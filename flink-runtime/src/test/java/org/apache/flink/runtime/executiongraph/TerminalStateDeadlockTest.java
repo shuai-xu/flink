@@ -125,7 +125,7 @@ public class TerminalStateDeadlockTest {
 			final Executor executor = Executors.newFixedThreadPool(4);
 			
 			// try a lot!
-			for (int i = 0; i < 1; i++) {
+			for (int i = 0; i < 20000; i++) {
 				final TestExecGraph eg = new TestExecGraph(jobId);
 				eg.attachJobGraph(vertices);
 
