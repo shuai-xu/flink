@@ -214,7 +214,7 @@ public class PipelinedRegionFailoverConcurrencyTest {
 		final ExecutionGraph graph = createSampleGraph(
 				jid,
 				new FailoverPipelinedRegionWithCustomExecutor(executor),
-				new FixedDelayRestartStrategy(2, 0), // one restart, no delay
+				new FixedDelayRestartStrategy(2, 0), // twice restart, no delay
 				slotProvider,
 				2);
 		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy)graph.getFailoverStrategy();
