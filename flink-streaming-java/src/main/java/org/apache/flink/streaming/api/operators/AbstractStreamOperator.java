@@ -423,8 +423,6 @@ public abstract class AbstractStreamOperator<OUT>
 		return snapshotInProgress;
 	}
 
-
-
 	/**
 	 * Stream operators with state, which want to participate in a snapshot need to override this hook method.
 	 *
