@@ -302,9 +302,6 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		advanceTime(nfaState, timerService.currentWatermark());
 
 		// STEP 4
-		if (sortedTimestamps.isEmpty()) {
-			elementQueueState.clear();
-		}
 		updateNFA(nfaState);
 
 		if (!sortedTimestamps.isEmpty() || !partialMatches.isEmpty()) {
@@ -354,9 +351,6 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		}
 
 		// STEP 3
-		if (sortedTimestamps.isEmpty()) {
-			elementQueueState.clear();
-		}
 		updateNFA(nfa);
 	}
 
