@@ -1,0 +1,5 @@
+{
+"phabricator.uri" : "https://aone.alibaba-inc.com/",
+"test.systems" : [{"name":"testlab","piplineId":"1223935"}],
+"subscribers":"P710480"
+}
