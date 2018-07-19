@@ -85,6 +85,7 @@ under the License.
 		<module>flink-yarn-tests</module>
 		<module>flink-fs-tests</module>
 		<module>flink-docs</module>
+		<module>flink-stability-test</module>
 	</modules>
 
 	<properties>
@@ -1158,6 +1159,9 @@ under the License.
 						<exclude>apache-maven-3.2.5/**</exclude>
 						<!-- PyCharm -->
 						<exclude>**/.idea/**</exclude>
+
+						<!--Stability test module -->
+						<exclude>flink-stability-test/**</exclude>
 					</excludes>
 				</configuration>
 			</plugin>

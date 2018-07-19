@@ -1,0 +1,44 @@
+##############################################################################
+#
+# @authors niwan@taobao.com
+#
+# Test blink stability when heartbeat timeout
+
+#
+RULE Heartbeat full timeout(on HeartbeatManagerImpl.requestHeartbeat())
+CLASS ^org.apache.flink.runtime.heartbeat.HeartbeatManagerImpl
+METHOD requestHeartbeat(ResourceID, ?)
+HELPER com.alibaba.blink.stabilitytest.STCaseHelper
+AT ENTRY
+COMPILE
+BIND heartbeatManager = $0; resourceID = $1; payload = $2;
+IF TRUE
+DO
+    invokeSTMethod("org.apache.flink.runtime.heartbeat.HeartbeatTimeoutSTCase", "fullTimeout", new Object[]{heartbeatManager, resourceID, payload});
+ENDRULE
+
+# For blink 1.x
+RULE Heartbeat half timeout(on HeartbeatManagerImpl.sendHeartbeat())
+CLASS ^org.apache.flink.runtime.heartbeat.HeartbeatManagerImpl
+METHOD sendHeartbeat(ResourceID, ?)
+HELPER com.alibaba.blink.stabilitytest.STCaseHelper
+AT ENTRY
+COMPILE
+BIND heartbeatManager = $0; resourceID = $1; payload = $2;
+IF TRUE
+DO
+    invokeSTMethod("org.apache.flink.runtime.heartbeat.HeartbeatTimeoutSTCase", "halfTimeout", new Object[]{heartbeatManager, resourceID, payload});
+ENDRULE
+
+# For blink 2.x
+RULE Heartbeat half timeout(on HeartbeatManagerImpl.receiveHeartbeat())
+CLASS ^org.apache.flink.runtime.heartbeat.HeartbeatManagerImpl
+METHOD receiveHeartbeat(ResourceID, ?)
+HELPER com.alibaba.blink.stabilitytest.STCaseHelper
+AT ENTRY
+COMPILE
+BIND heartbeatManager = $0; resourceID = $1; payload = $2;
+IF TRUE
+DO
+    invokeSTMethod("org.apache.flink.runtime.heartbeat.HeartbeatTimeoutSTCase", "halfTimeout", new Object[]{heartbeatManager, resourceID, payload});
+ENDRULE
