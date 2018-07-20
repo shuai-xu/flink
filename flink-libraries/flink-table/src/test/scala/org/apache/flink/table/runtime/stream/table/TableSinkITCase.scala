@@ -21,10 +21,13 @@ package org.apache.flink.table.runtime.stream.table
 import java.io.File
 import java.lang.{Boolean => JBool}
 
+import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.api.java.typeutils.runtime.RowSerializer
+import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.DataStream
@@ -641,8 +644,9 @@ object RowCollector {
 
   def addValue(value: JTuple2[JBool, Row]): Unit = {
 
-    // make a copy
-    val copy = new JTuple2[JBool, Row](value.f0, Row.copy(value.f1))
+    // make a deep copy
+    val copy = new JTuple2[JBool, Row](value.f0,
+      new KryoSerializer(classOf[Row], new ExecutionConfig()).copy(value.f1))
     sink.synchronized {
       sink += copy
     }

@@ -24,9 +24,13 @@ import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.TupleTypeInfo;
+import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.testutils.OneShotLatch;
 import org.apache.flink.metrics.Counter;
@@ -756,6 +760,93 @@ public class OneInputStreamTaskTest extends TestLogger {
 		@Override
 		public void processWatermark(Watermark mark) throws Exception {
 			output.emitWatermark(new Watermark(mark.getTimestamp() * 2));
+		}
+	}
+
+	@Test
+	public void testMutableObjectReuse() throws Exception {
+		final OneInputStreamTaskTestHarness<String, String> testHarness = new OneInputStreamTaskTestHarness<>(
+			OneInputStreamTask::new,
+			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
+			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO));
+
+		testHarness.setupOperatorChain(new OperatorID(), new TestMutableObjectReuseOperator(true))
+			.chain(new OperatorID(), new TestMutableObjectReuseOperator(),
+				new TupleSerializer(Tuple2.class,
+					new TypeSerializer<?>[]{BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()), BasicTypeInfo.INT_TYPE_INFO.createSerializer(new ExecutionConfig())}))
+			.finish();
+
+		ExecutionConfig executionConfig = testHarness.getExecutionConfig();
+		executionConfig.enableObjectReuse();
+
+		long initialTime = 0L;
+		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<Object>();
+
+		testHarness.invoke();
+		testHarness.waitForTaskRunning();
+
+		testHarness.processElement(new StreamRecord<>(Tuple2.of("Hello", 1)));
+		testHarness.processElement(new StreamRecord<>(Tuple2.of("Hello", 2), initialTime + 1));
+		testHarness.processElement(new Watermark(initialTime + 1));
+		testHarness.processElement(new StreamRecord<>(Tuple2.of("Ciao", 1), initialTime + 2));
+		testHarness.processEvent(new CheckpointBarrier(0, 0, CheckpointOptions.forCheckpointWithDefaultLocation()));
+		testHarness.processElement(new StreamRecord<>(Tuple2.of("Ciao", 2), initialTime + 3));
+
+		expectedOutput.add(new StreamRecord<>(Tuple2.of("Hello", 1)));
+		expectedOutput.add(new StreamRecord<>(Tuple2.of("Hello", 2), initialTime + 1));
+		expectedOutput.add(new Watermark(initialTime + 1));
+		expectedOutput.add(new StreamRecord<>(Tuple2.of("Ciao", 1), initialTime + 2));
+		expectedOutput.add(new CheckpointBarrier(0, 0, CheckpointOptions.forCheckpointWithDefaultLocation()));
+		expectedOutput.add(new StreamRecord<>(Tuple2.of("Ciao", 2), initialTime + 3));
+
+		testHarness.endInput();
+
+		testHarness.waitForTaskCompletion();
+
+		TestHarnessUtil.assertOutputEquals("Output was not correct.",
+			expectedOutput,
+			testHarness.getOutput());
+	}
+
+	// This must only be used in one test, otherwise the static fields will be changed
+	// by several tests concurrently
+	private static class TestMutableObjectReuseOperator
+		extends AbstractStreamOperator<Tuple2<String, Integer>>
+		implements OneInputStreamOperator<Tuple2<String, Integer>, Tuple2<String, Integer>> {
+
+		private static final long serialVersionUID = 1L;
+
+		private final boolean isHeadOperator;
+		private static Object headOperatorValue;
+
+		private Object prevRecord = null;
+		private Object prevValue = null;
+
+		public TestMutableObjectReuseOperator() {
+			this.isHeadOperator = false;
+		}
+
+		public TestMutableObjectReuseOperator(boolean isHeadOperator) {
+			this.isHeadOperator = isHeadOperator;
+		}
+
+		@Override
+		public void processElement(StreamRecord<Tuple2<String, Integer>> element) throws Exception {
+			if (isHeadOperator) {
+				if (prevRecord != null) {
+					assertTrue("Reuse StreamRecord object in the head operator.", element != prevRecord);
+					assertTrue("No reuse value object in the head operator.", element.getValue() == prevValue);
+				}
+
+				prevRecord = element;
+				prevValue = element.getValue();
+
+				headOperatorValue = element.getValue();
+			} else {
+				assertTrue("No reuse value object in chain.", element.getValue() == headOperatorValue);
+			}
+
+			output.collect(element);
 		}
 	}
 
