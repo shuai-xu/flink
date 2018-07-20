@@ -79,4 +79,17 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 */
 	void processLatencyMarker2(LatencyMarker latencyMarker) throws Exception;
 
+	/**
+	 * It is notified that no more element ({@link StreamRecord}, {@link Watermark} and {@link LatencyMarker})
+	 * will arrive on the first input of this two-input operator. This method is guaranteed to not
+	 * be called concurrently with other methods of the operator.
+	 */
+	default void endInput1() throws Exception {}
+
+	/**
+	 * It is notified that no more element ({@link StreamRecord}, {@link Watermark} and {@link LatencyMarker})
+	 * will arrive on the second input of this two-input operator. This method is guaranteed to not
+	 * be called concurrently with other methods of the operator.
+	 */
+	default void endInput2() throws Exception {}
 }
