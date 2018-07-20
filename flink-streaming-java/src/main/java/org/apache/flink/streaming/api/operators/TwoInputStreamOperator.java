@@ -36,6 +36,36 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OUT> {
 
 	/**
+	 * Returns the selection that this two-input operator wants to read firstly.
+	 * This method is guaranteed to not be called concurrently with other methods of the operator.
+	 */
+	default TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
+	}
+
+	/**
+	 * Processes one record that is from the first input of this two-input operator and returns
+	 * the next input selection. This method is guaranteed to not be called concurrently with
+	 * other methods of the operator.
+	 */
+	default TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
+		processElement1(element);
+
+		return TwoInputSelection.ANY;
+	}
+
+	/**
+	 * Processes one record that is from the second input of this two-input operator and returns
+	 * the next input selection. This method is guaranteed to not be called concurrently with
+	 * other methods of the operator.
+	 */
+	default TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
+		processElement2(element);
+
+		return TwoInputSelection.ANY;
+	}
+
+	/**
 	 * Processes one element that arrived on the first input of this two-input operator.
 	 * This method is guaranteed to not be called concurrently with other methods of the operator.
 	 */
