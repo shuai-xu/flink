@@ -135,6 +135,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 	private String jobManagerAddress;
 
+	private Boolean enableSharedSlot;
+
 	// ------------------------------------------------------------------------
 
 	@VisibleForTesting
@@ -145,7 +147,27 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			schedulingStrategy,
 			SystemClock.getInstance(),
 			AkkaUtils.getDefaultTimeout(),
-			Time.milliseconds(JobManagerOptions.SLOT_IDLE_TIMEOUT.defaultValue()));
+			Time.milliseconds(JobManagerOptions.SLOT_IDLE_TIMEOUT.defaultValue()),
+			true);
+	}
+
+	@VisibleForTesting
+	public SlotPool(
+		RpcService rpcService,
+		JobID jobId,
+		SchedulingStrategy schedulingStrategy,
+		Clock clock,
+		Time rpcTimeout,
+		Time idleSlotTimeout) {
+
+		this(
+			rpcService,
+			jobId,
+			schedulingStrategy,
+			clock,
+			rpcTimeout,
+			idleSlotTimeout,
+			true);
 	}
 
 	public SlotPool(
@@ -154,7 +176,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			SchedulingStrategy schedulingStrategy,
 			Clock clock,
 			Time rpcTimeout,
-			Time idleSlotTimeout) {
+			Time idleSlotTimeout,
+			Boolean enableSharedSlot) {
 
 		super(rpcService);
 
@@ -163,6 +186,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		this.clock = checkNotNull(clock);
 		this.rpcTimeout = checkNotNull(rpcTimeout);
 		this.idleSlotTimeout = checkNotNull(idleSlotTimeout);
+		this.enableSharedSlot = checkNotNull(enableSharedSlot);
 
 		this.registeredTaskManagers = new HashSet<>(16);
 		this.allocatedSlots = new AllocatedSlots();
@@ -325,7 +349,9 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		log.debug("Allocating slot with request {} for task execution {}", slotRequestId, task.getTaskToExecute());
 
-		final SlotSharingGroupId slotSharingGroupId = task.getSlotSharingGroupId();
+		final CoLocationConstraint coLocationConstraint = task.getCoLocationConstraint();
+		final SlotSharingGroupId slotSharingGroupId = (enableSharedSlot || coLocationConstraint != null) ?
+			task.getSlotSharingGroupId() : null;
 
 		if (slotSharingGroupId != null) {
 			// allocate slot with slot sharing

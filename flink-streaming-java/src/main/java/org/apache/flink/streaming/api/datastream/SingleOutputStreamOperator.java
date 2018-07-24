@@ -182,7 +182,7 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 	 * @param preferredResources The preferred resources for this operator.
 	 * @return The operator with set minimum and preferred resources.
 	 */
-	private SingleOutputStreamOperator<T> setResources(ResourceSpec minResources, ResourceSpec preferredResources) {
+	public SingleOutputStreamOperator<T> setResources(ResourceSpec minResources, ResourceSpec preferredResources) {
 		Preconditions.checkNotNull(minResources, "The min resources must be not null.");
 		Preconditions.checkNotNull(preferredResources, "The preferred resources must be not null.");
 		Preconditions.checkArgument(minResources.isValid() && preferredResources.isValid() && minResources.lessThanOrEqual(preferredResources),
@@ -199,7 +199,7 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 	 * @param resources The resources for this operator.
 	 * @return The operator with set minimum and preferred resources.
 	 */
-	private SingleOutputStreamOperator<T> setResources(ResourceSpec resources) {
+	public SingleOutputStreamOperator<T> setResources(ResourceSpec resources) {
 		Preconditions.checkNotNull(resources, "The resources must be not null.");
 		Preconditions.checkArgument(resources.isValid(), "The values in resources must be not less than 0.");
 

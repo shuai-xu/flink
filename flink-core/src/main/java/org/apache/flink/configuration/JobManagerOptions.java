@@ -144,6 +144,11 @@ public class JobManagerOptions {
 			.defaultValue(HeartbeatManagerOptions.HEARTBEAT_TIMEOUT.defaultValue())
 			.withDescription("The timeout in milliseconds for a idle slot in Slot Pool.");
 
+	public static final ConfigOption<Boolean> SLOT_ENABLE_SHARED_SLOT =
+		key("slot.enable-shared-slot")
+			.defaultValue(true)
+			.withDescription("Whether to enable slot sharing group when allocating slots in Slot Pool.");
+
 	// ---------------------------------------------------------------------------------------------
 
 	private JobManagerOptions() {
