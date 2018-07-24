@@ -29,6 +29,8 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -47,6 +49,8 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 	public static final String FIELD_NAME_START_TIME = "start-time";
 
 	public static final String FIELD_NAME_END_TIME = "end-time";
+
+	public static final String FIELD_NAME_STATE_TRANSITION_TIME = "state-transition-time";
 
 	public static final String FIELD_NAME_DURATION = "duration";
 
@@ -73,6 +77,9 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 	@JsonProperty(FIELD_NAME_DURATION)
 	private final long duration;
 
+	@JsonProperty(FIELD_NAME_STATE_TRANSITION_TIME)
+	private final Map<ExecutionState, Long> stateTransitionTime;
+
 	@JsonProperty(FIELD_NAME_METRICS)
 	private final IOMetricsInfo ioMetricsInfo;
 
@@ -85,6 +92,7 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 			@JsonProperty(FIELD_NAME_START_TIME) long startTime,
 			@JsonProperty(FIELD_NAME_END_TIME) long endTime,
 			@JsonProperty(FIELD_NAME_DURATION) long duration,
+			@JsonProperty(FIELD_NAME_STATE_TRANSITION_TIME) Map<ExecutionState, Long> stateTransitionTime,
 			@JsonProperty(FIELD_NAME_METRICS) IOMetricsInfo ioMetricsInfo) {
 
 		this.subtaskIndex = subtaskIndex;
@@ -94,6 +102,7 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 		this.startTime = startTime;
 		this.endTime = endTime;
 		this.duration = duration;
+		this.stateTransitionTime = stateTransitionTime;
 		this.ioMetricsInfo = Preconditions.checkNotNull(ioMetricsInfo);
 	}
 
@@ -123,6 +132,10 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 
 	public long getDuration() {
 		return duration;
+	}
+
+	public Map<ExecutionState, Long> getStateTransitionTime() {
+		return stateTransitionTime;
 	}
 
 	public IOMetricsInfo getIoMetricsInfo() {
@@ -179,6 +192,13 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 			ioMetrics.getNumRecordsOut(),
 			ioMetrics.isNumRecordsOutComplete());
 
+		long[] stateTimestamps = execution.getStateTimestamps();
+		Map<ExecutionState, Long> stateTransitionTime = new HashMap<>();
+
+		for (int i = 0; i < stateTimestamps.length; ++i) {
+			stateTransitionTime.put(ExecutionState.values()[i], stateTimestamps[i]);
+		}
+
 		return new SubtaskExecutionAttemptDetailsInfo(
 			execution.getParallelSubtaskIndex(),
 			status,
@@ -187,6 +207,7 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 			startTime,
 			endTime,
 			duration,
+			stateTransitionTime,
 			ioMetricsInfo
 		);
 	}

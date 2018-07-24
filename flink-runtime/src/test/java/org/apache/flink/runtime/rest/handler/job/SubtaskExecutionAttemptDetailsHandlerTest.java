@@ -50,6 +50,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.assertEquals;
@@ -167,6 +168,11 @@ public class SubtaskExecutionAttemptDetailsHandlerTest extends TestLogger {
 			true
 		);
 
+		Map<ExecutionState, Long> stateTransitionTime = new HashMap<ExecutionState, Long>();
+		for (ExecutionState state: ExecutionState.values()) {
+			stateTransitionTime.put(state, 0L);
+		}
+
 		final SubtaskExecutionAttemptDetailsInfo expectedDetailsInfo = new SubtaskExecutionAttemptDetailsInfo(
 			subtaskIndex,
 			expectedState,
@@ -175,6 +181,7 @@ public class SubtaskExecutionAttemptDetailsHandlerTest extends TestLogger {
 			-1L,
 			0L,
 			-1L,
+			stateTransitionTime,
 			ioMetricsInfo
 		);
 
