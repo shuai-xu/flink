@@ -197,6 +197,19 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	}
 
 	/**
+	 * Get the managed memory of task manager.
+	 * @return The managed memory in MB
+	 */
+	public int getManagedMemoryInMB() {
+		Resource managedMemory = extendedResources.get(ResourceSpec.MANAGED_MEMORY_NAME);
+		if (managedMemory != null) {
+			return (int)managedMemory.getValue();
+		}
+
+		return 0;
+	}
+
+	/**
 	 * Check whether required resource profile can be matched.
 	 *
 	 * @param required the required resource profile
@@ -286,7 +299,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	public String toString() {
 		final StringBuilder resources = new StringBuilder(extendedResources.size() * 10);
 		for (Map.Entry<String, Resource> resource : extendedResources.entrySet()) {
-			resources.append(", ").append(resource.getKey()).append('=').append(resource.getValue());
+			resources.append(", ").append(resource.getKey()).append('=').append(resource.getValue().getValue());
 		}
 		return "ResourceProfile{" +
 			"cpuCores=" + cpuCores +

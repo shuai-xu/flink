@@ -142,6 +142,66 @@ public class YarnConfigOptions {
 		.defaultValue("")
 		.withDescription("A comma-separated list of tags to apply to the Flink YARN application.");
 
+	/**
+	 * How many virtual core will use a physical core in yarn.
+	 */
+	public static final ConfigOption<Integer> YARN_VCORE_RATIO =
+			key("yarn.vcore-ratio")
+					.defaultValue(1)
+					.withDeprecatedKeys("yarn.vcore.ratio");
+
+	/**
+	 * Vcore for Job JobManager (App Master).
+	 */
+	public static final ConfigOption<Integer> JOB_APP_MASTER_VCORE =
+			key("job.app-master-vcore")
+					.defaultValue(1);
+
+	/**
+	 * The number of threads to start yarn containers in yarn resource manager.
+	 */
+	public static final ConfigOption<Integer> CONTAINER_LAUNCHER_NUMBER =
+			key("yarn.container-launcher-number")
+					.defaultValue(10);
+
+	/**
+	 * How many cores a task manager will supply for user.
+	 */
+	public static final ConfigOption<Double> YARN_CLUSTER_TM_CORE =
+			key("cluster.taskmanager.cpu.core")
+					.defaultValue(1.0);
+
+	/**
+	 * How many direct memory a task manager will supply for user.
+	 */
+	public static final ConfigOption<Integer> YARN_CLUSTER_TM_DIRECT_MEMORY =
+			key("cluster.taskmanager.direct.memory.mb")
+					.defaultValue(0);
+
+	/**
+	 * How many native memory a task manager will supply for user.
+	 */
+	public static final ConfigOption<Integer> YARN_CLUSTER_TM_NATIVE_MEMORY =
+			key("cluster.taskmanager.native.memory.mb")
+					.defaultValue(0);
+
+	/**
+	 * Specified as resource-type:value pairs separated by commas.
+	 * such as MANAGED_MEMORY_MB:1024,GPU:1,FPGA:1.
+	 * Extended resources should been defined in YARN cluster.
+	 */
+	public static final ConfigOption<String> YARN_CLUSTER_TM_EXTENDED_RESOURCES =
+			key("cluster.taskmanager.extended.resources")
+					.defaultValue("");
+
+	/**
+	 * The register timeout for a container before released by resource manager. In seconds.
+	 * In case of a container took very long time to be launched.
+	 */
+	public static final ConfigOption<Long> CONTAINER_REGISTER_TIMEOUT =
+			key("yarn.container-register-timeout")
+					.defaultValue(120L);
+
 	// ------------------------------------------------------------------------
 
 	/** This class is not meant to be instantiated. */

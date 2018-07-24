@@ -36,7 +36,7 @@ import org.apache.flink.runtime.util.EnvironmentInformation;
 import org.apache.flink.runtime.util.JvmShutdownSafeguard;
 import org.apache.flink.runtime.util.SignalHandler;
 import org.apache.flink.util.Preconditions;
-import org.apache.flink.yarn.YarnResourceManager;
+import org.apache.flink.yarn.YarnSessionResourceManager;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -88,7 +88,7 @@ public class YarnSessionClusterEntrypoint extends SessionClusterEntrypoint {
 			highAvailabilityServices,
 			rpcService.getScheduledExecutor());
 
-		return new YarnResourceManager(
+		return new YarnSessionResourceManager(
 			rpcService,
 			ResourceManager.RESOURCE_MANAGER_NAME,
 			resourceId,

@@ -43,6 +43,48 @@ public class TaskManagerOptions {
 				" YARN container, minus a certain tolerance value.");
 
 	/**
+	 * The heap memory used for task manager process.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_HEAP_MEMORY =
+			key("taskmanager.heap.memory.mb")
+					.defaultValue(128);
+
+	/**
+	 * The native memory used for task manager process.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NATIVE_MEMORY =
+			key("taskmanager.native.memory.mb")
+					.defaultValue(128);
+
+	/**
+	 * The direct memory used for netty framework in the task manager process.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NETTY_MEMORY =
+			key("taskmanager.netty.memory.mb")
+					.defaultValue(320);
+
+	/**
+	 * Ratio of young generation for dynamic memory in task manager.
+	 */
+	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO =
+			key("taskmanager.memory.dynamic.young.ratio")
+					.defaultValue(0.25);
+
+	/**
+	 * Ratio of young generation for persistent memory in task manager.
+	 */
+	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_PERSISTENT_YOUNG_RATIO =
+			key("taskmanager.memory.persistent.young.ratio")
+					.defaultValue(0.1);
+
+	/**
+	 * CMS occupy fraction for a task manager.
+	 */
+	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_CMS_GC_RATIO =
+			key("taskmanager.memory.cms.gc.ratio")
+					.defaultValue(0.7);
+
+	/**
 	 * Whether to kill the TaskManager when the task thread throws an OutOfMemoryError.
 	 */
 	public static final ConfigOption<Boolean> KILL_ON_OUT_OF_MEMORY =

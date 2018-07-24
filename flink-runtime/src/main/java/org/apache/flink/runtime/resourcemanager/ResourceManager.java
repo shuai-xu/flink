@@ -847,6 +847,10 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		}
 	}
 
+	protected boolean taskExecutorRegistered(ResourceID taskExecutorId) {
+		return taskExecutors.containsKey(taskExecutorId);
+	}
+
 	// ------------------------------------------------------------------------
 	//  Info messaging
 	// ------------------------------------------------------------------------
