@@ -105,16 +105,15 @@ public class StreamTestSingleInputGate<T> extends TestSingleInputGate {
 						moreAvailable = !inputQueue.isEmpty();
 					}
 					if (input != null && input.isStreamEnd()) {
-						when(inputChannels[channelIndex].getInputChannel().isReleased()).thenReturn(
-							true);
+						when(inputChannels[channelIndex].getInputChannel().isReleased()).thenReturn(true);
 						return Optional.of(new BufferAndAvailability(EventSerializer.toBuffer(EndOfPartitionEvent.INSTANCE), moreAvailable, 0));
 					} else if (input != null && input.isStreamRecord()) {
 						Object inputElement = input.getStreamRecord();
 
 						BufferBuilder bufferBuilder = createBufferBuilder(bufferSize);
-						recordSerializer.continueWritingWithNextBufferBuilder(bufferBuilder);
 						delegate.setInstance(inputElement);
-						recordSerializer.addRecord(delegate);
+						recordSerializer.serializeRecord(delegate);
+						recordSerializer.copyToBufferBuilder(bufferBuilder);
 						bufferBuilder.finish();
 
 						// Call getCurrentBuffer to ensure size is set
