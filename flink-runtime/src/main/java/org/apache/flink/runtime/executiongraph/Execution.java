@@ -21,7 +21,9 @@ package org.apache.flink.runtime.executiongraph;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.Archiveable;
 import org.apache.flink.api.common.accumulators.Accumulator;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.accumulators.StringifiedAccumulatorResult;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -46,15 +48,16 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
+import org.apache.flink.runtime.jobmaster.TaskNetworkMemoryUtil;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.OptionalFailure;
-
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
@@ -493,7 +496,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 							toSchedule,
 							queued,
 							new SlotProfile(
-								ResourceProfile.UNKNOWN,
+								generateResourceProfileForTask(toSchedule),
 								preferredLocations,
 								previousAllocationIDs),
 							allocationTimeout));
@@ -525,6 +528,57 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			// call race, already deployed, or already done
 			throw new IllegalExecutionStateException(this, CREATED, state);
 		}
+	}
+
+	private ResourceProfile generateResourceProfileForTask(ScheduledUnit task) {
+		ExecutionVertex executionVertex = task.getTaskToExecute().getVertex();
+		if (executionVertex.getJobVertex().getJobVertex().getMinResources().equals(ResourceSpec.DEFAULT)) {
+			return ResourceProfile.UNKNOWN;
+		}
+		int networkMemory = calculateTaskNetworkMemory(executionVertex);
+		return ResourceProfile.fromResourceSpec(
+			executionVertex.getJobVertex().getJobVertex().getMinResources(), networkMemory);
+
+	}
+
+	@VisibleForTesting
+	int calculateTaskNetworkMemory(ExecutionVertex executionVertex) {
+
+		Configuration config = getVertex().getJobVertex().getGraph().getJobConfiguration();
+
+		int numSubpartitions = 0;
+		for (IntermediateResultPartition irp : executionVertex.getProducedPartitions().values()) {
+			for (List<ExecutionEdge> consumer : irp.getConsumers()) {
+				numSubpartitions += consumer.size();
+			}
+		}
+
+		int numPipelineChannels = 0;
+		int numPipelineGates = 0;
+		int numBlockingChannels = 0;
+		int numBlockingGates = 0;
+		for (int j = 0; j < executionVertex.getNumberOfInputs(); ++j) {
+			ExecutionEdge[] edges = executionVertex.getInputEdges(j);
+
+			checkState(edges.length > 0, "There should be at least on edge for each input");
+
+			// Check the result type by viewing the first edge
+			boolean isBlocking = edges[0].getSource().getIntermediateResult().getResultType().isBlocking();
+
+			if (isBlocking) {
+				numBlockingChannels += edges.length;
+				numBlockingGates++;
+			} else {
+				numPipelineChannels += edges.length;
+				numPipelineGates++;
+			}
+		}
+
+		final int networkMemory =
+			TaskNetworkMemoryUtil.calculateTaskNetworkMemory(config, numSubpartitions, numPipelineChannels, numPipelineGates,
+				numBlockingChannels, numBlockingGates);
+
+		return networkMemory;
 	}
 
 	/**

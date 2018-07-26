@@ -19,9 +19,12 @@
 package org.apache.flink.runtime.clusterframework.types;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.GPUResource;
+import org.apache.flink.api.common.resources.Resource;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -144,5 +147,82 @@ public class ResourceProfileTest {
 		assertEquals(150, rp.getMemoryInMB());
 		assertEquals(100, rp.getOperatorsMemoryInMB());
 		assertEquals(1.6, rp.getExtendedResources().get(ResourceSpec.GPU_NAME).getValue(), 0.000001);
+	}
+
+	@Test
+	public void testMinus() {
+		ResourceProfile rs1 = new ResourceProfile(
+			3,
+			300,
+			302,
+			303,
+			304,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(305));
+				this.put("extend_2", new GPUResource(306));
+			}}
+		);
+
+		ResourceProfile rs2 = new ResourceProfile(
+			3,
+			200,
+			202,
+			203,
+			204,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(205));
+			}}
+		);
+
+		ResourceProfile result = rs1.minus(rs2);
+		assertEquals(result, new ResourceProfile(
+			0,
+			100,
+			100,
+			100,
+			100,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(100));
+				// Should be ignored.
+				this.put("extend_2", new GPUResource(306));
+			}})
+		);
+	}
+
+	@Test
+	public void testMinusWithUnknownExtendedResource() {
+		ResourceProfile rs1 = new ResourceProfile(
+			3,
+			300,
+			302,
+			303,
+			304,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(305));
+				this.put("extend_2", new GPUResource(306));
+			}}
+		);
+
+		ResourceProfile rs2 = new ResourceProfile(
+			3,
+			200,
+			202,
+			203,
+			204,
+			new HashMap<String, Resource>() {{
+				this.put("extend_1", new GPUResource(205));
+				this.put("extend_3", new GPUResource(105));
+			}}
+		);
+
+		boolean exceptionCaught = false;
+		try {
+			ResourceProfile result = rs1.minus(rs2);
+		} catch (IllegalArgumentException e) {
+			exceptionCaught = true;
+		}
+
+		assertTrue("Minus with non-existent extended resource should cause IllegalArgumentException",
+			exceptionCaught);
 	}
 }

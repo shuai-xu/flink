@@ -84,11 +84,14 @@ public class SlotManager implements AutoCloseable {
 	/** Timeout after which an unused TaskManager is released. */
 	private final Time taskManagerTimeout;
 
+	/** Timeout after which an unused TaskManager is released when SlotManager starts. */
+	private final Time taskManagerCheckerInitialDelay;
+
 	/** Map for all registered slots. */
-	private final HashMap<SlotID, TaskManagerSlot> slots;
+	protected final HashMap<SlotID, TaskManagerSlot> slots;
 
 	/** Index of all currently free slots. */
-	private final LinkedHashMap<SlotID, TaskManagerSlot> freeSlots;
+	protected final LinkedHashMap<SlotID, TaskManagerSlot> freeSlots;
 
 	/** All currently registered task managers. */
 	private final HashMap<InstanceID, TaskManagerRegistration> taskManagerRegistrations;
@@ -97,7 +100,7 @@ public class SlotManager implements AutoCloseable {
 	private final HashMap<AllocationID, SlotID> fulfilledSlotRequests;
 
 	/** Map of pending/unfulfilled slot allocation requests. */
-	private final HashMap<AllocationID, PendingSlotRequest> pendingSlotRequests;
+	protected final HashMap<AllocationID, PendingSlotRequest> pendingSlotRequests;
 
 	/** ResourceManager's id. */
 	private ResourceManagerId resourceManagerId;
@@ -115,15 +118,31 @@ public class SlotManager implements AutoCloseable {
 	/** True iff the component has been started. */
 	private boolean started;
 
+	/** Listener for the slot actions. */
+	private SlotListener slotListener;
+
+	/**
+	 * This constructor is used for test only.
+	 */
 	public SlotManager(
 			ScheduledExecutor scheduledExecutor,
 			Time taskManagerRequestTimeout,
 			Time slotRequestTimeout,
 			Time taskManagerTimeout) {
+		this(scheduledExecutor, taskManagerRequestTimeout, slotRequestTimeout, taskManagerTimeout, Time.milliseconds(0L));
+	}
+
+	public SlotManager(
+				ScheduledExecutor scheduledExecutor,
+				Time taskManagerRequestTimeout,
+				Time slotRequestTimeout,
+				Time taskManagerTimeout,
+				Time taskManagerCheckerInitialDelay) {
 		this.scheduledExecutor = Preconditions.checkNotNull(scheduledExecutor);
 		this.taskManagerRequestTimeout = Preconditions.checkNotNull(taskManagerRequestTimeout);
 		this.slotRequestTimeout = Preconditions.checkNotNull(slotRequestTimeout);
 		this.taskManagerTimeout = Preconditions.checkNotNull(taskManagerTimeout);
+		this.taskManagerCheckerInitialDelay = taskManagerCheckerInitialDelay;
 
 		slots = new HashMap<>(16);
 		freeSlots = new LinkedHashMap<>(16);
@@ -170,7 +189,11 @@ public class SlotManager implements AutoCloseable {
 
 	public int getNumberPendingSlotRequests() {return pendingSlotRequests.size(); }
 
-	// ---------------------------------------------------------------------------------------------
+	public void setSlotListener(SlotListener slotListener) {
+		this.slotListener = slotListener;
+	}
+
+		// ---------------------------------------------------------------------------------------------
 	// Component lifecycle methods
 	// ---------------------------------------------------------------------------------------------
 
@@ -193,7 +216,7 @@ public class SlotManager implements AutoCloseable {
 		taskManagerTimeoutCheck = scheduledExecutor.scheduleWithFixedDelay(
 			() -> mainThreadExecutor.execute(
 				() -> checkTaskManagerTimeouts()),
-			0L,
+			taskManagerCheckerInitialDelay.toMilliseconds(),
 			taskManagerTimeout.toMilliseconds(),
 			TimeUnit.MILLISECONDS);
 
@@ -454,14 +477,15 @@ public class SlotManager implements AutoCloseable {
 	 * <p>Note: If you want to change the behaviour of the slot manager wrt slot allocation and
 	 * request fulfillment, then you should override this method.
 	 *
-	 * @param slotResourceProfile defining the resources of an available slot
+	 * @param taskManagerSlot the available slot
 	 * @return A matching slot request which can be deployed in a slot with the given resource
 	 * profile. Null if there is no such slot request pending.
 	 */
-	protected PendingSlotRequest findMatchingRequest(ResourceProfile slotResourceProfile) {
+	protected PendingSlotRequest findMatchingRequest(TaskManagerSlot taskManagerSlot) {
 
 		for (PendingSlotRequest pendingSlotRequest : pendingSlotRequests.values()) {
-			if (!pendingSlotRequest.isAssigned() && slotResourceProfile.isMatching(pendingSlotRequest.getResourceProfile())) {
+			if (!pendingSlotRequest.isAssigned()
+				&& taskManagerSlot.getResourceProfile().isMatching(pendingSlotRequest.getResourceProfile())) {
 				return pendingSlotRequest;
 			}
 		}
@@ -619,6 +643,8 @@ public class SlotManager implements AutoCloseable {
 			// no allocation reported
 			switch (slot.getState()) {
 				case FREE:
+					// the slot is currently free --> but it may be stored in freeSlots
+					freeSlots.remove(slot.getSlotId());
 					handleFreeSlot(slot);
 					break;
 				case PENDING:
@@ -737,7 +763,11 @@ public class SlotManager implements AutoCloseable {
 	private void handleFreeSlot(TaskManagerSlot freeSlot) {
 		Preconditions.checkState(freeSlot.getState() == TaskManagerSlot.State.FREE);
 
-		PendingSlotRequest pendingSlotRequest = findMatchingRequest(freeSlot.getResourceProfile());
+		if (slotListener != null) {
+			slotListener.notifySlotFree(freeSlot.getSlotId());
+		}
+
+		PendingSlotRequest pendingSlotRequest = findMatchingRequest(freeSlot);
 
 		if (null != pendingSlotRequest) {
 			allocateSlot(freeSlot, pendingSlotRequest);
@@ -784,6 +814,10 @@ public class SlotManager implements AutoCloseable {
 					slot.getJobId(),
 					oldAllocationId,
 					new FlinkException("The assigned slot " + slot.getSlotId() + " was removed."));
+			}
+
+			if (slotListener != null) {
+				slotListener.notifySlotRemoved(slotId);
 			}
 		} else {
 			LOG.debug("There was no slot registered with slot id {}.", slotId);
@@ -996,5 +1030,15 @@ public class SlotManager implements AutoCloseable {
 
 			resourceActions.releaseResource(taskManagerRegistration.getInstanceId(), new FlinkException("Triggering of SlotManager#unregisterTaskManagersAndReleaseResources."));
 		}
+	}
+
+	/**
+	 * An utility interface for listening for the slot action in slot manager.
+	 */
+	protected interface SlotListener {
+
+		void notifySlotFree(SlotID slotId);
+
+		void notifySlotRemoved(SlotID slotId);
 	}
 }

@@ -265,6 +265,13 @@ public class TaskManagerOptions {
 			.defaultValue(false)
 			.withDescription("Whether TaskManager managed memory should be pre-allocated when the TaskManager is starting.");
 
+	/**
+	 * The resource profile for slots in a task executor.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_RESOURCE_PROFILE_KEY =
+		key("taskmanager.resourceProfile")
+			.defaultValue("");
+
 	// ------------------------------------------------------------------------
 	//  Network Options
 	// ------------------------------------------------------------------------
@@ -323,6 +330,15 @@ public class TaskManagerOptions {
 				" for parallel serialization.");
 
 	/**
+	 * Number of network buffers to use for each outgoing channel (subpartition).
+	 *
+	 * <p>Reasoning: 1 buffer for in-flight data in the subpartition + 1 buffer for parallel serialization
+	 */
+	public static final ConfigOption<Integer> NETWORK_BUFFERS_PER_SUBPARTITION =
+			key("taskmanager.network.memory.buffers-per-subpartition")
+			.defaultValue(2);
+
+	/**
 	 * Number of extra network buffers to use for each outgoing/incoming gate (result partition/input gate).
 	 */
 	public static final ConfigOption<Integer> NETWORK_EXTRA_BUFFERS_PER_GATE =
@@ -334,6 +350,22 @@ public class TaskManagerOptions {
 				" help relieve back-pressure caused by unbalanced data distribution among the subpartitions. This value should be" +
 				" increased in case of higher round trip times between nodes and/or larger number of machines in the cluster.");
 
+	/**
+	 * Number of network buffers to use for each external input channel.
+	 *
+	 * <p>This value should be large for external channels to avoid random reads in the shuffle service
+	 */
+	public static final ConfigOption<Integer> NETWORK_BUFFERS_PER_BLOCKING_CHANNEL =
+			key("taskmanager.network.memory.buffers-per-blocking-channel")
+			.defaultValue(128);
+
+	/**
+	 * Number of extra network buffers for to use for each ingoing external gate (input gate).
+	 * The non-positive value will be replaced with 2 * number of active input channel in the runtime.
+	 */
+	public static final ConfigOption<Integer> NETWORK_EXTRA_BUFFERS_PER_BLOCKING_GATE =
+			key("taskmanager.network.memory.floating-buffers-per-blocking-gate")
+			.defaultValue(0);
 
 	/**
 	 * Minimum backoff for partition requests of input channels.

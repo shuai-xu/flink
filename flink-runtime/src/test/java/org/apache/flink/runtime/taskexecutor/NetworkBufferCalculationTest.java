@@ -20,12 +20,14 @@ package org.apache.flink.runtime.taskexecutor;
 
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.memory.MemoryType;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.taskmanager.NetworkEnvironmentConfiguration;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 
@@ -106,6 +108,7 @@ public class NetworkBufferCalculationTest extends TestLogger {
 			memType,
 			false,
 			managedMemoryFraction,
-			0);
+			0,
+			Arrays.asList(ResourceProfile.UNKNOWN));
 	}
 }

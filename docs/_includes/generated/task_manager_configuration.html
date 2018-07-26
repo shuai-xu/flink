@@ -98,9 +98,24 @@
             <td>Boolean flag to enable/disable more detailed metrics about inbound/outbound network queue lengths.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.network.memory.buffers-per-blocking-channel</h5></td>
+            <td style="word-wrap: break-word;">128</td>
+            <td></td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.network.memory.buffers-per-channel</h5></td>
             <td style="word-wrap: break-word;">2</td>
             <td>Maximum number of network buffers to use for each outgoing/incoming channel (subpartition/input channel).In credit-based flow control mode, this indicates how many credits are exclusive in each input channel. It should be configured at least 2 for good performance. 1 buffer is for receiving in-flight data in the subpartition and 1 buffer is for parallel serialization.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.network.memory.buffers-per-subpartition</h5></td>
+            <td style="word-wrap: break-word;">2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.network.memory.floating-buffers-per-blocking-gate</h5></td>
+            <td style="word-wrap: break-word;">0</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>taskmanager.network.memory.floating-buffers-per-gate</h5></td>
@@ -156,6 +171,11 @@
             <td><h5>taskmanager.registration.timeout</h5></td>
             <td style="word-wrap: break-word;">"5 min"</td>
             <td>Defines the timeout for the TaskManager registration. If the duration is exceeded without a successful registration, then the TaskManager terminates.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.resourceProfile</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>taskmanager.rpc.port</h5></td>

@@ -175,9 +175,9 @@ public class YARNSessionITCase extends YarnTestBase {
 		FileUtils.writeStringToFile(tmpInFile, WordCountData.TEXT);
 
 		Runner jobRunner = startWithArgs(new String[]{"run",
-						"--detached", exampleJarLocation.getAbsolutePath(),
+						exampleJarLocation.getAbsolutePath(),
 						"--input", tmpInFile.getAbsoluteFile().toString()},
-				"Job has been submitted with JobID", RunTypes.CLI_FRONTEND);
+				"Job Runtime: ", RunTypes.CLI_FRONTEND);
 
 		jobRunner.join();
 

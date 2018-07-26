@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskexecutor;
 
+import org.apache.commons.net.util.Base64;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
@@ -27,6 +28,7 @@ import org.apache.flink.configuration.QueryableStateOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.akka.AkkaUtils;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.apache.flink.runtime.memory.MemoryManager;
@@ -37,9 +39,14 @@ import org.apache.flink.util.NetUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -80,6 +87,8 @@ public class TaskManagerServicesConfiguration {
 
 	private final boolean localRecoveryEnabled;
 
+	private final List<ResourceProfile> resourceProfileList = new LinkedList<>();
+
 	public TaskManagerServicesConfiguration(
 			InetAddress taskManagerAddress,
 			String[] tmpDirPaths,
@@ -92,7 +101,8 @@ public class TaskManagerServicesConfiguration {
 			MemoryType memoryType,
 			boolean preAllocateMemory,
 			float memoryFraction,
-			long timerServiceShutdownTimeout) {
+			long timerServiceShutdownTimeout,
+			List<ResourceProfile> resourceProfileList) {
 
 		this.taskManagerAddress = checkNotNull(taskManagerAddress);
 		this.tmpDirPaths = checkNotNull(tmpDirPaths);
@@ -110,6 +120,8 @@ public class TaskManagerServicesConfiguration {
 		checkArgument(timerServiceShutdownTimeout >= 0L, "The timer " +
 			"service shutdown timeout must be greater or equal to 0.");
 		this.timerServiceShutdownTimeout = timerServiceShutdownTimeout;
+
+		this.resourceProfileList.addAll(checkNotNull(resourceProfileList));
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -174,6 +186,10 @@ public class TaskManagerServicesConfiguration {
 
 	public long getTimerServiceShutdownTimeout() {
 		return timerServiceShutdownTimeout;
+	}
+
+	public List<ResourceProfile> getResourceProfileList() {
+		return resourceProfileList;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -249,6 +265,18 @@ public class TaskManagerServicesConfiguration {
 
 		long timerServiceShutdownTimeout = AkkaUtils.getTimeout(configuration).toMillis();
 
+		List<ResourceProfile> resourceProfiles = new ArrayList<>(slots);
+		String resource = configuration.getString(TaskManagerOptions.TASK_MANAGER_RESOURCE_PROFILE_KEY);
+		if (!resource.isEmpty()) {
+			ByteArrayInputStream input = new ByteArrayInputStream(Base64.decodeBase64(resource));
+			ObjectInputStream rpInput = new ObjectInputStream(input);
+			ResourceProfile resourceProfile = (ResourceProfile)rpInput.readObject();
+			rpInput.close();
+			for (int i = 0; i < slots; ++i) {
+				resourceProfiles.add(resourceProfile);
+			}
+		}
+
 		return new TaskManagerServicesConfiguration(
 			remoteAddress,
 			tmpDirs,
@@ -261,7 +289,8 @@ public class TaskManagerServicesConfiguration {
 			memType,
 			preAllocateMemory,
 			memoryFraction,
-			timerServiceShutdownTimeout);
+			timerServiceShutdownTimeout,
+			resourceProfiles);
 	}
 
 	// --------------------------------------------------------------------------

@@ -265,6 +265,45 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 		return cmp;
 	}
 
+	/**
+	 * Compute the result of subtract another resource from this piece of resource. The extended resource not included in this
+	 * resource will cause IllegalArgumentException.
+	 *
+	 * This method do not check whether enough resource is present. The caller of this method is responsible to do the checking.
+	 *
+	 * @param another The resource to subtract.
+	 * @return The result of subtract another resource from this resource.
+	 *
+	 * @throws IllegalArgumentException The extended resource not included in this resource will cause IllegalArgumentException.
+	 */
+	public ResourceProfile minus(ResourceProfile another) {
+		for (String extendedResourceName : another.extendedResources.keySet()) {
+			if (!extendedResources.containsKey(extendedResourceName)) {
+				throw new IllegalArgumentException("Non-exist extended resource: " + extendedResourceName);
+			}
+		}
+
+		Map<String, Resource> newExtendedResource = new HashMap<String, Resource>(extendedResources.size());
+
+		for (Map.Entry<String, Resource> entry : extendedResources.entrySet()) {
+			Resource anotherResource = another.extendedResources.get(entry.getKey());
+
+			if (anotherResource == null) {
+				newExtendedResource.put(entry.getKey(), entry.getValue());
+			} else {
+				newExtendedResource.put(entry.getKey(), entry.getValue().minus(anotherResource));
+			}
+		}
+
+		return new ResourceProfile(
+			cpuCores - another.cpuCores,
+			heapMemoryInMB - another.heapMemoryInMB,
+			directMemoryInMB - another.directMemoryInMB,
+			nativeMemoryInMB - another.nativeMemoryInMB,
+			networkMemoryInMB - another.networkMemoryInMB,
+			newExtendedResource);
+	}
+
 	// ------------------------------------------------------------------------
 
 	@Override
@@ -310,7 +349,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			'}';
 	}
 
-	static ResourceProfile fromResourceSpec(ResourceSpec resourceSpec, int networkMemory) {
+	public static ResourceProfile fromResourceSpec(ResourceSpec resourceSpec, int networkMemory) {
 		Map<String, Resource> copiedExtendedResources = new HashMap<>(resourceSpec.getExtendedResources());
 
 		return new ResourceProfile(
