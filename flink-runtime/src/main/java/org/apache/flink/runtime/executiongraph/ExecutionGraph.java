@@ -158,12 +158,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	/** In place updater for the execution graph's current state. Avoids having to use an
 	 * AtomicReference and thus makes the frequent read access a bit faster. */
 	private static final AtomicReferenceFieldUpdater<ExecutionGraph, JobStatus> STATE_UPDATER =
-			AtomicReferenceFieldUpdater.newUpdater(ExecutionGraph.class, JobStatus.class, "state");
+		AtomicReferenceFieldUpdater.newUpdater(ExecutionGraph.class, JobStatus.class, "state");
 
 	/** In place updater for the execution graph's current global recovery version.
 	 * Avoids having to use an AtomicLong and thus makes the frequent read access a bit faster */
 	private static final AtomicLongFieldUpdater<ExecutionGraph> GLOBAL_VERSION_UPDATER =
-			AtomicLongFieldUpdater.newUpdater(ExecutionGraph.class, "globalModVersion");
+		AtomicLongFieldUpdater.newUpdater(ExecutionGraph.class, "globalModVersion");
 
 	/** The log object used for debugging. */
 	static final Logger LOG = LoggerFactory.getLogger(ExecutionGraph.class);
@@ -290,6 +290,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	 * available after archiving. */
 	private CheckpointStatsTracker checkpointStatsTracker;
 
+	private long updatePartitionInfoSendInterval;
+
 	// ------ Fields that are only relevant for archived execution graphs ------------
 	private String jsonPlan;
 
@@ -302,15 +304,15 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	 */
 	@VisibleForTesting
 	ExecutionGraph(
-			ScheduledExecutorService futureExecutor,
-			Executor ioExecutor,
-			JobID jobId,
-			String jobName,
-			Configuration jobConfig,
-			SerializedValue<ExecutionConfig> serializedConfig,
-			Time timeout,
-			RestartStrategy restartStrategy,
-			SlotProvider slotProvider) throws IOException {
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		JobID jobId,
+		String jobName,
+		Configuration jobConfig,
+		SerializedValue<ExecutionConfig> serializedConfig,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		SlotProvider slotProvider) throws IOException {
 
 		this(
 			new JobInformation(
@@ -332,12 +334,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	 */
 	@VisibleForTesting
 	ExecutionGraph(
-			JobInformation jobInformation,
-			ScheduledExecutorService futureExecutor,
-			Executor ioExecutor,
-			Time timeout,
-			RestartStrategy restartStrategy,
-			SlotProvider slotProvider) throws IOException {
+		JobInformation jobInformation,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		SlotProvider slotProvider) throws IOException {
 		this(
 			jobInformation,
 			futureExecutor,
@@ -350,13 +352,13 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 	@VisibleForTesting
 	ExecutionGraph(
-			JobInformation jobInformation,
-			ScheduledExecutorService futureExecutor,
-			Executor ioExecutor,
-			Time timeout,
-			RestartStrategy restartStrategy,
-			FailoverStrategy.Factory failoverStrategy,
-			SlotProvider slotProvider) throws IOException {
+		JobInformation jobInformation,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		FailoverStrategy.Factory failoverStrategy,
+		SlotProvider slotProvider) throws IOException {
 		this(
 			jobInformation,
 			futureExecutor,
@@ -371,16 +373,16 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	}
 
 	public ExecutionGraph(
-			JobInformation jobInformation,
-			ScheduledExecutorService futureExecutor,
-			Executor ioExecutor,
-			Time rpcTimeout,
-			RestartStrategy restartStrategy,
-			FailoverStrategy.Factory failoverStrategyFactory,
-			SlotProvider slotProvider,
-			ClassLoader userClassLoader,
-			BlobWriter blobWriter,
-			Time allocationTimeout) throws IOException {
+		JobInformation jobInformation,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time rpcTimeout,
+		RestartStrategy restartStrategy,
+		FailoverStrategy.Factory failoverStrategyFactory,
+		SlotProvider slotProvider,
+		ClassLoader userClassLoader,
+		BlobWriter blobWriter,
+		Time allocationTimeout) throws IOException {
 
 		checkNotNull(futureExecutor);
 
@@ -463,19 +465,19 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	}
 
 	public void enableCheckpointing(
-			long interval,
-			long checkpointTimeout,
-			long minPauseBetweenCheckpoints,
-			int maxConcurrentCheckpoints,
-			CheckpointRetentionPolicy retentionPolicy,
-			List<ExecutionJobVertex> verticesToTrigger,
-			List<ExecutionJobVertex> verticesToWaitFor,
-			List<ExecutionJobVertex> verticesToCommitTo,
-			List<MasterTriggerRestoreHook<?>> masterHooks,
-			CheckpointIDCounter checkpointIDCounter,
-			CompletedCheckpointStore checkpointStore,
-			StateBackend checkpointStateBackend,
-			CheckpointStatsTracker statsTracker) {
+		long interval,
+		long checkpointTimeout,
+		long minPauseBetweenCheckpoints,
+		int maxConcurrentCheckpoints,
+		CheckpointRetentionPolicy retentionPolicy,
+		List<ExecutionJobVertex> verticesToTrigger,
+		List<ExecutionJobVertex> verticesToWaitFor,
+		List<ExecutionJobVertex> verticesToCommitTo,
+		List<MasterTriggerRestoreHook<?>> masterHooks,
+		CheckpointIDCounter checkpointIDCounter,
+		CompletedCheckpointStore checkpointStore,
+		StateBackend checkpointStateBackend,
+		CheckpointStatsTracker statsTracker) {
 
 		// simple sanity checks
 		checkArgument(interval >= 10, "checkpoint interval must not be below 10ms");
@@ -747,6 +749,15 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	}
 
 	/**
+	 * Returns the ExecutionContext associated with this ExecutionGraph.
+	 *
+	 * @return ExecutionContext associated with this ExecutionGraph
+	 */
+	public ScheduledExecutorService getFutureExecutorService() {
+		return futureExecutor;
+	}
+
+	/**
 	 * Merges all accumulator results from the tasks previously executed in the Executions.
 	 * @return The accumulator map
 	 */
@@ -804,6 +815,15 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		return StringifiedAccumulatorResult.stringifyAccumulatorResults(accumulatorMap);
 	}
 
+	public long getUpdatePartitionInfoSendInterval() {
+		return updatePartitionInfoSendInterval;
+	}
+
+	public void setUpdatePartitionInfoSendInterval(long updatePartitionInfoSendInterval) {
+		this.updatePartitionInfoSendInterval = updatePartitionInfoSendInterval;
+	}
+
+
 	// --------------------------------------------------------------------------------------------
 	//  Actions
 	// --------------------------------------------------------------------------------------------
@@ -812,7 +832,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 		LOG.debug("Attaching {} topologically sorted vertices to existing job graph with {} " +
 				"vertices and {} intermediate results.",
-				topologiallySorted.size(), tasks.size(), intermediateResults.size());
+			topologiallySorted.size(), tasks.size(), intermediateResults.size());
 
 		final ArrayList<ExecutionJobVertex> newExecJobVertices = new ArrayList<>(topologiallySorted.size());
 		final long createTimestamp = System.currentTimeMillis();
@@ -837,14 +857,14 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			ExecutionJobVertex previousTask = this.tasks.putIfAbsent(jobVertex.getID(), ejv);
 			if (previousTask != null) {
 				throw new JobException(String.format("Encountered two job vertices with ID %s : previous=[%s] / new=[%s]",
-						jobVertex.getID(), ejv, previousTask));
+					jobVertex.getID(), ejv, previousTask));
 			}
 
 			for (IntermediateResult res : ejv.getProducedDataSets()) {
 				IntermediateResult previousDataSet = this.intermediateResults.putIfAbsent(res.getId(), res);
 				if (previousDataSet != null) {
 					throw new JobException(String.format("Encountered two intermediate data set with ID %s : previous=[%s] / new=[%s]",
-							res.getId(), res, previousDataSet));
+						res.getId(), res, previousDataSet));
 				}
 			}
 
@@ -1467,7 +1487,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			}
 			else if (current.isGloballyTerminalState()) {
 				LOG.warn("Job has entered globally terminal state without waiting for all " +
-						"job vertices to reach final state.");
+					"job vertices to reach final state.");
 				break;
 			}
 			else {
@@ -1512,7 +1532,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 				}
 				else if (!isRestartable && transitionState(currentState, JobStatus.FAILED, failureCause)) {
 					final String cause1 = isFailureCauseAllowingRestart ? null :
-							"a type of SuppressRestartsException was thrown";
+						"a type of SuppressRestartsException was thrown";
 					final String cause2 = isRestartStrategyAllowingRestart ? null :
 						"the restart strategy prevented it";
 
@@ -1727,9 +1747,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	}
 
 	void notifyExecutionChange(
-			final Execution execution,
-			final ExecutionState newExecutionState,
-			final Throwable error) {
+		final Execution execution,
+		final ExecutionState newExecutionState,
+		final Throwable error) {
 
 		if (executionListeners.size() > 0) {
 			final ExecutionJobVertex vertex = execution.getVertex().getJobVertex();
@@ -1739,9 +1759,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			for (ExecutionStatusListener listener : executionListeners) {
 				try {
 					listener.executionStatusChanged(
-							getJobID(), vertex.getJobVertexId(), vertex.getJobVertex().getName(),
-							vertex.getParallelism(), execution.getParallelSubtaskIndex(),
-							execution.getAttemptId(), newExecutionState, timestamp, message);
+						getJobID(), vertex.getJobVertexId(), vertex.getJobVertex().getName(),
+						vertex.getParallelism(), execution.getParallelSubtaskIndex(),
+						execution.getAttemptId(), newExecutionState, timestamp, message);
 				} catch (Throwable t) {
 					LOG.warn("Error while notifying ExecutionStatusListener", t);
 				}

@@ -29,18 +29,13 @@ import org.apache.flink.runtime.accumulators.StringifiedAccumulatorResult;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
-import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
-import org.apache.flink.runtime.deployment.InputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescriptor;
-import org.apache.flink.runtime.deployment.ResultPartitionLocation;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
-import org.apache.flink.runtime.io.network.ConnectionID;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
@@ -71,6 +66,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.stream.Collectors;
@@ -108,7 +105,7 @@ import static org.apache.flink.util.Preconditions.checkState;
 public class Execution implements AccessExecution, Archiveable<ArchivedExecution>, LogicalSlot.Payload {
 
 	private static final AtomicReferenceFieldUpdater<Execution, ExecutionState> STATE_UPDATER =
-			AtomicReferenceFieldUpdater.newUpdater(Execution.class, ExecutionState.class, "state");
+		AtomicReferenceFieldUpdater.newUpdater(Execution.class, ExecutionState.class, "state");
 
 	private static final AtomicReferenceFieldUpdater<Execution, LogicalSlot> ASSIGNED_SLOT_UPDATER = AtomicReferenceFieldUpdater.newUpdater(
 		Execution.class,
@@ -180,9 +177,13 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 	// --------------------------------------------------------------------------------------------
 
+	private final Object updatePartitionLock = new Object();
+
+	private ScheduledFuture updatePartitionFuture;
+
 	/**
 	 * Creates a new Execution attempt.
-	 * 
+	 *
 	 * @param executor
 	 *             The executor used to dispatch callbacks from futures and asynchronous RPC calls.
 	 * @param vertex
@@ -197,12 +198,12 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 *             The rpcTimeout for RPC calls like deploy/cancel/stop.
 	 */
 	public Execution(
-			Executor executor,
-			ExecutionVertex vertex,
-			int attemptNumber,
-			long globalModVersion,
-			long startTimestamp,
-			Time rpcTimeout) {
+		Executor executor,
+		ExecutionVertex vertex,
+		int attemptNumber,
+		long globalModVersion,
+		long startTimestamp,
+		Time rpcTimeout) {
 
 		this.executor = checkNotNull(executor);
 		this.vertex = checkNotNull(vertex);
@@ -253,7 +254,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 	/**
 	 * Gets the global modification version of the execution graph when this execution was created.
-	 * 
+	 *
 	 * <p>This version is bumped in the ExecutionGraph whenever a global failover happens. It is used
 	 * to resolve conflicts between concurrent modification by global and local failover actions.
 	 */
@@ -390,7 +391,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * NOTE: This method only throws exceptions if it is in an illegal state to be scheduled, or if the tasks needs
 	 *       to be scheduled immediately and no resource is available. If the task is accepted by the schedule, any
 	 *       error sets the vertex state to failed and triggers the recovery logic.
-	 * 
+	 *
 	 * @param slotProvider The slot provider to use to allocate slot for this execution attempt.
 	 * @param queued Flag to indicate whether the scheduler may queue this task if it cannot
 	 *               immediately deploy it.
@@ -398,9 +399,9 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * @return Future which is completed once the Execution has been deployed
 	 */
 	public CompletableFuture<Void> scheduleForExecution(
-			SlotProvider slotProvider,
-			boolean queued,
-			LocationPreferenceConstraint locationPreferenceConstraint) {
+		SlotProvider slotProvider,
+		boolean queued,
+		LocationPreferenceConstraint locationPreferenceConstraint) {
 		final Time allocationTimeout = vertex.getExecutionGraph().getAllocationTimeout();
 		try {
 			final CompletableFuture<Execution> allocationFuture = allocateAndAssignSlotForExecution(
@@ -450,10 +451,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * @throws IllegalExecutionStateException if this method has been called while not being in the CREATED state
 	 */
 	public CompletableFuture<Execution> allocateAndAssignSlotForExecution(
-			SlotProvider slotProvider,
-			boolean queued,
-			LocationPreferenceConstraint locationPreferenceConstraint,
-			Time allocationTimeout) throws IllegalExecutionStateException {
+		SlotProvider slotProvider,
+		boolean queued,
+		LocationPreferenceConstraint locationPreferenceConstraint,
+		Time allocationTimeout) throws IllegalExecutionStateException {
 
 		checkNotNull(slotProvider);
 
@@ -463,7 +464,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		// sanity check
 		if (locationConstraint != null && sharingGroup == null) {
 			throw new IllegalStateException(
-					"Trying to schedule with co-location constraint but without slot sharing allowed.");
+				"Trying to schedule with co-location constraint but without slot sharing allowed.");
 		}
 
 		// this method only works if the execution is in the state 'CREATED'
@@ -472,8 +473,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			final SlotSharingGroupId slotSharingGroupId = sharingGroup != null ? sharingGroup.getSlotSharingGroupId() : null;
 
 			ScheduledUnit toSchedule = locationConstraint == null ?
-					new ScheduledUnit(this, slotSharingGroupId) :
-					new ScheduledUnit(this, slotSharingGroupId, locationConstraint);
+				new ScheduledUnit(this, slotSharingGroupId) :
+				new ScheduledUnit(this, slotSharingGroupId, locationConstraint);
 
 			// try to extract previous allocation ids, if applicable, so that we can reschedule to the same slot
 			ExecutionVertex executionVertex = getVertex();
@@ -628,7 +629,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 			if (LOG.isInfoEnabled()) {
 				LOG.info(String.format("Deploying %s (attempt #%d) to %s", vertex.getTaskNameWithSubtaskIndex(),
-						attemptNumber, getAssignedResourceLocation().getHostname()));
+					attemptNumber, getAssignedResourceLocation().getHostname()));
 			}
 
 			final TaskDeploymentDescriptor deployment = vertex.createDeploymentDescriptor(
@@ -642,24 +643,28 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 			final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
-			final CompletableFuture<Acknowledge> submitResultFuture = taskManagerGateway.submitTask(deployment, rpcTimeout);
+			executor.execute(
+				() -> {
+					final CompletableFuture<Acknowledge> submitResultFuture = taskManagerGateway.submitTask(deployment, rpcTimeout);
 
-			submitResultFuture.whenCompleteAsync(
-				(ack, failure) -> {
-					// only respond to the failure case
-					if (failure != null) {
-						if (failure instanceof TimeoutException) {
-							String taskname = vertex.getTaskNameWithSubtaskIndex() + " (" + attemptId + ')';
+					submitResultFuture.whenCompleteAsync(
+						(ack, failure) -> {
+							// only respond to the failure case
+							if (failure != null) {
+								if (failure instanceof TimeoutException) {
+									String taskname = vertex.getTaskNameWithSubtaskIndex() + " (" + attemptId + ')';
 
-							markFailed(new Exception(
-								"Cannot deploy task " + taskname + " - TaskManager (" + getAssignedResourceLocation()
-									+ ") not responding after a rpcTimeout of " + rpcTimeout, failure));
-						} else {
-							markFailed(failure);
-						}
-					}
-				},
-				executor);
+									markFailed(new Exception(
+										"Cannot deploy task " + taskname + " - TaskManager (" + getAssignedResourceLocation()
+											+ ") not responding after a rpcTimeout of " + rpcTimeout, failure));
+								} else {
+									markFailed(failure);
+								}
+							}
+						},
+						executor);
+				}
+			);
 		}
 		catch (Throwable t) {
 			markFailed(t);
@@ -773,10 +778,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			// ----------------------------------------------------------------
 			if (consumerState == CREATED) {
 				final Execution partitionExecution = partition.getProducer()
-						.getCurrentExecutionAttempt();
+					.getCurrentExecutionAttempt();
 
 				consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor.fromEdge(
-						partition, partitionExecution));
+					partition, partitionExecution));
 
 				// When deploying a consuming task, its task deployment descriptor will contain all
 				// deployment information available at the respective time. It is possible that some
@@ -796,7 +801,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 								LocationPreferenceConstraint.ANY); // there must be at least one known location
 						} catch (Throwable t) {
 							consumerVertex.fail(new IllegalStateException("Could not schedule consumer " +
-									"vertex " + consumerVertex, t));
+								"vertex " + consumerVertex, t));
 						}
 
 						return null;
@@ -813,45 +818,11 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			// ----------------------------------------------------------------
 			else {
 				if (consumerState == RUNNING) {
-					final LogicalSlot consumerSlot = consumer.getAssignedResource();
-
-					if (consumerSlot == null) {
-						// The consumer has been reset concurrently
-						continue;
-					}
-
-					final TaskManagerLocation partitionTaskManagerLocation = partition.getProducer()
-							.getCurrentAssignedResource().getTaskManagerLocation();
-					final ResourceID partitionTaskManager = partitionTaskManagerLocation.getResourceID();
-					
-					final ResourceID consumerTaskManager = consumerSlot.getTaskManagerLocation().getResourceID();
-
-					final ResultPartitionID partitionId = new ResultPartitionID(partition.getPartitionId(), attemptId);
-					
-
-					final ResultPartitionLocation partitionLocation;
-
-					if (consumerTaskManager.equals(partitionTaskManager)) {
-						// Consuming task is deployed to the same instance as the partition => local
-						partitionLocation = ResultPartitionLocation.createLocal();
-					}
-					else {
-						// Different instances => remote
-						final ConnectionID connectionId = new ConnectionID(
-								partitionTaskManagerLocation,
-								partition.getIntermediateResult().getConnectionIndex());
-
-						partitionLocation = ResultPartitionLocation.createRemote(connectionId);
-					}
-
-					final InputChannelDeploymentDescriptor descriptor = new InputChannelDeploymentDescriptor(
-							partitionId, partitionLocation);
-
-					consumer.sendUpdatePartitionInfoRpcCall(
-						Collections.singleton(
-							new PartitionInfo(
-								partition.getIntermediateResult().getId(),
-								descriptor)));
+					// cache the partition info and trigger a timer to group them and send in batch
+					final Execution partitionExecution = partition.getProducer()
+						.getCurrentExecutionAttempt();
+					consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor.fromEdge(partition, partitionExecution));
+					consumerVertex.getCurrentExecutionAttempt().sendPartitionInfoAsync();
 				}
 				// ----------------------------------------------------------------
 				// Consumer is scheduled or deploying => cache input channel
@@ -859,10 +830,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 				// ----------------------------------------------------------------
 				else if (consumerState == SCHEDULED || consumerState == DEPLOYING) {
 					final Execution partitionExecution = partition.getProducer()
-							.getCurrentExecutionAttempt();
+						.getCurrentExecutionAttempt();
 
 					consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor
-							.fromEdge(partition, partitionExecution));
+						.fromEdge(partition, partitionExecution));
 
 					// double check to resolve race conditions
 					if (consumerVertex.getExecutionState() == RUNNING) {
@@ -895,11 +866,11 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * @return Future stack trace sample response
 	 */
 	public CompletableFuture<StackTraceSampleResponse> requestStackTraceSample(
-			int sampleId,
-			int numSamples,
-			Time delayBetweenSamples,
-			int maxStackTraceDepth,
-			Time timeout) {
+		int sampleId,
+		int numSamples,
+		Time delayBetweenSamples,
+		int maxStackTraceDepth,
+		Time timeout) {
 
 		final LogicalSlot slot = assignedResource;
 
@@ -991,10 +962,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 				if (transitionState(current, FINISHED)) {
 					try {
 						for (IntermediateResultPartition finishedPartition
-								: getVertex().finishAllBlockingPartitions()) {
+							: getVertex().finishAllBlockingPartitions()) {
 
 							IntermediateResultPartition[] allPartitions = finishedPartition
-									.getIntermediateResult().getPartitions();
+								.getIntermediateResult().getPartitions();
 
 							for (IntermediateResultPartition partition : allPartitions) {
 								scheduleOrUpdateConsumers(partition.getConsumers());
@@ -1036,7 +1007,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	void cancelingComplete() {
 		cancelingComplete(null, null);
 	}
-	
+
 	void cancelingComplete(Map<String, Accumulator<?, ?>> userAccumulators, IOMetrics metrics) {
 
 		// the taskmanagers can themselves cancel tasks without an external trigger, if they find that the
@@ -1086,6 +1057,11 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	void sendPartitionInfos() {
+		if (updatePartitionFuture != null) {
+			synchronized (updatePartitionLock) {
+				updatePartitionFuture = null;
+			}
+		}
 		// check if the ExecutionVertex has already been archived and thus cleared the
 		// partial partition infos queue
 		if (partialInputChannelDeploymentDescriptors != null && !partialInputChannelDeploymentDescriptors.isEmpty()) {
@@ -1102,6 +1078,17 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			}
 
 			sendUpdatePartitionInfoRpcCall(partitionInfos);
+		}
+	}
+
+	void sendPartitionInfoAsync() {
+		synchronized (updatePartitionLock) {
+			if (updatePartitionFuture == null) {
+				updatePartitionFuture = getVertex().getExecutionGraph().getFutureExecutorService().schedule(
+					() -> {
+						sendPartitionInfos();
+					}, vertex.getExecutionGraph().getUpdatePartitionInfoSendInterval(), TimeUnit.MILLISECONDS);
+			}
 		}
 	}
 
@@ -1198,14 +1185,14 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			else if (currentState == CANCELING || currentState == FAILED) {
 				if (LOG.isDebugEnabled()) {
 					// this log statement is guarded because the 'getVertexWithAttempt()' method
-					// performs string concatenations 
+					// performs string concatenations
 					LOG.debug("Concurrent canceling/failing of {} while deployment was in progress.", getVertexWithAttempt());
 				}
 				sendCancelRpcCall();
 			}
 			else {
 				String message = String.format("Concurrent unexpected state transition of task %s to %s while deployment was in progress.",
-						getVertexWithAttempt(), currentState);
+					getVertexWithAttempt(), currentState);
 
 				if (LOG.isDebugEnabled()) {
 					LOG.debug(message);
@@ -1265,7 +1252,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * @param partitionInfos for the remote task
 	 */
 	private void sendUpdatePartitionInfoRpcCall(
-			final Iterable<PartitionInfo> partitionInfos) {
+		final Iterable<PartitionInfo> partitionInfos) {
 
 		final LogicalSlot slot = assignedResource;
 
@@ -1273,16 +1260,21 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 			final TaskManagerLocation taskManagerLocation = slot.getTaskManagerLocation();
 
-			CompletableFuture<Acknowledge> updatePartitionsResultFuture = taskManagerGateway.updatePartitions(attemptId, partitionInfos, rpcTimeout);
+			executor.execute(
+				() -> {
+					CompletableFuture<Acknowledge> updatePartitionsResultFuture =
+						taskManagerGateway.updatePartitions(attemptId, partitionInfos, rpcTimeout);
 
-			updatePartitionsResultFuture.whenCompleteAsync(
-				(ack, failure) -> {
-					// fail if there was a failure
-					if (failure != null) {
-						fail(new IllegalStateException("Update task on TaskManager " + taskManagerLocation +
-							" failed due to:", failure));
-					}
-				}, executor);
+					updatePartitionsResultFuture.whenCompleteAsync(
+						(ack, failure) -> {
+							// fail if there was a failure
+							if (failure != null) {
+								fail(new IllegalStateException("Update task on TaskManager " + taskManagerLocation +
+									" failed due to:", failure));
+							}
+						}, executor);
+				}
+			);
 		}
 	}
 
@@ -1407,7 +1399,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	// ------------------------------------------------------------------------
 	//  Accumulators
 	// ------------------------------------------------------------------------
-	
+
 	/**
 	 * Update accumulators (discarded when the Execution has already been terminated).
 	 * @param userAccumulators the user accumulators
@@ -1419,7 +1411,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			}
 		}
 	}
-	
+
 	public Map<String, Accumulator<?, ?>> getUserAccumulators() {
 		return userAccumulators;
 	}
@@ -1439,7 +1431,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	public int getParallelSubtaskIndex() {
 		return getVertex().getParallelSubtaskIndex();
 	}
-		
+
 	@Override
 	public IOMetrics getIOMetrics() {
 		return ioMetrics;
@@ -1459,13 +1451,13 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	// ------------------------------------------------------------------------
 	//  Standard utilities
 	// ------------------------------------------------------------------------
-	
+
 	@Override
 	public String toString() {
 		final LogicalSlot slot = assignedResource;
 
 		return String.format("Attempt #%d (%s) @ %s - [%s]", attemptNumber, vertex.getTaskNameWithSubtaskIndex(),
-				(slot == null ? "(unassigned)" : slot), state);
+			(slot == null ? "(unassigned)" : slot), state);
 	}
 
 	@Override
