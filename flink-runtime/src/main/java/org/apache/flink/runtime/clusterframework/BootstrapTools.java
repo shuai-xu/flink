@@ -68,7 +68,8 @@ public class BootstrapTools {
 	private static final Logger LOG = LoggerFactory.getLogger(BootstrapTools.class);
 
 	/**
-	 * Starts an ActorSystem with the given configuration listening at the address/ports.
+	 * Starts an ActorSystem with the given configuration listening at the address/ports,
+	 * without enlarge the ThreadPool.
 	 * @param configuration The Flink configuration
 	 * @param listeningAddress The address to listen at.
 	 * @param portRangeDefinition The port range to choose a port from.
@@ -81,6 +82,25 @@ public class BootstrapTools {
 			String listeningAddress,
 			String portRangeDefinition,
 			Logger logger) throws Exception {
+		return startActorSystem(configuration, listeningAddress, portRangeDefinition, logger, false);
+	}
+
+	/**
+	 * Starts an ActorSystem with the given configuration listening at the address/ports.
+	 * @param configuration The Flink configuration
+	 * @param listeningAddress The address to listen at.
+	 * @param portRangeDefinition The port range to choose a port from.
+	 * @param logger The logger to output log information.
+	 * @param enlargeThreadPool Whether this ActorSystem use a config that enlarge the ThreadPool
+	 * @return The ActorSystem which has been started
+	 * @throws Exception
+	 */
+	public static ActorSystem startActorSystem(
+		Configuration configuration,
+		String listeningAddress,
+		String portRangeDefinition,
+		Logger logger,
+		boolean enlargeThreadPool) throws Exception {
 
 		// parse port range definition and create port iterator
 		Iterator<Integer> portsIterator;
@@ -93,14 +113,7 @@ public class BootstrapTools {
 		while (portsIterator.hasNext()) {
 			// first, we check if the port is available by opening a socket
 			// if the actor system fails to start on the port, we try further
-			ServerSocket availableSocket = NetUtils.createSocketFromPorts(
-				portsIterator,
-				new NetUtils.SocketFactory() {
-					@Override
-					public ServerSocket createSocket(int port) throws IOException {
-						return new ServerSocket(port);
-					}
-				});
+			ServerSocket availableSocket = NetUtils.createSocketFromPorts(portsIterator, ServerSocket::new);
 
 			int port;
 			if (availableSocket == null) {
@@ -113,7 +126,7 @@ public class BootstrapTools {
 			}
 
 			try {
-				return startActorSystem(configuration, listeningAddress, port, logger);
+				return startActorSystem(configuration, listeningAddress, port, logger, enlargeThreadPool);
 			}
 			catch (Exception e) {
 				// we can continue to try if this contains a netty channel exception
@@ -131,7 +144,7 @@ public class BootstrapTools {
 	}
 
 	/**
-	 * Starts an Actor System at a specific port.
+	 * Starts an Actor System at a specific port without enlarge the ThreadPool.
 	 * @param configuration The Flink configuration.
 	 * @param listeningAddress The address to listen at.
 	 * @param listeningPort The port to listen at.
@@ -144,15 +157,34 @@ public class BootstrapTools {
 				String listeningAddress,
 				int listeningPort,
 				Logger logger) throws Exception {
+		return startActorSystem(configuration, listeningAddress, listeningPort, logger, false);
+	}
+
+	/**
+	 * Starts an Actor System at a specific port.
+	 * @param configuration The Flink configuration.
+	 * @param listeningAddress The address to listen at.
+	 * @param listeningPort The port to listen at.
+	 * @param logger the logger to output log information.
+	 * @param enlargeThreadPool Whether this ActorSystem use a config that enlarge the ThreadPool.
+	 * @return The ActorSystem which has been started.
+	 * @throws Exception
+	 */
+	public static ActorSystem startActorSystem(
+		Configuration configuration,
+		String listeningAddress,
+		int listeningPort,
+		Logger logger,
+		boolean enlargeThreadPool) throws Exception {
 
 		String hostPortUrl = NetUtils.unresolvedHostAndPortToNormalizedString(listeningAddress, listeningPort);
 		logger.info("Trying to start actor system at {}", hostPortUrl);
 
 		try {
-			Config akkaConfig = AkkaUtils.getAkkaConfig(
-				configuration,
-				new Some<>(new Tuple2<>(listeningAddress, listeningPort))
-			);
+			scala.Option<Tuple2<String, Object>> externalAddress = new Some<>(new Tuple2<>(listeningAddress, listeningPort));
+
+			Config akkaConfig = enlargeThreadPool ? AkkaUtils.getJobMasterAkkaConfig(configuration, externalAddress)
+												  : AkkaUtils.getAkkaConfig(configuration, externalAddress);
 
 			logger.debug("Using akka configuration\n {}", akkaConfig);
 

@@ -2143,7 +2143,8 @@ object JobManager {
       configuration,
       externalHostname,
       port,
-      LOG.logger)
+      LOG.logger,
+      true)
 
     val address = AkkaUtils.getAddress(jobManagerSystem)
 

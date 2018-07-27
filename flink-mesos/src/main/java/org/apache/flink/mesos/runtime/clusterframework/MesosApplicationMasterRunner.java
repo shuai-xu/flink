@@ -241,7 +241,7 @@ public class MesosApplicationMasterRunner {
 
 			// try to start the actor system, JobManager and JobManager actor system
 			// using the configured address and ports
-			actorSystem = BootstrapTools.startActorSystem(config, appMasterHostname, listeningPort, LOG);
+			actorSystem = BootstrapTools.startActorSystem(config, appMasterHostname, listeningPort, LOG, true);
 
 			Address address = AkkaUtils.getAddress(actorSystem);
 			final String akkaHostname = address.host().get();

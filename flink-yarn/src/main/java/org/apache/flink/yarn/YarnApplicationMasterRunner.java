@@ -284,7 +284,7 @@ public class YarnApplicationMasterRunner {
 			final String amPortRange = config.getString(
 					YarnConfigOptions.APPLICATION_MASTER_PORT);
 
-			actorSystem = BootstrapTools.startActorSystem(config, appMasterHostname, amPortRange, LOG);
+			actorSystem = BootstrapTools.startActorSystem(config, appMasterHostname, amPortRange, LOG, true);
 
 			final String akkaHostname = AkkaUtils.getAddress(actorSystem).host().get();
 			final int akkaPort = (Integer) AkkaUtils.getAddress(actorSystem).port().get();

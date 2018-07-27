@@ -391,7 +391,7 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler {
 			Configuration configuration,
 			String bindAddress,
 			String portRange) throws Exception {
-		ActorSystem actorSystem = BootstrapTools.startActorSystem(configuration, bindAddress, portRange, LOG);
+		ActorSystem actorSystem = BootstrapTools.startActorSystem(configuration, bindAddress, portRange, LOG, true);
 		FiniteDuration duration = AkkaUtils.getTimeout(configuration);
 		return new AkkaRpcService(actorSystem, Time.of(duration.length(), duration.unit()));
 	}
