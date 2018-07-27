@@ -46,19 +46,23 @@ public class SlotStatus implements Serializable {
 	/** if the slot is allocated, jobId identify which job this slot is allocated to; else, jobId is null */
 	private final JobID jobID;
 
+	private final long version;
+
 	public SlotStatus(SlotID slotID, ResourceProfile resourceProfile) {
-		this(slotID, resourceProfile, null, null);
+		this(slotID, resourceProfile, null, null, 0L);
 	}
 
 	public SlotStatus(
 			SlotID slotID,
 			ResourceProfile resourceProfile,
 			JobID jobID,
-			AllocationID allocationID) {
+			AllocationID allocationID,
+			long version) {
 		this.slotID = checkNotNull(slotID, "slotID cannot be null");
 		this.resourceProfile = checkNotNull(resourceProfile, "profile cannot be null");
 		this.allocationID = allocationID;
 		this.jobID = jobID;
+		this.version = version;
 	}
 
 	/**
@@ -97,6 +101,10 @@ public class SlotStatus implements Serializable {
 		return jobID;
 	}
 
+	public long getVersion() {
+		return version;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -117,6 +125,9 @@ public class SlotStatus implements Serializable {
 		if (allocationID != null ? !allocationID.equals(that.allocationID) : that.allocationID != null) {
 			return false;
 		}
+		if (version != that.version) {
+			return false;
+		}
 		return jobID != null ? jobID.equals(that.jobID) : that.jobID == null;
 
 	}
@@ -127,6 +138,7 @@ public class SlotStatus implements Serializable {
 		result = 31 * result + resourceProfile.hashCode();
 		result = 31 * result + (allocationID != null ? allocationID.hashCode() : 0);
 		result = 31 * result + (jobID != null ? jobID.hashCode() : 0);
+		result = 31 * result + Long.hashCode(version);
 		return result;
 	}
 

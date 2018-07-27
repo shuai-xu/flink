@@ -467,7 +467,8 @@ public class TaskExecutorTest extends TestLogger {
 				slotId,
 				resourceProfile,
 				new JobID(),
-				new AllocationID()));
+				new AllocationID(),
+				0L));
 
 		when(taskSlotTable.createSlotReport(any(ResourceID.class))).thenReturn(slotReport1, slotReport2);
 
@@ -894,6 +895,7 @@ public class TaskExecutorTest extends TestLogger {
 				allocationId,
 				jobManagerAddress,
 				resourceManagerLeaderId,
+				1L,
 				timeout);
 
 			slotRequestAck.get();
@@ -1394,6 +1396,7 @@ public class TaskExecutorTest extends TestLogger {
 				allocationId,
 				"foobar",
 				resourceManagerId,
+				1L,
 				timeout).get();
 
 			// wait until the job leader retrieval service for jobId is started
@@ -1518,7 +1521,14 @@ public class TaskExecutorTest extends TestLogger {
 			final ResourceID resourceId = taskExecutorResourceIdFuture.get();
 
 			final SlotID slotId = new SlotID(resourceId, 0);
-			final CompletableFuture<Acknowledge> slotRequestResponse = taskExecutorGateway.requestSlot(slotId, jobId, new AllocationID(), "foobar", testingResourceManagerGateway.getFencingToken(), timeout);
+			final CompletableFuture<Acknowledge> slotRequestResponse = taskExecutorGateway.requestSlot(
+				slotId,
+				jobId,
+				new AllocationID(),
+				"foobar",
+				testingResourceManagerGateway.getFencingToken(),
+				1L,
+				timeout);
 
 			try {
 				slotRequestResponse.get();

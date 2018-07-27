@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.resourcemanager.slotmanager;
 
+import akka.pattern.AskTimeoutException;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
@@ -371,7 +372,8 @@ public class SlotManager implements AutoCloseable {
 					slotStatus.getAllocationID(),
 					slotStatus.getJobID(),
 					slotStatus.getResourceProfile(),
-					taskExecutorConnection);
+					taskExecutorConnection,
+					slotStatus.getVersion());
 			}
 		}
 
@@ -419,7 +421,26 @@ public class SlotManager implements AutoCloseable {
 		if (null != taskManagerRegistration) {
 
 			for (SlotStatus slotStatus : slotReport) {
-				updateSlot(slotStatus.getSlotID(), slotStatus.getAllocationID(), slotStatus.getJobID());
+				TaskManagerSlot taskManagerSlot = slots.get(slotStatus.getSlotID());
+
+				if (slotStatus.getVersion() > taskManagerSlot.getVersion()) {
+					LOG.warn("The version of slot {}'s report {} should not exceed that in ResourceManager {}",
+							slotStatus.getSlotID(), slotStatus.getVersion(), taskManagerSlot.getVersion());
+					continue;
+				}
+
+				if (slotStatus.getVersion() < taskManagerSlot.getVersion()) {
+					if (taskManagerSlot.getState() == TaskManagerSlot.State.SYNCING) {
+						// The initial request timeout and TM send outdated message,
+						// re-send the allocation request in case the initial request lose.
+						reAllocateSlot(taskManagerSlot, taskManagerSlot.getAssignedSlotRequest());
+					} else {
+						LOG.debug("Received outdated slot report from task manager"
+								+ "with instance id {}. Current state leads. Ignoring this report.", instanceId);
+					}
+				} else {
+					updateSlot(slotStatus.getSlotID(), slotStatus.getAllocationID(), slotStatus.getJobID());
+				}
 			}
 
 			return true;
@@ -539,13 +560,15 @@ public class SlotManager implements AutoCloseable {
 	 * @param allocationId which is currently deployed in the slot
 	 * @param resourceProfile of the slot
 	 * @param taskManagerConnection to communicate with the remote task manager
+	 * @param initialVersion The version of the slot status in the TaskManager
 	 */
 	private void registerSlot(
 			SlotID slotId,
 			AllocationID allocationId,
 			JobID jobId,
 			ResourceProfile resourceProfile,
-			TaskExecutorConnection taskManagerConnection) {
+			TaskExecutorConnection taskManagerConnection,
+			long initialVersion) {
 
 		if (slots.containsKey(slotId)) {
 			// remove the old slot first
@@ -555,7 +578,8 @@ public class SlotManager implements AutoCloseable {
 		TaskManagerSlot slot = new TaskManagerSlot(
 			slotId,
 			resourceProfile,
-			taskManagerConnection);
+			taskManagerConnection,
+			initialVersion);
 
 		slots.put(slotId, slot);
 
@@ -598,6 +622,9 @@ public class SlotManager implements AutoCloseable {
 			@Nullable JobID jobId) {
 		if (null != allocationId) {
 			switch (slot.getState()) {
+				case SYNCING:
+					slot.syncState(TaskManagerSlot.State.PENDING);
+					// No break and continue updating the slot state as PENDING
 				case PENDING:
 					// we have a pending slot request --> check whether we have to reject it
 					PendingSlotRequest pendingSlotRequest = slot.getAssignedSlotRequest();
@@ -642,6 +669,9 @@ public class SlotManager implements AutoCloseable {
 		} else {
 			// no allocation reported
 			switch (slot.getState()) {
+				case SYNCING:
+					slot.clearPendingSlotRequest();
+					// No break and continue updating the slot state as FREE
 				case FREE:
 					// the slot is currently free --> but it may be stored in freeSlots
 					freeSlots.remove(slot.getSlotId());
@@ -690,6 +720,67 @@ public class SlotManager implements AutoCloseable {
 	private void allocateSlot(TaskManagerSlot taskManagerSlot, PendingSlotRequest pendingSlotRequest) {
 		Preconditions.checkState(taskManagerSlot.getState() == TaskManagerSlot.State.FREE);
 
+		taskManagerSlot.increaseVersion();
+		taskManagerSlot.assignPendingSlotRequest(pendingSlotRequest);
+
+		CompletableFuture<Acknowledge> completableFuture = sendSlotAllocationRequest(taskManagerSlot, pendingSlotRequest);
+
+		final AllocationID allocationId = pendingSlotRequest.getAllocationId();
+		final SlotID slotId = taskManagerSlot.getSlotId();
+		completableFuture.whenCompleteAsync(
+			(Acknowledge acknowledge, Throwable throwable) -> {
+				try {
+					if (acknowledge != null) {
+						updateSlot(slotId, allocationId, pendingSlotRequest.getJobId());
+					} else {
+						if (throwable instanceof SlotOccupiedException) {
+							SlotOccupiedException exception = (SlotOccupiedException) throwable;
+							updateSlot(slotId, exception.getAllocationId(), exception.getJobId());
+						} else if (throwable instanceof AskTimeoutException || throwable instanceof CancellationException) {
+							syncSlotForSlotRequest(slotId, allocationId);
+						} else {
+							removeSlotRequestFromSlot(slotId, allocationId);
+						}
+
+						if (!(throwable instanceof AskTimeoutException || throwable instanceof CancellationException)) {
+							handleFailedSlotRequest(slotId, allocationId, throwable);
+						} else {
+							LOG.debug("Slot allocation request {} has been cancelled or timeout.", allocationId, throwable);
+						}
+					}
+				} catch (Exception e) {
+					LOG.error("Error while completing the slot allocation.", e);
+				}
+			},
+			mainThreadExecutor);
+	}
+
+	private void reAllocateSlot(TaskManagerSlot taskManagerSlot, PendingSlotRequest pendingSlotRequest) {
+		Preconditions.checkState(taskManagerSlot.getState() == TaskManagerSlot.State.SYNCING,
+			String.format("Slot %s is in state %s", taskManagerSlot.getSlotId(), taskManagerSlot.getState()));
+		LOG.info("Assigning slot {} to allocation {}", taskManagerSlot.getSlotId(), pendingSlotRequest.getAllocationId());
+
+		CompletableFuture<Acknowledge> completableFuture = sendSlotAllocationRequest(taskManagerSlot, pendingSlotRequest);
+
+		final AllocationID allocationId = pendingSlotRequest.getAllocationId();
+		final SlotID slotId = taskManagerSlot.getSlotId();
+		completableFuture.whenCompleteAsync(
+			(Acknowledge acknowledge, Throwable throwable) -> {
+				try {
+					if (acknowledge != null) {
+						updateSlot(slotId, allocationId, pendingSlotRequest.getJobId());
+					} else {
+						// If repeat message fail, do nothing
+						LOG.debug("Slot allocation request {} has failed.", allocationId, throwable);
+					}
+				} catch (Exception e) {
+					LOG.error("Error while completing the slot allocation.", e);
+				}
+			},
+			mainThreadExecutor);
+	}
+
+	private CompletableFuture<Acknowledge> sendSlotAllocationRequest(TaskManagerSlot taskManagerSlot, PendingSlotRequest pendingSlotRequest) {
 		TaskExecutorConnection taskExecutorConnection = taskManagerSlot.getTaskManagerConnection();
 		TaskExecutorGateway gateway = taskExecutorConnection.getTaskExecutorGateway();
 
@@ -698,7 +789,6 @@ public class SlotManager implements AutoCloseable {
 		final SlotID slotId = taskManagerSlot.getSlotId();
 		final InstanceID instanceID = taskManagerSlot.getInstanceId();
 
-		taskManagerSlot.assignPendingSlotRequest(pendingSlotRequest);
 		pendingSlotRequest.setRequestFuture(completableFuture);
 
 		TaskManagerRegistration taskManagerRegistration = taskManagerRegistrations.get(instanceID);
@@ -717,6 +807,7 @@ public class SlotManager implements AutoCloseable {
 			allocationId,
 			pendingSlotRequest.getTargetAddress(),
 			resourceManagerId,
+			taskManagerSlot.getVersion(),
 			taskManagerRequestTimeout);
 
 		requestFuture.whenComplete(
@@ -728,30 +819,7 @@ public class SlotManager implements AutoCloseable {
 				}
 			});
 
-		completableFuture.whenCompleteAsync(
-			(Acknowledge acknowledge, Throwable throwable) -> {
-				try {
-					if (acknowledge != null) {
-						updateSlot(slotId, allocationId, pendingSlotRequest.getJobId());
-					} else {
-						if (throwable instanceof SlotOccupiedException) {
-							SlotOccupiedException exception = (SlotOccupiedException) throwable;
-							updateSlot(slotId, exception.getAllocationId(), exception.getJobId());
-						} else {
-							removeSlotRequestFromSlot(slotId, allocationId);
-						}
-
-						if (!(throwable instanceof CancellationException)) {
-							handleFailedSlotRequest(slotId, allocationId, throwable);
-						} else {
-							LOG.debug("Slot allocation request {} has been cancelled.", allocationId, throwable);
-						}
-					}
-				} catch (Exception e) {
-					LOG.error("Error while completing the slot allocation.", e);
-				}
-			},
-			mainThreadExecutor);
+		return completableFuture;
 	}
 
 	/**
@@ -853,6 +921,36 @@ public class SlotManager implements AutoCloseable {
 				updateSlotState(taskManagerSlot, taskManagerRegistration, null, null);
 			} else {
 				LOG.debug("Ignore slot request removal for slot {}.", slotId);
+			}
+		} else {
+			LOG.debug("There was no slot with {} registered. Probably this slot has been already freed.", slotId);
+		}
+	}
+
+	/**
+	 * Sync a pending slot request identified by the given allocation id from a slot identified
+	 * by the given slot id.
+	 *
+	 * @param slotId identifying the slot
+	 * @param allocationId identifying the presumable assigned pending slot request
+	 */
+	private void syncSlotForSlotRequest(SlotID slotId, AllocationID allocationId) {
+		TaskManagerSlot taskManagerSlot = slots.get(slotId);
+
+		if (null != taskManagerSlot) {
+			if (taskManagerSlot.getState() == TaskManagerSlot.State.PENDING && Objects.equals(allocationId, taskManagerSlot.getAssignedSlotRequest().getAllocationId())) {
+
+				TaskManagerRegistration taskManagerRegistration = taskManagerRegistrations.get(taskManagerSlot.getInstanceId());
+
+				if (taskManagerRegistration == null) {
+					throw new IllegalStateException("Trying to sync slot for request from slot for which there is no TaskManager " + taskManagerSlot.getInstanceId() + " is registered.");
+				}
+
+				// sync the pending slot request
+				taskManagerSlot.syncPendingSlotRequest();
+
+			} else {
+				LOG.debug("Ignore slot {} sync for request.", slotId);
 			}
 		} else {
 			LOG.debug("There was no slot with {} registered. Probably this slot has been already freed.", slotId);

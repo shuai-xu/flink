@@ -68,6 +68,9 @@ public class TaskSlot {
 	/** Allocation id of this slot; null if not allocated. */
 	private AllocationID allocationId;
 
+	/** Version of the state of this slot */
+	private long version;
+
 	TaskSlot(final int index, final ResourceProfile resourceProfile) {
 		Preconditions.checkArgument(0 <= index, "The index must be greater than 0.");
 		this.index = index;
@@ -78,11 +81,22 @@ public class TaskSlot {
 
 		this.jobId = null;
 		this.allocationId = null;
+		this.version = 0L;
 	}
 
 	// ----------------------------------------------------------------------------------
 	// State accessors
 	// ----------------------------------------------------------------------------------
+
+	public long getVersion() {
+		return version;
+	}
+
+	public void updateVersion(long version) {
+		Preconditions.checkArgument(version > this.version);
+
+		this.version = version;
+	}
 
 	public int getIndex() {
 		return index;
@@ -303,6 +317,6 @@ public class TaskSlot {
 	@Override
 	public String toString() {
 		return "TaskSlot(index:" + index + ", state:" + state + ", resource profile: " + resourceProfile +
-			", allocationId: " + (allocationId != null ? allocationId.toString() : "none") + ", jobId: " + (jobId != null ? jobId.toString() : "none") + ')';
+			", allocationId: " + (allocationId != null ? allocationId.toString() : "none") + ", jobId: " + (jobId != null ? jobId.toString() : "none") + ", version: " + version + ")";
 	}
 }

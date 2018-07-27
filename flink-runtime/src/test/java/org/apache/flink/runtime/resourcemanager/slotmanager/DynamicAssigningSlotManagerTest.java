@@ -41,9 +41,7 @@ package org.apache.flink.runtime.resourcemanager.slotmanager;
 	import java.util.concurrent.CompletableFuture;
 
 	import static org.junit.Assert.assertEquals;
-	import static org.mockito.Matchers.any;
-	import static org.mockito.Matchers.anyString;
-	import static org.mockito.Matchers.eq;
+	import static org.mockito.Matchers.*;
 	import static org.mockito.Mockito.mock;
 	import static org.mockito.Mockito.times;
 	import static org.mockito.Mockito.verify;
@@ -76,8 +74,8 @@ public class DynamicAssigningSlotManagerTest {
 		final SlotID slotId1 = new SlotID(resourceID, 0);
 		final SlotID slotId2 = new SlotID(resourceID, 1);
 		final List<SlotStatus> slotStatus = new ArrayList<>(2);
-		slotStatus.add(new SlotStatus(slotId1, ResourceProfile.UNKNOWN, jobId, null));
-		slotStatus.add(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null));
+		slotStatus.add(new SlotStatus(slotId1, ResourceProfile.UNKNOWN, jobId, null, 0L));
+		slotStatus.add(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null, 0L));
 		final SlotReport slotReport = new SlotReport(slotStatus);
 
 		final SlotRequest slotRequest1 = new SlotRequest(
@@ -100,6 +98,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			anyString(),
 			eq(resourceManagerId),
+			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 		final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
 
@@ -132,8 +131,8 @@ public class DynamicAssigningSlotManagerTest {
 		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
 
 		final List<SlotStatus> slotStatus = new ArrayList<>(2);
-		slotStatus.add(new SlotStatus(slotId1, ResourceProfile.UNKNOWN, jobId, null));
-		slotStatus.add(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null));
+		slotStatus.add(new SlotStatus(slotId1, ResourceProfile.UNKNOWN, jobId, null, 0L));
+		slotStatus.add(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null, 0L));
 
 		final SlotReport slotReport = new SlotReport(slotStatus);
 
@@ -158,6 +157,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			anyString(),
 			eq(resourceManagerId),
+			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 		final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
 
@@ -189,8 +189,8 @@ public class DynamicAssigningSlotManagerTest {
 		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
 
 		final List<SlotStatus> slotStatus = new ArrayList<>(2);
-		slotStatus.add(new SlotStatus(slotId1, ResourceProfile.UNKNOWN, jobId, null));
-		slotStatus.add(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null));
+		slotStatus.add(new SlotStatus(slotId1, ResourceProfile.UNKNOWN, jobId, null, 0L));
+		slotStatus.add(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null, 0L));
 
 		final SlotReport slotReport = new SlotReport(slotStatus);
 
@@ -221,6 +221,7 @@ public class DynamicAssigningSlotManagerTest {
 			any(AllocationID.class),
 			anyString(),
 			eq(resourceManagerId),
+			anyLong(),
 			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 		final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
 
@@ -240,7 +241,7 @@ public class DynamicAssigningSlotManagerTest {
 
 			slotManager.freeSlot(slotId1, slotRequest.getAllocationId());
 
-			SlotReport newSlotReport = new SlotReport(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null));
+			SlotReport newSlotReport = new SlotReport(new SlotStatus(slotId2, ResourceProfile.UNKNOWN, jobId, null, 0L));
 			slotManager.reportSlotStatus(taskExecutorConnection.getInstanceID(), newSlotReport);
 
 			assertEquals(0, slotManager.getNumberFreeSlots());

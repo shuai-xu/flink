@@ -166,7 +166,8 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 				slotId,
 				taskSlot.getResourceProfile(),
 				taskSlot.getJobId(),
-				taskSlot.getAllocationId());
+				taskSlot.getAllocationId(),
+				taskSlot.getVersion());
 
 			slotStatuses.set(i, slotStatus);
 		}
@@ -454,6 +455,25 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 		} else {
 			return null;
 		}
+	}
+
+	/**
+	 * Returns the version of the ith slot, used for sync with TaskManagerSlot
+	 * inside ResourceManager.
+	 * @param index of the slot
+	 * @return version of the ith slot
+	 */
+	public long getSlotVersion(int index) {
+		return taskSlots.get(index).getVersion();
+	}
+
+	/**
+	 * Update version of the ith slot as that of TaskManagerSlot.
+	 * @param index of the slot
+	 * @param version of TaskManagerSlot
+	 */
+	public void updateSlotVersion(int index, long version) {
+		taskSlots.get(index).updateVersion(version);
 	}
 
 	// ---------------------------------------------------------------------

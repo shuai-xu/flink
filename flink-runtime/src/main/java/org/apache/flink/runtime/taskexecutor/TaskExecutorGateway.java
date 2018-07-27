@@ -52,6 +52,7 @@ public interface TaskExecutorGateway extends RpcGateway {
 	 * @param allocationId id for the request
 	 * @param targetAddress to which to offer the requested slots
 	 * @param resourceManagerId current leader id of the ResourceManager
+	 * @param version version of a slot status
 	 * @param timeout for the operation
 	 * @return answer to the slot request
 	 */
@@ -61,6 +62,7 @@ public interface TaskExecutorGateway extends RpcGateway {
 		AllocationID allocationId,
 		String targetAddress,
 		ResourceManagerId resourceManagerId,
+		long version,
 		@RpcTimeout Time timeout);
 
 	CompletableFuture<StackTraceSampleResponse> requestStackTraceSample(

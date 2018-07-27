@@ -731,6 +731,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		final AllocationID allocationId,
 		final String targetAddress,
 		final ResourceManagerId resourceManagerId,
+		final long version,
 		final Time timeout) {
 		// TODO: Filter invalid requests from the resource manager by using the instance/registration Id
 
@@ -744,8 +745,21 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 				throw new TaskManagerException(message);
 			}
 
+			if (version <= taskSlotTable.getSlotVersion(slotId.getSlotNumber())) {
+				final String message = "Received an outdated request from resource manager with leader id" +
+					resourceManagerId;
+				log.debug(message);
+				throw new SlotAllocationException(message);
+			}
+
+			// Update the slot version even if the slot allocation may fail.
+			taskSlotTable.updateSlotVersion(slotId.getSlotNumber(), version);
+
 			if (taskSlotTable.isSlotFree(slotId.getSlotNumber())) {
-				if (taskSlotTable.allocateSlot(slotId.getSlotNumber(), jobId, allocationId, taskManagerConfiguration.getTimeout())) {
+				if (taskSlotTable.allocateSlot(slotId.getSlotNumber(),
+							jobId,
+							allocationId,
+							taskManagerConfiguration.getTimeout())) {
 					log.info("Allocated slot for {}.", allocationId);
 				} else {
 					log.info("Could not allocate slot for {}.", allocationId);

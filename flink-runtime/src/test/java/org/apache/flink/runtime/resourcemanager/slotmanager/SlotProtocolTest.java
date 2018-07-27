@@ -48,6 +48,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -105,7 +106,14 @@ public class SlotProtocolTest extends TestLogger {
 			TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
 			Mockito.when(
 				taskExecutorGateway
-					.requestSlot(any(SlotID.class), any(JobID.class), any(AllocationID.class), any(String.class), any(ResourceManagerId.class), any(Time.class)))
+					.requestSlot(
+						any(SlotID.class),
+						any(JobID.class),
+						any(AllocationID.class),
+						any(String.class),
+						any(ResourceManagerId.class),
+						anyLong(),
+						any(Time.class)))
 				.thenReturn(mock(CompletableFuture.class));
 
 			final ResourceID resourceID = ResourceID.generate();
@@ -120,7 +128,14 @@ public class SlotProtocolTest extends TestLogger {
 
 			// 4) Slot becomes available and TaskExecutor gets a SlotRequest
 			verify(taskExecutorGateway, timeout(5000L))
-				.requestSlot(eq(slotID), eq(jobID), eq(allocationID), any(String.class), any(ResourceManagerId.class), any(Time.class));
+				.requestSlot(
+					eq(slotID),
+					eq(jobID),
+					eq(allocationID),
+					any(String.class),
+					any(ResourceManagerId.class),
+					eq(1L),
+					any(Time.class));
 		}
 	}
 
@@ -140,7 +155,9 @@ public class SlotProtocolTest extends TestLogger {
 		TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
 		Mockito.when(
 			taskExecutorGateway
-				.requestSlot(any(SlotID.class), any(JobID.class), any(AllocationID.class), any(String.class), any(ResourceManagerId.class), any(Time.class)))
+				.requestSlot(any(SlotID.class), any(JobID.class),
+					any(AllocationID.class), any(String.class),
+					any(ResourceManagerId.class), anyLong(), any(Time.class)))
 			.thenReturn(mock(CompletableFuture.class));
 
 		try (SlotManager slotManager = new SlotManager(
@@ -173,7 +190,14 @@ public class SlotProtocolTest extends TestLogger {
 
 			// a SlotRequest is routed to the TaskExecutor
 			verify(taskExecutorGateway, timeout(5000))
-				.requestSlot(eq(slotID), eq(jobID), eq(allocationID), any(String.class), any(ResourceManagerId.class), any(Time.class));
+				.requestSlot(
+					eq(slotID),
+					eq(jobID),
+					eq(allocationID),
+					any(String.class),
+					any(ResourceManagerId.class),
+					eq(1L),
+					any(Time.class));
 		}
 	}
 }
