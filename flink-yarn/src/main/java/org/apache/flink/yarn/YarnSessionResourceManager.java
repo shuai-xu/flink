@@ -39,6 +39,7 @@ import org.apache.flink.runtime.resourcemanager.JobLeaderIdService;
 import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
+import org.apache.flink.runtime.resourcemanager.slotmanager.DynamicAssigningSlotManager;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
@@ -218,11 +219,11 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				TaskManagerResource.fromConfiguration(flinkConfig, initContainerResourceConfig(), 1);
 		log.info("taskManagerResource: " + taskManagerResource);
 
-		// TODO
-		/*if (slotManager instanceof DynamicAssigningSlotManager) {
-			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(taskManagerResource);
+		if (slotManager instanceof DynamicAssigningSlotManager) {
+			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(
+				TaskManagerResource.convertToResourceProfile(taskManagerResource));
 			log.info("The resource for user in a task executor is {}.", taskManagerResource);
-		}*/
+		}
 	}
 
 	protected AMRMClientAsync<AMRMClient.ContainerRequest> createAndStartResourceManagerClient(

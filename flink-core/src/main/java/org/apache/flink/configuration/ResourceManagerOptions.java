@@ -87,6 +87,13 @@ public class ResourceManagerOptions {
 		.withDescription("The timeout for an idle task manager to be released.");
 
 	/**
+	 * The timeout for an idle task manager to be released when slot manager starts, in milliseconds.
+	 */
+	public static final ConfigOption<Long> TASK_MANAGER_CHECKER_INITIAL_DELAY = ConfigOptions
+		.key("slotmanager.taskmanager.checker-initial-delay")
+		.defaultValue(180000L);
+
+	/**
 	 * Prefix for passing custom environment variables to Flink's master process.
 	 * For example for passing LD_LIBRARY_PATH as an env variable to the AppMaster, set:
 	 * containerized.master.env.LD_LIBRARY_PATH: "/usr/lib/native"

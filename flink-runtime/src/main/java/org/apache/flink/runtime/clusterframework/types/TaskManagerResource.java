@@ -18,9 +18,14 @@
 
 package org.apache.flink.runtime.clusterframework.types;
 
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -256,6 +261,25 @@ public class TaskManagerResource {
 				cmsGCRatio,
 				resourceProfile,
 				slotNum);
+	}
+
+	/**
+	 * Utility method to convert from TaskManagerResource to ResourceProfile.
+	 *
+	 * @param taskManagerResource The input resource configuration.
+	 * @return ResourceProfile equivalent to taskManagerResource.
+	 */
+	public static ResourceProfile convertToResourceProfile(TaskManagerResource taskManagerResource) {
+		Map<String, Resource> extendedResources = new HashMap<>();
+		extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME,
+			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, taskManagerResource.getManagedMemorySize()));
+		return new ResourceProfile(taskManagerResource.getTaskResourceProfile().getCpuCores(),
+			taskManagerResource.getTaskResourceProfile().getHeapMemoryInMB(),
+			taskManagerResource.getTaskResourceProfile().getDirectMemoryInMB(),
+			taskManagerResource.getTaskResourceProfile().getNativeMemoryInMB(),
+			taskManagerResource.getNetworkMemorySize(),
+			extendedResources);
+
 	}
 
 	@Override

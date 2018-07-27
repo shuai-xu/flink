@@ -18,7 +18,10 @@
 
 package org.apache.flink.yarn.entrypoint;
 
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ResourceManagerOptions;
+import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
 import org.apache.flink.runtime.entrypoint.SessionClusterEntrypoint;
@@ -29,6 +32,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServices;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServicesConfiguration;
+import org.apache.flink.runtime.resourcemanager.slotmanager.DynamicAssigningSlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.security.SecurityContext;
@@ -97,7 +101,14 @@ public class YarnSessionClusterEntrypoint extends SessionClusterEntrypoint {
 			rmConfiguration,
 			highAvailabilityServices,
 			heartbeatServices,
-			rmRuntimeServices.getSlotManager(),
+			new DynamicAssigningSlotManager(
+				rpcService.getScheduledExecutor(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerRequestTimeout(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getSlotRequestTimeout(),
+				configuration.contains(ResourceManagerOptions.TASK_MANAGER_TIMEOUT) ?
+					rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerTimeout() :
+					Time.seconds(AkkaUtils.INF_TIMEOUT().toSeconds()),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay()),
 			metricRegistry,
 			rmRuntimeServices.getJobLeaderIdService(),
 			clusterInformation,
