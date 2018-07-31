@@ -127,7 +127,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	}
 
 	/**
-	 * 
+	 *
 	 * @param timeout
 	 *            The RPC timeout to use for deploy / cancel calls
 	 * @param initialGlobalModVersion
@@ -173,9 +173,11 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 			timeout);
 
 		// create a co-location scheduling hint, if necessary
-		CoLocationGroup clg = jobVertex.getCoLocationGroup();
+		final CoLocationGroup clg = jobVertex.getCoLocationGroup();
 		if (clg != null) {
-			this.locationConstraint = clg.getLocationConstraint(subTaskIndex);
+			synchronized (clg) {
+				this.locationConstraint = clg.getLocationConstraint(subTaskIndex);
+			}
 		}
 		else {
 			this.locationConstraint = null;
@@ -311,7 +313,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	/**
 	 * Gets the location where the latest completed/canceled/failed execution of the vertex's
 	 * task happened.
-	 * 
+	 *
 	 * @return The latest prior execution location, or null, if there is none, yet.
 	 */
 	public TaskManagerLocation getLatestPriorLocation() {
@@ -444,36 +446,36 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	/**
 	 * Gets the overall preferred execution location for this vertex's current execution.
 	 * The preference is determined as follows:
-	 * 
+	 *
 	 * <ol>
 	 *     <li>If the task execution has state to load (from a checkpoint), then the location preference
 	 *         is the location of the previous execution (if there is a previous execution attempt).
 	 *     <li>If the task execution has no state or no previous location, then the location preference
 	 *         is based on the task's inputs.
 	 * </ol>
-	 * 
+	 *
 	 * These rules should result in the following behavior:
-	 * 
+	 *
 	 * <ul>
 	 *     <li>Stateless tasks are always scheduled based on co-location with inputs.
 	 *     <li>Stateful tasks are on their initial attempt executed based on co-location with inputs.
 	 *     <li>Repeated executions of stateful tasks try to co-locate the execution with its state.
 	 * </ul>
-	 * 
+	 *
 	 * @return The preferred execution locations for the execution attempt.
-	 * 
+	 *
 	 * @see #getPreferredLocationsBasedOnState()
-	 * @see #getPreferredLocationsBasedOnInputs() 
+	 * @see #getPreferredLocationsBasedOnInputs()
 	 */
 	public Collection<CompletableFuture<TaskManagerLocation>> getPreferredLocations() {
 		Collection<CompletableFuture<TaskManagerLocation>> basedOnState = getPreferredLocationsBasedOnState();
 		return basedOnState != null ? basedOnState : getPreferredLocationsBasedOnInputs();
 	}
-	
+
 	/**
 	 * Gets the preferred location to execute the current task execution attempt, based on the state
 	 * that the execution attempt will resume.
-	 * 
+	 *
 	 * @return A size-one collection with the location preference, or null, if there is no
 	 *         location preference based on the state.
 	 */
@@ -542,21 +544,21 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	/**
 	 * Archives the current Execution and creates a new Execution for this vertex.
-	 * 
+	 *
 	 * <p>This method atomically checks if the ExecutionGraph is still of an expected
 	 * global mod. version and replaces the execution if that is the case. If the ExecutionGraph
 	 * has increased its global mod. version in the meantime, this operation fails.
-	 * 
+	 *
 	 * <p>This mechanism can be used to prevent conflicts between various concurrent recovery and
 	 * reconfiguration actions in a similar way as "optimistic concurrency control".
-	 * 
+	 *
 	 * @param timestamp
 	 *             The creation timestamp for the new Execution
 	 * @param originatingGlobalModVersion
 	 *             The 
-	 * 
+	 *
 	 * @return Returns the new created Execution. 
-	 * 
+	 *
 	 * @throws GlobalModVersionMismatch Thrown, if the execution graph has a new global mod
 	 *                                  version than the one passed to this message.
 	 */
@@ -642,7 +644,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	}
 
 	/**
-	 *  
+	 *
 	 * @return A future that completes once the execution has reached its final state.
 	 */
 	public CompletableFuture<?> cancel() {
@@ -762,13 +764,13 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 			LogicalSlot targetSlot,
 			@Nullable JobManagerTaskRestore taskRestore,
 			int attemptNumber) throws ExecutionGraphException {
-		
+
 		// Produced intermediate results
 		List<ResultPartitionDeploymentDescriptor> producedPartitions = new ArrayList<>(resultPartitions.size());
-		
+
 		// Consumed intermediate results
 		List<InputGateDeploymentDescriptor> consumedPartitions = new ArrayList<>(inputEdges.length);
-		
+
 		boolean lazyScheduling = getExecutionGraph().getScheduleMode().allowLazyDeployment();
 
 		for (IntermediateResultPartition partition : resultPartitions.values()) {
@@ -791,8 +793,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 				producedPartitions.add(ResultPartitionDeploymentDescriptor.from(partition, maxParallelism, lazyScheduling));
 			}
 		}
-		
-		
+
+
 		for (ExecutionEdge[] edges : inputEdges) {
 			InputChannelDeploymentDescriptor[] partitions = InputChannelDeploymentDescriptor.fromEdges(
 				edges,
