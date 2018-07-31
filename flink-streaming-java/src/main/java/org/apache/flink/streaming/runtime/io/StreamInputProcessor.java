@@ -53,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.BitSet;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -92,6 +93,8 @@ public class StreamInputProcessor<IN> {
 
 	/** Number of input channels the valve needs to handle. */
 	private final int numInputChannels;
+
+	private final BitSet channelsWithEndOfPartitionEvents;
 
 	/**
 	 * The channel from which a buffer came, tracked so that we can appropriately map
@@ -150,6 +153,7 @@ public class StreamInputProcessor<IN> {
 		}
 
 		this.numInputChannels = inputGate.getNumberOfInputChannels();
+		this.channelsWithEndOfPartitionEvents = new BitSet(this.numInputChannels);
 
 		this.streamStatusMaintainer = checkNotNull(streamStatusMaintainer);
 		this.streamOperator = checkNotNull(streamOperator);
@@ -232,6 +236,11 @@ public class StreamInputProcessor<IN> {
 					final AbstractEvent event = bufferOrEvent.getEvent();
 					if (event.getClass() != EndOfPartitionEvent.class) {
 						throw new IOException("Unexpected event: " + event);
+					}
+
+					channelsWithEndOfPartitionEvents.set(bufferOrEvent.getChannelIndex());
+					if (channelsWithEndOfPartitionEvents.cardinality() == numInputChannels) {
+						streamOperator.endInput();
 					}
 				}
 			}

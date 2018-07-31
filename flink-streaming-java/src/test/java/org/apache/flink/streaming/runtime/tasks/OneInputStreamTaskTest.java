@@ -23,6 +23,7 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
@@ -38,6 +39,8 @@ import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.checkpoint.CheckpointMetaData;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
+import org.apache.flink.runtime.concurrent.FutureUtils;
+import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -76,7 +79,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import scala.concurrent.duration.Deadline;
@@ -850,6 +855,52 @@ public class OneInputStreamTaskTest extends TestLogger {
 		}
 	}
 
+	@Test
+	public void testEndInputNotification() throws Exception {
+		final OneInputStreamTaskTestHarness<String, String> testHarness = new OneInputStreamTaskTestHarness<>(
+			OneInputStreamTask::new,
+			2, 2,
+			BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
+
+		testHarness.setupOperatorChain(new OperatorID(), new TestEndInputNotificationOperator(0))
+			.chain(new OperatorID(),
+				new TestEndInputNotificationOperator(1),
+				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()))
+			.finish();
+
+		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<Object>();
+
+		testHarness.invoke();
+		testHarness.waitForTaskRunning();
+
+		TestEndInputNotificationOperator headOperator = (TestEndInputNotificationOperator) testHarness.getTask().headOperator;
+
+		testHarness.processElement(new StreamRecord<>("Hello-0-0"), 0, 0);
+		testHarness.endInput(0,  0);
+		testHarness.processElement(new StreamRecord<>("Hello-0-1"), 0, 1);
+		testHarness.endInput(0,  1);
+
+		headOperator.waitNumOutputRecords(2);
+
+		testHarness.processElement(new StreamRecord<>("Hello-1-0"), 1, 0);
+		testHarness.processElement(new StreamRecord<>("Hello-1-1"), 1, 1);
+		testHarness.endInput(1,  0);
+		testHarness.endInput(1,  1);
+
+		expectedOutput.add(new StreamRecord<>("Hello-0-0"));
+		expectedOutput.add(new StreamRecord<>("Hello-0-1"));
+		expectedOutput.add(new StreamRecord<>("Hello-1-0"));
+		expectedOutput.add(new StreamRecord<>("Hello-1-1"));
+		expectedOutput.add(new StreamRecord<>("Ciao-operator0"));
+		expectedOutput.add(new StreamRecord<>("Ciao-operator1"));
+
+		testHarness.waitForTaskCompletion();
+
+		TestHarnessUtil.assertOutputEquals("Output was not correct.",
+			expectedOutput,
+			testHarness.getOutput());
+	}
+
 	//==============================================================================================
 	// Utility functions and classes
 	//==============================================================================================
@@ -1086,6 +1137,70 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		protected void handleWatermark(Watermark mark) {
 			output.emitWatermark(mark);
+		}
+	}
+
+	/**
+	 * Using for test the endInput notification.
+	 */
+	protected static class TestEndInputNotificationOperator
+		extends AbstractStreamOperator<String>
+		implements OneInputStreamOperator<String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		private final int index;
+
+		private volatile int numOutputRecords;
+
+		private static final CompletableFuture<Void> success = CompletableFuture.completedFuture(null);
+		private static final CompletableFuture<Void> failure = FutureUtils.completedExceptionally(new Exception("Not in line with expectations."));
+
+		public TestEndInputNotificationOperator(int index) {
+			this.index = index;
+		}
+
+		@Override
+		public void processElement(StreamRecord<String> element) throws Exception {
+			output.collect(element);
+
+			numOutputRecords++;
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+		@Override
+		public void endInput() throws Exception {
+			output.collect(new StreamRecord<>("Ciao-operator" + index));
+
+			numOutputRecords++;
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+		public void waitNumOutputRecords(int num) throws Exception {
+			FutureUtils.retryWithDelay(
+				() -> {
+					if (numOutputRecords == num) {
+						return success;
+					}
+					return failure;
+				},
+				5_000,
+				Time.milliseconds(0),
+				(throwable) -> {
+					synchronized (this) {
+						try {
+							this.wait(1L);
+						} catch (Throwable t) {
+						}
+					}
+					return true;
+				},
+				new ScheduledExecutorServiceAdapter(Executors.newSingleThreadScheduledExecutor()))
+				.get();
 		}
 	}
 }

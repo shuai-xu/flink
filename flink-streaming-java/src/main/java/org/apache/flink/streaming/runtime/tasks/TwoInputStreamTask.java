@@ -24,10 +24,13 @@ import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.io.StreamTwoInputProcessor;
 import org.apache.flink.streaming.runtime.metrics.MinWatermarkGauge;
 import org.apache.flink.streaming.runtime.metrics.WatermarkGauge;
+import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,6 +119,21 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 
 		while (running && inputProcessor.processInput()) {
 			// all the work happens in the "processInput" method
+		}
+
+		// all inputs are finished, notify non-head operators
+		if (running) {
+			synchronized (getCheckpointLock()) {
+				TwoInputStreamOperator<?, ?, ?> headOperator = operatorChain.getHeadOperator();
+				for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+					if (operator == headOperator) {
+						continue;
+					}
+
+					Preconditions.checkState(operator instanceof OneInputStreamOperator);
+					((OneInputStreamOperator<?, ?>) operator).endInput();
+				}
+			}
 		}
 	}
 

@@ -25,6 +25,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.execution.Environment;
+import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.StreamTestSingleInputGate;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -404,6 +405,10 @@ public class StreamTaskTestHarness<OUT> {
 		for (int i = 0; i < numInputGates; i++) {
 			inputGates[i].endInput();
 		}
+	}
+
+	public void endInput(int gate, int channel) {
+		inputGates[gate].sendEvent(EndOfPartitionEvent.INSTANCE, channel);
 	}
 
 	public StreamConfigChainer setupOperatorChain(OperatorID headOperatorId, OneInputStreamOperator<?, ?> headOperator) {

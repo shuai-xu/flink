@@ -53,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.BitSet;
 import java.util.Collection;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -106,6 +107,9 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 	/** Number of input channels the valves need to handle. */
 	private final int numInputChannels1;
 	private final int numInputChannels2;
+
+	private final BitSet channelsWithEndOfPartitionEvents1;
+	private final BitSet channelsWithEndOfPartitionEvents2;
 
 	/**
 	 * The channel from which a buffer came, tracked so that we can appropriately map
@@ -184,6 +188,9 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 
 		this.numInputChannels1 = numInputChannels1;
 		this.numInputChannels2 = inputGate.getNumberOfInputChannels() - numInputChannels1;
+
+		this.channelsWithEndOfPartitionEvents1 = new BitSet(this.numInputChannels1);
+		this.channelsWithEndOfPartitionEvents2 = new BitSet(this.numInputChannels2);
 
 		this.firstStatus = StreamStatus.ACTIVE;
 		this.secondStatus = StreamStatus.ACTIVE;
@@ -309,6 +316,20 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 					if (event.getClass() != EndOfPartitionEvent.class) {
 						throw new IOException("Unexpected event: " + event);
 					}
+
+					int channelIndex = bufferOrEvent.getChannelIndex();
+					if (channelIndex < numInputChannels1) {
+						channelsWithEndOfPartitionEvents1.set(channelIndex);
+						if (channelsWithEndOfPartitionEvents1.cardinality() == numInputChannels1) {
+							streamOperator.endInput1();
+						}
+					} else {
+						channelsWithEndOfPartitionEvents2.set(channelIndex);
+						if (channelsWithEndOfPartitionEvents2.cardinality() == numInputChannels2) {
+							streamOperator.endInput2();
+						}
+					}
+
 				}
 			}
 			else {

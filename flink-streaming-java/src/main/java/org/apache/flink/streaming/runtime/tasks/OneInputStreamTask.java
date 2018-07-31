@@ -26,8 +26,10 @@ import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.runtime.io.StreamInputProcessor;
 import org.apache.flink.streaming.runtime.metrics.WatermarkGauge;
+import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
 
@@ -104,6 +106,21 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 
 		while (running && inputProcessor.processInput()) {
 			// all the work happens in the "processInput" method
+		}
+
+		// the input is finished, notify non-head operators
+		if (running) {
+			synchronized (getCheckpointLock()) {
+				OneInputStreamOperator<?, ?> headOperator = operatorChain.getHeadOperator();
+				for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+					if (operator == headOperator) {
+						continue;
+					}
+
+					Preconditions.checkState(operator instanceof OneInputStreamOperator);
+					((OneInputStreamOperator<?, ?>) operator).endInput();
+				}
+			}
 		}
 	}
 

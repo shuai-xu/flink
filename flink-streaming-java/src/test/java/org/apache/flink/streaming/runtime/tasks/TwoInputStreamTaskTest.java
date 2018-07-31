@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.runtime.tasks;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -28,6 +29,8 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
+import org.apache.flink.runtime.concurrent.FutureUtils;
+import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -58,7 +61,9 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -728,6 +733,147 @@ public class TwoInputStreamTaskTest {
 
 				output.collect(element);
 			}
+		}
+	}
+
+	@Test
+	public void testEndInputNotification() throws Exception {
+		final TwoInputStreamTaskTestHarness<String, String, String> testHarness = new TwoInputStreamTaskTestHarness<>(
+			TwoInputStreamTask::new,
+			3, 2, new int[] {1, 2, 2},
+			BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
+
+		testHarness.setupOperatorChain(new OperatorID(), new TestEndInputNotificationOperator(0))
+			.chain(new OperatorID(),
+				new OneInputStreamTaskTest.TestEndInputNotificationOperator(1),
+				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()))
+			.finish();
+
+		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<Object>();
+
+		testHarness.invoke();
+		testHarness.waitForTaskRunning();
+
+		TestEndInputNotificationOperator headOperator = (TestEndInputNotificationOperator) testHarness.getTask().headOperator;
+
+		testHarness.processElement(new StreamRecord<>("Hello-1"), 0, 0);
+		testHarness.endInput(0,  0);
+		testHarness.processElement(new StreamRecord<>("Hello-2"), 0, 1);
+		testHarness.endInput(0,  1);
+
+		headOperator.waitNumOutputRecords(1, 3);
+
+		testHarness.processElement(new StreamRecord<>("Hello-3"), 1, 0);
+		testHarness.processElement(new StreamRecord<>("Hello-4"), 1, 1);
+		testHarness.endInput(1,  0);
+		testHarness.endInput(1,  1);
+
+		headOperator.waitNumOutputRecords(2, 2);
+
+		testHarness.processElement(new StreamRecord<>("Hello-5"), 2, 0);
+		testHarness.processElement(new StreamRecord<>("Hello-6"), 2, 1);
+		testHarness.endInput(2,  0);
+		testHarness.endInput(2,  1);
+
+		expectedOutput.add(new StreamRecord<>("Hello-1-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Hello-2-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Ciao-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Hello-3-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Hello-4-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Hello-5-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Hello-6-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Ciao-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Ciao-operator1"));
+
+		testHarness.waitForTaskCompletion();
+
+		TestHarnessUtil.assertOutputEquals("Output was not correct.",
+			expectedOutput,
+			testHarness.getOutput());
+	}
+
+	private static class TestEndInputNotificationOperator
+		extends AbstractStreamOperator<String>
+		implements TwoInputStreamOperator<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		private final int index;
+		private final String name;
+
+		private volatile int numOutputRecords1;
+		private volatile int numOutputRecords2;
+
+		private static final CompletableFuture<Void> success = CompletableFuture.completedFuture(null);
+		private static final CompletableFuture<Void> failure = FutureUtils.completedExceptionally(new Exception("Not in line with expectations."));
+
+		public TestEndInputNotificationOperator(int index) {
+			this.index = index;
+			this.name = "operator" + index;
+		}
+
+		@Override
+		public void processElement1(StreamRecord<String> element) throws Exception {
+			output.collect(element.replace(element.getValue() + "-[" + name + "-1]"));
+
+			numOutputRecords1++;
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+		@Override
+		public void processElement2(StreamRecord<String> element) throws Exception {
+			output.collect(element.replace(element.getValue() + "-[" + name + "-2]"));
+
+			numOutputRecords2++;
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+			output.collect(new StreamRecord<>("Ciao-[" + name + "-1]"));
+
+			numOutputRecords1++;
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+			output.collect(new StreamRecord<>("Ciao-[" + name + "-2]"));
+
+			numOutputRecords2++;
+			synchronized (this) {
+				this.notifyAll();
+			}
+		}
+
+		public void waitNumOutputRecords(int typeNumber, int numOutputRecords) throws Exception {
+			FutureUtils.retryWithDelay(
+				() -> {
+					if ((typeNumber == 1 && numOutputRecords1 == numOutputRecords)
+						|| (typeNumber == 2 && numOutputRecords2 == numOutputRecords)) {
+						return success;
+					}
+					return failure;
+				},
+				5_000,
+				Time.milliseconds(0),
+				(throwable) -> {
+					synchronized (this) {
+						try {
+							this.wait(1L);
+						} catch (Throwable t) {
+						}
+					}
+					return true;
+				},
+				new ScheduledExecutorServiceAdapter(Executors.newSingleThreadScheduledExecutor()))
+				.get();
 		}
 	}
 }
