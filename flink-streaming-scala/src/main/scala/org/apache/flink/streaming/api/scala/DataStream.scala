@@ -176,7 +176,7 @@ class DataStream[T](stream: JavaStream[T]) {
     * Sets the resource of this operation.
     */
   @PublicEvolving
-  def setResources(resources: ResourceSpec) : Unit = {
+  def setResources(resources: ResourceSpec) : DataStream[T] = {
     this.setResources(resources, resources)
   }
 

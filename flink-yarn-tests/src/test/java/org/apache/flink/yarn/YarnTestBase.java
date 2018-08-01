@@ -325,6 +325,13 @@ public abstract class YarnTestBase extends TestLogger {
 	 *
 	 */
 	public static void ensureNoProhibitedStringInLogFiles(final String[] prohibited, final String[] whitelisted) {
+		ensureNoProhibitedStringInLogFiles(prohibited, whitelisted, new String[0]);
+	}
+
+	public static void ensureNoProhibitedStringInLogFiles(
+		final String[] prohibited,
+		final String[] whitelisted,
+		final String[] appsToIgnore) {
 		File cwd = new File("target/" + YARN_CONFIGURATION.get(TEST_CLUSTER_NAME_KEY));
 		Assert.assertTrue("Expecting directory " + cwd.getAbsolutePath() + " to exist", cwd.exists());
 		Assert.assertTrue("Expecting directory " + cwd.getAbsolutePath() + " to be a directory", cwd.isDirectory());
@@ -335,6 +342,11 @@ public abstract class YarnTestBase extends TestLogger {
 			public boolean accept(File dir, String name) {
 			// scan each file for prohibited strings.
 			File f = new File(dir.getAbsolutePath() + "/" + name);
+			for (String fileToIgnore : appsToIgnore) {
+				if (f.getAbsolutePath().contains(fileToIgnore)) {
+					return false;
+				}
+			}
 			try {
 				BufferingScanner scanner = new BufferingScanner(new Scanner(f), 10);
 				while (scanner.hasNextLine()) {
@@ -589,6 +601,16 @@ public abstract class YarnTestBase extends TestLogger {
 	 * This method returns once the "startedAfterString" has been seen.
 	 */
 	protected Runner startWithArgs(String[] args, String startedAfterString, RunTypes type) throws IOException {
+		return startWithArgs(args, startedAfterString, type, 60, false);
+	}
+
+	protected Runner startWithArgs(
+		String[] args,
+		String startedAfterString,
+		RunTypes type,
+		int startTimeoutSeconds,
+		boolean expectTimeout) throws IOException {
+
 		LOG.info("Running with args {}", Arrays.toString(args));
 
 		outContent = new ByteArrayOutputStream();
@@ -600,8 +622,6 @@ public abstract class YarnTestBase extends TestLogger {
 		System.setOut(new PrintStream(outContent));
 		System.setErr(new PrintStream(errContent));
 		System.setIn(in);
-
-		final int startTimeoutSeconds = 60;
 
 		Runner runner = new Runner(
 			args,
@@ -632,8 +652,12 @@ public abstract class YarnTestBase extends TestLogger {
 		}
 
 		resetStreamsAndSendOutput();
-		Assert.fail("During the timeout period of " + startTimeoutSeconds + " seconds the " +
+		if (!expectTimeout) {
+			Assert.fail("During the timeout period of " + startTimeoutSeconds + " seconds the " +
 				"expected string did not show up");
+		} else {
+			throw new RuntimeException("Expected timeout for " + startTimeoutSeconds + " seconds");
+		}
 		return null;
 	}
 

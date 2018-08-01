@@ -435,6 +435,8 @@ public abstract class StreamTransformation<T> {
 				", name='" + name + '\'' +
 				", outputType=" + outputType +
 				", parallelism=" + parallelism +
+				", minResource: " + minResources +
+				", preferredResource: " + preferredResources +
 				'}';
 	}
 

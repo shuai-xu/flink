@@ -400,7 +400,8 @@ public class StreamingJobGraphGenerator {
 		jobVertex.setMaxParallelism(streamNode.getMaxParallelism());
 
 		if (LOG.isDebugEnabled()) {
-			LOG.debug("Parallelism set: {} for {}", parallelism, streamNodeId);
+			LOG.debug("Parallelism set: {} for {}\nJobVertex resource set: minResource {}, preferredResource {}",
+				parallelism, streamNodeId, jobVertex.getMinResources(), jobVertex.getPreferredResources());
 		}
 
 		jobVertices.put(streamNodeId, jobVertex);

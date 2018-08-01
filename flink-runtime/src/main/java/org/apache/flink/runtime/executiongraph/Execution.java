@@ -539,7 +539,6 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		int networkMemory = calculateTaskNetworkMemory(executionVertex);
 		return ResourceProfile.fromResourceSpec(
 			executionVertex.getJobVertex().getJobVertex().getMinResources(), networkMemory);
-
 	}
 
 	@VisibleForTesting
