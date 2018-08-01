@@ -125,6 +125,46 @@ public class SlotManagerTest extends TestLogger {
 	}
 
 	/**
+	 * Tests TM reports slot status to RM after RM has failed and restarted.
+	 */
+	@Test
+	public void testTaskManagerRegistrationAfterRMFailover() throws Exception {
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+
+		final ResourceID resourceId = ResourceID.generate();
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		final TaskExecutorConnection taskManagerConnection = new TaskExecutorConnection(resourceId, taskExecutorGateway);
+
+		final SlotID slotId1 = new SlotID(resourceId, 0);
+		final SlotID slotId2 = new SlotID(resourceId, 1);
+		final ResourceProfile resourceProfile = new ResourceProfile(42.0, 1337);
+
+		final JobID jobId = new JobID();
+		final AllocationID allocationID = new AllocationID();
+
+		final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile, null, null, null, 3L);
+		final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile, jobId, allocationID, resourceProfile, 6L);
+		final SlotReport slotReport = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
+
+		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
+			slotManager.registerTaskManager(taskManagerConnection, slotReport);
+
+			assertEquals("The number registered slots does not equal the expected number.",2, slotManager.getNumberRegisteredSlots());
+
+			TaskManagerSlot slotOne = slotManager.getSlot(slotId1);
+			assertNotNull(slotOne);
+			assertEquals(TaskManagerSlot.State.FREE, slotOne.getState());
+			assertEquals(3L, slotOne.getVersion());
+
+			TaskManagerSlot slotTwo = slotManager.getSlot(slotId2);
+			assertNotNull(slotTwo);
+			assertEquals(TaskManagerSlot.State.ALLOCATED, slotTwo.getState());
+			assertEquals(6L, slotTwo.getVersion());
+		}
+	}
+
+	/**
 	 * Tests that un-registration of task managers will free and remove all registered slots.
 	 */
 	@Test
@@ -138,6 +178,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			any(JobID.class),
 			any(AllocationID.class),
+			any(ResourceProfile.class),
 			anyString(),
 			eq(resourceManagerId),
 			anyLong(),
@@ -151,7 +192,7 @@ public class SlotManagerTest extends TestLogger {
 		final AllocationID allocationId1 = new AllocationID();
 		final AllocationID allocationId2 = new AllocationID();
 		final ResourceProfile resourceProfile = new ResourceProfile(42.0, 1337);
-		final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile, jobId, allocationId1, 0L);
+		final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile, jobId, allocationId1, resourceProfile, 0L);
 		final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile);
 		final SlotReport slotReport = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
 
@@ -266,6 +307,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -286,6 +328,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),
@@ -314,6 +357,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			any(JobID.class),
 			any(AllocationID.class),
+			any(ResourceProfile.class),
 			anyString(),
 			eq(resourceManagerId),
 			anyLong(),
@@ -373,6 +417,7 @@ public class SlotManagerTest extends TestLogger {
 			eq(slotId),
 			eq(jobId),
 			eq(allocationId),
+			any(ResourceProfile.class),
 			anyString(),
 			eq(resourceManagerId),
 			anyLong(),
@@ -397,6 +442,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),
@@ -427,7 +473,7 @@ public class SlotManagerTest extends TestLogger {
 
 		final TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
 
-		final SlotStatus slotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, 0L);
+		final SlotStatus slotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, resourceProfile, 0L);
 		final SlotReport slotReport = new SlotReport(slotStatus);
 
 		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
@@ -494,7 +540,7 @@ public class SlotManagerTest extends TestLogger {
 		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
 		final TaskExecutorConnection taskManagerConnection = new TaskExecutorConnection(resourceID, taskExecutorGateway);
 
-		final SlotStatus slotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, 0L);
+		final SlotStatus slotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, resourceProfile, 0L);
 		final SlotReport slotReport = new SlotReport(slotStatus);
 
 		final SlotRequest slotRequest = new SlotRequest(jobId, allocationId, resourceProfile, "foobar");
@@ -525,6 +571,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			any(JobID.class),
 			any(AllocationID.class),
+			any(ResourceProfile.class),
 			anyString(),
 			eq(resourceManagerId),
 			anyLong(),
@@ -573,6 +620,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			any(JobID.class),
 			any(AllocationID.class),
+			any(ResourceProfile.class),
 			anyString(),
 			eq(resourceManagerId),
 			anyLong(),
@@ -656,7 +704,7 @@ public class SlotManagerTest extends TestLogger {
 		final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile);
 		final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile);
 
-		final SlotStatus newSlotStatus2 = new SlotStatus(slotId2, resourceProfile, jobId, allocationId, 0L);
+		final SlotStatus newSlotStatus2 = new SlotStatus(slotId2, resourceProfile, jobId, allocationId, resourceProfile, 0L);
 
 		final SlotReport slotReport1 = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
 		final SlotReport slotReport2 = new SlotReport(Arrays.asList(newSlotStatus2, slotStatus1));
@@ -805,6 +853,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			any(JobID.class),
 			eq(allocationId),
+			eq(resourceProfile),
 			anyString(),
 			any(ResourceManagerId.class),
 			anyLong(),
@@ -831,6 +880,7 @@ public class SlotManagerTest extends TestLogger {
 				slotIdCaptor.capture(),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				eq(1L),
@@ -845,6 +895,7 @@ public class SlotManagerTest extends TestLogger {
 				slotIdCaptor.capture(),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				eq(1L),
@@ -886,6 +937,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			any(JobID.class),
 			eq(allocationId),
+			eq(resourceProfile),
 			anyString(),
 			any(ResourceManagerId.class),
 			anyLong(),
@@ -935,6 +987,7 @@ public class SlotManagerTest extends TestLogger {
 				slotIdCaptor.capture(),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -949,8 +1002,8 @@ public class SlotManagerTest extends TestLogger {
 
 			assertTrue(freeSlotFuture.get());
 
-			final SlotStatus newSlotStatus1 = new SlotStatus(slotIdCaptor.getValue(), resourceProfile, new JobID(), new AllocationID(), 1L);
-			final SlotStatus newSlotStatus2 = new SlotStatus(freeSlotId, resourceProfile, null, null, 0L);
+			final SlotStatus newSlotStatus1 = new SlotStatus(slotIdCaptor.getValue(), resourceProfile, new JobID(), new AllocationID(), resourceProfile, 1L);
+			final SlotStatus newSlotStatus2 = new SlotStatus(freeSlotId, resourceProfile, null, null, null, 0L);
 			final SlotReport newSlotReport = new SlotReport(Arrays.asList(newSlotStatus1, newSlotStatus2));
 
 			CompletableFuture<Boolean> reportSlotStatusFuture = CompletableFuture.supplyAsync(
@@ -964,6 +1017,7 @@ public class SlotManagerTest extends TestLogger {
 				slotIdCaptor.capture(),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -1009,6 +1063,7 @@ public class SlotManagerTest extends TestLogger {
 			any(SlotID.class),
 			eq(jobId),
 			eq(allocationId),
+			eq(resourceProfile),
 			anyString(),
 			eq(resourceManagerId),
 			anyLong(),
@@ -1049,9 +1104,10 @@ public class SlotManagerTest extends TestLogger {
 				slotIdArgumentCaptor.capture(),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
-				anyLong(),
+				eq(1L),
 				any(Time.class));
 
 			CompletableFuture<Boolean> idleFuture = CompletableFuture.supplyAsync(
@@ -1165,6 +1221,7 @@ public class SlotManagerTest extends TestLogger {
 				ResourceProfile.UNKNOWN,
 				new JobID(),
 				new AllocationID(),
+				new ResourceProfile(1, 100),
 				0L);
 			final SlotReport slotReport = new SlotReport(
 				slotStatus);
@@ -1215,6 +1272,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -1239,6 +1297,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),
@@ -1289,6 +1348,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -1306,6 +1366,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),
@@ -1319,12 +1380,13 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 
-			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, 1L);
+			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, jobId, allocationId, resourceProfile, 1L);
 			final SlotReport newSlotReport = new SlotReport(newSlotStatus);
 			slotManager.reportSlotStatus(taskExecutorConnection.getInstanceID(), newSlotReport);
 
@@ -1366,6 +1428,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -1383,6 +1446,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),
@@ -1396,12 +1460,13 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 
-			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, null, null, 1L);
+			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, null, null, null, 1L);
 			final SlotReport newSlotReport = new SlotReport(newSlotStatus);
 			slotManager.reportSlotStatus(taskExecutorConnection.getInstanceID(), newSlotReport);
 
@@ -1445,6 +1510,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
@@ -1462,6 +1528,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),
@@ -1475,12 +1542,13 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				anyString(),
 				eq(resourceManagerId),
 				anyLong(),
 				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
 
-			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, null, null, 0L);
+			final SlotStatus newSlotStatus = new SlotStatus(slotId, resourceProfile, null, null, null, 0L);
 			final SlotReport newSlotReport = new SlotReport(newSlotStatus);
 			slotManager.reportSlotStatus(taskExecutorConnection.getInstanceID(), newSlotReport);
 
@@ -1489,6 +1557,7 @@ public class SlotManagerTest extends TestLogger {
 				eq(slotId),
 				eq(jobId),
 				eq(allocationId),
+				eq(resourceProfile),
 				eq(targetAddress),
 				eq(resourceManagerId),
 				eq(1L),

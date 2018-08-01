@@ -371,6 +371,7 @@ public class SlotManager implements AutoCloseable {
 					slotStatus.getSlotID(),
 					slotStatus.getAllocationID(),
 					slotStatus.getJobID(),
+					slotStatus.getAllocationResourceProfile(),
 					slotStatus.getResourceProfile(),
 					taskExecutorConnection,
 					slotStatus.getVersion());
@@ -558,6 +559,7 @@ public class SlotManager implements AutoCloseable {
 	 *
 	 * @param slotId identifying the slot on the task manager
 	 * @param allocationId which is currently deployed in the slot
+	 * @param allocationResourceProfile The actual allocated resource for current deployed task
 	 * @param resourceProfile of the slot
 	 * @param taskManagerConnection to communicate with the remote task manager
 	 * @param initialVersion The version of the slot status in the TaskManager
@@ -566,6 +568,7 @@ public class SlotManager implements AutoCloseable {
 			SlotID slotId,
 			AllocationID allocationId,
 			JobID jobId,
+			ResourceProfile allocationResourceProfile,
 			ResourceProfile resourceProfile,
 			TaskExecutorConnection taskManagerConnection,
 			long initialVersion) {
@@ -584,6 +587,13 @@ public class SlotManager implements AutoCloseable {
 		slots.put(slotId, slot);
 
 		updateSlot(slotId, allocationId, jobId);
+
+		if (slotListener != null && allocationId != null) {
+			Preconditions.checkNotNull(allocationResourceProfile,
+					"The allocation resource profile should be reported together");
+
+			slotListener.notifySlotRegistered(slotId, allocationResourceProfile);
+		}
 	}
 
 	/**
@@ -805,6 +815,7 @@ public class SlotManager implements AutoCloseable {
 			slotId,
 			pendingSlotRequest.getJobId(),
 			allocationId,
+			pendingSlotRequest.getResourceProfile(),
 			pendingSlotRequest.getTargetAddress(),
 			resourceManagerId,
 			taskManagerSlot.getVersion(),
@@ -1134,6 +1145,8 @@ public class SlotManager implements AutoCloseable {
 	 * An utility interface for listening for the slot action in slot manager.
 	 */
 	protected interface SlotListener {
+
+		void notifySlotRegistered(SlotID slotId, ResourceProfile allocationResourceProfile);
 
 		void notifySlotFree(SlotID slotId);
 

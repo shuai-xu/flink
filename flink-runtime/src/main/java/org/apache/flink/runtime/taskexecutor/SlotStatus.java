@@ -43,13 +43,16 @@ public class SlotStatus implements Serializable {
 	/** if the slot is allocated, allocationId identify its allocation; else, allocationId is null */
 	private final AllocationID allocationID;
 
+	/** The actual allocated resource */
+	private final ResourceProfile allocationResourceProfile;
+
 	/** if the slot is allocated, jobId identify which job this slot is allocated to; else, jobId is null */
 	private final JobID jobID;
 
 	private final long version;
 
 	public SlotStatus(SlotID slotID, ResourceProfile resourceProfile) {
-		this(slotID, resourceProfile, null, null, 0L);
+		this(slotID, resourceProfile, null, null, null, 0L);
 	}
 
 	public SlotStatus(
@@ -57,11 +60,13 @@ public class SlotStatus implements Serializable {
 			ResourceProfile resourceProfile,
 			JobID jobID,
 			AllocationID allocationID,
+			ResourceProfile allocationResourceProfile,
 			long version) {
 		this.slotID = checkNotNull(slotID, "slotID cannot be null");
 		this.resourceProfile = checkNotNull(resourceProfile, "profile cannot be null");
 		this.allocationID = allocationID;
 		this.jobID = jobID;
+		this.allocationResourceProfile = allocationResourceProfile;
 		this.version = version;
 	}
 
@@ -81,6 +86,15 @@ public class SlotStatus implements Serializable {
 	 */
 	public ResourceProfile getResourceProfile() {
 		return resourceProfile;
+	}
+
+	/**
+	 * Get the actual allocated resource in this slot
+	 *
+	 * @return The actual allocated resource if this slot is allocated, otherwise null
+	 */
+	public ResourceProfile getAllocationResourceProfile() {
+		return allocationResourceProfile;
 	}
 
 	/**
@@ -125,6 +139,10 @@ public class SlotStatus implements Serializable {
 		if (allocationID != null ? !allocationID.equals(that.allocationID) : that.allocationID != null) {
 			return false;
 		}
+		if (allocationResourceProfile != null ? !allocationResourceProfile.equals(that.allocationResourceProfile)
+				: that.allocationResourceProfile != null) {
+			return false;
+		}
 		if (version != that.version) {
 			return false;
 		}
@@ -138,6 +156,7 @@ public class SlotStatus implements Serializable {
 		result = 31 * result + resourceProfile.hashCode();
 		result = 31 * result + (allocationID != null ? allocationID.hashCode() : 0);
 		result = 31 * result + (jobID != null ? jobID.hashCode() : 0);
+		result = 31 * result + (allocationResourceProfile != null ? allocationResourceProfile.hashCode() : 0);
 		result = 31 * result + Long.hashCode(version);
 		return result;
 	}

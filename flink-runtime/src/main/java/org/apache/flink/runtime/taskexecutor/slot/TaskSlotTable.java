@@ -63,6 +63,8 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 	/** Timer service used to time out allocated slots. */
 	private final TimerService<AllocationID> timerService;
 
+	private final ResourceProfile totalResource;
+
 	/** The list of all task slots. */
 	private final List<TaskSlot> taskSlots;
 
@@ -83,6 +85,7 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 
 	public TaskSlotTable(
 		final Collection<ResourceProfile> resourceProfiles,
+		final ResourceProfile totalResource,
 		final TimerService<AllocationID> timerService) {
 
 		int numberSlots = resourceProfiles.size();
@@ -100,6 +103,8 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 			taskSlots.set(index, new TaskSlot(index, resourceProfile));
 			++index;
 		}
+
+		this.totalResource = totalResource;
 
 		allocationIDTaskSlotMap = new HashMap<>(numberSlots);
 
@@ -167,6 +172,7 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 				taskSlot.getResourceProfile(),
 				taskSlot.getJobId(),
 				taskSlot.getAllocationId(),
+				taskSlot.getAllocationResourceProfile(),
 				taskSlot.getVersion());
 
 			slotStatuses.set(i, slotStatus);
@@ -188,15 +194,26 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 	 * @param index of the task slot to allocate
 	 * @param jobId to allocate the task slot for
 	 * @param allocationId identifying the allocation
+	 * @param allocationResourceProfile the actual allocated resource
 	 * @param slotTimeout until the slot times out
 	 * @return True if the task slot could be allocated; otherwise false
 	 */
-	public boolean allocateSlot(int index, JobID jobId, AllocationID allocationId, Time slotTimeout) {
+	public boolean allocateSlot(int index,
+								JobID jobId,
+								AllocationID allocationId,
+								ResourceProfile allocationResourceProfile,
+								Time slotTimeout) {
 		checkInit();
 
 		TaskSlot taskSlot = taskSlots.get(index);
 
-		boolean result = taskSlot.allocate(jobId, allocationId);
+		if (!hasEnoughResource(allocationResourceProfile)) {
+			LOG.warn("Not enough resource for allocation with job = {},  id = {}, resource = {}",
+				jobId, allocationId, allocationResourceProfile);
+			return false;
+		}
+
+		boolean result = taskSlot.allocate(jobId, allocationId, allocationResourceProfile);
 
 		if (result) {
 			// update the allocation id to task slot map
@@ -601,6 +618,22 @@ public class TaskSlotTable implements TimeoutListener<AllocationID> {
 
 	private void checkInit() {
 		Preconditions.checkState(started, "The %s has to be started.", TaskSlotTable.class.getSimpleName());
+	}
+
+	private boolean hasEnoughResource(ResourceProfile allocationResourceProfile) {
+		if (totalResource.equals(ResourceProfile.UNKNOWN)) {
+			return true;
+		}
+
+		ResourceProfile remainResource = totalResource;
+
+		for (TaskSlot taskSlot : taskSlots) {
+			if (taskSlot.getAllocationId() != null) {
+				remainResource = remainResource.minus(taskSlot.getAllocationResourceProfile());
+			}
+		}
+
+		return remainResource.isMatching(allocationResourceProfile);
 	}
 
 	// ---------------------------------------------------------------------

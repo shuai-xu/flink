@@ -25,6 +25,7 @@ import org.apache.flink.runtime.blob.TransientBlobKey;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
@@ -50,6 +51,7 @@ public interface TaskExecutorGateway extends RpcGateway {
 	 * @param slotId slot id for the request
 	 * @param jobId for which to request a slot
 	 * @param allocationId id for the request
+	 * @param allocationResourceProfile resource profile for the request
 	 * @param targetAddress to which to offer the requested slots
 	 * @param resourceManagerId current leader id of the ResourceManager
 	 * @param version version of a slot status
@@ -60,6 +62,7 @@ public interface TaskExecutorGateway extends RpcGateway {
 		SlotID slotId,
 		JobID jobId,
 		AllocationID allocationId,
+		ResourceProfile allocationResourceProfile,
 		String targetAddress,
 		ResourceManagerId resourceManagerId,
 		long version,

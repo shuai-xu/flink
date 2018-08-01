@@ -272,6 +272,13 @@ public class TaskManagerOptions {
 		key("taskmanager.resourceProfile")
 			.defaultValue("");
 
+	/**
+	 * The resource profile for all the slots in a task executor.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_TOTAL_RESOURCE_PROFILE_KEY =
+		key("taskmanager.total.resourceProfile")
+			.defaultValue("");
+
 	// ------------------------------------------------------------------------
 	//  Network Options
 	// ------------------------------------------------------------------------

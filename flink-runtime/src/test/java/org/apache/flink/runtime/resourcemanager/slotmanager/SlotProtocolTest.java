@@ -110,6 +110,7 @@ public class SlotProtocolTest extends TestLogger {
 						any(SlotID.class),
 						any(JobID.class),
 						any(AllocationID.class),
+						any(ResourceProfile.class),
 						any(String.class),
 						any(ResourceManagerId.class),
 						anyLong(),
@@ -132,6 +133,7 @@ public class SlotProtocolTest extends TestLogger {
 					eq(slotID),
 					eq(jobID),
 					eq(allocationID),
+					eq(resourceProfile),
 					any(String.class),
 					any(ResourceManagerId.class),
 					eq(1L),
@@ -156,7 +158,7 @@ public class SlotProtocolTest extends TestLogger {
 		Mockito.when(
 			taskExecutorGateway
 				.requestSlot(any(SlotID.class), any(JobID.class),
-					any(AllocationID.class), any(String.class),
+					any(AllocationID.class), any(ResourceProfile.class), any(String.class),
 					any(ResourceManagerId.class), anyLong(), any(Time.class)))
 			.thenReturn(mock(CompletableFuture.class));
 
@@ -194,6 +196,7 @@ public class SlotProtocolTest extends TestLogger {
 					eq(slotID),
 					eq(jobID),
 					eq(allocationID),
+					eq(resourceProfile),
 					any(String.class),
 					any(ResourceManagerId.class),
 					eq(1L),

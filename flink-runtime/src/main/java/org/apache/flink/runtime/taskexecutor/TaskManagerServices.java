@@ -259,11 +259,13 @@ public class TaskManagerServices {
 			resourceProfiles.add(ResourceProfile.UNKNOWN);
 		}
 
+		final ResourceProfile totalResourceProfile = taskManagerServicesConfiguration.getTotalResourceProfile();
+
 		final TimerService<AllocationID> timerService = new TimerService<>(
 			new ScheduledThreadPoolExecutor(1),
 			taskManagerServicesConfiguration.getTimerServiceShutdownTimeout());
 
-		final TaskSlotTable taskSlotTable = new TaskSlotTable(resourceProfiles, timerService);
+		final TaskSlotTable taskSlotTable = new TaskSlotTable(resourceProfiles, totalResourceProfile, timerService);
 
 		final JobManagerTable jobManagerTable = new JobManagerTable();
 

@@ -123,7 +123,10 @@ public class TaskExecutorITCase extends TestLogger {
 		final TaskManagerConfiguration taskManagerConfiguration = TaskManagerConfiguration.fromConfiguration(configuration);
 		final TaskManagerLocation taskManagerLocation = new TaskManagerLocation(taskManagerResourceId, InetAddress.getLocalHost(), 1234);
 		final List<ResourceProfile> resourceProfiles = Arrays.asList(resourceProfile);
-		final TaskSlotTable taskSlotTable = new TaskSlotTable(resourceProfiles, new TimerService<AllocationID>(scheduledExecutorService, 100L));
+		final TaskSlotTable taskSlotTable = new TaskSlotTable(
+			resourceProfiles,
+			new ResourceProfile(1, 100),
+			new TimerService<AllocationID>(scheduledExecutorService, 100L));
 		final SlotManager slotManager = new SlotManager(
 			rpcService.getScheduledExecutor(),
 			TestingUtils.infiniteTime(),

@@ -206,7 +206,7 @@ public class TaskManagerResource {
 		return slotNum;
 	}
 
-	ResourceProfile getTaskResourceProfile() {
+	public ResourceProfile getTaskResourceProfile() {
 		return taskResourceProfile;
 	}
 

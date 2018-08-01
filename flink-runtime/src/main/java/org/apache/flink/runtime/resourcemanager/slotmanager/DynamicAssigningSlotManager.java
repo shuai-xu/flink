@@ -180,6 +180,11 @@ public class DynamicAssigningSlotManager extends SlotManager {
 	private class SlotListenerImpl implements SlotListener {
 
 		@Override
+		public void notifySlotRegistered(SlotID slotId, ResourceProfile allocationResourceProfile) {
+			recordAllocatedSlotAndResource(slotId, allocationResourceProfile);
+		}
+
+		@Override
 		public void notifySlotFree(SlotID slotId) {
 			removeSlotFromAllocatedResources(slotId);
 		}

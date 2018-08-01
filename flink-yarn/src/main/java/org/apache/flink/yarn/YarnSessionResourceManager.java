@@ -49,6 +49,7 @@ import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.MathUtils;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -65,6 +66,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import javax.annotation.Nullable;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -516,6 +519,13 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				taskManagerConfiguration.getMaxRegistrationDuration().getUnit());
 		final Configuration taskManagerConfig = BootstrapTools.generateTaskManagerConfiguration(
 				flinkConfig, "", 0, slotNumber, teRegistrationTimeout);
+
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		ObjectOutputStream rpOutput = new ObjectOutputStream(output);
+		rpOutput.writeObject(taskManagerResource.getTaskResourceProfile());
+		rpOutput.close();
+		taskManagerConfig.setString(TaskManagerOptions.TASK_MANAGER_TOTAL_RESOURCE_PROFILE_KEY,
+			new String(Base64.encodeBase64(output.toByteArray())));
 
 		// config the managed memory for task manager, fraction will be used if managed memory was not set.
 		final int managedMemory = taskManagerResource.getManagedMemorySize();

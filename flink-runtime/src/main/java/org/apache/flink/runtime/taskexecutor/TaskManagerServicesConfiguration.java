@@ -89,6 +89,8 @@ public class TaskManagerServicesConfiguration {
 
 	private final List<ResourceProfile> resourceProfileList = new LinkedList<>();
 
+	private final ResourceProfile totalResourceProfile;
+
 	public TaskManagerServicesConfiguration(
 			InetAddress taskManagerAddress,
 			String[] tmpDirPaths,
@@ -102,7 +104,8 @@ public class TaskManagerServicesConfiguration {
 			boolean preAllocateMemory,
 			float memoryFraction,
 			long timerServiceShutdownTimeout,
-			List<ResourceProfile> resourceProfileList) {
+			List<ResourceProfile> resourceProfileList,
+			ResourceProfile totalResourceProfile) {
 
 		this.taskManagerAddress = checkNotNull(taskManagerAddress);
 		this.tmpDirPaths = checkNotNull(tmpDirPaths);
@@ -122,6 +125,8 @@ public class TaskManagerServicesConfiguration {
 		this.timerServiceShutdownTimeout = timerServiceShutdownTimeout;
 
 		this.resourceProfileList.addAll(checkNotNull(resourceProfileList));
+
+		this.totalResourceProfile = totalResourceProfile;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -190,6 +195,10 @@ public class TaskManagerServicesConfiguration {
 
 	public List<ResourceProfile> getResourceProfileList() {
 		return resourceProfileList;
+	}
+
+	public ResourceProfile getTotalResourceProfile() {
+		return totalResourceProfile;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -277,6 +286,14 @@ public class TaskManagerServicesConfiguration {
 			}
 		}
 
+		ResourceProfile totalResourceProfile = ResourceProfile.UNKNOWN;
+		String totalResource = configuration.getString(TaskManagerOptions.TASK_MANAGER_TOTAL_RESOURCE_PROFILE_KEY);
+		if (!totalResource.isEmpty()) {
+			ByteArrayInputStream input = new ByteArrayInputStream(Base64.decodeBase64(totalResource));
+			ObjectInputStream rpInput = new ObjectInputStream(input);
+			totalResourceProfile = (ResourceProfile)rpInput.readObject();
+		}
+
 		return new TaskManagerServicesConfiguration(
 			remoteAddress,
 			tmpDirs,
@@ -290,7 +307,8 @@ public class TaskManagerServicesConfiguration {
 			preAllocateMemory,
 			memoryFraction,
 			timerServiceShutdownTimeout,
-			resourceProfiles);
+			resourceProfiles,
+			totalResourceProfile);
 	}
 
 	// --------------------------------------------------------------------------
