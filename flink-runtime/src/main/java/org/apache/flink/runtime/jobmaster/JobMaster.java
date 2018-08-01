@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmaster;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
@@ -48,6 +49,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionGraphBuilder;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
+import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.executiongraph.IntermediateResult;
 import org.apache.flink.runtime.executiongraph.JobStatusListener;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
@@ -568,19 +570,27 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			return FutureUtils.completedExceptionally(new Exception("Cannot find execution vertex for vertex ID " + vertexID));
 		}
 
-		final InputSplitAssigner splitAssigner = vertex.getSplitAssigner();
-		if (splitAssigner == null) {
-			log.error("No InputSplitAssigner for vertex ID {}.", vertexID);
-			return FutureUtils.completedExceptionally(new Exception("No InputSplitAssigner for vertex ID " + vertexID));
-		}
+		ExecutionVertex executionVertex = execution.getVertex();
+		InputSplit nextInputSplit = executionVertex.getNextInputSplitFromAssgined();
+		if (nextInputSplit == null) {
+			final InputSplitAssigner splitAssigner = vertex.getSplitAssigner();
+			if (splitAssigner == null) {
+				log.error("No InputSplitAssigner for vertex ID {}.", vertexID);
+				return FutureUtils.completedExceptionally(new Exception("No InputSplitAssigner for vertex ID " + vertexID));
+			}
 
-		final LogicalSlot slot = execution.getAssignedResource();
-		final int taskId = execution.getVertex().getParallelSubtaskIndex();
-		final String host = slot != null ? slot.getTaskManagerLocation().getHostname() : null;
-		final InputSplit nextInputSplit = splitAssigner.getNextInputSplit(host, taskId);
+			final LogicalSlot slot = execution.getAssignedResource();
+			final int taskId = execution.getVertex().getParallelSubtaskIndex();
+			final String host = slot != null ? slot.getTaskManagerLocation().getHostname() : null;
+			nextInputSplit = splitAssigner.getNextInputSplit(host, taskId);
 
-		if (log.isDebugEnabled()) {
-			log.debug("Send next input split {}.", nextInputSplit);
+			if (nextInputSplit != null) {
+				executionVertex.inputSplitAssigned(nextInputSplit);
+			}
+
+			if (log.isDebugEnabled()) {
+				log.debug("Send next input split {}.", nextInputSplit);
+			}
 		}
 
 		try {
@@ -590,7 +600,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			log.error("Could not serialize the next input split of class {}.", nextInputSplit.getClass(), ex);
 			IOException reason = new IOException("Could not serialize the next input split of class " +
 					nextInputSplit.getClass() + ".", ex);
-			vertex.fail(reason);
+			executionVertex.fail(reason);
 			return FutureUtils.completedExceptionally(reason);
 		}
 	}
@@ -1485,6 +1495,15 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 			rescalingBehaviour.acceptWithException(jobVertex, newParallelism);
 		}
+	}
+
+	//----------------------------------------------------------------------------------------------
+	// Utility methods only for testing
+	//----------------------------------------------------------------------------------------------
+
+	@VisibleForTesting
+	ExecutionGraph getExecutionGraph() {
+		return executionGraph;
 	}
 
 	//----------------------------------------------------------------------------------------------

@@ -23,6 +23,7 @@ import org.apache.flink.api.common.Archiveable;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
@@ -33,9 +34,7 @@ import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescript
 import org.apache.flink.runtime.deployment.ResultPartitionDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
-import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.instance.SimpleSlot;
-import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
@@ -43,6 +42,8 @@ import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobmaster.LogicalSlot;
+import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
@@ -103,6 +104,10 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	/** The current or latest execution attempt of this vertex's task */
 	private volatile Execution currentExecution;	// this field must never be null
+
+	private final List<InputSplit> assignedInputSplits = new LinkedList<>();
+
+	private int inputSplitIndex = 0;
 
 	// --------------------------------------------------------------------------------------------
 
@@ -606,6 +611,9 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 					getExecutionGraph().vertexUnFinished();
 				}
 
+				//TODO: set this index according to checkpoint when batch support checkpoint.
+				inputSplitIndex = 0;
+
 				return newExecution;
 			}
 			else {
@@ -699,6 +707,11 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		currentExecution.sendPartitionInfos();
 	}
 
+	void clearAssignedInputSplits() {
+		assignedInputSplits.clear();
+		inputSplitIndex = 0;
+	}
+
 	/**
 	 * Returns all blocking result partitions whose receivers can be scheduled/updated.
 	 */
@@ -721,6 +734,21 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		else {
 			return finishedBlockingPartitions;
 		}
+	}
+
+	// the following two method is added for region failover
+	// record the input split assigned to this task
+	public void inputSplitAssigned(InputSplit inputSplit) {
+		this.assignedInputSplits.add(inputSplit);
+		inputSplitIndex++;
+		Preconditions.checkArgument(inputSplitIndex == assignedInputSplits.size());
+	}
+
+	public InputSplit getNextInputSplitFromAssgined() {
+		if (assignedInputSplits.isEmpty() || inputSplitIndex >= assignedInputSplits.size()) {
+			return null;
+		}
+		return assignedInputSplits.get(inputSplitIndex++);
 	}
 
 	// --------------------------------------------------------------------------------------------

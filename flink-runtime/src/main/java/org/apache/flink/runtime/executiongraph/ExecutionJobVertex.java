@@ -571,6 +571,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 			for (int i = 0; i < parallelism; i++) {
 				taskVertices[i].resetForNewExecution(timestamp, expectedGlobalModVersion);
+				taskVertices[i].clearAssignedInputSplits();
 			}
 
 			// set up the input splits again

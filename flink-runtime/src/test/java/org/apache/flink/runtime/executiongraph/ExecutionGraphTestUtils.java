@@ -149,6 +149,33 @@ public class ExecutionGraphTestUtils {
 	}
 
 	/**
+	 * Waits until the Execution vertex has reached a certain state.
+	 *
+	 * <p>This method is based on polling and might miss very fast state transitions!
+	 */
+	public static void waitUntilExecutionVertexState(ExecutionVertex ev, ExecutionState state, long maxWaitMillis)
+			throws TimeoutException {
+
+		checkNotNull(ev);
+		checkNotNull(state);
+		checkArgument(maxWaitMillis >= 0);
+
+		// this is a poor implementation - we may want to improve it eventually
+		final long deadline = maxWaitMillis == 0 ? Long.MAX_VALUE : System.nanoTime() + (maxWaitMillis * 1_000_000);
+
+		while (ev.getExecutionState() != state && System.nanoTime() < deadline) {
+			try {
+				Thread.sleep(2);
+			} catch (InterruptedException ignored) {}
+		}
+
+		if (System.nanoTime() >= deadline) {
+			throw new TimeoutException();
+		}
+	}
+
+
+	/**
 	 * Waits until all executions fulfill the given predicate.
 	 *
 	 * @param executionGraph for which to check the executions
