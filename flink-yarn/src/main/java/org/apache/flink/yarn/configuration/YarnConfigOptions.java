@@ -165,36 +165,6 @@ public class YarnConfigOptions {
 					.defaultValue(10);
 
 	/**
-	 * How many cores a task manager will supply for user.
-	 */
-	public static final ConfigOption<Double> YARN_CLUSTER_TM_CORE =
-			key("cluster.taskmanager.cpu.core")
-					.defaultValue(1.0);
-
-	/**
-	 * How many direct memory a task manager will supply for user.
-	 */
-	public static final ConfigOption<Integer> YARN_CLUSTER_TM_DIRECT_MEMORY =
-			key("cluster.taskmanager.direct.memory.mb")
-					.defaultValue(0);
-
-	/**
-	 * How many native memory a task manager will supply for user.
-	 */
-	public static final ConfigOption<Integer> YARN_CLUSTER_TM_NATIVE_MEMORY =
-			key("cluster.taskmanager.native.memory.mb")
-					.defaultValue(0);
-
-	/**
-	 * Specified as resource-type:value pairs separated by commas.
-	 * such as MANAGED_MEMORY_MB:1024,GPU:1,FPGA:1.
-	 * Extended resources should been defined in YARN cluster.
-	 */
-	public static final ConfigOption<String> YARN_CLUSTER_TM_EXTENDED_RESOURCES =
-			key("cluster.taskmanager.extended.resources")
-					.defaultValue("");
-
-	/**
 	 * The register timeout for a container before released by resource manager. In seconds.
 	 * In case of a container took very long time to be launched.
 	 */

@@ -43,46 +43,86 @@ public class TaskManagerOptions {
 				" YARN container, minus a certain tolerance value.");
 
 	/**
+	 * How many cores a task manager will supply for user.
+	 */
+	public static final ConfigOption<Double> TASK_MANAGER_CORE =
+			key("taskmanager.cpu.core")
+			.defaultValue(1.0)
+			.withDescription("How many cores a task manager will supply for user");
+
+	/**
+	 * How many direct memory a task manager will supply for user.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_DIRECT_MEMORY =
+			key("taskmanager.direct.memory.mb")
+			.defaultValue(0)
+			.withDescription("How many direct memory (in megabytes) a task manager will supply for user.");
+
+	/**
+	 * How many native memory a task manager will supply for user.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_NATIVE_MEMORY =
+			key("taskmanager.native.memory.mb")
+			.defaultValue(0)
+			.withDescription("How many native memory (in megabytes) a task manager will supply for user.");
+
+	/**
+	 * Extended resources will supply for user.
+	 * Specified as resource-type:value pairs separated by commas.
+	 * such as GPU:1,FPGA:1.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_EXTENDED_RESOURCES =
+			key("taskmanager.extended.resources")
+			.defaultValue("Extended resources will supply for user. " +
+				"Specified as resource-type:value pairs separated by commas. such as GPU:1,FPGA:1.");
+
+	/**
 	 * The heap memory used for task manager process.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_HEAP_MEMORY =
-			key("taskmanager.heap.memory.mb")
-					.defaultValue(128);
+			key("taskmanager.process.heap.memory.mb")
+			.defaultValue(128)
+			.withDescription("The heap memory (in megabytes) used for task manager process.");
 
 	/**
 	 * The native memory used for task manager process.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NATIVE_MEMORY =
-			key("taskmanager.native.memory.mb")
-					.defaultValue(128);
+			key("taskmanager.process.native.memory.mb")
+			.defaultValue(128)
+			.withDescription("The native memory (in megabytes) used for task manager process.");
 
 	/**
 	 * The direct memory used for netty framework in the task manager process.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_PROCESS_NETTY_MEMORY =
-			key("taskmanager.netty.memory.mb")
-					.defaultValue(320);
+			key("taskmanager.process.netty.memory.mb")
+			.defaultValue(320)
+			.withDescription("The direct memory (in megabytes) used for netty framework in the task manager process.");
 
 	/**
 	 * Ratio of young generation for dynamic memory in task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO =
 			key("taskmanager.memory.dynamic.young.ratio")
-					.defaultValue(0.25);
+			.defaultValue(0.25)
+			.withDescription("Ratio of young generation for dynamic memory in task manager.");
 
 	/**
 	 * Ratio of young generation for persistent memory in task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_PERSISTENT_YOUNG_RATIO =
 			key("taskmanager.memory.persistent.young.ratio")
-					.defaultValue(0.1);
+			.defaultValue(0.1)
+			.withDescription("Ratio of young generation for persistent memory in task manager.");
 
 	/**
 	 * CMS occupy fraction for a task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_CMS_GC_RATIO =
 			key("taskmanager.memory.cms.gc.ratio")
-					.defaultValue(0.7);
+			.defaultValue(0.7)
+			.withDescription("CMS occupy fraction for a task manager.");
 
 	/**
 	 * Whether to kill the TaskManager when the task thread throws an OutOfMemoryError.

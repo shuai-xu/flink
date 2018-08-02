@@ -28,6 +28,11 @@
             <td>The maximum number of bytes that a checkpoint alignment may buffer. If the checkpoint alignment buffers more than the configured amount of data, the checkpoint is aborted (skipped). A value of -1 indicates that there is no limit.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.cpu.core</h5></td>
+            <td style="word-wrap: break-word;">1.0</td>
+            <td>How many cores a task manager will supply for user</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.data.port</h5></td>
             <td style="word-wrap: break-word;">0</td>
             <td>The task manager’s port used for data exchange operations.</td>
@@ -48,9 +53,19 @@
             <td>The interval (in ms) for the log thread to log the current memory usage.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.direct.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">0</td>
+            <td>How many direct memory (in megabytes) a task manager will supply for user.</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.exit-on-fatal-akka-error</h5></td>
             <td style="word-wrap: break-word;">false</td>
             <td>Whether the quarantine monitor for task managers shall be started. The quarantine monitor shuts down the actor system if it detects that it has quarantined another actor system or if it has been quarantined by another actor system.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.extended.resources</h5></td>
+            <td style="word-wrap: break-word;">"Extended resources will supply for user. Specified as resource-type:value pairs separated by commas. such as GPU:1,FPGA:1."</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>taskmanager.heap.mb</h5></td>
@@ -68,6 +83,16 @@
             <td>Whether to kill the TaskManager when the task thread throws an OutOfMemoryError.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.memory.cms.gc.ratio</h5></td>
+            <td style="word-wrap: break-word;">0.7</td>
+            <td>CMS occupy fraction for a task manager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.memory.dynamic.young.ratio</h5></td>
+            <td style="word-wrap: break-word;">0.25</td>
+            <td>Ratio of young generation for dynamic memory in task manager.</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.memory.fraction</h5></td>
             <td style="word-wrap: break-word;">0.7</td>
             <td>The relative amount of memory (after subtracting the amount of memory used by network buffers) that the task manager reserves for sorting, hash tables, and caching of intermediate results. For example, a value of `0.8` means that a task manager reserves 80% of its memory for internal data buffers, leaving 20% of free memory for the task manager's heap for objects created by user-defined functions. This parameter is only evaluated, if taskmanager.memory.size is not set.</td>
@@ -76,6 +101,11 @@
             <td><h5>taskmanager.memory.off-heap</h5></td>
             <td style="word-wrap: break-word;">false</td>
             <td>Memory allocation method (JVM heap or off-heap), used for managed memory of the TaskManager as well as the network buffers.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.memory.persistent.young.ratio</h5></td>
+            <td style="word-wrap: break-word;">0.1</td>
+            <td>Ratio of young generation for persistent memory in task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.memory.preallocate</h5></td>
@@ -91,6 +121,11 @@
             <td><h5>taskmanager.memory.size</h5></td>
             <td style="word-wrap: break-word;">-1</td>
             <td>Amount of memory to be allocated by the task manager's memory manager (in megabytes). If not set, a relative fraction will be allocated.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.native.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">0</td>
+            <td>How many native memory (in megabytes) a task manager will supply for user.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.network.detailed-metrics</h5></td>
@@ -153,6 +188,21 @@
             <td>The number of parallel operator or user function instances that a single TaskManager can run. If this value is larger than 1, a single TaskManager takes multiple instances of a function or operator. That way, the TaskManager can utilize multiple CPU cores, but at the same time, the available memory is divided between the different operator or function instances. This value is typically proportional to the number of physical CPU cores that the TaskManager's machine has (e.g., equal to the number of cores, or half the number of cores).</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.process.heap.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">128</td>
+            <td>The heap memory (in megabytes) used for task manager process.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.process.native.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">128</td>
+            <td>The native memory (in megabytes) used for task manager process.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.process.netty.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">320</td>
+            <td>The direct memory (in megabytes) used for netty framework in the task manager process.</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.registration.initial-backoff</h5></td>
             <td style="word-wrap: break-word;">"500 ms"</td>
             <td>The initial registration backoff between two consecutive registration attempts. The backoff is doubled for each new registration attempt until it reaches the maximum registration backoff.</td>
@@ -181,6 +231,11 @@
             <td><h5>taskmanager.rpc.port</h5></td>
             <td style="word-wrap: break-word;">"0"</td>
             <td>The task manager’s IPC port. Accepts a list of ports (“50100,50101”), ranges (“50100-50200”) or a combination of both. It is recommended to set a range of ports to avoid collisions when multiple TaskManagers are running on the same machine.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.total.resourceProfile</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td></td>
         </tr>
     </tbody>
 </table>

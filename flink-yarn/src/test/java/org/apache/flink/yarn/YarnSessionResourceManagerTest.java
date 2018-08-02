@@ -20,6 +20,7 @@ package org.apache.flink.yarn;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.concurrent.ManuallyTriggeredScheduledExecutor;
@@ -38,7 +39,6 @@ import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.util.TestLogger;
-import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -90,7 +90,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 	@SuppressWarnings("unchecked")
 	private YarnSessionResourceManager createYarnSessionResourceManager() {
 		Configuration conf = new Configuration();
-		conf.setString(YarnConfigOptions.YARN_CLUSTER_TM_EXTENDED_RESOURCES, "MANAGED_MEMORY_MB:128");
+		conf.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
 		ResourceManagerConfiguration rmConfig =
 			new ResourceManagerConfiguration(Time.seconds(1), Time.seconds(10));
 		final HighAvailabilityServices highAvailabilityServices = mock(HighAvailabilityServices.class);

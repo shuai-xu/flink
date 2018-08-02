@@ -19,10 +19,10 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.webmonitor.WebMonitorUtils;
 import org.apache.flink.test.testdata.WordCountData;
 import org.apache.flink.test.util.TestBaseUtils;
-import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
@@ -93,8 +93,8 @@ public class YARNSessionITCase extends YarnTestBase {
 				"-tm", "1024",
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
-				"-D" + YarnConfigOptions.YARN_CLUSTER_TM_CORE.key() + "=2",
-				"-D" + YarnConfigOptions.YARN_CLUSTER_TM_EXTENDED_RESOURCES.key() + "=MANAGED_MEMORY_MB:128"},
+				"-D" + TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
+				"-D" + TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=128"},
 			"Flink JobManager is now running",
 			RunTypes.YARN_SESSION);
 
@@ -123,16 +123,8 @@ public class YARNSessionITCase extends YarnTestBase {
 		}
 		LOG.info("Got application URL from YARN {}", url);
 
-		ArrayNode taskManagers = null;
-		while (taskManagers == null || taskManagers.size() < 1) {
-			String response = TestBaseUtils.getFromHTTP(url + "taskmanagers/");
-			JsonNode parsedTMs = new ObjectMapper().readTree(response);
-			taskManagers = (ArrayNode) parsedTMs.get("taskmanagers");
-			Assert.assertNotNull(taskManagers);
-			Thread.sleep(500);
-		}
-		Assert.assertEquals("unexpected slot number: " + taskManagers,
-			3, taskManagers.get(0).get("slotsNumber").asInt());
+		int slotNumber = getSlotNumber(url + "taskmanagers/", 3);
+		Assert.assertEquals("unexpected slot number: " + slotNumber, 3, slotNumber);
 
 		// get the configuration from webinterface & check if the dynamic properties from YARN show up there.
 		String jsonConfig = TestBaseUtils.getFromHTTP(url + "jobmanager/config");
@@ -152,8 +144,6 @@ public class YARNSessionITCase extends YarnTestBase {
 
 		Assert.assertEquals("unable to find hostname in " + jsonConfig, hostname,
 			parsedConfig.get(JobManagerOptions.ADDRESS.key()));
-		/*Assert.assertEquals("unable to find port in " + jsonConfig, port,
-			parsedConfig.get(JobManagerOptions.PORT.key()));*/
 
 		// test logfile access
 		String logs = TestBaseUtils.getFromHTTP(url + "jobmanager/log");
@@ -225,8 +215,8 @@ public class YARNSessionITCase extends YarnTestBase {
 				"-tm", "1024",
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
-				"-D" + YarnConfigOptions.YARN_CLUSTER_TM_CORE.key() + "=2",
-				"-D" + YarnConfigOptions.YARN_CLUSTER_TM_EXTENDED_RESOURCES.key() + "=MANAGED_MEMORY_MB:128"},
+				"-D" + TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
+				"-D" + TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=128"},
 			"Flink JobManager is now running",
 			RunTypes.YARN_SESSION);
 
@@ -255,16 +245,8 @@ public class YARNSessionITCase extends YarnTestBase {
 		}
 		LOG.info("Got application URL from YARN {}", url);
 
-		ArrayNode taskManagers = null;
-		while (taskManagers == null || taskManagers.size() < 1) {
-			String response = TestBaseUtils.getFromHTTP(url + "taskmanagers/");
-			JsonNode parsedTMs = new ObjectMapper().readTree(response);
-			taskManagers = (ArrayNode) parsedTMs.get("taskmanagers");
-			Assert.assertNotNull(taskManagers);
-			Thread.sleep(500);
-		}
-		Assert.assertEquals("unexpected slot number: " + taskManagers,
-			3, taskManagers.get(0).get("slotsNumber").asInt());
+		int slotNumber = getSlotNumber(url + "taskmanagers/", 3);
+		Assert.assertEquals("unexpected slot number: " + slotNumber, 3, slotNumber);
 
 		// get the configuration from webinterface & check if the dynamic properties from YARN show up there.
 		String jsonConfig = TestBaseUtils.getFromHTTP(url + "jobmanager/config");
@@ -284,8 +266,6 @@ public class YARNSessionITCase extends YarnTestBase {
 
 		Assert.assertEquals("unable to find hostname in " + jsonConfig, hostname,
 			parsedConfig.get(JobManagerOptions.ADDRESS.key()));
-		/*Assert.assertEquals("unable to find port in " + jsonConfig, port,
-			parsedConfig.get(JobManagerOptions.PORT.key()));*/
 
 		// test logfile access
 		String logs = TestBaseUtils.getFromHTTP(url + "jobmanager/log");
@@ -361,8 +341,8 @@ public class YARNSessionITCase extends YarnTestBase {
 				"-tm", "1024",
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
-				"-D" + YarnConfigOptions.YARN_CLUSTER_TM_CORE.key() + "=2",
-				"-D" + YarnConfigOptions.YARN_CLUSTER_TM_EXTENDED_RESOURCES.key() + "=MANAGED_MEMORY_MB:128"},
+				"-D" + TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
+				"-D" + TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=128"},
 			"Flink JobManager is now running",
 			RunTypes.YARN_SESSION);
 
@@ -395,16 +375,8 @@ public class YARNSessionITCase extends YarnTestBase {
 		}
 		LOG.info("Got application URL from YARN {}", url);
 
-		ArrayNode taskManagers = null;
-		while (taskManagers == null || taskManagers.size() < 1) {
-			String response = TestBaseUtils.getFromHTTP(url + "taskmanagers/");
-			JsonNode parsedTMs = new ObjectMapper().readTree(response);
-			taskManagers = (ArrayNode) parsedTMs.get("taskmanagers");
-			Assert.assertNotNull(taskManagers);
-			Thread.sleep(500);
-		}
-		Assert.assertEquals("unexpected slot number: " + taskManagers,
-			3, taskManagers.get(0).get("slotsNumber").asInt());
+		int slotNumber = getSlotNumber(url + "taskmanagers/", 3);
+		Assert.assertEquals("unexpected slot number: " + slotNumber, 3, slotNumber);
 
 		// get the configuration from webinterface & check if the dynamic properties from YARN show up there.
 		String jsonConfig = TestBaseUtils.getFromHTTP(url + "jobmanager/config");
@@ -424,8 +396,6 @@ public class YARNSessionITCase extends YarnTestBase {
 
 		Assert.assertEquals("unable to find hostname in " + jsonConfig, hostname,
 			parsedConfig.get(JobManagerOptions.ADDRESS.key()));
-		/*Assert.assertEquals("unable to find port in " + jsonConfig, port,
-			parsedConfig.get(JobManagerOptions.PORT.key()));*/
 
 		// test logfile access
 		String logs = TestBaseUtils.getFromHTTP(url + "jobmanager/log");
@@ -502,5 +472,26 @@ public class YARNSessionITCase extends YarnTestBase {
 			ensureNoProhibitedStringInLogFiles(PROHIBITED_STRINGS, WHITELISTED_STRINGS,
 				appsToIgnore.toArray(new String[appsToIgnore.size()]));
 		}
+	}
+
+	private int getSlotNumber(String url, int expect) throws Exception {
+		ArrayNode taskManagers = null;
+		int slotNumber = 0;
+		int index = 0;
+		while (taskManagers == null || taskManagers.size() < 1 || index < 60) {
+			String response = TestBaseUtils.getFromHTTP(url);
+			JsonNode parsedTMs = new ObjectMapper().readTree(response);
+			taskManagers = (ArrayNode) parsedTMs.get("taskmanagers");
+			Assert.assertNotNull(taskManagers);
+			if (taskManagers.size() == 1) {
+				slotNumber = taskManagers.get(0).get("slotsNumber").asInt();
+				if (slotNumber == expect) {
+					break;
+				}
+			}
+			Thread.sleep(500);
+			index++;
+		}
+		return slotNumber;
 	}
 }

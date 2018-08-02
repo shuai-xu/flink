@@ -8,6 +8,11 @@
     </thead>
     <tbody>
         <tr>
+            <td><h5>job.app-master-vcore</h5></td>
+            <td style="word-wrap: break-word;">1</td>
+            <td></td>
+        </tr>
+        <tr>
             <td><h5>yarn.application-attempts</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
             <td>Number of ApplicationMaster restarts. Note that that the entire Flink cluster will restart and the YARN Client will loose the connection. Also, the JobManager address will change and you’ll need to set the JM host:port manually. It is recommended to leave this option at 1.</td>
@@ -26,6 +31,16 @@
             <td><h5>yarn.appmaster.rpc.port</h5></td>
             <td style="word-wrap: break-word;">-1</td>
             <td>The port where the application master RPC system is listening.</td>
+        </tr>
+        <tr>
+            <td><h5>yarn.container-launcher-number</h5></td>
+            <td style="word-wrap: break-word;">10</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>yarn.container-register-timeout</h5></td>
+            <td style="word-wrap: break-word;">120</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>yarn.containers.vcores</h5></td>
@@ -56,6 +71,11 @@
             <td><h5>yarn.tags</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
             <td>A comma-separated list of tags to apply to the Flink YARN application.</td>
+        </tr>
+        <tr>
+            <td><h5>yarn.vcore-ratio</h5></td>
+            <td style="word-wrap: break-word;">1</td>
+            <td></td>
         </tr>
     </tbody>
 </table>

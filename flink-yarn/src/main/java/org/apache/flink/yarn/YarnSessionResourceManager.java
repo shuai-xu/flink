@@ -19,6 +19,7 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -142,6 +143,9 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	/** The number of containers requested. **/
 	private final int workerNum;
 
+	/** The resource for each Yarn container. **/
+	private final Resource workerResource;
+
 	/** The number of containers requested, but not yet granted. */
 	private final AtomicInteger numPendingContainerRequests;
 
@@ -206,8 +210,6 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 
 		numPendingContainerRequests = new AtomicInteger(0);
 
-		workerNum = Integer.parseInt(env.getOrDefault(YarnConfigKeys.ENV_TM_COUNT, "1"));
-
 		resourcePriority = Priority.newInstance(0);
 
 		containerRegisterTimeout = Time.seconds(flinkConfig.getLong(YarnConfigOptions.CONTAINER_REGISTER_TIMEOUT));
@@ -227,6 +229,13 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				TaskManagerResource.convertToResourceProfile(taskManagerResource));
 			log.info("The resource for user in a task executor is {}.", taskManagerResource);
 		}
+
+		workerNum = Integer.parseInt(env.getOrDefault(YarnConfigKeys.ENV_TM_COUNT, "1"));
+		int containerMemory = taskManagerResource.getTotalContainerMemory();
+		int containerVcore = (int) (taskManagerResource.getContainerCpuCores() *
+				flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO));
+		workerResource = Resource.newInstance(containerMemory, containerVcore);
+		log.info("workerNum: {}, workerResource: {}", workerNum, workerResource);
 	}
 
 	protected AMRMClientAsync<AMRMClient.ContainerRequest> createAndStartResourceManagerClient(
@@ -349,7 +358,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 
 	@Override
 	public void startNewWorker(ResourceProfile resourceProfile) {
-		requestYarnContainers(getWorkerResource(), 1);
+		requestYarnContainers(workerResource, 1);
 	}
 
 	@Override
@@ -358,7 +367,10 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 			Container container = workerNode.getContainer();
 			log.info("Release container {}.", container.getId());
 			resourceManagerClient.releaseAssignedContainer(container.getId());
-			workerNodeMap.remove(workerNode.getResourceID());
+			YarnWorkerNode node = workerNodeMap.remove(workerNode.getResourceID());
+			if (node != null) {
+				requestYarnContainers(workerResource, 1);
+			}
 		}
 		return true;
 	}
@@ -376,33 +388,31 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	@VisibleForTesting
 	void startClusterWorkers() {
 		int requiredWorkerNum = Math.max(workerNum - workerNodeMap.size(), 0);
-		requestYarnContainers(getWorkerResource(), requiredWorkerNum);
-	}
-
-	private Resource getWorkerResource() {
-		int containerMemory = taskManagerResource.getTotalContainerMemory();
-		int containerVcore = (int) (taskManagerResource.getContainerCpuCores() *
-				flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO));
-		return Resource.newInstance(containerMemory, containerVcore);
+		requestYarnContainers(workerResource, requiredWorkerNum);
 	}
 
 	private ResourceProfile initContainerResourceConfig() {
-		double core = flinkConfig.getDouble(YarnConfigOptions.YARN_CLUSTER_TM_CORE);
+		double core = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_CORE);
 		int heapMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
-		int nativeMemory = flinkConfig.getInteger(YarnConfigOptions.YARN_CLUSTER_TM_NATIVE_MEMORY);
-		int directMemory = flinkConfig.getInteger(YarnConfigOptions.YARN_CLUSTER_TM_DIRECT_MEMORY);
+		int nativeMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_NATIVE_MEMORY);
+		int directMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_DIRECT_MEMORY);
 
 		int networkBuffersNum = flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS);
 		long pageSize = flinkConfig.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
 		int networkMemory = (int) Math.ceil((pageSize * networkBuffersNum) / (1024.0 * 1024.0));
 
+		// Add managed memory to extended resources.
+		long managedMemory = flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
+		Map<String, org.apache.flink.api.common.resources.Resource> resourceMap = getExtendedResources();
+		resourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
+				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemory));
 		return new ResourceProfile(
 				core,
 				heapMemory,
 				directMemory,
 				nativeMemory,
 				networkMemory,
-				getExtendedResources());
+				resourceMap);
 	}
 
 	/**
@@ -412,7 +422,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	 */
 	private Map<String, org.apache.flink.api.common.resources.Resource> getExtendedResources() {
 		Map<String, org.apache.flink.api.common.resources.Resource> extendedResources = new HashMap<>();
-		String resourcesStr = flinkConfig.getString(YarnConfigOptions.YARN_CLUSTER_TM_EXTENDED_RESOURCES);
+		String resourcesStr = flinkConfig.getString(TaskManagerOptions.TASK_MANAGER_EXTENDED_RESOURCES);
 		if (resourcesStr != null && !resourcesStr.isEmpty()) {
 			for (String resource : resourcesStr.split(",")) {
 				String[] splits = resource.split(":");
@@ -465,7 +475,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		return new Tuple2(host, Integer.valueOf(port));
 	}
 
-	private void requestYarnContainers(Resource resource, int numContainers) {
+	private synchronized void requestYarnContainers(Resource resource, int numContainers) {
 		int requiredWorkerNum = workerNum - workerNodeMap.size() - numPendingContainerRequests.get();
 		if (requiredWorkerNum < 1) {
 			log.info("Allocated and pending containers have reached the limit {}, will not allocate more.", workerNum);
@@ -473,7 +483,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		}
 
 		numPendingContainerRequests.addAndGet(numContainers);
-		for (int i = 0; i < numPendingContainerRequests.get(); ++i) {
+		for (int i = 0; i < requiredWorkerNum; ++i) {
 			resourceManagerClient.addContainerRequest(new AMRMClient.ContainerRequest(resource, null, null, resourcePriority));
 		}
 
@@ -567,7 +577,6 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		if (node != null && !taskExecutorRegistered(containerId)) {
 			log.info("Container {} did not register in {}, will stop it and request a new one.", containerId, containerRegisterTimeout);
 			stopWorker(node);
-			requestYarnContainers(node.getContainer().getResource(), 1);
 			return false;
 		}
 		return node != null;
@@ -621,7 +630,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				// If a worker terminated exceptionally, start a new one;
 				YarnWorkerNode node = workerNodeMap.remove(new ResourceID(container.getContainerId().toString()));
 				if (node != null) {
-					requestYarnContainers(node.getContainer().getResource(), 1);
+					requestYarnContainers(workerResource, 1);
 				}
 			}
 		}
@@ -639,6 +648,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				log.info("Received new container: {} - Remaining pending container requests: {}",
 						container.getId(), numPendingContainerRequests.get() - 1);
 				numPendingContainerRequests.decrementAndGet();
+				resourceManagerClient.removeContainerRequest(
+						new AMRMClient.ContainerRequest(workerResource, null, null, resourcePriority));
 
 				final String containerIdStr = container.getId().toString();
 				workerNodeMap.put(new ResourceID(containerIdStr),
@@ -658,7 +669,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 						resourceManagerClient.releaseAssignedContainer(container.getId());
 						YarnWorkerNode node = workerNodeMap.remove(new ResourceID(container.getId().toString()));
 						if (node != null) {
-							requestYarnContainers(container.getResource(), 1);
+							requestYarnContainers(workerResource, 1);
 						}
 					}
 				});
