@@ -28,7 +28,7 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{Programs, RelBuilder}
 import org.apache.flink.api.common.TaskInfo
-import org.apache.flink.api.common.accumulators.Accumulator
+import org.apache.flink.api.common.accumulators.{AbstractAccumulatorRegistry, Accumulator}
 import org.apache.flink.api.common.functions._
 import org.apache.flink.api.common.functions.util.RuntimeUDFContext
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
@@ -153,7 +153,7 @@ abstract class ExpressionTestBase {
         null,
         context._3.getConfig,
         new util.HashMap[String, Future[Path]](),
-        new util.HashMap[String, Accumulator[_, _]](),
+        mock(classOf[AbstractAccumulatorRegistry]),
         null)
       richMapper.setRuntimeContext(t)
       richMapper.open(new Configuration())

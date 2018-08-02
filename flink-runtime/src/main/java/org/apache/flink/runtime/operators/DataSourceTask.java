@@ -310,7 +310,7 @@ public class DataSourceTask<OT> extends AbstractInvokable {
 		this.eventualOutputs = new ArrayList<RecordWriter<?>>();
 
 		this.output = BatchTask.initOutputs(this, cl, this.config, this.chainedTasks, this.eventualOutputs,
-				getExecutionConfig(), getEnvironment().getAccumulatorRegistry().getUserMap());
+				getExecutionConfig(), getEnvironment().getAccumulatorRegistry());
 	}
 
 	// ------------------------------------------------------------------------
@@ -401,7 +401,7 @@ public class DataSourceTask<OT> extends AbstractInvokable {
 		String sourceName =  getEnvironment().getTaskInfo().getTaskName().split("->")[0].trim();
 		sourceName = sourceName.startsWith("CHAIN") ? sourceName.substring(6) : sourceName;
 		return new DistributedRuntimeUDFContext(env.getTaskInfo(), getUserCodeClassLoader(),
-				getExecutionConfig(), env.getDistributedCacheEntries(), env.getAccumulatorRegistry().getUserMap(), 
+				getExecutionConfig(), env.getDistributedCacheEntries(), env.getAccumulatorRegistry(),
 				getEnvironment().getMetricGroup().addOperator(sourceName));
 	}
 }

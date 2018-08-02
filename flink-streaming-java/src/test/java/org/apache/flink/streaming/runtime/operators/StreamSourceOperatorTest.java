@@ -19,7 +19,6 @@
 package org.apache.flink.streaming.runtime.operators;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.functions.StoppableFunction;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.execution.Environment;
@@ -50,7 +49,6 @@ import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -304,7 +302,7 @@ public class StreamSourceOperatorTest {
 		when(mockTask.getConfiguration()).thenReturn(cfg);
 		when(mockTask.getEnvironment()).thenReturn(env);
 		when(mockTask.getExecutionConfig()).thenReturn(executionConfig);
-		when(mockTask.getAccumulatorMap()).thenReturn(Collections.<String, Accumulator<?, ?>>emptyMap());
+		when(mockTask.getAccumulatorRegistry()).thenReturn(env.getAccumulatorRegistry());
 		when(mockTask.getStreamStatusMaintainer()).thenReturn(streamStatusMaintainer);
 
 		doAnswer(new Answer<ProcessingTimeService>() {

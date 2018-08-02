@@ -65,6 +65,7 @@ import org.apache.flink.runtime.messages.{Acknowledge, StackTraceSampleResponse}
 import org.apache.flink.runtime.metrics.groups.TaskManagerMetricGroup
 import org.apache.flink.runtime.metrics.util.MetricUtils
 import org.apache.flink.runtime.metrics.{MetricRegistryConfiguration, MetricRegistryImpl, MetricRegistry => FlinkMetricRegistry}
+import org.apache.flink.runtime.preaggregatedaccumulators.EmptyOperationAccumulatorAggregationManager
 import org.apache.flink.runtime.process.ProcessReaper
 import org.apache.flink.runtime.security.{SecurityConfiguration, SecurityUtils}
 import org.apache.flink.runtime.state.{TaskExecutorLocalStateStoresManager, TaskStateManagerImpl}
@@ -148,6 +149,8 @@ class TaskManager(
 
   /** Handler for shared broadcast variables (shared between multiple Tasks) */
   protected val bcVarManager = new BroadcastVariableManager()
+
+  protected val globalFilterManager = new EmptyOperationAccumulatorAggregationManager()
 
   /** Handler for distributed files cached by this TaskManager */
   protected val fileCache = new FileCache(config.getTmpDirectories())
@@ -1227,6 +1230,7 @@ class TaskManager(
         ioManager,
         network,
         bcVarManager,
+        globalFilterManager,
         taskStateManager,
         taskManagerConnection,
         inputSplitProvider,

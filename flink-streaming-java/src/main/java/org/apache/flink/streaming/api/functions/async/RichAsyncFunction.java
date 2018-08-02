@@ -51,6 +51,7 @@ import org.apache.flink.util.Preconditions;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Rich variant of the {@link AsyncFunction}. As a {@link RichFunction}, it gives access to the
@@ -201,6 +202,26 @@ public abstract class RichAsyncFunction<IN, OUT> extends AbstractRichFunction im
 		@Override
 		public Map<String, Accumulator<?, ?>> getAllAccumulators() {
 			throw new UnsupportedOperationException("Accumulators are not supported in rich async functions.");
+		}
+
+		@Override
+		public <V, A extends Serializable> void addPreAggregatedAccumulator(String name, Accumulator<V, A> accumulator) {
+			throw new UnsupportedOperationException("Pre-aggregated accumulators are not supported in rich async functions.");
+		}
+
+		@Override
+		public <V, A extends Serializable> Accumulator<V, A> getPreAggregatedAccumulator(String name) {
+			throw new UnsupportedOperationException("Pre-aggregated accumulators are not supported in rich async functions.");
+		}
+
+		@Override
+		public void commitPreAggregatedAccumulator(String name) {
+			throw new UnsupportedOperationException("Pre-aggregated accumulators are not supported in rich async functions.");
+		}
+
+		@Override
+		public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name) {
+			throw new UnsupportedOperationException("Pre-aggregated accumulators are not supported in rich async functions.");
 		}
 
 		@Override

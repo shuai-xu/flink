@@ -520,6 +520,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 				taskExecutorServices.getIOManager(),
 				taskExecutorServices.getNetworkEnvironment(),
 				taskExecutorServices.getBroadcastVariableManager(),
+				taskExecutorServices.getAccumulatorAggregationManager(),
 				taskStateManager,
 				taskManagerActions,
 				inputSplitProvider,

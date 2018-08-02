@@ -44,6 +44,7 @@ import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
+import org.apache.flink.runtime.preaggregatedaccumulators.EmptyOperationAccumulatorAggregationManager;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -112,6 +113,7 @@ public class StreamMockEnvironment implements Environment {
 		TaskStateManager taskStateManager) {
 		this(
 			new JobID(),
+			new JobVertexID(),
 			new ExecutionAttemptID(0L, 0L),
 			jobConfig,
 			taskConfig,
@@ -124,6 +126,7 @@ public class StreamMockEnvironment implements Environment {
 
 	public StreamMockEnvironment(
 		JobID jobID,
+		JobVertexID jobVertexID,
 		ExecutionAttemptID executionAttemptID,
 		Configuration jobConfig,
 		Configuration taskConfig,
@@ -154,7 +157,8 @@ public class StreamMockEnvironment implements Environment {
 		this.bufferSize = bufferSize;
 
 		this.executionConfig = executionConfig;
-		this.accumulatorRegistry = new AccumulatorRegistry(jobID, getExecutionId());
+		this.accumulatorRegistry = new AccumulatorRegistry(jobID, jobVertexID, getExecutionId(),
+			new EmptyOperationAccumulatorAggregationManager());
 
 		KvStateRegistry registry = new KvStateRegistry();
 		this.kvStateRegistry = registry.createTaskRegistry(jobID, getJobVertexId());

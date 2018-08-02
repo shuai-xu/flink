@@ -19,7 +19,7 @@
 package org.apache.flink.runtime.operators;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.accumulators.Accumulator;
+import org.apache.flink.api.common.accumulators.AbstractAccumulatorRegistry;
 import org.apache.flink.api.common.distributions.DataDistribution;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.GroupCombineFunction;
@@ -70,7 +70,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The base class for all batch tasks. Encapsulated common behavior and implements the main life-cycle
@@ -210,9 +209,9 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 	protected volatile boolean running = true;
 
 	/**
-	 * The accumulator map used in the RuntimeContext.
+	 * The accumulator registry used in the RuntimeContext.
 	 */
-	protected Map<String, Accumulator<?,?>> accumulatorMap;
+	protected AbstractAccumulatorRegistry accumulatorRegistry;
 	private OperatorMetricGroup metrics;
 
 	// --------------------------------------------------------------------------------------------
@@ -1023,17 +1022,17 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 		ClassLoader userCodeClassLoader = getUserCodeClassLoader();
 
-		this.accumulatorMap = getEnvironment().getAccumulatorRegistry().getUserMap();
+		this.accumulatorRegistry = getEnvironment().getAccumulatorRegistry();
 
 		this.output = initOutputs(this, userCodeClassLoader, this.config, this.chainedTasks, this.eventualOutputs,
-				this.getExecutionConfig(), this.accumulatorMap);
+				this.getExecutionConfig(), this.accumulatorRegistry);
 	}
 
 	public DistributedRuntimeUDFContext createRuntimeContext(MetricGroup metrics) {
 		Environment env = getEnvironment();
 
 		return new DistributedRuntimeUDFContext(env.getTaskInfo(), getUserCodeClassLoader(),
-				getExecutionConfig(), env.getDistributedCacheEntries(), this.accumulatorMap, metrics);
+				getExecutionConfig(), env.getDistributedCacheEntries(), this.accumulatorRegistry, metrics);
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1272,7 +1271,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 										List<ChainedDriver<?, ?>> chainedTasksTarget,
 										List<RecordWriter<?>> eventualOutputs,
 										ExecutionConfig executionConfig,
-										Map<String, Accumulator<?,?>> accumulatorMap)
+										AbstractAccumulatorRegistry accumulatorRegistry)
 	throws Exception
 	{
 		final int numOutputs = config.getNumOutputs();
@@ -1309,7 +1308,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 					previous = getOutputCollector(containingTask, chainedStubConf, cl, eventualOutputs, 0, chainedStubConf.getNumOutputs());
 				}
 
-				ct.setup(chainedStubConf, taskName, previous, containingTask, cl, executionConfig, accumulatorMap);
+				ct.setup(chainedStubConf, taskName, previous, containingTask, cl, executionConfig, accumulatorRegistry);
 				chainedTasksTarget.add(0, ct);
 
 				if (i == numChained - 1) {

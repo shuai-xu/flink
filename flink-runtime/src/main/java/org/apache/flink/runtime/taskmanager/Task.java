@@ -47,6 +47,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.JobInformation;
 import org.apache.flink.runtime.executiongraph.TaskInformation;
 import org.apache.flink.runtime.filecache.FileCache;
+import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
 import org.apache.flink.runtime.io.network.netty.PartitionProducerStateChecker;
@@ -285,6 +286,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		IOManager ioManager,
 		NetworkEnvironment networkEnvironment,
 		BroadcastVariableManager bcVarManager,
+		AccumulatorAggregationManager accumulatorAggregationManager,
 		TaskStateManager taskStateManager,
 		TaskManagerActions taskManagerActions,
 		InputSplitProvider inputSplitProvider,
@@ -333,7 +335,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		this.ioManager = Preconditions.checkNotNull(ioManager);
 		this.broadcastVariableManager = Preconditions.checkNotNull(bcVarManager);
 		this.taskStateManager = Preconditions.checkNotNull(taskStateManager);
-		this.accumulatorRegistry = new AccumulatorRegistry(jobId, executionId);
+		this.accumulatorRegistry = new AccumulatorRegistry(jobId, vertexId, executionId, accumulatorAggregationManager);
 
 		this.inputSplitProvider = Preconditions.checkNotNull(inputSplitProvider);
 		this.checkpointResponder = Preconditions.checkNotNull(checkpointResponder);

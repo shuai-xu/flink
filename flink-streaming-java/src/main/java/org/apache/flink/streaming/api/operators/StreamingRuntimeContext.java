@@ -19,7 +19,6 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.functions.BroadcastVariableInitializer;
 import org.apache.flink.api.common.functions.util.AbstractRuntimeUDFContext;
 import org.apache.flink.api.common.state.AggregatingState;
@@ -44,7 +43,6 @@ import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.util.Preconditions;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of the {@link org.apache.flink.api.common.functions.RuntimeContext},
@@ -63,12 +61,11 @@ public class StreamingRuntimeContext extends AbstractRuntimeUDFContext {
 
 	private final String operatorUniqueID;
 
-	public StreamingRuntimeContext(AbstractStreamOperator<?> operator,
-									Environment env, Map<String, Accumulator<?, ?>> accumulators) {
+	public StreamingRuntimeContext(AbstractStreamOperator<?> operator, Environment env) {
 		super(env.getTaskInfo(),
 				env.getUserClassLoader(),
 				operator.getExecutionConfig(),
-				accumulators,
+				env.getAccumulatorRegistry(),
 				env.getDistributedCacheEntries(),
 				operator.getMetricGroup());
 

@@ -27,7 +27,9 @@ import org.apache.flink.runtime.broadcast.BroadcastVariableManager;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
+import org.apache.flink.runtime.preaggregatedaccumulators.RPCBasedAccumulatorAggregationManager;
 import org.apache.flink.runtime.filecache.FileCache;
+import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.io.network.ConnectionManager;
@@ -78,6 +80,7 @@ public class TaskManagerServices {
 	private final IOManager ioManager;
 	private final NetworkEnvironment networkEnvironment;
 	private final BroadcastVariableManager broadcastVariableManager;
+	private final AccumulatorAggregationManager accumulatorAggregationManager;
 	private final FileCache fileCache;
 	private final TaskSlotTable taskSlotTable;
 	private final JobManagerTable jobManagerTable;
@@ -90,6 +93,7 @@ public class TaskManagerServices {
 		IOManager ioManager,
 		NetworkEnvironment networkEnvironment,
 		BroadcastVariableManager broadcastVariableManager,
+		AccumulatorAggregationManager accumulatorAggregationManager,
 		FileCache fileCache,
 		TaskSlotTable taskSlotTable,
 		JobManagerTable jobManagerTable,
@@ -106,6 +110,7 @@ public class TaskManagerServices {
 		this.jobManagerTable = Preconditions.checkNotNull(jobManagerTable);
 		this.jobLeaderService = Preconditions.checkNotNull(jobLeaderService);
 		this.taskManagerStateStore = Preconditions.checkNotNull(taskManagerStateStore);
+		this.accumulatorAggregationManager = Preconditions.checkNotNull(accumulatorAggregationManager);
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -150,6 +155,10 @@ public class TaskManagerServices {
 
 	public TaskExecutorLocalStateStoresManager getTaskManagerStateStore() {
 		return taskManagerStateStore;
+	}
+
+	public AccumulatorAggregationManager getAccumulatorAggregationManager() {
+		return accumulatorAggregationManager;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -285,12 +294,15 @@ public class TaskManagerServices {
 			stateRootDirectoryFiles,
 			taskIOExecutor);
 
+		final AccumulatorAggregationManager accumulatorAggregationManager = new RPCBasedAccumulatorAggregationManager();
+
 		return new TaskManagerServices(
 			taskManagerLocation,
 			memoryManager,
 			ioManager,
 			network,
 			broadcastVariableManager,
+			accumulatorAggregationManager,
 			fileCache,
 			taskSlotTable,
 			jobManagerTable,

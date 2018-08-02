@@ -19,7 +19,6 @@
 package org.apache.flink.streaming.api.functions.source;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.io.RichInputFormat;
 import org.apache.flink.api.common.io.statistics.BaseStatistics;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -42,7 +41,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
 
 /**
  * Tests for {@link InputFormatSourceFunction}.
@@ -268,8 +266,7 @@ public class InputFormatSourceFunctionTest {
 
 		private MockRuntimeContext(LifeCycleTestInputFormat format, int noOfSplits, Environment environment) {
 			super(new MockStreamOperator(),
-				environment,
-				Collections.<String, Accumulator<?, ?>>emptyMap());
+				environment);
 
 			this.noOfSplits = noOfSplits;
 			this.format = format;

@@ -44,6 +44,7 @@ import org.apache.flink.metrics.MetricGroup;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A RuntimeContext contains information about the context in which functions are executed. Each parallel instance
@@ -151,6 +152,42 @@ public interface RuntimeContext {
 	@Deprecated
 	@PublicEvolving
 	Map<String, Accumulator<?, ?>> getAllAccumulators();
+
+	/**
+	 * Pre-aggregated accumulator is a special kind of accumulators. It is committed by each task
+	 * of a single job vertex and then aggregated to a single value. Only the aggregated value is
+	 * stored instead of the values from each task, and this process is different from the common
+	 * accumulators.
+	 *
+	 * <p>Pre-aggregated accumulator is different from the Accumulator in that:
+	 * <ul>
+	 *     <li> The Pre-aggregated accumulator is subjected to the tasks of a single JobVertex, and all the tasks
+	 *          should commit exactly one partial value.</li>
+	 *     <li> The Pre-aggregated accumulator does not guarantee successful aggregation. The user codes should function
+	 *          normally without the accumulator.</li>
+	 *     <li> The Pre-aggregated accumulator guarantees only AT_LEAST_ONCE semantics.</li>
+	 * </ul>
+	 */
+	@PublicEvolving
+	<V, A extends Serializable> void addPreAggregatedAccumulator(String name, Accumulator<V, A> accumulator);
+
+	/**
+	 * Gets an uncommitted pre-aggregated accumulator.
+	 */
+	@PublicEvolving
+	<V, A extends Serializable> Accumulator<V, A> getPreAggregatedAccumulator(String name);
+
+	/**
+	 * Commits a pre-aggregated accumulator and remove it from the registered map.
+	 */
+	@PublicEvolving
+	void commitPreAggregatedAccumulator(String name);
+
+	/**
+	 * Queries a pre-aggregated accumulator asynchronously.
+	 */
+	@PublicEvolving
+	<V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name);
 
 	/**
 	 * Convenience function to create a counter object for integers.
