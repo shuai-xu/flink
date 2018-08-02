@@ -23,13 +23,12 @@ import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannel.BufferAndAvailability;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.mockito.stubbing.OngoingStubbing;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -45,8 +44,7 @@ public class TestInputChannel {
 
 	private final SingleInputGate inputGate;
 
-	// Abusing Mockito here... ;)
-	protected OngoingStubbing<Optional<BufferAndAvailability>> stubbing;
+	private ConcurrentLinkedQueue<BufferAndAvailability> bufferQueue;
 
 	public TestInputChannel(SingleInputGate inputGate, int channelIndex) {
 		checkArgument(channelIndex >= 0);
@@ -55,22 +53,12 @@ public class TestInputChannel {
 		when(mock.getChannelIndex()).thenReturn(channelIndex);
 	}
 
-	public TestInputChannel read(Buffer buffer) throws IOException, InterruptedException {
-		return read(buffer, true);
-	}
-
-	public TestInputChannel read(Buffer buffer, boolean moreAvailable) throws IOException, InterruptedException {
-		if (stubbing == null) {
-			stubbing = when(mock.getNextBuffer()).thenReturn(Optional.of(new BufferAndAvailability(buffer, moreAvailable, 0)));
-		} else {
-			stubbing = stubbing.thenReturn(Optional.of(new BufferAndAvailability(buffer, moreAvailable, 0)));
-		}
-
-		return this;
-	}
-
 	public TestInputChannel readBuffer() throws IOException, InterruptedException {
 		return readBuffer(true);
+	}
+
+	public TestInputChannel read(Buffer buffer) throws IOException, InterruptedException {
+		return read(buffer, true);
 	}
 
 	public TestInputChannel readBuffer(boolean moreAvailable) throws IOException, InterruptedException {
@@ -80,28 +68,45 @@ public class TestInputChannel {
 		return read(buffer, moreAvailable);
 	}
 
+	public TestInputChannel read(Buffer buffer, boolean moreAvailable) throws IOException, InterruptedException {
+		readInitialize();
+
+		bufferQueue.add(new BufferAndAvailability(buffer, moreAvailable, 0));
+		return this;
+	}
+
 	public TestInputChannel readEndOfPartitionEvent() throws IOException, InterruptedException {
-		final Answer<Optional<BufferAndAvailability>> answer = new Answer<Optional<BufferAndAvailability>>() {
-			@Override
-			public Optional<BufferAndAvailability> answer(InvocationOnMock invocationOnMock) throws Throwable {
-				// Return true after finishing
-				when(mock.isReleased()).thenReturn(true);
+		readInitialize();
 
-				return Optional.of(new BufferAndAvailability(EventSerializer.toBuffer(EndOfPartitionEvent.INSTANCE), false, 0));
-			}
-		};
-
-		if (stubbing == null) {
-			stubbing = when(mock.getNextBuffer()).thenAnswer(answer);
-		} else {
-			stubbing = stubbing.thenAnswer(answer);
-		}
-
+		bufferQueue.add(new BufferAndAvailability(EventSerializer.toBuffer(EndOfPartitionEvent.INSTANCE), false, 0));
 		return this;
 	}
 
 	public InputChannel getInputChannel() {
 		return mock;
+	}
+
+	private void readInitialize() {
+		synchronized (this) {
+			if (this.bufferQueue == null) {
+				this.bufferQueue = new ConcurrentLinkedQueue<>();
+
+				try {
+					when(mock.getNextBuffer()).thenAnswer((invocationOnMock) -> {
+						BufferAndAvailability bufferAndAvailability = bufferQueue.poll();
+
+						if (EventSerializer.isEvent(bufferAndAvailability.buffer(), EndOfPartitionEvent.class)) {
+							// Return true after finishing
+							when(mock.isReleased()).thenReturn(true);
+						}
+
+						return Optional.of(bufferAndAvailability);
+					});
+				} catch (IOException | InterruptedException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------

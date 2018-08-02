@@ -179,6 +179,11 @@ public class BarrierBufferMassiveRandomTest {
 		}
 
 		@Override
+		public Optional<BufferOrEvent> getNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
+			return getNextBufferOrEvent();
+		}
+
+		@Override
 		public Optional<BufferOrEvent> pollNextBufferOrEvent() throws IOException, InterruptedException {
 			return getNextBufferOrEvent();
 		}

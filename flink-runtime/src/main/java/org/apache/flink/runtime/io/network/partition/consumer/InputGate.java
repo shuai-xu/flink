@@ -81,6 +81,16 @@ public interface InputGate {
 	Optional<BufferOrEvent> getNextBufferOrEvent() throws IOException, InterruptedException;
 
 	/**
+	 * Blocking call waiting for next {@link BufferOrEvent} on the given sub {@link InputGate} when
+	 * being complex InputGate.
+	 *
+	 * <p>If being single InputGate, its behavior must be equivalent to {@link #getNextBufferOrEvent()}.
+	 *
+	 * @return {@code Optional.empty()} if {@link #isFinished()} returns true.
+	 */
+	Optional<BufferOrEvent> getNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException;
+
+	/**
 	 * Poll the {@link BufferOrEvent}.
 	 *
 	 * @return {@code Optional.empty()} if there is no data to return or if {@link #isFinished()} returns true.

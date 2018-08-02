@@ -503,6 +503,11 @@ public class SingleInputGate implements InputGate {
 	}
 
 	@Override
+	public Optional<BufferOrEvent> getNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
+		return getNextBufferOrEvent(true);
+	}
+
+	@Override
 	public Optional<BufferOrEvent> pollNextBufferOrEvent() throws IOException, InterruptedException {
 		return getNextBufferOrEvent(false);
 	}

@@ -24,6 +24,7 @@ import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGateListener;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Optional;
@@ -83,6 +84,11 @@ public class MockInputGate implements InputGate {
 			closedChannels++;
 		}
 		return Optional.of(next);
+	}
+
+	@Override
+	public Optional<BufferOrEvent> getNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
+		return getNextBufferOrEvent();
 	}
 
 	@Override
