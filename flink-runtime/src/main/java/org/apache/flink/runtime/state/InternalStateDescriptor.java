@@ -18,7 +18,9 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.functions.Partitioner;
+import org.apache.flink.api.common.functions.RowMerger;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.types.Row;
@@ -210,6 +212,23 @@ public final class InternalStateDescriptor implements Serializable {
 		}
 
 		return new RowSerializer(valueColumnSerializers);
+	}
+
+	/**
+	 * Returns the merger for the values in the state.
+	 *
+	 * @return The merger for the values in the state.
+	 */
+	public Merger<Row> getValueMerger() {
+		Merger<?>[] valueColumnMergers =
+			new Merger<?>[getNumValueColumns()];
+
+		for (int index = 0; index < getNumValueColumns(); ++index) {
+			valueColumnMergers[index] =
+				getValueColumnDescriptor(index).getMerger();
+		}
+
+		return new RowMerger(valueColumnMergers);
 	}
 
 	@Override
