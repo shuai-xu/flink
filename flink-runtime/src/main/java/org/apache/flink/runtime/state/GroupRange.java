@@ -75,6 +75,17 @@ public class GroupRange implements GroupSet {
 		return endGroup;
 	}
 
+	/**
+	 * A helper method to create a group range with given bounds.
+	 *
+	 * @param startGroup The lower bound of the range.
+	 * @param endGroup The upper bound of the range.
+	 * @return The group range with given bounds.
+	 */
+	public static GroupRange of(int startGroup, int endGroup) {
+		return new GroupRange(startGroup, endGroup);
+	}
+
 	//--------------------------------------------------------------------------
 
 	@Override

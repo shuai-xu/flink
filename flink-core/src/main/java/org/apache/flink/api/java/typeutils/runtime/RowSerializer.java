@@ -61,6 +61,15 @@ public final class RowSerializer extends TypeSerializer<Row> {
 		this.nullMask = new boolean[fieldSerializers.length];
 	}
 
+	/**
+	 * Returns the serializers for the fields in the row.
+	 *
+	 * @return The serializers for the fields in the row.
+	 */
+	public TypeSerializer<?>[] getFieldSerializers() {
+		return fieldSerializers;
+	}
+
 	@Override
 	public boolean isImmutableType() {
 		return false;

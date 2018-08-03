@@ -41,15 +41,15 @@ import java.io.IOException;
  * (typically a replicated highly-available filesystem, like <a href="https://hadoop.apache.org/">HDFS</a>,
  * <a href="https://ceph.com/">Ceph</a>, <a href="https://aws.amazon.com/documentation/s3/">S3</a>,
  * <a href="https://cloud.google.com/storage/">GCS</a>, etc).
- * 
+ *
  * <p>The {@code RocksDBStateBackend} stores working state in <a href="http://rocksdb.org/">RocksDB</a>,
  * and checkpoints the state by default to a filesystem (similar to the {@code FsStateBackend}).
- * 
+ *
  * <h2>Raw Bytes Storage and Backends</h2>
- * 
+ *
  * The {@code StateBackend} creates services for <i>raw bytes storage</i> and for <i>keyed state</i>
  * and <i>operator state</i>.
- * 
+ *
  * <p>The <i>raw bytes storage</i> (through the {@link CheckpointStreamFactory}) is the fundamental
  * service that simply stores bytes in a fault tolerant fashion. This service is used by the JobManager
  * to store checkpoint and recovery metadata and is typically also used by the keyed- and operator state
@@ -61,12 +61,12 @@ import java.io.IOException;
  * However, it is also possible that for example a keyed state backend simply implements the bridge to
  * a key/value store, and that it does not need to store anything in the raw byte storage upon a
  * checkpoint.
- * 
+ *
  * <h2>Serializability</h2>
- * 
+ *
  * State Backends need to be {@link java.io.Serializable serializable}, because they distributed
- * across parallel processes (for distributed execution) together with the streaming application code. 
- * 
+ * across parallel processes (for distributed execution) together with the streaming application code.
+ *
  * <p>Because of that, {@code StateBackend} implementations (typically subclasses
  * of {@link AbstractStateBackend}) are meant to be like <i>factories</i> that create the proper
  * states stores that provide access to the persistent storage and hold the keyed- and operator
@@ -74,7 +74,7 @@ import java.io.IOException;
  * configurations) which makes it easier to be serializable.
  *
  * <h2>Thread Safety</h2>
- * 
+ *
  * State backend implementations have to be thread-safe. Multiple threads may be creating
  * streams and keyed-/operator state backends concurrently.
  */
@@ -112,7 +112,7 @@ public interface StateBackend extends java.io.Serializable {
 	CheckpointStorage createCheckpointStorage(JobID jobId) throws IOException;
 
 	// ------------------------------------------------------------------------
-	//  Structure Backends 
+	//  Structure Backends
 	// ------------------------------------------------------------------------
 
 	/**
@@ -135,7 +135,7 @@ public interface StateBackend extends java.io.Serializable {
 			int numberOfKeyGroups,
 			KeyGroupRange keyGroupRange,
 			TaskKvStateRegistry kvStateRegistry) throws Exception;
-	
+
 	/**
 	 * Creates a new {@link OperatorStateBackend} that can be used for storing operator state.
 	 *
@@ -150,4 +150,22 @@ public interface StateBackend extends java.io.Serializable {
 	 * @throws Exception This method may forward all exceptions that occur while instantiating the backend.
 	 */
 	OperatorStateBackend createOperatorStateBackend(Environment env, String operatorIdentifier) throws Exception;
+
+	/**
+	 * Creates a new {@link AbstractInternalStateBackend} that can be used for storing internal state.
+	 *
+	 * @param env The runtime environment of the executing task.
+	 * @param operatorIdentifier The identifier of the operator whose state should be stored.
+	 * @param numberOfGroups The total number of groups for all subtasks.
+	 * @param groups The groups of the given scope in the backend.
+	 *
+	 * @return The AbstractInternalStateBackend for operator identified by the job and operator identifier.
+	 *
+	 * @throws Exception This method may forward all exceptions that occur while instantiating the backend.
+	 */
+	AbstractInternalStateBackend createInternalStateBackend(
+		Environment env,
+		String operatorIdentifier,
+		int numberOfGroups,
+		GroupSet groups) throws Exception;
 }

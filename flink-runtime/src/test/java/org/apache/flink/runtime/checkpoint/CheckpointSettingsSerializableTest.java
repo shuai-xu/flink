@@ -35,9 +35,11 @@ import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguratio
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.StateBackend;
@@ -70,22 +72,22 @@ public class CheckpointSettingsSerializableTest extends TestLogger {
 		final Serializable outOfClassPath = CommonTestUtils.createObjectForClassNotInClassPath(classLoader);
 
 		final MasterTriggerRestoreHook.Factory[] hooks = {
-				new TestFactory(outOfClassPath) };
+			new TestFactory(outOfClassPath) };
 		final SerializedValue<MasterTriggerRestoreHook.Factory[]> serHooks = new SerializedValue<>(hooks);
 
 		final JobCheckpointingSettings checkpointingSettings = new JobCheckpointingSettings(
-				Collections.<JobVertexID>emptyList(),
-				Collections.<JobVertexID>emptyList(),
-				Collections.<JobVertexID>emptyList(),
-				new CheckpointCoordinatorConfiguration(
-					1000L,
-					10000L,
-					0L,
-					1,
-					CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION,
-					true),
-				new SerializedValue<StateBackend>(new CustomStateBackend(outOfClassPath)),
-				serHooks);
+			Collections.<JobVertexID>emptyList(),
+			Collections.<JobVertexID>emptyList(),
+			Collections.<JobVertexID>emptyList(),
+			new CheckpointCoordinatorConfiguration(
+				1000L,
+				10000L,
+				0L,
+				1,
+				CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION,
+				true),
+			new SerializedValue<StateBackend>(new CustomStateBackend(outOfClassPath)),
+			serHooks);
 
 		final JobGraph jobGraph = new JobGraph(new JobID(), "test job");
 		jobGraph.setSnapshotSettings(checkpointingSettings);
@@ -121,7 +123,7 @@ public class CheckpointSettingsSerializableTest extends TestLogger {
 	private static final class TestFactory implements MasterTriggerRestoreHook.Factory {
 
 		private static final long serialVersionUID = -612969579110202607L;
-		
+
 		private final Serializable payload;
 
 		TestFactory(Serializable payload) {
@@ -176,6 +178,15 @@ public class CheckpointSettingsSerializableTest extends TestLogger {
 		public OperatorStateBackend createOperatorStateBackend(
 			Environment env, String operatorIdentifier) throws Exception {
 			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public AbstractInternalStateBackend createInternalStateBackend(
+			Environment env,
+			String operatorIdentifier,
+			int numberOfGroups,
+			GroupSet groups) throws Exception {
+			return null;
 		}
 	}
 }

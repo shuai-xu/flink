@@ -52,10 +52,12 @@ import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.OperatorStateHandle;
@@ -274,6 +276,15 @@ public class StreamTaskTerminationTest extends TestLogger {
 				.thenReturn(new FutureTask<>(new BlockingCallable()));
 
 			return operatorStateBackend;
+		}
+
+		@Override
+		public AbstractInternalStateBackend createInternalStateBackend(
+			Environment env,
+			String operatorIdentifier,
+			int numberOfGroups,
+			GroupSet groups) throws Exception {
+			return null;
 		}
 	}
 

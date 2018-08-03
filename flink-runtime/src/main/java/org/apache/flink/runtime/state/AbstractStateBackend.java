@@ -42,16 +42,23 @@ public abstract class AbstractStateBackend implements StateBackend, java.io.Seri
 
 	@Override
 	public abstract <K> AbstractKeyedStateBackend<K> createKeyedStateBackend(
-			Environment env,
-			JobID jobID,
-			String operatorIdentifier,
-			TypeSerializer<K> keySerializer,
-			int numberOfKeyGroups,
-			KeyGroupRange keyGroupRange,
-			TaskKvStateRegistry kvStateRegistry) throws IOException;
+		Environment env,
+		JobID jobID,
+		String operatorIdentifier,
+		TypeSerializer<K> keySerializer,
+		int numberOfKeyGroups,
+		KeyGroupRange keyGroupRange,
+		TaskKvStateRegistry kvStateRegistry) throws IOException;
 
 	@Override
 	public abstract OperatorStateBackend createOperatorStateBackend(
-			Environment env,
-			String operatorIdentifier) throws Exception;
+		Environment env,
+		String operatorIdentifier) throws Exception;
+
+	@Override
+	public abstract AbstractInternalStateBackend createInternalStateBackend(
+		Environment env,
+		String operatorIdentifier,
+		int numberOfGroups,
+		GroupSet groups) throws Exception;
 }

@@ -26,10 +26,12 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.ConfigurableStateBackend;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -203,13 +205,13 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 	 *                              runtime configuration will be used.
 	 */
 	public MemoryStateBackend(
-			@Nullable String checkpointPath,
-			@Nullable String savepointPath,
-			int maxStateSize,
-			TernaryBoolean asynchronousSnapshots) {
+		@Nullable String checkpointPath,
+		@Nullable String savepointPath,
+		int maxStateSize,
+		TernaryBoolean asynchronousSnapshots) {
 
 		super(checkpointPath == null ? null : new Path(checkpointPath),
-				savepointPath == null ? null : new Path(savepointPath));
+			savepointPath == null ? null : new Path(savepointPath));
 
 		checkArgument(maxStateSize > 0, "maxStateSize must be > 0");
 		this.maxStateSize = maxStateSize;
@@ -231,7 +233,7 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 		// if asynchronous snapshots were configured, use that setting,
 		// else check the configuration
 		this.asynchronousSnapshots = original.asynchronousSnapshots.resolveUndefined(
-				configuration.getBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS));
+			configuration.getBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS));
 	}
 
 	// ------------------------------------------------------------------------
@@ -289,36 +291,46 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 
 	@Override
 	public OperatorStateBackend createOperatorStateBackend(
-			Environment env,
-			String operatorIdentifier) throws Exception {
+		Environment env,
+		String operatorIdentifier) throws Exception {
 
 		return new DefaultOperatorStateBackend(
-				env.getUserClassLoader(),
-				env.getExecutionConfig(),
-				isUsingAsynchronousSnapshots());
+			env.getUserClassLoader(),
+			env.getExecutionConfig(),
+			isUsingAsynchronousSnapshots());
 	}
 
 	@Override
 	public <K> AbstractKeyedStateBackend<K> createKeyedStateBackend(
-			Environment env,
-			JobID jobID,
-			String operatorIdentifier,
-			TypeSerializer<K> keySerializer,
-			int numberOfKeyGroups,
-			KeyGroupRange keyGroupRange,
-			TaskKvStateRegistry kvStateRegistry) {
+		Environment env,
+		JobID jobID,
+		String operatorIdentifier,
+		TypeSerializer<K> keySerializer,
+		int numberOfKeyGroups,
+		KeyGroupRange keyGroupRange,
+		TaskKvStateRegistry kvStateRegistry) {
 
 		TaskStateManager taskStateManager = env.getTaskStateManager();
 
 		return new HeapKeyedStateBackend<>(
-				kvStateRegistry,
-				keySerializer,
-				env.getUserClassLoader(),
-				numberOfKeyGroups,
-				keyGroupRange,
-				isUsingAsynchronousSnapshots(),
-				env.getExecutionConfig(),
-				taskStateManager.createLocalRecoveryConfig());
+			kvStateRegistry,
+			keySerializer,
+			env.getUserClassLoader(),
+			numberOfKeyGroups,
+			keyGroupRange,
+			isUsingAsynchronousSnapshots(),
+			env.getExecutionConfig(),
+			taskStateManager.createLocalRecoveryConfig());
+	}
+
+	@Override
+	public AbstractInternalStateBackend createInternalStateBackend(
+		Environment env,
+		String operatorIdentifier,
+		int numberOfGroups,
+		GroupSet groups) {
+
+		throw new UnsupportedOperationException();
 	}
 
 	// ------------------------------------------------------------------------
@@ -328,9 +340,9 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 	@Override
 	public String toString() {
 		return "MemoryStateBackend (data in heap memory / checkpoints to JobManager) " +
-				"(checkpoints: '" + getCheckpointPath() +
-				"', savepoints: '" + getSavepointPath() +
-				"', asynchronous: " + asynchronousSnapshots +
-				", maxStateSize: " + maxStateSize + ")";
+			"(checkpoints: '" + getCheckpointPath() +
+			"', savepoints: '" + getSavepointPath() +
+			"', asynchronous: " + asynchronousSnapshots +
+			", maxStateSize: " + maxStateSize + ")";
 	}
 }

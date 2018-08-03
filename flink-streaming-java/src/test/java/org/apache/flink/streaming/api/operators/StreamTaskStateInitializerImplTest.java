@@ -31,9 +31,11 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.OperatorStateBackend;
@@ -146,6 +148,15 @@ public class StreamTaskStateInitializerImplTest {
 			public OperatorStateBackend createOperatorStateBackend(
 				Environment env, String operatorIdentifier) throws Exception {
 				return mock(OperatorStateBackend.class);
+			}
+
+			@Override
+			public AbstractInternalStateBackend createInternalStateBackend(
+				Environment env,
+				String operatorIdentifier,
+				int numberOfGroups,
+				GroupSet groups) throws Exception {
+				return null;
 			}
 		});
 

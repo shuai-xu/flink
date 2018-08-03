@@ -28,9 +28,11 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.client.JobExecutionException;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.StateBackend;
@@ -120,6 +122,15 @@ public class StateBackendITCase extends AbstractTestBase {
 			Environment env,
 			String operatorIdentifier) throws Exception {
 
+			throw new SuccessException();
+		}
+
+		@Override
+		public AbstractInternalStateBackend createInternalStateBackend(
+			Environment env,
+			String operatorIdentifier,
+			int numberOfGroups,
+			GroupSet groups) throws Exception {
 			throw new SuccessException();
 		}
 	}
