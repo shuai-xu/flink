@@ -18,7 +18,10 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.core.fs.FSDataOutputStream;
+import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.core.memory.MemorySegmentWritable;
 
 import javax.annotation.Nullable;
 
@@ -58,7 +61,7 @@ public interface CheckpointStreamFactory {
 	 * <p>Note: This is an abstract class and not an interface because {@link OutputStream}
 	 * is an abstract class.
 	 */
-	abstract class CheckpointStateOutputStream extends FSDataOutputStream {
+	abstract class CheckpointStateOutputStream extends FSDataOutputStream implements MemorySegmentWritable {
 
 		/**
 		 * Closes the stream and gets a state handle that can create an input stream
@@ -87,5 +90,13 @@ public interface CheckpointStreamFactory {
 		 */
 		@Override
 		public abstract void close() throws IOException;
+
+		@PublicEvolving
+		@Override
+		public void write(MemorySegment segment, int off, int len) throws IOException {
+			for (int i = off; i < off + len; i++) {
+				write(segment.get(i));
+			}
+		}
 	}
 }

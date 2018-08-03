@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.memory;
 
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
+import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.StreamStateHandle;
@@ -97,6 +98,12 @@ public class MemCheckpointStreamFactory implements CheckpointStreamFactory {
 		@Override
 		public void write(byte[] b, int off, int len) throws IOException {
 			os.write(b, off, len);
+			isEmpty = false;
+		}
+
+		@Override
+		public void write(MemorySegment segment, int off, int len) throws IOException {
+			os.write(segment, off, len);
 			isEmpty = false;
 		}
 

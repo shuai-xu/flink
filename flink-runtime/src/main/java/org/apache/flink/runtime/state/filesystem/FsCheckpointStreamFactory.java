@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.filesystem;
 import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.StreamStateHandle;
@@ -151,7 +152,7 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 		private int pos;
 
 		private FSDataOutputStream outStream;
-		
+
 		private final int localStateThreshold;
 
 		private final Path basePath;
@@ -199,7 +200,7 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 					// flush the write buffer to make it clear again
 					flush();
 				}
-				
+
 				// copy what is in the buffer
 				System.arraycopy(b, off, writeBuffer, pos, len);
 				pos += len;
@@ -209,6 +210,21 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 				flush();
 				// write the bytes directly
 				outStream.write(b, off, len);
+			}
+		}
+
+		@Override
+		public void write(MemorySegment segment, int off, int len) throws IOException {
+			// Regardless of size, go through writeBuffer.
+			int remain = len;
+			while (remain > 0) {
+				int toCopy = Math.min(remain, writeBuffer.length - pos);
+				segment.get(len - remain + off, writeBuffer, pos, toCopy);
+				remain -= toCopy;
+				pos += toCopy;
+				if (remain > 0) {
+					flush();
+				}
 			}
 		}
 
@@ -300,7 +316,7 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 							flush();
 
 							pos = writeBuffer.length;
-						
+
 							long size = -1L;
 
 							// make a best effort attempt to figure out the size

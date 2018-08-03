@@ -30,7 +30,7 @@ import java.util.Arrays;
  * Un-synchronized stream similar to Java's ByteArrayOutputStream that also exposes the current position.
  */
 @Internal
-public class ByteArrayOutputStreamWithPos extends OutputStream {
+public class ByteArrayOutputStreamWithPos extends OutputStream implements MemorySegmentWritable {
 
 	protected byte[] buffer;
 	protected int count;
@@ -117,5 +117,12 @@ public class ByteArrayOutputStreamWithPos extends OutputStream {
 
 	public byte[] getBuf() {
 		return buffer;
+	}
+
+	@Override
+	public void write(MemorySegment segment, int off, int len) throws IOException {
+		ensureCapacity(count + len);
+		segment.get(off, buffer, count, len);
+		count += len;
 	}
 }
