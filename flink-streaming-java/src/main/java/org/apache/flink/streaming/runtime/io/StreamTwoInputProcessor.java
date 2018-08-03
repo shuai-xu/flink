@@ -321,12 +321,16 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 					if (channelIndex < numInputChannels1) {
 						channelsWithEndOfPartitionEvents1.set(channelIndex);
 						if (channelsWithEndOfPartitionEvents1.cardinality() == numInputChannels1) {
-							streamOperator.endInput1();
+							synchronized (lock) {
+								streamOperator.endInput1();
+							}
 						}
 					} else {
 						channelsWithEndOfPartitionEvents2.set(channelIndex);
 						if (channelsWithEndOfPartitionEvents2.cardinality() == numInputChannels2) {
-							streamOperator.endInput2();
+							synchronized (lock) {
+								streamOperator.endInput2();
+							}
 						}
 					}
 

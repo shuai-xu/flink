@@ -240,7 +240,9 @@ public class StreamInputProcessor<IN> {
 
 					channelsWithEndOfPartitionEvents.set(bufferOrEvent.getChannelIndex());
 					if (channelsWithEndOfPartitionEvents.cardinality() == numInputChannels) {
-						streamOperator.endInput();
+						synchronized (lock) {
+							streamOperator.endInput();
+						}
 					}
 				}
 			}
