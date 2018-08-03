@@ -47,6 +47,9 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 * Processes one record that is from the first input of this two-input operator and returns
 	 * the next input selection. This method is guaranteed to not be called concurrently with
 	 * other methods of the operator.
+	 *
+	 * <p>Warning: The default implementation is only to be compatible {@link #processElement1(StreamRecord)}
+	 * and will be deleted synchronously when {@link #processElement1(StreamRecord)} is removed.
 	 */
 	default TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
 		processElement1(element);
@@ -58,6 +61,9 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 * Processes one record that is from the second input of this two-input operator and returns
 	 * the next input selection. This method is guaranteed to not be called concurrently with
 	 * other methods of the operator.
+	 *
+	 * <p>Warning: The default implementation is only to be compatible {@link #processElement2(StreamRecord)}
+	 * and will be deleted synchronously when {@link #processElement2(StreamRecord)} is removed.
 	 */
 	default TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
 		processElement2(element);
@@ -68,14 +74,22 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	/**
 	 * Processes one element that arrived on the first input of this two-input operator.
 	 * This method is guaranteed to not be called concurrently with other methods of the operator.
+	 *
+	 * @deprecated This will be removed in a future version.
+	 *             Please use {@link #processRecord1(StreamRecord)} instead.
 	 */
-	void processElement1(StreamRecord<IN1> element) throws Exception;
+	@Deprecated
+	default void processElement1(StreamRecord<IN1> element) throws Exception {}
 
 	/**
 	 * Processes one element that arrived on the second input of this two-input operator.
 	 * This method is guaranteed to not be called concurrently with other methods of the operator.
+	 *
+	 * @deprecated This will be removed in a future version.
+	 *             Please use {@link #processRecord2(StreamRecord)} instead.
 	 */
-	void processElement2(StreamRecord<IN2> element) throws Exception;
+	@Deprecated
+	default void processElement2(StreamRecord<IN2> element) throws Exception {}
 
 	/**
 	 * Processes a {@link Watermark} that arrived on the first input of this two-input operator.
