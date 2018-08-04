@@ -19,6 +19,10 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 
 import java.util.Collection;
 
@@ -61,4 +65,30 @@ public interface InternalStateBackend extends Snapshotable<StatePartitionSnapsho
 	 */
 	@VisibleForTesting
 	InternalState getInternalState(String stateName);
+
+	/**
+	 * Returns the keyed state with the given descriptor. The state will be
+	 * created if it has not been created by the backend.
+	 *
+	 * @param stateDescriptor The descriptor of the state to be retrieved.
+	 * @param <K> Type of the keys in the state.
+	 * @param <V> Type of the values in the state.
+	 * @param <S> Type of the state to be retrieved.
+	 */
+	<K, V, S extends KeyedState<K, V>> S getKeyedState(
+		KeyedStateDescriptor<K, V, S> stateDescriptor
+	);
+
+	/**
+	 * Returns the subkeyed state with the given descriptor. The state will be
+	 * created if it has not been created by the backend.
+	 *
+	 * @param stateDescriptor The descriptor of the state to be retrieved.
+	 * @param <K> Type of the keys in the state.
+	 * @param <N> Type of the namespaces in the state.
+	 * @param <V> Type of the values in the state.
+	 */
+	<K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
+		SubKeyedStateDescriptor<K, N, V, S> stateDescriptor
+	);
 }
