@@ -35,6 +35,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobmaster.message.ClassloadingProps;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
+import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
@@ -48,6 +49,7 @@ import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import javax.annotation.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -286,4 +288,11 @@ public interface JobMasterGateway extends
 	 * @param cause the reason that the allocation failed
 	 */
 	void notifyAllocationFailure(AllocationID allocationID, Exception cause);
+
+	/**
+	 * Commits a list of aggregated accumulator values.
+	 *
+	 * @param commitAccumulators accumulators to commit.
+	 */
+	void commitPreAggregatedAccumulator(List<CommitAccumulator> commitAccumulators);
 }

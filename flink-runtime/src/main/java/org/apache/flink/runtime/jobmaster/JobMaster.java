@@ -82,6 +82,7 @@ import org.apache.flink.runtime.messages.checkpoint.AcknowledgeCheckpoint;
 import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
+import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
 import org.apache.flink.runtime.query.KvStateLocation;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.query.UnknownKvStateLocation;
@@ -121,6 +122,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -993,6 +995,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	@Override
 	public void notifyAllocationFailure(AllocationID allocationID, Exception cause) {
 		slotPool.failAllocation(allocationID, cause);
+	}
+
+	@Override
+	public void commitPreAggregatedAccumulator(List<CommitAccumulator> commitAccumulators) {
+
 	}
 
 	//----------------------------------------------------------------------------------------------

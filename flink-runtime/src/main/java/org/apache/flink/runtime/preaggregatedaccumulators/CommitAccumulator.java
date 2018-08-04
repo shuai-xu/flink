@@ -18,42 +18,49 @@
 
 package org.apache.flink.runtime.preaggregatedaccumulators;
 
-import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.io.Serializable;
-import java.util.concurrent.CompletableFuture;
+import java.util.Set;
 
 /**
- * A specialized implementation for non-FLIP6 architecture who simply ignores all the committed values,
- * and queries sent to this implementation will never be fulfilled.
+ * Partially aggregated accumulators committed to JobMaster.
  */
-public final class EmptyOperationAccumulatorAggregationManager implements AccumulatorAggregationManager {
+public class CommitAccumulator implements Serializable {
+	/** The job vertex ID of the tasks that commit the values. */
+	private final JobVertexID jobVertexId;
 
-	@Override
-	public void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, ExecutionAttemptID attemptId, String name) {
+	/** The name of the accumulator. */
+	private final String name;
 
+	/** The partially aggregated value. */
+	private final Accumulator accumulator;
+
+	/** The index of the tasks that commit the value. */
+	private final Set<ExecutionAttemptID> committedTasks;
+
+	CommitAccumulator(JobVertexID jobVertexId, String name, Accumulator accumulator, Set<ExecutionAttemptID> committedTasks) {
+		this.jobVertexId = jobVertexId;
+		this.name = name;
+		this.accumulator = accumulator;
+		this.committedTasks = committedTasks;
 	}
 
-	@Override
-	public void commitPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name, Accumulator value) {
-
+	public JobVertexID getJobVertexId() {
+		return jobVertexId;
 	}
 
-	@Override
-	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name) {
-		return new CompletableFuture<>();
+	public String getName() {
+		return name;
 	}
 
-	@Override
-	public void clearRegistrationForTask(JobID jobId, ExecutionAttemptID attemptId) {
-
+	public Accumulator getAccumulator() {
+		return accumulator;
 	}
 
-	@Override
-	public void clearAccumulatorsForJob(JobID jobId) {
-
+	public Set<ExecutionAttemptID> getCommittedTasks() {
+		return committedTasks;
 	}
 }

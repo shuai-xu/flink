@@ -64,6 +64,7 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
 import org.apache.flink.runtime.metrics.groups.TaskManagerMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
+import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.query.KvStateClientProxy;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.query.KvStateServer;
@@ -170,6 +171,9 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	/** The network component in the task manager. */
 	private final NetworkEnvironment networkEnvironment;
 
+	/** The manager for pre-aggregated accumulators. */
+	private final AccumulatorAggregationManager accumulatorAggregationManager;
+
 	// --------- job manager connections -----------
 
 	private final Map<ResourceID, JobManagerConnection> jobManagerConnections;
@@ -202,6 +206,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	@Nullable
 	private UUID currentRegistrationTimeoutId;
 
+
 	public TaskExecutor(
 			RpcService rpcService,
 			TaskManagerConfiguration taskManagerConfiguration,
@@ -229,6 +234,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		this.taskManagerLocation = taskExecutorServices.getTaskManagerLocation();
 		this.localStateStoresManager = taskExecutorServices.getTaskManagerStateStore();
 		this.networkEnvironment = taskExecutorServices.getNetworkEnvironment();
+		this.accumulatorAggregationManager = taskExecutorServices.getAccumulatorAggregationManager();
 		this.resourceManagerLeaderRetriever = haServices.getResourceManagerLeaderRetriever();
 
 		this.jobManagerConnections = new HashMap<>(4);
@@ -1200,7 +1206,10 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			}
 		}
 
-		// 3. Disassociate from the JobManager
+		// 3. Clear the aggregated accumulators
+		accumulatorAggregationManager.clearAccumulatorsForJob(jobId);
+
+		// 4. Disassociate from the JobManager
 		JobManagerConnection jobManagerConnection = jobManagerTable.remove(jobId);
 
 		if (jobManagerConnection != null) {
@@ -1342,6 +1351,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 			log.info("Un-registering task and sending final execution state {} to JobManager for task {} {}.",
 				task.getExecutionState(), task.getTaskInfo().getTaskName(), task.getExecutionId());
+
+			accumulatorAggregationManager.clearRegistrationForTask(task.getJobID(), task.getExecutionId());
 
 			AccumulatorSnapshot accumulatorSnapshot = task.getAccumulatorRegistry().getSnapshot();
 

@@ -40,7 +40,7 @@ public interface AccumulatorAggregationManager {
 	 * @param jobId JobID of the registering task.
 	 * @param jobVertexId JobVertexID of the registering task.
 	 * @param attemptId ExecutionAttemptID of the registering task.
-	 * @param name The name of the filter to register on.
+	 * @param name The name of the accumulator to register.
 	 */
 	void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, ExecutionAttemptID attemptId, String name);
 
@@ -49,22 +49,37 @@ public interface AccumulatorAggregationManager {
 	 * should have already registered on the accumulator and have not committed before.
 	 *
 	 * @param jobId JobID of the committing task.
-	 * @param jobVertexId JobVertexID of the committing task.
 	 * @param attemptId ExecutionAttemptID of the committing task.
-	 * @param name The name of the filter to commit on.
+	 * @param name The name of the accumulator to commit.
 	 * @param value The committing pre-aggregated accumulator's value.
 	 */
-	void commitPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, ExecutionAttemptID attemptId, String name, Accumulator value);
+	void commitPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name, Accumulator value);
 
 	/**
 	 * Queries the aggregated value of a specific pre-aggregated accumulator asynchronously.
 	 *
 	 * @param jobId JobID of the querying task.
 	 * @param attemptId ExecutionAttemptID of the querying task.
-	 * @param name  The name of the filter to  on.
+	 * @param name  The name of the accumulator to query.
 	 * @return The Future object for the querying pre-aggregated accumulator.
 	 */
 	<V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId,
 																								ExecutionAttemptID attemptId,
 																								String name);
+
+	/**
+	 * Clears the registration status of a task if it has not committed yet when the task exits.
+	 *
+	 * @param jobId JobID of the exited task.
+	 * @param attemptId AttemptID of the exited task.
+	 */
+	void clearRegistrationForTask(JobID jobId, ExecutionAttemptID attemptId);
+
+	/**
+	 * Removes all the aggregating and querying accumulators for the specific job when the connection to the
+	 * JobMaster is closed.
+	 *
+	 * @param jobId JobID of the job to clear status.
+	 */
+	void clearAccumulatorsForJob(JobID jobId);
 }

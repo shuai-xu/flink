@@ -294,7 +294,7 @@ public class TaskManagerServices {
 			stateRootDirectoryFiles,
 			taskIOExecutor);
 
-		final AccumulatorAggregationManager accumulatorAggregationManager = new RPCBasedAccumulatorAggregationManager();
+		final AccumulatorAggregationManager accumulatorAggregationManager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
 
 		return new TaskManagerServices(
 			taskManagerLocation,

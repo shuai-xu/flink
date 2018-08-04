@@ -39,6 +39,7 @@ import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
 import org.apache.flink.runtime.jobmaster.message.ClassloadingProps;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
+import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
 import org.apache.flink.runtime.query.KvStateLocation;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
@@ -53,6 +54,7 @@ import javax.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -168,6 +170,11 @@ public class TestingJobMasterGateway implements JobMasterGateway {
 	@Override
 	public void notifyAllocationFailure(AllocationID allocationID, Exception cause) {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void commitPreAggregatedAccumulator(List<CommitAccumulator> commitAccumulators) {
+
 	}
 
 	@Override
