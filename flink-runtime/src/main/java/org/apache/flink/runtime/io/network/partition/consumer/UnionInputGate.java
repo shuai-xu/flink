@@ -313,6 +313,16 @@ public class UnionInputGate implements InputGate, InputGateListener {
 	}
 
 	@Override
+	public int getSubInputGateCount() {
+		return inputGates.length;
+	}
+
+	@Override
+	public InputGate getSubInputGate(int index) {
+		return inputGates[index];
+	}
+
+	@Override
 	public void notifyInputGateNonEmpty(InputGate inputGate) {
 		queueInputGate(checkNotNull(inputGate));
 	}

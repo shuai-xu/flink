@@ -82,7 +82,7 @@ public interface InputGate {
 
 	/**
 	 * Blocking call waiting for next {@link BufferOrEvent} on the given sub {@link InputGate} when
-	 * being complex InputGate.
+	 * being compounded InputGate.
 	 *
 	 * <p>If being single InputGate, its behavior must be equivalent to {@link #getNextBufferOrEvent()}.
 	 *
@@ -102,4 +102,19 @@ public interface InputGate {
 	void registerListener(InputGateListener listener);
 
 	int getPageSize();
+
+	/**
+	 * Get the number of all sub {@link InputGate}.
+	 *
+	 * @return 0 if this is a single InputGate, &gt 0 otherwise.
+	 */
+	int getSubInputGateCount();
+
+	/**
+	 * Get sub {@link InputGate} from the compounded InputGate.
+	 *
+	 * @param index The index of the sub InputGate.
+	 * @return null if this is a single InputGate.
+	 */
+	InputGate getSubInputGate(int index);
 }

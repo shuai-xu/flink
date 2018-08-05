@@ -373,6 +373,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		testHarness.setupOutputForSingletonOperatorChain();
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
+		streamConfig.setCheckpointingEnabled(true);
 		StreamMap<String, String> mapOperator = new StreamMap<String, String>(new IdentityMap());
 		streamConfig.setStreamOperator(mapOperator);
 		streamConfig.setOperatorID(new OperatorID());
@@ -436,6 +437,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		testHarness.setupOutputForSingletonOperatorChain();
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
+		streamConfig.setCheckpointingEnabled(true);
 		StreamMap<String, String> mapOperator = new StreamMap<String, String>(new IdentityMap());
 		streamConfig.setStreamOperator(mapOperator);
 		streamConfig.setOperatorID(new OperatorID());

@@ -35,6 +35,8 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayDeque;
 import java.util.Optional;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
 /**
  * The BarrierTracker keeps track of what checkpoint barriers have been received from
  * which input channels. Once it has observed all checkpoint barriers for a checkpoint ID,
@@ -47,7 +49,7 @@ import java.util.Optional;
  * <p>NOTE: This implementation strictly assumes that newer checkpoints have higher checkpoint IDs.
  */
 @Internal
-public class BarrierTracker implements CheckpointBarrierHandler {
+public class BarrierTracker implements SelectedReadingBarrierHandler {
 
 	private static final Logger LOG = LoggerFactory.getLogger(BarrierTracker.class);
 
@@ -90,28 +92,28 @@ public class BarrierTracker implements CheckpointBarrierHandler {
 
 	@Override
 	public BufferOrEvent getNextNonBlocked() throws Exception {
-		while (true) {
-			Optional<BufferOrEvent> next = inputGate.getNextBufferOrEvent();
-			if (!next.isPresent()) {
-				// buffer or input exhausted
-				return null;
-			}
+		return getNextNonBlocked(Optional.empty());
+	}
 
-			BufferOrEvent bufferOrEvent = next.get();
-			if (bufferOrEvent.isBuffer()) {
-				return bufferOrEvent;
-			}
-			else if (bufferOrEvent.getEvent().getClass() == CheckpointBarrier.class) {
-				processBarrier((CheckpointBarrier) bufferOrEvent.getEvent(), bufferOrEvent.getChannelIndex());
-			}
-			else if (bufferOrEvent.getEvent().getClass() == CancelCheckpointMarker.class) {
-				processCheckpointAbortBarrier((CancelCheckpointMarker) bufferOrEvent.getEvent(), bufferOrEvent.getChannelIndex());
-			}
-			else {
-				// some other event
-				return bufferOrEvent;
-			}
-		}
+	@Override
+	public BufferOrEvent getNextNonBlocked(InputGate subInputGate) throws Exception {
+		checkNotNull(subInputGate, "subInputGate is null");
+		return getNextNonBlocked(Optional.of(subInputGate));
+	}
+
+	@Override
+	public int getSubInputGateCount() {
+		return inputGate.getSubInputGateCount();
+	}
+
+	@Override
+	public InputGate getSubInputGate(int index) {
+		return inputGate.getSubInputGate(index);
+	}
+
+	@Override
+	public int getNumberOfInputChannels() {
+		return inputGate.getNumberOfInputChannels();
 	}
 
 	@Override
@@ -138,6 +140,32 @@ public class BarrierTracker implements CheckpointBarrierHandler {
 	public long getAlignmentDurationNanos() {
 		// this one does not do alignment at all
 		return 0L;
+	}
+
+	private BufferOrEvent getNextNonBlocked(Optional<InputGate> subInputGate) throws Exception {
+		while (true) {
+			Optional<BufferOrEvent> next = subInputGate.isPresent() ?
+				inputGate.getNextBufferOrEvent(subInputGate.get()) : inputGate.getNextBufferOrEvent();
+			if (!next.isPresent()) {
+				// buffer or input exhausted
+				return null;
+			}
+
+			BufferOrEvent bufferOrEvent = next.get();
+			if (bufferOrEvent.isBuffer()) {
+				return bufferOrEvent;
+			}
+			else if (bufferOrEvent.getEvent().getClass() == CheckpointBarrier.class) {
+				processBarrier((CheckpointBarrier) bufferOrEvent.getEvent(), bufferOrEvent.getChannelIndex());
+			}
+			else if (bufferOrEvent.getEvent().getClass() == CancelCheckpointMarker.class) {
+				processCheckpointAbortBarrier((CancelCheckpointMarker) bufferOrEvent.getEvent(), bufferOrEvent.getChannelIndex());
+			}
+			else {
+				// some other event
+				return bufferOrEvent;
+			}
+		}
 	}
 
 	private void processBarrier(CheckpointBarrier receivedBarrier, int channelIndex) throws Exception {

@@ -82,7 +82,7 @@ public class StreamInputProcessor<IN> {
 
 	private final DeserializationDelegate<StreamElement> deserializationDelegate;
 
-	private final CheckpointBarrierHandler barrierHandler;
+	private final SelectedReadingBarrierHandler barrierHandler;
 
 	private final Object lock;
 
@@ -119,6 +119,7 @@ public class StreamInputProcessor<IN> {
 	public StreamInputProcessor(
 			InputGate[] inputGates,
 			TypeSerializer<IN> inputSerializer,
+			boolean isCheckpointingEnabled,
 			StreamTask<?, ?> checkpointedTask,
 			CheckpointingMode checkpointMode,
 			Object lock,
@@ -130,10 +131,8 @@ public class StreamInputProcessor<IN> {
 			WatermarkGauge watermarkGauge,
 			boolean objectReuse) throws IOException {
 
-		InputGate inputGate = InputGateUtil.createInputGate(inputGates);
-
 		this.barrierHandler = InputProcessorUtil.createCheckpointBarrierHandler(
-			checkpointedTask, checkpointMode, ioManager, inputGate, taskManagerConfig);
+			isCheckpointingEnabled, checkpointedTask, checkpointMode, ioManager, taskManagerConfig, inputGates);
 
 		this.lock = checkNotNull(lock);
 
@@ -144,15 +143,16 @@ public class StreamInputProcessor<IN> {
 
 		this.reusedObject = objectReuse ? inputSerializer.createInstance() : null;
 
+		this.numInputChannels = this.barrierHandler.getNumberOfInputChannels();
+
 		// Initialize one deserializer per input channel
-		this.recordDeserializers = new SpillingAdaptiveSpanningRecordDeserializer[inputGate.getNumberOfInputChannels()];
+		this.recordDeserializers = new SpillingAdaptiveSpanningRecordDeserializer[this.numInputChannels];
 
 		for (int i = 0; i < recordDeserializers.length; i++) {
 			recordDeserializers[i] = new SpillingAdaptiveSpanningRecordDeserializer<>(
 				ioManager.getSpillingDirectoriesPaths());
 		}
 
-		this.numInputChannels = inputGate.getNumberOfInputChannels();
 		this.channelsWithEndOfPartitionEvents = new BitSet(this.numInputChannels);
 
 		this.streamStatusMaintainer = checkNotNull(streamStatusMaintainer);

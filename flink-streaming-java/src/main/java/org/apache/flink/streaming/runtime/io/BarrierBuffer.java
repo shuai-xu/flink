@@ -51,7 +51,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * the blocks are released.
  */
 @Internal
-public class BarrierBuffer implements CheckpointBarrierHandler {
+public class BarrierBuffer implements SelectedReadingBarrierHandler {
 
 	private static final Logger LOG = LoggerFactory.getLogger(BarrierBuffer.class);
 
@@ -210,6 +210,26 @@ public class BarrierBuffer implements CheckpointBarrierHandler {
 				return bufferOrEvent;
 			}
 		}
+	}
+
+	@Override
+	public BufferOrEvent getNextNonBlocked(InputGate subInputGate) throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public int getSubInputGateCount() {
+		return inputGate.getSubInputGateCount();
+	}
+
+	@Override
+	public InputGate getSubInputGate(int index) {
+		return inputGate.getSubInputGate(index);
+	}
+
+	@Override
+	public int getNumberOfInputChannels() {
+		return inputGate.getNumberOfInputChannels();
 	}
 
 	private void completeBufferedSequence() throws IOException {

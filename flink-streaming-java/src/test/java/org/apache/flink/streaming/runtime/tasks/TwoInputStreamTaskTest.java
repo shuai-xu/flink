@@ -31,6 +31,7 @@ import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
+import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -48,6 +49,7 @@ import org.apache.flink.streaming.api.functions.co.RichCoMapFunction;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.operators.co.CoStreamMap;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -252,6 +254,7 @@ public class TwoInputStreamTaskTest {
 		testHarness.setupOutputForSingletonOperatorChain();
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
+		streamConfig.setCheckpointingEnabled(true);
 		CoStreamMap<String, Integer, String> coMapOperator = new CoStreamMap<String, Integer, String>(new IdentityMap());
 		streamConfig.setStreamOperator(coMapOperator);
 		streamConfig.setOperatorID(new OperatorID());
@@ -337,6 +340,7 @@ public class TwoInputStreamTaskTest {
 		testHarness.setupOutputForSingletonOperatorChain();
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
+		streamConfig.setCheckpointingEnabled(true);
 		CoStreamMap<String, Integer, String> coMapOperator = new CoStreamMap<String, Integer, String>(new IdentityMap());
 		streamConfig.setStreamOperator(coMapOperator);
 		streamConfig.setOperatorID(new OperatorID());
@@ -874,6 +878,175 @@ public class TwoInputStreamTaskTest {
 				},
 				new ScheduledExecutorServiceAdapter(Executors.newSingleThreadScheduledExecutor()))
 				.get();
+		}
+	}
+
+	@Test
+	public void testSelectedReading() throws Exception {
+		final TwoInputStreamTaskTestHarness<String, String, String> testHarness = new TwoInputStreamTaskTestHarness<>(
+			TestSelectedReadingTask::new,
+			3, 2, new int[] {1, 2, 2},
+			BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
+
+		testHarness.setupOperatorChain(new OperatorID(), new TestSelectedReadingOperator(0, 2))
+			.chain(new OperatorID(),
+				new TestSelectedReadingOneInputOperator(1),
+				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()))
+			.finish();
+
+		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<Object>();
+
+		testHarness.invoke();
+		testHarness.waitForTaskRunning();
+
+		testHarness.processElement(new StreamRecord<>("Hello-1"), 0, 0);
+		testHarness.endInput(0,  0);
+		testHarness.processElement(new StreamRecord<>("Hello-2"), 0, 1);
+		testHarness.processElement(new StreamRecord<>("Hello-3"), 0, 1);
+		testHarness.endInput(0,  1);
+
+		testHarness.processElement(new StreamRecord<>("Hello-4"), 1, 0);
+		testHarness.processElement(new StreamRecord<>("Hello-5"), 1, 1);
+		testHarness.endInput(1,  0);
+		testHarness.endInput(1,  1);
+
+		testHarness.processElement(new StreamRecord<>("Hello-6"), 2, 0);
+		testHarness.processElement(new StreamRecord<>("Hello-7"), 2, 1);
+		testHarness.endInput(2,  0);
+		testHarness.endInput(2,  1);
+
+		Object lock = ((TestSelectedReadingTask) testHarness.getTask()).getStartProcessingLock();
+		synchronized (lock) {
+			lock.notifyAll();
+		}
+
+		expectedOutput.add(new StreamRecord<>("Hello-1-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Hello-2-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Hello-4-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Hello-6-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Hello-3-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Ciao-[operator0-1]"));
+		expectedOutput.add(new StreamRecord<>("Hello-5-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Hello-7-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Ciao-[operator0-2]"));
+		expectedOutput.add(new StreamRecord<>("Ciao-operator1"));
+
+		testHarness.waitForTaskCompletion();
+
+		TestHarnessUtil.assertOutputEquals("Output was not correct.",
+			expectedOutput,
+			testHarness.getOutput());
+	}
+
+	private static class TestSelectedReadingTask extends TwoInputStreamTask {
+
+		private Object startProcessingLock = new Object();
+
+		public TestSelectedReadingTask(Environment env) {
+			super(env);
+		}
+
+		@Override
+		protected void run() throws Exception {
+			synchronized (startProcessingLock) {
+				startProcessingLock.wait();
+			}
+
+			super.run();
+		}
+
+		public Object getStartProcessingLock() {
+			return startProcessingLock;
+		}
+	}
+
+	private static class TestSelectedReadingOperator
+		extends AbstractStreamOperator<String>
+		implements TwoInputStreamOperator<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		private final int index;
+		private final String name;
+		private final int maxContinuousReadingNum;
+
+		private boolean isInputEnd1;
+		private boolean isInputEnd2;
+
+		private int currentInputReadingCount;
+
+		public TestSelectedReadingOperator(int index, int maxContinuousReadingNum) {
+			this.index = index;
+			this.name = "operator" + index;
+			this.maxContinuousReadingNum = maxContinuousReadingNum;
+
+			this.currentInputReadingCount = 0;
+		}
+
+		@Override
+		public TwoInputSelection firstInputSelection() {
+			return TwoInputSelection.FIRST;
+		}
+
+		@Override
+		public TwoInputSelection processRecord1(StreamRecord<String> element) throws Exception {
+			output.collect(element.replace(element.getValue() + "-[" + name + "-1]"));
+
+			currentInputReadingCount++;
+			if (currentInputReadingCount == maxContinuousReadingNum) {
+				currentInputReadingCount = 0;
+				return !isInputEnd2 ? TwoInputSelection.SECOND : TwoInputSelection.FIRST;
+			} else {
+				return TwoInputSelection.FIRST;
+			}
+		}
+
+		@Override
+		public TwoInputSelection processRecord2(StreamRecord<String> element) throws Exception {
+			output.collect(element.replace(element.getValue() + "-[" + name + "-2]"));
+
+			currentInputReadingCount++;
+			if (currentInputReadingCount == maxContinuousReadingNum) {
+				currentInputReadingCount = 0;
+				return !isInputEnd1 ? TwoInputSelection.FIRST : TwoInputSelection.SECOND;
+			} else {
+				return TwoInputSelection.SECOND;
+			}
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+			output.collect(new StreamRecord<>("Ciao-[" + name + "-1]"));
+			isInputEnd1 = true;
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+			output.collect(new StreamRecord<>("Ciao-[" + name + "-2]"));
+			isInputEnd2 = true;
+		}
+	}
+
+	private static class TestSelectedReadingOneInputOperator
+		extends AbstractStreamOperator<String>
+		implements OneInputStreamOperator<String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		private final int index;
+
+		public TestSelectedReadingOneInputOperator(int index) {
+			this.index = index;
+		}
+
+		@Override
+		public void processElement(StreamRecord<String> element) throws Exception {
+			output.collect(element);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+			output.collect(new StreamRecord<>("Ciao-operator" + index));
 		}
 	}
 }

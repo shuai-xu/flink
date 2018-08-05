@@ -58,6 +58,16 @@ public class MockInputGate implements InputGate {
 	}
 
 	@Override
+	public int getSubInputGateCount() {
+		return 0;
+	}
+
+	@Override
+	public InputGate getSubInputGate(int index) {
+		return null;
+	}
+
+	@Override
 	public int getNumberOfInputChannels() {
 		return numChannels;
 	}

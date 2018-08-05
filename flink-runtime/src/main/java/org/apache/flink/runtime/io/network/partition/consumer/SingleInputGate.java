@@ -254,6 +254,16 @@ public class SingleInputGate implements InputGate {
 		}
 	}
 
+	@Override
+	public int getSubInputGateCount() {
+		return 0;
+	}
+
+	@Override
+	public InputGate getSubInputGate(int index) {
+		return null;
+	}
+
 	public int getNumberOfQueuedBuffers() {
 		// re-try 3 times, if fails, return 0 for "unknown"
 		for (int retry = 0; retry < 3; retry++) {

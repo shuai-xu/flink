@@ -84,6 +84,7 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 			inputProcessor = new StreamInputProcessor<>(
 					inputGates,
 					inSerializer,
+					configuration.isCheckpointingEnabled(),
 					this,
 					configuration.getCheckpointMode(),
 					getCheckpointLock(),
