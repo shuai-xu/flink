@@ -320,265 +320,263 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	 */
 	@Test
 	public void testCheckpointWithParallelismChange() throws Exception {
-		if (checkpointType.equals(CheckpointType.SAVEPOINT)) {
-			SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+		SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
 
-			Map<Integer, Map<String, Map<Row, Row>>> globalGroupMaps = new HashMap<>();
+		Map<Integer, Map<String, Map<Row, Row>>> globalGroupMaps = new HashMap<>();
 
-			InternalStateDescriptor globalStateDescriptor1 =
-				new InternalStateDescriptorBuilder("globalState1")
-					.addKeyColumn("key", IntSerializer.INSTANCE)
-					.addValueColumn("value", FloatSerializer.INSTANCE)
-					.getDescriptor();
-			InternalState globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
-			populateGroupStateData(globalGroupMaps, globalState1);
+		InternalStateDescriptor globalStateDescriptor1 =
+			new InternalStateDescriptorBuilder("globalState1")
+				.addKeyColumn("key", IntSerializer.INSTANCE)
+				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.getDescriptor();
+		InternalState globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
+		populateGroupStateData(globalGroupMaps, globalState1);
 
-			InternalStateDescriptor globalStateDescriptor2 =
-				new InternalStateDescriptorBuilder("globalState2")
-					.addKeyColumn("key1", IntSerializer.INSTANCE)
-					.addKeyColumn("key2", IntSerializer.INSTANCE)
-					.addValueColumn("value", FloatSerializer.INSTANCE)
-					.getDescriptor();
-			InternalState globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
-			populateGroupStateData(globalGroupMaps, globalState2);
+		InternalStateDescriptor globalStateDescriptor2 =
+			new InternalStateDescriptorBuilder("globalState2")
+				.addKeyColumn("key1", IntSerializer.INSTANCE)
+				.addKeyColumn("key2", IntSerializer.INSTANCE)
+				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.getDescriptor();
+		InternalState globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
+		populateGroupStateData(globalGroupMaps, globalState2);
 
-			InternalStateDescriptor emptyStateDescriptor =
-				new InternalStateDescriptorBuilder("emptyState")
-					.addKeyColumn("key", IntSerializer.INSTANCE)
-					.addValueColumn("value", FloatSerializer.INSTANCE)
-					.getDescriptor();
-			InternalState emptyState = stateBackend.getInternalState(emptyStateDescriptor);
+		InternalStateDescriptor emptyStateDescriptor =
+			new InternalStateDescriptorBuilder("emptyState")
+				.addKeyColumn("key", IntSerializer.INSTANCE)
+				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.getDescriptor();
+		InternalState emptyState = stateBackend.getInternalState(emptyStateDescriptor);
 
-			// Takes a snapshot of the states
-			StatePartitionSnapshot snapshot1 =
-				runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
+		// Takes a snapshot of the states
+		StatePartitionSnapshot snapshot1 =
+			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
-			// Does some updates to the states
-			Random random = new Random();
-			int index = 0;
-			for (int i = 0; i < 1000; ++i) {
-				if (index % 3 == 0) {
-					Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+		// Does some updates to the states
+		Random random = new Random();
+		int index = 0;
+		for (int i = 0; i < 1000; ++i) {
+			if (index % 3 == 0) {
+				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+				globalState1.put(key1, value1);
+
+				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+				globalState2.put(key2, value2);
+			}
+			index++;
+		}
+
+		stateBackend.close();
+
+		// Restores the stateBackend from a subset of the snapshot
+		GroupRange firstGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 0);
+		StatePartitionSnapshot firstSnapshot1 = snapshot1.getIntersection(firstGroups1);
+
+		// Restores the stateBackend from the snapshot
+		stateBackend = createStateBackend(maxParallelism, firstGroups1, classLoader);
+		stateBackend.restore(Collections.singleton(firstSnapshot1));
+
+		// Validates that the states are correctly restored.
+		globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
+		assertNotNull(globalState1);
+
+		globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
+		assertNotNull(globalState2);
+
+		emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+		assertNotNull(emptyState);
+
+		Iterator<Pair<Row, Row>> globalIterator1 = globalState1.iterator();
+		validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, firstGroups1, globalStateDescriptor1.getName());
+
+		Iterator<Pair<Row, Row>> globalIterator2 = globalState2.iterator();
+		validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, firstGroups1, globalStateDescriptor2.getName());
+
+		// Does some updates to the stateBackend.
+		index = 0;
+		for (int i = 200; i < 1200; ++i) {
+			if (index % 2 == 0) {
+				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				if (isGroupContainsKey(firstGroups1, key1)) {
 					Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
 					globalState1.put(key1, value1);
+					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
+				}
 
-					Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				if (isGroupContainsKey(firstGroups1, key2)) {
 					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
 					globalState2.put(key2, value2);
+					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
 				}
-				index++;
 			}
 
-			stateBackend.close();
+			index++;
+		}
 
-			// Restores the stateBackend from a subset of the snapshot
-			GroupRange firstGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 0);
-			StatePartitionSnapshot firstSnapshot1 = snapshot1.getIntersection(firstGroups1);
+		// Takes a snapshot of the stateBackend
+		StatePartitionSnapshot firstSnapshot2 =
+			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
-			// Restores the stateBackend from the snapshot
-			stateBackend = createStateBackend(maxParallelism, firstGroups1, classLoader);
-			stateBackend.restore(Collections.singleton(firstSnapshot1));
+		stateBackend.close();
+
+		// Restores the stateBackend from a subset of the snapshot
+		GroupRange secondGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 1);
+		StatePartitionSnapshot secondSnapshot1 = snapshot1.getIntersection(secondGroups1);
+
+		// Restores the stateBackend from the snapshot
+		stateBackend = createStateBackend(maxParallelism, secondGroups1, classLoader);
+		stateBackend.restore(Collections.singleton(secondSnapshot1));
+
+		// Validates that the states are correctly restored.
+		globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
+		assertNotNull(globalState1);
+
+		globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
+		assertNotNull(globalState2);
+
+		emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+		assertNotNull(emptyState);
+
+		globalIterator1 = globalState1.iterator();
+		validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, secondGroups1, globalStateDescriptor1.getName());
+
+		globalIterator2 = globalState2.iterator();
+		validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, secondGroups1, globalStateDescriptor2.getName());
+
+		// Does some updates to the stateBackend.
+		index = 0;
+		for (int i = 200; i < 1200; ++i) {
+			if (index % 3 == 0) {
+				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				if (isGroupContainsKey(secondGroups1, key1)) {
+					Row value1 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState1.put(key1, value1);
+					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
+				}
+
+				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				if (isGroupContainsKey(secondGroups1, key2)) {
+					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState2.put(key2, value2);
+
+					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
+				}
+			}
+
+			index++;
+		}
+
+		// Takes a snapshot of the stateBackend
+		StatePartitionSnapshot secondSnapshot2 =
+			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
+
+		stateBackend.close();
+
+		// Restores the stateBackend from a subset of the snapshot
+		GroupRange thirdGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 2);
+		StatePartitionSnapshot thirdSnapshot1 = snapshot1.getIntersection(thirdGroups1);
+
+		// Restores the stateBackend from the snapshot
+		stateBackend = createStateBackend(maxParallelism, thirdGroups1, classLoader);
+		stateBackend.restore(Collections.singleton(thirdSnapshot1));
+
+		// Validates that the states are correctly restored.
+		globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
+		assertNotNull(globalState1);
+
+		globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
+		assertNotNull(globalState2);
+
+		emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+		assertNotNull(emptyState);
+
+		globalIterator1 = globalState1.iterator();
+		validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, thirdGroups1, globalStateDescriptor1.getName());
+
+		globalIterator2 = globalState2.iterator();
+		validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, thirdGroups1, globalStateDescriptor2.getName());
+
+
+		// Does some updates to the stateBackend.
+		index = 0;
+		for (int i = 200; i < 1200; ++i) {
+			if (index % 4 == 0) {
+				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
+				if (isGroupContainsKey(thirdGroups1, key1)) {
+					Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+					globalState1.put(key1, value1);
+					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
+				}
+
+				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
+				if (isGroupContainsKey(thirdGroups1, key2)) {
+					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState2.put(key2, value2);
+					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
+				}
+			}
+
+			index++;
+		}
+
+		// Takes a snapshot of the stateBackend
+		StatePartitionSnapshot thirdSnapshot2 =
+			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
+
+		stateBackend.close();
+
+		// Merge the local states
+		GroupSet leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
+		GroupSet rightGroups3 = getGroupsForSubtask(maxParallelism, 2, 1);
+		InternalStateBackend newLeftBackend = createStateBackend(maxParallelism, leftGroups3, classLoader);
+		InternalStateBackend newRightBackend = createStateBackend(maxParallelism, rightGroups3, classLoader);
+
+		try {
+			StatePartitionSnapshot firstSnapshot3 = firstSnapshot2.getIntersection(leftGroups3);
+			StatePartitionSnapshot secondSnapshot3ForLeft = secondSnapshot2.getIntersection(leftGroups3);
+			StatePartitionSnapshot secondSnapshot3ForRight = secondSnapshot2.getIntersection(rightGroups3);
+			StatePartitionSnapshot thirdSnapshot3 = thirdSnapshot2.getIntersection(rightGroups3);
+
+			newLeftBackend.restore(Arrays.asList(firstSnapshot3, secondSnapshot3ForLeft));
+			newRightBackend.restore(Arrays.asList(secondSnapshot3ForRight, thirdSnapshot3));
 
 			// Validates that the states are correctly restored.
-			globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
-			assertNotNull(globalState1);
+			InternalState leftGlobalState1 = newLeftBackend.getInternalState(globalStateDescriptor1.getName());
+			assertNotNull(leftGlobalState1);
 
-			globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
-			assertNotNull(globalState2);
+			InternalState rightGlobalState1 = newRightBackend.getInternalState(globalStateDescriptor1.getName());
+			assertNotNull(rightGlobalState1);
 
-			emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+			InternalState leftGlobalState2 = newLeftBackend.getInternalState(globalStateDescriptor2.getName());
+			assertNotNull(leftGlobalState2);
+
+			InternalState rightGlobalState2 = newRightBackend.getInternalState(globalStateDescriptor2.getName());
+			assertNotNull(rightGlobalState2);
+
+			emptyState = newLeftBackend.getInternalState(emptyStateDescriptor.getName());
 			assertNotNull(emptyState);
 
-			Iterator<Pair<Row, Row>> globalIterator1 = globalState1.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, firstGroups1, globalStateDescriptor1.getName());
-
-			Iterator<Pair<Row, Row>> globalIterator2 = globalState2.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, firstGroups1, globalStateDescriptor2.getName());
-
-			// Does some updates to the stateBackend.
-			index = 0;
-			for (int i = 200; i < 1200; ++i) {
-				if (index % 2 == 0) {
-					Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-					if (isGroupContainsKey(firstGroups1, key1)) {
-						Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-						globalState1.put(key1, value1);
-						recordGroupPair(globalGroupMaps, globalState1, key1, value1);
-					}
-
-					Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-					if (isGroupContainsKey(firstGroups1, key2)) {
-						Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-						globalState2.put(key2, value2);
-						recordGroupPair(globalGroupMaps, globalState2, key2, value2);
-					}
-				}
-
-				index++;
-			}
-
-			// Takes a snapshot of the stateBackend
-			StatePartitionSnapshot firstSnapshot2 =
-				runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
-
-			stateBackend.close();
-
-			// Restores the stateBackend from a subset of the snapshot
-			GroupRange secondGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 1);
-			StatePartitionSnapshot secondSnapshot1 = snapshot1.getIntersection(secondGroups1);
-
-			// Restores the stateBackend from the snapshot
-			stateBackend = createStateBackend(maxParallelism, secondGroups1, classLoader);
-			stateBackend.restore(Collections.singleton(secondSnapshot1));
-
-			// Validates that the states are correctly restored.
-			globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
-			assertNotNull(globalState1);
-
-			globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
-			assertNotNull(globalState2);
-
-			emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
+			emptyState = newRightBackend.getInternalState(emptyStateDescriptor.getName());
 			assertNotNull(emptyState);
 
-			globalIterator1 = globalState1.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, secondGroups1, globalStateDescriptor1.getName());
+			Iterator<Pair<Row, Row>> leftGlobalIterator1 = leftGlobalState1.iterator();
+			validateStateDataWithGroupSet(globalGroupMaps, leftGlobalIterator1, leftGroups3, globalStateDescriptor1.getName());
 
-			globalIterator2 = globalState2.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, secondGroups1, globalStateDescriptor2.getName());
+			Iterator<Pair<Row, Row>> rightGlobalIterator1 = rightGlobalState1.iterator();
+			validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator1, rightGroups3, globalStateDescriptor1.getName());
 
-			// Does some updates to the stateBackend.
-			index = 0;
-			for (int i = 200; i < 1200; ++i) {
-				if (index % 3 == 0) {
-					Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-					if (isGroupContainsKey(secondGroups1, key1)) {
-						Row value1 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-						globalState1.put(key1, value1);
-						recordGroupPair(globalGroupMaps, globalState1, key1, value1);
-					}
+			Iterator<Pair<Row, Row>> leftGlobalIterator2 = leftGlobalState2.iterator();
+			validateStateDataWithGroupSet(globalGroupMaps, leftGlobalIterator2, leftGroups3, globalStateDescriptor2.getName());
 
-					Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-					if (isGroupContainsKey(secondGroups1, key2)) {
-						Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-						globalState2.put(key2, value2);
+			Iterator<Pair<Row, Row>> rightGlobalIterator2 = rightGlobalState2.iterator();
+			validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator2, rightGroups3, globalStateDescriptor2.getName());
 
-						recordGroupPair(globalGroupMaps, globalState2, key2, value2);
-					}
-				}
-
-				index++;
-			}
-
-			// Takes a snapshot of the stateBackend
-			StatePartitionSnapshot secondSnapshot2 =
-				runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
-
-			stateBackend.close();
-
-			// Restores the stateBackend from a subset of the snapshot
-			GroupRange thirdGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 2);
-			StatePartitionSnapshot thirdSnapshot1 = snapshot1.getIntersection(thirdGroups1);
-
-			// Restores the stateBackend from the snapshot
-			stateBackend = createStateBackend(maxParallelism, thirdGroups1, classLoader);
-			stateBackend.restore(Collections.singleton(thirdSnapshot1));
-
-			// Validates that the states are correctly restored.
-			globalState1 = stateBackend.getInternalState(globalStateDescriptor1.getName());
-			assertNotNull(globalState1);
-
-			globalState2 = stateBackend.getInternalState(globalStateDescriptor2.getName());
-			assertNotNull(globalState2);
-
-			emptyState = stateBackend.getInternalState(emptyStateDescriptor.getName());
-			assertNotNull(emptyState);
-
-			globalIterator1 = globalState1.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, globalIterator1, thirdGroups1, globalStateDescriptor1.getName());
-
-			globalIterator2 = globalState2.iterator();
-			validateStateDataWithGroupSet(globalGroupMaps, globalIterator2, thirdGroups1, globalStateDescriptor2.getName());
-
-
-			// Does some updates to the stateBackend.
-			index = 0;
-			for (int i = 200; i < 1200; ++i) {
-				if (index % 4 == 0) {
-					Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
-					if (isGroupContainsKey(thirdGroups1, key1)) {
-						Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
-						globalState1.put(key1, value1);
-						recordGroupPair(globalGroupMaps, globalState1, key1, value1);
-					}
-
-					Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
-					if (isGroupContainsKey(thirdGroups1, key2)) {
-						Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
-						globalState2.put(key2, value2);
-						recordGroupPair(globalGroupMaps, globalState2, key2, value2);
-					}
-				}
-
-				index++;
-			}
-
-			// Takes a snapshot of the stateBackend
-			StatePartitionSnapshot thirdSnapshot2 =
-				runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
-
-			stateBackend.close();
-
-			// Merge the local states
-			GroupSet leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
-			GroupSet rightGroups3 = getGroupsForSubtask(maxParallelism, 2, 1);
-			InternalStateBackend newLeftBackend = createStateBackend(maxParallelism, leftGroups3, classLoader);
-			InternalStateBackend newRightBackend = createStateBackend(maxParallelism, rightGroups3, classLoader);
-
-			try {
-				StatePartitionSnapshot firstSnapshot3 = firstSnapshot2.getIntersection(leftGroups3);
-				StatePartitionSnapshot secondSnapshot3ForLeft = secondSnapshot2.getIntersection(leftGroups3);
-				StatePartitionSnapshot secondSnapshot3ForRight = secondSnapshot2.getIntersection(rightGroups3);
-				StatePartitionSnapshot thirdSnapshot3 = thirdSnapshot2.getIntersection(rightGroups3);
-
-				newLeftBackend.restore(Arrays.asList(firstSnapshot3, secondSnapshot3ForLeft));
-				newRightBackend.restore(Arrays.asList(secondSnapshot3ForRight, thirdSnapshot3));
-
-				// Validates that the states are correctly restored.
-				InternalState leftGlobalState1 = newLeftBackend.getInternalState(globalStateDescriptor1.getName());
-				assertNotNull(leftGlobalState1);
-
-				InternalState rightGlobalState1 = newRightBackend.getInternalState(globalStateDescriptor1.getName());
-				assertNotNull(rightGlobalState1);
-
-				InternalState leftGlobalState2 = newLeftBackend.getInternalState(globalStateDescriptor2.getName());
-				assertNotNull(leftGlobalState2);
-
-				InternalState rightGlobalState2 = newRightBackend.getInternalState(globalStateDescriptor2.getName());
-				assertNotNull(rightGlobalState2);
-
-				emptyState = newLeftBackend.getInternalState(emptyStateDescriptor.getName());
-				assertNotNull(emptyState);
-
-				emptyState = newRightBackend.getInternalState(emptyStateDescriptor.getName());
-				assertNotNull(emptyState);
-
-				Iterator<Pair<Row, Row>> leftGlobalIterator1 = leftGlobalState1.iterator();
-				validateStateDataWithGroupSet(globalGroupMaps, leftGlobalIterator1, leftGroups3, globalStateDescriptor1.getName());
-
-				Iterator<Pair<Row, Row>> rightGlobalIterator1 = rightGlobalState1.iterator();
-				validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator1, rightGroups3, globalStateDescriptor1.getName());
-
-				Iterator<Pair<Row, Row>> leftGlobalIterator2 = leftGlobalState2.iterator();
-				validateStateDataWithGroupSet(globalGroupMaps, leftGlobalIterator2, leftGroups3, globalStateDescriptor2.getName());
-
-				Iterator<Pair<Row, Row>> rightGlobalIterator2 = rightGlobalState2.iterator();
-				validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator2, rightGroups3, globalStateDescriptor2.getName());
-
-			} finally {
-				newLeftBackend.close();
-				newRightBackend.close();
-			}
+		} finally {
+			newLeftBackend.close();
+			newRightBackend.close();
 		}
 	}
 

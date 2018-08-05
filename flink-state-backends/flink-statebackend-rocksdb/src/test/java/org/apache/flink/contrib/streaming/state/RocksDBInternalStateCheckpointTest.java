@@ -18,10 +18,9 @@
 
 package org.apache.flink.contrib.streaming.state;
 
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.state.GroupSet;
-import org.apache.flink.runtime.state.InternalStateAccessTestBase;
 import org.apache.flink.runtime.state.InternalStateBackend;
+import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.util.AbstractID;
 
@@ -41,10 +40,9 @@ import java.lang.reflect.Field;
 import static org.mockito.Mockito.mock;
 
 /**
- * Unit tests to validate that internal states can be correctly accessed in
- * {@link RocksDBInternalStateBackend}.
+ * Tests for {@link RocksDBInternalStateBackend}'s checkpoint.
  */
-public class RocksDBInternalStateAccessTest extends InternalStateAccessTestBase {
+public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointTestBase {
 
 	@ClassRule
 	public static TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -76,14 +74,13 @@ public class RocksDBInternalStateAccessTest extends InternalStateAccessTestBase 
 	protected InternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) throws Exception {
-
+		ClassLoader userClassLoader) throws IOException {
 		dbOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createDBOptions().setCreateIfMissing(true);
 		columnOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createColumnOptions();
 		ensureRocksDBIsLoaded(rocksDBLoadPath);
 		return new RocksDBInternalStateBackend(
 			userClassLoader,
-			temporaryFolder.newFolder().getAbsoluteFile(),
+			temporaryFolder.newFolder(),
 			dbOptions,
 			columnOptions,
 			numberOfGroups,
@@ -143,9 +140,8 @@ public class RocksDBInternalStateAccessTest extends InternalStateAccessTestBase 
 		}
 	}
 
-	@VisibleForTesting
 	static void resetRocksDBLoadedFlag() throws Exception {
-		final Field initField = org.rocksdb.NativeLibraryLoader.class.getDeclaredField("initialized");
+		final Field initField = NativeLibraryLoader.class.getDeclaredField("initialized");
 		initField.setAccessible(true);
 		initField.setBoolean(null, false);
 	}

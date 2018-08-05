@@ -469,7 +469,9 @@ public class RocksDBStateBackend extends AbstractStateBackend implements Configu
 			getDbOptions(),
 			getColumnOptions(),
 			numberOfGroups,
-			groups);
+			groups,
+			isIncrementalCheckpointsEnabled(),
+			localRecoveryConfig);
 	}
 
 	// ------------------------------------------------------------------------

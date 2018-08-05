@@ -51,8 +51,6 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateImpl;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -64,7 +62,6 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * The base implementation for {@link InternalStateBackend}.
  */
 public abstract class AbstractInternalStateBackend implements InternalStateBackend, KeyedStateBinder, SubKeyedStateBinder {
-	private static final Logger LOG = LoggerFactory.getLogger(AbstractStateBackend.class);
 
 	/**
 	 * The total number of groups in all subtasks.
@@ -280,4 +277,5 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	public InternalState getInternalState(String stateName) {
 		return states.get(stateName);
 	}
+
 }

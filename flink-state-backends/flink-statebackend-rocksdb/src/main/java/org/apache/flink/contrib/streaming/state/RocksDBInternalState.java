@@ -84,7 +84,7 @@ public class RocksDBInternalState implements InternalState {
 	private final InternalStateDescriptor descriptor;
 
 	/** Number of bytes required to prefix the groups. */
-	private final byte[] stateNameBytes;
+	final byte[] stateNameBytes;
 
 	/**
 	 * The byte-wise comparator for RocksDB internal state.

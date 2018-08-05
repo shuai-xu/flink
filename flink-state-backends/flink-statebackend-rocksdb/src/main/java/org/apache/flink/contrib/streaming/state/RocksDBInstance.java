@@ -43,6 +43,8 @@ import java.util.Map;
  */
 public class RocksDBInstance implements AutoCloseable {
 
+	static final String SST_FILE_SUFFIX = ".sst";
+
 	/**
 	 * Our RocksDB database, this is used to store state.
 	 * The different k/v states that we have don't each have their own RocksDB instance.
