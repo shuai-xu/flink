@@ -18,19 +18,28 @@
 
 package org.apache.flink.runtime.resourcemanager;
 
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
+import org.apache.flink.api.common.resources.Resource;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
+import org.apache.flink.runtime.clusterframework.types.TaskManagerResource;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
+import org.apache.flink.runtime.resourcemanager.slotmanager.DynamicAssigningSlotManager;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A standalone implementation of the resource manager. Used when the system is started in
@@ -40,10 +49,42 @@ import javax.annotation.Nullable;
  */
 public class StandaloneResourceManager extends ResourceManager<ResourceID> {
 
+	private final Configuration flinkConfig;
+
+	private final TaskManagerResource taskManagerResource;
+
 	public StandaloneResourceManager(
 			RpcService rpcService,
 			String resourceManagerEndpointId,
 			ResourceID resourceId,
+			ResourceManagerConfiguration resourceManagerConfiguration,
+			HighAvailabilityServices highAvailabilityServices,
+			HeartbeatServices heartbeatServices,
+			SlotManager slotManager,
+			MetricRegistry metricRegistry,
+			JobLeaderIdService jobLeaderIdService,
+			ClusterInformation clusterInformation,
+			FatalErrorHandler fatalErrorHandler) {
+		this(
+			rpcService,
+			resourceManagerEndpointId,
+			resourceId,
+			new Configuration(),
+			resourceManagerConfiguration,
+			highAvailabilityServices,
+			heartbeatServices,
+			slotManager,
+			metricRegistry,
+			jobLeaderIdService,
+			clusterInformation,
+			fatalErrorHandler);
+	}
+
+	public StandaloneResourceManager(
+			RpcService rpcService,
+			String resourceManagerEndpointId,
+			ResourceID resourceId,
+			Configuration configuration,
 			ResourceManagerConfiguration resourceManagerConfiguration,
 			HighAvailabilityServices highAvailabilityServices,
 			HeartbeatServices heartbeatServices,
@@ -64,6 +105,21 @@ public class StandaloneResourceManager extends ResourceManager<ResourceID> {
 			jobLeaderIdService,
 			clusterInformation,
 			fatalErrorHandler);
+		flinkConfig = configuration;
+
+		// build the task manager's total resource according to user's resource
+		taskManagerResource =
+				TaskManagerResource.fromConfiguration(flinkConfig, initContainerResourceConfig(), 1);
+		log.info("taskManagerResource: " + taskManagerResource);
+
+		if (slotManager instanceof DynamicAssigningSlotManager) {
+			((DynamicAssigningSlotManager) slotManager).setTotalResourceOfTaskExecutor(
+					TaskManagerResource.convertToResourceProfile(taskManagerResource));
+			log.info("The resource for user in a task executor is {}.", taskManagerResource);
+		} else {
+			log.warn("DynamicAssigningSlotManager have not been set in StandaloneResourceManager, " +
+					"setResources() of operator may not work!");
+		}
 	}
 
 	@Override
@@ -88,6 +144,32 @@ public class StandaloneResourceManager extends ResourceManager<ResourceID> {
 	@Override
 	protected ResourceID workerStarted(ResourceID resourceID) {
 		return resourceID;
+	}
+
+	// Utility methods
+
+	private ResourceProfile initContainerResourceConfig() {
+		double core = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_CORE);
+		int heapMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
+		int nativeMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_NATIVE_MEMORY);
+		int directMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_DIRECT_MEMORY);
+
+		int networkBuffersNum = flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS);
+		long pageSize = flinkConfig.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
+		int networkMemory = (int) Math.ceil((pageSize * networkBuffersNum) / (1024.0 * 1024.0));
+
+		// Add managed memory to extended resources.
+		long managedMemory = flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
+		Map<String, Resource> resourceMap = new HashMap<>();
+		resourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
+				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemory));
+		return new ResourceProfile(
+				core,
+				heapMemory,
+				directMemory,
+				nativeMemory,
+				networkMemory,
+				resourceMap);
 	}
 
 }
