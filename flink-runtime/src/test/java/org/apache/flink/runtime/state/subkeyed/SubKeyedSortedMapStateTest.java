@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.functions.NaturalComparator;
+import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
@@ -447,7 +448,7 @@ public class SubKeyedSortedMapStateTest {
 		SubKeyedSortedMapStateDescriptor<Integer, String, Integer, Float> descriptor =
 			new SubKeyedSortedMapStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		SubKeyedSortedMapState<Integer, String, Integer, Float> state = backend.getSubKeyedState(descriptor);
 		assertNotNull(state);
@@ -508,7 +509,7 @@ public class SubKeyedSortedMapStateTest {
 		SubKeyedSortedMapStateDescriptor<Integer, String, Integer, Float> descriptor =
 			new SubKeyedSortedMapStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		SubKeyedSortedMapState<Integer, String, Integer, Float> state = backend.getSubKeyedState(descriptor);
 		assertNotNull(state);

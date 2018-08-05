@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.NaturalComparator;
+import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
@@ -509,7 +510,7 @@ public class KeyedSortedMapStateTest {
 	public void testBoundAccess() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
-				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
 		assertNotNull(state);
@@ -557,7 +558,7 @@ public class KeyedSortedMapStateTest {
 	public void testIterator() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
-				new NaturalComparator<>(), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
 		assertNotNull(state);

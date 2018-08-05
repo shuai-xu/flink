@@ -42,7 +42,7 @@ abstract class RocksDBStateRangeIterator<T> extends AbstractRocksDBStateIterator
 			"start key bytes cannot be null when creating RocksDBStateRangeIterator.");
 		Preconditions.checkArgument(endDBKey != null,
 			"end key bytes cannot be null when creating RocksDBStateRangeIterator.");
-		Preconditions.checkArgument(RocksDBInstance.compare(startDBKey, endDBKey) < 0,
+		Preconditions.checkArgument(RocksDBInstance.compare(startDBKey, endDBKey) <= 0,
 			" start key bytes must order before end key bytes when creating RocksDBStateRangeIterator.");
 
 		this.startDBKey = startDBKey;

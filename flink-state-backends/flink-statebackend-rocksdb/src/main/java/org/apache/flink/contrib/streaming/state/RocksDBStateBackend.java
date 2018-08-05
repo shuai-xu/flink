@@ -446,7 +446,30 @@ public class RocksDBStateBackend extends AbstractStateBackend implements Configu
 		String operatorIdentifier,
 		int numberOfGroups,
 		GroupSet groups) throws IOException {
-		throw new UnsupportedOperationException();
+		// first, make sure that the RocksDB JNI library is loaded
+		// we do this explicitly here to have better error handling
+		String tempDir = env.getTaskManagerInfo().getTmpDirectories()[0];
+		ensureRocksDBIsLoaded(tempDir);
+
+		// replace all characters that are not legal for filenames with underscore
+		String fileCompatibleIdentifier = operatorIdentifier.replaceAll("[^a-zA-Z0-9\\-]", "_");
+
+		lazyInitializeForJob(env, fileCompatibleIdentifier);
+
+		File instanceBasePath = new File(
+			getNextStoragePath(),
+			"job_" + jobId + "_op_" + fileCompatibleIdentifier + "_uuid_" + UUID.randomUUID());
+
+		LocalRecoveryConfig localRecoveryConfig =
+			env.getTaskStateManager().createLocalRecoveryConfig();
+
+		return new RocksDBInternalStateBackend(
+			env.getUserClassLoader(),
+			instanceBasePath,
+			getDbOptions(),
+			getColumnOptions(),
+			numberOfGroups,
+			groups);
 	}
 
 	// ------------------------------------------------------------------------

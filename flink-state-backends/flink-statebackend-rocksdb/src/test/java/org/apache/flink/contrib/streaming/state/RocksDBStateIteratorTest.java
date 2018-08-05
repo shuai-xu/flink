@@ -51,8 +51,6 @@ public class RocksDBStateIteratorTest {
 
 	private int groups = 128;
 
-	private int ttlSeconds = -1;
-
 	private static DBOptions dbOptions;
 
 	private static ColumnFamilyOptions columnOptions;
@@ -78,8 +76,10 @@ public class RocksDBStateIteratorTest {
 
 	@Test
 	public void testConstructIterator() throws IOException, RocksDBException {
-		try (RocksDBInstance dbInstance = new RocksDBInstance(dbOptions, columnOptions,
-			ttlSeconds, temporaryFolder.newFolder().getAbsoluteFile())) {
+		try (RocksDBInstance dbInstance = new RocksDBInstance(
+			dbOptions,
+			columnOptions,
+			temporaryFolder.newFolder().getAbsoluteFile())) {
 
 			try {
 				createRangeIterator(dbInstance, null, null);
@@ -103,13 +103,6 @@ public class RocksDBStateIteratorTest {
 			}
 
 			try {
-				createRangeIterator(dbInstance, new byte[3], new byte[3]);
-				fail();
-			} catch (IllegalArgumentException e) {
-				// ignored.
-			}
-
-			try {
 				createRangeIterator(dbInstance, new byte[5], new byte[3]);
 				fail();
 			} catch (IllegalArgumentException e) {
@@ -124,8 +117,10 @@ public class RocksDBStateIteratorTest {
 
 	@Test
 	public void testIteratorAPIs() throws IOException, RocksDBException {
-		try (RocksDBInstance dbInstance = new RocksDBInstance(dbOptions, columnOptions,
-			ttlSeconds, temporaryFolder.newFolder().getAbsoluteFile())) {
+		try (RocksDBInstance dbInstance = new RocksDBInstance(
+			dbOptions,
+			columnOptions,
+			temporaryFolder.newFolder().getAbsoluteFile())) {
 
 			loadRandomData(dbInstance);
 
@@ -162,8 +157,10 @@ public class RocksDBStateIteratorTest {
 
 	@Test
 	public void testIteratorAccess() throws IOException, RocksDBException {
-		try (RocksDBInstance dbInstance = new RocksDBInstance(dbOptions, columnOptions,
-			ttlSeconds, temporaryFolder.newFolder().getAbsoluteFile())) {
+		try (RocksDBInstance dbInstance = new RocksDBInstance(
+			dbOptions,
+			columnOptions,
+			temporaryFolder.newFolder().getAbsoluteFile())) {
 
 			SortedMap<byte[], byte[]> expectedResult = loadRandomData(dbInstance);
 

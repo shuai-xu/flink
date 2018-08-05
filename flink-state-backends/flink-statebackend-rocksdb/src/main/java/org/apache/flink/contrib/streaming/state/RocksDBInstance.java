@@ -30,7 +30,6 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
-import org.rocksdb.TtlDB;
 import org.rocksdb.WriteOptions;
 
 import java.io.File;
@@ -63,14 +62,13 @@ public class RocksDBInstance implements AutoCloseable {
 	 * @param instanceRocksDBPath The DB path used to create the rocksDB.
 	 * @throws RocksDBException Throws when failing to create the rocksDB instance.
 	 */
-	RocksDBInstance(DBOptions dbOptions, ColumnFamilyOptions columnOptions, int ttlSeconds, File instanceRocksDBPath) throws RocksDBException {
+	RocksDBInstance(DBOptions dbOptions, ColumnFamilyOptions columnOptions, File instanceRocksDBPath) throws RocksDBException {
 		Preconditions.checkArgument(dbOptions.createIfMissing(), "DBOptions should call setCreateIfMissing(true)");
 
 		this.writeOptions = new WriteOptions().setDisableWAL(true);
 		List<ColumnFamilyDescriptor> columnFamilyDescriptors = Collections.singletonList(new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnOptions));
 		List<ColumnFamilyHandle> stateColumnFamilyHandles = new ArrayList<>(1);
-		List<Integer> ttlValues = Collections.singletonList(ttlSeconds);
-		this.db = TtlDB.open(dbOptions, instanceRocksDBPath.getAbsolutePath(), columnFamilyDescriptors, stateColumnFamilyHandles, ttlValues, false);
+		this.db = RocksDB.open(dbOptions, instanceRocksDBPath.getAbsolutePath(), columnFamilyDescriptors, stateColumnFamilyHandles);
 		// create handle for default CF
 		Preconditions.checkState(columnFamilyDescriptors.size() == stateColumnFamilyHandles.size(),
 			"Not all requested column family handles have been created");

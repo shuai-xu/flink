@@ -32,6 +32,8 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.TestTaskStateManager;
@@ -49,6 +51,7 @@ import org.rocksdb.CompactionStyle;
 import org.rocksdb.DBOptions;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -108,6 +111,20 @@ public class RocksDBStateBackendConfigTest {
 
 		rocksDbBackend.setDbStoragePaths(testDir1, testDir2);
 		assertArrayEquals(new String[] { testDir1, testDir2 }, rocksDbBackend.getDbStoragePaths());
+
+		final RocksDBInternalStateBackend internalStateBackend = createInternalStateBackend(rocksDbBackend);
+
+		try {
+			File instanceBasePath = internalStateBackend.getInstanceBasePath();
+			assertThat(instanceBasePath.getAbsolutePath(), anyOf(startsWith(testDir1), startsWith(testDir2)));
+
+			//noinspection NullArgumentToVariableArgMethod
+			rocksDbBackend.setDbStoragePaths(null);
+			assertNull(rocksDbBackend.getDbStoragePaths());
+		}
+		finally {
+			internalStateBackend.close();
+		}
 
 		final RocksDBKeyedStateBackend<Integer> keyedBackend = createKeyedStateBackend(rocksDbBackend);
 
@@ -172,6 +189,19 @@ public class RocksDBStateBackendConfigTest {
 		final RocksDBStateBackend rocksDbBackend = new RocksDBStateBackend(tempFolder.newFolder().toURI().toString());
 		rocksDbBackend.setDbStoragePath(configuredPath);
 
+		final RocksDBInternalStateBackend internalStateBackend = createInternalStateBackend(rocksDbBackend);
+
+		try {
+			File instanceBasePath = internalStateBackend.getInstanceBasePath();
+			assertThat(instanceBasePath.getAbsolutePath(), startsWith(expectedPath.getAbsolutePath()));
+
+			//noinspection NullArgumentToVariableArgMethod
+			rocksDbBackend.setDbStoragePaths(null);
+			assertNull(rocksDbBackend.getDbStoragePaths());
+		} finally {
+			internalStateBackend.close();
+		}
+
 		RocksDBKeyedStateBackend<Integer> keyedBackend = createKeyedStateBackend(rocksDbBackend);
 
 		try {
@@ -234,15 +264,28 @@ public class RocksDBStateBackendConfigTest {
 		assertNull(rocksDbBackend.getDbStoragePaths());
 
 		Environment env = getMockEnvironment(tempDirs);
+
+		RocksDBInternalStateBackend internalStateBackend = (RocksDBInternalStateBackend) rocksDbBackend.createInternalStateBackend(env,
+			"foobar",
+			1,
+			new GroupRange(0, 1));
+
+		try {
+			File instanceBasePath = internalStateBackend.getInstanceBasePath();
+			assertThat(instanceBasePath.getAbsolutePath(), anyOf(startsWith(dir1.getAbsolutePath()), startsWith(dir2.getAbsolutePath())));
+		} finally {
+			internalStateBackend.close();
+		}
+
 		RocksDBKeyedStateBackend<Integer> keyedBackend = (RocksDBKeyedStateBackend<Integer>) rocksDbBackend.
-				createKeyedStateBackend(
-						env,
-						env.getJobID(),
-						"test_op",
-						IntSerializer.INSTANCE,
-						1,
-						new KeyGroupRange(0, 0),
-						env.getTaskKvStateRegistry());
+			createKeyedStateBackend(
+				env,
+				env.getJobID(),
+				"test_op",
+				IntSerializer.INSTANCE,
+				1,
+				new KeyGroupRange(0, 0),
+				env.getTaskKvStateRegistry());
 
 		try {
 			File instanceBasePath = keyedBackend.getInstanceBasePath();
@@ -271,17 +314,33 @@ public class RocksDBStateBackendConfigTest {
 
 			rocksDbBackend.setDbStoragePath(targetDir.getAbsolutePath());
 
+			boolean isFailed = false;
+			try {
+				Environment env = getMockEnvironment();
+				rocksDbBackend.createInternalStateBackend(
+					env,
+					"foobar",
+					1,
+					new GroupRange(0, 1));
+			}
+			catch (Exception e) {
+				assertTrue(e.getMessage().contains("No local storage directories available"));
+				assertTrue(e.getMessage().contains(targetDir.getAbsolutePath()));
+				isFailed = true;
+			}
+			assertTrue("We must see a failure because no storaged directory is feasible.", isFailed);
+
 			boolean hasFailure = false;
 			try {
 				Environment env = getMockEnvironment();
 				rocksDbBackend.createKeyedStateBackend(
-						env,
-						env.getJobID(),
-						"foobar",
-						IntSerializer.INSTANCE,
-						1,
-						new KeyGroupRange(0, 0),
-						new KvStateRegistry().createTaskRegistry(env.getJobID(), new JobVertexID()));
+					env,
+					env.getJobID(),
+					"foobar",
+					IntSerializer.INSTANCE,
+					1,
+					new KeyGroupRange(0, 0),
+					new KvStateRegistry().createTaskRegistry(env.getJobID(), new JobVertexID()));
 			}
 			catch (Exception e) {
 				assertTrue(e.getMessage().contains("No local storage directories available"));
@@ -312,6 +371,21 @@ public class RocksDBStateBackendConfigTest {
 			}
 
 			rocksDbBackend.setDbStoragePaths(targetDir1.getAbsolutePath(), targetDir2.getAbsolutePath());
+
+			try {
+				Environment env = getMockEnvironment();
+				InternalStateBackend internalStateBackend = rocksDbBackend.createInternalStateBackend(
+					env,
+					"foobar",
+					1,
+					new GroupRange(0, 1));
+
+				internalStateBackend.close();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+				fail("Backend initialization failed even though some paths were available");
+			}
 
 			try {
 				Environment env = getMockEnvironment();
@@ -435,7 +509,7 @@ public class RocksDBStateBackendConfigTest {
 		original.setOptions(optionsFactory);
 
 		final String[] localDirs = new String[] {
-				tempFolder.newFolder().getAbsolutePath(), tempFolder.newFolder().getAbsolutePath() };
+			tempFolder.newFolder().getAbsolutePath(), tempFolder.newFolder().getAbsolutePath() };
 		original.setDbStoragePaths(localDirs);
 
 		RocksDBStateBackend copy = original.configure(new Configuration());
@@ -466,19 +540,29 @@ public class RocksDBStateBackendConfigTest {
 	// ------------------------------------------------------------------------
 
 	static RocksDBKeyedStateBackend<Integer> createKeyedStateBackend(
-			RocksDBStateBackend rocksDbBackend) throws Exception {
+		RocksDBStateBackend rocksDbBackend) throws Exception {
 
 		final Environment env = getMockEnvironment();
 
 		return (RocksDBKeyedStateBackend<Integer>) rocksDbBackend.
-				createKeyedStateBackend(
-						env,
-						env.getJobID(),
-						"test_op",
-						IntSerializer.INSTANCE,
-						1,
-						new KeyGroupRange(0, 0),
-						env.getTaskKvStateRegistry());
+			createKeyedStateBackend(
+				env,
+				env.getJobID(),
+				"test_op",
+				IntSerializer.INSTANCE,
+				1,
+				new KeyGroupRange(0, 0),
+				env.getTaskKvStateRegistry());
+	}
+
+	static RocksDBInternalStateBackend createInternalStateBackend(RocksDBStateBackend rocksDBStateBackend) throws IOException {
+		final Environment env = getMockEnvironment();
+
+		RocksDBInternalStateBackend rocksDBInternalStateBackend =
+			(RocksDBInternalStateBackend) rocksDBStateBackend.createInternalStateBackend(env, "test_op", 1, new GroupRange(0, 1));
+
+		return rocksDBInternalStateBackend;
+
 	}
 
 	static Environment getMockEnvironment() {

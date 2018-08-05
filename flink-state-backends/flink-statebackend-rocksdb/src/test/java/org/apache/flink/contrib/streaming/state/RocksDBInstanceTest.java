@@ -81,8 +81,10 @@ public class RocksDBInstanceTest {
 
 	@Test
 	public void testRocksObjectsClosed() throws IOException, RocksDBException {
-		RocksDBInstance dbInstance = new RocksDBInstance(dbOptions, columnOptions,
-			ttlSeconds, temporaryFolder.newFolder().getAbsoluteFile());
+		RocksDBInstance dbInstance = new RocksDBInstance(
+			dbOptions,
+			columnOptions,
+			temporaryFolder.newFolder().getAbsoluteFile());
 
 		RocksDB rocksDB = (RocksDB) Whitebox.getInternalState(dbInstance, "db");
 		WriteOptions writeOptions = (WriteOptions) Whitebox.getInternalState(dbInstance, "writeOptions");
@@ -103,8 +105,11 @@ public class RocksDBInstanceTest {
 
 	@Test
 	public void testBasicOperations() throws IOException, RocksDBException {
-		try (RocksDBInstance dbInstance = new RocksDBInstance(dbOptions, columnOptions,
-			ttlSeconds, temporaryFolder.newFolder().getAbsoluteFile())) {
+		try (RocksDBInstance dbInstance = new RocksDBInstance(
+			dbOptions,
+			columnOptions,
+			temporaryFolder.newFolder().getAbsoluteFile())) {
+
 			byte[] keyBytes = new byte[10];
 			byte[] valueBytes = new byte[20];
 			ThreadLocalRandom.current().nextBytes(keyBytes);

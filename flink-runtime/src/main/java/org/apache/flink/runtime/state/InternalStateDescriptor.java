@@ -224,8 +224,12 @@ public final class InternalStateDescriptor implements Serializable {
 			new Merger<?>[getNumValueColumns()];
 
 		for (int index = 0; index < getNumValueColumns(); ++index) {
-			valueColumnMergers[index] =
-				getValueColumnDescriptor(index).getMerger();
+			Merger<?> merger = getValueColumnDescriptor(index).getMerger();
+			if (merger == null) {
+				return null;
+			} else {
+				valueColumnMergers[index] = merger;
+			}
 		}
 
 		return new RowMerger(valueColumnMergers);

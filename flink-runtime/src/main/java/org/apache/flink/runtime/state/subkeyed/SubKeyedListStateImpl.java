@@ -359,6 +359,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 		if (iterator.hasNext()) {
 			element = iterator.next();
 			iterator.remove();
+			internalState.put(Row.of(key, namespace), Row.of(listValue));
 		}
 
 		return element;

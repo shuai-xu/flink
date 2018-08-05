@@ -18,7 +18,12 @@
 
 package org.apache.flink.contrib.streaming.state;
 
+import org.apache.flink.runtime.state.InternalStateDescriptor;
+import org.apache.flink.types.Pair;
+import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
+
+import java.util.List;
 
 /**
  * The rocksDB entry of (dbKey, dbValue).
@@ -50,6 +55,53 @@ public class RocksDBEntry {
 		deleted = true;
 		dbValue = null;
 		dbInstance.delete(dbKey);
+	}
+
+	/**
+	 * Get the pair of row with given internal state descriptor.
+	 *
+	 * @param descriptor the given internal state descriptor
+	 */
+	Pair<Row, Row> getRowPair(InternalStateDescriptor descriptor) {
+		Preconditions.checkNotNull(descriptor,
+			"Must provide internal state descriptor to get the pair of row");
+
+		return new Pair<Row, Row>() {
+			/** The key of the pair. */
+			private Row key;
+
+			/** The value of the pair. */
+			private Row value;
+
+			@Override
+			public Row getKey() {
+				if (key == null) {
+					key = RocksDBInternalState.deserializeStateKey(dbKey, descriptor);
+				}
+				return key;
+			}
+
+			@Override
+			public Row getValue() {
+				if (dbValue == null) {
+					return null;
+				}
+				if (value == null) {
+					if (descriptor.getValueMerger() != null) {
+						List<Row> rows = RocksDBInternalState.deserializeStateValues(dbValue, descriptor);
+						value = RocksDBInternalState.mergeMultiValues(rows, descriptor.getValueMerger());
+					} else {
+						value = RocksDBInternalState.deserializeStateValue(dbValue, descriptor);
+					}
+				}
+				return value;
+			}
+
+			@Override
+			public Row setValue(Row value) {
+				throw new UnsupportedOperationException();
+			}
+		};
 	}
 
 	byte[] getDBKey() {
