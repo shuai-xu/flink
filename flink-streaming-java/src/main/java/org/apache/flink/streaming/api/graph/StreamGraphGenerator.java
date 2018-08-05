@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
 import org.apache.flink.streaming.api.transformations.CoFeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.FeedbackTransformation;
@@ -498,6 +499,10 @@ public class StreamGraphGenerator {
 				null,
 				"Sink: " + sink.getName());
 
+		if (sink.getOperator().getUserFunction() instanceof OutputFormatSinkFunction) {
+			OutputFormatSinkFunction<T> fs = (OutputFormatSinkFunction<T>) sink.getOperator().getUserFunction();
+			streamGraph.setOutputFormat(sink.getId(), fs.getFormat());
+		}
 		streamGraph.setParallelism(sink.getId(), sink.getParallelism());
 		streamGraph.setMaxParallelism(sink.getId(), sink.getMaxParallelism());
 

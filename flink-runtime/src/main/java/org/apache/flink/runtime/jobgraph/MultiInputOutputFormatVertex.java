@@ -18,53 +18,61 @@
 
 package org.apache.flink.runtime.jobgraph;
 
-import org.apache.flink.runtime.jobgraph.FormatUtil.OutputFormatStub;
+import org.apache.flink.runtime.jobgraph.FormatUtil.MultiFormatStub;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * A task vertex that run an initialization on the master, trying to deserialize an output format
- * and initializing/finalizing it on master, if necessary.
+ * A task vertex that run an initialization on the master, trying to deserialize input/output formats
+ * and initializing/finalizing them on master, if necessary.
  */
-public class OutputFormatVertex extends JobVertex {
+public class MultiInputOutputFormatVertex extends JobVertex {
 
 	private static final long serialVersionUID = 1L;
 
-	private String formatDescription;
+	private Map<OperatorID, String> formatDescriptionMap = new HashMap<>();
 
 	/**
 	 * Creates a new task vertex with the specified name.
 	 *
 	 * @param name The name of the task vertex.
 	 */
-	public OutputFormatVertex(String name) {
+	public MultiInputOutputFormatVertex(String name) {
 		super(name);
 	}
 
-	public void setFormatDescription(String formatDescription) {
-		this.formatDescription = formatDescription;
+	public MultiInputOutputFormatVertex(String name, JobVertexID id, List<JobVertexID> alternativeIds, List<OperatorID> operatorIds, List<OperatorID> alternativeOperatorIds) {
+		super(name, id, alternativeIds, operatorIds, alternativeOperatorIds);
 	}
 
-	public String getFormatDescription() {
-		return formatDescription;
+	public void setFormatDescription(OperatorID operatorId, String formatDescription) {
+		formatDescriptionMap.put(operatorId, formatDescription);
+	}
+
+	public String getFormatDescription(OperatorID operatorId) {
+		return formatDescriptionMap.get(operatorId);
 	}
 
 	@Override
 	public void initializeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		OutputFormatStub stub = new OutputFormatStub(cfg, loader);
+		MultiFormatStub stub = new MultiFormatStub<>(cfg, loader);
 
-		FormatUtil.initializeOutputFormatsOnMaster(this, stub, Collections.singletonMap(OutputFormatStub.STUB_KEY, formatDescription));
+		FormatUtil.initializeInputFormatsOnMaster(this, stub, Collections.unmodifiableMap(formatDescriptionMap));
+		FormatUtil.initializeOutputFormatsOnMaster(this, stub, Collections.unmodifiableMap(formatDescriptionMap));
 	}
 
 	@Override
 	public void finalizeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		OutputFormatStub stub = new OutputFormatStub(cfg, loader);
+		MultiFormatStub stub = new MultiFormatStub<>(cfg, loader);
 
-		FormatUtil.finalizeOutputFormatsOnMaster(this, stub, Collections.singletonMap(OutputFormatStub.STUB_KEY, formatDescription));
+		FormatUtil.finalizeOutputFormatsOnMaster(this, stub, Collections.unmodifiableMap(formatDescriptionMap));
 	}
 }

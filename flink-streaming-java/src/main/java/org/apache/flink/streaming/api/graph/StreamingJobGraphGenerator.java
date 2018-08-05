@@ -21,8 +21,8 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.functions.Function;
+import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.common.operators.util.UserCodeObjectWrapper;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
@@ -31,11 +31,12 @@ import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
-import org.apache.flink.runtime.jobgraph.InputFormatVertex;
+import org.apache.flink.runtime.jobgraph.FormatUtil;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.MultiInputOutputFormatVertex;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -67,6 +68,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -111,6 +113,8 @@ public class StreamingJobGraphGenerator {
 	private final Map<Integer, ResourceSpec> chainedMinResources;
 	private final Map<Integer, ResourceSpec> chainedPreferredResources;
 
+	private Map<Integer, Map<OperatorID, OutputFormat>> outputFormats;
+
 	private final StreamGraphHasher defaultStreamGraphHasher;
 	private final List<StreamGraphHasher> legacyStreamGraphHashers;
 
@@ -126,6 +130,7 @@ public class StreamingJobGraphGenerator {
 		this.chainedNames = new HashMap<>();
 		this.chainedMinResources = new HashMap<>();
 		this.chainedPreferredResources = new HashMap<>();
+		this.outputFormats = new HashMap<>();
 		this.physicalEdgesInOrder = new ArrayList<>();
 
 		jobGraph = new JobGraph(streamGraph.getJobName());
@@ -246,6 +251,7 @@ public class StreamingJobGraphGenerator {
 				chainedOperatorHashes.computeIfAbsent(startNodeId, k -> new ArrayList<>());
 
 			byte[] primaryHashBytes = hashes.get(currentNodeId);
+			OperatorID currentOperatorId = new OperatorID(primaryHashBytes);
 
 			for (Map<Integer, byte[]> legacyHash : legacyHashes) {
 				operatorHashes.add(new Tuple2<>(primaryHashBytes, legacyHash.get(currentNodeId)));
@@ -255,8 +261,17 @@ public class StreamingJobGraphGenerator {
 			chainedMinResources.put(currentNodeId, createChainedMinResources(currentNodeId, chainableOutputs));
 			chainedPreferredResources.put(currentNodeId, createChainedPreferredResources(currentNodeId, chainableOutputs));
 
+			if (streamGraph.getStreamNode(currentNodeId).getOutputFormat() != null) {
+				Map<OperatorID, OutputFormat> outputFormatMap = outputFormats.get(startNodeId);
+				if (outputFormatMap == null) {
+					outputFormatMap = new HashMap<>();
+					outputFormats.put(startNodeId, outputFormatMap);
+				}
+				outputFormatMap.put(currentOperatorId, streamGraph.getStreamNode(currentNodeId).getOutputFormat());
+			}
+
 			StreamConfig config = currentNodeId.equals(startNodeId)
-					? createJobVertex(startNodeId, hashes, legacyHashes, chainedOperatorHashes)
+					? createJobVertex(startNodeId, currentOperatorId, hashes, legacyHashes, chainedOperatorHashes)
 					: new StreamConfig(new Configuration());
 
 			setVertexConfig(currentNodeId, config, chainableOutputs, nonChainableOutputs);
@@ -288,7 +303,7 @@ public class StreamingJobGraphGenerator {
 				chainedConfigs.get(startNodeId).put(currentNodeId, config);
 			}
 
-			config.setOperatorID(new OperatorID(primaryHashBytes));
+			config.setOperatorID(currentOperatorId);
 
 			if (chainableOutputs.isEmpty()) {
 				config.setChainEnd();
@@ -333,6 +348,7 @@ public class StreamingJobGraphGenerator {
 
 	private StreamConfig createJobVertex(
 			Integer streamNodeId,
+			OperatorID operatorId,
 			Map<Integer, byte[]> hashes,
 			List<Map<Integer, byte[]>> legacyHashes,
 			Map<Integer, List<Tuple2<byte[], byte[]>>> chainedOperatorHashes) {
@@ -367,15 +383,19 @@ public class StreamingJobGraphGenerator {
 			}
 		}
 
-		if (streamNode.getInputFormat() != null) {
-			jobVertex = new InputFormatVertex(
+		if (streamNode.getInputFormat() != null || outputFormats.get(streamNodeId) != null) {
+			jobVertex = new MultiInputOutputFormatVertex(
 					chainedNames.get(streamNodeId),
 					jobVertexId,
 					legacyJobVertexIds,
 					chainedOperatorVertexIds,
 					userDefinedChainedOperatorVertexIds);
+
 			TaskConfig taskConfig = new TaskConfig(jobVertex.getConfiguration());
-			taskConfig.setStubWrapper(new UserCodeObjectWrapper<Object>(streamNode.getInputFormat()));
+			FormatUtil.MultiFormatStub.setStubFormats(
+				taskConfig,
+				streamNode.getInputFormat() == null ? null : Collections.singletonMap(operatorId, streamNode.getInputFormat()),
+				outputFormats.get(streamNodeId));
 		} else {
 			jobVertex = new JobVertex(
 					chainedNames.get(streamNodeId),

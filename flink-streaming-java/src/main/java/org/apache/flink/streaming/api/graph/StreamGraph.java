@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.graph;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.io.InputFormat;
+import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -512,6 +513,10 @@ public class StreamGraph extends StreamingPlan {
 
 	public void setInputFormat(Integer vertexID, InputFormat<?, ?> inputFormat) {
 		getStreamNode(vertexID).setInputFormat(inputFormat);
+	}
+
+	public void setOutputFormat(Integer vertexID, OutputFormat<?> outputFormat) {
+		getStreamNode(vertexID).setOutputFormat(outputFormat);
 	}
 
 	void setTransformationUID(Integer nodeId, String transformationId) {
