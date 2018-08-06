@@ -25,7 +25,8 @@ import org.apache.flink.test.preaggregatedaccumulators.utils.PreAggregatedAccumu
 import java.util.Map;
 
 /**
- * Test for the basic functionality of pre-aggregated accumulators.
+ * Tests the basic functionality of pre-aggregated accumulators with the PRODUCER_WAIT_CONSUMER_FINISH mode.
+ * In this mode, the producer tasks do not commit the accumulator till the consumer tasks finish.
  */
 public class PreAggregatedAccumulatorWithFailQueryITCase extends StreamingProgramTestBase {
 	private Map<Integer, Integer> numberReceived;
@@ -33,7 +34,8 @@ public class PreAggregatedAccumulatorWithFailQueryITCase extends StreamingProgra
 	@Override
 	protected void testProgram() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		this.numberReceived = PreAggregatedAccumulatorProgram.executeJob(PreAggregatedAccumulatorProgram.ExecutionMode.PRODUCER_WAIT_CONSUMER_FINISH, env);
+		this.numberReceived = PreAggregatedAccumulatorProgram.executeJob(
+			PreAggregatedAccumulatorProgram.ExecutionMode.PRODUCER_WAIT_CONSUMER_FINISH, env);
 	}
 
 	@Override

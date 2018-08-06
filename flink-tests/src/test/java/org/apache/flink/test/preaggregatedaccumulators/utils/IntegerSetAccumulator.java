@@ -22,15 +22,17 @@ import org.apache.flink.api.common.accumulators.Accumulator;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
- * An accumulator who contains a set of integers to be filtered out.
+ * An accumulator who contains a set of integers. The contained numbers will be filtered out from the
+ * stream on demand.
  */
 public class IntegerSetAccumulator implements Accumulator<Integer, IntegerSetAccumulator.IntegerSet> {
-	private IntegerSet integerSet = new IntegerSet();
+	private final IntegerSet integerSet = new IntegerSet();
 
-	public IntegerSetAccumulator() { }
+	IntegerSetAccumulator() { }
 
 	@Override
 	public void add(Integer value) {
@@ -59,6 +61,25 @@ public class IntegerSetAccumulator implements Accumulator<Integer, IntegerSetAcc
 		return cloned;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		IntegerSetAccumulator that = (IntegerSetAccumulator) o;
+		return Objects.equals(integerSet, that.integerSet);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(integerSet);
+	}
+
 	/**
 	 * Serializable wrapper class for a set of integers.
 	 */
@@ -67,6 +88,32 @@ public class IntegerSetAccumulator implements Accumulator<Integer, IntegerSetAcc
 
 		Set<Integer> getIntegers() {
 			return integers;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+
+			IntegerSet that = (IntegerSet) o;
+			return Objects.equals(integers, that.integers);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(integers);
+		}
+
+		@Override
+		public String toString() {
+			return "IntegerSet{" +
+				"integers=" + integers +
+				'}';
 		}
 	}
 }

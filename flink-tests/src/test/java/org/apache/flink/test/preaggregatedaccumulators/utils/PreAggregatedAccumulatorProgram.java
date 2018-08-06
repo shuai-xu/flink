@@ -46,28 +46,46 @@ import static org.junit.Assert.assertFalse;
  *    C
  * </pre>
  *
- * <p>Each task of B wants to output numbers from 1 to MAX_NUMBER, and C output the received numbers.
+ * <p>Each task of B outputs numbers from 1 to MAX_NUMBER, and each task of C outputs the received numbers.
  * During this process, each task of A will commit a value equals to its subtask index, and numbers
  * match these indices will be filtered out. Pre-aggregated accumulators are used to help B to finish the filter in
  * advance, and C will execute the final filter in case the accumulators do not arrive in time.
  */
 public class PreAggregatedAccumulatorProgram {
-	private static final int PARALLELISM = 1;
+	private static final int PARALLELISM = 4;
 	private static final int MAX_NUMBER = 1000;
 	private static final String ACCUMULATOR_NAME = "test";
+	private static final IntegerSetAccumulator.IntegerSet EXPECTED_ACCUMULATOR_QUERY_RESULT = new IntegerSetAccumulator.IntegerSet();
+	static {
+		for (int i = 0; i < PARALLELISM; ++i) {
+			EXPECTED_ACCUMULATOR_QUERY_RESULT.getIntegers().add(i);
+		}
+	}
 
+	/**
+	 * The execution contexts of all the executions. Each execution context encapsulates the latches and the result map
+	 * used in one execution. These objects can not be created as the variables of the user functions since the user
+	 * functions go through multiple copies during the execution.
+	 */
 	private static final ConcurrentHashMap<String, ExecutionContext> EXECUTION_CONTEXTS = new ConcurrentHashMap<>();
 
+	/**
+	 * Executes a test job and acquire the computation result.
+	 *
+	 * @param executionMode The execution mode required.
+	 * @param env The stream execution environment.
+	 * @return The result of the execution.
+	 */
 	public static Map<Integer, Integer> executeJob(ExecutionMode executionMode,
 													StreamExecutionEnvironment env) throws Exception {
 		env.setParallelism(PARALLELISM);
 
-		// Create a random id for this execution so that different execution will not interfere with others.
+		// Create a random id for the context of this execution so that different execution will not interfere with others.
 		final String contextId = RandomStringUtils.random(16);
 		EXECUTION_CONTEXTS.put(contextId, new ExecutionContext(executionMode));
 
-		DataStream<Integer> left = env.addSource(new AccumulatorProducerSourceFunction(contextId));
-		DataStream<Integer> right = env.addSource(new AccumulatorConsumerSourceFunction(contextId));
+		DataStream<Integer> left = env.addSource(new AccumulatorProducerSourceFunction(contextId)).name("producer");
+		DataStream<Integer> right = env.addSource(new AccumulatorConsumerSourceFunction(contextId)).name("consumer");
 		left.connect(right).flatMap(new IntegerJoinFunction(contextId));
 
 		env.execute();
@@ -76,6 +94,12 @@ public class PreAggregatedAccumulatorProgram {
 		return executionContext.getNumberReceived();
 	}
 
+	/**
+	 * Compares the execution result. The expected result should be a map of
+	 * {PARALLELISM: PARALLELISM, PARALLELISM + 1: PARALLELISM, ..., MAX_NUMBER: PARALLELISM}.
+	 *
+	 * @param numberReceived The execution result.
+	 */
 	public static void assertResultConsistent(Map<Integer, Integer> numberReceived) {
 		for (int i = 0; i < PARALLELISM; ++i) {
 			assertFalse(numberReceived.containsKey(i));
@@ -87,15 +111,29 @@ public class PreAggregatedAccumulatorProgram {
 	}
 
 	/**
-	 * Execution mode of the test program, which indicates the execution order of the two sources.
+	 * Execution mode of the test program, which controls the execution order of the two sources.
 	 */
 	public enum ExecutionMode {
+		/**
+		 * The accumulator consumer tasks do not send data till the query completing, which ensures
+		 * the accumulator takes effective.
+		 */
 		CONSUMER_WAIT_QUERY_FINISH,
-		PRODUCER_WAIT_CONSUMER_FINISH
+
+		/**
+		 * The accumulator producer tasks do not send data till the consumer tasks finish, which
+		 * ensures the accumulator do not take effective.
+		 */
+		PRODUCER_WAIT_CONSUMER_FINISH,
+
+		/**
+		 * Do not limit the execution order of the producer and consumer tasks.
+		 */
+		RANDOM
 	}
 
 	/**
-	 * Wrapper class for global objects used in test program, including the latch to coordinate the
+	 * Wrapper class for global objects used in test program, including the latches to coordinate the
 	 * execution order and the map to hold the result.
 	 */
 	public static class ExecutionContext {
@@ -103,30 +141,30 @@ public class PreAggregatedAccumulatorProgram {
 		private final CountDownLatch consumerFinishedLatch = new CountDownLatch(PARALLELISM);
 		private final ConcurrentHashMap<Integer, Integer> numberReceived = new ConcurrentHashMap<>();
 
-		public ExecutionContext(ExecutionMode executionMode) {
+		ExecutionContext(ExecutionMode executionMode) {
 			this.executionMode = executionMode;
 		}
 
-		public ExecutionMode getExecutionMode() {
+		ExecutionMode getExecutionMode() {
 			return executionMode;
 		}
 
-		public CountDownLatch getConsumerFinishedLatch() {
+		CountDownLatch getConsumerFinishedLatch() {
 			return consumerFinishedLatch;
 		}
 
-		public ConcurrentHashMap<Integer, Integer> getNumberReceived() {
+		ConcurrentHashMap<Integer, Integer> getNumberReceived() {
 			return numberReceived;
 		}
 	}
 
 	/**
-	 * The source who produce the tested accumulator.
+	 * The source who produces the tested accumulator.
 	 */
 	private static class AccumulatorProducerSourceFunction extends RichParallelSourceFunction<Integer> {
 		private final String contextId;
 
-		public AccumulatorProducerSourceFunction(String contextId) {
+		AccumulatorProducerSourceFunction(String contextId) {
 			this.contextId = contextId;
 		}
 
@@ -161,11 +199,11 @@ public class PreAggregatedAccumulatorProgram {
 	 */
 	private static class AccumulatorConsumerSourceFunction extends RichParallelSourceFunction<Integer> {
 		private final String contextId;
+		private CompletableFuture<Accumulator<Integer, IntegerSetAccumulator.IntegerSet>> filterCompletableFuture;
 
-		private CountDownLatch globalFilterReceived;
-		private volatile Accumulator<Integer, IntegerSetAccumulator.IntegerSet> receivedAccumulator;
+		private boolean accumulatorCompared = false;
 
-		public AccumulatorConsumerSourceFunction(String contextId) {
+		AccumulatorConsumerSourceFunction(String contextId) {
 			this.contextId = contextId;
 		}
 
@@ -173,17 +211,7 @@ public class PreAggregatedAccumulatorProgram {
 		public void open(Configuration parameters) throws Exception {
 			super.open(parameters);
 
-			globalFilterReceived = new CountDownLatch(1);
-
-			CompletableFuture<Accumulator<Integer, IntegerSetAccumulator.IntegerSet>> filterCompletableFuture =
-				getRuntimeContext().queryPreAggregatedAccumulator(ACCUMULATOR_NAME);
-
-			filterCompletableFuture.whenComplete((receivedAccumulator, throwable) -> {
-				if (receivedAccumulator != null) {
-					this.receivedAccumulator = receivedAccumulator;
-					globalFilterReceived.countDown();
-				}
-			});
+			this.filterCompletableFuture = getRuntimeContext().queryPreAggregatedAccumulator(ACCUMULATOR_NAME);
 		}
 
 		@Override
@@ -192,14 +220,22 @@ public class PreAggregatedAccumulatorProgram {
 			CountDownLatch consumerFinished = EXECUTION_CONTEXTS.get(contextId).getConsumerFinishedLatch();
 
 			if (executionMode == ExecutionMode.CONSUMER_WAIT_QUERY_FINISH) {
-				//TODO: will be uncomment later
-//				globalFilterReceived.await();
+				filterCompletableFuture.join();
 			}
 
 			for (int i = 0; i < MAX_NUMBER; ++i) {
-				final Accumulator<Integer, IntegerSetAccumulator.IntegerSet> currentAccumulator = receivedAccumulator;
+				if (filterCompletableFuture.isDone()) {
+					final Accumulator<Integer, IntegerSetAccumulator.IntegerSet> accumulator = filterCompletableFuture.get();
 
-				if (currentAccumulator == null || !currentAccumulator.getLocalValue().getIntegers().contains(i)) {
+					if (!accumulatorCompared) {
+						assertEquals(EXPECTED_ACCUMULATOR_QUERY_RESULT, accumulator.getLocalValue());
+						accumulatorCompared = true;
+					}
+
+					if (!accumulator.getLocalValue().getIntegers().contains(i)) {
+						ctx.collect(i);
+					}
+				} else {
 					ctx.collect(i);
 				}
 			}
@@ -214,13 +250,12 @@ public class PreAggregatedAccumulatorProgram {
 	}
 
 	/**
-	 * Join the result of the producer and consumer source. In this case, only the consumer source
-	 * has output.
+	 * A fake join task to do the final filtering to ensure the output numbers are expected.
 	 */
 	private static class IntegerJoinFunction implements CoFlatMapFunction<Integer, Integer, Integer> {
 		private final String contextId;
 
-		public IntegerJoinFunction(String contextId) {
+		IntegerJoinFunction(String contextId) {
 			this.contextId = contextId;
 		}
 

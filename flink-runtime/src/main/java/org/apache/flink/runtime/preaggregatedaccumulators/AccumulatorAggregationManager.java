@@ -48,11 +48,12 @@ public interface AccumulatorAggregationManager {
 	 * should have already registered on the accumulator and have not committed before.
 	 *
 	 * @param jobId JobID of the committing task.
+	 * @param jobVertexId JobVertexID of the committing task.
 	 * @param subtaskIndex subtaskIndex of the committing task.
 	 * @param name The name of the accumulator to commit.
 	 * @param value The committing pre-aggregated accumulator's value.
 	 */
-	void commitPreAggregatedAccumulator(JobID jobId, int subtaskIndex, String name, Accumulator value);
+	void commitPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name, Accumulator value);
 
 	/**
 	 * Queries the aggregated value of a specific pre-aggregated accumulator asynchronously.
@@ -67,9 +68,10 @@ public interface AccumulatorAggregationManager {
 	 * Clears the registration status of a task if it has not committed yet when the task exits.
 	 *
 	 * @param jobId JobID of the exited task.
+	 * @param jobVertexId JobVertexID of the exited task.
 	 * @param subtaskIndex subtaskIndex of the exiting task.
 	 */
-	void clearRegistrationForTask(JobID jobId, int subtaskIndex);
+	void clearRegistrationForTask(JobID jobId, JobVertexID jobVertexId, int subtaskIndex);
 
 	/**
 	 * Removes all the aggregating and querying accumulators for the specific job when the connection to the

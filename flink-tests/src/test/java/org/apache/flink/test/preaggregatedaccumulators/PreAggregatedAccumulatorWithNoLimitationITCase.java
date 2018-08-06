@@ -25,17 +25,17 @@ import org.apache.flink.test.preaggregatedaccumulators.utils.PreAggregatedAccumu
 import java.util.Map;
 
 /**
- * Tests for the basic functionality of pre-aggregated accumulators with the CONSUMER_WAIT_QUERY_FINISH mode.
- * the accumulator consumer tasks do not send data till the accumulator queries finish.
+ * Testes the basic functionality of pre-aggregated accumulators with the RANDOM mode.
+ * This mode do not limits the order of accumulator querying and consumer tasks' executions.
  */
-public class PreAggregatedAccumulatorWithSuccessQueryITCase extends StreamingProgramTestBase {
+public class PreAggregatedAccumulatorWithNoLimitationITCase extends StreamingProgramTestBase {
 	private Map<Integer, Integer> numberReceived;
 
 	@Override
 	protected void testProgram() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		this.numberReceived = PreAggregatedAccumulatorProgram.executeJob(
-			PreAggregatedAccumulatorProgram.ExecutionMode.CONSUMER_WAIT_QUERY_FINISH, env);
+			PreAggregatedAccumulatorProgram.ExecutionMode.RANDOM, env);
 	}
 
 	@Override

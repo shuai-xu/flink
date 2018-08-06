@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.jobmaster.utils;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.queryablestate.KvStateID;
 import org.apache.flink.runtime.checkpoint.CheckpointMetrics;
@@ -52,6 +53,7 @@ import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 
 import javax.annotation.Nullable;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
@@ -175,6 +177,11 @@ public class TestingJobMasterGateway implements JobMasterGateway {
 	@Override
 	public void commitPreAggregatedAccumulator(List<CommitAccumulator> commitAccumulators) {
 
+	}
+
+	@Override
+	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name) {
+		throw new UnsupportedOperationException();
 	}
 
 	@Override

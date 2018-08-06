@@ -25,6 +25,8 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.taskexecutor.JobManagerConnection;
 import org.apache.flink.runtime.taskexecutor.JobManagerTable;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +46,18 @@ import static org.apache.flink.util.Preconditions.checkState;
 public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggregationManager {
 	private final JobManagerTable jobManagerTable;
 
-	private final Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = new HashMap<>();
+	/** The accumulators registered or committed by the tasks running on this executor. */
+	private final Map<JobID, Map<String, AggregatedAccumulator>> perJobAggregatedAccumulators = new HashMap<>();
+
+	private final Object queryLock = new Object();
+
+	/** The unfulfilled query futures, which will be completed once the query to the job master finishes. */
+	@GuardedBy("queryLock")
+	private final Map<JobID, Map<String, List<CompletableFuture<Accumulator>>>> perJobUnfulfilledUserQueryFutures = new HashMap<>();
+
+	/** If the query has completed, the aggregated accumulator or exceptions caught are cached. */
+	@GuardedBy("queryLock")
+	private final Map<JobID, Map<String, Object>> perJobCachedQueryResults = new HashMap<>();
 
 	public RPCBasedAccumulatorAggregationManager(JobManagerTable jobManagerTable) {
 		this.jobManagerTable = jobManagerTable;
@@ -52,22 +65,22 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 
 	@Override
 	public void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name) {
-		synchronized (perJobAccumulators) {
-			AggregatedAccumulator aggregatedAccumulator = perJobAccumulators.computeIfAbsent(jobId, k -> new HashMap<>())
+		synchronized (perJobAggregatedAccumulators) {
+			AggregatedAccumulator aggregatedAccumulator = perJobAggregatedAccumulators.computeIfAbsent(jobId, k -> new HashMap<>())
 				.computeIfAbsent(name, k -> new AggregatedAccumulator(jobVertexId));
 			aggregatedAccumulator.registerForTask(jobVertexId, subtaskIndex);
 		}
 	}
 
 	@Override
-	public void commitPreAggregatedAccumulator(JobID jobId, int subtaskIndex, String name, Accumulator value) {
-		synchronized (perJobAccumulators) {
-			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAccumulators.get(jobId);
+	public void commitPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name, Accumulator value) {
+		synchronized (perJobAggregatedAccumulators) {
+			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAggregatedAccumulators.get(jobId);
 			AggregatedAccumulator aggregatedAccumulator = (currentJobAccumulators != null ? currentJobAccumulators.get(name) : null);
 
 			checkState(aggregatedAccumulator != null, "The committed accumulator does not exist.");
 
-			aggregatedAccumulator.commitForTask(subtaskIndex, value);
+			aggregatedAccumulator.commitForTask(jobVertexId, subtaskIndex, value);
 
 			if (aggregatedAccumulator.isAllCommitted()) {
 				commitAggregatedAccumulators(jobId,
@@ -81,21 +94,66 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 			}
 
 			if (currentJobAccumulators.isEmpty()) {
-				perJobAccumulators.remove(jobId);
+				perJobAggregatedAccumulators.remove(jobId);
 			}
 		}
 	}
 
 	@Override
-	public <V, A extends
-		Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, String name) {
-		return new CompletableFuture<>();
+	@SuppressWarnings("unchecked")
+	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, String name) {
+		synchronized (queryLock) {
+			CompletableFuture<Accumulator<V, A>> localQueryFuture = new CompletableFuture<>();
+
+			Map<String, Object> currentJobCachedQueryResults = perJobCachedQueryResults.get(jobId);
+			Object cachedQueryResult = (currentJobCachedQueryResults == null ? null : currentJobCachedQueryResults.get(name));
+
+			if (cachedQueryResult == null) {
+				boolean hasQueriedJobMaster = perJobUnfulfilledUserQueryFutures.containsKey(jobId) &&
+					perJobUnfulfilledUserQueryFutures.get(jobId).containsKey(name);
+
+				if (!hasQueriedJobMaster) {
+					JobManagerConnection connection = jobManagerTable.get(jobId);
+					if (connection == null) {
+						localQueryFuture.complete(null);
+						return localQueryFuture;
+					}
+
+					perJobUnfulfilledUserQueryFutures.computeIfAbsent(jobId, k -> new HashMap<>())
+						.computeIfAbsent(name, k -> new ArrayList<>())
+						.add((CompletableFuture) localQueryFuture);
+
+					CompletableFuture<Accumulator<V, A>> queryToJobMaster =
+						connection.getJobManagerGateway().queryPreAggregatedAccumulator(name);
+
+					// If the queried accumulator has already been prepared, the callback will be called directly
+					// in current thread, otherwise it will be executed by the RPC main thread later.
+					queryToJobMaster.whenComplete(((accumulator, throwable) -> {
+						onAccumulatorQueryFinished(jobId, name, accumulator, throwable);
+					}));
+				} else {
+					perJobUnfulfilledUserQueryFutures.get(jobId).get(name).add((CompletableFuture) localQueryFuture);
+				}
+
+				return localQueryFuture;
+			}
+
+			if (cachedQueryResult instanceof Accumulator) {
+				localQueryFuture.complete((Accumulator<V, A>) cachedQueryResult);
+				return localQueryFuture;
+			} else if (cachedQueryResult instanceof Throwable) {
+				localQueryFuture.completeExceptionally((Throwable) cachedQueryResult);
+				return localQueryFuture;
+			} else {
+				throw new IllegalStateException("The cached result should be either accumulator or throwable.");
+			}
+		}
 	}
 
 	@Override
-	public void clearRegistrationForTask(JobID jobId, int subtaskIndex) {
-		synchronized (perJobAccumulators) {
-			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAccumulators.get(jobId);
+	public void clearRegistrationForTask(JobID jobId, JobVertexID jobVertexId, int subtaskIndex) {
+		synchronized (perJobAggregatedAccumulators) {
+			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAggregatedAccumulators.get(jobId);
 
 			if (currentJobAccumulators != null) {
 				List<CommitAccumulator> commitAccumulators = new ArrayList<>();
@@ -103,6 +161,10 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 
 				for (Map.Entry<String, AggregatedAccumulator> entry : currentJobAccumulators.entrySet()) {
 					AggregatedAccumulator aggregatedAccumulator = entry.getValue();
+
+					if (!aggregatedAccumulator.getJobVertexId().equals(jobVertexId)) {
+						continue;
+					}
 
 					aggregatedAccumulator.clearRegistrationForTask(subtaskIndex);
 
@@ -127,7 +189,7 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 				}
 
 				if (currentJobAccumulators.isEmpty()) {
-					perJobAccumulators.remove(jobId);
+					perJobAggregatedAccumulators.remove(jobId);
 				}
 			}
 		}
@@ -135,22 +197,43 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 
 	@Override
 	public void clearAccumulatorsForJob(JobID jobId) {
-		synchronized (perJobAccumulators) {
-			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAccumulators.remove(jobId);
-
-			if (currentJobAccumulators != null) {
+		synchronized (perJobAggregatedAccumulators) {
+			perJobAggregatedAccumulators.computeIfPresent(jobId, (k, currentJobAccumulators) -> {
 				currentJobAccumulators.clear();
-			}
+				return null;
+			});
+		}
+
+		synchronized (queryLock) {
+			perJobUnfulfilledUserQueryFutures.computeIfPresent(jobId, (k, currentJobQueryFutures) -> {
+				currentJobQueryFutures.clear();
+				return null;
+			});
+
+			perJobCachedQueryResults.computeIfPresent(jobId, (k, currentJobCachedResults) -> {
+				currentJobCachedResults.clear();
+				return null;
+			});
 		}
 	}
 
 	@VisibleForTesting
-	Map<JobID, Map<String, AggregatedAccumulator>> getPerJobAccumulators() {
-		return perJobAccumulators;
+	Map<JobID, Map<String, AggregatedAccumulator>> getPerJobAggregatedAccumulators() {
+		return perJobAggregatedAccumulators;
+	}
+
+	@VisibleForTesting
+	public Map<JobID, Map<String, List<CompletableFuture<Accumulator>>>> getPerJobUnfulfilledUserQueryFutures() {
+		return perJobUnfulfilledUserQueryFutures;
+	}
+
+	@VisibleForTesting
+	public Map<JobID, Map<String, Object>> getPerJobCachedQueryResults() {
+		return perJobCachedQueryResults;
 	}
 
 	private void commitAggregatedAccumulators(JobID jobId, List<CommitAccumulator> accumulators) {
-		assert Thread.holdsLock(perJobAccumulators);
+		assert Thread.holdsLock(perJobAggregatedAccumulators);
 
 		JobManagerConnection connection = jobManagerTable.get(jobId);
 		if (connection != null) {
@@ -158,14 +241,53 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	private <V, A extends Serializable> void onAccumulatorQueryFinished(JobID jobId, String name, Accumulator<V, A> accumulator, Throwable throwable) {
+		synchronized (queryLock) {
+			checkState(!perJobCachedQueryResults.containsKey(jobId) || !perJobCachedQueryResults.get(jobId).containsKey(name),
+				"The target accumulator " + name + " of job " + jobId + " should not be in the cached result list.");
+
+			checkState(perJobUnfulfilledUserQueryFutures.containsKey(jobId) && perJobUnfulfilledUserQueryFutures.get(jobId).containsKey(name),
+				"The target accumulator should reside in the unfulfilled query map.");
+
+			Map<String, Object> currentJobCacheQueryResults = perJobCachedQueryResults.computeIfAbsent(jobId, k -> new HashMap<>());
+
+			List<CompletableFuture<Accumulator>> userQueries = perJobUnfulfilledUserQueryFutures.get(jobId).get(name);
+
+			if (accumulator != null) {
+				userQueries.forEach(userQuery -> {
+					userQuery.complete(accumulator);
+				});
+				currentJobCacheQueryResults.put(name, accumulator);
+			} else {
+				userQueries.forEach(userQuery -> {
+					userQuery.completeExceptionally(throwable);
+				});
+				currentJobCacheQueryResults.put(name, throwable);
+			}
+
+			// Remove the unused list and map.
+			perJobUnfulfilledUserQueryFutures.compute(jobId, (k, currentJobUserQueryFutures) -> {
+				currentJobUserQueryFutures.remove(name);
+				return currentJobUserQueryFutures.size() == 0 ? null : currentJobUserQueryFutures;
+			});
+		}
+	}
+
 	/**
 	 * The wrapper class for an accumulator, which manages its registered tasks and committed tasks.
 	 */
 	static final class AggregatedAccumulator {
+		/** The set of tasks who have registered. */
 		private final Set<Integer> registeredTasks = new HashSet<>();
+
+		/** The set of tasks who have committed. */
 		private final Set<Integer> committedTasks = new HashSet<>();
+
+		/** The JobVertexID this accumulator belongs to. */
 		private final JobVertexID jobVertexId;
 
+		/** The currently aggregated value. */
 		private Accumulator aggregatedValue;
 
 		AggregatedAccumulator(JobVertexID jobVertexId) {
@@ -182,7 +304,9 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 		}
 
 		@SuppressWarnings("unchecked")
-		void commitForTask(int subtaskIndex, Accumulator value) {
+		void commitForTask(JobVertexID jobVertexId, int subtaskIndex, Accumulator value) {
+			checkArgument(this.jobVertexId.equals(jobVertexId),
+				"The registered task belongs to different JobVertex with previous registered ones");
 			checkState(registeredTasks.contains(subtaskIndex), "Can not commit for an accumulator that has " +
 				"not been registered before");
 

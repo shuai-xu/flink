@@ -20,6 +20,7 @@ package org.apache.flink.runtime.jobmaster;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -117,6 +118,7 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1009,6 +1011,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		for (CommitAccumulator commitAccumulator : commitAccumulators) {
 			accumulatorAggregationCoordinator.commitPreAggregatedAccumulator(executionGraph, commitAccumulator);
 		}
+	}
+
+	@Override
+	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name) {
+		return accumulatorAggregationCoordinator.queryPreAggregatedAccumulator(name);
 	}
 
 	//----------------------------------------------------------------------------------------------

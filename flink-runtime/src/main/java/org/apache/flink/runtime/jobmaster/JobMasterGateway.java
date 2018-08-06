@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmaster;
 
+import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.checkpoint.CheckpointCoordinatorGateway;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
@@ -48,6 +49,7 @@ import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 
 import javax.annotation.Nullable;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -295,4 +297,12 @@ public interface JobMasterGateway extends
 	 * @param commitAccumulators accumulators to commit.
 	 */
 	void commitPreAggregatedAccumulator(List<CommitAccumulator> commitAccumulators);
+
+	/**
+	 * Queries an aggregated accumulator with the specific name.
+	 *
+	 * @param name the name of the target accumulator.
+	 * @return Future which is completed with the result of querying accumulator.
+	 */
+	<V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name);
 }

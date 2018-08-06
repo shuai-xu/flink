@@ -24,10 +24,14 @@ import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkState;
@@ -37,8 +41,13 @@ import static org.apache.flink.util.Preconditions.checkState;
  * answering the queries when the final values have been acquired.
  */
 public class AccumulatorAggregationCoordinator {
-	private final Map<String, GlobalAggregatedAccumulator> accumulators = new HashMap<>();
+	/** The partly committed or fully committed accumulators. */
+	private final Map<String, GlobalAggregatedAccumulator> aggregatedAccumulators = new HashMap<>();
 
+	/** The unfulfilled query futures, which will be fulfilled when the target accumulator finishes aggregating. */
+	private final Map<String, List<CompletableFuture<Accumulator>>> unfulfilledQueryFutures = new HashMap<>();
+
+	@SuppressWarnings("unchecked")
 	public void commitPreAggregatedAccumulator(ExecutionGraph executionGraph, CommitAccumulator commitAccumulator) {
 		ExecutionJobVertex jobVertex = executionGraph.getJobVertex(commitAccumulator.getJobVertexId());
 		// JobVertex remains not changed even with failovers, therefore a valid job vertex should never be null.
@@ -47,10 +56,10 @@ public class AccumulatorAggregationCoordinator {
 		}
 
 		GlobalAggregatedAccumulator globalAggregatedAccumulator =
-			accumulators.computeIfAbsent(commitAccumulator.getName(), k -> new GlobalAggregatedAccumulator(commitAccumulator.getJobVertexId()));
+			aggregatedAccumulators.computeIfAbsent(commitAccumulator.getName(), k -> new GlobalAggregatedAccumulator(commitAccumulator.getJobVertexId()));
 
 		if (globalAggregatedAccumulator.isAllCommitted()) {
-			// May be due to failover or rescale, for failover, we desert the repeat value.
+			// May be due to failover or rescaling. For failover, we desert the repeat values.
 			// TODO: Handle rescaling of jobVertex.
 			return;
 		}
@@ -64,28 +73,53 @@ public class AccumulatorAggregationCoordinator {
 
 		if (globalAggregatedAccumulator.getCommittedTasks().size() == jobVertex.getParallelism()) {
 			globalAggregatedAccumulator.markAllCommitted();
+
+			List<CompletableFuture<Accumulator>> queryFutures = unfulfilledQueryFutures.get(commitAccumulator.getName());
+			if (queryFutures != null) {
+				queryFutures.forEach(query -> {
+					query.complete(globalAggregatedAccumulator.getAggregatedValue());
+				});
+				unfulfilledQueryFutures.remove(commitAccumulator.getName());
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name) {
+		CompletableFuture<Accumulator<V, A>> queryFuture = new CompletableFuture<>();
+
+		GlobalAggregatedAccumulator globalAggregatedAccumulator = aggregatedAccumulators.get(name);
+		if (globalAggregatedAccumulator == null || !globalAggregatedAccumulator.isAllCommitted()) {
+			unfulfilledQueryFutures.computeIfAbsent(name, k -> new ArrayList<>()).add((CompletableFuture) queryFuture);
+		} else {
+			queryFuture.complete(globalAggregatedAccumulator.getAggregatedValue());
 		}
 
-		// TODO: answering queries.
+		return queryFuture;
 	}
 
 	public void clear() {
-		accumulators.clear();
+		aggregatedAccumulators.clear();
+		unfulfilledQueryFutures.clear();
 	}
 
 	@VisibleForTesting
-	public Map<String, GlobalAggregatedAccumulator> getAccumulators() {
-		return accumulators;
+	public Map<String, GlobalAggregatedAccumulator> getAggregatedAccumulators() {
+		return aggregatedAccumulators;
+	}
+
+	public Map<String, List<CompletableFuture<Accumulator>>> getUnfulfilledQueryFutures() {
+		return unfulfilledQueryFutures;
 	}
 
 	/**
-	 * Wrapper class for managing the committed status for a specific accumulator.
+	 * Wrapper class for managing the committed status of a specific accumulator.
 	 */
 	static class GlobalAggregatedAccumulator {
 		/** The job vertex ID of the tasks that commit the values. */
 		private final JobVertexID jobVertexId;
 
-		/** The index of the tasks that commit the value. */
+		/** The index of the tasks who have committed. */
 		private final Set<Integer> committedTasks = new HashSet<>();
 
 		/** The partially aggregated value. */

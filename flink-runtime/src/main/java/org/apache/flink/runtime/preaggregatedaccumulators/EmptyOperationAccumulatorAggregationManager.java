@@ -37,7 +37,7 @@ public final class EmptyOperationAccumulatorAggregationManager implements Accumu
 	}
 
 	@Override
-	public void commitPreAggregatedAccumulator(JobID jobId, int subtaskIndex, String name, Accumulator value) {
+	public void commitPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name, Accumulator value) {
 
 	}
 
@@ -47,7 +47,7 @@ public final class EmptyOperationAccumulatorAggregationManager implements Accumu
 	}
 
 	@Override
-	public void clearRegistrationForTask(JobID jobId, int subtaskIndex) {
+	public void clearRegistrationForTask(JobID jobId, JobVertexID jobVertexId, int subtaskIndex) {
 
 	}
 

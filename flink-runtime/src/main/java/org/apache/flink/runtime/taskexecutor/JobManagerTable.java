@@ -20,8 +20,8 @@ package org.apache.flink.runtime.taskexecutor;
 
 import org.apache.flink.api.common.JobID;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Container for multiple {@link JobManagerConnection} registered under their respective job id.
@@ -30,7 +30,10 @@ public class JobManagerTable {
 	private final Map<JobID, JobManagerConnection> jobManagerConnections;
 
 	public JobManagerTable() {
-		jobManagerConnections = new HashMap<>(4);
+		// The JobManagerTable will be updated in the RPC main thread, and read in
+		// the task thread when committing and querying aggregated accumulators, thus
+		// ConcurrentHashMap is required here.
+		jobManagerConnections = new ConcurrentHashMap<>(4);
 	}
 
 	public boolean contains(JobID jobId) {

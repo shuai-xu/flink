@@ -100,7 +100,7 @@ public class AccumulatorRegistry extends AbstractAccumulatorRegistry {
 		}
 
 		Accumulator<?, ?> accumulator = preAggregatedUserAccumulators.remove(name);
-		accumulatorAggregationManager.commitPreAggregatedAccumulator(jobID, subtaskIndex, name, accumulator);
+		accumulatorAggregationManager.commitPreAggregatedAccumulator(jobID, jobVertexID, subtaskIndex, name, accumulator);
 	}
 
 	@Override

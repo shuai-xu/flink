@@ -45,15 +45,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 import static org.apache.flink.runtime.preaggregatedaccumulators.RPCBasedAccumulatorAggregationManager.AggregatedAccumulator;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Tests the actions of RPCBasedAccumulatorAggregationManager.
@@ -71,7 +78,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 			new RPCBasedAccumulatorAggregationManager(createJobManagerTable(Collections.singletonList(jobId)));
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, name);
 
-		Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = manager.getPerJobAccumulators();
+		Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = manager.getPerJobAggregatedAccumulators();
 
 		assertTrue("There should be only one job exactly.",
 			perJobAccumulators.size() == 1 && perJobAccumulators.containsKey(jobId));
@@ -92,7 +99,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 			manager.registerPreAggregatedAccumulator(jobId, secondJobVertexId, subtaskIndex, name);
 			fail("Should throw exception when tasks from another job vertex try to register on the same accumulator.");
 		} catch (IllegalArgumentException e) {
-			// Expected exception
+			// Expected exception.
 		}
 	}
 
@@ -123,10 +130,10 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, firstSubtaskIndex, name);
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, secondSubtaskIndex, name);
 
-		// Commit for the second task
-		manager.commitPreAggregatedAccumulator(jobId, secondSubtaskIndex, name, new IntCounter(2));
+		// Commit for the second task.
+		manager.commitPreAggregatedAccumulator(jobId, jobVertexId, secondSubtaskIndex, name, new IntCounter(2));
 
-		Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = manager.getPerJobAccumulators();
+		Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = manager.getPerJobAggregatedAccumulators();
 		assertTrue("There should be only current job exactly.",
 			perJobAccumulators.size() == 1 && perJobAccumulators.containsKey(jobId));
 		Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAccumulators.get(jobId);
@@ -149,14 +156,14 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		// Commit for an unregistered task.
 		try {
 			final int nonExistSubtaskIndex = 100;
-			manager.commitPreAggregatedAccumulator(jobId, nonExistSubtaskIndex, name, new IntCounter(3));
+			manager.commitPreAggregatedAccumulator(jobId, jobVertexId, nonExistSubtaskIndex, name, new IntCounter(3));
 			fail("Commit for an unregistered task should throw exception");
 		} catch (IllegalStateException e) {
 			// Expected exception.
 		}
 
-		// Commit for the first task
-		manager.commitPreAggregatedAccumulator(jobId, firstSubtaskIndex, name, new IntCounter(1));
+		// Commit for the first task.
+		manager.commitPreAggregatedAccumulator(jobId, jobVertexId, firstSubtaskIndex, name, new IntCounter(1));
 
 		assertTrue("The current job should be removed.", perJobAccumulators.isEmpty());
 		assertEquals(1, commitAccumulators.size());
@@ -187,11 +194,11 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, 2, name);
 
 		// Commit the accumulator.
-		manager.commitPreAggregatedAccumulator(jobId, subtaskIndex, name, new IntCounter(1));
+		manager.commitPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, name, new IntCounter(1));
 
-		manager.clearRegistrationForTask(jobId, subtaskIndex);
+		manager.clearRegistrationForTask(jobId, jobVertexId, subtaskIndex);
 
-		AggregatedAccumulator aggregatedAccumulator = manager.getPerJobAccumulators().get(jobId).get(name);
+		AggregatedAccumulator aggregatedAccumulator = manager.getPerJobAggregatedAccumulators().get(jobId).get(name);
 
 		assertEquals(3, aggregatedAccumulator.getRegisteredTasks().size());
 		assertTrue("The committed task should not be removed from the registered list on clear registration.",
@@ -227,13 +234,13 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		final String removedName = "removed";
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, removedName);
 
-		Map<String, AggregatedAccumulator> currentJobAccumulators = manager.getPerJobAccumulators().get(jobId);
+		Map<String, AggregatedAccumulator> currentJobAccumulators = manager.getPerJobAggregatedAccumulators().get(jobId);
 		assertTrue("Both of the two accumulators should exist.",
 			currentJobAccumulators.size() == 2 &&
 				currentJobAccumulators.containsKey(unRemovedName) &&
 				currentJobAccumulators.containsKey(removedName));
 
-		manager.clearRegistrationForTask(jobId, subtaskIndex);
+		manager.clearRegistrationForTask(jobId, jobVertexId, subtaskIndex);
 		assertTrue("Only the un-removed accumulator should exist.",
 			currentJobAccumulators.size() == 1 && currentJobAccumulators.containsKey(unRemovedName));
 
@@ -278,38 +285,220 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, name);
 
 		// other tasks who have registered and committed.
-		final int otherTaskId = 1;
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, otherTaskId, name);
-		manager.commitPreAggregatedAccumulator(jobId, otherTaskId, name, new IntCounter(3));
+		final int otherTaskIndex = 1;
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, otherTaskIndex, name);
+		manager.commitPreAggregatedAccumulator(jobId, jobVertexId, otherTaskIndex, name, new IntCounter(3));
 
-		manager.clearRegistrationForTask(jobId, subtaskIndex);
+		manager.clearRegistrationForTask(jobId, jobVertexId, subtaskIndex);
 
 		assertEquals("The target accumulator should be removed after committing and further cause that the job's map get removed.",
-			0, manager.getPerJobAccumulators().size());
+			0, manager.getPerJobAggregatedAccumulators().size());
 
 		assertTrue("The target accumulator should be committed.",
 			globalCommittedAccumulators.size() == 1 && globalCommittedAccumulators.containsKey(name));
 		assertEquals(3, globalCommittedAccumulators.get(name).getLocalValue());
 	}
 
+	/**
+	 * Verifies that when querying an incomplete accumulator, the local queries should be kept
+	 * in the unfulfilled list till the query to the job master is fulfilled.
+	 */
 	@Test
+	@SuppressWarnings("unchecked")
+	public void testQueryIncompleteAccumulators() {
+		final JobID jobId = new JobID();
+		final String name = "test";
+
+		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
+		JobMasterGateway gateway = jobManagerTable.get(jobId).getJobManagerGateway();
+
+		CompletableFuture jobMasterQueryFuture = new CompletableFuture();
+		when(gateway.queryPreAggregatedAccumulator(any(String.class))).thenReturn(jobMasterQueryFuture);
+
+		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
+
+		final int numQueries = 4;
+		Accumulator[] queryResults = new Accumulator[numQueries];
+
+		for (int i = 0; i < numQueries; ++i) {
+			CompletableFuture<Accumulator<Integer, Integer>> localQueryFuture = manager.queryPreAggregatedAccumulator(jobId, name);
+			assertFalse("The query should not finish since the job master has not completed.", localQueryFuture.isDone());
+
+			final int myIndex = i;
+			localQueryFuture.whenComplete(((accumulator, throwable) -> {
+				queryResults[myIndex] = accumulator;
+			}));
+		}
+
+		// There should be only one query sent to JobMaster.
+		verify(gateway, times(1)).queryPreAggregatedAccumulator(eq(name));
+
+		// All the local queries should be kept in the unfulfilled list.
+		assertEquals(numQueries, manager.getPerJobUnfulfilledUserQueryFutures().get(jobId).get(name).size());
+
+		jobMasterQueryFuture.complete(new IntCounter(5));
+
+		for (int i = 0;  i < queryResults.length; ++i) {
+			assertNotNull("The query should finish since the job master has completed.", queryResults[i]);
+			assertEquals(5, queryResults[i].getLocalValue());
+		}
+	}
+
+	/**
+	 * Verifies that when querying an complete accumulator, the first query will copy the accumulator from the
+	 * job master to the local cache, and the following queries will be fulfilled by the local cache directly.
+	 */
+	@Test
+	@SuppressWarnings("unchecked")
+	public void testQueryCompleteAccumulators() {
+		final JobID jobId = new JobID();
+		final String name = "test";
+
+		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
+		JobMasterGateway gateway = jobManagerTable.get(jobId).getJobManagerGateway();
+
+		CompletableFuture jobMasterQueryFuture = new CompletableFuture();
+		jobMasterQueryFuture.complete(new IntCounter(5));
+		when(gateway.queryPreAggregatedAccumulator(any(String.class))).thenReturn(jobMasterQueryFuture);
+
+		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
+
+		// The first query copies the accumulator from the JobMaster and store it in the cache.
+		CompletableFuture<Accumulator<Integer, Integer>> localQueryFuture = manager.queryPreAggregatedAccumulator(jobId, name);
+		assertTrue("The query should finish directly since the accumulator has completed aggregation.",
+			localQueryFuture.isDone());
+
+		// There should be only one query sent to JobMaster.
+		verify(gateway, times(1)).queryPreAggregatedAccumulator(eq(name));
+		assertTrue("The accumulator should be added to cache after the first queries.",
+			manager.getPerJobCachedQueryResults().containsKey(jobId) &&
+			manager.getPerJobCachedQueryResults().get(jobId).containsKey(name));
+		Object entry = manager.getPerJobCachedQueryResults().get(jobId).get(name);
+		assertTrue("The cached result should be equals to the target accumulator.",
+			entry != null && ((Accumulator<Integer, Integer>) entry).getLocalValue() == 5);
+
+		reset(gateway);
+
+		// The following queries should be fulfilled directly by the cache.
+		final int numQueries = 4;
+		Accumulator[] queryResults = new Accumulator[numQueries];
+
+		for (int i = 0; i < numQueries; ++i) {
+			localQueryFuture = manager.queryPreAggregatedAccumulator(jobId, name);
+			assertTrue("The query should finish directly since the accumulator has completed aggregation.",
+				localQueryFuture.isDone());
+
+			final int myIndex = i;
+			localQueryFuture.whenComplete(((accumulator, throwable) -> {
+				queryResults[myIndex] = accumulator;
+			}));
+		}
+
+		for (int i = 0;  i < queryResults.length; ++i) {
+			assertNotNull("The query should be finished since the accumulator has complete aggregation.", queryResults[i]);
+			assertEquals(5, queryResults[i].getLocalValue());
+		}
+
+		// There should be no more queries send to the job master.
+		verify(gateway, times(0)).queryPreAggregatedAccumulator(any(String.class));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void testQueryToJobMasterFail() {
+		final JobID jobId = new JobID();
+		final String name = "test";
+
+		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
+		JobMasterGateway gateway = jobManagerTable.get(jobId).getJobManagerGateway();
+
+		CompletableFuture jobMasterQueryFuture = new CompletableFuture();
+		jobMasterQueryFuture.completeExceptionally(new RuntimeException("fail to query"));
+		when(gateway.queryPreAggregatedAccumulator(any(String.class))).thenReturn(jobMasterQueryFuture);
+
+		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
+
+		// The first query records the exception it in the cache.
+		CompletableFuture<Accumulator<Integer, Integer>> localQueryFuture = manager.queryPreAggregatedAccumulator(jobId, name);
+		assertTrue("The query should finish directly since the accumulator has complete aggregation.",
+			localQueryFuture.isDone());
+
+		// There should be only one query sent to JobMaster.
+		verify(gateway, times(1)).queryPreAggregatedAccumulator(eq(name));
+		assertTrue("The accumulator should be added to cache after the first queries.",
+			manager.getPerJobCachedQueryResults().containsKey(jobId) &&
+			manager.getPerJobCachedQueryResults().get(jobId).containsKey(name));
+		Object entry = manager.getPerJobCachedQueryResults().get(jobId).get(name);
+		assertTrue("The cached result should be a RuntimeException.",
+			entry != null && entry instanceof RuntimeException);
+
+		reset(gateway);
+
+		// The following queries should be fulfilled directly by the cache.
+		final int numQueries = 4;
+		Throwable[] exceptionsCaught = new Throwable[numQueries];
+
+		for (int i = 0; i < numQueries; ++i) {
+			localQueryFuture = manager.queryPreAggregatedAccumulator(jobId, name);
+			assertTrue("The query should finish directly since the accumulator has complete aggregation.",
+				localQueryFuture.isDone());
+
+			final int myIndex = i;
+			localQueryFuture.whenComplete(((accumulator, throwable) -> {
+				if (accumulator != null) {
+					fail("The query should fail");
+				} else {
+					exceptionsCaught[myIndex] = throwable;
+				}
+			}));
+		}
+
+		for (int i = 0;  i < exceptionsCaught.length; ++i) {
+			assertNotNull("The query should be finished with exception.", exceptionsCaught[i]);
+			assertTrue("RuntimeException should be caught.", exceptionsCaught[i] instanceof RuntimeException);
+		}
+
+		// There should be no more queries send to the job master.
+		verify(gateway, times(0)).queryPreAggregatedAccumulator(any(String.class));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
 	public void testClearForJob() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
 		final int subtaskIndex = 0;
 
 		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
+		JobMasterGateway gateway = jobManagerTable.get(jobId).getJobManagerGateway();
+
+		CompletableFuture unfulfilledQuery = new CompletableFuture();
+		when(gateway.queryPreAggregatedAccumulator(eq("unfulfilled"))).thenReturn(unfulfilledQuery);
+
+		CompletableFuture fulfilledQuery = new CompletableFuture();
+		fulfilledQuery.complete(new IntCounter(5));
+		when(gateway.queryPreAggregatedAccumulator(eq("fulfilled"))).thenReturn(fulfilledQuery);
+
 		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
 
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, "test");
-		assertEquals(1, manager.getPerJobAccumulators().size());
+		manager.queryPreAggregatedAccumulator(jobId, "unfulfilled");
+		manager.queryPreAggregatedAccumulator(jobId, "fulfilled");
+
+		assertEquals(1, manager.getPerJobAggregatedAccumulators().size());
+		assertEquals(1, manager.getPerJobUnfulfilledUserQueryFutures().size());
+		assertEquals(1, manager.getPerJobCachedQueryResults().size());
 
 		// There may be cases that one job is cleared before any registration.
 		manager.clearAccumulatorsForJob(new JobID());
-		assertEquals(1, manager.getPerJobAccumulators().size());
+		assertEquals(1, manager.getPerJobAggregatedAccumulators().size());
+		assertEquals(1, manager.getPerJobUnfulfilledUserQueryFutures().size());
+		assertEquals(1, manager.getPerJobCachedQueryResults().size());
 
 		manager.clearAccumulatorsForJob(jobId);
-		assertEquals(0, manager.getPerJobAccumulators().size());
+		assertEquals(0, manager.getPerJobAggregatedAccumulators().size());
+		assertEquals(0, manager.getPerJobUnfulfilledUserQueryFutures().size());
+		assertEquals(0, manager.getPerJobCachedQueryResults().size());
 	}
 
 	@Test
@@ -378,6 +567,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 
 						for (String name : accumulators) {
 							manager.commitPreAggregatedAccumulator(jobId,
+								jobs.get(jobId).getJobVertexId(),
 								jobs.get(jobId).getTasks().get(currentTaskIndex),
 								name,
 								new IntCounter(currentTaskIndex + 1));
