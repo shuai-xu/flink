@@ -144,7 +144,7 @@ public class MockEnvironment implements Environment, AutoCloseable {
 		this.inputSplitProvider = inputSplitProvider;
 		this.bufferSize = bufferSize;
 
-		this.accumulatorRegistry = new AccumulatorRegistry(jobID, jobVertexID, getExecutionId(),
+		this.accumulatorRegistry = new AccumulatorRegistry(jobID, jobVertexID, subtaskIndex, getExecutionId(),
 			new EmptyOperationAccumulatorAggregationManager());
 
 		KvStateRegistry registry = new KvStateRegistry();

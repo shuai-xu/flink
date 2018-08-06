@@ -20,7 +20,6 @@ package org.apache.flink.runtime.preaggregatedaccumulators;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.io.Serializable;
@@ -33,22 +32,22 @@ import java.util.concurrent.CompletableFuture;
 public final class EmptyOperationAccumulatorAggregationManager implements AccumulatorAggregationManager {
 
 	@Override
-	public void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, ExecutionAttemptID attemptId, String name) {
+	public void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name) {
 
 	}
 
 	@Override
-	public void commitPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name, Accumulator value) {
+	public void commitPreAggregatedAccumulator(JobID jobId, int subtaskIndex, String name, Accumulator value) {
 
 	}
 
 	@Override
-	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name) {
+	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, String name) {
 		return new CompletableFuture<>();
 	}
 
 	@Override
-	public void clearRegistrationForTask(JobID jobId, ExecutionAttemptID attemptId) {
+	public void clearRegistrationForTask(JobID jobId, int subtaskIndex) {
 
 	}
 

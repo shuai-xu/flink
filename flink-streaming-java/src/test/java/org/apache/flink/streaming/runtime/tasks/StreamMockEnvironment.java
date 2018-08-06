@@ -157,7 +157,7 @@ public class StreamMockEnvironment implements Environment {
 		this.bufferSize = bufferSize;
 
 		this.executionConfig = executionConfig;
-		this.accumulatorRegistry = new AccumulatorRegistry(jobID, jobVertexID, getExecutionId(),
+		this.accumulatorRegistry = new AccumulatorRegistry(jobID, jobVertexID, subtaskIndex, getExecutionId(),
 			new EmptyOperationAccumulatorAggregationManager());
 
 		KvStateRegistry registry = new KvStateRegistry();

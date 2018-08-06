@@ -83,6 +83,7 @@ import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
 import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
+import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationCoordinator;
 import org.apache.flink.runtime.query.KvStateLocation;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.query.UnknownKvStateLocation;
@@ -170,6 +171,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private final JobManagerJobMetricGroupFactory jobMetricGroupFactory;
 
+	private final AccumulatorAggregationCoordinator accumulatorAggregationCoordinator;
+
 	private final HeartbeatManager<AccumulatorReport, Void> taskManagerHeartbeatManager;
 
 	private final HeartbeatManager<Void, Void> resourceManagerHeartbeatManager;
@@ -254,6 +257,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		this.fatalErrorHandler = checkNotNull(fatalErrorHandler);
 		this.userCodeLoader = checkNotNull(userCodeLoader);
 		this.jobMetricGroupFactory = checkNotNull(jobMetricGroupFactory);
+
+		this.accumulatorAggregationCoordinator = new AccumulatorAggregationCoordinator();
 
 		this.taskManagerHeartbeatManager = heartbeatServices.createHeartbeatManagerSender(
 			resourceId,
@@ -378,6 +383,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		} else {
 			disposeInternalSavepointFuture = CompletableFuture.completedFuture(null);
 		}
+
+		accumulatorAggregationCoordinator.clear();
 
 		final CompletableFuture<Void> slotPoolTerminationFuture = slotPool.getTerminationFuture();
 
@@ -999,7 +1006,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	@Override
 	public void commitPreAggregatedAccumulator(List<CommitAccumulator> commitAccumulators) {
-
+		for (CommitAccumulator commitAccumulator : commitAccumulators) {
+			accumulatorAggregationCoordinator.commitPreAggregatedAccumulator(executionGraph, commitAccumulator);
+		}
 	}
 
 	//----------------------------------------------------------------------------------------------

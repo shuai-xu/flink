@@ -59,7 +59,7 @@ public class DummyEnvironment implements Environment {
 	private final TaskInfo taskInfo;
 	private KvStateRegistry kvStateRegistry = new KvStateRegistry();
 	private TaskStateManager taskStateManager;
-	private final AccumulatorRegistry accumulatorRegistry = new AccumulatorRegistry(jobId, jobVertexId, executionId, new EmptyOperationAccumulatorAggregationManager());
+	private final AccumulatorRegistry accumulatorRegistry = new AccumulatorRegistry(jobId, jobVertexId, 0, executionId, new EmptyOperationAccumulatorAggregationManager());
 	private ClassLoader userClassLoader;
 
 	public DummyEnvironment() {

@@ -1352,7 +1352,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			log.info("Un-registering task and sending final execution state {} to JobManager for task {} {}.",
 				task.getExecutionState(), task.getTaskInfo().getTaskName(), task.getExecutionId());
 
-			accumulatorAggregationManager.clearRegistrationForTask(task.getJobID(), task.getExecutionId());
+			accumulatorAggregationManager.clearRegistrationForTask(task.getJobID(), task.getTaskInfo().getIndexOfThisSubtask());
 
 			AccumulatorSnapshot accumulatorSnapshot = task.getAccumulatorRegistry().getSnapshot();
 

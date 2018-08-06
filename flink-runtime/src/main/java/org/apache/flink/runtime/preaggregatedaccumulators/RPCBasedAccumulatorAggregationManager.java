@@ -21,7 +21,6 @@ package org.apache.flink.runtime.preaggregatedaccumulators;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.taskexecutor.JobManagerConnection;
 import org.apache.flink.runtime.taskexecutor.JobManagerTable;
@@ -52,23 +51,23 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 	}
 
 	@Override
-	public void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, ExecutionAttemptID attemptId, String name) {
+	public void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name) {
 		synchronized (perJobAccumulators) {
 			AggregatedAccumulator aggregatedAccumulator = perJobAccumulators.computeIfAbsent(jobId, k -> new HashMap<>())
 				.computeIfAbsent(name, k -> new AggregatedAccumulator(jobVertexId));
-			aggregatedAccumulator.registerForTask(jobVertexId, attemptId);
+			aggregatedAccumulator.registerForTask(jobVertexId, subtaskIndex);
 		}
 	}
 
 	@Override
-	public void commitPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name, Accumulator value) {
+	public void commitPreAggregatedAccumulator(JobID jobId, int subtaskIndex, String name, Accumulator value) {
 		synchronized (perJobAccumulators) {
 			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAccumulators.get(jobId);
 			AggregatedAccumulator aggregatedAccumulator = (currentJobAccumulators != null ? currentJobAccumulators.get(name) : null);
 
 			checkState(aggregatedAccumulator != null, "The committed accumulator does not exist.");
 
-			aggregatedAccumulator.commitForTask(attemptId, value);
+			aggregatedAccumulator.commitForTask(subtaskIndex, value);
 
 			if (aggregatedAccumulator.isAllCommitted()) {
 				commitAggregatedAccumulators(jobId,
@@ -89,13 +88,12 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 
 	@Override
 	public <V, A extends
-		Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId,
-																						ExecutionAttemptID attemptId, String name) {
+		Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, String name) {
 		return new CompletableFuture<>();
 	}
 
 	@Override
-	public void clearRegistrationForTask(JobID jobId, ExecutionAttemptID attemptId) {
+	public void clearRegistrationForTask(JobID jobId, int subtaskIndex) {
 		synchronized (perJobAccumulators) {
 			Map<String, AggregatedAccumulator> currentJobAccumulators = perJobAccumulators.get(jobId);
 
@@ -106,7 +104,7 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 				for (Map.Entry<String, AggregatedAccumulator> entry : currentJobAccumulators.entrySet()) {
 					AggregatedAccumulator aggregatedAccumulator = entry.getValue();
 
-					aggregatedAccumulator.clearRegistrationForTask(attemptId);
+					aggregatedAccumulator.clearRegistrationForTask(subtaskIndex);
 
 					if (aggregatedAccumulator.isAllCommitted()) {
 						commitAccumulators.add(new CommitAccumulator(entry.getValue().getJobVertexId(),
@@ -164,8 +162,8 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 	 * The wrapper class for an accumulator, which manages its registered tasks and committed tasks.
 	 */
 	static final class AggregatedAccumulator {
-		private final Set<ExecutionAttemptID> registeredTasks = new HashSet<>();
-		private final Set<ExecutionAttemptID> committedTasks = new HashSet<>();
+		private final Set<Integer> registeredTasks = new HashSet<>();
+		private final Set<Integer> committedTasks = new HashSet<>();
 		private final JobVertexID jobVertexId;
 
 		private Accumulator aggregatedValue;
@@ -174,18 +172,18 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 			this.jobVertexId = jobVertexId;
 		}
 
-		void registerForTask(JobVertexID jobVertexId, ExecutionAttemptID attemptId) {
+		void registerForTask(JobVertexID jobVertexId, int subtaskIndex) {
 			checkArgument(this.jobVertexId.equals(jobVertexId),
 				"The registered task belongs to different JobVertex with previous registered ones");
 
-			checkState(!registeredTasks.contains(attemptId), "This task has already registered.");
+			checkState(!registeredTasks.contains(subtaskIndex), "This task has already registered.");
 
-			registeredTasks.add(attemptId);
+			registeredTasks.add(subtaskIndex);
 		}
 
 		@SuppressWarnings("unchecked")
-		void commitForTask(ExecutionAttemptID attemptId, Accumulator value) {
-			checkState(registeredTasks.contains(attemptId), "Can not commit for an accumulator that has " +
+		void commitForTask(int subtaskIndex, Accumulator value) {
+			checkState(registeredTasks.contains(subtaskIndex), "Can not commit for an accumulator that has " +
 				"not been registered before");
 
 			if (aggregatedValue == null) {
@@ -194,12 +192,12 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 				aggregatedValue.merge(value);
 			}
 
-			committedTasks.add(attemptId);
+			committedTasks.add(subtaskIndex);
 		}
 
-		void clearRegistrationForTask(ExecutionAttemptID attemptID) {
-			if (registeredTasks.contains(attemptID) && !committedTasks.contains(attemptID)) {
-				registeredTasks.remove(attemptID);
+		void clearRegistrationForTask(int subtaskIndex) {
+			if (registeredTasks.contains(subtaskIndex) && !committedTasks.contains(subtaskIndex)) {
+				registeredTasks.remove(subtaskIndex);
 			}
 		}
 
@@ -219,12 +217,12 @@ public class RPCBasedAccumulatorAggregationManager implements AccumulatorAggrega
 			return jobVertexId;
 		}
 
-		Set<ExecutionAttemptID> getCommittedTasks() {
+		Set<Integer> getCommittedTasks() {
 			return committedTasks;
 		}
 
 		@VisibleForTesting
-		Set<ExecutionAttemptID> getRegisteredTasks() {
+		Set<Integer> getRegisteredTasks() {
 			return registeredTasks;
 		}
 	}

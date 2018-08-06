@@ -64,12 +64,12 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 	public void testRegistration() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
-		final ExecutionAttemptID attemptId = new ExecutionAttemptID();
+		final int subtaskIndex = 0;
 		final String name = "test";
 
 		RPCBasedAccumulatorAggregationManager manager =
 			new RPCBasedAccumulatorAggregationManager(createJobManagerTable(Collections.singletonList(jobId)));
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, attemptId, name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, name);
 
 		Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = manager.getPerJobAccumulators();
 
@@ -82,14 +82,14 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 
 		AggregatedAccumulator aggregatedAccumulator = currentJobAccumulators.get(name);
 		assertTrue("There should be only one registered task exactly.",
-			aggregatedAccumulator.getRegisteredTasks().size() == 1 && aggregatedAccumulator.getRegisteredTasks().contains(attemptId));
+			aggregatedAccumulator.getRegisteredTasks().size() == 1 && aggregatedAccumulator.getRegisteredTasks().contains(subtaskIndex));
 		assertEquals(jobVertexId, aggregatedAccumulator.getJobVertexId());
 
 		final JobVertexID secondJobVertexId = new JobVertexID();
 		final ExecutionAttemptID secondAttemptId = new ExecutionAttemptID();
 
 		try {
-			manager.registerPreAggregatedAccumulator(jobId, secondJobVertexId, secondAttemptId, name);
+			manager.registerPreAggregatedAccumulator(jobId, secondJobVertexId, subtaskIndex, name);
 			fail("Should throw exception when tasks from another job vertex try to register on the same accumulator.");
 		} catch (IllegalArgumentException e) {
 			// Expected exception
@@ -101,8 +101,10 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 	public void testCommission() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
-		final ExecutionAttemptID firstAttemptId = new ExecutionAttemptID();
-		final ExecutionAttemptID secondAttemptId = new ExecutionAttemptID();
+
+		final int firstSubtaskIndex = 0;
+		final int secondSubtaskIndex = 1;
+
 		final String name = "test";
 
 		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
@@ -118,11 +120,11 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 			}
 		}).when(gateway).commitPreAggregatedAccumulator(any(List.class));
 
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, firstAttemptId, name);
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, secondAttemptId, name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, firstSubtaskIndex, name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, secondSubtaskIndex, name);
 
 		// Commit for the second task
-		manager.commitPreAggregatedAccumulator(jobId, secondAttemptId, name, new IntCounter(2));
+		manager.commitPreAggregatedAccumulator(jobId, secondSubtaskIndex, name, new IntCounter(2));
 
 		Map<JobID, Map<String, AggregatedAccumulator>> perJobAccumulators = manager.getPerJobAccumulators();
 		assertTrue("There should be only current job exactly.",
@@ -134,11 +136,11 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		AggregatedAccumulator aggregatedAccumulator = currentJobAccumulators.get(name);
 		assertTrue("There should be two registered task exactly.",
 			aggregatedAccumulator.getRegisteredTasks().size() == 2
-				&& aggregatedAccumulator.getRegisteredTasks().contains(firstAttemptId)
-				&& aggregatedAccumulator.getRegisteredTasks().contains(secondAttemptId));
+				&& aggregatedAccumulator.getRegisteredTasks().contains(firstSubtaskIndex)
+				&& aggregatedAccumulator.getRegisteredTasks().contains(secondSubtaskIndex));
 		assertTrue("There should be one committed task exactly.",
 			aggregatedAccumulator.getCommittedTasks().size() == 1
-				&& aggregatedAccumulator.getCommittedTasks().contains(secondAttemptId));
+				&& aggregatedAccumulator.getCommittedTasks().contains(secondSubtaskIndex));
 		assertEquals(2, aggregatedAccumulator.getAggregatedValue().getLocalValue());
 
 		// Check that JobMaster receives no committed accumulators.
@@ -146,21 +148,22 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 
 		// Commit for an unregistered task.
 		try {
-			manager.commitPreAggregatedAccumulator(jobId, new ExecutionAttemptID(), name, new IntCounter(3));
+			final int nonExistSubtaskIndex = 100;
+			manager.commitPreAggregatedAccumulator(jobId, nonExistSubtaskIndex, name, new IntCounter(3));
 			fail("Commit for an unregistered task should throw exception");
 		} catch (IllegalStateException e) {
 			// Expected exception.
 		}
 
 		// Commit for the first task
-		manager.commitPreAggregatedAccumulator(jobId, firstAttemptId, name, new IntCounter(1));
+		manager.commitPreAggregatedAccumulator(jobId, firstSubtaskIndex, name, new IntCounter(1));
 
 		assertTrue("The current job should be removed.", perJobAccumulators.isEmpty());
 		assertEquals(1, commitAccumulators.size());
 		assertEquals(jobVertexId, commitAccumulators.get(0).getJobVertexId());
 		assertEquals(name, commitAccumulators.get(0).getName());
 		assertEquals(3, ((IntCounter) commitAccumulators.get(0).getAccumulator()).getLocalValue().intValue());
-		assertEquals(new HashSet<>(Arrays.asList(firstAttemptId, secondAttemptId)), commitAccumulators.get(0).getCommittedTasks());
+		assertEquals(new HashSet<>(Arrays.asList(firstSubtaskIndex, secondSubtaskIndex)), commitAccumulators.get(0).getCommittedTasks());
 	}
 
 	/**
@@ -171,32 +174,32 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 	public void testClearRegistrationOnCommittedAccumulator() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
-		final ExecutionAttemptID attemptId = new ExecutionAttemptID();
+		final int subtaskIndex = 0;
 		final String name = "test";
 
 		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
 		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
 
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, attemptId, name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, name);
 
 		// Other tasks who have also registered.
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, new ExecutionAttemptID(), name);
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, new ExecutionAttemptID(), name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, 1, name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, 2, name);
 
 		// Commit the accumulator.
-		manager.commitPreAggregatedAccumulator(jobId, attemptId, name, new IntCounter(1));
+		manager.commitPreAggregatedAccumulator(jobId, subtaskIndex, name, new IntCounter(1));
 
-		manager.clearRegistrationForTask(jobId, attemptId);
+		manager.clearRegistrationForTask(jobId, subtaskIndex);
 
 		AggregatedAccumulator aggregatedAccumulator = manager.getPerJobAccumulators().get(jobId).get(name);
 
 		assertEquals(3, aggregatedAccumulator.getRegisteredTasks().size());
 		assertTrue("The committed task should not be removed from the registered list on clear registration.",
-			aggregatedAccumulator.getRegisteredTasks().contains(attemptId));
+			aggregatedAccumulator.getRegisteredTasks().contains(subtaskIndex));
 
 		assertEquals(1, aggregatedAccumulator.getCommittedTasks().size());
 		assertTrue("The committed task should not be removed from the committed list on clear registration.",
-			aggregatedAccumulator.getCommittedTasks().contains(attemptId));
+			aggregatedAccumulator.getCommittedTasks().contains(subtaskIndex));
 	}
 
 	/**
@@ -208,7 +211,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 	public void testUncommittedAccumulatorsWhenClearRegistration() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
-		final ExecutionAttemptID attemptId = new ExecutionAttemptID();
+		final int subtaskIndex = 0;
 
 		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
 		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
@@ -216,13 +219,13 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		// The first accumulator has more than one tasks registered, when clearing registration
 		// it should only remove the target task.
 		final String unRemovedName = "unremoved";
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, attemptId, unRemovedName);
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, new ExecutionAttemptID(), unRemovedName);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, unRemovedName);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, 1, unRemovedName);
 
 		// The second accumulator has only one task registered, when clearing registration
 		// the whole accumulator should be removed.
 		final String removedName = "removed";
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, attemptId, removedName);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, removedName);
 
 		Map<String, AggregatedAccumulator> currentJobAccumulators = manager.getPerJobAccumulators().get(jobId);
 		assertTrue("Both of the two accumulators should exist.",
@@ -230,13 +233,13 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 				currentJobAccumulators.containsKey(unRemovedName) &&
 				currentJobAccumulators.containsKey(removedName));
 
-		manager.clearRegistrationForTask(jobId, attemptId);
+		manager.clearRegistrationForTask(jobId, subtaskIndex);
 		assertTrue("Only the un-removed accumulator should exist.",
 			currentJobAccumulators.size() == 1 && currentJobAccumulators.containsKey(unRemovedName));
 
 		AggregatedAccumulator unRemovedAccumulator = currentJobAccumulators.get(unRemovedName);
 		assertFalse("The target target should be removed from the registered list since it has not committed. ",
-			unRemovedAccumulator.getRegisteredTasks().contains(attemptId));
+			unRemovedAccumulator.getRegisteredTasks().contains(subtaskIndex));
 	}
 
 	/**
@@ -248,7 +251,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 	public void testCommittedAccumulatorsWhenClearRegistration() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
-		final ExecutionAttemptID attemptId = new ExecutionAttemptID();
+		final int subtaskIndex = 0;
 		final String name = "test";
 
 		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
@@ -272,14 +275,14 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 
 		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
 
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, attemptId, name);
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, name);
 
 		// other tasks who have registered and committed.
-		ExecutionAttemptID otherTaskId = new ExecutionAttemptID();
+		final int otherTaskId = 1;
 		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, otherTaskId, name);
 		manager.commitPreAggregatedAccumulator(jobId, otherTaskId, name, new IntCounter(3));
 
-		manager.clearRegistrationForTask(jobId, attemptId);
+		manager.clearRegistrationForTask(jobId, subtaskIndex);
 
 		assertEquals("The target accumulator should be removed after committing and further cause that the job's map get removed.",
 			0, manager.getPerJobAccumulators().size());
@@ -293,12 +296,12 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 	public void testClearForJob() {
 		final JobID jobId = new JobID();
 		final JobVertexID jobVertexId = new JobVertexID();
-		final ExecutionAttemptID attemptId = new ExecutionAttemptID();
+		final int subtaskIndex = 0;
 
 		JobManagerTable jobManagerTable = createJobManagerTable(Collections.singletonList(jobId));
 		RPCBasedAccumulatorAggregationManager manager = new RPCBasedAccumulatorAggregationManager(jobManagerTable);
 
-		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, attemptId, "test");
+		manager.registerPreAggregatedAccumulator(jobId, jobVertexId, subtaskIndex, "test");
 		assertEquals(1, manager.getPerJobAccumulators().size());
 
 		// There may be cases that one job is cleared before any registration.
@@ -432,14 +435,14 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 		private Object jobMasterLock = new Object();
 		private JobID jobId = new JobID();
 		private JobVertexID jobVertexId = new JobVertexID();
-		private List<ExecutionAttemptID> tasks = new ArrayList<>();
+		private List<Integer> tasks = new ArrayList<>();
 		private List<String> accumulators = new ArrayList<>();
 
 		private Map<String, Accumulator> globalCommittedAccumulators = new HashMap<>();
 
 		PerJobContext(int numberOfTasks, int numberOfAccumulators) {
 			for (int i = 0; i < numberOfTasks; ++i) {
-				tasks.add(new ExecutionAttemptID());
+				tasks.add(i);
 			}
 
 			for (int i = 0; i < numberOfAccumulators; ++i) {
@@ -459,7 +462,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 			return jobVertexId;
 		}
 
-		List<ExecutionAttemptID> getTasks() {
+		List<Integer> getTasks() {
 			return tasks;
 		}
 

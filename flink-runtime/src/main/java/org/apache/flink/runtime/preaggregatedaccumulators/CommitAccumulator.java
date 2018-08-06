@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.preaggregatedaccumulators;
 
 import org.apache.flink.api.common.accumulators.Accumulator;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.io.Serializable;
@@ -39,9 +38,9 @@ public class CommitAccumulator implements Serializable {
 	private final Accumulator accumulator;
 
 	/** The index of the tasks that commit the value. */
-	private final Set<ExecutionAttemptID> committedTasks;
+	private final Set<Integer> committedTasks;
 
-	CommitAccumulator(JobVertexID jobVertexId, String name, Accumulator accumulator, Set<ExecutionAttemptID> committedTasks) {
+	public CommitAccumulator(JobVertexID jobVertexId, String name, Accumulator accumulator, Set<Integer> committedTasks) {
 		this.jobVertexId = jobVertexId;
 		this.name = name;
 		this.accumulator = accumulator;
@@ -60,7 +59,7 @@ public class CommitAccumulator implements Serializable {
 		return accumulator;
 	}
 
-	public Set<ExecutionAttemptID> getCommittedTasks() {
+	public Set<Integer> getCommittedTasks() {
 		return committedTasks;
 	}
 }

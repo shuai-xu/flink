@@ -335,7 +335,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		this.ioManager = Preconditions.checkNotNull(ioManager);
 		this.broadcastVariableManager = Preconditions.checkNotNull(bcVarManager);
 		this.taskStateManager = Preconditions.checkNotNull(taskStateManager);
-		this.accumulatorRegistry = new AccumulatorRegistry(jobId, vertexId, executionId, accumulatorAggregationManager);
+		this.accumulatorRegistry = new AccumulatorRegistry(jobId, vertexId, subtaskIndex, executionId, accumulatorAggregationManager);
 
 		this.inputSplitProvider = Preconditions.checkNotNull(inputSplitProvider);
 		this.checkpointResponder = Preconditions.checkNotNull(checkpointResponder);

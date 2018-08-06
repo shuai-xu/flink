@@ -20,7 +20,6 @@ package org.apache.flink.runtime.preaggregatedaccumulators;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.io.Serializable;
@@ -39,41 +38,38 @@ public interface AccumulatorAggregationManager {
 	 *
 	 * @param jobId JobID of the registering task.
 	 * @param jobVertexId JobVertexID of the registering task.
-	 * @param attemptId ExecutionAttemptID of the registering task.
+	 * @param subtaskIndex subtaskIndex of the registering task.
 	 * @param name The name of the accumulator to register.
 	 */
-	void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, ExecutionAttemptID attemptId, String name);
+	void registerPreAggregatedAccumulator(JobID jobId, JobVertexID jobVertexId, int subtaskIndex, String name);
 
 	/**
 	 * Commits the final value of a task for the specific accumulator. The committed task
 	 * should have already registered on the accumulator and have not committed before.
 	 *
 	 * @param jobId JobID of the committing task.
-	 * @param attemptId ExecutionAttemptID of the committing task.
+	 * @param subtaskIndex subtaskIndex of the committing task.
 	 * @param name The name of the accumulator to commit.
 	 * @param value The committing pre-aggregated accumulator's value.
 	 */
-	void commitPreAggregatedAccumulator(JobID jobId, ExecutionAttemptID attemptId, String name, Accumulator value);
+	void commitPreAggregatedAccumulator(JobID jobId, int subtaskIndex, String name, Accumulator value);
 
 	/**
 	 * Queries the aggregated value of a specific pre-aggregated accumulator asynchronously.
 	 *
 	 * @param jobId JobID of the querying task.
-	 * @param attemptId ExecutionAttemptID of the querying task.
-	 * @param name  The name of the accumulator to query.
+	 * @param name The name of the filter to  on.
 	 * @return The Future object for the querying pre-aggregated accumulator.
 	 */
-	<V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId,
-																								ExecutionAttemptID attemptId,
-																								String name);
+	<V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(JobID jobId, String name);
 
 	/**
 	 * Clears the registration status of a task if it has not committed yet when the task exits.
 	 *
 	 * @param jobId JobID of the exited task.
-	 * @param attemptId AttemptID of the exited task.
+	 * @param subtaskIndex subtaskIndex of the exiting task.
 	 */
-	void clearRegistrationForTask(JobID jobId, ExecutionAttemptID attemptId);
+	void clearRegistrationForTask(JobID jobId, int subtaskIndex);
 
 	/**
 	 * Removes all the aggregating and querying accumulators for the specific job when the connection to the

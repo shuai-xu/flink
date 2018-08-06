@@ -43,6 +43,7 @@ public class AccumulatorRegistry extends AbstractAccumulatorRegistry {
 
 	private final JobID jobID;
 	private final JobVertexID jobVertexID;
+	private final int subtaskIndex;
 	private final ExecutionAttemptID taskID;
 	private final AccumulatorAggregationManager accumulatorAggregationManager;
 
@@ -52,10 +53,12 @@ public class AccumulatorRegistry extends AbstractAccumulatorRegistry {
 
 	public AccumulatorRegistry(JobID jobID,
 								JobVertexID jobVertexID,
+								int subtaskIndex,
 								ExecutionAttemptID taskID,
 								AccumulatorAggregationManager accumulatorAggregationManager) {
 		this.jobID = jobID;
 		this.jobVertexID = jobVertexID;
+		this.subtaskIndex = subtaskIndex;
 		this.taskID = taskID;
 		this.accumulatorAggregationManager = accumulatorAggregationManager;
 	}
@@ -81,7 +84,7 @@ public class AccumulatorRegistry extends AbstractAccumulatorRegistry {
 		}
 		preAggregatedUserAccumulators.put(name, accumulator);
 
-		accumulatorAggregationManager.registerPreAggregatedAccumulator(jobID, jobVertexID, taskID, name);
+		accumulatorAggregationManager.registerPreAggregatedAccumulator(jobID, jobVertexID, subtaskIndex, name);
 	}
 
 	@Override
@@ -97,11 +100,11 @@ public class AccumulatorRegistry extends AbstractAccumulatorRegistry {
 		}
 
 		Accumulator<?, ?> accumulator = preAggregatedUserAccumulators.remove(name);
-		accumulatorAggregationManager.commitPreAggregatedAccumulator(jobID, taskID, name, accumulator);
+		accumulatorAggregationManager.commitPreAggregatedAccumulator(jobID, subtaskIndex, name, accumulator);
 	}
 
 	@Override
 	public <V, A extends Serializable> CompletableFuture<Accumulator<V, A>> queryPreAggregatedAccumulator(String name) {
-		return accumulatorAggregationManager.queryPreAggregatedAccumulator(jobID, taskID, name);
+		return accumulatorAggregationManager.queryPreAggregatedAccumulator(jobID, name);
 	}
 }
