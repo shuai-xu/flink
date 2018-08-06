@@ -24,6 +24,7 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.BlobServerOptions;
+import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.core.io.InputSplit;
@@ -52,6 +53,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
+import org.apache.flink.runtime.executiongraph.restart.RestartStrategyFactory;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.heartbeat.TestingHeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
@@ -61,7 +63,6 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
-import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -471,7 +472,7 @@ public class JobMasterTest extends TestLogger {
 			final long end = System.nanoTime();
 
 			// we rely on the slot request timeout to fail a stuck scheduling operation
-			assertThat((end-start) / 1_000_000L, Matchers.greaterThanOrEqualTo(slotRequestTimeout));
+			assertThat((end - start) / 1_000_000L, Matchers.greaterThanOrEqualTo(slotRequestTimeout));
 
 			assertThat(submittedTaskFuture.isDone(), is(false));
 
@@ -570,9 +571,12 @@ public class JobMasterTest extends TestLogger {
 
 		final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
 
-		jobMaster.start(jobMasterId, testingTimeout);
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
 
 		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
 			final TestingResourceManagerGateway testingResourceManagerGateway = new TestingResourceManagerGateway();
 			final BlockingQueue<JobMasterId> registrationsQueue = new ArrayBlockingQueue<>(1);
 
@@ -612,9 +616,12 @@ public class JobMasterTest extends TestLogger {
 			haServices,
 			new TestingJobManagerSharedServicesBuilder().build());
 
-		jobMaster.start(jobMasterId, testingTimeout);
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
 
 		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
 			final TestingResourceManagerGateway testingResourceManagerGateway = new TestingResourceManagerGateway();
 
 			final BlockingQueue<JobMasterId> registrationQueue = new ArrayBlockingQueue<>(1);
@@ -658,9 +665,12 @@ public class JobMasterTest extends TestLogger {
 			new TestingJobManagerSharedServicesBuilder().build(),
 			heartbeatServices);
 
-		jobMaster.start(jobMasterId, testingTimeout);
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
 
 		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
 			final TestingResourceManagerGateway testingResourceManagerGateway = new TestingResourceManagerGateway();
 
 			final CompletableFuture<AllocationID> allocationIdFuture = new CompletableFuture<>();
@@ -713,10 +723,10 @@ public class JobMasterTest extends TestLogger {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
 	}
- 
+
 	@Test
 	public void testRequestNextInputSplit() throws Exception {
-
+		// build one node JobGraph
 		InputSplitSource<TestingInputSplit> inputSplitSource = new TestingInputSplitSource();
 
 		JobVertex source = new JobVertex("vertex1");
@@ -724,57 +734,83 @@ public class JobMasterTest extends TestLogger {
 		source.setInputSplitSource(inputSplitSource);
 		source.setInvokableClass(AbstractInvokable.class);
 
-		final ExecutionConfig executionConfig = new ExecutionConfig();
-		executionConfig.setRestartStrategy(RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 0L));
-
 		final JobGraph jobGraph = new JobGraph(source);
 		jobGraph.setAllowQueuedScheduling(true);
-		jobGraph.setExecutionConfig(executionConfig);
+
+		configuration.setLong(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_ATTEMPTS, 1);
+		configuration.setString(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_DELAY, "0 s");
+
+		final JobManagerSharedServices jobManagerSharedServices =
+			new TestingJobManagerSharedServicesBuilder()
+				.setRestartStrategyFactory(RestartStrategyFactory.createRestartStrategyFactory(configuration))
+				.build();
 
 		final JobMaster jobMaster = createJobMaster(
 			configuration,
 			jobGraph,
 			haServices,
-			new TestingJobManagerSharedServicesBuilder().build(),
-			heartbeatServices);
+			jobManagerSharedServices);
 
-		jobMaster.start(jobMasterId, testingTimeout);
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
 
 		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
 			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
 
 			ExecutionGraph eg = jobMaster.getExecutionGraph();
+			ExecutionVertex ev = eg.getAllExecutionVertices().iterator().next();
 
-			SerializedInputSplit serializedInputSplit1 = jobMasterGateway.requestNextInputSplit(
+			SerializedInputSplit serializedInputSplit1 = jobMasterGateway
+				.requestNextInputSplit(
 					source.getID(),
-					eg.getAllExecutionVertices().iterator().next().getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit1 = InstantiationUtil.deserializeObject(
-					serializedInputSplit1.getInputSplitData(), ClassLoader.getSystemClassLoader());
+					ev.getCurrentExecutionAttempt().getAttemptId())
+				.get(1L, TimeUnit.SECONDS);
+			InputSplit inputSplit1 = InstantiationUtil
+				.deserializeObject(
+					serializedInputSplit1.getInputSplitData(),
+					ClassLoader.getSystemClassLoader());
 			assertEquals(0, inputSplit1.getSplitNumber());
 
-			SerializedInputSplit serializedInputSplit2 = jobMasterGateway.requestNextInputSplit(
+			SerializedInputSplit serializedInputSplit2 = jobMasterGateway
+				.requestNextInputSplit(
 					source.getID(),
-					eg.getAllExecutionVertices().iterator().next().getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit2 = InstantiationUtil.deserializeObject(
-					serializedInputSplit2.getInputSplitData(), ClassLoader.getSystemClassLoader());
+					ev.getCurrentExecutionAttempt().getAttemptId())
+				.get(1L, TimeUnit.SECONDS);
+			InputSplit inputSplit2 = InstantiationUtil
+				.deserializeObject(
+					serializedInputSplit2.getInputSplitData(),
+					ClassLoader.getSystemClassLoader());
 			assertEquals(1, inputSplit2.getSplitNumber());
 
-			eg.failGlobal(new Exception("Testing exception"));
-			ExecutionGraphTestUtils.waitUntilJobStatus(eg, JobStatus.RUNNING, 2000);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev, ExecutionState.SCHEDULED, 2000L);
 
-			SerializedInputSplit serializedInputSplit3 = jobMasterGateway.requestNextInputSplit(
+			eg.failGlobal(new Exception("Testing exception"));
+
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev, ExecutionState.SCHEDULED, 2000L);
+
+			SerializedInputSplit serializedInputSplit3 = jobMasterGateway
+				.requestNextInputSplit(
 					source.getID(),
-					eg.getAllExecutionVertices().iterator().next().getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit3 = InstantiationUtil.deserializeObject(
-					serializedInputSplit3.getInputSplitData(), ClassLoader.getSystemClassLoader());
+					ev.getCurrentExecutionAttempt().getAttemptId())
+				.get(1L, TimeUnit.SECONDS);
+			InputSplit inputSplit3 = InstantiationUtil
+				.deserializeObject(
+					serializedInputSplit3.getInputSplitData(),
+					ClassLoader.getSystemClassLoader());
 			assertEquals(0, inputSplit3.getSplitNumber());
 
-			// check if a concurrent error occurred
-			testingFatalErrorHandler.rethrowError();
-
+			SerializedInputSplit serializedInputSplit4 = jobMasterGateway
+				.requestNextInputSplit(
+					source.getID(),
+					ev.getCurrentExecutionAttempt().getAttemptId())
+				.get(1L, TimeUnit.SECONDS);
+			InputSplit inputSplit4 = InstantiationUtil
+				.deserializeObject(
+					serializedInputSplit4.getInputSplitData(),
+					ClassLoader.getSystemClassLoader());
+			assertEquals(1, inputSplit4.getSplitNumber());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -805,9 +841,12 @@ public class JobMasterTest extends TestLogger {
 			new TestingJobManagerSharedServicesBuilder().build(),
 			heartbeatServices);
 
-		jobMaster.start(jobMasterId, testingTimeout);
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
 
 		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
 			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
 
 			ExecutionGraph eg = jobMaster.getExecutionGraph();
