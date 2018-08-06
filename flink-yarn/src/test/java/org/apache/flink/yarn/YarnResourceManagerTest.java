@@ -77,6 +77,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 
@@ -84,6 +86,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -478,6 +481,122 @@ public class YarnResourceManagerTest extends TestLogger {
 			when(testingContainerStatus.getExitStatus()).thenReturn(-1);
 			resourceManager.onContainersCompleted(ImmutableList.of(testingContainerStatus));
 			verify(mockResourceManagerClient, times(2)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+		}};
+	}
+
+	@Test
+	public void testHeartbeatTimeoutWithTaskExecutor() throws Exception {
+		new Context() {{
+			startResourceManager();
+			// Request slot from SlotManager.
+			CompletableFuture<?> registerSlotRequestFuture = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+						new SlotRequest(new JobID(), new AllocationID(), resourceProfile1, taskHost));
+				return null;
+			});
+
+			// wait for the registerSlotRequest completion
+			registerSlotRequestFuture.get();
+
+			// Callback from YARN when container is allocated.
+			Container testingContainer = mock(Container.class);
+			when(testingContainer.getId()).thenReturn(
+					ContainerId.newInstance(
+							ApplicationAttemptId.newInstance(
+									ApplicationId.newInstance(System.currentTimeMillis(), 1),
+									1),
+							1));
+			when(testingContainer.getNodeId()).thenReturn(NodeId.newInstance("container", 1234));
+			when(testingContainer.getResource()).thenReturn(Resource.newInstance(200, 1));
+			when(testingContainer.getPriority()).thenReturn(Priority.UNDEFINED);
+			resourceManager.onContainersAllocated(ImmutableList.of(testingContainer));
+			verify(mockResourceManagerClient).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+			verify(mockNMClient).startContainer(eq(testingContainer), any(ContainerLaunchContext.class));
+
+			// Remote task executor registers with YarnResourceManager.
+			TaskExecutorGateway mockTaskExecutorGateway = mock(TaskExecutorGateway.class);
+			rpcService.registerGateway(taskHost, mockTaskExecutorGateway);
+
+			final ResourceManagerGateway rmGateway = resourceManager.getSelfGateway(ResourceManagerGateway.class);
+
+			final ResourceID taskManagerResourceId = new ResourceID(testingContainer.getId().toString());
+			final SlotReport slotReport = new SlotReport(
+					new SlotStatus(
+							new SlotID(taskManagerResourceId, 1),
+							new ResourceProfile(10, 1, 1, 1, 0, Collections.emptyMap())));
+
+			CompletableFuture<Integer> numberRegisteredSlotsFuture = rmGateway
+					.registerTaskExecutor(
+							taskHost,
+							taskManagerResourceId,
+							dataPort,
+							hardwareDescription,
+							Time.seconds(10L))
+					.thenCompose(
+							(RegistrationResponse response) -> {
+								assertThat(response, instanceOf(TaskExecutorRegistrationSuccess.class));
+								final TaskExecutorRegistrationSuccess success = (TaskExecutorRegistrationSuccess) response;
+								return rmGateway.sendSlotReport(
+										taskManagerResourceId,
+										success.getRegistrationId(),
+										slotReport,
+										Time.seconds(10L));
+							})
+					.handleAsync(
+							(Acknowledge ignored, Throwable throwable) -> rmServices.slotManager.getNumberRegisteredSlots(),
+							resourceManager.getMainThreadExecutorForTesting());
+
+			final int numberRegisteredSlots = numberRegisteredSlotsFuture.get();
+
+			assertEquals(1, numberRegisteredSlots);
+
+			ArgumentCaptor<Runnable> heartbeatRunnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+			verify(rmServices.scheduledExecutor, times(2)).scheduleAtFixedRate(
+					heartbeatRunnableCaptor.capture(),
+					eq(0L),
+					eq(5L),
+					eq(TimeUnit.MILLISECONDS));
+
+			List<Runnable> heartbeatRunnable = heartbeatRunnableCaptor.getAllValues();
+
+			ArgumentCaptor<Runnable> timeoutRunnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+			verify(rmServices.scheduledExecutor).schedule(timeoutRunnableCaptor.capture(), eq(5L), eq(TimeUnit.MILLISECONDS));
+
+			Runnable timeoutRunnable = timeoutRunnableCaptor.getValue();
+
+			// Run all the heartbeat requests.
+			for (Runnable runnable : heartbeatRunnable) {
+				runnable.run();
+			}
+
+			verify(mockTaskExecutorGateway, times(1)).heartbeatFromResourceManager(eq(rmResourceID));
+
+			// Run the timeout runnable to simulate a heartbeat timeout.
+			timeoutRunnable.run();
+
+			verify(mockTaskExecutorGateway, Mockito.timeout(Time.seconds(10L).toMilliseconds()))
+					.disconnectResourceManager(any(Exception.class));
+
+			// Stop worker should be called.
+			verify(mockNMClient, times(1)).stopContainer(any(), any());
+			verify(mockResourceManagerClient, times(1)).releaseAssignedContainer(any());
+
+			// Unregister all task executors and release all containers.
+			CompletableFuture<?> unregisterAndReleaseFuture = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.unregisterTaskManagersAndReleaseResources();
+				return null;
+			});
+
+			unregisterAndReleaseFuture.get();
+
+			verify(mockNMClient).stopContainer(any(ContainerId.class), any(NodeId.class));
+			verify(mockResourceManagerClient).releaseAssignedContainer(any(ContainerId.class));
+
+			stopResourceManager();
+
+			// It's now safe to access the SlotManager state since the ResourceManager has been stopped.
+			assertTrue(rmServices.slotManager.getNumberRegisteredSlots() == 0);
+			assertTrue(resourceManager.getNumberOfRegisteredTaskManagers().get() == 0);
 		}};
 	}
 }

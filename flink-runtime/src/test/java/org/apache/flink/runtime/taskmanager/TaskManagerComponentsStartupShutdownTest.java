@@ -123,6 +123,7 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 				Time.milliseconds(500),
 				Time.seconds(30),
 				Time.seconds(10),
+				Time.seconds(30),
 				config,
 				false, // exit-jvm-on-fatal-error
 				FlinkUserCodeClassLoaders.ResolveOrder.CHILD_FIRST,

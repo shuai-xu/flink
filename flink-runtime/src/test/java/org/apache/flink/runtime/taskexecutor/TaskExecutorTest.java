@@ -196,12 +196,12 @@ public class TaskExecutorTest extends TestLogger {
 			null);
 
 		configuration = new Configuration();
-		taskManagerConfiguration = TaskManagerConfiguration.fromConfiguration(configuration);
+		taskManagerConfiguration = spy(TaskManagerConfiguration.fromConfiguration(configuration));
 
 		taskManagerLocation = new LocalTaskManagerLocation();
 		jobId = new JobID();
 
-		testingFatalErrorHandler = new TestingFatalErrorHandler();
+		testingFatalErrorHandler = spy(new TestingFatalErrorHandler());
 
 		haServices = new TestingHighAvailabilityServices();
 		resourceManagerLeaderRetriever = new SettableLeaderRetrievalService();
@@ -300,6 +300,8 @@ public class TaskExecutorTest extends TestLogger {
 
 	@Test
 	public void testHeartbeatTimeoutWithResourceManager() throws Exception {
+		when(taskManagerConfiguration.getMaxReconnectionDuration()).thenReturn(Time.milliseconds(0));
+
 		final String rmAddress = "rm";
 		final ResourceID rmResourceId = new ResourceID(rmAddress);
 
@@ -378,8 +380,13 @@ public class TaskExecutorTest extends TestLogger {
 			// the TaskExecutor should try to reconnect to the RM
 			registrationAttempts.await();
 
+			// there should be a fatal error, but the option is async, so wait for a period
+			verify(testingFatalErrorHandler, Mockito.timeout(5000).only()).onFatalError(any(Exception.class));
+
 		} finally {
 			RpcUtils.terminateRpcEndpoint(taskManager, timeout);
+			assertNotNull(testingFatalErrorHandler.getException());
+			testingFatalErrorHandler.clearError();
 		}
 	}
 

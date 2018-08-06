@@ -203,6 +203,11 @@
             <td>The direct memory (in megabytes) used for netty framework in the task manager process.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.reconnection.timeout</h5></td>
+            <td style="word-wrap: break-word;">"1 min"</td>
+            <td>Defines the maximum time it can take for the TaskManager reconnection. If the duration is exceeded without a successful reconnection, then disassociate from JM.</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.registration.initial-backoff</h5></td>
             <td style="word-wrap: break-word;">"500 ms"</td>
             <td>The initial registration backoff between two consecutive registration attempts. The backoff is doubled for each new registration attempt until it reaches the maximum registration backoff.</td>

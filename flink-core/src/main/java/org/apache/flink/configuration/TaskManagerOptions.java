@@ -227,6 +227,16 @@ public class TaskManagerOptions {
 				" exceeded without a successful registration, then the TaskManager terminates.");
 
 	/**
+	 * Defines the maximum time it can take for the TaskManager reconnection. If the duration is
+	 * exceeded without a successful reconnection, then disassociate from JM.
+	 */
+	public static final ConfigOption<String> RECONNECTION_TIMEOUT =
+			key("taskmanager.reconnection.timeout")
+					.defaultValue("1 min")
+					.withDescription("Defines the maximum time it can take for the TaskManager reconnection. If the duration is" +
+							" exceeded without a successful reconnection, then disassociate from JM.");
+
+	/**
 	 * The config parameter defining the number of task slots of a task manager.
 	 */
 	public static final ConfigOption<Integer> NUM_TASK_SLOTS =

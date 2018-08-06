@@ -1709,6 +1709,81 @@ public class SlotManagerTest extends TestLogger {
 		}
 	}
 
+	/**
+	 * Tests that the repeat registration from TM will be handled as reporting slot status.
+	 * The report with older version will be ignored.
+	 */
+	@Test
+	public void testTaskManagerRepeatRegistration() throws Exception {
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+
+		ResourceID resourceId = ResourceID.generate();
+		final SlotID slotId1 = new SlotID(resourceId, 0);
+		final SlotID slotId2 = new SlotID(resourceId, 1);
+
+		final ResourceProfile resourceProfile1 = new ResourceProfile(42.0, 1337);
+		final ResourceProfile resourceProfile2 = new ResourceProfile(43.0, 1338);
+
+		final SlotStatus slotStatus1 = new SlotStatus(slotId1, resourceProfile1);
+		final SlotStatus slotStatus2 = new SlotStatus(slotId2, resourceProfile2);
+		final SlotReport slotReport = new SlotReport(Arrays.asList(slotStatus1, slotStatus2));
+
+		final JobID jobId = new JobID();
+		final AllocationID allocationId = new AllocationID();
+
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+				eq(slotId2),
+				eq(jobId),
+				eq(allocationId),
+				eq(resourceProfile2),
+				anyString(),
+				eq(resourceManagerId),
+				anyLong(),
+				any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+		final TaskExecutorConnection taskManagerConnection = new TaskExecutorConnection(resourceId, taskExecutorGateway);
+
+		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
+			// First registration
+			slotManager.registerTaskManager(taskManagerConnection, slotReport);
+
+			assertEquals("The number registered slots does not equal the expected number.", 2, slotManager.getNumberRegisteredSlots());
+			assertNotNull(slotManager.getSlot(slotId1));
+			assertNotNull(slotManager.getSlot(slotId2));
+
+			assertEquals(TaskManagerSlot.State.FREE, slotManager.getSlot(slotId1).getState());
+			assertEquals(0L, slotManager.getSlot(slotId1).getVersion());
+			assertEquals(TaskManagerSlot.State.FREE, slotManager.getSlot(slotId2).getState());
+			assertEquals(0L, slotManager.getSlot(slotId2).getVersion());
+
+			// Allocate an slot
+			final SlotRequest slotRequest = new SlotRequest(
+					jobId,
+					allocationId,
+					resourceProfile2,
+					"foobar");
+			assertTrue(slotManager.registerSlotRequest(slotRequest));
+
+			assertEquals(TaskManagerSlot.State.FREE, slotManager.getSlot(slotId1).getState());
+			assertEquals(0L, slotManager.getSlot(slotId1).getVersion());
+			assertEquals(TaskManagerSlot.State.ALLOCATED, slotManager.getSlot(slotId2).getState());
+			assertEquals(1L, slotManager.getSlot(slotId2).getVersion());
+			assertEquals(allocationId, slotManager.getSlot(slotId2).getAllocationId());
+
+			// Repeat registration
+			slotManager.registerTaskManager(taskManagerConnection, slotReport);
+
+			// The state of slots should not be merged with timestamp logic
+			assertEquals(TaskManagerSlot.State.FREE, slotManager.getSlot(slotId1).getState());
+			assertEquals(0L, slotManager.getSlot(slotId1).getVersion());
+			assertEquals(TaskManagerSlot.State.ALLOCATED, slotManager.getSlot(slotId2).getState());
+			assertEquals(1L, slotManager.getSlot(slotId2).getVersion());
+			assertEquals(allocationId, slotManager.getSlot(slotId2).getAllocationId());
+		}
+	}
+
 	private Set<AllocationID> extractFailedAllocationsForJob(JobID jobId2, Map<JobID, List<Tuple2<JobID, AllocationID>>> job2AndJob3FailedAllocationInfo) {
 		return job2AndJob3FailedAllocationInfo.get(jobId2).stream().map(t -> t.f1).collect(Collectors.toSet());
 	}

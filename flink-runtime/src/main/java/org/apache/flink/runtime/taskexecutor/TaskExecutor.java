@@ -203,6 +203,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	@Nullable
 	private TaskExecutorToResourceManagerConnection resourceManagerConnection;
 
+	private long resourceManagerConnectedTimestamp;
+
 	@Nullable
 	private UUID currentRegistrationTimeoutId;
 
@@ -981,6 +983,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			taskExecutorRegistrationId);
 
 		stopRegistrationTimeout();
+
+		resourceManagerConnectedTimestamp = System.currentTimeMillis();
 	}
 
 	private void closeResourceManagerConnection(Exception cause) {
@@ -1015,6 +1019,15 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 			resourceManagerConnection.close();
 			resourceManagerConnection = null;
+
+			final long checkerScheduledTimestamp = System.currentTimeMillis();
+			scheduleRunAsync(() -> {
+				log.info("Scheduling a resource manager reconnection checker in {}.", checkerScheduledTimestamp);
+				if (resourceManagerConnectedTimestamp <= checkerScheduledTimestamp) {
+					fatalErrorHandler.onFatalError(new Exception("Reconnect to RM failed"));
+				}
+			}, Time.of(taskManagerConfiguration.getMaxReconnectionDuration().getSize() * 2,
+					taskManagerConfiguration.getMaxReconnectionDuration().getUnit()));
 		}
 
 		startRegistrationTimeout();
@@ -1329,7 +1342,36 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		futureAcknowledge.whenCompleteAsync(
 			(ack, throwable) -> {
 				if (throwable != null) {
-					failTask(executionAttemptID, throwable);
+					if (throwable instanceof TimeoutException) {
+						log.warn("Update task execution state failed, will retry after {}. Job {}: Attempt {}, {}",
+								taskManagerConfiguration.getRefusedRegistrationPause(),
+								taskExecutionState.getJobID(), executionAttemptID, throwable);
+
+						scheduleRunAsync(new Runnable() {
+							@Override
+							public void run() {
+								log.warn("Retry to update task execution state, {}: {}.",
+										taskExecutionState.getJobID(), executionAttemptID);
+
+								// Try to update JM information
+								final JobMasterGateway newJobMasterGateway;
+
+								JobID jobID = taskExecutionState.getJobID();
+								JobManagerConnection jobManagerConnection = jobManagerTable.get(jobID);
+								if (jobManagerConnection != null) {
+									newJobMasterGateway = jobManagerConnection.getJobManagerGateway();
+								} else {
+									newJobMasterGateway = jobMasterGateway;
+								}
+
+								updateTaskExecutionState(newJobMasterGateway, taskExecutionState);
+							}
+						}, taskManagerConfiguration.getRefusedRegistrationPause());
+					} else {
+						log.warn("Update task execution state {} failed, due to some unexpected reason.",
+								taskExecutionState, throwable);
+						failTask(executionAttemptID, throwable);
+					}
 				}
 			},
 			getMainThreadExecutor());

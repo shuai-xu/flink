@@ -407,6 +407,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 
 		// finally, create the executing thread, but do not start it
 		executingThread = new Thread(TASK_THREADS_GROUP, this, taskNameWithSubtask);
+		executingThread.setUncaughtExceptionHandler(FatalExitExceptionHandler.INSTANCE);
 	}
 
 	// ------------------------------------------------------------------------

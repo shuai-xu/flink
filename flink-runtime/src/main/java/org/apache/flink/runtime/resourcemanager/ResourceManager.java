@@ -691,11 +691,7 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 			HardwareDescription hardwareDescription) {
 		WorkerRegistration<WorkerType> oldRegistration = taskExecutors.remove(taskExecutorResourceId);
 		if (oldRegistration != null) {
-			// TODO :: suggest old taskExecutor to stop itself
-			log.info("Replacing old registration of TaskExecutor {}.", taskExecutorResourceId);
-
-			// remove old task manager registration from slot manager
-			slotManager.unregisterTaskManager(oldRegistration.getInstanceID());
+			log.info("Will merging slot state of old instance of worker for ResourceID {}", taskExecutorResourceId);
 		}
 
 		final WorkerType newWorker = workerStarted(taskExecutorResourceId);
@@ -1064,9 +1060,14 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 				public void run() {
 					log.info("The heartbeat of TaskManager with id {} timed out.", resourceID);
 
-					closeTaskManagerConnection(
-							resourceID,
-							new TimeoutException("The heartbeat of TaskManager with id " + resourceID + "  timed out."));
+					WorkerType worker = taskExecutors.get(resourceID).getWorker();
+					if (worker != null) {
+						stopWorker(worker);
+
+						closeTaskManagerConnection(
+								resourceID,
+								new TimeoutException("The heartbeat of TaskManager with id " + resourceID + "  timed out."));
+					}
 				}
 			});
 		}
