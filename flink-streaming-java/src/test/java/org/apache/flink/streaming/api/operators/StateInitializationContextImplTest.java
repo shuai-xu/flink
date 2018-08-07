@@ -103,7 +103,7 @@ public class StateInitializationContextImplTest {
 			int end = prev + size;
 			DataOutputView dov = new DataOutputViewStreamWrapper(out);
 			KeyGroupRangeOffsets offsets =
-					new KeyGroupRangeOffsets(i == 9 ? KeyGroupRange.EMPTY_KEY_GROUP_RANGE : new KeyGroupRange(prev, end));
+				new KeyGroupRangeOffsets(i == 9 ? KeyGroupRange.EMPTY_KEY_GROUP_RANGE : new KeyGroupRange(prev, end));
 			prev = end + 1;
 			for (int kg : offsets.getKeyGroupRange()) {
 				offsets.setKeyGroupOffset(kg, out.getPosition());
@@ -112,7 +112,7 @@ public class StateInitializationContextImplTest {
 			}
 
 			KeyedStateHandle handle =
-					new KeyGroupsStateHandle(offsets, new ByteStateHandleCloseChecking("kg-" + i, out.toByteArray()));
+				new KeyGroupsStateHandle(offsets, new ByteStateHandleCloseChecking("kg-" + i, out.toByteArray()));
 
 			keyedStateHandles.add(handle);
 		}
@@ -133,10 +133,10 @@ public class StateInitializationContextImplTest {
 
 			Map<String, OperatorStateHandle.StateMetaInfo> offsetsMap = new HashMap<>();
 			offsetsMap.put(
-					DefaultOperatorStateBackend.DEFAULT_OPERATOR_STATE_NAME,
-					new OperatorStateHandle.StateMetaInfo(offsets.toArray(), OperatorStateHandle.Mode.SPLIT_DISTRIBUTE));
+				DefaultOperatorStateBackend.DEFAULT_OPERATOR_STATE_NAME,
+				new OperatorStateHandle.StateMetaInfo(offsets.toArray(), OperatorStateHandle.Mode.SPLIT_DISTRIBUTE));
 			OperatorStateHandle operatorStateHandle =
-					new OperatorStreamStateHandle(offsetsMap, new ByteStateHandleCloseChecking("os-" + i, out.toByteArray()));
+				new OperatorStreamStateHandle(offsetsMap, new ByteStateHandleCloseChecking("os-" + i, out.toByteArray()));
 			operatorStateHandles.add(operatorStateHandle);
 		}
 
@@ -144,7 +144,8 @@ public class StateInitializationContextImplTest {
 			StateObjectCollection.empty(),
 			new StateObjectCollection<>(operatorStateHandles),
 			StateObjectCollection.empty(),
-			new StateObjectCollection<>(keyedStateHandles));
+			new StateObjectCollection<>(keyedStateHandles),
+			StateObjectCollection.empty());
 
 		OperatorID operatorID = new OperatorID();
 		TaskStateSnapshot taskStateSnapshot = new TaskStateSnapshot();
@@ -199,12 +200,12 @@ public class StateInitializationContextImplTest {
 			closableRegistry);
 
 		this.initializationContext =
-				new StateInitializationContextImpl(
-						stateContext.isRestored(),
-						stateContext.operatorStateBackend(),
-						mock(KeyedStateStore.class),
-						stateContext.rawKeyedStateInputs(),
-						stateContext.rawOperatorStateInputs());
+			new StateInitializationContextImpl(
+				stateContext.isRestored(),
+				stateContext.operatorStateBackend(),
+				mock(KeyedStateStore.class),
+				stateContext.rawKeyedStateInputs(),
+				stateContext.rawOperatorStateInputs());
 	}
 
 	@Test
@@ -239,7 +240,7 @@ public class StateInitializationContextImplTest {
 		int readKeyGroupCount = 0;
 
 		for (KeyGroupStatePartitionStreamProvider stateStreamProvider
-				: initializationContext.getRawKeyedStateInputs()) {
+			: initializationContext.getRawKeyedStateInputs()) {
 
 			Assert.assertNotNull(stateStreamProvider);
 
@@ -260,7 +261,7 @@ public class StateInitializationContextImplTest {
 		Set<Integer> readStatesCount = new HashSet<>();
 
 		for (StatePartitionStreamProvider statePartitionStreamProvider
-				: initializationContext.getRawOperatorStateInputs()) {
+			: initializationContext.getRawOperatorStateInputs()) {
 
 			Assert.assertNotNull(statePartitionStreamProvider);
 
@@ -282,7 +283,7 @@ public class StateInitializationContextImplTest {
 
 		try {
 			for (KeyGroupStatePartitionStreamProvider stateStreamProvider
-					: initializationContext.getRawKeyedStateInputs()) {
+				: initializationContext.getRawKeyedStateInputs()) {
 				Assert.assertNotNull(stateStreamProvider);
 
 				if (count == stopCount) {

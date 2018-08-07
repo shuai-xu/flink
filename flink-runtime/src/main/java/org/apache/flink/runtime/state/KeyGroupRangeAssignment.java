@@ -87,15 +87,13 @@ public final class KeyGroupRangeAssignment {
 		int parallelism,
 		int operatorIndex) {
 
-		checkParallelismPreconditions(parallelism);
-		checkParallelismPreconditions(maxParallelism);
-
-		Preconditions.checkArgument(maxParallelism >= parallelism,
-			"Maximum parallelism must not be smaller than parallelism.");
-
-		int start = ((operatorIndex * maxParallelism + parallelism - 1) / parallelism);
-		int end = ((operatorIndex + 1) * maxParallelism - 1) / parallelism;
-		return new KeyGroupRange(start, end);
+		GroupRange partitionRange = GroupRangePartitioner.getPartitionRange(
+			GroupRange.of(0, maxParallelism),
+			parallelism,
+			operatorIndex);
+		int startGroup = partitionRange.getStartGroup();
+		int endGroup = partitionRange.getEndGroup();
+		return new KeyGroupRange(startGroup, endGroup-1);
 	}
 
 	/**
@@ -113,7 +111,9 @@ public final class KeyGroupRangeAssignment {
 	 * parallelism and maxParallelism.
 	 */
 	public static int computeOperatorIndexForKeyGroup(int maxParallelism, int parallelism, int keyGroupId) {
-		return keyGroupId * parallelism / maxParallelism;
+		return GroupRangePartitioner.getPartitionIndex(GroupRange.of(0, maxParallelism),
+			parallelism,
+			keyGroupId);
 	}
 
 	/**

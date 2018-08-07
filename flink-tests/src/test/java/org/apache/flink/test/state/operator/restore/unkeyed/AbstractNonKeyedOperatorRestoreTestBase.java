@@ -25,6 +25,7 @@ import org.apache.flink.streaming.util.migration.MigrationVersion;
 import org.apache.flink.test.state.operator.restore.AbstractOperatorRestoreTestBase;
 import org.apache.flink.test.state.operator.restore.ExecutionMode;
 
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -41,6 +42,7 @@ import static org.apache.flink.test.state.operator.restore.unkeyed.NonKeyedJob.c
  * Base class for all non-keyed operator restore tests.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public abstract class AbstractNonKeyedOperatorRestoreTestBase extends AbstractOperatorRestoreTestBase {
 
 	private final MigrationVersion migrationVersion;

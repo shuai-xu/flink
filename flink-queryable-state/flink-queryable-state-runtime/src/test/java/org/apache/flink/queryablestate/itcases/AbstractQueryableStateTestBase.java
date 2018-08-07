@@ -104,6 +104,7 @@ import static org.junit.Assert.fail;
 /**
  * Base class for queryable state integration tests with a configurable state backend.
  */
+@Ignore
 public abstract class AbstractQueryableStateTestBase extends TestLogger {
 
 	private static final Duration TEST_TIMEOUT = Duration.ofSeconds(10000L);

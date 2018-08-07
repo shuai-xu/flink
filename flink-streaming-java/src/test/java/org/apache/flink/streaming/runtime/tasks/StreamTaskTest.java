@@ -65,6 +65,7 @@ import org.apache.flink.runtime.operators.testutils.MockEnvironmentBuilder;
 import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.AbstractStateBackend;
 import org.apache.flink.runtime.state.CheckpointStorage;
@@ -78,6 +79,7 @@ import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateBackendFactory;
 import org.apache.flink.runtime.state.StateInitializationContext;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.TaskLocalStateStoreImpl;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -522,12 +524,14 @@ public class StreamTaskTest extends TestLogger {
 		KeyedStateHandle rawKeyedStateHandle = mock(KeyedStateHandle.class);
 		OperatorStateHandle managedOperatorStateHandle = mock(OperatorStreamStateHandle.class);
 		OperatorStateHandle rawOperatorStateHandle = mock(OperatorStreamStateHandle.class);
+		StatePartitionSnapshot managedInternalState = mock(StatePartitionSnapshot.class);
 
 		OperatorSnapshotFutures operatorSnapshotResult = new OperatorSnapshotFutures(
 			DoneFuture.of(SnapshotResult.of(managedKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(rawKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(managedOperatorStateHandle)),
-			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)));
+			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)),
+			DoneFuture.of(managedInternalState));
 
 		when(streamOperator.snapshotState(anyLong(), anyLong(), any(CheckpointOptions.class), any(CheckpointStreamFactory.class))).thenReturn(operatorSnapshotResult);
 
@@ -626,12 +630,14 @@ public class StreamTaskTest extends TestLogger {
 		KeyedStateHandle rawKeyedStateHandle = mock(KeyedStateHandle.class);
 		OperatorStateHandle managedOperatorStateHandle = mock(OperatorStreamStateHandle.class);
 		OperatorStateHandle rawOperatorStateHandle = mock(OperatorStreamStateHandle.class);
+		StatePartitionSnapshot statePartitionSnapshot = mock(StatePartitionSnapshot.class);
 
 		OperatorSnapshotFutures operatorSnapshotResult = new OperatorSnapshotFutures(
 			DoneFuture.of(SnapshotResult.of(managedKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(rawKeyedStateHandle)),
 			DoneFuture.of(SnapshotResult.of(managedOperatorStateHandle)),
-			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)));
+			DoneFuture.of(SnapshotResult.of(rawOperatorStateHandle)),
+			DoneFuture.of(statePartitionSnapshot));
 
 		when(streamOperator.snapshotState(anyLong(), anyLong(), any(CheckpointOptions.class), any(CheckpointStreamFactory.class))).thenReturn(operatorSnapshotResult);
 
@@ -924,7 +930,7 @@ public class StreamTaskTest extends TestLogger {
 		when(network.getResultPartitionManager()).thenReturn(partitionManager);
 		when(network.getDefaultIOMode()).thenReturn(IOManager.IOMode.SYNC);
 		when(network.createKvStateTaskRegistry(any(JobID.class), any(JobVertexID.class)))
-				.thenReturn(mock(TaskKvStateRegistry.class));
+			.thenReturn(mock(TaskKvStateRegistry.class));
 		when(network.getTaskEventDispatcher()).thenReturn(taskEventDispatcher);
 
 		JobInformation jobInformation = new JobInformation(
@@ -1037,7 +1043,7 @@ public class StreamTaskTest extends TestLogger {
 		}
 
 		protected AbstractStateBackend createInnerBackend(Configuration config) {
-			return new MemoryStateBackend();
+			return new MemoryStateBackend(false);
 		}
 	}
 
@@ -1136,6 +1142,11 @@ public class StreamTaskTest extends TestLogger {
 					@Override
 					public CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs() {
 						return replaceWithSpy(context.rawKeyedStateInputs());
+					}
+
+					@Override
+					public AbstractInternalStateBackend internalStateBackend() {
+						return context.internalStateBackend();
 					}
 
 					public <T extends Closeable> T replaceWithSpy(T closeable) {

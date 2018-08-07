@@ -89,7 +89,7 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	/**
 	 * Subclasses should implement this method to release unused resources.
 	 */
-	protected abstract void closeImpl();
+	protected void closeImpl() {}
 
 	/**
 	 * Creates the internal state described by the given descriptor.
@@ -148,7 +148,6 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	public Map<String, InternalState> getStates() {
 		return states;
 	}
-
 	//--------------------------------------------------------------------------
 
 	@Override
@@ -277,5 +276,4 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	public InternalState getInternalState(String stateName) {
 		return states.get(stateName);
 	}
-
 }

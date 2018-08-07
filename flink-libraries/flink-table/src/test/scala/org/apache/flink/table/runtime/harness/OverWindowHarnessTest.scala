@@ -440,28 +440,28 @@ class OverWindowHarnessTest extends HarnessTestBase{
       CRow(Row.of(20002L: JLong, "ccc", 2L: JLong), change = true))) // clean-up 4500
     testHarness.processWatermark(20010) // compute output
 
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(4499)
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(4500)
-    val x = testHarness.numKeyedStateEntries()
-    assert(testHarness.numKeyedStateEntries() == 0) // check that all state is gone
+    val x = testHarness.numInternalStateEntries()
+    assert(testHarness.numInternalStateEntries() == 0) // check that all state is gone
 
     // check that state is only removed if all data was processed
     testHarness.processElement(new StreamRecord(
       CRow(Row.of(20011L: JLong, "ccc", 3L: JLong), change = true))) // clean-up 6500
 
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(6500) // clean-up attempt but rescheduled to 8500
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
 
     testHarness.processWatermark(20020) // schedule emission
 
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(8499) // clean-up
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(8500) // clean-up
-    assert(testHarness.numKeyedStateEntries() == 0) // check that all state is gone
+    assert(testHarness.numInternalStateEntries() == 0) // check that all state is gone
 
     val result = testHarness.getOutput
 
@@ -586,27 +586,27 @@ class OverWindowHarnessTest extends HarnessTestBase{
       CRow(Row.of(20002L: JLong, "ccc", 2L: JLong), change = true))) // clean-up 4500
     testHarness.processWatermark(20010) // compute output
 
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(4499)
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(4500)
-    assert(testHarness.numKeyedStateEntries() == 0) // check that all state is gone
+    assert(testHarness.numInternalStateEntries() == 0) // check that all state is gone
 
     // check that state is only removed if all data was processed
     testHarness.processElement(new StreamRecord(
       CRow(Row.of(20011L: JLong, "ccc", 3L: JLong), change = true))) // clean-up 6500
 
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(6500) // clean-up attempt but rescheduled to 8500
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
 
     testHarness.processWatermark(20020) // schedule emission
 
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(8499) // clean-up
-    assert(testHarness.numKeyedStateEntries() > 0) // check that we have state
+    assert(testHarness.numInternalStateEntries() > 0) // check that we have state
     testHarness.setProcessingTime(8500) // clean-up
-    assert(testHarness.numKeyedStateEntries() == 0) // check that all state is gone
+    assert(testHarness.numInternalStateEntries() == 0) // check that all state is gone
 
 
     val result = testHarness.getOutput
@@ -723,11 +723,11 @@ class OverWindowHarnessTest extends HarnessTestBase{
     testHarness.processWatermark(19000)
 
     // test cleanup
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(2999) // clean up timer is 3000, so nothing should happen
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(3000) // clean up is triggered
-    assert(testHarness.numKeyedStateEntries() == 0)
+    assert(testHarness.numInternalStateEntries() == 0)
 
     testHarness.processWatermark(20000)
     testHarness.processElement(new StreamRecord(
@@ -739,15 +739,15 @@ class OverWindowHarnessTest extends HarnessTestBase{
     testHarness.processElement(new StreamRecord(
       CRow(Row.of(20002L: JLong, "ccc", 2L: JLong), change = true))) // clean-up 5000
 
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(5000) // does not clean up, because data left. New timer 7000
     testHarness.processWatermark(20010) // compute output
 
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(6999) // clean up timer is 3000, so nothing should happen
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(7000) // clean up is triggered
-    assert(testHarness.numKeyedStateEntries() == 0)
+    assert(testHarness.numInternalStateEntries() == 0)
 
     val result = testHarness.getOutput
 
@@ -859,11 +859,11 @@ class OverWindowHarnessTest extends HarnessTestBase{
     testHarness.processWatermark(19000)
 
     // test cleanup
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(2999) // clean up timer is 3000, so nothing should happen
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(3000) // clean up is triggered
-    assert(testHarness.numKeyedStateEntries() == 0)
+    assert(testHarness.numInternalStateEntries() == 0)
 
     testHarness.processWatermark(20000)
     testHarness.processElement(new StreamRecord(
@@ -875,15 +875,15 @@ class OverWindowHarnessTest extends HarnessTestBase{
     testHarness.processElement(new StreamRecord(
       CRow(Row.of(20002L: JLong, "ccc", 2L: JLong), change = true))) // clean-up 5000
 
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(5000) // does not clean up, because data left. New timer 7000
     testHarness.processWatermark(20010) // compute output
 
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(6999) // clean up timer is 3000, so nothing should happen
-    assert(testHarness.numKeyedStateEntries() > 0)
+    assert(testHarness.numInternalStateEntries() > 0)
     testHarness.setProcessingTime(7000) // clean up is triggered
-    assert(testHarness.numKeyedStateEntries() == 0)
+    assert(testHarness.numInternalStateEntries() == 0)
 
     val result = testHarness.getOutput
 

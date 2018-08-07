@@ -249,27 +249,27 @@ public class JobManagerHARecoveryTest extends TestLogger {
 
 			List<JobVertexID> vertexId = Collections.singletonList(sourceJobVertex.getID());
 			jobGraph.setSnapshotSettings(new JobCheckpointingSettings(
-					vertexId,
-					vertexId,
-					vertexId,
-					new CheckpointCoordinatorConfiguration(
-						100L,
-						10L * 60L * 1000L,
-						0L,
-						1,
-						CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION,
-						true),
-					null));
+				vertexId,
+				vertexId,
+				vertexId,
+				new CheckpointCoordinatorConfiguration(
+					100L,
+					10L * 60L * 1000L,
+					0L,
+					1,
+					CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION,
+					true),
+				null));
 
 			BlockingStatefulInvokable.initializeStaticHelpers(slots);
 
 			Future<Object> isLeader = gateway.ask(
-					TestingJobManagerMessages.getNotifyWhenLeader(),
-					deadline.timeLeft());
+				TestingJobManagerMessages.getNotifyWhenLeader(),
+				deadline.timeLeft());
 
 			Future<Object> isConnectedToJobManager = tmGateway.ask(
-					new TestingTaskManagerMessages.NotifyWhenRegisteredAtJobManager(jobManager),
-					deadline.timeLeft());
+				new TestingTaskManagerMessages.NotifyWhenRegisteredAtJobManager(jobManager),
+				deadline.timeLeft());
 
 			// tell jobManager that he's the leader
 			myLeaderElectionService.isLeader(leaderSessionID);
@@ -281,8 +281,8 @@ public class JobManagerHARecoveryTest extends TestLogger {
 
 			// submit blocking job
 			Future<Object> jobSubmitted = gateway.ask(
-					new JobManagerMessages.SubmitJob(jobGraph, ListeningBehaviour.DETACHED),
-					deadline.timeLeft());
+				new JobManagerMessages.SubmitJob(jobGraph, ListeningBehaviour.DETACHED),
+				deadline.timeLeft());
 
 			Await.ready(jobSubmitted, deadline.timeLeft());
 
@@ -324,8 +324,8 @@ public class JobManagerHARecoveryTest extends TestLogger {
 			for (long state : recoveredStates) {
 				boolean isExpected = state >= BlockingStatefulInvokable.NUM_CHECKPOINTS_TO_COMPLETE;
 				assertTrue("Did not recover checkpoint state correctly, expecting >= " +
-						BlockingStatefulInvokable.NUM_CHECKPOINTS_TO_COMPLETE +
-						", but state was " + state, isExpected);
+					BlockingStatefulInvokable.NUM_CHECKPOINTS_TO_COMPLETE +
+					", but state was " + state, isExpected);
 			}
 		} finally {
 			if (archive != null) {
@@ -534,8 +534,8 @@ public class JobManagerHARecoveryTest extends TestLogger {
 		@Override
 		public boolean triggerCheckpoint(CheckpointMetaData checkpointMetaData, CheckpointOptions checkpointOptions) throws Exception {
 			ByteStreamStateHandle byteStreamStateHandle = new ByteStreamStateHandle(
-					String.valueOf(UUID.randomUUID()),
-					InstantiationUtil.serializeObject(checkpointMetaData.getCheckpointId()));
+				String.valueOf(UUID.randomUUID()),
+				InstantiationUtil.serializeObject(checkpointMetaData.getCheckpointId()));
 
 			Map<String, OperatorStateHandle.StateMetaInfo> stateNameToPartitionOffsets = new HashMap<>(1);
 			stateNameToPartitionOffsets.put(
@@ -551,12 +551,13 @@ public class JobManagerHARecoveryTest extends TestLogger {
 					StateObjectCollection.singleton(operatorStateHandle),
 					StateObjectCollection.empty(),
 					StateObjectCollection.empty(),
+					StateObjectCollection.empty(),
 					StateObjectCollection.empty()));
 
 			getEnvironment().acknowledgeCheckpoint(
-					checkpointMetaData.getCheckpointId(),
-					new CheckpointMetrics(0L, 0L, 0L, 0L),
-					checkpointStateHandles);
+				checkpointMetaData.getCheckpointId(),
+				new CheckpointMetrics(0L, 0L, 0L, 0L),
+				checkpointStateHandles);
 			return true;
 		}
 

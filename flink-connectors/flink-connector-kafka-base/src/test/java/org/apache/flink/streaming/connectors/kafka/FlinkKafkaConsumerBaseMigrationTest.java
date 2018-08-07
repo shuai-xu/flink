@@ -74,6 +74,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
  * Flink release-* branch.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class FlinkKafkaConsumerBaseMigrationTest {
 
 	/**

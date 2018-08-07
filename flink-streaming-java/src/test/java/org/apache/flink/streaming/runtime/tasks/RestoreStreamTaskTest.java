@@ -167,6 +167,7 @@ public class RestoreStreamTaskTest extends TestLogger {
 			Collections.emptyMap(),
 			Collections.emptyMap(),
 			Collections.emptyMap(),
+			Collections.emptyMap(),
 			Collections.emptyMap());
 
 		stateHandles.putSubtaskStateByOperatorID(headOperatorID, emptyHeadOperatorState);
@@ -260,8 +261,8 @@ public class RestoreStreamTaskTest extends TestLogger {
 	}
 
 	private void triggerCheckpoint(
-			OneInputStreamTaskTestHarness<String, String> testHarness,
-			OneInputStreamTask<String, String> streamTask) throws Exception {
+		OneInputStreamTaskTestHarness<String, String> testHarness,
+		OneInputStreamTask<String, String> streamTask) throws Exception {
 
 		long checkpointId = 1L;
 		CheckpointMetaData checkpointMetaData = new CheckpointMetaData(checkpointId, 1L);

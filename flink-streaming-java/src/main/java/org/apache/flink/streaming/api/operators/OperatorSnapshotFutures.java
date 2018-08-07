@@ -18,10 +18,13 @@
 
 package org.apache.flink.streaming.api.operators;
 
+import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
+import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.util.ExceptionUtils;
 
@@ -46,23 +49,29 @@ public class OperatorSnapshotFutures {
 	@Nonnull
 	private RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture;
 
+	@Nonnull
+	private RunnableFuture<StatePartitionSnapshot> internalStateManagedFuture;
+
 	public OperatorSnapshotFutures() {
 		this(
 			DoneFuture.of(SnapshotResult.empty()),
 			DoneFuture.of(SnapshotResult.empty()),
 			DoneFuture.of(SnapshotResult.empty()),
-			DoneFuture.of(SnapshotResult.empty()));
+			DoneFuture.of(SnapshotResult.empty()),
+			DoneFuture.of(new DefaultStatePartitionSnapshot(GroupRange.of(0, 1))));
 	}
 
 	public OperatorSnapshotFutures(
 		@Nonnull RunnableFuture<SnapshotResult<KeyedStateHandle>> keyedStateManagedFuture,
 		@Nonnull RunnableFuture<SnapshotResult<KeyedStateHandle>> keyedStateRawFuture,
 		@Nonnull RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateManagedFuture,
-		@Nonnull RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture) {
+		@Nonnull RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture,
+		@Nonnull RunnableFuture<StatePartitionSnapshot> internalStateManagedFuture) {
 		this.keyedStateManagedFuture = keyedStateManagedFuture;
 		this.keyedStateRawFuture = keyedStateRawFuture;
 		this.operatorStateManagedFuture = operatorStateManagedFuture;
 		this.operatorStateRawFuture = operatorStateRawFuture;
+		this.internalStateManagedFuture = internalStateManagedFuture;
 	}
 
 	@Nonnull
@@ -105,6 +114,15 @@ public class OperatorSnapshotFutures {
 		this.operatorStateRawFuture = operatorStateRawFuture;
 	}
 
+	@Nonnull
+	public RunnableFuture<StatePartitionSnapshot> getInternalStateManagedFuture() {
+		return internalStateManagedFuture;
+	}
+
+	public void setInternalStateManagedFuture(@Nonnull RunnableFuture<StatePartitionSnapshot> internalStateManagedFuture) {
+		this.internalStateManagedFuture = internalStateManagedFuture;
+	}
+
 	public void cancel() throws Exception {
 		Exception exception = null;
 
@@ -119,6 +137,14 @@ public class OperatorSnapshotFutures {
 		} catch (Exception e) {
 			exception = ExceptionUtils.firstOrSuppressed(
 				new Exception("Could not properly cancel managed operator state future.", e),
+				exception);
+		}
+
+		try {
+			StateUtil.discardStateFuture(getInternalStateManagedFuture());
+		} catch (Exception e) {
+			exception = ExceptionUtils.firstOrSuppressed(
+				new Exception("Could not properly cancel managed internal state future.", e),
 				exception);
 		}
 

@@ -155,6 +155,11 @@ public final class DefaultStatePartitionSnapshot implements StatePartitionSnapsh
 	}
 
 	@Override
+	public boolean hasStates() {
+		return snapshotHandle != null;
+	}
+
+	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
 			return true;

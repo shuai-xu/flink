@@ -21,12 +21,15 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.StateHandleDummyUtil;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
+import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
+import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateObject;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Assert;
@@ -68,29 +71,35 @@ public class OperatorSnapshotFinalizerTest extends TestLogger {
 			StateHandleDummyUtil.deepDummyCopy(operatorTemplate),
 			StateHandleDummyUtil.deepDummyCopy(operatorTemplate));
 
+		StatePartitionSnapshot snapInternalMan = new DefaultStatePartitionSnapshot(GroupRange.of(0, 1));
+
 		DoneFuture<SnapshotResult<KeyedStateHandle>> managedKeyed = new PseudoNotDoneFuture<>(snapKeyMan);
 		DoneFuture<SnapshotResult<KeyedStateHandle>> rawKeyed = new PseudoNotDoneFuture<>(snapKeyRaw);
 		DoneFuture<SnapshotResult<OperatorStateHandle>> managedOp = new PseudoNotDoneFuture<>(snapOpMan);
 		DoneFuture<SnapshotResult<OperatorStateHandle>> rawOp = new PseudoNotDoneFuture<>(snapOpRaw);
+		DoneFuture<StatePartitionSnapshot> managedInternal = new PseudoNotDoneFuture<>(snapInternalMan);
 
 		Assert.assertFalse(managedKeyed.isDone());
 		Assert.assertFalse(rawKeyed.isDone());
 		Assert.assertFalse(managedOp.isDone());
 		Assert.assertFalse(rawOp.isDone());
+		Assert.assertFalse(managedInternal.isDone());
 
-		OperatorSnapshotFutures futures = new OperatorSnapshotFutures(managedKeyed, rawKeyed, managedOp, rawOp);
+		OperatorSnapshotFutures futures = new OperatorSnapshotFutures(managedKeyed, rawKeyed, managedOp, rawOp, managedInternal);
 		OperatorSnapshotFinalizer operatorSnapshotFinalizer = new OperatorSnapshotFinalizer(futures);
 
 		Assert.assertTrue(managedKeyed.isDone());
 		Assert.assertTrue(rawKeyed.isDone());
 		Assert.assertTrue(managedOp.isDone());
 		Assert.assertTrue(rawOp.isDone());
+		Assert.assertTrue(managedInternal.isDone());
 
 		OperatorSubtaskState jobManagerOwnedState = operatorSnapshotFinalizer.getJobManagerOwnedState();
 		Assert.assertTrue(checkResult(snapKeyMan.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getManagedKeyedState()));
 		Assert.assertTrue(checkResult(snapKeyRaw.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getRawKeyedState()));
 		Assert.assertTrue(checkResult(snapOpMan.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getManagedOperatorState()));
 		Assert.assertTrue(checkResult(snapOpRaw.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getRawOperatorState()));
+		Assert.assertTrue(checkResult(snapInternalMan, jobManagerOwnedState.getManagedInternalState()));
 
 		OperatorSubtaskState taskLocalState = operatorSnapshotFinalizer.getTaskLocalState();
 		Assert.assertTrue(checkResult(snapKeyMan.getTaskLocalSnapshot(), taskLocalState.getManagedKeyedState()));

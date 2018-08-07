@@ -18,11 +18,15 @@
 
 package org.apache.flink.runtime.checkpoint.savepoint;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.checkpoint.MasterState;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.IncrementalKeyedStateHandle;
 import org.apache.flink.runtime.state.KeyGroupRange;
@@ -31,6 +35,7 @@ import org.apache.flink.runtime.state.KeyGroupsStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.StateHandleID;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
@@ -52,15 +57,15 @@ import java.util.UUID;
 
 /**
  * (De)serializer for checkpoint metadata format version 2.
- * 
+ *
  * <p>This format version adds
- * 
+ *
  * <p>Basic checkpoint metadata layout:
  * <pre>
  *  +--------------+---------------+-----------------+
  *  | checkpointID | master states | operator states |
  *  +--------------+---------------+-----------------+
- *  
+ *
  *  Master state:
  *  +--------------+---------------------+---------+------+---------------+
  *  | magic number | num remaining bytes | version | name | payload bytes |
@@ -78,6 +83,8 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 	private static final byte KEY_GROUPS_HANDLE = 3;
 	private static final byte PARTITIONABLE_OPERATOR_STATE_HANDLE = 4;
 	private static final byte INCREMENTAL_KEY_GROUPS_HANDLE = 5;
+	private static final byte DEFAULT_STATE_PARTITION_SNAPSHOT = 6;
+	private static final byte INCREMENTAL_STATE_PARTITION_SNAPSHOT = 7;
 
 	/** The singleton instance of the serializer */
 	public static final SavepointV2Serializer INSTANCE = new SavepointV2Serializer();
@@ -282,6 +289,9 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 
 		KeyedStateHandle keyedStateStream = extractSingleton(subtaskState.getRawKeyedState());
 		serializeKeyedStateHandle(keyedStateStream, dos);
+
+		StatePartitionSnapshot snapshot = extractSingleton(subtaskState.getManagedInternalState());
+		serializeInternalStateBackend(snapshot, dos);
 	}
 
 	private static OperatorSubtaskState deserializeSubtaskState(DataInputStream dis) throws IOException {
@@ -313,15 +323,18 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 
 		KeyedStateHandle keyedStateStream = deserializeKeyedStateHandle(dis);
 
+		StatePartitionSnapshot managedInternalStateStream = deserializeInternalStateBackend(dis);
+
 		return new OperatorSubtaskState(
-				operatorStateBackend,
-				operatorStateStream,
-				keyedStateBackend,
-				keyedStateStream);
+			operatorStateBackend,
+			operatorStateStream,
+			keyedStateBackend,
+			keyedStateStream,
+			managedInternalStateStream);
 	}
 
 	private static void serializeKeyedStateHandle(
-			KeyedStateHandle stateHandle, DataOutputStream dos) throws IOException {
+		KeyedStateHandle stateHandle, DataOutputStream dos) throws IOException {
 
 		if (stateHandle == null) {
 			dos.writeByte(NULL_HANDLE);
@@ -350,6 +363,34 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 
 			serializeStreamStateHandleMap(incrementalKeyedStateHandle.getSharedState(), dos);
 			serializeStreamStateHandleMap(incrementalKeyedStateHandle.getPrivateState(), dos);
+		} else {
+			throw new IllegalStateException("Unknown KeyedStateHandle type: " + stateHandle.getClass());
+		}
+	}
+
+	private static void serializeInternalStateBackend(
+		StatePartitionSnapshot stateHandle, DataOutputStream dos) throws IOException {
+
+		if (stateHandle == null) {
+			dos.writeByte(NULL_HANDLE);
+		} else if (stateHandle instanceof DefaultStatePartitionSnapshot) {
+			DefaultStatePartitionSnapshot statePartitionSnapshot = (DefaultStatePartitionSnapshot) stateHandle;
+
+			dos.writeByte(DEFAULT_STATE_PARTITION_SNAPSHOT);
+			dos.writeInt(((GroupRange)statePartitionSnapshot.getGroups()).getStartGroup());
+			dos.writeInt(((GroupRange)statePartitionSnapshot.getGroups()).getEndGroup());
+			Map<Integer, Tuple2<Long, Integer>> metaInfos = statePartitionSnapshot.getMetaInfos();
+			dos.writeInt(metaInfos.size());
+
+			for (Map.Entry<Integer, Tuple2<Long, Integer>> entry : metaInfos.entrySet()) {
+				dos.writeInt(entry.getKey());
+				dos.writeLong(entry.getValue().f0);
+				dos.writeInt(entry.getValue().f1);
+			}
+
+			serializeStreamStateHandle(statePartitionSnapshot.getSnapshotHandle(), dos);
+		} else if (stateHandle instanceof IncrementalStatePartitionSnapshot) {
+			throw new IllegalStateException("");
 		} else {
 			throw new IllegalStateException("Unknown KeyedStateHandle type: " + stateHandle.getClass());
 		}
@@ -433,13 +474,49 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 		}
 	}
 
+	private static StatePartitionSnapshot deserializeInternalStateBackend(DataInputStream dis) throws IOException {
+		final int type = dis.readByte();
+		if (NULL_HANDLE == type) {
+
+			return null;
+		} else if (DEFAULT_STATE_PARTITION_SNAPSHOT == type) {
+
+			int startKeyGroup = dis.readInt();
+			int endKeyGroups = dis.readInt();
+			GroupRange groupRange =
+				GroupRange.of(startKeyGroup, endKeyGroups);
+
+			int metaInfoSize = dis.readInt();
+
+			Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>(metaInfoSize);
+			for (int i = 0; i < metaInfoSize; ++i) {
+				Integer group = dis.readInt();
+				Long offset = dis.readLong();
+				Integer numEntries = dis.readInt();
+				metaInfos.put(group, new Tuple2<>(offset, numEntries));
+			}
+
+			StreamStateHandle stateHandle = deserializeStreamStateHandle(dis);
+
+			if (stateHandle == null) {
+				return new DefaultStatePartitionSnapshot(groupRange);
+			} else {
+				return new DefaultStatePartitionSnapshot(groupRange, metaInfos, stateHandle);
+			}
+		} else if (INCREMENTAL_STATE_PARTITION_SNAPSHOT == type) {
+			throw new IllegalStateException();
+		} else {
+			throw new IllegalStateException("Reading invalid KeyedStateHandle, type: " + type);
+		}
+	}
+
 	private static void serializeOperatorStateHandle(
 		OperatorStateHandle stateHandle, DataOutputStream dos) throws IOException {
 
 		if (stateHandle != null) {
 			dos.writeByte(PARTITIONABLE_OPERATOR_STATE_HANDLE);
 			Map<String, OperatorStateHandle.StateMetaInfo> partitionOffsetsMap =
-					stateHandle.getStateNameToPartitionOffsets();
+				stateHandle.getStateNameToPartitionOffsets();
 			dos.writeInt(partitionOffsetsMap.size());
 			for (Map.Entry<String, OperatorStateHandle.StateMetaInfo> entry : partitionOffsetsMap.entrySet()) {
 				dos.writeUTF(entry.getKey());
@@ -462,7 +539,7 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 	}
 
 	private static OperatorStateHandle deserializeOperatorStateHandle(
-			DataInputStream dis) throws IOException {
+		DataInputStream dis) throws IOException {
 
 		final int type = dis.readByte();
 		if (NULL_HANDLE == type) {
@@ -482,7 +559,7 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 				}
 
 				OperatorStateHandle.StateMetaInfo metaInfo =
-						new OperatorStateHandle.StateMetaInfo(offsets, mode);
+					new OperatorStateHandle.StateMetaInfo(offsets, mode);
 				offsetsMap.put(key, metaInfo);
 			}
 			StreamStateHandle stateHandle = deserializeStreamStateHandle(dis);
@@ -493,7 +570,7 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 	}
 
 	private static void serializeStreamStateHandle(
-			StreamStateHandle stateHandle, DataOutputStream dos) throws IOException {
+		StreamStateHandle stateHandle, DataOutputStream dos) throws IOException {
 
 		if (stateHandle == null) {
 			dos.writeByte(NULL_HANDLE);

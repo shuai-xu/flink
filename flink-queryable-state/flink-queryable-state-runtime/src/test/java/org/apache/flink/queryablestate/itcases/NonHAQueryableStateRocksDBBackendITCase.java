@@ -31,12 +31,14 @@ import org.apache.flink.test.util.MiniClusterResource;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
 /**
  * Several integration tests for queryable state using the {@link RocksDBStateBackend}.
  */
+@Ignore
 public class NonHAQueryableStateRocksDBBackendITCase extends AbstractQueryableStateTestBase {
 
 	// NUM_TMS * NUM_SLOTS_PER_TM must match the parallelism of the pipelines so that

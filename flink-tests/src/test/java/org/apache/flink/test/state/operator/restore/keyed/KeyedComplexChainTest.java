@@ -24,9 +24,12 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.util.migration.MigrationVersion;
 import org.apache.flink.test.state.operator.restore.ExecutionMode;
 
+import org.junit.Ignore;
+
 /**
  * Test state restoration for a keyed operator restore tests.
  */
+@Ignore
 public class KeyedComplexChainTest extends AbstractKeyedOperatorRestoreTestBase {
 
 	public KeyedComplexChainTest(MigrationVersion migrationVersion) {

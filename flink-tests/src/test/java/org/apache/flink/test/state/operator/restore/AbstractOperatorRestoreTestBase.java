@@ -40,6 +40,7 @@ import org.apache.flink.util.TestLogger;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -62,6 +63,7 @@ import static org.junit.Assert.assertNotNull;
  * Step 1: Migrate the job to the newer version by submitting the same job used for the old version savepoint, and create a new savepoint.
  * Step 2: Modify the job topology, and restore from the savepoint created in step 1.
  */
+@Ignore
 public abstract class AbstractOperatorRestoreTestBase extends TestLogger {
 
 	private static final int NUM_TMS = 1;

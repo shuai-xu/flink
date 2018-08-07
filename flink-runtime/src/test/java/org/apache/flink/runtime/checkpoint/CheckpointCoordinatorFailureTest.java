@@ -29,6 +29,7 @@ import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.util.TestLogger;
 
@@ -96,12 +97,14 @@ public class CheckpointCoordinatorFailureTest extends TestLogger {
 		KeyedStateHandle rawKeyedHandle = mock(KeyedStateHandle.class);
 		OperatorStateHandle managedOpHandle = mock(OperatorStreamStateHandle.class);
 		OperatorStateHandle rawOpHandle = mock(OperatorStreamStateHandle.class);
+		StatePartitionSnapshot managedInternalState = mock(StatePartitionSnapshot.class);
 
 		final OperatorSubtaskState operatorSubtaskState = spy(new OperatorSubtaskState(
 			managedOpHandle,
 			rawOpHandle,
 			managedKeyedHandle,
-			rawKeyedHandle));
+			rawKeyedHandle,
+			managedInternalState));
 
 		TaskStateSnapshot subtaskState = spy(new TaskStateSnapshot());
 		subtaskState.putSubtaskStateByOperatorID(new OperatorID(), operatorSubtaskState);

@@ -27,8 +27,11 @@ import org.apache.flink.runtime.checkpoint.PrioritizedOperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
@@ -37,9 +40,11 @@ import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.TaskStateManager;
+import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.util.OperatorSubtaskDescriptionText;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.util.CloseableIterable;
@@ -121,6 +126,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 			taskStateManager.prioritizedOperatorState(operatorID);
 
 		AbstractKeyedStateBackend<?> keyedStatedBackend = null;
+		AbstractInternalStateBackend internalStateBackend = null;
 		OperatorStateBackend operatorStateBackend = null;
 		CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs = null;
 		CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs = null;
@@ -134,6 +140,12 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 				operatorIdentifierText,
 				prioritizedOperatorSubtaskStates,
 				streamTaskCloseableRegistry);
+
+			// -------------- Internal State Backend --------------
+			internalStateBackend = internalStateBackend(
+				keySerializer,
+				prioritizedOperatorSubtaskStates
+			);
 
 			// -------------- Operator State Backend --------------
 			operatorStateBackend = operatorStateBackend(
@@ -159,6 +171,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 				prioritizedOperatorSubtaskStates.isRestored(),
 				operatorStateBackend,
 				keyedStatedBackend,
+				internalStateBackend,
 				timeServiceManager,
 				rawOperatorStateInputs,
 				rawKeyedStateInputs);
@@ -173,6 +186,10 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 				keyedStatedBackend.dispose();
 			}
 
+			if (internalStateBackend != null) {
+				// need anything else???
+				internalStateBackend.close();
+			}
 			if (operatorStateBackend != null) {
 				if (streamTaskCloseableRegistry.unregisterCloseable(operatorStateBackend)) {
 					IOUtils.closeQuietly(operatorStateBackend);
@@ -239,6 +256,28 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
 		return backendRestorer.createAndRestore(
 			prioritizedOperatorSubtaskStates.getPrioritizedManagedOperatorState());
+	}
+
+	protected <K> AbstractInternalStateBackend internalStateBackend(
+		TypeSerializer<K> keySerializer,
+		PrioritizedOperatorSubtaskState prioritizedOperatorSubtaskStates
+	) throws Exception {
+//		if (keySerializer == null) {
+//			return null;
+//		}
+		List<StateObjectCollection<StatePartitionSnapshot>> managedInternalStateList = prioritizedOperatorSubtaskStates.getPrioritizedManagedInternalState();
+		StateObjectCollection managedInternalState = managedInternalStateList.get(0);
+		// init heap internalstatebackend
+		MemoryStateBackend memoryStateBackend = new MemoryStateBackend();
+		AbstractInternalStateBackend internalStateBackend =
+			memoryStateBackend.createInternalStateBackend(
+				environment,
+				environment.getTaskInfo().getTaskName(),
+				environment.getTaskInfo().getMaxNumberOfParallelSubtasks(),
+				getGroups());
+
+		internalStateBackend.restore(managedInternalState);
+		return internalStateBackend;
 	}
 
 	protected <K> AbstractKeyedStateBackend<K> keyedStatedBackend(
@@ -342,6 +381,16 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 		}
 
 		return CloseableIterable.empty();
+	}
+
+	private GroupSet getGroups() {
+		int maxParallelism = environment.getTaskInfo().getMaxNumberOfParallelSubtasks();
+		int parallelism = environment.getTaskInfo().getNumberOfParallelSubtasks();
+		int subtaskIndex = environment.getTaskInfo().getIndexOfThisSubtask();
+
+		KeyGroupRange range = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
+
+		return GroupRange.of(range.getStartKeyGroup(), range.getEndKeyGroup() + 1);
 	}
 
 	// =================================================================================================================
@@ -545,6 +594,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 		private final OperatorStateBackend operatorStateBackend;
 		private final AbstractKeyedStateBackend<?> keyedStateBackend;
 		private final InternalTimeServiceManager<?, ?> internalTimeServiceManager;
+		private final AbstractInternalStateBackend internalStateBackend;
 
 		private final CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs;
 		private final CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs;
@@ -553,6 +603,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 			boolean restored,
 			OperatorStateBackend operatorStateBackend,
 			AbstractKeyedStateBackend<?> keyedStateBackend,
+			AbstractInternalStateBackend internalStateBackend,
 			InternalTimeServiceManager<?, ?> internalTimeServiceManager,
 			CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs,
 			CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs) {
@@ -560,6 +611,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 			this.restored = restored;
 			this.operatorStateBackend = operatorStateBackend;
 			this.keyedStateBackend = keyedStateBackend;
+			this.internalStateBackend = internalStateBackend;
 			this.internalTimeServiceManager = internalTimeServiceManager;
 			this.rawOperatorStateInputs = rawOperatorStateInputs;
 			this.rawKeyedStateInputs = rawKeyedStateInputs;
@@ -573,6 +625,11 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 		@Override
 		public AbstractKeyedStateBackend<?> keyedStateBackend() {
 			return keyedStateBackend;
+		}
+
+		@Override
+		public AbstractInternalStateBackend internalStateBackend() {
+			return internalStateBackend;
 		}
 
 		@Override

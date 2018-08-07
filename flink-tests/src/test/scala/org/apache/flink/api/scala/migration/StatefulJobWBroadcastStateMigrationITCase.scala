@@ -75,6 +75,7 @@ object StatefulJobWBroadcastStateMigrationITCase {
   * ITCase for migration Scala state types across different Flink versions.
   */
 @RunWith(classOf[Parameterized])
+@Ignore
 class StatefulJobWBroadcastStateMigrationITCase(
                                         migrationVersionAndBackend: (MigrationVersion, String))
   extends SavepointMigrationTestBase with Serializable {

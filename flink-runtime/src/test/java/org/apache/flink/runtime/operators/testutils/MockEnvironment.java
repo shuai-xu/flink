@@ -113,7 +113,7 @@ public class MockEnvironment implements Environment, AutoCloseable {
 		return new MockEnvironmentBuilder();
 	}
 
-	protected MockEnvironment(
+	public MockEnvironment(
 		JobID jobID,
 		JobVertexID jobVertexID,
 		String taskName,

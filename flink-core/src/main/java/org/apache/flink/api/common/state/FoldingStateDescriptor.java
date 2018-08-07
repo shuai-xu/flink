@@ -115,4 +115,13 @@ public class FoldingStateDescriptor<T, ACC> extends StateDescriptor<FoldingState
 	public Type getType() {
 		return Type.FOLDING;
 	}
+
+	/**
+	 * Returns the initial value used in the folding.
+	 *
+	 * @return The initial value used in the folding
+	 */
+	public ACC getInitialValue() {
+		return getDefaultValue();
+	}
 }

@@ -24,6 +24,7 @@ import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateObject;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StateUtil;
 
 import org.slf4j.Logger;
@@ -61,6 +62,8 @@ public class SubtaskState implements CompositeStateHandle {
 	 */
 	private final KeyedStateHandle rawKeyedState;
 
+	private final StatePartitionSnapshot managedInternalState;
+
 	/**
 	 * The state size. This is also part of the deserialized state handle.
 	 * We store it here in order to not deserialize the state handle when
@@ -72,18 +75,21 @@ public class SubtaskState implements CompositeStateHandle {
 			ChainedStateHandle<OperatorStateHandle> managedOperatorState,
 			ChainedStateHandle<OperatorStateHandle> rawOperatorState,
 			KeyedStateHandle managedKeyedState,
-			KeyedStateHandle rawKeyedState) {
+			KeyedStateHandle rawKeyedState,
+			StatePartitionSnapshot managedInternalState) {
 
 		this.managedOperatorState = managedOperatorState;
 		this.rawOperatorState = rawOperatorState;
 		this.managedKeyedState = managedKeyedState;
 		this.rawKeyedState = rawKeyedState;
+		this.managedInternalState = managedInternalState;
 
 		try {
 			long calculateStateSize = getSizeNullSafe(managedOperatorState);
 			calculateStateSize += getSizeNullSafe(rawOperatorState);
 			calculateStateSize += getSizeNullSafe(managedKeyedState);
 			calculateStateSize += getSizeNullSafe(rawKeyedState);
+			calculateStateSize += getSizeNullSafe(managedInternalState);
 			stateSize = calculateStateSize;
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to get state size.", e);
@@ -110,6 +116,10 @@ public class SubtaskState implements CompositeStateHandle {
 
 	public KeyedStateHandle getRawKeyedState() {
 		return rawKeyedState;
+	}
+
+	public StatePartitionSnapshot getManagedInternalState() {
+		return managedInternalState;
 	}
 
 	@Override

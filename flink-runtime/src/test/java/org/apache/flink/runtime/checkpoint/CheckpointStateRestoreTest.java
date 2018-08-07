@@ -86,9 +86,9 @@ public class CheckpointStateRestoreTest {
 			ExecutionVertex stateless2 = mockExecutionVertex(statelessExec2, statelessId, 1, 2);
 
 			ExecutionJobVertex stateful = mockExecutionJobVertex(statefulId,
-					new ExecutionVertex[] { stateful1, stateful2, stateful3 });
+				new ExecutionVertex[] { stateful1, stateful2, stateful3 });
 			ExecutionJobVertex stateless = mockExecutionJobVertex(statelessId,
-					new ExecutionVertex[] { stateless1, stateless2 });
+				new ExecutionVertex[] { stateless1, stateless2 });
 
 			Map<JobVertexID, ExecutionJobVertex> map = new HashMap<JobVertexID, ExecutionJobVertex>();
 			map.put(statefulId, stateful);
@@ -125,6 +125,7 @@ public class CheckpointStateRestoreTest {
 					StateObjectCollection.empty(),
 					StateObjectCollection.empty(),
 					StateObjectCollection.singleton(serializedKeyGroupStates),
+					StateObjectCollection.empty(),
 					StateObjectCollection.empty()));
 
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(jid, statefulExec1.getAttemptId(), checkpointId, new CheckpointMetrics(), subtaskStates));

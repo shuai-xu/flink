@@ -151,7 +151,7 @@ public class GroupRange implements GroupSet {
 		return "GroupRange{" +
 			"startGroup=" + startGroup +
 			", endGroup=" + endGroup +
-		"}";
+			"}";
 	}
 
 	//--------------------------------------------------------------------------
@@ -184,4 +184,3 @@ public class GroupRange implements GroupSet {
 		}
 	}
 }
-

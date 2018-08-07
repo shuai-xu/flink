@@ -67,7 +67,7 @@ public class CheckpointMessagesTest {
 	public void testConfirmTaskCheckpointed() {
 		try {
 			AcknowledgeCheckpoint noState = new AcknowledgeCheckpoint(
-					new JobID(), new ExecutionAttemptID(), 569345L);
+				new JobID(), new ExecutionAttemptID(), 569345L);
 
 			KeyGroupRange keyGroupRange = KeyGroupRange.of(42,42);
 
@@ -78,16 +78,17 @@ public class CheckpointMessagesTest {
 					CheckpointCoordinatorTest.generatePartitionableStateHandle(new JobVertexID(), 0, 2, 8, false),
 					null,
 					CheckpointCoordinatorTest.generateKeyGroupState(keyGroupRange, Collections.singletonList(new MyHandle())),
+					null,
 					null
 				)
 			);
 
 			AcknowledgeCheckpoint withState = new AcknowledgeCheckpoint(
-					new JobID(),
-					new ExecutionAttemptID(),
-					87658976143L,
-					new CheckpointMetrics(),
-					checkpointStateHandles);
+				new JobID(),
+				new ExecutionAttemptID(),
+				87658976143L,
+				new CheckpointMetrics(),
+				checkpointStateHandles);
 
 			testSerializabilityEqualsHashCode(noState);
 			testSerializabilityEqualsHashCode(withState);

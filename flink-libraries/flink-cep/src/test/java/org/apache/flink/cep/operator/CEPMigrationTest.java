@@ -59,6 +59,7 @@ import static org.junit.Assert.assertTrue;
  * {@code write*()} method on the corresponding Flink release-* branch.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class CEPMigrationTest {
 
 	/**

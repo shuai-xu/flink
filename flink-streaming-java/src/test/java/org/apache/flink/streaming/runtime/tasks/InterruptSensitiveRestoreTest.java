@@ -176,15 +176,15 @@ public class InterruptSensitiveRestoreTest {
 	// ------------------------------------------------------------------------
 
 	private static Task createTask(
-			StreamConfig streamConfig,
-			Configuration taskConfig,
-			StreamStateHandle state,
-			int mode) throws IOException {
+		StreamConfig streamConfig,
+		Configuration taskConfig,
+		StreamStateHandle state,
+		int mode) throws IOException {
 
 		TaskEventDispatcher taskEventDispatcher = new TaskEventDispatcher();
 		NetworkEnvironment networkEnvironment = mock(NetworkEnvironment.class);
 		when(networkEnvironment.createKvStateTaskRegistry(any(JobID.class), any(JobVertexID.class)))
-				.thenReturn(mock(TaskKvStateRegistry.class));
+			.thenReturn(mock(TaskKvStateRegistry.class));
 		when(networkEnvironment.getTaskEventDispatcher()).thenReturn(taskEventDispatcher);
 
 		Collection<KeyedStateHandle> keyedStateFromBackend = Collections.emptyList();
@@ -194,16 +194,16 @@ public class InterruptSensitiveRestoreTest {
 
 		Map<String, OperatorStateHandle.StateMetaInfo> operatorStateMetadata = new HashMap<>(1);
 		OperatorStateHandle.StateMetaInfo metaInfo =
-				new OperatorStateHandle.StateMetaInfo(new long[]{0}, OperatorStateHandle.Mode.SPLIT_DISTRIBUTE);
+			new OperatorStateHandle.StateMetaInfo(new long[]{0}, OperatorStateHandle.Mode.SPLIT_DISTRIBUTE);
 		operatorStateMetadata.put(DefaultOperatorStateBackend.DEFAULT_OPERATOR_STATE_NAME, metaInfo);
 
 		KeyGroupRangeOffsets keyGroupRangeOffsets = new KeyGroupRangeOffsets(new KeyGroupRange(0, 0));
 
 		Collection<OperatorStateHandle> operatorStateHandles =
-				Collections.singletonList(new OperatorStreamStateHandle(operatorStateMetadata, state));
+			Collections.singletonList(new OperatorStreamStateHandle(operatorStateMetadata, state));
 
 		List<KeyedStateHandle> keyedStateHandles =
-				Collections.singletonList(new KeyGroupsStateHandle(keyGroupRangeOffsets, state));
+			Collections.singletonList(new KeyGroupsStateHandle(keyGroupRangeOffsets, state));
 
 		switch (mode) {
 			case OPERATOR_MANAGED:
@@ -226,7 +226,8 @@ public class InterruptSensitiveRestoreTest {
 			new StateObjectCollection<>(operatorStateBackend),
 			new StateObjectCollection<>(operatorStateStream),
 			new StateObjectCollection<>(keyedStateFromBackend),
-			new StateObjectCollection<>(keyedStateFromStream));
+			new StateObjectCollection<>(keyedStateFromStream),
+			new StateObjectCollection<>());
 
 		JobVertexID jobVertexID = new JobVertexID();
 		OperatorID operatorID = OperatorID.fromJobVertexID(jobVertexID);

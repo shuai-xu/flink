@@ -83,6 +83,7 @@ import static org.junit.Assert.fail;
  * the corresponding Flink release-* branch.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class WindowOperatorMigrationTest {
 
 	@Parameterized.Parameters(name = "Migration Savepoint: {0}")
@@ -113,21 +114,21 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple3<String, Long, Long>, TimeWindow> operator = new WindowOperator<>(
-				EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<String>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new SessionWindowFunction()),
-				PurgingTrigger.of(CountTrigger.of(4)),
-				0,
-				null /* late data output tag */);
+			EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<String>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new SessionWindowFunction()),
+			PurgingTrigger.of(CountTrigger.of(4)),
+			0,
+			null /* late data output tag */);
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple3<String, Long, Long>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.open();
@@ -159,23 +160,23 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple3<String, Long, Long>, TimeWindow> operator = new WindowOperator<>(
-				EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<String>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new SessionWindowFunction()),
-				PurgingTrigger.of(CountTrigger.of(4)),
-				0,
-				null /* late data output tag */);
+			EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<String>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new SessionWindowFunction()),
+			PurgingTrigger.of(CountTrigger.of(4)),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple3<String, Long, Long>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 
@@ -217,21 +218,21 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple3<String, Long, Long>, TimeWindow> operator = new WindowOperator<>(
-				EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<String>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new SessionWindowFunction()),
-				PurgingTrigger.of(CountTrigger.of(4)),
-				0,
-				null /* late data output tag */);
+			EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<String>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new SessionWindowFunction()),
+			PurgingTrigger.of(CountTrigger.of(4)),
+			0,
+			null /* late data output tag */);
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple3<String, Long, Long>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.open();
@@ -257,23 +258,23 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple3<String, Long, Long>, TimeWindow> operator = new WindowOperator<>(
-				EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<String>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new SessionWindowFunction()),
-				PurgingTrigger.of(CountTrigger.of(4)),
-				0,
-				null /* late data output tag */);
+			EventTimeSessionWindows.withGap(Time.seconds(sessionSize)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<String>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new SessionWindowFunction()),
+			PurgingTrigger.of(CountTrigger.of(4)),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple3<String, Long, Long>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 
@@ -326,24 +327,24 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ReducingStateDescriptor<Tuple2<String, Integer>> stateDesc = new ReducingStateDescriptor<>("window-contents",
-				new SumReducer<>(),
-				inputType.createSerializer(new ExecutionConfig()));
+			new SumReducer<>(),
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
-				EventTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
+			EventTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.open();
@@ -384,24 +385,24 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ReducingStateDescriptor<Tuple2<String, Integer>> stateDesc = new ReducingStateDescriptor<>("window-contents",
-				new SumReducer<>(),
-				inputType.createSerializer(new ExecutionConfig()));
+			new SumReducer<>(),
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
-				EventTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
+			EventTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 
@@ -443,23 +444,23 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
-				EventTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
+			EventTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.open();
@@ -500,23 +501,23 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
-				EventTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingEventTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
+			EventTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 
@@ -558,24 +559,24 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ReducingStateDescriptor<Tuple2<String, Integer>> stateDesc = new ReducingStateDescriptor<>("window-contents",
-				new SumReducer<>(),
-				inputType.createSerializer(new ExecutionConfig()));
+			new SumReducer<>(),
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
-				ProcessingTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
+			ProcessingTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.open();
@@ -610,24 +611,24 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ReducingStateDescriptor<Tuple2<String, Integer>> stateDesc = new ReducingStateDescriptor<>("window-contents",
-				new SumReducer<>(),
-				inputType.createSerializer(new ExecutionConfig()));
+			new SumReducer<>(),
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
-				ProcessingTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalSingleValueWindowFunction<>(new PassThroughWindowFunction<String, TimeWindow, Tuple2<String, Integer>>()),
+			ProcessingTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 
@@ -664,23 +665,23 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
-				ProcessingTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
+			ProcessingTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.open();
@@ -714,23 +715,23 @@ public class WindowOperatorMigrationTest {
 		TypeInformation<Tuple2<String, Integer>> inputType = TypeInfoParser.parse("Tuple2<String, Integer>");
 
 		ListStateDescriptor<Tuple2<String, Integer>> stateDesc = new ListStateDescriptor<>("window-contents",
-				inputType.createSerializer(new ExecutionConfig()));
+			inputType.createSerializer(new ExecutionConfig()));
 
 		WindowOperator<String, Tuple2<String, Integer>, Iterable<Tuple2<String, Integer>>, Tuple2<String, Integer>, TimeWindow> operator = new WindowOperator<>(
-				TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
-				new TimeWindow.Serializer(),
-				new TupleKeySelector<>(),
-				BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
-				stateDesc,
-				new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
-				ProcessingTimeTrigger.create(),
-				0,
-				null /* late data output tag */);
+			TumblingProcessingTimeWindows.of(Time.of(windowSize, TimeUnit.SECONDS)),
+			new TimeWindow.Serializer(),
+			new TupleKeySelector<>(),
+			BasicTypeInfo.STRING_TYPE_INFO.createSerializer(new ExecutionConfig()),
+			stateDesc,
+			new InternalIterableWindowFunction<>(new RichSumReducer<TimeWindow>()),
+			ProcessingTimeTrigger.create(),
+			0,
+			null /* late data output tag */);
 
 		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
 
 		OneInputStreamOperatorTestHarness<Tuple2<String, Integer>, Tuple2<String, Integer>> testHarness =
-				new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
+			new KeyedOneInputStreamOperatorTestHarness<>(operator, new TupleKeySelector<>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 

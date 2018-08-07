@@ -63,9 +63,9 @@ public class FlinkKafkaProducer011ITCase extends KafkaTestBase {
 	protected Properties extraProperties;
 
 	protected TypeInformationSerializationSchema<Integer> integerSerializationSchema =
-			new TypeInformationSerializationSchema<>(BasicTypeInfo.INT_TYPE_INFO, new ExecutionConfig());
+		new TypeInformationSerializationSchema<>(BasicTypeInfo.INT_TYPE_INFO, new ExecutionConfig());
 	protected KeyedSerializationSchema<Integer> integerKeyedSerializationSchema =
-			new KeyedSerializationSchemaWrapper<>(integerSerializationSchema);
+		new KeyedSerializationSchemaWrapper<>(integerSerializationSchema);
 
 	@Before
 	public void before() {
@@ -474,11 +474,11 @@ public class FlinkKafkaProducer011ITCase extends KafkaTestBase {
 	}
 
 	private List<OperatorStateHandle> repartitionAndExecute(
-			String topic,
-			List<OperatorStateHandle> inputStates,
-			int parallelism,
-			int maxParallelism,
-			Iterator<Integer> inputData) throws Exception {
+		String topic,
+		List<OperatorStateHandle> inputStates,
+		int parallelism,
+		int maxParallelism,
+		Iterator<Integer> inputData) throws Exception {
 
 		List<OperatorStateHandle> outputStates = new ArrayList<>();
 		List<OneInputStreamOperatorTestHarness<Integer, Object>> testHarnesses = new ArrayList<>();
@@ -492,6 +492,7 @@ public class FlinkKafkaProducer011ITCase extends KafkaTestBase {
 
 			testHarness.initializeState(new OperatorSubtaskState(
 				new StateObjectCollection<>(inputStates),
+				StateObjectCollection.empty(),
 				StateObjectCollection.empty(),
 				StateObjectCollection.empty(),
 				StateObjectCollection.empty()));
@@ -610,11 +611,11 @@ public class FlinkKafkaProducer011ITCase extends KafkaTestBase {
 	}
 
 	private OneInputStreamOperatorTestHarness<Integer, Object> createTestHarness(
-			String topic,
-			int maxParallelism,
-			int parallelism,
-			int subtaskIndex,
-			Semantic semantic) throws Exception {
+		String topic,
+		int maxParallelism,
+		int parallelism,
+		int subtaskIndex,
+		Semantic semantic) throws Exception {
 		Properties properties = createProperties();
 
 		FlinkKafkaProducer011<Integer> kafkaProducer = new FlinkKafkaProducer011<>(

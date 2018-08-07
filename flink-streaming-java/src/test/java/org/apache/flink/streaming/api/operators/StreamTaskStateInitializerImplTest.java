@@ -181,7 +181,8 @@ public class StreamTaskStateInitializerImplTest {
 						OperatorStateHandle.Mode.SPLIT_DISTRIBUTE)),
 				CheckpointTestUtils.createDummyStreamStateHandle(random)),
 			CheckpointTestUtils.createDummyKeyGroupStateHandle(random),
-			CheckpointTestUtils.createDummyKeyGroupStateHandle(random));
+			CheckpointTestUtils.createDummyKeyGroupStateHandle(random),
+			null);
 
 		taskStateSnapshot.putSubtaskStateByOperatorID(operatorID, operatorSubtaskState);
 

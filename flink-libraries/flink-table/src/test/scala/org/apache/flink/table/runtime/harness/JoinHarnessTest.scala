@@ -115,7 +115,7 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.setProcessingTime(3)
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1L: JLong, "1a3"), change = true), 3))
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
 
     // The number of timers won't increase.
     assertEquals(2, testHarness.numProcessingTimeTimers())
@@ -127,7 +127,7 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(2L: JLong, "2b4"), change = true), 4))
 
     // The number of states should be doubled.
-    assertEquals(8, testHarness.numKeyedStateEntries())
+    assertEquals(9, testHarness.numInternalStateEntries())
     assertEquals(4, testHarness.numProcessingTimeTimers())
 
     // Test for -10 boundary (13 - 10 = 3).
@@ -138,7 +138,7 @@ class JoinHarnessTest extends HarnessTestBase {
 
     // Test for +20 boundary (13 + 20 = 33).
     testHarness.setProcessingTime(33)
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1L: JLong, "1a33"), change = true), 33))
@@ -200,13 +200,13 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.setProcessingTime(3)
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1L: JLong, "1a3"), change = true), 3))
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     // All the right rows will not be cached.
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(1L: JLong, "1b3"), change = true), 3))
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     testHarness.setProcessingTime(7)
@@ -215,7 +215,7 @@ class JoinHarnessTest extends HarnessTestBase {
     // This row will only be joined without being cached (7 >= 7 - 5).
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(2L: JLong, "2b7"), change = true), 7))
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     testHarness.setProcessingTime(12)
@@ -226,19 +226,19 @@ class JoinHarnessTest extends HarnessTestBase {
     // We add a delay (relativeWindowSize / 2) for cleaning up state.
     // No timers will be triggered here.
     testHarness.setProcessingTime(13)
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     // Trigger the timer registered by the left row (key = 1) with timestamp = 1
     // (1 + 10 + 2 + 0 + 1 = 14).
     // The left row (key = 1) with timestamp = 3 will removed here.
     testHarness.setProcessingTime(14)
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
     assertEquals(1, testHarness.numProcessingTimeTimers())
 
     // Clean up the left row (key = 2) with timestamp = 2.
     testHarness.setProcessingTime(16)
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
     assertEquals(0, testHarness.numProcessingTimeTimers())
     val result = testHarness.getOutput
 
@@ -291,7 +291,7 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(2L: JLong, "k1"), change = true), 0))
 
     assertEquals(2, testHarness.numEventTimeTimers())
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
 
     testHarness.processElement1(new StreamRecord[CRow](
       CRow(Row.of(5L: JLong, "k1"), change = true), 0))
@@ -302,7 +302,7 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.processWatermark1(new Watermark(20))
     testHarness.processWatermark2(new Watermark(20))
 
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(7, testHarness.numInternalStateEntries())
 
     testHarness.processElement1(new StreamRecord[CRow](
       CRow(Row.of(35L: JLong, "k1"), change = true), 0))
@@ -317,13 +317,13 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.processElement2(new StreamRecord[CRow](
       CRow(Row.of(39L: JLong, "k2"), change = true), 0))
 
-    assertEquals(6, testHarness.numKeyedStateEntries())
+    assertEquals(6, testHarness.numInternalStateEntries())
 
     // The right row with timestamp = 35 will be removed here.
     testHarness.processWatermark1(new Watermark(61))
     testHarness.processWatermark2(new Watermark(61))
 
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
 
     val expectedOutput = new ConcurrentLinkedQueue[Object]()
     expectedOutput.add(new Watermark(-19))
@@ -401,20 +401,20 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.processElement1(new StreamRecord[CRow](
       CRow(Row.of(6L: JLong, "k1"), change = true), 0))
 
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
 
     // Trigger the left timer with timestamp  8.
     // The row with timestamp = 13 will be removed here (13 < 10 + 7).
     testHarness.processWatermark1(new Watermark(10))
     testHarness.processWatermark2(new Watermark(10))
 
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(3, testHarness.numInternalStateEntries())
 
     // Clear the states.
     testHarness.processWatermark1(new Watermark(18))
     testHarness.processWatermark2(new Watermark(18))
 
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
 
     val expectedOutput = new ConcurrentLinkedQueue[Object]()
     expectedOutput.add(new Watermark(-9))
@@ -462,21 +462,21 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(1L: JLong, "k2"), change = true), 0))
 
     assertEquals(2, testHarness.numEventTimeTimers())
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
 
     // The left row with timestamp = 1 will be padded and removed (14=1+5+1+((5+9)/2)).
     testHarness.processWatermark1(new Watermark(14))
     testHarness.processWatermark2(new Watermark(14))
 
     assertEquals(1, testHarness.numEventTimeTimers())
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
 
     // The right row with timestamp = 1 will be removed (18=1+9+1+((5+9)/2)).
     testHarness.processWatermark1(new Watermark(18))
     testHarness.processWatermark2(new Watermark(18))
 
     assertEquals(0, testHarness.numEventTimeTimers())
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
 
     testHarness.processElement1(new StreamRecord[CRow](
       CRow(Row.of(2L: JLong, "k1"), change = true), 0))
@@ -485,7 +485,7 @@ class JoinHarnessTest extends HarnessTestBase {
 
     // The late rows with timestamp = 2 will not be cached, but a null padding result for the left
     // row will be emitted.
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
     assertEquals(0, testHarness.numEventTimeTimers())
 
     // Make sure the common (inner) join can be performed.
@@ -576,21 +576,21 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(1L: JLong, "k2"), change = true), 0))
 
     assertEquals(2, testHarness.numEventTimeTimers())
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
 
     // The left row with timestamp = 1 will be removed (14=1+5+1+((5+9)/2)).
     testHarness.processWatermark1(new Watermark(14))
     testHarness.processWatermark2(new Watermark(14))
 
     assertEquals(1, testHarness.numEventTimeTimers())
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
 
     // The right row with timestamp = 1 will be padded and removed (18=1+9+1+((5+9)/2)).
     testHarness.processWatermark1(new Watermark(18))
     testHarness.processWatermark2(new Watermark(18))
 
     assertEquals(0, testHarness.numEventTimeTimers())
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
 
     testHarness.processElement1(new StreamRecord[CRow](
       CRow(Row.of(2L: JLong, "k1"), change = true), 0))
@@ -599,7 +599,7 @@ class JoinHarnessTest extends HarnessTestBase {
 
     // The late rows with timestamp = 2 will not be cached, but a null padding result for the right
     // row will be emitted.
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
     assertEquals(0, testHarness.numEventTimeTimers())
 
     // Make sure the common (inner) join can be performed.
@@ -689,21 +689,21 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(1L: JLong, "k2"), change = true), 0))
 
     assertEquals(2, testHarness.numEventTimeTimers())
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
 
     // The left row with timestamp = 1 will be padded and removed (14=1+5+1+((5+9)/2)).
     testHarness.processWatermark1(new Watermark(14))
     testHarness.processWatermark2(new Watermark(14))
 
     assertEquals(1, testHarness.numEventTimeTimers())
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
 
     // The right row with timestamp = 1 will be padded and removed (18=1+9+1+((5+9)/2)).
     testHarness.processWatermark1(new Watermark(18))
     testHarness.processWatermark2(new Watermark(18))
 
     assertEquals(0, testHarness.numEventTimeTimers())
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
 
     testHarness.processElement1(new StreamRecord[CRow](
       CRow(Row.of(2L: JLong, "k1"), change = true), 0))
@@ -712,7 +712,7 @@ class JoinHarnessTest extends HarnessTestBase {
 
     // The late rows with timestamp = 2 will not be cached, but a null padding result for the right
     // row will be emitted.
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
     assertEquals(0, testHarness.numEventTimeTimers())
 
     // Make sure the common (inner) join can be performed.
@@ -819,53 +819,53 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1: JInt, "aaa"), change = true)))
     assertEquals(1, testHarness.numProcessingTimeTimers())
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
     testHarness.setProcessingTime(2)
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1: JInt, "aaa"), change = true)))
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(2: JInt, "bbb"), change = true)))
     assertEquals(2, testHarness.numProcessingTimeTimers())
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
     testHarness.setProcessingTime(3)
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1: JInt, "aaa"), change = true)))
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     // right stream input and output normally
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(1: JInt, "Hi1"), change = true)))
-    assertEquals(6, testHarness.numKeyedStateEntries())
+    assertEquals(6, testHarness.numInternalStateEntries())
     assertEquals(3, testHarness.numProcessingTimeTimers())
     testHarness.setProcessingTime(4)
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(2: JInt, "Hello1"), change = true)))
-    assertEquals(8, testHarness.numKeyedStateEntries())
+    assertEquals(8, testHarness.numInternalStateEntries())
     assertEquals(4, testHarness.numProcessingTimeTimers())
 
     // expired left stream record with key value of 1
     testHarness.setProcessingTime(5)
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(1: JInt, "Hi2"), change = true)))
-    assertEquals(6, testHarness.numKeyedStateEntries())
+    assertEquals(7, testHarness.numInternalStateEntries())
     assertEquals(3, testHarness.numProcessingTimeTimers())
 
     // expired all left stream record
     testHarness.setProcessingTime(6)
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     // expired right stream record with key value of 2
     testHarness.setProcessingTime(8)
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
     assertEquals(1, testHarness.numProcessingTimeTimers())
 
     testHarness.setProcessingTime(10)
-    assertTrue(testHarness.numKeyedStateEntries() > 0)
+    assertTrue(testHarness.numInternalStateEntries() > 0)
     // expired all right stream record
     testHarness.setProcessingTime(11)
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
     assertEquals(0, testHarness.numProcessingTimeTimers())
 
     val result = testHarness.getOutput
@@ -922,18 +922,18 @@ class JoinHarnessTest extends HarnessTestBase {
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1: JInt, "aaa"), change = true)))
     assertEquals(1, testHarness.numProcessingTimeTimers())
-    assertEquals(2, testHarness.numKeyedStateEntries())
+    assertEquals(2, testHarness.numInternalStateEntries())
     testHarness.setProcessingTime(2)
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1: JInt, "aaa"), change = true)))
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(2: JInt, "bbb"), change = true)))
     assertEquals(2, testHarness.numProcessingTimeTimers())
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
     testHarness.setProcessingTime(3)
     testHarness.processElement1(new StreamRecord(
       CRow(Row.of(1: JInt, "aaa"), change = false)))
-    assertEquals(4, testHarness.numKeyedStateEntries())
+    assertEquals(4, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     // right stream input and output normally
@@ -941,12 +941,12 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(1: JInt, "Hi1"), change = true)))
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(1: JInt, "Hi1"), change = false)))
-    assertEquals(5, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(3, testHarness.numProcessingTimeTimers())
     testHarness.setProcessingTime(4)
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(2: JInt, "Hello1"), change = true)))
-    assertEquals(7, testHarness.numKeyedStateEntries())
+    assertEquals(7, testHarness.numInternalStateEntries())
     assertEquals(4, testHarness.numProcessingTimeTimers())
 
     testHarness.processElement1(new StreamRecord(
@@ -957,17 +957,17 @@ class JoinHarnessTest extends HarnessTestBase {
       CRow(Row.of(1: JInt, "Hi2"), change = true)))
     testHarness.processElement2(new StreamRecord(
       CRow(Row.of(1: JInt, "Hi2"), change = false)))
-    assertEquals(5, testHarness.numKeyedStateEntries())
+    assertEquals(5, testHarness.numInternalStateEntries())
     assertEquals(3, testHarness.numProcessingTimeTimers())
 
     // expired all left stream record
     testHarness.setProcessingTime(6)
-    assertEquals(3, testHarness.numKeyedStateEntries())
+    assertEquals(3, testHarness.numInternalStateEntries())
     assertEquals(2, testHarness.numProcessingTimeTimers())
 
     // expired right stream record with key value of 2
     testHarness.setProcessingTime(8)
-    assertEquals(0, testHarness.numKeyedStateEntries())
+    assertEquals(0, testHarness.numInternalStateEntries())
     assertEquals(0, testHarness.numProcessingTimeTimers())
 
     val result = testHarness.getOutput

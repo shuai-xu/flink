@@ -64,6 +64,7 @@ import static org.junit.Assert.assertTrue;
  * the corresponding Flink release-* branch.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class BucketingSinkMigrationTest {
 
 	/**

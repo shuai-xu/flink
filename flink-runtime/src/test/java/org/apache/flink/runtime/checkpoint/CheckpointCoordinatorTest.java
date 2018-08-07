@@ -1020,8 +1020,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				Thread.sleep(250);
 			}
 			while (!checkpoint.isDiscarded() &&
-					coord.getNumberOfPendingCheckpoints() > 0 &&
-					System.currentTimeMillis() < deadline);
+				coord.getNumberOfPendingCheckpoints() > 0 &&
+				System.currentTimeMillis() < deadline);
 
 			assertTrue("Checkpoint was not canceled by the timeout", checkpoint.isDiscarded());
 			assertEquals(0, coord.getNumberOfPendingCheckpoints());
@@ -1292,7 +1292,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			int numCallsSoFar = numCalls.get();
 			Thread.sleep(400);
 			assertTrue(numCallsSoFar == numCalls.get() ||
-					numCallsSoFar+1 == numCalls.get());
+				numCallsSoFar+1 == numCalls.get());
 
 			// start another sequence of periodic scheduling
 			numCalls.set(0);
@@ -1314,7 +1314,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			numCallsSoFar = numCalls.get();
 			Thread.sleep(400);
 			assertTrue(numCallsSoFar == numCalls.get() ||
-					numCallsSoFar + 1 == numCalls.get());
+				numCallsSoFar + 1 == numCalls.get());
 
 			coord.shutdown(JobStatus.FINISHED);
 		}
@@ -1347,20 +1347,20 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		final long delay = 50;
 
 		final CheckpointCoordinator coord = new CheckpointCoordinator(
-				jid,
-				2,           // periodic interval is 2 ms
-				200_000,     // timeout is very long (200 s)
-				delay,       // 50 ms delay between checkpoints
-				1,
-				CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION,
-				new ExecutionVertex[] { vertex },
-				new ExecutionVertex[] { vertex },
-				new ExecutionVertex[] { vertex },
-				new StandaloneCheckpointIDCounter(),
-				new StandaloneCompletedCheckpointStore(2),
-				new MemoryStateBackend(),
-				Executors.directExecutor(),
-				SharedStateRegistry.DEFAULT_FACTORY);
+			jid,
+			2,           // periodic interval is 2 ms
+			200_000,     // timeout is very long (200 s)
+			delay,       // 50 ms delay between checkpoints
+			1,
+			CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION,
+			new ExecutionVertex[] { vertex },
+			new ExecutionVertex[] { vertex },
+			new ExecutionVertex[] { vertex },
+			new StandaloneCheckpointIDCounter(),
+			new StandaloneCompletedCheckpointStore(2),
+			new MemoryStateBackend(),
+			Executors.directExecutor(),
+			SharedStateRegistry.DEFAULT_FACTORY);
 
 		try {
 			coord.startCheckpointScheduler();
@@ -1700,12 +1700,12 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				Thread.sleep(20);
 			}
 			while ((now = System.currentTimeMillis()) < minDuration ||
-					(numCalls.get() < maxConcurrentAttempts && now < timeout));
+				(numCalls.get() < maxConcurrentAttempts && now < timeout));
 
 			assertEquals(maxConcurrentAttempts, numCalls.get());
 
 			verify(triggerVertex.getCurrentExecutionAttempt(), times(maxConcurrentAttempts))
-					.triggerCheckpoint(anyLong(), anyLong(), any(CheckpointOptions.class));
+				.triggerCheckpoint(anyLong(), anyLong(), any(CheckpointOptions.class));
 
 			// now, once we acknowledge one checkpoint, it should trigger the next one
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(jid, ackAttemptID, 1L));
@@ -1774,7 +1774,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				Thread.sleep(20);
 			}
 			while ((now = System.currentTimeMillis()) < minDuration ||
-					(coord.getNumberOfPendingCheckpoints() < maxConcurrentAttempts && now < timeout));
+				(coord.getNumberOfPendingCheckpoints() < maxConcurrentAttempts && now < timeout));
 
 			// validate that the pending checkpoints are there
 			assertEquals(maxConcurrentAttempts, coord.getNumberOfPendingCheckpoints());
@@ -1792,7 +1792,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				Thread.sleep(20);
 			}
 			while (coord.getPendingCheckpoints().get(4L) == null &&
-					System.currentTimeMillis() < newTimeout);
+				System.currentTimeMillis() < newTimeout);
 
 			// do the final check
 			assertEquals(maxConcurrentAttempts, coord.getNumberOfPendingCheckpoints());
@@ -1855,7 +1855,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				Thread.sleep(20);
 			}
 			while (System.currentTimeMillis() < timeout &&
-					coord.getNumberOfPendingCheckpoints() == 0);
+				coord.getNumberOfPendingCheckpoints() == 0);
 
 			assertTrue(coord.getNumberOfPendingCheckpoints() > 0);
 		}
@@ -1989,7 +1989,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		allExecutionVertices.addAll(Arrays.asList(jobVertex2.getTaskVertices()));
 
 		ExecutionVertex[] arrayExecutionVertices =
-				allExecutionVertices.toArray(new ExecutionVertex[allExecutionVertices.size()]);
+			allExecutionVertices.toArray(new ExecutionVertex[allExecutionVertices.size()]);
 
 		CompletedCheckpointStore store = new RecoverableCompletedCheckpointStore();
 
@@ -2023,11 +2023,11 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			TaskStateSnapshot subtaskState = mockSubtaskState(jobVertexID1, index, keyGroupPartitions1.get(index));
 
 			AcknowledgeCheckpoint acknowledgeCheckpoint = new AcknowledgeCheckpoint(
-					jid,
-					jobVertex1.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
-					checkpointId,
-					new CheckpointMetrics(),
-					subtaskState);
+				jid,
+				jobVertex1.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
+				checkpointId,
+				new CheckpointMetrics(),
+				subtaskState);
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
 		}
@@ -2036,11 +2036,11 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			TaskStateSnapshot subtaskState = mockSubtaskState(jobVertexID2, index, keyGroupPartitions2.get(index));
 
 			AcknowledgeCheckpoint acknowledgeCheckpoint = new AcknowledgeCheckpoint(
-					jid,
-					jobVertex2.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
-					checkpointId,
-					new CheckpointMetrics(),
-					subtaskState);
+				jid,
+				jobVertex2.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
+				checkpointId,
+				new CheckpointMetrics(),
+				subtaskState);
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
 		}
@@ -2136,14 +2136,14 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		for (int index = 0; index < jobVertex1.getParallelism(); index++) {
 			KeyGroupsStateHandle keyGroupState = generateKeyGroupState(jobVertexID1, keyGroupPartitions1.get(index), false);
-			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(null, null, keyGroupState, null);
+			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(null, null, keyGroupState, null, null);
 			TaskStateSnapshot taskOperatorSubtaskStates = new TaskStateSnapshot();
 			taskOperatorSubtaskStates.putSubtaskStateByOperatorID(OperatorID.fromJobVertexID(jobVertexID1), operatorSubtaskState);
 			AcknowledgeCheckpoint acknowledgeCheckpoint = new AcknowledgeCheckpoint(
-					jid,
-					jobVertex1.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
-					checkpointId,
-					new CheckpointMetrics(),
+				jid,
+				jobVertex1.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
+				checkpointId,
+				new CheckpointMetrics(),
 				taskOperatorSubtaskStates);
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
@@ -2152,15 +2152,15 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		for (int index = 0; index < jobVertex2.getParallelism(); index++) {
 			KeyGroupsStateHandle keyGroupState = generateKeyGroupState(jobVertexID2, keyGroupPartitions2.get(index), false);
-			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(null, null, keyGroupState, null);
+			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(null, null, keyGroupState, null, null);
 			TaskStateSnapshot taskOperatorSubtaskStates = new TaskStateSnapshot();
 			taskOperatorSubtaskStates.putSubtaskStateByOperatorID(OperatorID.fromJobVertexID(jobVertexID2), operatorSubtaskState);
 			AcknowledgeCheckpoint acknowledgeCheckpoint = new AcknowledgeCheckpoint(
-					jid,
-					jobVertex2.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
-					checkpointId,
-					new CheckpointMetrics(),
-					taskOperatorSubtaskStates);
+				jid,
+				jobVertex2.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
+				checkpointId,
+				new CheckpointMetrics(),
+				taskOperatorSubtaskStates);
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
 		}
@@ -2239,13 +2239,13 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		int newParallelism2 = scaleOut ? 13 : 2;
 
 		final ExecutionJobVertex jobVertex1 = mockExecutionJobVertex(
-				jobVertexID1,
-				parallelism1,
-				maxParallelism1);
+			jobVertexID1,
+			parallelism1,
+			maxParallelism1);
 		final ExecutionJobVertex jobVertex2 = mockExecutionJobVertex(
-				jobVertexID2,
-				parallelism2,
-				maxParallelism2);
+			jobVertexID2,
+			parallelism2,
+			maxParallelism2);
 
 		List<ExecutionVertex> allExecutionVertices = new ArrayList<>(parallelism1 + parallelism2);
 
@@ -2253,7 +2253,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		allExecutionVertices.addAll(Arrays.asList(jobVertex2.getTaskVertices()));
 
 		ExecutionVertex[] arrayExecutionVertices =
-				allExecutionVertices.toArray(new ExecutionVertex[allExecutionVertices.size()]);
+			allExecutionVertices.toArray(new ExecutionVertex[allExecutionVertices.size()]);
 
 		// set up the coordinator and validate the initial state
 		CheckpointCoordinator coord = new CheckpointCoordinator(
@@ -2279,25 +2279,25 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		long checkpointId = Iterables.getOnlyElement(coord.getPendingCheckpoints().keySet());
 
 		List<KeyGroupRange> keyGroupPartitions1 =
-				StateAssignmentOperation.createKeyGroupPartitions(maxParallelism1, parallelism1);
+			StateAssignmentOperation.createKeyGroupPartitions(maxParallelism1, parallelism1);
 		List<KeyGroupRange> keyGroupPartitions2 =
-				StateAssignmentOperation.createKeyGroupPartitions(maxParallelism2, parallelism2);
+			StateAssignmentOperation.createKeyGroupPartitions(maxParallelism2, parallelism2);
 
 		//vertex 1
 		for (int index = 0; index < jobVertex1.getParallelism(); index++) {
 			OperatorStateHandle opStateBackend = generatePartitionableStateHandle(jobVertexID1, index, 2, 8, false);
 			KeyGroupsStateHandle keyedStateBackend = generateKeyGroupState(jobVertexID1, keyGroupPartitions1.get(index), false);
 			KeyGroupsStateHandle keyedStateRaw = generateKeyGroupState(jobVertexID1, keyGroupPartitions1.get(index), true);
-			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(opStateBackend, null, keyedStateBackend, keyedStateRaw);
+			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(opStateBackend, null, keyedStateBackend, keyedStateRaw, null);
 			TaskStateSnapshot taskOperatorSubtaskStates = new TaskStateSnapshot();
 			taskOperatorSubtaskStates.putSubtaskStateByOperatorID(OperatorID.fromJobVertexID(jobVertexID1), operatorSubtaskState);
 
 			AcknowledgeCheckpoint acknowledgeCheckpoint = new AcknowledgeCheckpoint(
-					jid,
-					jobVertex1.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
-					checkpointId,
-					new CheckpointMetrics(),
-					taskOperatorSubtaskStates);
+				jid,
+				jobVertex1.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
+				checkpointId,
+				new CheckpointMetrics(),
+				taskOperatorSubtaskStates);
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
 		}
@@ -2313,16 +2313,16 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			expectedOpStatesBackend.add(new ChainedStateHandle<>(Collections.singletonList(opStateBackend)));
 			expectedOpStatesRaw.add(new ChainedStateHandle<>(Collections.singletonList(opStateRaw)));
 
-			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(opStateBackend, opStateRaw, keyedStateBackend, keyedStateRaw);
+			OperatorSubtaskState operatorSubtaskState = new OperatorSubtaskState(opStateBackend, opStateRaw, keyedStateBackend, keyedStateRaw, null);
 			TaskStateSnapshot taskOperatorSubtaskStates = new TaskStateSnapshot();
 			taskOperatorSubtaskStates.putSubtaskStateByOperatorID(OperatorID.fromJobVertexID(jobVertexID2), operatorSubtaskState);
 
 			AcknowledgeCheckpoint acknowledgeCheckpoint = new AcknowledgeCheckpoint(
-					jid,
-					jobVertex2.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
-					checkpointId,
-					new CheckpointMetrics(),
-					taskOperatorSubtaskStates);
+				jid,
+				jobVertex2.getTaskVertices()[index].getCurrentExecutionAttempt().getAttemptId(),
+				checkpointId,
+				new CheckpointMetrics(),
+				taskOperatorSubtaskStates);
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
 		}
@@ -2334,18 +2334,18 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		Map<JobVertexID, ExecutionJobVertex> tasks = new HashMap<>();
 
 		List<KeyGroupRange> newKeyGroupPartitions2 =
-				StateAssignmentOperation.createKeyGroupPartitions(maxParallelism2, newParallelism2);
+			StateAssignmentOperation.createKeyGroupPartitions(maxParallelism2, newParallelism2);
 
 		final ExecutionJobVertex newJobVertex1 = mockExecutionJobVertex(
-				jobVertexID1,
-				parallelism1,
-				maxParallelism1);
+			jobVertexID1,
+			parallelism1,
+			maxParallelism1);
 
 		// rescale vertex 2
 		final ExecutionJobVertex newJobVertex2 = mockExecutionJobVertex(
-				jobVertexID2,
-				newParallelism2,
-				maxParallelism2);
+			jobVertexID2,
+			newParallelism2,
+			maxParallelism2);
 
 		tasks.put(jobVertexID1, newJobVertex1);
 		tasks.put(jobVertexID2, newJobVertex2);
@@ -2397,7 +2397,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		OperatorID operatorID = OperatorID.fromJobVertexID(jobVertexID);
 		return new Tuple2<>(jobVertexID, operatorID);
 	}
-	
+
 	/**
 	 * old topology
 	 * [operator1,operator2] * parallelism1 -> [operator3,operator4] * parallelism2
@@ -2446,6 +2446,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 					subManagedOperatorState,
 					subRawOperatorState,
 					null,
+					null,
 					null);
 				taskState.putState(index, subtaskState);
 			}
@@ -2483,7 +2484,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 					subManagedOperatorState,
 					subRawOperatorState,
 					subManagedKeyedState,
-					subRawKeyedState);
+					subRawKeyedState,
+					null);
 				operatorState.putState(index, subtaskState);
 			}
 		}
@@ -2529,14 +2531,14 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			spy(new StandaloneCompletedCheckpointStore(1));
 
 		CompletedCheckpoint completedCheckpoint = new CompletedCheckpoint(
-				jobID,
-				2,
-				System.currentTimeMillis(),
-				System.currentTimeMillis() + 3000,
-				operatorStates,
-				Collections.<MasterState>emptyList(),
-				CheckpointProperties.forCheckpoint(CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION),
-				new TestCompletedCheckpointStorageLocation());
+			jobID,
+			2,
+			System.currentTimeMillis(),
+			System.currentTimeMillis() + 3000,
+			operatorStates,
+			Collections.<MasterState>emptyList(),
+			CheckpointProperties.forCheckpoint(CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION),
+			new TestCompletedCheckpointStorageLocation());
 
 		when(standaloneCompletedCheckpointStore.getLatestCheckpoint()).thenReturn(completedCheckpoint);
 
@@ -2742,14 +2744,14 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		OperatorStateRepartitioner repartitioner = RoundRobinOperatorStateRepartitioner.INSTANCE;
 		List<Collection<OperatorStateHandle>> repartitionedStates =
-				repartitioner.repartitionState(Collections.singletonList(osh), 3);
+			repartitioner.repartitionState(Collections.singletonList(osh), 3);
 
 		Map<String, Integer> checkCounts = new HashMap<>(3);
 
 		for (Collection<OperatorStateHandle> operatorStateHandles : repartitionedStates) {
 			for (OperatorStateHandle operatorStateHandle : operatorStateHandles) {
 				for (Map.Entry<String, OperatorStateHandle.StateMetaInfo> stateNameToMetaInfo :
-						operatorStateHandle.getStateNameToPartitionOffsets().entrySet()) {
+					operatorStateHandle.getStateNameToPartitionOffsets().entrySet()) {
 
 					String stateName = stateNameToMetaInfo.getKey();
 					Integer count = checkCounts.get(stateName);
@@ -2788,8 +2790,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 	// ------------------------------------------------------------------------
 
 	public static KeyGroupsStateHandle generateKeyGroupState(
-			JobVertexID jobVertexID,
-			KeyGroupRange keyGroupPartition, boolean rawState) throws IOException {
+		JobVertexID jobVertexID,
+		KeyGroupRange keyGroupPartition, boolean rawState) throws IOException {
 
 		List<Integer> testStatesLists = new ArrayList<>(keyGroupPartition.getNumberOfKeyGroups());
 
@@ -2806,25 +2808,25 @@ public class CheckpointCoordinatorTest extends TestLogger {
 	}
 
 	public static KeyGroupsStateHandle generateKeyGroupState(
-			KeyGroupRange keyGroupRange,
-			List<? extends Serializable> states) throws IOException {
+		KeyGroupRange keyGroupRange,
+		List<? extends Serializable> states) throws IOException {
 
 		Preconditions.checkArgument(keyGroupRange.getNumberOfKeyGroups() == states.size());
 
 		Tuple2<byte[], List<long[]>> serializedDataWithOffsets =
-				serializeTogetherAndTrackOffsets(Collections.<List<? extends Serializable>>singletonList(states));
+			serializeTogetherAndTrackOffsets(Collections.<List<? extends Serializable>>singletonList(states));
 
 		KeyGroupRangeOffsets keyGroupRangeOffsets = new KeyGroupRangeOffsets(keyGroupRange, serializedDataWithOffsets.f1.get(0));
 
 		ByteStreamStateHandle allSerializedStatesHandle = new ByteStreamStateHandle(
-				String.valueOf(UUID.randomUUID()),
-				serializedDataWithOffsets.f0);
+			String.valueOf(UUID.randomUUID()),
+			serializedDataWithOffsets.f0);
 
 		return new KeyGroupsStateHandle(keyGroupRangeOffsets, allSerializedStatesHandle);
 	}
 
 	public static Tuple2<byte[], List<long[]>> serializeTogetherAndTrackOffsets(
-			List<List<? extends Serializable>> serializables) throws IOException {
+		List<List<? extends Serializable>> serializables) throws IOException {
 
 		List<long[]> offsets = new ArrayList<>(serializables.size());
 		List<byte[]> serializedGroupValues = new ArrayList<>();
@@ -2848,11 +2850,11 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		runningGroupsOffset = 0;
 		for (byte[] serializedGroupValue : serializedGroupValues) {
 			System.arraycopy(
-					serializedGroupValue,
-					0,
-					allSerializedValuesConcatenated,
-					runningGroupsOffset,
-					serializedGroupValue.length);
+				serializedGroupValue,
+				0,
+				allSerializedValuesConcatenated,
+				runningGroupsOffset,
+				serializedGroupValue.length);
 			runningGroupsOffset += serializedGroupValue.length;
 		}
 		return new Tuple2<>(allSerializedValuesConcatenated, offsets);
@@ -2886,11 +2888,11 @@ public class CheckpointCoordinatorTest extends TestLogger {
 	}
 
 	public static ChainedStateHandle<OperatorStateHandle> generateChainedPartitionableStateHandle(
-			JobVertexID jobVertexID,
-			int index,
-			int namedStates,
-			int partitionsPerState,
-			boolean rawState) throws IOException {
+		JobVertexID jobVertexID,
+		int index,
+		int namedStates,
+		int partitionsPerState,
+		boolean rawState) throws IOException {
 
 		Map<String, List<? extends Serializable>> statesListsMap = new HashMap<>(namedStates);
 
@@ -2943,9 +2945,9 @@ public class CheckpointCoordinatorTest extends TestLogger {
 	}
 
 	static ExecutionJobVertex mockExecutionJobVertex(
-			JobVertexID jobVertexID,
-			int parallelism,
-			int maxParallelism) {
+		JobVertexID jobVertexID,
+		int parallelism,
+		int maxParallelism) {
 
 		return mockExecutionJobVertex(
 			jobVertexID,
@@ -3027,7 +3029,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		ExecutionJobVertex jobVertex = mock(ExecutionJobVertex.class);
 		when(jobVertex.getOperatorIDs()).thenReturn(jobVertexIDs);
-		
+
 		when(vertex.getJobVertex()).thenReturn(jobVertex);
 
 		return vertex;
@@ -3043,7 +3045,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		TaskStateSnapshot subtaskStates = spy(new TaskStateSnapshot());
 		OperatorSubtaskState subtaskState = spy(new OperatorSubtaskState(
-			partitionableState, null, partitionedKeyGroupState, null)
+			partitionableState, null, partitionedKeyGroupState, null, null)
 		);
 
 		subtaskStates.putSubtaskStateByOperatorID(OperatorID.fromJobVertexID(jobVertexID), subtaskState);
@@ -3052,8 +3054,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 	}
 
 	public static void verifyStateRestore(
-			JobVertexID jobVertexID, ExecutionJobVertex executionJobVertex,
-			List<KeyGroupRange> keyGroupPartitions) throws Exception {
+		JobVertexID jobVertexID, ExecutionJobVertex executionJobVertex,
+		List<KeyGroupRange> keyGroupPartitions) throws Exception {
 
 		for (int i = 0; i < executionJobVertex.getParallelism(); i++) {
 
@@ -3064,21 +3066,21 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			OperatorSubtaskState operatorState = stateSnapshot.getSubtaskStateByOperatorID(OperatorID.fromJobVertexID(jobVertexID));
 
 			ChainedStateHandle<OperatorStateHandle> expectedOpStateBackend =
-					generateChainedPartitionableStateHandle(jobVertexID, i, 2, 8, false);
+				generateChainedPartitionableStateHandle(jobVertexID, i, 2, 8, false);
 
 			assertTrue(CommonTestUtils.isSteamContentEqual(
-					expectedOpStateBackend.get(0).openInputStream(),
-					operatorState.getManagedOperatorState().iterator().next().openInputStream()));
+				expectedOpStateBackend.get(0).openInputStream(),
+				operatorState.getManagedOperatorState().iterator().next().openInputStream()));
 
 			KeyGroupsStateHandle expectPartitionedKeyGroupState = generateKeyGroupState(
-					jobVertexID, keyGroupPartitions.get(i), false);
+				jobVertexID, keyGroupPartitions.get(i), false);
 			compareKeyedState(Collections.singletonList(expectPartitionedKeyGroupState), operatorState.getManagedKeyedState());
 		}
 	}
 
 	public static void compareKeyedState(
-			Collection<KeyGroupsStateHandle> expectPartitionedKeyGroupState,
-			Collection<? extends KeyedStateHandle> actualPartitionedKeyGroupState) throws Exception {
+		Collection<KeyGroupsStateHandle> expectPartitionedKeyGroupState,
+		Collection<? extends KeyedStateHandle> actualPartitionedKeyGroupState) throws Exception {
 
 		KeyGroupsStateHandle expectedHeadOpKeyGroupStateHandle = expectPartitionedKeyGroupState.iterator().next();
 		int expectedTotalKeyGroups = expectedHeadOpKeyGroupStateHandle.getKeyGroupRange().getNumberOfKeyGroups();
@@ -3096,7 +3098,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				long offset = expectedHeadOpKeyGroupStateHandle.getOffsetForKeyGroup(groupId);
 				inputStream.seek(offset);
 				int expectedKeyGroupState =
-						InstantiationUtil.deserializeObject(inputStream, Thread.currentThread().getContextClassLoader());
+					InstantiationUtil.deserializeObject(inputStream, Thread.currentThread().getContextClassLoader());
 				for (KeyedStateHandle oneActualKeyedStateHandle : actualPartitionedKeyGroupState) {
 
 					assertTrue(oneActualKeyedStateHandle instanceof KeyGroupsStateHandle);
@@ -3107,7 +3109,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 						try (FSDataInputStream actualInputStream = oneActualKeyGroupStateHandle.openInputStream()) {
 							actualInputStream.seek(actualOffset);
 							int actualGroupState = InstantiationUtil.
-									deserializeObject(actualInputStream, Thread.currentThread().getContextClassLoader());
+								deserializeObject(actualInputStream, Thread.currentThread().getContextClassLoader());
 							assertEquals(expectedKeyGroupState, actualGroupState);
 						}
 					}
@@ -3117,8 +3119,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 	}
 
 	public static void comparePartitionableState(
-			List<ChainedStateHandle<OperatorStateHandle>> expected,
-			List<List<Collection<OperatorStateHandle>>> actual) throws Exception {
+		List<ChainedStateHandle<OperatorStateHandle>> expected,
+		List<List<Collection<OperatorStateHandle>>> actual) throws Exception {
 
 		List<String> expectedResult = new ArrayList<>();
 		for (ChainedStateHandle<OperatorStateHandle> chainedStateHandle : expected) {
@@ -3152,7 +3154,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				for (long offset : entry.getValue().getOffsets()) {
 					in.seek(offset);
 					Integer state = InstantiationUtil.
-							deserializeObject(in, Thread.currentThread().getContextClassLoader());
+						deserializeObject(in, Thread.currentThread().getContextClassLoader());
 					resultCollector.add(opIdx + " : " + entry.getKey() + " : " + state);
 				}
 			}
@@ -3202,20 +3204,20 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		// Periodic
 		CheckpointTriggerResult triggerResult = coord.triggerCheckpoint(
-				System.currentTimeMillis(),
-				CheckpointProperties.forCheckpoint(CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION),
-				null,
-				true);
+			System.currentTimeMillis(),
+			CheckpointProperties.forCheckpoint(CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION),
+			null,
+			true);
 
 		assertTrue(triggerResult.isFailure());
 		assertEquals(CheckpointDeclineReason.PERIODIC_SCHEDULER_SHUTDOWN, triggerResult.getFailureReason());
 
 		// Not periodic
 		triggerResult = coord.triggerCheckpoint(
-				System.currentTimeMillis(),
-				CheckpointProperties.forCheckpoint(CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION),
-				null,
-				false);
+			System.currentTimeMillis(),
+			CheckpointProperties.forCheckpoint(CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION),
+			null,
+			false);
 
 		assertFalse(triggerResult.isFailure());
 	}
@@ -3242,12 +3244,12 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			int maxPartitionsPerState = 1 + r.nextInt(9);
 
 			doTestPartitionableStateRepartitioning(
-					r, oldParallelism, newParallelism, numNamedStates, maxPartitionsPerState);
+				r, oldParallelism, newParallelism, numNamedStates, maxPartitionsPerState);
 		}
 	}
 
 	private void doTestPartitionableStateRepartitioning(
-			Random r, int oldParallelism, int newParallelism, int numNamedStates, int maxPartitionsPerState) {
+		Random r, int oldParallelism, int newParallelism, int numNamedStates, int maxPartitionsPerState) {
 
 		List<OperatorStateHandle> previousParallelOpInstanceStates = new ArrayList<>(oldParallelism);
 
@@ -3266,8 +3268,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				OperatorStateHandle.Mode mode = r.nextInt(10) == 0 ?
 					OperatorStateHandle.Mode.UNION : OperatorStateHandle.Mode.SPLIT_DISTRIBUTE;
 				namedStatesToOffsets.put(
-						"State-" + s,
-						new OperatorStateHandle.StateMetaInfo(offs, mode));
+					"State-" + s,
+					new OperatorStateHandle.StateMetaInfo(offs, mode));
 
 			}
 
@@ -3276,12 +3278,12 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				long[] offs = {off + 1, off + 2, off + 3, off + 4};
 
 				namedStatesToOffsets.put(
-						"State-" + (numNamedStates - 1),
-						new OperatorStateHandle.StateMetaInfo(offs, OperatorStateHandle.Mode.BROADCAST));
+					"State-" + (numNamedStates - 1),
+					new OperatorStateHandle.StateMetaInfo(offs, OperatorStateHandle.Mode.BROADCAST));
 			}
 
 			previousParallelOpInstanceStates.add(
-					new OperatorStreamStateHandle(namedStatesToOffsets, new FileStateHandle(fakePath, -1)));
+				new OperatorStreamStateHandle(namedStatesToOffsets, new FileStateHandle(fakePath, -1)));
 		}
 
 		Map<StreamStateHandle, Map<String, List<Long>>> expected = new HashMap<>();
@@ -3332,7 +3334,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		OperatorStateRepartitioner repartitioner = RoundRobinOperatorStateRepartitioner.INSTANCE;
 
 		List<Collection<OperatorStateHandle>> pshs =
-				repartitioner.repartitionState(previousParallelOpInstanceStates, newParallelism);
+			repartitioner.repartitionState(previousParallelOpInstanceStates, newParallelism);
 
 		Map<StreamStateHandle, Map<String, List<Long>>> actual = new HashMap<>();
 
@@ -3594,11 +3596,11 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			store,
 			new MemoryStateBackend(),
 			Executors.directExecutor(),
-				deleteExecutor -> {
-					SharedStateRegistry instance = new SharedStateRegistry(deleteExecutor);
-					createdSharedStateRegistries.add(instance);
-					return instance;
-				});
+			deleteExecutor -> {
+				SharedStateRegistry instance = new SharedStateRegistry(deleteExecutor);
+				createdSharedStateRegistries.add(instance);
+				return instance;
+			});
 
 		final int numCheckpoints = 3;
 
@@ -3771,6 +3773,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 					StateObjectCollection.empty(),
 					StateObjectCollection.empty(),
 					StateObjectCollection.singleton(managedState),
+					StateObjectCollection.empty(),
 					StateObjectCollection.empty()));
 
 			Map<OperatorID, OperatorSubtaskState> opStates = new HashMap<>();

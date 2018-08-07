@@ -43,6 +43,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.util.migration.MigrationVersion;
 import org.apache.flink.util.Collector;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -57,6 +58,7 @@ import static org.junit.Assert.assertEquals;
  * migrating for multiple previous Flink versions, as well as for different state backends.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class StatefulJobSavepointMigrationITCase extends SavepointMigrationTestBase {
 
 	private static final int NUM_SOURCE_ELEMENTS = 4;

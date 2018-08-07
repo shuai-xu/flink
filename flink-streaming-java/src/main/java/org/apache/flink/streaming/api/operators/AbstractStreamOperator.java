@@ -23,6 +23,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.KeyedStateStore;
 import org.apache.flink.api.common.state.State;
+import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -38,10 +39,16 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.metrics.groups.TaskManagerJobMetricGroup;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
+import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.DefaultKeyedStateStore;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.InternalState;
+import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.KeyGroupsList;
 import org.apache.flink.runtime.state.KeyedStateBackend;
@@ -54,7 +61,13 @@ import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.memory.MemoryStateBackend;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.streaming.api.graph.StreamConfig;
+import org.apache.flink.streaming.api.operators.state.ContextStateBinder;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -89,7 +102,7 @@ import java.io.Serializable;
  */
 @PublicEvolving
 public abstract class AbstractStreamOperator<OUT>
-		implements StreamOperator<OUT>, Serializable {
+	implements StreamOperator<OUT>, Serializable {
 
 	private static final long serialVersionUID = 1L;
 
@@ -131,11 +144,17 @@ public abstract class AbstractStreamOperator<OUT>
 	 */
 	private transient KeySelector<?, ?> stateKeySelector2;
 
+	/** Backend for internal states. */
+	private transient AbstractInternalStateBackend internalStateBackend;
+
 	/** Backend for keyed state. This might be empty if we're not on a keyed stream. */
 	private transient AbstractKeyedStateBackend<?> keyedStateBackend;
 
 	/** Keyed state store view on the keyed backend. */
 	private transient DefaultKeyedStateStore keyedStateStore;
+
+	/** The binder to create user-facing states. */
+	private transient StateBinder contextStateBinder;
 
 	// ---------------- operator state ------------------
 
@@ -204,6 +223,9 @@ public abstract class AbstractStreamOperator<OUT>
 
 		stateKeySelector1 = config.getStatePartitioner(0, getUserCodeClassloader());
 		stateKeySelector2 = config.getStatePartitioner(1, getUserCodeClassloader());
+
+		initInternalState();
+		contextStateBinder = new ContextStateBinder(this);
 	}
 
 	@Override
@@ -233,6 +255,7 @@ public abstract class AbstractStreamOperator<OUT>
 
 		this.operatorStateBackend = context.operatorStateBackend();
 		this.keyedStateBackend = context.keyedStateBackend();
+		this.internalStateBackend = context.internalStateBackend();
 
 		if (keyedStateBackend != null) {
 			this.keyedStateStore = new DefaultKeyedStateStore(keyedStateBackend, getExecutionConfig());
@@ -341,6 +364,10 @@ public abstract class AbstractStreamOperator<OUT>
 			exception = ExceptionUtils.firstOrSuppressed(e, exception);
 		}
 
+		if (internalStateBackend != null) {
+			internalStateBackend.close();
+		}
+
 		if (exception != null) {
 			throw exception;
 		}
@@ -375,6 +402,10 @@ public abstract class AbstractStreamOperator<OUT>
 			if (null != keyedStateBackend) {
 				snapshotInProgress.setKeyedStateManagedFuture(
 					keyedStateBackend.snapshot(checkpointId, timestamp, factory, checkpointOptions));
+			}
+			if (null != internalStateBackend) {
+				snapshotInProgress.setInternalStateManagedFuture(
+					internalStateBackend.snapshot(checkpointId, timestamp, factory, checkpointOptions));
 			}
 		} catch (Exception snapshotException) {
 			try {
@@ -494,9 +525,75 @@ public abstract class AbstractStreamOperator<OUT>
 		return runtimeContext;
 	}
 
+	/**
+	 * Creates an internal state described by the given descriptor.
+	 *
+	 * @param descriptor The descriptor of the internal state to be created.
+	 * @return The state described by the given descriptor.
+	 */
+	protected InternalState getInternalState(
+		final InternalStateDescriptor descriptor
+	) {
+		return internalStateBackend.getInternalState(descriptor);
+	}
+
+	/**
+	 * Creates a keyed state described by the given descriptor.
+	 *
+	 * @param descriptor The descriptor of the keyed state to be created.
+	 * @param <K> Type of the keys in the state.
+	 * @param <V> Type of the values in the state.
+	 * @param <S> Type of the state to be created.
+	 * @return The state described by the given descriptor.
+	 */
+	public <K, V, S extends KeyedState<K, V>> S getKeyedState(
+		final KeyedStateDescriptor<K, V, S> descriptor
+	) {
+		return internalStateBackend.getKeyedState(descriptor);
+	}
+
+	/**
+	 * Creates a subkeyed state described by the given descriptor.
+	 *
+	 * @param descriptor The descriptor of the subkeyed state to be created.
+	 * @param <K> Type of the keys in the state.
+	 * @param <N> Type of the namespaces in the state.
+	 * @param <V> Type of the values in the state.
+	 * @param <S> Type of the state to be created.
+	 * @return The state described by the given descriptor.
+	 */
+	public <K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
+		final SubKeyedStateDescriptor<K, N, V, S> descriptor
+	) {
+		return internalStateBackend.getSubKeyedState(descriptor);
+	}
+
+	/**
+	 * Creates a user-facing state described by the given descriptor.
+	 *
+	 * @param stateDescriptor The descriptor of the user-facing state to be created.
+	 * @param <S> Type of the state to be created.
+	 * @param <T> Type of the values in the state.
+	 * @return The state described by the given descriptor.
+	 */
+	protected <S extends State, T> S getState(
+		final StateDescriptor<S, T> stateDescriptor
+	) {
+		Preconditions.checkNotNull(stateDescriptor);
+		try {
+			return stateDescriptor.bind(contextStateBinder);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public <K> KeyedStateBackend<K> getKeyedStateBackend() {
 		return (KeyedStateBackend<K>) keyedStateBackend;
+	}
+
+	public AbstractInternalStateBackend getInternalStateBackend() {
+		return internalStateBackend;
 	}
 
 	public OperatorStateBackend getOperatorStateBackend() {
@@ -593,6 +690,10 @@ public abstract class AbstractStreamOperator<OUT>
 				throw new RuntimeException("Exception occurred while setting the current key context.", e);
 			}
 		}
+	}
+
+	public TypeSerializer<Object> getKeySerializer() {
+		return config.getStateKeySerializer(getUserCodeClassloader());
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -777,5 +878,24 @@ public abstract class AbstractStreamOperator<OUT>
 	public int numEventTimeTimers() {
 		return timeServiceManager == null ? 0 :
 			timeServiceManager.numEventTimeTimers();
+	}
+
+	private void initInternalState() {
+		MemoryStateBackend memoryStateBackend = new MemoryStateBackend(false);
+
+		internalStateBackend = memoryStateBackend.createInternalStateBackend(
+			container.getEnvironment(),
+			container.getName(),
+			container.getEnvironment().getTaskInfo().getMaxNumberOfParallelSubtasks(),
+			getGroups());
+	}
+
+	private GroupSet getGroups() {
+		int maxParallelism = container.getEnvironment().getTaskInfo().getMaxNumberOfParallelSubtasks();
+		int parallelism = container.getEnvironment().getTaskInfo().getNumberOfParallelSubtasks();
+		int subtaskIndex = container.getEnvironment().getTaskInfo().getIndexOfThisSubtask();
+
+		KeyGroupRange range = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
+		return GroupRange.of(range.getStartKeyGroup(), range.getEndKeyGroup() + 1);
 	}
 }

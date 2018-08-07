@@ -37,6 +37,7 @@ import org.apache.flink.streaming.util.migration.MigrationVersion;
 import org.apache.flink.util.Collector;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -51,6 +52,7 @@ import java.util.Map;
  * cover migrating for multiple previous Flink versions, as well as for different state backends.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class StatefulJobWBroadcastStateMigrationITCase extends SavepointMigrationTestBase {
 
 	private static final int NUM_SOURCE_ELEMENTS = 4;

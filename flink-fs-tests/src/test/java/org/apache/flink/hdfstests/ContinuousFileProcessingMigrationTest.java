@@ -67,6 +67,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * Tests that verify the migration from previous Flink version snapshots.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class ContinuousFileProcessingMigrationTest {
 
 	private static final int LINES_PER_FILE = 10;

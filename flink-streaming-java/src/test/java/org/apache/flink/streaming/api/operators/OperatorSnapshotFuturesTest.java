@@ -23,6 +23,7 @@ import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
@@ -72,11 +73,16 @@ public class OperatorSnapshotFuturesTest extends TestLogger {
 		RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture =
 			spy(DoneFuture.of(operatorStateRawResult));
 
+		StatePartitionSnapshot managedInternalState = mock(StatePartitionSnapshot.class);
+		RunnableFuture<StatePartitionSnapshot> internalManagedFuture =
+			spy(DoneFuture.of(managedInternalState));
+
 		operatorSnapshotResult = new OperatorSnapshotFutures(
 			keyedStateManagedFuture,
 			keyedStateRawFuture,
 			operatorStateManagedFuture,
-			operatorStateRawFuture);
+			operatorStateRawFuture,
+			internalManagedFuture);
 
 		operatorSnapshotResult.cancel();
 

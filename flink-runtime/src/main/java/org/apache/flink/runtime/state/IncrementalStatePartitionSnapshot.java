@@ -221,6 +221,11 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 	}
 
 	@Override
+	public boolean hasStates() {
+		return metaStateHandle != null;
+	}
+
+	@Override
 	public GroupSet getGroups() {
 		return groups;
 	}

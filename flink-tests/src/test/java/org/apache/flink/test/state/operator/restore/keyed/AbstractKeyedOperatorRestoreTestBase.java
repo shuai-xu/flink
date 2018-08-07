@@ -25,6 +25,7 @@ import org.apache.flink.streaming.util.migration.MigrationVersion;
 import org.apache.flink.test.state.operator.restore.AbstractOperatorRestoreTestBase;
 import org.apache.flink.test.state.operator.restore.ExecutionMode;
 
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -35,6 +36,7 @@ import java.util.Collection;
  * Base class for all keyed operator restore tests.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public abstract class AbstractKeyedOperatorRestoreTestBase extends AbstractOperatorRestoreTestBase {
 
 	private final MigrationVersion migrationVersion;

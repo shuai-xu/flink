@@ -18,11 +18,14 @@
 
 package org.apache.flink.runtime.checkpoint;
 
+import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
+import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.StateObject;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.flink.util.TestLogger;
@@ -52,7 +55,7 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 	@Test
 	public void testPrioritization() {
 
-		for (int i = 0; i < 81; ++i) { // 3^4 possible configurations.
+		for (int i = 0; i < 243; ++i) { // 3^5 possible configurations.
 
 			OperatorSubtaskState primaryAndFallback = generateForConfiguration(i);
 
@@ -115,15 +118,16 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 	}
 
 	/**
-	 * Generator for all 3^4 = 81 possible configurations of a OperatorSubtaskState:
-	 * - 4 different sub-states:
-	 *      managed/raw + operator/keyed.
+	 * Generator for all 3^5 = 243 possible configurations of a OperatorSubtaskState:
+	 * - 5 different sub-states:
+	 *      (managed/raw + operator/keyed) + managed internal state.
 	 * - 3 different options per sub-state:
 	 *      empty (simulate no state), single handle (simulate recovery), 2 handles (simulate e.g. rescaling)
+	 *
 	 */
 	private OperatorSubtaskState generateForConfiguration(int conf) {
 
-		Preconditions.checkState(conf >= 0 && conf <= 80); // 3^4
+		Preconditions.checkState(conf >= 0 && conf <= 242); // 3^5
 		final int numModes = 3;
 
 		KeyGroupRange keyGroupRange = new KeyGroupRange(0, 4);
@@ -181,7 +185,19 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 							createNewKeyedStateHandle(keyGroupRange1),
 							createNewKeyedStateHandle(keyGroupRange2)));
 
-		return new OperatorSubtaskState(s1, s2, s3, s4);
+		div *= numModes;
+		mode = (conf / div) % numModes;
+		StateObjectCollection<StatePartitionSnapshot> s5 =
+			mode == 0?
+				StateObjectCollection.empty() :
+				mode == 1?
+					new StateObjectCollection<>(
+						Collections.singleton(createNewManagedInternalState(keyGroupRange))) :
+					new StateObjectCollection<>(
+						Arrays.asList(
+							createNewManagedInternalState(keyGroupRange1),
+							createNewManagedInternalState(keyGroupRange2)));
+		return new OperatorSubtaskState(s1, s2, s3, s4, s5);
 	}
 
 	/**
@@ -198,7 +214,8 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 					deepCopyFirstElement(primaryOriginal.getManagedOperatorState()),
 					deepCopyFirstElement(primaryOriginal.getRawOperatorState()),
 					deepCopyFirstElement(primaryOriginal.getManagedKeyedState()),
-					deepCopyFirstElement(primaryOriginal.getRawKeyedState()));
+					deepCopyFirstElement(primaryOriginal.getRawKeyedState()),
+					deepCopyFirstElement(primaryOriginal.getManagedInternalState()));
 			case 1:
 				return new OperatorSubtaskState();
 			case 2:
@@ -208,7 +225,8 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 					createNewOperatorStateHandle(numNamedStates, random),
 					createNewOperatorStateHandle(numNamedStates, random),
 					createNewKeyedStateHandle(otherRange),
-					createNewKeyedStateHandle(otherRange));
+					createNewKeyedStateHandle(otherRange),
+					null);
 			default:
 				throw new IllegalArgumentException("Mode: " + mode);
 		}
@@ -284,9 +302,25 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 			result = deepDummyCopy((OperatorStateHandle) stateObject);
 		} else if (stateObject instanceof KeyedStateHandle) {
 			result = deepDummyCopy((KeyedStateHandle) stateObject);
+		} else if (stateObject instanceof StatePartitionSnapshot) {
+			result = deepDummyStataPartitionSnapshotCopy((StatePartitionSnapshot) stateObject);
 		} else {
 			throw new IllegalStateException();
 		}
 		return (T) result;
+	}
+
+	private StatePartitionSnapshot createNewManagedInternalState(KeyGroupRange range) {
+		StatePartitionSnapshot snapshot = new DefaultStatePartitionSnapshot(
+			GroupRange.of(range.getStartKeyGroup(), range.getEndKeyGroup() + 1));
+		return snapshot;
+	}
+
+	private StatePartitionSnapshot deepDummyStataPartitionSnapshotCopy(StatePartitionSnapshot original) {
+		if (original == null) {
+			return null;
+		}
+
+		return new DefaultStatePartitionSnapshot(original.getGroups());
 	}
 }
