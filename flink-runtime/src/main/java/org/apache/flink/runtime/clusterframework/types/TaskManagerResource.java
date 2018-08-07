@@ -202,7 +202,7 @@ public class TaskManagerResource {
 		return (int) ((persistentMemory + userDefinedTriggerMemory) / (getOldHeapMemory()) * 100);
 	}
 
-	int getSlotNum() {
+	public int getSlotNum() {
 		return slotNum;
 	}
 

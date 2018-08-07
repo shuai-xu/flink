@@ -30,7 +30,7 @@
         <tr>
             <td><h5>taskmanager.cpu.core</h5></td>
             <td style="word-wrap: break-word;">1.0</td>
-            <td>How many cores a task manager will supply for user</td>
+            <td>How many physical cpu cores a task manager will supply for user</td>
         </tr>
         <tr>
             <td><h5>taskmanager.data.port</h5></td>
@@ -83,14 +83,19 @@
             <td>Whether to kill the TaskManager when the task thread throws an OutOfMemoryError.</td>
         </tr>
         <tr>
-            <td><h5>taskmanager.memory.cms.gc.ratio</h5></td>
+            <td><h5>taskmanager.jvm.memory.cms.gc.ratio</h5></td>
             <td style="word-wrap: break-word;">0.7</td>
             <td>CMS occupy fraction for a task manager.</td>
         </tr>
         <tr>
-            <td><h5>taskmanager.memory.dynamic.young.ratio</h5></td>
+            <td><h5>taskmanager.jvm.memory.dynamic.young.ratio</h5></td>
             <td style="word-wrap: break-word;">0.25</td>
             <td>Ratio of young generation for dynamic memory in task manager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.jvm.memory.persistent.young.ratio</h5></td>
+            <td style="word-wrap: break-word;">0.1</td>
+            <td>Ratio of young generation for persistent memory in task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.memory.fraction</h5></td>
@@ -101,11 +106,6 @@
             <td><h5>taskmanager.memory.off-heap</h5></td>
             <td style="word-wrap: break-word;">false</td>
             <td>Memory allocation method (JVM heap or off-heap), used for managed memory of the TaskManager as well as the network buffers.</td>
-        </tr>
-        <tr>
-            <td><h5>taskmanager.memory.persistent.young.ratio</h5></td>
-            <td style="word-wrap: break-word;">0.1</td>
-            <td>Ratio of young generation for persistent memory in task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.memory.preallocate</h5></td>
@@ -121,6 +121,31 @@
             <td><h5>taskmanager.memory.size</h5></td>
             <td style="word-wrap: break-word;">-1</td>
             <td>Amount of memory to be allocated by the task manager's memory manager (in megabytes). If not set, a relative fraction will be allocated.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.multi-slots.max.cpu.core</h5></td>
+            <td style="word-wrap: break-word;">1.0</td>
+            <td>Cpu core limitation, used to decide how many slots can be placed on a taskmanager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.multi-slots.max.extended-resources</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td>Extended resources limitation, used to decide how many slots can be placed on a taskmanger. String format is like "GPU=10,FPGA=12".</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.multi-slots.max.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">32768</td>
+            <td>Memory (in megabytes) limitation, used to decide how many slots can be placed on a taskmanager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.multi-slots.min.cpu.core</h5></td>
+            <td style="word-wrap: break-word;">1.0</td>
+            <td>Min cpu core for a taskmanager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.multi-slots.min.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">1024</td>
+            <td>Min memory (in megabytes) for taskmanager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.native.memory.mb</h5></td>
@@ -230,7 +255,7 @@
         <tr>
             <td><h5>taskmanager.resourceProfile</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
-            <td></td>
+            <td>The resource profile of a slot in a task executor.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.rpc.port</h5></td>
@@ -240,7 +265,7 @@
         <tr>
             <td><h5>taskmanager.total.resourceProfile</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
-            <td></td>
+            <td>The total resource profile of all the slots in a task executor.</td>
         </tr>
     </tbody>
 </table>

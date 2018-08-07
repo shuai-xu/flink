@@ -446,6 +446,15 @@ public class MesosResourceManager extends ResourceManager<RegisteredMesosWorkerN
 		return true;
 	}
 
+	@Override
+	public void cancelNewWorker(ResourceProfile resourceProfile) {
+	}
+
+	@Override
+	protected int getNumberAllocatedWorkers() {
+		return workersInNew.size() + workersInLaunch.size() + workersBeingReturned.size();
+	}
+
 	/**
 	 * Callback when a worker was started.
 	 *

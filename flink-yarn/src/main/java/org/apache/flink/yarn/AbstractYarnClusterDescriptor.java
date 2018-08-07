@@ -1018,7 +1018,8 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		// Set up resource type requirements for ApplicationMaster
 		Resource capability = Records.newRecord(Resource.class);
 		capability.setMemory(clusterSpecification.getMasterMemoryMB());
-		capability.setVirtualCores(flinkConfiguration.getInteger(YarnConfigOptions.JOB_APP_MASTER_VCORE));
+		capability.setVirtualCores(flinkConfiguration.getInteger(YarnConfigOptions.JOB_APP_MASTER_CORE)
+				* flinkConfiguration.getInteger(YarnConfigOptions.YARN_VCORE_RATIO));
 
 		final String customApplicationName = customName != null ? customName : applicationName;
 

@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.resourcemanager.slotmanager;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
@@ -147,21 +146,7 @@ public class DynamicAssigningSlotManager extends SlotManager {
 			Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> slotToResource = allocatedSlotsResource.get(slotId.getResourceID());
 			ResourceProfile rf = slotToResource.f0.remove(slotId);
 			if (rf != null) {
-				Map<String, Resource> extendedResources = new HashMap<>();
-				for (Map.Entry<String, Resource> extend : slotToResource.f1.getExtendedResources().entrySet()) {
-					Resource rfValue = rf.getExtendedResources().get(extend.getKey());
-					if (rfValue != null) {
-						extendedResources.put(extend.getKey(), extend.getValue().merge(rfValue));
-					} else {
-						extendedResources.put(extend.getKey(), extend.getValue());
-					}
-				}
-				slotToResource.f1 = new ResourceProfile(slotToResource.f1.getCpuCores() + rf.getCpuCores(),
-					slotToResource.f1.getDirectMemoryInMB() + rf.getDirectMemoryInMB(),
-					slotToResource.f1.getHeapMemoryInMB() + rf.getHeapMemoryInMB(),
-					slotToResource.f1.getNativeMemoryInMB() + rf.getNativeMemoryInMB(),
-					slotToResource.f1.getNetworkMemoryInMB() + rf.getNetworkMemoryInMB(),
-					extendedResources);
+				slotToResource.f1 = slotToResource.f1.merge(rf);
 			}
 			if (slotToResource.f0.isEmpty()) {
 				allocatedSlotsResource.remove(slotId.getResourceID());

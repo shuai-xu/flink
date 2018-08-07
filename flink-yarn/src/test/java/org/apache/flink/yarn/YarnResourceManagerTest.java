@@ -79,6 +79,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 
@@ -91,6 +93,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.flink.yarn.YarnConfigKeys.ENV_APP_ID;
@@ -116,6 +119,8 @@ import static org.mockito.Mockito.when;
  * General tests for the YARN resource manager component.
  */
 public class YarnResourceManagerTest extends TestLogger {
+
+	private static final Logger LOG = LoggerFactory.getLogger(YarnResourceManagerTest.class);
 
 	private static final Time TIMEOUT = Time.seconds(10L);
 
@@ -233,6 +238,7 @@ public class YarnResourceManagerTest extends TestLogger {
 
 		// domain objects for test purposes
 		final ResourceProfile resourceProfile1 = new ResourceProfile(1.0, 200);
+		final ResourceProfile resourceProfile2 = new ResourceProfile(2.0, 300);
 
 		public ContainerId task = ContainerId.newInstance(
 				ApplicationAttemptId.newInstance(ApplicationId.newInstance(1L, 0), 0), 1);
@@ -326,6 +332,14 @@ public class YarnResourceManagerTest extends TestLogger {
 		public void stopResourceManager() throws Exception {
 			rpcService.stopService().get();
 		}
+
+		public void waitForThreadPoolExecution() throws Exception {
+			ThreadPoolExecutor executor = (ThreadPoolExecutor) resourceManager.executor;
+			while (!(executor.getQueue().size() == 0 && executor.getActiveCount() == 0)) {
+				LOG.info("Waiting for all launch container requests been executed.");
+				Thread.sleep(500);
+			}
+		}
 	}
 
 	@Test
@@ -352,8 +366,9 @@ public class YarnResourceManagerTest extends TestLogger {
 					1));
 			when(testingContainer.getNodeId()).thenReturn(NodeId.newInstance("container", 1234));
 			when(testingContainer.getResource()).thenReturn(Resource.newInstance(200, 1));
-			when(testingContainer.getPriority()).thenReturn(Priority.UNDEFINED);
+			when(testingContainer.getPriority()).thenReturn(Priority.newInstance(0));
 			resourceManager.onContainersAllocated(ImmutableList.of(testingContainer));
+			waitForThreadPoolExecution();
 			verify(mockResourceManagerClient).addContainerRequest(any(AMRMClient.ContainerRequest.class));
 			verify(mockNMClient).startContainer(eq(testingContainer), any(ContainerLaunchContext.class));
 
@@ -402,7 +417,6 @@ public class YarnResourceManagerTest extends TestLogger {
 
 			unregisterAndReleaseFuture.get();
 
-			verify(mockNMClient).stopContainer(any(ContainerId.class), any(NodeId.class));
 			verify(mockResourceManagerClient).releaseAssignedContainer(any(ContainerId.class));
 
 			stopResourceManager();
@@ -444,8 +458,15 @@ public class YarnResourceManagerTest extends TestLogger {
 				return null;
 			});
 
+			CompletableFuture<?> registerSlotRequestFuture2 = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+					new SlotRequest(new JobID(), new AllocationID(), resourceProfile2, taskHost));
+				return null;
+			});
+
 			// wait for the registerSlotRequest completion
 			registerSlotRequestFuture.get();
+			registerSlotRequestFuture2.get();
 
 			ContainerId testContainerId = ContainerId.newInstance(
 				ApplicationAttemptId.newInstance(
@@ -458,9 +479,27 @@ public class YarnResourceManagerTest extends TestLogger {
 			when(testingContainer.getId()).thenReturn(testContainerId);
 			when(testingContainer.getNodeId()).thenReturn(NodeId.newInstance("container", 1234));
 			when(testingContainer.getResource()).thenReturn(Resource.newInstance(200, 1));
-			when(testingContainer.getPriority()).thenReturn(Priority.UNDEFINED);
+			when(testingContainer.getPriority()).thenReturn(Priority.newInstance(0));
 			resourceManager.onContainersAllocated(ImmutableList.of(testingContainer));
-			verify(mockResourceManagerClient).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+			waitForThreadPoolExecution();
+			verify(mockResourceManagerClient, times(2)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+			verify(mockNMClient).startContainer(eq(testingContainer), any(ContainerLaunchContext.class));
+
+			ContainerId testContainerId2 = ContainerId.newInstance(
+				ApplicationAttemptId.newInstance(
+					ApplicationId.newInstance(System.currentTimeMillis(), 1),
+					1),
+				1);
+
+			// Callback from YARN when container is allocated.
+			Container testingContainer2 = mock(Container.class);
+			when(testingContainer2.getId()).thenReturn(testContainerId2);
+			when(testingContainer2.getNodeId()).thenReturn(NodeId.newInstance("container2", 1234));
+			when(testingContainer2.getResource()).thenReturn(Resource.newInstance(300, 2));
+			when(testingContainer2.getPriority()).thenReturn(Priority.newInstance(1));
+			resourceManager.onContainersAllocated(ImmutableList.of(testingContainer2));
+			waitForThreadPoolExecution();
+			verify(mockResourceManagerClient, times(2)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
 			verify(mockNMClient).startContainer(eq(testingContainer), any(ContainerLaunchContext.class));
 
 			// Callback from YARN when container is Completed, pending request can not be fulfilled by pending
@@ -471,7 +510,7 @@ public class YarnResourceManagerTest extends TestLogger {
 			when(testingContainerStatus.getDiagnostics()).thenReturn("Test exit");
 			when(testingContainerStatus.getExitStatus()).thenReturn(-1);
 			resourceManager.onContainersCompleted(ImmutableList.of(testingContainerStatus));
-			verify(mockResourceManagerClient, times(2)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+			verify(mockResourceManagerClient, times(3)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
 
 			// Callback from YARN when container is Completed happened before global fail, pending request
 			// slot is already fulfilled by pending containers, no need to request new container.
@@ -480,7 +519,26 @@ public class YarnResourceManagerTest extends TestLogger {
 			when(testingContainerStatus.getDiagnostics()).thenReturn("Test exit");
 			when(testingContainerStatus.getExitStatus()).thenReturn(-1);
 			resourceManager.onContainersCompleted(ImmutableList.of(testingContainerStatus));
-			verify(mockResourceManagerClient, times(2)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+			verify(mockResourceManagerClient, times(3)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+
+			// Callback from YARN when container is Completed, pending request can not be fulfilled by pending
+			// containers, need to request new container.
+			ContainerStatus testingContainerStatus2 = mock(ContainerStatus.class);
+			when(testingContainerStatus2.getContainerId()).thenReturn(testContainerId2);
+			when(testingContainerStatus2.getState()).thenReturn(ContainerState.COMPLETE);
+			when(testingContainerStatus2.getDiagnostics()).thenReturn("Test exit");
+			when(testingContainerStatus2.getExitStatus()).thenReturn(-1);
+			resourceManager.onContainersCompleted(ImmutableList.of(testingContainerStatus2));
+			verify(mockResourceManagerClient, times(4)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
+
+			// Callback from YARN when container is Completed happened before global fail, pending request
+			// slot is already fulfilled by pending containers, no need to request new container.
+			when(testingContainerStatus2.getContainerId()).thenReturn(testContainerId2);
+			when(testingContainerStatus2.getState()).thenReturn(ContainerState.COMPLETE);
+			when(testingContainerStatus2.getDiagnostics()).thenReturn("Test exit");
+			when(testingContainerStatus2.getExitStatus()).thenReturn(-1);
+			resourceManager.onContainersCompleted(ImmutableList.of(testingContainerStatus2));
+			verify(mockResourceManagerClient, times(4)).addContainerRequest(any(AMRMClient.ContainerRequest.class));
 		}};
 	}
 
@@ -508,8 +566,9 @@ public class YarnResourceManagerTest extends TestLogger {
 							1));
 			when(testingContainer.getNodeId()).thenReturn(NodeId.newInstance("container", 1234));
 			when(testingContainer.getResource()).thenReturn(Resource.newInstance(200, 1));
-			when(testingContainer.getPriority()).thenReturn(Priority.UNDEFINED);
+			when(testingContainer.getPriority()).thenReturn(Priority.newInstance(0));
 			resourceManager.onContainersAllocated(ImmutableList.of(testingContainer));
+			waitForThreadPoolExecution();
 			verify(mockResourceManagerClient).addContainerRequest(any(AMRMClient.ContainerRequest.class));
 			verify(mockNMClient).startContainer(eq(testingContainer), any(ContainerLaunchContext.class));
 
@@ -578,7 +637,6 @@ public class YarnResourceManagerTest extends TestLogger {
 					.disconnectResourceManager(any(Exception.class));
 
 			// Stop worker should be called.
-			verify(mockNMClient, times(1)).stopContainer(any(), any());
 			verify(mockResourceManagerClient, times(1)).releaseAssignedContainer(any());
 
 			// Unregister all task executors and release all containers.
@@ -589,7 +647,6 @@ public class YarnResourceManagerTest extends TestLogger {
 
 			unregisterAndReleaseFuture.get();
 
-			verify(mockNMClient).stopContainer(any(ContainerId.class), any(NodeId.class));
 			verify(mockResourceManagerClient).releaseAssignedContainer(any(ContainerId.class));
 
 			stopResourceManager();

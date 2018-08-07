@@ -146,6 +146,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	/** The resource for each Yarn container. **/
 	private final Resource workerResource;
 
+	private final int slotNumber;
+
 	/** The number of containers requested, but not yet granted. */
 	private final AtomicInteger numPendingContainerRequests;
 
@@ -193,6 +195,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		this.taskManagerConfiguration = TaskManagerConfiguration.fromConfiguration(flinkConfig);
 		this.env = env;
 		this.workerNodeMap = new ConcurrentHashMap<>();
+		this.slotNumber = Integer.parseInt(env.getOrDefault(YarnConfigKeys.ENV_SLOTS, "10"));
 
 		final int yarnHeartbeatIntervalMS = flinkConfig.getInteger(
 				YarnConfigOptions.HEARTBEAT_DELAY_SECONDS) * 1000;
@@ -234,6 +237,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		int containerMemory = taskManagerResource.getTotalContainerMemory();
 		int containerVcore = (int) (taskManagerResource.getContainerCpuCores() *
 				flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO));
+		// TODO: Set extended resources if the version of yarn api >= 2.8 .
 		workerResource = Resource.newInstance(containerMemory, containerVcore);
 		log.info("workerNum: {}, workerResource: {}", workerNum, workerResource);
 	}
@@ -380,6 +384,15 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		return workerNodeMap.get(resourceID);
 	}
 
+	@Override
+	public void cancelNewWorker(ResourceProfile resourceProfile) {
+	}
+
+	@Override
+	protected int getNumberAllocatedWorkers() {
+		return workerNodeMap.size();
+	}
+
 	// Utility methods
 
 	/**
@@ -497,7 +510,6 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 
 	private ContainerLaunchContext createTaskExecutorLaunchContext(Container container)
 			throws Exception {
-		int slotNumber = Integer.parseInt(env.getOrDefault(YarnConfigKeys.ENV_SLOTS, "10"));
 
 		// init the ContainerLaunchContext
 		final String currDir = env.get(ApplicationConstants.Environment.PWD.key());

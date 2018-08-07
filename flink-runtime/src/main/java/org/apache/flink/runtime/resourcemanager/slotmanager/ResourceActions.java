@@ -53,4 +53,11 @@ public interface ResourceActions {
 	 * @param cause of the allocation failure
 	 */
 	void notifyAllocationFailure(JobID jobId, AllocationID allocationId, Exception cause);
+
+	/**
+	 * Cancel a previous allocation of a resource with the given {@link ResourceProfile}.
+	 *
+	 * @param resourceProfile for the to be allocated resource
+	 */
+	void cancelResourceAllocation(ResourceProfile resourceProfile);
 }

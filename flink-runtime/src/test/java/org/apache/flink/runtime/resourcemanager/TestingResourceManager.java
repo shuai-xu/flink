@@ -87,4 +87,14 @@ public class TestingResourceManager extends ResourceManager<ResourceID> {
 		// cannot stop workers
 		return false;
 	}
+
+	@Override
+	public void cancelNewWorker(ResourceProfile resourceProfile) {
+		// noop
+	}
+
+	@Override
+	protected int getNumberAllocatedWorkers() {
+		return 0;
+	}
 }

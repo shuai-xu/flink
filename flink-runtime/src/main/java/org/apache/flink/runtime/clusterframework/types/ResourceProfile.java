@@ -304,6 +304,28 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			newExtendedResource);
 	}
 
+	public ResourceProfile merge(ResourceProfile another) {
+		Map<String, Resource> newExtendedResoures = Collections.emptyMap();
+		if (!extendedResources.isEmpty() || !another.extendedResources.isEmpty()) {
+			newExtendedResoures = new HashMap<>();
+			newExtendedResoures.putAll(extendedResources);
+			for (Map.Entry<String, Resource> extendResource : another.extendedResources.entrySet()) {
+				Resource rfValue = newExtendedResoures.get(extendResource.getKey());
+				if (rfValue != null) {
+					newExtendedResoures.put(extendResource.getKey(), extendResource.getValue().merge(rfValue));
+				} else {
+					newExtendedResoures.put(extendResource.getKey(), extendResource.getValue());
+				}
+			}
+		}
+		return new ResourceProfile(this.getCpuCores() + another.getCpuCores(),
+			this.getHeapMemoryInMB() + another.getHeapMemoryInMB(),
+			this.getDirectMemoryInMB() + another.getDirectMemoryInMB(),
+			this.getNativeMemoryInMB() + another.getNativeMemoryInMB(),
+			this.getNetworkMemoryInMB() + another.getNetworkMemoryInMB(),
+			newExtendedResoures);
+	}
+
 	// ------------------------------------------------------------------------
 
 	@Override

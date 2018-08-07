@@ -33,7 +33,7 @@ public class TaskManagerOptions {
 	// ------------------------------------------------------------------------
 
 	/**
-	 * JVM heap size (in megabytes) for the TaskManagers.
+	 * How many heap memory a task manager will supply for user.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_HEAP_MEMORY =
 			key("taskmanager.heap.mb")
@@ -48,7 +48,7 @@ public class TaskManagerOptions {
 	public static final ConfigOption<Double> TASK_MANAGER_CORE =
 			key("taskmanager.cpu.core")
 			.defaultValue(1.0)
-			.withDescription("How many cores a task manager will supply for user");
+			.withDescription("How many physical cpu cores a task manager will supply for user");
 
 	/**
 	 * How many direct memory a task manager will supply for user.
@@ -104,7 +104,7 @@ public class TaskManagerOptions {
 	 * Ratio of young generation for dynamic memory in task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO =
-			key("taskmanager.memory.dynamic.young.ratio")
+			key("taskmanager.jvm.memory.dynamic.young.ratio")
 			.defaultValue(0.25)
 			.withDescription("Ratio of young generation for dynamic memory in task manager.");
 
@@ -112,7 +112,7 @@ public class TaskManagerOptions {
 	 * Ratio of young generation for persistent memory in task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_PERSISTENT_YOUNG_RATIO =
-			key("taskmanager.memory.persistent.young.ratio")
+			key("taskmanager.jvm.memory.persistent.young.ratio")
 			.defaultValue(0.1)
 			.withDescription("Ratio of young generation for persistent memory in task manager.");
 
@@ -120,9 +120,67 @@ public class TaskManagerOptions {
 	 * CMS occupy fraction for a task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_CMS_GC_RATIO =
-			key("taskmanager.memory.cms.gc.ratio")
+			key("taskmanager.jvm.memory.cms.gc.ratio")
 			.defaultValue(0.7)
 			.withDescription("CMS occupy fraction for a task manager.");
+
+	/**
+	 * Cpu core limitation for a task manager, used to decide how many slots can be placed on a task manager.
+	 */
+	public static final ConfigOption<Double> TASK_MANAGER_MULTI_SLOTS_MAX_CORE =
+			key("taskmanager.multi-slots.max.cpu.core")
+			.defaultValue(1.0)
+			.withDescription("Cpu core limitation, used to decide how many slots can be placed on a taskmanager.");
+
+	/**
+	 * Memory limitation, used to decide how many slots can be placed on a task manager.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY =
+			key("taskmanager.multi-slots.max.memory.mb")
+			.defaultValue(32768)
+			.withDescription("Memory (in megabytes) limitation, used to decide how many slots can be placed " +
+				"on a taskmanager.");
+
+	/**
+	 * Extended resources limitation, used to decide how many slots can be placed on a task manager.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_MULTI_SLOTS_MAX_EXTENDED_RESOURCES =
+			key("taskmanager.multi-slots.max.extended-resources")
+			.defaultValue("")
+			.withDescription("Extended resources limitation, used to decide how many slots can be placed " +
+				"on a taskmanger. String format is like \"GPU=10,FPGA=12\".");
+
+	/**
+	 * Min cpu cores for a task manager.
+	 */
+	public static final ConfigOption<Double> TASK_MANAGER_MULTI_SLOTS_MIN_CORE =
+			key("taskmanager.multi-slots.min.cpu.core")
+			.defaultValue(1.0)
+			.withDescription("Min cpu core for a taskmanager.");
+
+	/**
+	 * Min memory for a task manager.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY =
+			key("taskmanager.multi-slots.min.memory.mb")
+			.defaultValue(1024)
+			.withDescription("Min memory (in megabytes) for taskmanager.");
+
+	/**
+	 * The resource profile for slots in a task executor.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_RESOURCE_PROFILE_KEY =
+			key("taskmanager.resourceProfile")
+			.defaultValue("")
+			.withDescription("The resource profile of a slot in a task executor.");
+
+	/**
+	 * The resource profile for all the slots in a task executor.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_TOTAL_RESOURCE_PROFILE_KEY =
+			key("taskmanager.total.resourceProfile")
+			.defaultValue("")
+			.withDescription("The total resource profile of all the slots in a task executor.");
 
 	/**
 	 * Whether to kill the TaskManager when the task thread throws an OutOfMemoryError.
@@ -314,20 +372,6 @@ public class TaskManagerOptions {
 			key("taskmanager.memory.preallocate")
 			.defaultValue(false)
 			.withDescription("Whether TaskManager managed memory should be pre-allocated when the TaskManager is starting.");
-
-	/**
-	 * The resource profile for slots in a task executor.
-	 */
-	public static final ConfigOption<String> TASK_MANAGER_RESOURCE_PROFILE_KEY =
-		key("taskmanager.resourceProfile")
-			.defaultValue("");
-
-	/**
-	 * The resource profile for all the slots in a task executor.
-	 */
-	public static final ConfigOption<String> TASK_MANAGER_TOTAL_RESOURCE_PROFILE_KEY =
-		key("taskmanager.total.resourceProfile")
-			.defaultValue("");
 
 	// ------------------------------------------------------------------------
 	//  Network Options

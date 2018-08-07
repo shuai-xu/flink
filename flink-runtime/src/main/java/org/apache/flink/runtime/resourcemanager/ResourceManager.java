@@ -776,8 +776,9 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	 *
 	 * @param resourceID Id of the TaskManager that has failed.
 	 * @param cause The exception which cause the TaskManager failed.
+	 * @return whether the task executor has been registered
 	 */
-	protected void closeTaskManagerConnection(final ResourceID resourceID, final Exception cause) {
+	protected boolean closeTaskManagerConnection(final ResourceID resourceID, final Exception cause) {
 		taskManagerHeartbeatManager.unmonitorTarget(resourceID);
 
 		WorkerRegistration<WorkerType> workerRegistration = taskExecutors.remove(resourceID);
@@ -789,8 +790,14 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 			slotManager.unregisterTaskManager(workerRegistration.getInstanceID());
 
 			workerRegistration.getTaskExecutorGateway().disconnectResourceManager(cause);
+
+			for (JobManagerRegistration jobManagerRegistration : jobManagerRegistrations.values()) {
+				jobManagerRegistration.getJobManagerGateway().disconnectTaskManager(resourceID, cause);
+			}
+			return true;
 		} else {
 			log.debug("No open TaskExecutor connection {}. Ignoring close TaskExecutor connection.", resourceID);
+			return false;
 		}
 	}
 
@@ -990,6 +997,22 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	 */
 	public abstract boolean stopWorker(WorkerType worker);
 
+	/**
+	 * Cancel a previous resource allocation using the resource profile.
+	 *
+	 * @param resourceProfile The resource description
+	 */
+	@VisibleForTesting
+	public abstract void cancelNewWorker(ResourceProfile resourceProfile);
+
+	/**
+	 * Gets the number of allocated workers.
+	 *
+	 * @return the number of workers allocated by the resourceManager.
+	 */
+	@VisibleForTesting
+	protected abstract int getNumberAllocatedWorkers();
+
 	// ------------------------------------------------------------------------
 	//  Static utility classes
 	// ------------------------------------------------------------------------
@@ -1018,6 +1041,12 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 			if (jobManagerRegistration != null) {
 				jobManagerRegistration.getJobManagerGateway().notifyAllocationFailure(allocationId, cause);
 			}
+		}
+
+		@Override
+		public void cancelResourceAllocation(ResourceProfile resourceProfile) {
+			validateRunsInMainThread();
+			cancelNewWorker(resourceProfile);
 		}
 	}
 

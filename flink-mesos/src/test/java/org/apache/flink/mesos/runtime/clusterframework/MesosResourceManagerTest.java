@@ -215,9 +215,10 @@ public class MesosResourceManagerTest extends TestLogger {
 		}
 
 		@Override
-		protected void closeTaskManagerConnection(ResourceID resourceID, Exception cause) {
+		protected boolean closeTaskManagerConnection(ResourceID resourceID, Exception cause) {
 			super.closeTaskManagerConnection(resourceID, cause);
 			closedTaskManagerConnections.add(resourceID);
+			return false;
 		}
 
 		@VisibleForTesting

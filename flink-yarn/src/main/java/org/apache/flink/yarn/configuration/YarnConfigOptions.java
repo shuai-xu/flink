@@ -151,10 +151,10 @@ public class YarnConfigOptions {
 					.withDeprecatedKeys("yarn.vcore.ratio");
 
 	/**
-	 * Vcore for Job JobManager (App Master).
+	 * Physical core for Job JobManager (App Master).
 	 */
-	public static final ConfigOption<Integer> JOB_APP_MASTER_VCORE =
-			key("job.app-master-vcore")
+	public static final ConfigOption<Integer> JOB_APP_MASTER_CORE =
+			key("job.app-master-core")
 					.defaultValue(1);
 
 	/**

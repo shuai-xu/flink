@@ -31,6 +31,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServices;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerRuntimeServicesConfiguration;
+import org.apache.flink.runtime.resourcemanager.slotmanager.StrictlyMatchingSlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.security.SecurityContext;
@@ -109,7 +110,12 @@ public class YarnJobClusterEntrypoint extends JobClusterEntrypoint {
 			rmConfiguration,
 			highAvailabilityServices,
 			heartbeatServices,
-			rmRuntimeServices.getSlotManager(),
+			new StrictlyMatchingSlotManager(
+				rpcService.getScheduledExecutor(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerRequestTimeout(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getSlotRequestTimeout(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerTimeout(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay()),
 			metricRegistry,
 			rmRuntimeServices.getJobLeaderIdService(),
 			clusterInformation,

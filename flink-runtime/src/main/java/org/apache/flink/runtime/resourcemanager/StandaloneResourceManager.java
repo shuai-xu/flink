@@ -142,6 +142,15 @@ public class StandaloneResourceManager extends ResourceManager<ResourceID> {
 	}
 
 	@Override
+	public void cancelNewWorker(ResourceProfile resourceProfile) {
+	}
+
+	@Override
+	protected int getNumberAllocatedWorkers() {
+		return 0;
+	}
+
+	@Override
 	protected ResourceID workerStarted(ResourceID resourceID) {
 		return resourceID;
 	}
