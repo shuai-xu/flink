@@ -125,6 +125,7 @@ public class GeminiInternalState implements InternalState {
 		Preconditions.checkNotNull(value);
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 		Preconditions.checkArgument(value.getArity() == descriptor.getNumKeyColumns());
+		Preconditions.checkNotNull(descriptor.getValueMerger());
 
 		Row newValue = isCopyValue() ? descriptor.getValueSerializer().copy(value) : value;
 		Row oldValue = stateStore.get(key);

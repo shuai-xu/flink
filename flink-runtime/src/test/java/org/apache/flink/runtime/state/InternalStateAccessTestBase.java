@@ -261,6 +261,36 @@ public abstract class InternalStateAccessTestBase {
 	public void testKeyMerge() {
 		prepareStateBackend();
 
+		InternalStateDescriptor nullValueMergerDescriptor =
+			new InternalStateDescriptorBuilder("test-null-merger")
+				.addKeyColumn("key1", IntSerializer.INSTANCE)
+				.addValueColumn("value1",
+					new ListSerializer(IntSerializer.INSTANCE))
+				.getDescriptor();
+
+		InternalState nullValueMergerState =
+			backend.getInternalState(nullValueMergerDescriptor);
+
+		try {
+			ArrayList<Integer> list = new ArrayList<>();
+			list.add(10);
+			nullValueMergerState.merge(Row.of(1), Row.of(list));
+			fail("Should throw NullPointerException with null value merger");
+		} catch (Exception e) {
+			assertTrue(e instanceof NullPointerException);
+		}
+
+		try {
+			ArrayList<Integer> list = new ArrayList<>();
+			list.add(10);
+			Map<Row, Row> pairs = new HashMap<>();
+			pairs.put(Row.of(1), Row.of(list));
+			nullValueMergerState.mergeAll(pairs);
+			fail("Should throw NullPointerException with null value merger");
+		} catch (Exception e) {
+			assertTrue(e instanceof NullPointerException);
+		}
+
 		InternalStateDescriptor descriptor =
 			new InternalStateDescriptorBuilder("test")
 				.addKeyColumn("key1", IntSerializer.INSTANCE)

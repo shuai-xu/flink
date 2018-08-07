@@ -158,6 +158,7 @@ final class HeapInternalState implements InternalState {
 		Preconditions.checkNotNull(value);
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 		Preconditions.checkArgument(value.getArity() == descriptor.getNumValueColumns());
+		Preconditions.checkNotNull(descriptor.getValueMerger());
 
 		int group = getGroupForKey(key);
 
