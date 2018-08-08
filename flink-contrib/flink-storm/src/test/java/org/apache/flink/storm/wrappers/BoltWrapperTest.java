@@ -28,6 +28,7 @@ import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.runtime.accumulators.AccumulatorRegistry;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
+import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.util.TestingTaskManagerRuntimeInfo;
 import org.apache.flink.storm.util.AbstractTest;
 import org.apache.flink.storm.util.SplitStreamType;
@@ -374,6 +375,7 @@ public class BoltWrapperTest extends AbstractTest {
 		Environment env = mock(Environment.class);
 		when(env.getTaskInfo()).thenReturn(new TaskInfo("Mock Task", 1, 0, 1, 0));
 		when(env.getUserClassLoader()).thenReturn(BoltWrapperTest.class.getClassLoader());
+		when(env.getTaskStateManager()).thenReturn(new TestTaskStateManager());
 		when(env.getMetricGroup()).thenReturn(UnregisteredMetricGroups.createUnregisteredTaskMetricGroup());
 		when(env.getTaskManagerInfo()).thenReturn(new TestingTaskManagerRuntimeInfo());
 		when(env.getAccumulatorRegistry()).thenReturn(mock(AccumulatorRegistry.class));
