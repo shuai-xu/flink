@@ -497,6 +497,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 				if (pendingNumber != null && pendingNumber.get() > 0) {
 					pendingNumber.decrementAndGet();
+					resourceManagerClient.removeContainerRequest(new AMRMClient.ContainerRequest(
+						container.getResource(), null, null, Priority.newInstance(priority)));
 					if (pendingNumber.get() == 0) {
 						priorityToSpareSlots.put(priority, 0);
 					}
