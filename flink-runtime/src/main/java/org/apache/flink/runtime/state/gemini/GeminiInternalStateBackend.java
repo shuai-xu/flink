@@ -20,12 +20,13 @@ package org.apache.flink.runtime.state.gemini;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.util.Preconditions;
 
@@ -48,6 +49,11 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 	private static final Logger LOG = LoggerFactory.getLogger(GeminiInternalStateBackend.class);
 
 	/**
+	 * The configuration for local recovery.
+	 */
+	private final LocalRecoveryConfig localRecoveryConfig;
+
+	/**
 	 * Configuration for this state backend.
 	 */
 	private transient GeminiConfiguration geminiConfiguration;
@@ -66,16 +72,23 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig,
 		Configuration configuration) {
 		super(numberOfGroups, groups, userClassLoader);
 
 		Preconditions.checkNotNull(configuration);
+		Preconditions.checkNotNull(localRecoveryConfig);
 
+		this.localRecoveryConfig = localRecoveryConfig;
 		this.stateStoreMap = new HashMap<>(16);
 		this.geminiConfiguration = new GeminiConfiguration(configuration);
 		this.geminiAgent = new GeminiAgent(this, geminiConfiguration);
 
 		LOG.info("GeminiStateBackend is created with configuration: " + configuration);
+	}
+
+	public LocalRecoveryConfig getLocalRecoveryConfig() {
+		return localRecoveryConfig;
 	}
 
 	@Override
@@ -103,7 +116,7 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 	}
 
 	@Override
-	public RunnableFuture<StatePartitionSnapshot> snapshot(
+	public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(
 		long checkpointId,
 		long timestamp,
 		CheckpointStreamFactory streamFactory,
@@ -111,7 +124,7 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 	) throws Exception {
 
 		if (states.isEmpty()) {
-			return DoneFuture.of(new DefaultStatePartitionSnapshot(getGroups()));
+			return DoneFuture.of(SnapshotResult.empty());
 		}
 
 		final SnapshotOperator snapshotOperator = geminiAgent.createSnapshotOperator(
@@ -128,12 +141,11 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 		LOG.info("GeminiStateBackend snapshot synchronous part took " +
 			(System.currentTimeMillis() - syncStartTime) + " ms.");
 
-		return new FutureTask<StatePartitionSnapshot>(
-			new Callable<StatePartitionSnapshot>() {
+		return new FutureTask<SnapshotResult<StatePartitionSnapshot>>(
+			new Callable<SnapshotResult<StatePartitionSnapshot>>() {
 				@Override
-				public StatePartitionSnapshot call() throws Exception {
-					StatePartitionSnapshot snapshot = snapshotOperator.materializeSnapshot();
-					return snapshot;
+				public SnapshotResult<StatePartitionSnapshot> call() throws Exception {
+					return snapshotOperator.materializeSnapshot();
 				}
 			}) {
 			@Override

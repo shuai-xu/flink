@@ -27,6 +27,7 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.junit.After;
 import org.junit.Before;
@@ -60,7 +61,8 @@ public class SubKeyedSortedMapStateTest {
 		backend = new HeapInternalStateBackend(
 			10,
 			getGroupsForSubtask(10, 1, 0),
-			ClassLoader.getSystemClassLoader()
+			ClassLoader.getSystemClassLoader(),
+			new TestTaskStateManager().createLocalRecoveryConfig()
 		);
 
 		backend.restore(null);

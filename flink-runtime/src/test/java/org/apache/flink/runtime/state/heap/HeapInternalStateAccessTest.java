@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.heap;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateAccessTestBase;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 
 /**
  * Unit tests to validate that internal states can be correctly accessed in
@@ -32,8 +33,9 @@ public class HeapInternalStateAccessTest extends InternalStateAccessTestBase {
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
-		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader);
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
+		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig);
 	}
 
 }

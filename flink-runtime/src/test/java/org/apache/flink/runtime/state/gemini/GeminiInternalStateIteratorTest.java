@@ -29,6 +29,7 @@ import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
 import org.apache.flink.runtime.state.InternalStateIteratorTestBase;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 
@@ -79,9 +80,10 @@ public class GeminiInternalStateIteratorTest extends InternalStateIteratorTestBa
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
 		Configuration configuration = getStateBackendConfiguration();
-		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, configuration);
+		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration);
 	}
 
 	private Configuration getStateBackendConfiguration() {

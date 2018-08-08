@@ -31,7 +31,7 @@ import java.util.Collection;
  * execution instance of an operator will deploy a backend to manage its
  * internal states.
  */
-public interface InternalStateBackend extends Snapshotable<StatePartitionSnapshot, Collection<StatePartitionSnapshot>> {
+public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>> {
 
 	/**
 	 * Closes the backend. This method is called when the task completes its

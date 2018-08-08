@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.gemini;
 
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 
 /**
@@ -33,7 +34,7 @@ public interface SnapshotOperator {
 	/**
 	 * Materializes the snapshot in asynchronous part of a checkpoint.
 	 */
-	StatePartitionSnapshot materializeSnapshot() throws Exception;
+	SnapshotResult<StatePartitionSnapshot> materializeSnapshot() throws Exception;
 
 	/**
 	 * Releases resources of this snapshot.

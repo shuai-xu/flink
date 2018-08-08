@@ -63,12 +63,13 @@ public abstract class InternalStateAccessTestBase {
 	protected abstract InternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) throws Exception;
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
 	@Before
 	public void openStateBackend() throws Exception {
 		GroupSet groups = getGroupsForSubtask(10, 1, 0);
-		backend = createStateBackend(10, groups, ClassLoader.getSystemClassLoader());
+		backend = createStateBackend(10, groups, ClassLoader.getSystemClassLoader(), TestLocalRecoveryConfig.disabled());
 		backend.restore(null);
 	}
 

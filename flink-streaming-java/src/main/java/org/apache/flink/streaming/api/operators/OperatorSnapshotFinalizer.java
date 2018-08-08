@@ -57,14 +57,15 @@ public class OperatorSnapshotFinalizer {
 			FutureUtil.runIfNotDoneAndGet(snapshotFutures.getOperatorStateRawFuture());
 
 		snapshotFutures.getInternalStateManagedFuture().run();
-		StatePartitionSnapshot managedInternalState =
+		SnapshotResult<StatePartitionSnapshot> internalManaged =
 			FutureUtil.runIfNotDoneAndGet(snapshotFutures.getInternalStateManagedFuture());
+
 		jobManagerOwnedState = new OperatorSubtaskState(
 			operatorManaged.getJobManagerOwnedSnapshot(),
 			operatorRaw.getJobManagerOwnedSnapshot(),
 			keyedManaged.getJobManagerOwnedSnapshot(),
 			keyedRaw.getJobManagerOwnedSnapshot(),
-			managedInternalState
+			internalManaged.getJobManagerOwnedSnapshot()
 		);
 
 		taskLocalState = new OperatorSubtaskState(
@@ -72,7 +73,7 @@ public class OperatorSnapshotFinalizer {
 			operatorRaw.getTaskLocalSnapshot(),
 			keyedManaged.getTaskLocalSnapshot(),
 			keyedRaw.getTaskLocalSnapshot(),
-			null
+			internalManaged.getTaskLocalSnapshot()
 		);
 	}
 

@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.heap;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 
 /**
  * Unit tests to validates that internal states can be correctly saved and
@@ -32,7 +33,8 @@ public class HeapInternalStateCheckpointTest extends InternalStateCheckpointTest
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
-		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader);
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
+		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig);
 	}
 }

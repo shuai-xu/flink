@@ -337,11 +337,13 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 				numberOfGroups,
 				groups,
 				env.getUserClassLoader(),
+				env.getTaskStateManager().createLocalRecoveryConfig(),
 				env.getTaskManagerInfo().getConfiguration()) :
 			new HeapInternalStateBackend(
 				numberOfGroups,
 				groups,
-				env.getUserClassLoader());
+				env.getUserClassLoader(),
+				env.getTaskStateManager().createLocalRecoveryConfig());
 	}
 
 	// ------------------------------------------------------------------------

@@ -25,7 +25,6 @@ import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -72,15 +71,6 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 	 * <p>his variable is not null iff the handles was registered.
 	 */
 	private transient SharedStateRegistry sharedStateRegistry;
-
-	public IncrementalStatePartitionSnapshot(GroupSet groups) {
-		this.groups = groups;
-		this.checkpointId = -1;
-		this.sharedState = Collections.emptyMap();
-		this.privateState = Collections.emptyMap();
-		this.metaStateHandle = null;
-		this.sharedStateRegistry = null;
-	}
 
 	public IncrementalStatePartitionSnapshot(
 		GroupSet groups,
@@ -218,11 +208,6 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 		}
 
 		return size;
-	}
-
-	@Override
-	public boolean hasStates() {
-		return metaStateHandle != null;
 	}
 
 	@Override

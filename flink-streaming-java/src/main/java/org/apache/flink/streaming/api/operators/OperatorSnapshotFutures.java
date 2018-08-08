@@ -18,9 +18,7 @@
 
 package org.apache.flink.streaming.api.operators;
 
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.SnapshotResult;
@@ -50,7 +48,7 @@ public class OperatorSnapshotFutures {
 	private RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture;
 
 	@Nonnull
-	private RunnableFuture<StatePartitionSnapshot> internalStateManagedFuture;
+	private RunnableFuture<SnapshotResult<StatePartitionSnapshot>> internalStateManagedFuture;
 
 	public OperatorSnapshotFutures() {
 		this(
@@ -58,7 +56,7 @@ public class OperatorSnapshotFutures {
 			DoneFuture.of(SnapshotResult.empty()),
 			DoneFuture.of(SnapshotResult.empty()),
 			DoneFuture.of(SnapshotResult.empty()),
-			DoneFuture.of(new DefaultStatePartitionSnapshot(GroupRange.of(0, 1))));
+			DoneFuture.of(SnapshotResult.empty()));
 	}
 
 	public OperatorSnapshotFutures(
@@ -66,7 +64,7 @@ public class OperatorSnapshotFutures {
 		@Nonnull RunnableFuture<SnapshotResult<KeyedStateHandle>> keyedStateRawFuture,
 		@Nonnull RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateManagedFuture,
 		@Nonnull RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture,
-		@Nonnull RunnableFuture<StatePartitionSnapshot> internalStateManagedFuture) {
+		@Nonnull RunnableFuture<SnapshotResult<StatePartitionSnapshot>> internalStateManagedFuture) {
 		this.keyedStateManagedFuture = keyedStateManagedFuture;
 		this.keyedStateRawFuture = keyedStateRawFuture;
 		this.operatorStateManagedFuture = operatorStateManagedFuture;
@@ -115,11 +113,12 @@ public class OperatorSnapshotFutures {
 	}
 
 	@Nonnull
-	public RunnableFuture<StatePartitionSnapshot> getInternalStateManagedFuture() {
+	public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> getInternalStateManagedFuture() {
 		return internalStateManagedFuture;
 	}
 
-	public void setInternalStateManagedFuture(@Nonnull RunnableFuture<StatePartitionSnapshot> internalStateManagedFuture) {
+	public void setInternalStateManagedFuture(
+		@Nonnull RunnableFuture<SnapshotResult<StatePartitionSnapshot>> internalStateManagedFuture) {
 		this.internalStateManagedFuture = internalStateManagedFuture;
 	}
 

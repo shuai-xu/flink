@@ -73,16 +73,18 @@ public class OperatorSnapshotFuturesTest extends TestLogger {
 		RunnableFuture<SnapshotResult<OperatorStateHandle>> operatorStateRawFuture =
 			spy(DoneFuture.of(operatorStateRawResult));
 
-		StatePartitionSnapshot managedInternalState = mock(StatePartitionSnapshot.class);
-		RunnableFuture<StatePartitionSnapshot> internalManagedFuture =
-			spy(DoneFuture.of(managedInternalState));
+		StatePartitionSnapshot internalManagedStateHandle = mock(StatePartitionSnapshot.class);
+		SnapshotResult<StatePartitionSnapshot> internalStateManagedResult =
+			SnapshotResult.of(internalManagedStateHandle);
+		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> internalStateManagedFuture =
+			spy(DoneFuture.of(internalStateManagedResult));
 
 		operatorSnapshotResult = new OperatorSnapshotFutures(
 			keyedStateManagedFuture,
 			keyedStateRawFuture,
 			operatorStateManagedFuture,
-			operatorStateRawFuture,
-			internalManagedFuture);
+			operatorStateRawFuture, internalStateManagedFuture
+		);
 
 		operatorSnapshotResult.cancel();
 
@@ -90,10 +92,12 @@ public class OperatorSnapshotFuturesTest extends TestLogger {
 		verify(keyedStateRawFuture).cancel(true);
 		verify(operatorStateManagedFuture).cancel(true);
 		verify(operatorStateRawFuture).cancel(true);
+		verify(internalStateManagedFuture).cancel(true);
 
 		verify(keyedManagedStateHandle).discardState();
 		verify(keyedRawStateHandle).discardState();
 		verify(operatorManagedStateHandle).discardState();
 		verify(operatorRawStateHandle).discardState();
+		verify(internalManagedStateHandle).discardState();
 	}
 }

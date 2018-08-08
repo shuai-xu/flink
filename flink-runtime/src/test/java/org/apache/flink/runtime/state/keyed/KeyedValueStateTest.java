@@ -24,6 +24,7 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.junit.After;
 import org.junit.Before;
@@ -54,7 +55,8 @@ public class KeyedValueStateTest {
 		backend = new HeapInternalStateBackend(
 			10,
 			getGroupsForSubtask(10, 1, 0),
-			ClassLoader.getSystemClassLoader()
+			ClassLoader.getSystemClassLoader(),
+			TestLocalRecoveryConfig.disabled()
 		);
 
 		backend.restore(null);

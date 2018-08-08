@@ -74,7 +74,8 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 	protected InternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) throws IOException {
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) throws IOException {
 		dbOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createDBOptions().setCreateIfMissing(true);
 		columnOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createColumnOptions();
 		ensureRocksDBIsLoaded(rocksDBLoadPath);

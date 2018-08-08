@@ -39,11 +39,4 @@ public interface StatePartitionSnapshot extends CompositeStateHandle {
 	 *         given groups and the groups in the snapshot.
 	 */
 	StatePartitionSnapshot getIntersection(GroupSet groups);
-
-	/**
-	 * Whethre the snapshot has state.
-	 *
-	 * @return Returns true if this contains at least one {@link StateObject}.
-	 */
-	boolean hasStates();
 }

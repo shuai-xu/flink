@@ -41,6 +41,7 @@ import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.keyed.KeyedState;
@@ -404,7 +405,7 @@ public class StatefulStreamOperatorTest {
 		}
 
 		@Override
-		public RunnableFuture<StatePartitionSnapshot> snapshot(long checkpointId, long timestamp, CheckpointStreamFactory streamFactory, CheckpointOptions checkpointOptions) throws Exception {
+		public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(long checkpointId, long timestamp, CheckpointStreamFactory streamFactory, CheckpointOptions checkpointOptions) throws Exception {
 			return null;
 		}
 

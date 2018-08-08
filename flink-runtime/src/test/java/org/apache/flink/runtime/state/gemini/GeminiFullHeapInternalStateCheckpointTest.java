@@ -22,6 +22,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 
 /**
  * Unit tests to validates that internal states can be correctly saved and
@@ -33,9 +34,10 @@ public class GeminiFullHeapInternalStateCheckpointTest extends InternalStateChec
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
 		Configuration configuration = getStateBackendConfiguration();
-		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, configuration);
+		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration);
 	}
 
 	private Configuration getStateBackendConfiguration() {

@@ -25,8 +25,10 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
+import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalState;
@@ -34,9 +36,11 @@ import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
+import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
+import org.apache.flink.util.function.SupplierWithException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +69,7 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	/**
 	 * The factory to use for writing state to streams.
 	 */
-	private final CheckpointStreamFactory streamFactory;
+	private final CheckpointStreamFactory primaryStreamFactory;
 
 	/**
 	 * Map for holding the snapshots of all {@link StateStore}.
@@ -79,12 +83,12 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	public FullSnapshotOperator(
 		GeminiInternalStateBackend stateBackend,
 		long checkpointId,
-		CheckpointStreamFactory streamFactory,
+		CheckpointStreamFactory primaryStreamFactory,
 		CloseableRegistry cancelStreamRegistry
 	) {
 		this.stateBackend = Preconditions.checkNotNull(stateBackend);
 		this.checkpointId = checkpointId;
-		this.streamFactory = Preconditions.checkNotNull(streamFactory);
+		this.primaryStreamFactory = Preconditions.checkNotNull(primaryStreamFactory);
 		this.cancelStreamRegistry = Preconditions.checkNotNull(cancelStreamRegistry);
 		this.stateStoreSnapshotMap = new HashMap<>();
 	}
@@ -98,19 +102,36 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	}
 
 	@Override
-	public StatePartitionSnapshot materializeSnapshot() throws Exception {
+	public SnapshotResult<StatePartitionSnapshot> materializeSnapshot() throws Exception {
+
+		if (stateBackend.getStates().isEmpty()) {
+			return SnapshotResult.empty();
+		}
 
 		GroupSet groups = stateBackend.getGroups();
 
-		if (stateBackend.getStates().isEmpty()) {
-			return new DefaultStatePartitionSnapshot(groups);
-		}
+		SupplierWithException<CheckpointStreamWithResultProvider, Exception> checkpointStreamSupplier =
 
-		CheckpointStreamFactory.CheckpointStateOutputStream outputStream = null;
+				stateBackend.getLocalRecoveryConfig().isLocalRecoveryEnabled() ?
+
+					() -> CheckpointStreamWithResultProvider.createDuplicatingStream(
+						checkpointId,
+						CheckpointedStateScope.EXCLUSIVE,
+						primaryStreamFactory,
+						stateBackend.getLocalRecoveryConfig().getLocalStateDirectoryProvider()) :
+
+					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						CheckpointedStateScope.EXCLUSIVE,
+						primaryStreamFactory);
+
+		CheckpointStreamWithResultProvider streamWithResultProvider = null;
 
 		try {
-			outputStream = streamFactory.createCheckpointStateOutputStream(CheckpointedStateScope.EXCLUSIVE);
-			cancelStreamRegistry.registerCloseable(outputStream);
+			streamWithResultProvider = checkpointStreamSupplier.get();
+			cancelStreamRegistry.registerCloseable(streamWithResultProvider);
+
+			CheckpointStreamFactory.CheckpointStateOutputStream outputStream =
+				streamWithResultProvider.getCheckpointOutputStream();
 
 			DataOutputViewStreamWrapper outputView =
 				new DataOutputViewStreamWrapper(outputStream);
@@ -127,23 +148,35 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 			Map<Integer, Tuple2<Long, Integer>> metaInfos =
 				snapshotData(outputStream, outputView);
 
-			StreamStateHandle snapshotHandle = outputStream.closeAndGetHandle();
-
 			LOG.info("GeminiStateBackend snapshot asynchronous part took " +
 				(System.currentTimeMillis() - asyncStartTime) + " ms.");
 
-			return new DefaultStatePartitionSnapshot(
-				groups,
-				metaInfos,
-				snapshotHandle
-			);
+
+			SnapshotResult<StreamStateHandle> streamSnapshotResult =
+				streamWithResultProvider.closeAndFinalizeCheckpointStreamResult();
+			cancelStreamRegistry.unregisterCloseable(streamWithResultProvider);
+			streamWithResultProvider = null;
+
+			StreamStateHandle streamStateHandle = streamSnapshotResult.getJobManagerOwnedSnapshot();
+			StatePartitionSnapshot snapshot =
+				new DefaultStatePartitionSnapshot(
+					groups, metaInfos, streamStateHandle);
+
+			StreamStateHandle localStreamStateHandle = streamSnapshotResult.getTaskLocalSnapshot();
+			if (localStreamStateHandle != null) {
+				StatePartitionSnapshot localSnapshot =
+					new DefaultStatePartitionSnapshot(
+						groups, metaInfos, localStreamStateHandle);
+
+				return SnapshotResult.withLocalState(snapshot, localSnapshot);
+			} else {
+				return SnapshotResult.of(snapshot);
+			}
+
 		} finally {
-			if (cancelStreamRegistry.unregisterCloseable(outputStream)) {
-				try {
-					outputStream.close();
-				} catch (Exception e) {
-					LOG.warn("Could not properly close the output stream.", e);
-				}
+			if (streamWithResultProvider != null) {
+				IOUtils.closeQuietly(streamWithResultProvider);
+				cancelStreamRegistry.unregisterCloseable(streamWithResultProvider);
 			}
 		}
 	}

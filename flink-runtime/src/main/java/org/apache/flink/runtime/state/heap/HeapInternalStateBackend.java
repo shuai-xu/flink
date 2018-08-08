@@ -29,6 +29,7 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
+import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
@@ -37,12 +38,16 @@ import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalColumnDescriptor;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
+import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.function.SupplierWithException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,15 +75,22 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 	private transient Map<Integer, Map<String, Map>> heap;
 
 	/**
+	 * The configuration for local recovery.
+	 */
+	private final LocalRecoveryConfig localRecoveryConfig;
+
+	/**
 	 * Sole constructor.
 	 */
 	public HeapInternalStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
 		super(numberOfGroups, groups, userClassLoader);
 
-		this.heap = new HashMap();
+		this.heap = new HashMap<>();
+		this.localRecoveryConfig = Preconditions.checkNotNull(localRecoveryConfig);
 
 		LOG.info("HeapInternalStateBackend is created.");
 	}
@@ -149,23 +161,39 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 	}
 
 	@Override
-	public RunnableFuture<StatePartitionSnapshot> snapshot(
+	public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(
 		long checkpointId,
 		long timestamp,
-		CheckpointStreamFactory streamFactory,
+		CheckpointStreamFactory primaryStreamFactory,
 		CheckpointOptions checkpointOptions
 	) throws Exception {
 		GroupSet groups = getGroups();
 
 		if (states.isEmpty()) {
-			return DoneFuture.of(new DefaultStatePartitionSnapshot(groups));
+			return DoneFuture.of(SnapshotResult.empty());
 		}
 
-		CheckpointStreamFactory.CheckpointStateOutputStream outputStream = null;
+		SupplierWithException<CheckpointStreamWithResultProvider, Exception> checkpointStreamSupplier =
+			localRecoveryConfig.isLocalRecoveryEnabled() ?
+
+					() -> CheckpointStreamWithResultProvider.createDuplicatingStream(
+						checkpointId,
+						CheckpointedStateScope.EXCLUSIVE,
+						primaryStreamFactory,
+						localRecoveryConfig.getLocalStateDirectoryProvider()) :
+
+					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						CheckpointedStateScope.EXCLUSIVE,
+						primaryStreamFactory);
+
+		CheckpointStreamWithResultProvider streamWithResultProvider = null;
 
 		// Writes state descriptors into the checkpoint stream
 		try {
-			outputStream = streamFactory.createCheckpointStateOutputStream(CheckpointedStateScope.EXCLUSIVE);
+			streamWithResultProvider = checkpointStreamSupplier.get();
+
+			CheckpointStreamFactory.CheckpointStateOutputStream outputStream =
+				streamWithResultProvider.getCheckpointOutputStream();
 
 			DataOutputViewStreamWrapper outputView =
 				new DataOutputViewStreamWrapper(outputStream);
@@ -183,22 +211,39 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 			Map<Integer, Tuple2<Long, Integer>> metaInfos =
 				snapshotData(outputStream, outputView);
 
-			StreamStateHandle snapshotHandle = outputStream.closeAndGetHandle();
+			SnapshotResult<StreamStateHandle> streamSnapshotResult =
+				streamWithResultProvider.closeAndFinalizeCheckpointStreamResult();
+			streamWithResultProvider = null;
 
 			LOG.info("Successfully complete the snapshot of the states in " +
 				(System.currentTimeMillis() - startTime) + "ms");
 
-			return DoneFuture.of(
+			StreamStateHandle streamStateHandle = streamSnapshotResult.getJobManagerOwnedSnapshot();
+			DefaultStatePartitionSnapshot snapshot =
 				new DefaultStatePartitionSnapshot(
 					groups,
 					metaInfos,
-					snapshotHandle
-				)
-			);
+					streamStateHandle
+				);
+
+			StreamStateHandle localStreamStateHandle = streamSnapshotResult.getTaskLocalSnapshot();
+			if (localStreamStateHandle != null) {
+				DefaultStatePartitionSnapshot localSnapshot =
+					new DefaultStatePartitionSnapshot(
+						groups,
+						metaInfos,
+						localStreamStateHandle
+					);
+
+				return DoneFuture.of(SnapshotResult.withLocalState(snapshot, localSnapshot));
+			} else {
+				return DoneFuture.of(SnapshotResult.of(snapshot));
+			}
+
 		} finally {
 			try {
-				if (outputStream != null) {
-					outputStream.close();
+				if (streamWithResultProvider != null) {
+					IOUtils.closeQuietly(streamWithResultProvider);
 				}
 			} catch (Exception e) {
 				LOG.warn("Could not properly close the output stream.", e);

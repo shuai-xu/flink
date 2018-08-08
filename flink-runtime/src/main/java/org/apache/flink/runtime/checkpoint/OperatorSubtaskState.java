@@ -291,15 +291,6 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 			|| rawOperatorState.hasState()
 			|| managedKeyedState.hasState()
 			|| rawKeyedState.hasState()
-			|| hasInternalState();
-	}
-
-	private boolean hasInternalState() {
-		for (StatePartitionSnapshot snapshot : managedInternalState) {
-			if (snapshot.hasStates()) {
-				return true;
-			}
-		}
-		return false;
+			|| managedInternalState.hasState();
 	}
 }

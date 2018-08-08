@@ -27,6 +27,7 @@ import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateAccessTestBase;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.types.Row;
 
 import org.junit.Test;
@@ -69,9 +70,10 @@ public class GeminiInternalStateAccessTest extends InternalStateAccessTestBase {
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
 		Configuration configuration = getStateBackendConfiguration();
-		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, configuration);
+		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration);
 	}
 
 	private Configuration getStateBackendConfiguration() {

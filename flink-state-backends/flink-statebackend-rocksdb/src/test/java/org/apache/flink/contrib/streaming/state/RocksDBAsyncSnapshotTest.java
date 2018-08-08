@@ -456,7 +456,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 					.addValueColumn("value", StringSerializer.INSTANCE)
 					.getDescriptor());
 
-			RunnableFuture<StatePartitionSnapshot> snapshotFuture = internalBackend.snapshot(checkpointId,
+			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture = internalBackend.snapshot(checkpointId,
 				timestamp,
 				new TestCheckpointStreamFactory(() -> outputStream),
 				CheckpointOptions.forCheckpointWithDefaultLocation());

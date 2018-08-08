@@ -26,6 +26,7 @@ import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
 import org.apache.flink.runtime.state.InternalStateIteratorTestBase;
+import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 
@@ -51,8 +52,9 @@ public class HeapInternalStateIteratorTest extends InternalStateIteratorTestBase
 	protected AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
-		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader);
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) {
+		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig);
 	}
 
 	@Test

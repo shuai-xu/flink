@@ -29,12 +29,14 @@ import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.DirectoryStateHandle;
+import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.PlaceholderStreamStateHandle;
 import org.apache.flink.runtime.state.SnapshotDirectory;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StateObject;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
@@ -42,6 +44,7 @@ import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
@@ -92,7 +95,7 @@ public class RocksDBIncrementalSnapshotOperation {
 
 	private final ResourceGuard.Lease dbLease;
 
-	private StreamStateHandle metaStateHandle = null;
+	private SnapshotResult<StreamStateHandle> metaStateHandle = null;
 
 	RocksDBIncrementalSnapshotOperation(
 		RocksDBInternalStateBackend stateBackend,
@@ -131,7 +134,7 @@ public class RocksDBIncrementalSnapshotOperation {
 	}
 
 	@Nonnull
-	StatePartitionSnapshot runSnapshot() throws Exception {
+	SnapshotResult<StatePartitionSnapshot> runSnapshot() throws Exception {
 
 		stateBackend.getCancelStreamRegistry().registerCloseable(closeableRegistry);
 
@@ -189,12 +192,45 @@ public class RocksDBIncrementalSnapshotOperation {
 			stateBackend.materializedSstFiles.put(checkpointId, sstFiles);
 		}
 
-		return new IncrementalStatePartitionSnapshot(
-			stateBackend.getGroups(),
-			checkpointId,
-			sstFiles,
-			miscFiles,
-			metaStateHandle);
+		StatePartitionSnapshot stateSnapshot =
+			new IncrementalStatePartitionSnapshot(
+				stateBackend.getGroups(),
+				checkpointId,
+				sstFiles,
+				miscFiles,
+				metaStateHandle.getJobManagerOwnedSnapshot());
+
+			StreamStateHandle taskLocalSnapshotMetaDataStateHandle = metaStateHandle.getTaskLocalSnapshot();
+			DirectoryStateHandle directoryStateHandle = null;
+
+			try {
+				directoryStateHandle = localBackupDirectory.completeSnapshotAndGetHandle();
+			} catch (IOException ex) {
+
+				Exception collector = ex;
+
+				try {
+					taskLocalSnapshotMetaDataStateHandle.discardState();
+				} catch (Exception discardEx) {
+					collector = ExceptionUtils.firstOrSuppressed(discardEx, collector);
+				}
+
+				LOG.warn("Problem with local state snapshot.", collector);
+			}
+
+			if (directoryStateHandle != null && taskLocalSnapshotMetaDataStateHandle != null) {
+
+				StatePartitionSnapshot localStateSnapshot =
+					new IncrementalLocalStatePartitionSnapshot(
+						stateBackend.getGroups(),
+						checkpointId,
+						taskLocalSnapshotMetaDataStateHandle,
+						directoryStateHandle,
+						sstFiles.keySet());
+				return SnapshotResult.withLocalState(stateSnapshot, localStateSnapshot);
+			} else {
+				return SnapshotResult.of(stateSnapshot);
+			}
 	}
 
 	void stop() {
@@ -304,7 +340,7 @@ public class RocksDBIncrementalSnapshotOperation {
 		}
 	}
 
-	private StreamStateHandle materializeMetaData() throws Exception {
+	private SnapshotResult<StreamStateHandle> materializeMetaData() throws Exception {
 		LocalRecoveryConfig localRecoveryConfig = stateBackend.localRecoveryConfig;
 
 		CheckpointStreamWithResultProvider streamWithResultProvider =
@@ -336,7 +372,7 @@ public class RocksDBIncrementalSnapshotOperation {
 			}
 
 			if (closeableRegistry.unregisterCloseable(streamWithResultProvider)) {
-				StreamStateHandle resultStateHandle = outputStream.closeAndGetHandle();
+				SnapshotResult<StreamStateHandle> resultStateHandle = streamWithResultProvider.closeAndFinalizeCheckpointStreamResult();
 				streamWithResultProvider = null;
 				return resultStateHandle;
 			} else {

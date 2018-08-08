@@ -60,12 +60,13 @@ public abstract class InternalStateIteratorTestBase {
 	protected abstract AbstractInternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader);
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig);
 
 	@Before
 	public void openStateBackend() throws Exception {
 		GroupSet groups = getGroupsForSubtask(10, 1, 0);
-		backend = createStateBackend(10, groups, ClassLoader.getSystemClassLoader());
+		backend = createStateBackend(10, groups, ClassLoader.getSystemClassLoader(), TestLocalRecoveryConfig.disabled());
 	}
 
 	@After
@@ -80,7 +81,8 @@ public abstract class InternalStateIteratorTestBase {
 		AbstractInternalStateBackend backend = createStateBackend(
 			10,
 			getGroupsForSubtask(10, 2, 0),
-			ClassLoader.getSystemClassLoader());
+			ClassLoader.getSystemClassLoader(),
+			TestLocalRecoveryConfig.disabled());
 
 		InternalStateDescriptor descriptor =
 			new InternalStateDescriptorBuilder("test")

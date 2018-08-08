@@ -38,8 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import static org.mockito.Mockito.mock;
-
 /**
  * Unit tests to validate that internal states can be correctly accessed in
  * {@link RocksDBInternalStateBackend}.
@@ -76,7 +74,8 @@ public class RocksDBInternalStateAccessTest extends InternalStateAccessTestBase 
 	protected InternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) throws Exception {
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) throws Exception {
 
 		dbOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createDBOptions().setCreateIfMissing(true);
 		columnOptions = PredefinedOptions.FLASH_SSD_OPTIMIZED_HIGH_MEM.createColumnOptions();
@@ -89,7 +88,7 @@ public class RocksDBInternalStateAccessTest extends InternalStateAccessTestBase 
 			numberOfGroups,
 			groups,
 			true,
-			mock(LocalRecoveryConfig.class));
+			localRecoveryConfig);
 	}
 
 	private void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {

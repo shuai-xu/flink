@@ -52,6 +52,7 @@ import java.util.concurrent.RunnableFuture;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -86,6 +87,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	protected ClassLoader classLoader;
 
+	protected LocalRecoveryConfig localRecoveryConfig;
+
 	/**
 	 * Creates a new state stateBackend for testing.
 	 *
@@ -94,7 +97,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	protected abstract InternalStateBackend createStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) throws IOException;
+		ClassLoader userClassLoader,
+		LocalRecoveryConfig localRecoveryConfig) throws IOException;
 
 	@Before
 	public void open() throws Exception {
@@ -108,11 +112,13 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		initParallelism = 1;
 		initSubtaskIndex = 0;
 		classLoader = ClassLoader.getSystemClassLoader();
+		localRecoveryConfig = TestLocalRecoveryConfig.disabled();
 
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
-			classLoader);
+			classLoader,
+			localRecoveryConfig);
 		stateBackend.restore(null);
 	}
 
@@ -126,19 +132,20 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	@Test
 	public void testCheckpointWithEmptyStateBackend() throws Exception {
 
-		RunnableFuture<StatePartitionSnapshot> snapshotFuture =
+		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
 			stateBackend.snapshot(0, 0, checkpointStreamFactory, checkpointOptions);
 		assertNotNull(snapshotFuture);
 
 		StatePartitionSnapshot snapshot = runSnapshot(snapshotFuture);
-		assertNotNull(snapshot);
+		assertNull(snapshot);
 		stateBackend.close();
 
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
-			classLoader);
-		stateBackend.restore(Collections.singleton(snapshot));
+			classLoader,
+			localRecoveryConfig);
+		stateBackend.restore(null);
 
 		Collection<InternalState> states = stateBackend.getInternalStates();
 		assertTrue(states.isEmpty());
@@ -154,7 +161,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				.getDescriptor();
 		stateBackend.getInternalState(globalStateDescriptor);
 
-		RunnableFuture<StatePartitionSnapshot> snapshotFuture =
+		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
 			stateBackend.snapshot(0, 0, checkpointStreamFactory, checkpointOptions);
 		assertNotNull(snapshotFuture);
 
@@ -165,7 +172,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
-			classLoader);
+			classLoader,
+			localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(snapshot));
 
 		Collection<InternalState> states = stateBackend.getInternalStates();
@@ -232,7 +240,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
-			classLoader);
+			classLoader,
+			localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(snapshot1));
 
 		// Validates that the states are correctly restored.
@@ -297,7 +306,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		stateBackend = createStateBackend(
 			maxParallelism,
 			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
-			classLoader);
+			classLoader,
+			localRecoveryConfig);
 
 		stateBackend.restore(Collections.singleton(snapshot2));
 
@@ -375,7 +385,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		StatePartitionSnapshot firstSnapshot1 = snapshot1.getIntersection(firstGroups1);
 
 		// Restores the stateBackend from the snapshot
-		stateBackend = createStateBackend(maxParallelism, firstGroups1, classLoader);
+		stateBackend = createStateBackend(maxParallelism, firstGroups1, classLoader, localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(firstSnapshot1));
 
 		// Validates that the states are correctly restored.
@@ -427,7 +437,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		StatePartitionSnapshot secondSnapshot1 = snapshot1.getIntersection(secondGroups1);
 
 		// Restores the stateBackend from the snapshot
-		stateBackend = createStateBackend(maxParallelism, secondGroups1, classLoader);
+		stateBackend = createStateBackend(maxParallelism, secondGroups1, classLoader, localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(secondSnapshot1));
 
 		// Validates that the states are correctly restored.
@@ -480,7 +490,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		StatePartitionSnapshot thirdSnapshot1 = snapshot1.getIntersection(thirdGroups1);
 
 		// Restores the stateBackend from the snapshot
-		stateBackend = createStateBackend(maxParallelism, thirdGroups1, classLoader);
+		stateBackend = createStateBackend(maxParallelism, thirdGroups1, classLoader, localRecoveryConfig);
 		stateBackend.restore(Collections.singleton(thirdSnapshot1));
 
 		// Validates that the states are correctly restored.
@@ -531,8 +541,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		// Merge the local states
 		GroupSet leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
 		GroupSet rightGroups3 = getGroupsForSubtask(maxParallelism, 2, 1);
-		InternalStateBackend newLeftBackend = createStateBackend(maxParallelism, leftGroups3, classLoader);
-		InternalStateBackend newRightBackend = createStateBackend(maxParallelism, rightGroups3, classLoader);
+		InternalStateBackend newLeftBackend = createStateBackend(maxParallelism, leftGroups3, classLoader, localRecoveryConfig);
+		InternalStateBackend newRightBackend = createStateBackend(maxParallelism, rightGroups3, classLoader, localRecoveryConfig);
 
 		try {
 			StatePartitionSnapshot firstSnapshot3 = firstSnapshot2.getIntersection(leftGroups3);
@@ -737,10 +747,10 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		SharedStateRegistry sharedStateRegistry
 	) throws Exception {
 
-		RunnableFuture<StatePartitionSnapshot> snapshotFuture =
+		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
 			stateBackend.snapshot(checkpointId, checkpointTimestamp, checkpointStreamFactory, checkpointOptions);
 
-		StatePartitionSnapshot statePartitionSnapshot = FutureUtil.runIfNotDoneAndGet(snapshotFuture);
+		StatePartitionSnapshot statePartitionSnapshot = runSnapshot(snapshotFuture);
 
 		// Register the snapshot at the registry to replace the place holders with actual handles.
 		if (checkpointOptions.getCheckpointType().equals(CheckpointType.CHECKPOINT)) {
@@ -750,11 +760,10 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		return statePartitionSnapshot;
 	}
 
-	private StatePartitionSnapshot runSnapshot(RunnableFuture<StatePartitionSnapshot> snapshotRunnableFuture) throws Exception {
-		if (!snapshotRunnableFuture.isDone()) {
-			Thread runner = new Thread(snapshotRunnableFuture);
-			runner.start();
-		}
-		return snapshotRunnableFuture.get();
+	private static StatePartitionSnapshot runSnapshot(
+		RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotRunnableFuture) throws Exception {
+		SnapshotResult<StatePartitionSnapshot> snapshotResult =
+			FutureUtil.runIfNotDoneAndGet(snapshotRunnableFuture);
+		return snapshotResult == null ? null : snapshotResult.getJobManagerOwnedSnapshot();
 	}
 }

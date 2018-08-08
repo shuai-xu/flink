@@ -71,13 +71,15 @@ public class OperatorSnapshotFinalizerTest extends TestLogger {
 			StateHandleDummyUtil.deepDummyCopy(operatorTemplate),
 			StateHandleDummyUtil.deepDummyCopy(operatorTemplate));
 
-		StatePartitionSnapshot snapInternalMan = new DefaultStatePartitionSnapshot(GroupRange.of(0, 1));
+		SnapshotResult<StatePartitionSnapshot> snapInternalMan = SnapshotResult.withLocalState(
+			new DefaultStatePartitionSnapshot(GroupRange.of(0, 1)),
+			new DefaultStatePartitionSnapshot(GroupRange.of(0, 1)));
 
 		DoneFuture<SnapshotResult<KeyedStateHandle>> managedKeyed = new PseudoNotDoneFuture<>(snapKeyMan);
 		DoneFuture<SnapshotResult<KeyedStateHandle>> rawKeyed = new PseudoNotDoneFuture<>(snapKeyRaw);
 		DoneFuture<SnapshotResult<OperatorStateHandle>> managedOp = new PseudoNotDoneFuture<>(snapOpMan);
 		DoneFuture<SnapshotResult<OperatorStateHandle>> rawOp = new PseudoNotDoneFuture<>(snapOpRaw);
-		DoneFuture<StatePartitionSnapshot> managedInternal = new PseudoNotDoneFuture<>(snapInternalMan);
+		DoneFuture<SnapshotResult<StatePartitionSnapshot>> managedInternal = new PseudoNotDoneFuture<>(snapInternalMan);
 
 		Assert.assertFalse(managedKeyed.isDone());
 		Assert.assertFalse(rawKeyed.isDone());
@@ -99,13 +101,14 @@ public class OperatorSnapshotFinalizerTest extends TestLogger {
 		Assert.assertTrue(checkResult(snapKeyRaw.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getRawKeyedState()));
 		Assert.assertTrue(checkResult(snapOpMan.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getManagedOperatorState()));
 		Assert.assertTrue(checkResult(snapOpRaw.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getRawOperatorState()));
-		Assert.assertTrue(checkResult(snapInternalMan, jobManagerOwnedState.getManagedInternalState()));
+		Assert.assertTrue(checkResult(snapInternalMan.getJobManagerOwnedSnapshot(), jobManagerOwnedState.getManagedInternalState()));
 
 		OperatorSubtaskState taskLocalState = operatorSnapshotFinalizer.getTaskLocalState();
 		Assert.assertTrue(checkResult(snapKeyMan.getTaskLocalSnapshot(), taskLocalState.getManagedKeyedState()));
 		Assert.assertTrue(checkResult(snapKeyRaw.getTaskLocalSnapshot(), taskLocalState.getRawKeyedState()));
 		Assert.assertTrue(checkResult(snapOpMan.getTaskLocalSnapshot(), taskLocalState.getManagedOperatorState()));
 		Assert.assertTrue(checkResult(snapOpRaw.getTaskLocalSnapshot(), taskLocalState.getRawOperatorState()));
+		Assert.assertTrue(checkResult(snapInternalMan.getTaskLocalSnapshot(), taskLocalState.getManagedInternalState()));
 	}
 
 	private <T extends StateObject> boolean checkResult(T expected, StateObjectCollection<T> actual) {

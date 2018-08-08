@@ -496,11 +496,13 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 				numberOfGroups,
 				groups,
 				env.getUserClassLoader(),
+				env.getTaskStateManager().createLocalRecoveryConfig(),
 				env.getTaskManagerInfo().getConfiguration()) :
 			new HeapInternalStateBackend(
 				numberOfGroups,
 				groups,
-				env.getUserClassLoader());
+				env.getUserClassLoader(),
+				env.getTaskStateManager().createLocalRecoveryConfig());
 	}
 
 	// ------------------------------------------------------------------------

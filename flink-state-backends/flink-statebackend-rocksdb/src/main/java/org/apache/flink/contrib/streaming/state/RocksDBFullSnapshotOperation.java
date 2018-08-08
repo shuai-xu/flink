@@ -34,6 +34,7 @@ import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.SnapshotDirectory;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.types.Pair;
@@ -147,21 +148,30 @@ public class RocksDBFullSnapshotOperation {
 	 * @return state partition snapshot for the completed snapshot.
 	 */
 	@Nonnull
-	public StatePartitionSnapshot getStatePartitionSnapshot() throws IOException {
+	public SnapshotResult<StatePartitionSnapshot> getStatePartitionSnapshot() throws IOException {
 
 		Preconditions.checkNotNull(metaInfo);
 
-		StreamStateHandle snapshotHandle =
-			checkpointStreamWithResultProvider.getCheckpointOutputStream().closeAndGetHandle();
-		StatePartitionSnapshot snapshot =
-			new DefaultStatePartitionSnapshot(
-				stateBackend.getGroups(),
-				metaInfo,
-				snapshotHandle);
+		SnapshotResult<StreamStateHandle> snapshotResult =
+			checkpointStreamWithResultProvider.closeAndFinalizeCheckpointStreamResult();
 
 		LOG.info("Successfully complete the snapshot of the states");
 
-		return snapshot;
+		StreamStateHandle snapshotHandle = snapshotResult.getJobManagerOwnedSnapshot();
+		StatePartitionSnapshot snapshot =
+			new DefaultStatePartitionSnapshot(
+					stateBackend.getGroups(), metaInfo, snapshotHandle);
+
+		StreamStateHandle localSnapshotHandle = snapshotResult.getTaskLocalSnapshot();
+		if (localSnapshotHandle != null) {
+			StatePartitionSnapshot localSnapshot =
+				new DefaultStatePartitionSnapshot(
+						stateBackend.getGroups(), metaInfo, localSnapshotHandle);
+
+			return SnapshotResult.withLocalState(snapshot, localSnapshot);
+		} else {
+			return SnapshotResult.of(snapshot);
+		}
 	}
 
 	/**

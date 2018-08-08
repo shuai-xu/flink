@@ -35,6 +35,7 @@ import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.SharedStateRegistry;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
@@ -244,7 +245,7 @@ public class RocksDBInternalStateBackendTest {
 		setupRocksDBStateBackend();
 
 		try {
-			RunnableFuture<StatePartitionSnapshot> snapshot =
+			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot =
 				backend.snapshot(0L, 0L, testStreamFactory, CheckpointOptions.forCheckpointWithDefaultLocation());
 
 			RocksDBInstance spyDB = backend.getDbInstance();
@@ -279,7 +280,7 @@ public class RocksDBInternalStateBackendTest {
 		setupRocksDBStateBackend();
 
 		try {
-			RunnableFuture<StatePartitionSnapshot> snapshot =
+			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot =
 				backend.snapshot(0L, 0L, testStreamFactory, CheckpointOptions.forCheckpointWithDefaultLocation());
 			verify(rocksDBResourceGuard, times(1)).acquireResource();
 			assertEquals(1, rocksDBResourceGuard.getLeaseCount());
@@ -298,7 +299,7 @@ public class RocksDBInternalStateBackendTest {
 		setupRocksDBStateBackend();
 
 		try {
-			RunnableFuture<StatePartitionSnapshot> snapshot =
+			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot =
 				backend.snapshot(0L, 0L, testStreamFactory, CheckpointOptions.forCheckpointWithDefaultLocation());
 			assertEquals(1, rocksDBResourceGuard.getLeaseCount());
 			snapshot.cancel(true);
@@ -326,7 +327,7 @@ public class RocksDBInternalStateBackendTest {
 		setupRocksDBStateBackend();
 
 		try {
-			RunnableFuture<StatePartitionSnapshot> snapshotFuture =
+			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
 				backend.snapshot(0L, 0L, testStreamFactory, CheckpointOptions.forCheckpointWithDefaultLocation());
 			Thread asyncSnapshotThread = new Thread(snapshotFuture);
 			asyncSnapshotThread.start();
@@ -336,7 +337,8 @@ public class RocksDBInternalStateBackendTest {
 			blocker.trigger(); // allow checkpointing to start writing
 			waiter.await(); // wait for snapshot stream writing to run
 
-			StatePartitionSnapshot snapshot = snapshotFuture.get();
+			SnapshotResult<StatePartitionSnapshot> snapshotResult = snapshotFuture.get();
+			StatePartitionSnapshot snapshot = snapshotResult.getJobManagerOwnedSnapshot();
 			assertNotNull(snapshot);
 			assertTrue(snapshot.getStateSize() > 0);
 			assertEquals(new GroupRange(0, 10), snapshot.getGroups());
@@ -358,7 +360,7 @@ public class RocksDBInternalStateBackendTest {
 	public void testCancelRunningSnapshot() throws Exception {
 		setupRocksDBStateBackend();
 		try {
-			RunnableFuture<StatePartitionSnapshot> snapshot =
+			RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot =
 				backend.snapshot(0L, 0L, testStreamFactory, CheckpointOptions.forCheckpointWithDefaultLocation());
 			Thread asyncSnapshotThread = new Thread(snapshot);
 			asyncSnapshotThread.start();
@@ -422,10 +424,11 @@ public class RocksDBInternalStateBackendTest {
 
 					runStateUpdates();
 
-					RunnableFuture<StatePartitionSnapshot> snapshotFuture =
+					RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshotFuture =
 						backend.snapshot(checkpointId, checkpointId, checkpointStorageLocation, CheckpointOptions.forCheckpointWithDefaultLocation());
 
-					StatePartitionSnapshot snapshot = FutureUtil.runIfNotDoneAndGet(snapshotFuture);
+					SnapshotResult<StatePartitionSnapshot> snapshotResult = FutureUtil.runIfNotDoneAndGet(snapshotFuture);
+					StatePartitionSnapshot snapshot = snapshotResult.getJobManagerOwnedSnapshot();
 
 					IncrementalStatePartitionSnapshot stateHandle =
 						(IncrementalStatePartitionSnapshot) snapshot;

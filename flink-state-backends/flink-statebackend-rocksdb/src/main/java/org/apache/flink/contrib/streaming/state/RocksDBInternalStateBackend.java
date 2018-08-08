@@ -40,6 +40,7 @@ import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.LocalRecoveryDirectoryProvider;
 import org.apache.flink.runtime.state.SnapshotDirectory;
+import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.SnapshotStrategy;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
@@ -128,7 +129,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	final LocalRecoveryConfig localRecoveryConfig;
 
 	/** The snapshot strategy, e.g., if we use full or incremental checkpoints, local state, and so on. */
-	private final SnapshotStrategy<StatePartitionSnapshot> snapshotStrategy;
+	private final SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> snapshotStrategy;
 
 	RocksDBInternalStateBackend(
 		ClassLoader userClassLoader,
@@ -239,7 +240,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 	 * @throws Exception indicating a problem in the synchronous part of the checkpoint.
 	 */
 	@Override
-	public RunnableFuture<StatePartitionSnapshot> snapshot(
+	public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> snapshot(
 		long checkpointId,
 		long timestamp,
 		CheckpointStreamFactory streamFactory,
@@ -355,16 +356,16 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		}
 	}
 
-	private class IncrementalSnapshotStrategy implements SnapshotStrategy<StatePartitionSnapshot> {
+	private class IncrementalSnapshotStrategy implements SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> {
 
-		private final SnapshotStrategy<StatePartitionSnapshot> savepointDelegate;
+		private final SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> savepointDelegate;
 
 		public IncrementalSnapshotStrategy() {
 			this.savepointDelegate = new RocksDBInternalStateBackend.FullSnapshotStrategy();
 		}
 
 		@Override
-		public RunnableFuture<StatePartitionSnapshot> performSnapshot(
+		public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> performSnapshot(
 			long checkpointId,
 			long checkpointTimestamp,
 			CheckpointStreamFactory checkpointStreamFactory,
@@ -387,7 +388,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Asynchronous RocksDB snapshot performed on empty keyed state at {}. Returning null.", checkpointTimestamp);
 				}
-				return DoneFuture.of(new IncrementalStatePartitionSnapshot(getGroups()));
+				return DoneFuture.of(SnapshotResult.empty());
 			}
 
 			SnapshotDirectory snapshotDirectory;
@@ -432,7 +433,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 				throw e;
 			}
 
-			return new FutureTask<StatePartitionSnapshot>(
+			return new FutureTask<SnapshotResult<StatePartitionSnapshot>>(
 				snapshotOperation::runSnapshot
 			) {
 				@Override
@@ -449,10 +450,10 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		}
 	}
 
-	private class FullSnapshotStrategy implements SnapshotStrategy<StatePartitionSnapshot> {
+	private class FullSnapshotStrategy implements SnapshotStrategy<SnapshotResult<StatePartitionSnapshot>> {
 
 		@Override
-		public RunnableFuture<StatePartitionSnapshot> performSnapshot(
+		public RunnableFuture<SnapshotResult<StatePartitionSnapshot>> performSnapshot(
 			long checkpointId,
 			long timestamp,
 			CheckpointStreamFactory primaryStreamFactory,
@@ -466,7 +467,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 						timestamp);
 				}
 
-				return DoneFuture.of(new DefaultStatePartitionSnapshot(getGroups()));
+				return DoneFuture.of(SnapshotResult.empty());
 			}
 
 			final SupplierWithException<CheckpointStreamWithResultProvider, Exception> supplier =
@@ -497,8 +498,8 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 			snapshotOperation.takeDBSnapShot();
 
 			// implementation of the async IO operation, based on FutureTask
-			AbstractAsyncCallableWithResources<StatePartitionSnapshot> ioCallable =
-				new AbstractAsyncCallableWithResources<StatePartitionSnapshot>() {
+			AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>> ioCallable =
+				new AbstractAsyncCallableWithResources<SnapshotResult<StatePartitionSnapshot>>() {
 
 					@Override
 					protected void acquireResources() throws Exception {
@@ -534,7 +535,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 
 					@Nonnull
 					@Override
-					public StatePartitionSnapshot performOperation() throws Exception {
+					public SnapshotResult<StatePartitionSnapshot> performOperation() throws Exception {
 						long startTime = System.currentTimeMillis();
 
 						if (isStopped()) {
