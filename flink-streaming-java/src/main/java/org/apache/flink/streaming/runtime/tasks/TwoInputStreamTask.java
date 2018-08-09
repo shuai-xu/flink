@@ -71,10 +71,10 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 
 		int numberOfInputs = configuration.getNumberOfInputs();
 
-		ArrayList<InputGate> inputList1 = new ArrayList<InputGate>();
-		ArrayList<InputGate> inputList2 = new ArrayList<InputGate>();
+		ArrayList<InputGate> inputList1 = new ArrayList<>();
+		ArrayList<InputGate> inputList2 = new ArrayList<>();
 
-		List<StreamEdge> inEdges = configuration.getInPhysicalEdges(userClassLoader);
+		List<StreamEdge> inEdges = getStreamTaskConfig().getInStreamEdgesOfChain();
 
 		for (int i = 0; i < numberOfInputs; i++) {
 			int inputType = inEdges.get(i).getTypeNumber();

@@ -89,6 +89,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import static org.apache.flink.streaming.runtime.tasks.StreamTaskTestHarness.createSingleOperatorTaskConfig;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -135,8 +136,7 @@ public class InterruptSensitiveRestoreTest {
 	private void testRestoreWithInterrupt(int mode) throws Exception {
 
 		IN_RESTORE_LATCH.reset();
-		Configuration taskConfig = new Configuration();
-		StreamConfig cfg = new StreamConfig(taskConfig);
+		StreamConfig cfg = new StreamConfig(new Configuration());
 		cfg.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 		switch (mode) {
 			case OPERATOR_MANAGED:
@@ -152,7 +152,7 @@ public class InterruptSensitiveRestoreTest {
 
 		StreamStateHandle lockingHandle = new InterruptLockingStateHandle();
 
-		Task task = createTask(cfg, taskConfig, lockingHandle, mode);
+		Task task = createTask(cfg, lockingHandle, mode);
 
 		// start the task and wait until it is in "restore"
 		task.startTaskThread();
@@ -177,7 +177,6 @@ public class InterruptSensitiveRestoreTest {
 
 	private static Task createTask(
 		StreamConfig streamConfig,
-		Configuration taskConfig,
 		StreamStateHandle state,
 		int mode) throws IOException {
 
@@ -251,7 +250,7 @@ public class InterruptSensitiveRestoreTest {
 			1,
 			1,
 			SourceStreamTask.class.getName(),
-			taskConfig);
+			createSingleOperatorTaskConfig(streamConfig).getConfiguration());
 
 		BlobCacheService blobService =
 			new BlobCacheService(mock(PermanentBlobCache.class), mock(TransientBlobCache.class));

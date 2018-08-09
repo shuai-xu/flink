@@ -31,6 +31,7 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
+import org.apache.flink.runtime.operators.util.CorruptConfigurationException;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
@@ -49,6 +50,7 @@ import org.apache.flink.util.Preconditions;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -83,7 +85,9 @@ public class StreamTaskTestHarness<OUT> {
 	protected ExecutionConfig executionConfig;
 	public Configuration jobConfig;
 	public Configuration taskConfig;
-	protected StreamConfig streamConfig;
+
+	public StreamTaskConfigCache streamTaskConfigCache;
+	protected StreamConfig streamConfig; // for head operator
 
 	protected TestTaskStateManager taskStateManager;
 
@@ -119,7 +123,8 @@ public class StreamTaskTestHarness<OUT> {
 		this.taskConfig = new Configuration();
 		this.executionConfig = new ExecutionConfig();
 
-		streamConfig = new StreamConfig(taskConfig);
+		this.streamTaskConfigCache = new StreamTaskConfigCache(Thread.currentThread().getContextClassLoader());
+		this.streamConfig = new StreamConfig(new Configuration());
 
 		outputSerializer = outputType.createSerializer(executionConfig);
 		outputStreamRecordSerializer = new StreamElementSerializer<OUT>(outputSerializer);
@@ -163,9 +168,11 @@ public class StreamTaskTestHarness<OUT> {
 	public void setupOutputForSingletonOperatorChain() {
 		Preconditions.checkState(!setupCalled, "This harness was already setup.");
 		setupCalled = true;
+		TimeCharacteristic timeCharacteristic = TimeCharacteristic.EventTime;
+
 		streamConfig.setChainStart();
 		streamConfig.setBufferTimeout(0);
-		streamConfig.setTimeCharacteristic(TimeCharacteristic.EventTime);
+		streamConfig.setTimeCharacteristic(timeCharacteristic);
 		streamConfig.setOutputSelectors(Collections.<OutputSelector<?>>emptyList());
 		streamConfig.setNumberOfOutputs(1);
 		streamConfig.setTypeSerializerOut(outputSerializer);
@@ -182,8 +189,11 @@ public class StreamTaskTestHarness<OUT> {
 
 		outEdgesInOrder.add(new StreamEdge(sourceVertexDummy, targetVertexDummy, 0, new LinkedList<String>(), new BroadcastPartitioner<Object>(), null /* output tag */));
 
-		streamConfig.setOutEdgesInOrder(outEdgesInOrder);
 		streamConfig.setNonChainedOutputs(outEdgesInOrder);
+
+		streamTaskConfigCache.setOutStreamEdgesOfChain(outEdgesInOrder);
+		streamTaskConfigCache.setChainedHeadNodeIds(Arrays.asList(streamConfig.getVertexID()));
+		streamTaskConfigCache.setChainedNodeConfigs(Collections.singletonMap(streamConfig.getVertexID(), streamConfig));
 	}
 
 	public StreamMockEnvironment createEnvironment() {
@@ -218,6 +228,16 @@ public class StreamTaskTestHarness<OUT> {
 
 		initializeInputs();
 		initializeOutput();
+
+		try {
+			streamTaskConfigCache.setTimeCharacteristic(streamConfig.getTimeCharacteristic());
+		} catch (CorruptConfigurationException e) {
+			// Not set time characteristic, do nothing.
+		}
+		streamTaskConfigCache.setCheckpointingEnabled(streamConfig.isCheckpointingEnabled());
+		streamTaskConfigCache.setCheckpointMode(streamConfig.getCheckpointMode());
+		streamTaskConfigCache.setStateBackend(streamConfig.getStateBackend(Thread.currentThread().getContextClassLoader()));
+		streamTaskConfigCache.serializeTo(new StreamTaskConfig(this.taskConfig));
 
 		this.task = taskFactory.apply(mockEnv);
 
@@ -414,13 +434,13 @@ public class StreamTaskTestHarness<OUT> {
 	public StreamConfigChainer setupOperatorChain(OperatorID headOperatorId, OneInputStreamOperator<?, ?> headOperator) {
 		Preconditions.checkState(!setupCalled, "This harness was already setup.");
 		setupCalled = true;
-		return new StreamConfigChainer(headOperatorId, headOperator, getStreamConfig());
+		return new StreamConfigChainer(headOperatorId, headOperator, streamConfig, streamTaskConfigCache);
 	}
 
 	public StreamConfigChainer setupOperatorChain(OperatorID headOperatorId, TwoInputStreamOperator<?, ?, ?> headOperator) {
 		Preconditions.checkState(!setupCalled, "This harness was already setup.");
 		setupCalled = true;
-		return new StreamConfigChainer(headOperatorId, headOperator, getStreamConfig());
+		return new StreamConfigChainer(headOperatorId, headOperator, streamConfig, streamTaskConfigCache);
 	}
 
 	// ------------------------------------------------------------------------
@@ -451,6 +471,32 @@ public class StreamTaskTestHarness<OUT> {
 		public Throwable getError() {
 			return error;
 		}
+	}
+
+	// ------------------------------------------------------------------------
+	//  Test Utilities
+	// ------------------------------------------------------------------------
+
+	public static StreamTaskConfig createSingleOperatorTaskConfig(StreamConfig config) {
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		StreamTaskConfigCache streamTaskConfigCache = new StreamTaskConfigCache(cl);
+
+		try {
+			streamTaskConfigCache.setTimeCharacteristic(config.getTimeCharacteristic());
+		} catch (CorruptConfigurationException e) {
+			// Not set time characteristic, do nothing.
+		}
+		streamTaskConfigCache.setCheckpointingEnabled(config.isCheckpointingEnabled());
+		streamTaskConfigCache.setCheckpointMode(config.getCheckpointMode());
+		streamTaskConfigCache.setStateBackend(config.getStateBackend(cl));
+
+		streamTaskConfigCache.setChainedHeadNodeIds(Arrays.asList(config.getVertexID()));
+		streamTaskConfigCache.setChainedNodeConfigs(Collections.singletonMap(config.getVertexID(), config));
+
+		StreamTaskConfig streamTaskConfig = new StreamTaskConfig(new Configuration());
+		streamTaskConfigCache.serializeTo(streamTaskConfig);
+
+		return streamTaskConfig;
 	}
 }
 

@@ -57,6 +57,8 @@ import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
+import org.apache.flink.streaming.runtime.tasks.StreamTaskConfig;
+import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigCache;
 import org.apache.flink.streaming.runtime.tasks.TestProcessingTimeService;
 import org.apache.flink.streaming.util.MockStreamConfig;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
@@ -397,13 +399,12 @@ public class AsyncWaitOperatorTest extends TestLogger {
 				BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO);
 		testHarness.setupOutputForSingletonOperatorChain();
 
-		testHarness.taskConfig = chainedVertex.getConfiguration();
-
-		final StreamConfig streamConfig = testHarness.getStreamConfig();
-		final StreamConfig operatorChainStreamConfig = new StreamConfig(chainedVertex.getConfiguration());
-		final AsyncWaitOperator<Integer, Integer> headOperator =
-				operatorChainStreamConfig.getStreamOperator(AsyncWaitOperatorTest.class.getClassLoader());
-		streamConfig.setStreamOperator(headOperator);
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		testHarness.streamTaskConfigCache = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(chainedVertex.getConfiguration()), classLoader);
+		testHarness.getStreamConfig().setStreamOperator(
+			testHarness.streamTaskConfigCache.getChainedHeadNodeConfigs()
+				.get(0)
+				.getStreamOperator(AsyncWaitOperatorTest.class.getClassLoader()));
 
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();

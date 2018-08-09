@@ -149,6 +149,7 @@ import scala.concurrent.duration.Deadline;
 import scala.concurrent.duration.FiniteDuration;
 import scala.concurrent.impl.Promise;
 
+import static org.apache.flink.streaming.runtime.tasks.StreamTaskTestHarness.createSingleOperatorTaskConfig;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -188,7 +189,7 @@ public class StreamTaskTest extends TestLogger {
 		cfg.setStreamOperator(new SlowlyDeserializingOperator());
 		cfg.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
-		Task task = createTask(SourceStreamTask.class, cfg, new Configuration());
+		Task task = createTask(SourceStreamTask.class, createSingleOperatorTaskConfig(cfg), new Configuration());
 
 		TestingExecutionStateListener testingExecutionStateListener = new TestingExecutionStateListener();
 
@@ -236,7 +237,7 @@ public class StreamTaskTest extends TestLogger {
 		cfg.setStreamOperator(streamSource);
 		cfg.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
-		Task task = createTask(StateBackendTestSource.class, cfg, taskManagerConfig);
+		Task task = createTask(StateBackendTestSource.class, createSingleOperatorTaskConfig(cfg), taskManagerConfig);
 
 		StateBackendTestSource.fail = false;
 		task.startTaskThread();
@@ -268,7 +269,7 @@ public class StreamTaskTest extends TestLogger {
 		cfg.setStreamOperator(streamSource);
 		cfg.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
-		Task task = createTask(StateBackendTestSource.class, cfg, taskManagerConfig);
+		Task task = createTask(StateBackendTestSource.class, createSingleOperatorTaskConfig(cfg), taskManagerConfig);
 
 		StateBackendTestSource.fail = true;
 		task.startTaskThread();
@@ -293,7 +294,7 @@ public class StreamTaskTest extends TestLogger {
 		syncLatch = new OneShotLatch();
 
 		StreamConfig cfg = new StreamConfig(new Configuration());
-		Task task = createTask(CancelLockingTask.class, cfg, new Configuration());
+		Task task = createTask(CancelLockingTask.class, createSingleOperatorTaskConfig(cfg), new Configuration());
 
 		// start the task and wait until it runs
 		// execution state RUNNING is not enough, we need to wait until the stream task's run() method
@@ -313,7 +314,7 @@ public class StreamTaskTest extends TestLogger {
 		syncLatch = new OneShotLatch();
 
 		StreamConfig cfg = new StreamConfig(new Configuration());
-		Task task = createTask(CancelFailingTask.class, cfg, new Configuration());
+		Task task = createTask(CancelFailingTask.class, createSingleOperatorTaskConfig(cfg), new Configuration());
 
 		// start the task and wait until it runs
 		// execution state RUNNING is not enough, we need to wait until the stream task's run() method
@@ -770,8 +771,7 @@ public class StreamTaskTest extends TestLogger {
 	 */
 	@Test
 	public void testOperatorClosingBeforeStopRunning() throws Throwable {
-		Configuration taskConfiguration = new Configuration();
-		StreamConfig streamConfig = new StreamConfig(taskConfiguration);
+		StreamConfig streamConfig = new StreamConfig(new Configuration());
 		streamConfig.setStreamOperator(new BlockingCloseStreamOperator());
 		streamConfig.setOperatorID(new OperatorID());
 
@@ -781,7 +781,7 @@ public class StreamTaskTest extends TestLogger {
 					.setMemorySize(32L * 1024L)
 					.setInputSplitProvider(new MockInputSplitProvider())
 					.setBufferSize(1)
-					.setTaskConfiguration(taskConfiguration)
+					.setTaskConfiguration(createSingleOperatorTaskConfig(streamConfig).getConfiguration())
 					.build()) {
 			StreamTask<Void, BlockingCloseStreamOperator> streamTask = new NoOpStreamTask<>(mockEnvironment);
 			final AtomicReference<Throwable> atomicThrowable = new AtomicReference<>(null);
@@ -903,14 +903,14 @@ public class StreamTaskTest extends TestLogger {
 
 	public static Task createTask(
 		Class<? extends AbstractInvokable> invokable,
-		StreamConfig taskConfig,
+		StreamTaskConfig taskConfig,
 		Configuration taskManagerConfig) throws Exception {
 		return createTask(invokable, taskConfig, taskManagerConfig, new TestTaskStateManager());
 	}
 
 	public static Task createTask(
 			Class<? extends AbstractInvokable> invokable,
-			StreamConfig taskConfig,
+			StreamTaskConfig taskConfig,
 			Configuration taskManagerConfig,
 			TestTaskStateManager taskStateManager) throws Exception {
 

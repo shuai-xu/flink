@@ -91,6 +91,7 @@ import java.util.Collections;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RunnableFuture;
 
+import static org.apache.flink.streaming.runtime.tasks.StreamTaskTestHarness.createSingleOperatorTaskConfig;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -194,8 +195,7 @@ public class TaskCheckpointingBehaviourTest extends TestLogger {
 		CheckpointResponder checkpointResponder,
 		boolean failOnCheckpointErrors) throws IOException {
 
-		Configuration taskConfig = new Configuration();
-		StreamConfig cfg = new StreamConfig(taskConfig);
+		StreamConfig cfg = new StreamConfig(new Configuration());
 		cfg.setStreamOperator(op);
 		cfg.setOperatorID(new OperatorID());
 		cfg.setStateBackend(backend);
@@ -217,7 +217,7 @@ public class TaskCheckpointingBehaviourTest extends TestLogger {
 				1,
 				11,
 				TestStreamTask.class.getName(),
-				taskConfig);
+				createSingleOperatorTaskConfig(cfg).getConfiguration());
 
 		TaskKvStateRegistry mockKvRegistry = mock(TaskKvStateRegistry.class);
 		TaskEventDispatcher taskEventDispatcher = new TaskEventDispatcher();

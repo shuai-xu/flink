@@ -61,6 +61,7 @@ public class DummyEnvironment implements Environment {
 	private TaskStateManager taskStateManager;
 	private final AccumulatorRegistry accumulatorRegistry = new AccumulatorRegistry(jobId, jobVertexId, 0, executionId, new EmptyOperationAccumulatorAggregationManager());
 	private ClassLoader userClassLoader;
+	private Configuration taskConfiguration;
 
 	public DummyEnvironment() {
 		this("Test Job", 1, 0, 1);
@@ -108,9 +109,13 @@ public class DummyEnvironment implements Environment {
 		return executionId;
 	}
 
+	public void setTaskConfiguration(Configuration taskConfiguration) {
+		this.taskConfiguration = taskConfiguration;
+	}
+
 	@Override
 	public Configuration getTaskConfiguration() {
-		return new Configuration();
+		return taskConfiguration == null ? new Configuration() : taskConfiguration;
 	}
 
 	@Override
@@ -224,6 +229,7 @@ public class DummyEnvironment implements Environment {
 	public TaskEventDispatcher getTaskEventDispatcher() {
 		throw new UnsupportedOperationException();
 	}
+
 	public void setTaskStateManager(TaskStateManager taskStateManager) {
 		this.taskStateManager = taskStateManager;
 	}

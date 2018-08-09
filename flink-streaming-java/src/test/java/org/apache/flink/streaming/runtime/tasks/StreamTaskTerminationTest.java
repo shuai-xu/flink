@@ -88,6 +88,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.flink.streaming.runtime.tasks.StreamTaskTestHarness.createSingleOperatorTaskConfig;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
@@ -111,8 +112,7 @@ public class StreamTaskTerminationTest extends TestLogger {
 	 */
 	@Test
 	public void testConcurrentAsyncCheckpointCannotFailFinishedStreamTask() throws Exception {
-		final Configuration taskConfiguration = new Configuration();
-		final StreamConfig streamConfig = new StreamConfig(taskConfiguration);
+		final StreamConfig streamConfig = new StreamConfig(new Configuration());
 		final NoOpStreamOperator<Long> noOpStreamOperator = new NoOpStreamOperator<>();
 
 		final StateBackend blockingStateBackend = new BlockingStateBackend();
@@ -138,7 +138,7 @@ public class StreamTaskTerminationTest extends TestLogger {
 			1,
 			1,
 			BlockingStreamTask.class.getName(),
-			taskConfiguration);
+			createSingleOperatorTaskConfig(streamConfig).getConfiguration());
 
 		final TaskManagerRuntimeInfo taskManagerRuntimeInfo = new TestingTaskManagerRuntimeInfo();
 

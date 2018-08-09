@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.apache.flink.streaming.runtime.tasks.StreamTaskTestHarness.createSingleOperatorTaskConfig;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -133,7 +134,7 @@ public class AbstractUdfStreamOperatorLifecycleTest {
 		cfg.setOperatorID(new OperatorID());
 		cfg.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
-		Task task = StreamTaskTest.createTask(SourceStreamTask.class, cfg, taskManagerConfig);
+		Task task = StreamTaskTest.createTask(SourceStreamTask.class, createSingleOperatorTaskConfig(cfg), taskManagerConfig);
 
 		task.startTaskThread();
 
@@ -156,7 +157,7 @@ public class AbstractUdfStreamOperatorLifecycleTest {
 		cfg.setOperatorID(new OperatorID());
 		cfg.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
-		Task task = StreamTaskTest.createTask(SourceStreamTask.class, cfg, taskManagerConfig);
+		Task task = StreamTaskTest.createTask(SourceStreamTask.class, createSingleOperatorTaskConfig(cfg), taskManagerConfig);
 
 		task.startTaskThread();
 		LifecycleTrackingStreamSource.runStarted.await();

@@ -518,8 +518,8 @@ public class OneInputStreamTaskTest extends TestLogger {
 		int numberChainedTasks = 11;
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
+		configureChainedTestingStreamOperator(testHarness, streamConfig, numberChainedTasks);
 
-		configureChainedTestingStreamOperator(streamConfig, numberChainedTasks);
 		TestTaskStateManager taskStateManager = testHarness.taskStateManager;
 		OneShotLatch waitForAcknowledgeLatch = new OneShotLatch();
 
@@ -557,7 +557,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		StreamConfig restoredTaskStreamConfig = restoredTaskHarness.getStreamConfig();
 
-		configureChainedTestingStreamOperator(restoredTaskStreamConfig, numberChainedTasks);
+		configureChainedTestingStreamOperator(restoredTaskHarness, restoredTaskStreamConfig, numberChainedTasks);
 
 		TaskStateSnapshot stateHandles = taskStateManager.getLastJobManagerTaskStateSnapshot();
 		Assert.assertEquals(numberChainedTasks, stateHandles.getSubtaskStateMappings().size());
@@ -908,6 +908,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 	//==============================================================================================
 
 	private void configureChainedTestingStreamOperator(
+		StreamTaskTestHarness testHarness,
 		StreamConfig streamConfig,
 		int numberChainedTasks) {
 
@@ -917,9 +918,12 @@ public class OneInputStreamTaskTest extends TestLogger {
 		TestingStreamOperator<Integer, Integer> previousOperator = new TestingStreamOperator<>();
 		streamConfig.setStreamOperator(previousOperator);
 		streamConfig.setOperatorID(new OperatorID(0L, 0L));
+		streamConfig.setVertexID(0);
 
 		// create the chain of operators
-		Map<Integer, StreamConfig> chainedTaskConfigs = new HashMap<>(numberChainedTasks - 1);
+		Map<Integer, StreamConfig> chainedTaskConfigs = new HashMap<>(numberChainedTasks);
+		chainedTaskConfigs.put(streamConfig.getVertexID(), streamConfig);
+
 		List<StreamEdge> outputEdges = new ArrayList<>(numberChainedTasks - 1);
 
 		for (int chainedIndex = 1; chainedIndex < numberChainedTasks; chainedIndex++) {
@@ -927,6 +931,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 			StreamConfig chainedConfig = new StreamConfig(new Configuration());
 			chainedConfig.setStreamOperator(chainedOperator);
 			chainedConfig.setOperatorID(new OperatorID(0L, chainedIndex));
+			chainedConfig.setVertexID(chainedIndex);
 			chainedTaskConfigs.put(chainedIndex, chainedConfig);
 
 			StreamEdge outputEdge = new StreamEdge(
@@ -958,7 +963,10 @@ public class OneInputStreamTaskTest extends TestLogger {
 		}
 
 		streamConfig.setChainedOutputs(outputEdges);
-		streamConfig.setTransitiveChainedTaskConfigs(chainedTaskConfigs);
+
+		testHarness.streamTaskConfigCache.setOutStreamEdgesOfChain(null);
+		testHarness.streamTaskConfigCache.setChainedHeadNodeIds(Arrays.asList(streamConfig.getVertexID()));
+		testHarness.streamTaskConfigCache.setChainedNodeConfigs(chainedTaskConfigs);
 	}
 
 	private static class IdentityKeySelector<IN> implements KeySelector<IN, IN> {

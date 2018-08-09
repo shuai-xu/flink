@@ -94,16 +94,17 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> streamRecordWriters) {
 
 		final ClassLoader userCodeClassloader = containingTask.getUserCodeClassLoader();
-		final StreamConfig configuration = containingTask.getConfiguration();
+		final StreamTaskConfigSnapshot streamTaskConfig = containingTask.getStreamTaskConfig();
 
-		headOperator = configuration.getStreamOperator(userCodeClassloader);
+		final StreamConfig headNodeConfig = streamTaskConfig.getChainedHeadNodeConfigs().get(0);
+		headOperator = headNodeConfig.getStreamOperator(userCodeClassloader);
 
 		// we read the chained configs, and the order of record writer registrations by output name
-		Map<Integer, StreamConfig> chainedConfigs = configuration.getTransitiveChainedTaskConfigsWithSelf(userCodeClassloader);
+		Map<Integer, StreamConfig> chainedConfigs = streamTaskConfig.getChainedNodeConfigs();
 
 		// create the final output stream writers
 		// we iterate through all the out edges from this job vertex and create a stream output
-		List<StreamEdge> outEdgesInOrder = configuration.getOutEdgesInOrder(userCodeClassloader);
+		List<StreamEdge> outEdgesInOrder = streamTaskConfig.getOutStreamEdgesOfChain();
 		Map<StreamEdge, RecordWriterOutput<?>> streamOutputMap = new HashMap<>(outEdgesInOrder.size());
 		this.streamOutputs = new RecordWriterOutput<?>[outEdgesInOrder.size()];
 
@@ -127,7 +128,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			List<StreamOperator<?>> allOps = new ArrayList<>(chainedConfigs.size());
 			this.chainEntryPoint = createOutputCollector(
 				containingTask,
-				configuration,
+				headNodeConfig,
 				chainedConfigs,
 				userCodeClassloader,
 				streamOutputMap,
@@ -135,7 +136,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 
 			if (headOperator != null) {
 				WatermarkGaugeExposingOutput<StreamRecord<OUT>> output = getChainEntryPoint();
-				headOperator.setup(containingTask, configuration, output);
+				headOperator.setup(containingTask, headNodeConfig, output);
 
 				headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_OUTPUT_WATERMARK, output.getWatermarkGauge());
 			}

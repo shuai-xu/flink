@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.tasks;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.TaskInfo;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.FileSystemSafetyNet;
@@ -137,11 +138,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	/** the head operator that consumes the input streams of this task. */
 	protected OP headOperator;
 
+	/** The configuration of the head operator. */
+	protected final StreamConfig configuration;
+
 	/** The chain of operators executed by this task. */
 	protected OperatorChain<OUT, OP> operatorChain;
 
 	/** The configuration of this streaming task. */
-	protected final StreamConfig configuration;
+	protected final StreamTaskConfigSnapshot streamTaskConfig;
 
 	/** Our state backend. We use this to create checkpoint streams and a keyed state backend. */
 	protected StateBackend stateBackend;
@@ -210,10 +214,13 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 		super(environment);
 
 		this.timerService = timeProvider;
-		this.configuration = new StreamConfig(getTaskConfiguration());
-		this.streamRecordWriters = createStreamRecordWriters(
-			configuration,
-			environment);
+		this.streamTaskConfig = StreamTaskConfigCache.deserializeFrom(
+			new StreamTaskConfig(super.getTaskConfiguration()), this.getUserCodeClassLoader());
+
+		this.streamRecordWriters = createStreamRecordWriters(streamTaskConfig, environment);
+
+		List<StreamConfig> chainedNodeConfigs = streamTaskConfig.getChainedHeadNodeConfigs();
+		this.configuration = chainedNodeConfigs.size() == 0 ? new StreamConfig(new Configuration()) : chainedNodeConfigs.get(0);
 	}
 
 	// ------------------------------------------------------------------------
@@ -501,7 +508,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	}
 
 	boolean isSerializingTimestamps() {
-		TimeCharacteristic tc = configuration.getTimeCharacteristic();
+		TimeCharacteristic tc = streamTaskConfig.getTimeCharacteristic();
 		return tc == TimeCharacteristic.EventTime | tc == TimeCharacteristic.IngestionTime;
 	}
 
@@ -535,6 +542,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 	public AccumulatorRegistry getAccumulatorRegistry() {
 		return accumulatorRegistry;
+	}
+
+	public StreamTaskConfigSnapshot getStreamTaskConfig() {
+		return streamTaskConfig;
 	}
 
 	public StreamStatusMaintainer getStreamStatusMaintainer() {
@@ -737,7 +748,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	// ------------------------------------------------------------------------
 
 	private StateBackend createStateBackend() throws Exception {
-		final StateBackend fromApplication = configuration.getStateBackend(getUserCodeClassLoader());
+		final StateBackend fromApplication = streamTaskConfig.getStateBackend();
 
 		return StateBackendLoader.fromApplicationOrConfigOrDefault(
 				fromApplication,
@@ -1159,14 +1170,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 	@VisibleForTesting
 	public static <OUT> List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> createStreamRecordWriters(
-			StreamConfig configuration,
+			StreamTaskConfigSnapshot config,
 			Environment environment) {
 		List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> streamRecordWriters = new ArrayList<>();
-		List<StreamEdge> outEdgesInOrder = configuration.getOutEdgesInOrder(environment.getUserClassLoader());
-		Map<Integer, StreamConfig> chainedConfigs = configuration.getTransitiveChainedTaskConfigsWithSelf(environment.getUserClassLoader());
+		List<StreamEdge> outEdges = config.getOutStreamEdgesOfChain();
+		Map<Integer, StreamConfig> chainedConfigs = config.getChainedNodeConfigs();
 
-		for (int i = 0; i < outEdgesInOrder.size(); i++) {
-			StreamEdge edge = outEdgesInOrder.get(i);
+		for (int i = 0; i < outEdges.size(); i++) {
+			StreamEdge edge = outEdges.get(i);
 			streamRecordWriters.add(
 				createStreamRecordWriter(
 					edge,

@@ -27,6 +27,10 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
+import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.filesystem.FsStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.datastream.IterativeStream;
@@ -34,6 +38,9 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.ParallelSourceFunction;
+import org.apache.flink.streaming.runtime.tasks.StreamTaskConfig;
+import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigCache;
+import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigSnapshot;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.TestLogger;
 
@@ -52,6 +59,92 @@ import static org.junit.Assert.assertTrue;
  */
 @SuppressWarnings("serial")
 public class StreamingJobGraphGeneratorTest extends TestLogger {
+
+	@Test
+	public void testChainBase() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		env.enableCheckpointing(10, CheckpointingMode.AT_LEAST_ONCE);
+		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+
+		// fromElements -> CHAIN(Map -> Print)
+		env.fromElements(1, 2, 3).setParallelism(1)
+			.map(new MapFunction<Integer, Integer>() {
+				@Override
+				public Integer map(Integer value) throws Exception {
+					return value;
+				}
+			}).setParallelism(2)
+			.print().setParallelism(2);
+		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(env.getStreamGraph());
+
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+		assertEquals(2, verticesSorted.size());
+
+		JobVertex sourceVertex = verticesSorted.get(0);
+		JobVertex mapPrintVertex = verticesSorted.get(1);
+
+		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
+		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, mapPrintVertex.getInputs().get(0).getSource().getResultType());
+
+		ClassLoader cl = getClass().getClassLoader();
+
+		StreamTaskConfigSnapshot sourceTaskConfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(sourceVertex.getConfiguration()), cl);
+		assertEquals(TimeCharacteristic.EventTime, sourceTaskConfig.getTimeCharacteristic());
+		assertTrue(sourceTaskConfig.isCheckpointingEnabled());
+		assertEquals(CheckpointingMode.AT_LEAST_ONCE, sourceTaskConfig.getCheckpointMode());
+		assertEquals(FsStateBackend.class, sourceTaskConfig.getStateBackend().getClass());
+		assertEquals(0, sourceTaskConfig.getInStreamEdgesOfChain().size());
+		assertEquals(1, sourceTaskConfig.getOutStreamEdgesOfChain().size());
+		assertEquals(1, sourceTaskConfig.getChainedNodeConfigs().size());
+		assertEquals(1, sourceTaskConfig.getChainedHeadNodeIds().size());
+		assertEquals(1, sourceTaskConfig.getChainedHeadNodeConfigs().size());
+
+		StreamTaskConfigSnapshot mapPrintTaskConfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(mapPrintVertex.getConfiguration()), cl);
+		assertEquals(TimeCharacteristic.EventTime, mapPrintTaskConfig.getTimeCharacteristic());
+		assertTrue(mapPrintTaskConfig.isCheckpointingEnabled());
+		assertEquals(CheckpointingMode.AT_LEAST_ONCE, mapPrintTaskConfig.getCheckpointMode());
+		assertEquals(FsStateBackend.class, mapPrintTaskConfig.getStateBackend().getClass());
+		assertEquals(1, mapPrintTaskConfig.getInStreamEdgesOfChain().size());
+		assertEquals(0, mapPrintTaskConfig.getOutStreamEdgesOfChain().size());
+		assertEquals(2, mapPrintTaskConfig.getChainedNodeConfigs().size());
+		assertEquals(1, mapPrintTaskConfig.getChainedHeadNodeIds().size());
+		assertEquals(1, mapPrintTaskConfig.getChainedHeadNodeConfigs().size());
+
+		Map<Integer, StreamConfig> sourceChainedConfigs = sourceTaskConfig.getChainedNodeConfigs();
+		List<Integer> sourceTaskHeadNodeIds = sourceTaskConfig.getChainedHeadNodeIds();
+		StreamConfig sourceConfig = sourceChainedConfigs.get(sourceTaskHeadNodeIds.get(0));
+
+		Map<Integer, StreamConfig> mapPrintChainedConfigs = mapPrintTaskConfig.getChainedNodeConfigs();
+		List<Integer> mapPrintTaskHeadNodeIds = mapPrintTaskConfig.getChainedHeadNodeIds();
+		StreamConfig mapConfig = mapPrintChainedConfigs.get(mapPrintTaskHeadNodeIds.get(0));
+		List<StreamEdge> mapOutEdges = mapConfig.getChainedOutputs(cl);
+		assertEquals(1, mapOutEdges.size());
+		StreamConfig printConfig = mapPrintChainedConfigs.get(mapOutEdges.get(0).getTargetId());
+
+		assertTrue(sourceConfig.isChainStart());
+		assertTrue(sourceConfig.isChainEnd());
+		assertEquals(0, sourceConfig.getNumberOfInputs());
+		assertEquals(0, sourceConfig.getChainedOutputs(cl).size());
+		assertEquals(1, sourceConfig.getNumberOfOutputs());
+		assertEquals(1, sourceConfig.getNonChainedOutputs(cl).size());
+		assertEquals(sourceConfig, sourceTaskConfig.getChainedHeadNodeConfigs().get(0));
+
+		assertTrue(mapConfig.isChainStart());
+		assertFalse(mapConfig.isChainEnd());
+		assertEquals(1, mapConfig.getNumberOfInputs());
+		assertEquals(0, mapConfig.getNumberOfOutputs());
+		assertEquals(0, mapConfig.getNonChainedOutputs(cl).size());
+		assertEquals(1, mapConfig.getChainedOutputs(cl).size());
+		assertEquals(mapConfig, mapPrintTaskConfig.getChainedHeadNodeConfigs().get(0));
+
+		assertFalse(printConfig.isChainStart());
+		assertTrue(printConfig.isChainEnd());
+		assertEquals(0, printConfig.getNumberOfInputs());
+		assertEquals(0, printConfig.getChainedOutputs(cl).size());
+		assertEquals(0, printConfig.getNumberOfOutputs());
+		assertEquals(0, printConfig.getNonChainedOutputs(cl).size());
+	}
 
 	@Test
 	public void testParallelismOneNotChained() {
@@ -127,27 +220,34 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	public void testChainStartEndSetting() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		// fromElements -> CHAIN(Map -> Print)
-		env.fromElements(1, 2, 3)
+		env.fromElements(1, 2, 3).setParallelism(1)
 			.map(new MapFunction<Integer, Integer>() {
 				@Override
 				public Integer map(Integer value) throws Exception {
 					return value;
 				}
-			})
-			.print();
+			}).setParallelism(2)
+			.print().setParallelism(2);
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(env.getStreamGraph());
 
 		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+		assertEquals(2, verticesSorted.size());
+
 		JobVertex sourceVertex = verticesSorted.get(0);
 		JobVertex mapPrintVertex = verticesSorted.get(1);
 
 		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
 		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, mapPrintVertex.getInputs().get(0).getSource().getResultType());
 
-		StreamConfig sourceConfig = new StreamConfig(sourceVertex.getConfiguration());
-		StreamConfig mapConfig = new StreamConfig(mapPrintVertex.getConfiguration());
-		Map<Integer, StreamConfig> chainedConfigs = mapConfig.getTransitiveChainedTaskConfigs(getClass().getClassLoader());
-		StreamConfig printConfig = chainedConfigs.values().iterator().next();
+		ClassLoader cl = getClass().getClassLoader();
+
+		StreamTaskConfigSnapshot sourceTaskConfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(sourceVertex.getConfiguration()), cl);
+		StreamTaskConfigSnapshot mapPrintTaskConfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(mapPrintVertex.getConfiguration()), cl);
+
+		StreamConfig sourceConfig = sourceTaskConfig.getChainedHeadNodeConfigs().get(0);
+		StreamConfig mapConfig = mapPrintTaskConfig.getChainedHeadNodeConfigs().get(0);
+		List<StreamEdge> mapOutEdges = mapConfig.getChainedOutputs(cl);
+		StreamConfig printConfig = mapPrintTaskConfig.getChainedNodeConfigs().get(mapOutEdges.get(0).getTargetId());
 
 		assertTrue(sourceConfig.isChainStart());
 		assertTrue(sourceConfig.isChainEnd());
@@ -224,8 +324,11 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(env.getStreamGraph());
 
-		JobVertex sourceMapFilterVertex = jobGraph.getVerticesSortedTopologicallyFromSources().get(0);
-		JobVertex reduceSinkVertex = jobGraph.getVerticesSortedTopologicallyFromSources().get(1);
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+		assertEquals(2, verticesSorted.size());
+
+		JobVertex sourceMapFilterVertex = verticesSorted.get(0);
+		JobVertex reduceSinkVertex = verticesSorted.get(1);
 
 		assertTrue(sourceMapFilterVertex.getMinResources().equals(resource1.merge(resource2).merge(resource3)));
 		assertTrue(reduceSinkVertex.getPreferredResources().equals(resource4.merge(resource5)));
