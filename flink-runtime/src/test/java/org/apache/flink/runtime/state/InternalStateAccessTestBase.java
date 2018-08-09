@@ -265,6 +265,7 @@ public abstract class InternalStateAccessTestBase {
 		InternalStateDescriptor nullValueMergerDescriptor =
 			new InternalStateDescriptorBuilder("test-null-merger")
 				.addKeyColumn("key1", IntSerializer.INSTANCE)
+				.addKeyColumn("key2", StringSerializer.INSTANCE)
 				.addValueColumn("value1",
 					new ListSerializer(IntSerializer.INSTANCE))
 				.getDescriptor();
@@ -275,7 +276,7 @@ public abstract class InternalStateAccessTestBase {
 		try {
 			ArrayList<Integer> list = new ArrayList<>();
 			list.add(10);
-			nullValueMergerState.merge(Row.of(1), Row.of(list));
+			nullValueMergerState.merge(Row.of(1, "null"), Row.of(list));
 			fail("Should throw NullPointerException with null value merger");
 		} catch (Exception e) {
 			assertTrue(e instanceof NullPointerException);
@@ -285,7 +286,7 @@ public abstract class InternalStateAccessTestBase {
 			ArrayList<Integer> list = new ArrayList<>();
 			list.add(10);
 			Map<Row, Row> pairs = new HashMap<>();
-			pairs.put(Row.of(1), Row.of(list));
+			pairs.put(Row.of(1, "null"), Row.of(list));
 			nullValueMergerState.mergeAll(pairs);
 			fail("Should throw NullPointerException with null value merger");
 		} catch (Exception e) {
@@ -295,6 +296,7 @@ public abstract class InternalStateAccessTestBase {
 		InternalStateDescriptor descriptor =
 			new InternalStateDescriptorBuilder("test")
 				.addKeyColumn("key1", IntSerializer.INSTANCE)
+				.addKeyColumn("key2", StringSerializer.INSTANCE)
 				.addValueColumn("value1",
 					new ListSerializer(IntSerializer.INSTANCE),
 					new ListMerger<>())
@@ -316,7 +318,7 @@ public abstract class InternalStateAccessTestBase {
 
 		// merge null value
 		try {
-			state.merge(Row.of(1), null);
+			state.merge(Row.of(1, "null"), null);
 			fail("Should throw NullPointerException");
 		} catch (Exception e) {
 			assertTrue(e instanceof NullPointerException);
@@ -326,11 +328,11 @@ public abstract class InternalStateAccessTestBase {
 		for (int i = 0; i < 100; i++) {
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
-			state.put(Row.of(i), Row.of(value));
+			state.put(Row.of(i, String.valueOf(i)), Row.of(value));
 		}
 
 		for (int i = 0; i < 100; i++) {
-			Row internalValue = state.get(Row.of(i));
+			Row internalValue = state.get(Row.of(i, String.valueOf(i)));
 			assertNotNull(internalValue);
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -340,11 +342,11 @@ public abstract class InternalStateAccessTestBase {
 		for (int i = 0; i < 100; i++) {
 			List<Integer> value = new ArrayList<>();
 			value.add(i + 1);
-			state.merge(Row.of(i), Row.of(value));
+			state.merge(Row.of(i, String.valueOf(i)), Row.of(value));
 		}
 
 		for (int i = 0; i < 100; i++) {
-			Row actualValue = state.get(Row.of(i));
+			Row actualValue = state.get(Row.of(i, String.valueOf(i)));
 			assertNotNull(actualValue);
 			ArrayList<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -355,7 +357,7 @@ public abstract class InternalStateAccessTestBase {
 		// If the state previously did not contains a row for the given key,
 		// associate the given value with the key.
 		for (int i = 100; i < 200; i++) {
-			Row internalKey = Row.of(i);
+			Row internalKey = Row.of(i, String.valueOf(i));
 			assertNull(state.get(internalKey));
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -363,7 +365,7 @@ public abstract class InternalStateAccessTestBase {
 		}
 
 		for (int i = 100; i < 200; i++) {
-			Row internalValue = state.get(Row.of(i));
+			Row internalValue = state.get(Row.of(i, String.valueOf(i)));
 			assertNotNull(internalValue);
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -374,13 +376,13 @@ public abstract class InternalStateAccessTestBase {
 		for (int i = 100; i < 200; i++) {
 			List<Integer> value = new ArrayList<>();
 			value.add(i + 1);
-			pairsToMerge.put(Row.of(i), Row.of(value));
+			pairsToMerge.put(Row.of(i, String.valueOf(i)), Row.of(value));
 		}
 
 		state.mergeAll(pairsToMerge);
 
 		for (int i = 100; i < 200; i++) {
-			Row actualValue = state.get(Row.of(i));
+			Row actualValue = state.get(Row.of(i, String.valueOf(i)));
 			assertNotNull(actualValue);
 			ArrayList<Integer> value = new ArrayList<>();
 			value.add(i);
