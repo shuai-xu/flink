@@ -62,7 +62,8 @@ public class SubKeyedSortedMapStateTest {
 			10,
 			getGroupsForSubtask(10, 1, 0),
 			ClassLoader.getSystemClassLoader(),
-			new TestTaskStateManager().createLocalRecoveryConfig()
+			new TestTaskStateManager().createLocalRecoveryConfig(),
+			null
 		);
 
 		backend.restore(null);

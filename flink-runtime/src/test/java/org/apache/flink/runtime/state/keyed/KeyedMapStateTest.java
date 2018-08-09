@@ -58,7 +58,8 @@ public class KeyedMapStateTest {
 			10,
 			getGroupsForSubtask(10, 1, 0),
 			ClassLoader.getSystemClassLoader(),
-			TestLocalRecoveryConfig.disabled()
+			TestLocalRecoveryConfig.disabled(),
+			null
 		);
 
 		backend.restore(null);

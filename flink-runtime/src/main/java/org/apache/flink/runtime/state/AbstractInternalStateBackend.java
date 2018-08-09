@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.core.fs.CloseableRegistry;
+import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.keyed.KeyedListState;
 import org.apache.flink.runtime.state.keyed.KeyedListStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedListStateImpl;
@@ -87,6 +88,11 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	protected CloseableRegistry cancelStreamRegistry;
 
 	/**
+	 * StateRegistry helper for this task.
+	 */
+	protected TaskKvStateRegistry kvStateRegistry;
+
+	/**
 	 * Subclasses should implement this method to release unused resources.
 	 */
 	protected void closeImpl() {}
@@ -104,13 +110,15 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	protected AbstractInternalStateBackend(
 		int numberOfGroups,
 		GroupSet groups,
-		ClassLoader userClassLoader) {
+		ClassLoader userClassLoader,
+		TaskKvStateRegistry kvStateRegistry) {
 
 		this.numberOfGroups = numberOfGroups;
 		this.groups = Preconditions.checkNotNull(groups);
 		this.userClassLoader = Preconditions.checkNotNull(userClassLoader);
 		this.states = new HashMap<>();
 		this.cancelStreamRegistry = new CloseableRegistry();
+		this.kvStateRegistry = kvStateRegistry;
 	}
 
 	/**
@@ -199,7 +207,9 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		InternalStateDescriptor internalStateDescriptor = KeyedValueStateImpl.buildInternalStateDescriptor(keyedStateDescriptor);
 		InternalState internalState = getInternalState(internalStateDescriptor);
 
-		return new KeyedValueStateImpl<>(internalState);
+		KeyedValueState<K, V> state = new KeyedValueStateImpl<>(internalState);
+		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+		return state;
 	}
 
 	@Override
@@ -208,7 +218,9 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 			KeyedListStateImpl.buildInternalStateDescriptor(keyedStateDescriptor);
 		InternalState internalState = getInternalState(internalStateDescriptor);
 
-		return new KeyedListStateImpl<>(internalState);
+		KeyedListState<K, E> state = new KeyedListStateImpl<>(internalState);
+		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+		return state;
 	}
 
 	@Override
@@ -217,7 +229,9 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 			KeyedMapStateImpl.createInternalStateDescriptor(keyedStateDescriptor);
 		InternalState internalState = getInternalState(internalStateDescriptor);
 
-		return new KeyedMapStateImpl<>(internalState);
+		KeyedMapState<K, MK, MV> state = new KeyedMapStateImpl<>(internalState);
+		registQueryableStateIfNeeded(keyedStateDescriptor, state);
+		return state;
 	}
 
 	@Override
@@ -275,5 +289,16 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	@Override
 	public InternalState getInternalState(String stateName) {
 		return states.get(stateName);
+	}
+
+	private void registQueryableStateIfNeeded(KeyedStateDescriptor descriptor, KeyedState state) {
+		if (descriptor.isQueryable()) {
+			if (kvStateRegistry == null) {
+				throw new IllegalStateException("State backend has not been initialized for job.");
+			}
+			GroupRange groups = (GroupRange) getGroups();
+			KeyGroupRange keyGroupRange = KeyGroupRange.of(groups.getStartGroup(), groups.getEndGroup() - 1);
+			this.kvStateRegistry.registerKvState(keyGroupRange, descriptor.getQueryableStateName(), state);
+		}
 	}
 }

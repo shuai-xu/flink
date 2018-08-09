@@ -48,8 +48,6 @@ import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.queryablestate.client.QueryableStateClient;
-import org.apache.flink.queryablestate.client.VoidNamespace;
-import org.apache.flink.queryablestate.client.VoidNamespaceSerializer;
 import org.apache.flink.queryablestate.exceptions.UnknownKeyOrNamespaceException;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
@@ -104,7 +102,6 @@ import static org.junit.Assert.fail;
 /**
  * Base class for queryable state integration tests with a configurable state backend.
  */
-@Ignore
 public abstract class AbstractQueryableStateTestBase extends TestLogger {
 
 	private static final Duration TEST_TIMEOUT = Duration.ofSeconds(10000L);
@@ -1164,10 +1161,7 @@ public abstract class AbstractQueryableStateTestBase extends TestLogger {
 		@Override
 		public void open() throws Exception {
 			super.open();
-			this.state = getKeyedStateBackend().getPartitionedState(
-					VoidNamespace.INSTANCE,
-					VoidNamespaceSerializer.INSTANCE,
-					stateDescriptor);
+			this.state = getRuntimeContext().getAggregatingState(stateDescriptor);
 		}
 
 		@Override

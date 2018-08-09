@@ -180,7 +180,8 @@ public class RocksDBInternalStateBackendTest {
 			10,
 			getGroupsForSubtask(10, 1, 0),
 			true,
-			mock(LocalRecoveryConfig.class));
+			mock(LocalRecoveryConfig.class),
+			null);
 		backend.restore(null);
 
 		state1 = backend.getInternalState(stateDescriptor1);
@@ -228,7 +229,8 @@ public class RocksDBInternalStateBackendTest {
 				10,
 				getGroupsForSubtask(10, 1, 0),
 				true,
-				mock(LocalRecoveryConfig.class));
+				mock(LocalRecoveryConfig.class),
+				null);
 
 			verify(columnFamilyOptions, Mockito.times(1))
 				.setMergeOperatorName(RocksDBInternalStateBackend.MERGE_OPERATOR_NAME);

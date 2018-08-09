@@ -19,16 +19,11 @@
 package org.apache.flink.queryablestate.network;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
-import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.queryablestate.KvStateID;
-import org.apache.flink.queryablestate.client.VoidNamespace;
-import org.apache.flink.queryablestate.client.VoidNamespaceSerializer;
 import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.queryablestate.exceptions.UnknownKeyOrNamespaceException;
 import org.apache.flink.queryablestate.exceptions.UnknownKvStateIdException;
@@ -48,9 +43,15 @@ import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.query.KvStateRegistryListener;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.AbstractStateBackend;
+import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateBackend;
+import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 import org.apache.flink.runtime.state.internal.InternalKvState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.util.TestLogger;
 
@@ -63,6 +64,7 @@ import org.apache.flink.shaded.netty4.io.netty.handler.codec.LengthFieldBasedFra
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.net.InetAddress;
 import java.util.Collections;
@@ -72,6 +74,8 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Tests for {@link KvStateServerHandler}.
@@ -118,14 +122,17 @@ public class KvStateServerHandlerTest extends TestLogger {
 		EmbeddedChannel channel = new EmbeddedChannel(getFrameDecoder(), handler);
 
 		// Register state
-		ValueStateDescriptor<Integer> desc = new ValueStateDescriptor<>("any", IntSerializer.INSTANCE);
+		KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
 		desc.setQueryable("vanilla");
 
-		int numKeyGroups = 1;
-		AbstractStateBackend abstractBackend = new MemoryStateBackend();
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
-		AbstractKeyedStateBackend<Integer> backend = createKeyedStateBackend(registry, numKeyGroups, abstractBackend, dummyEnv);
+		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+			1,
+			GroupRange.of(0, 1),
+			Thread.currentThread().getContextClassLoader(),
+			TestLocalRecoveryConfig.disabled(),
+			registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
@@ -134,26 +141,17 @@ public class KvStateServerHandlerTest extends TestLogger {
 		int expectedValue = 712828289;
 
 		int key = 99812822;
-		backend.setCurrentKey(key);
-		ValueState<Integer> state = backend.getPartitionedState(
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE,
-				desc);
+		KeyedValueState<Integer, Integer> state = heapBackend.createKeyedValueState(desc);
+		state.put(key, expectedValue);
 
-		state.update(expectedValue);
-
-		byte[] serializedKeyAndNamespace = KvStateSerializer.serializeKeyAndNamespace(
-				key,
-				IntSerializer.INSTANCE,
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE);
+		byte[] serializedKey = KvStateSerializer.serializeValue(key, IntSerializer.INSTANCE);
 
 		long requestId = Integer.MAX_VALUE + 182828L;
 
 		assertTrue(registryListener.registrationName.equals("vanilla"));
 
 		KvStateInternalRequest request = new KvStateInternalRequest(
-				registryListener.kvStateId, serializedKeyAndNamespace);
+				registryListener.kvStateId, serializedKey);
 
 		ByteBuf serRequest = MessageSerializer.serializeRequest(channel.alloc(), requestId, request);
 
@@ -247,23 +245,26 @@ public class KvStateServerHandlerTest extends TestLogger {
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
 
+		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+															1,
+															GroupRange.of(0, 1),
+															Thread.currentThread().getContextClassLoader(),
+															TestLocalRecoveryConfig.disabled(),
+															registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
+
 		// Register state
-		ValueStateDescriptor<Integer> desc = new ValueStateDescriptor<>("any", IntSerializer.INSTANCE);
+		KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
 		desc.setQueryable("vanilla");
 
-		backend.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, desc);
+		heapBackend.createKeyedValueState(desc);
 
-		byte[] serializedKeyAndNamespace = KvStateSerializer.serializeKeyAndNamespace(
-				1238283,
-				IntSerializer.INSTANCE,
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE);
+		byte[] serializedKey = KvStateSerializer.serializeValue(1238283, IntSerializer.INSTANCE);
 
 		long requestId = Integer.MAX_VALUE + 22982L;
 
 		assertTrue(registryListener.registrationName.equals("vanilla"));
 
-		KvStateInternalRequest request = new KvStateInternalRequest(registryListener.kvStateId, serializedKeyAndNamespace);
+		KvStateInternalRequest request = new KvStateInternalRequest(registryListener.kvStateId, serializedKey);
 		ByteBuf serRequest = MessageSerializer.serializeRequest(channel.alloc(), requestId, request);
 
 		// Write the request and wait for the response
@@ -299,42 +300,8 @@ public class KvStateServerHandlerTest extends TestLogger {
 		EmbeddedChannel channel = new EmbeddedChannel(getFrameDecoder(), handler);
 
 		// Failing KvState
-		InternalKvState<Integer, VoidNamespace, Long> kvState =
-				new InternalKvState<Integer, VoidNamespace, Long>() {
-					@Override
-					public TypeSerializer<Integer> getKeySerializer() {
-						return IntSerializer.INSTANCE;
-					}
-
-					@Override
-					public TypeSerializer<VoidNamespace> getNamespaceSerializer() {
-						return VoidNamespaceSerializer.INSTANCE;
-					}
-
-					@Override
-					public TypeSerializer<Long> getValueSerializer() {
-						return LongSerializer.INSTANCE;
-					}
-
-					@Override
-					public void setCurrentNamespace(VoidNamespace namespace) {
-						// do nothing
-					}
-
-					@Override
-					public byte[] getSerializedValue(
-							final byte[] serializedKeyAndNamespace,
-							final TypeSerializer<Integer> safeKeySerializer,
-							final TypeSerializer<VoidNamespace> safeNamespaceSerializer,
-							final TypeSerializer<Long> safeValueSerializer) throws Exception {
-						throw new RuntimeException("Expected test Exception");
-					}
-
-					@Override
-					public void clear() {
-
-					}
-				};
+		KeyedState<?, ?> kvState = Mockito.mock(KeyedState.class);
+		when(kvState.getSerializedValue(any(byte[].class))).thenThrow(new RuntimeException("Expected test Exception"));
 
 		KvStateID kvStateId = registry.registerKvState(
 				new JobID(),
@@ -417,20 +384,23 @@ public class KvStateServerHandlerTest extends TestLogger {
 		KvStateServerHandler handler = new KvStateServerHandler(localTestServer, registry, serializer, stats);
 		EmbeddedChannel channel = new EmbeddedChannel(getFrameDecoder(), handler);
 
-		int numKeyGroups = 1;
-		AbstractStateBackend abstractBackend = new MemoryStateBackend();
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
-		KeyedStateBackend<Integer> backend = createKeyedStateBackend(registry, numKeyGroups, abstractBackend, dummyEnv);
+		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+															1,
+															GroupRange.of(0, 1),
+															Thread.currentThread().getContextClassLoader(),
+															TestLocalRecoveryConfig.disabled(),
+															registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
 
 		// Register state
-		ValueStateDescriptor<Integer> desc = new ValueStateDescriptor<>("any", IntSerializer.INSTANCE);
+		KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
 		desc.setQueryable("vanilla");
 
-		backend.getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, desc);
+		heapBackend.createKeyedValueState(desc);
 
 		assertTrue(registryListener.registrationName.equals("vanilla"));
 
@@ -552,45 +522,34 @@ public class KvStateServerHandlerTest extends TestLogger {
 		KvStateServerHandler handler = new KvStateServerHandler(testServer, registry, serializer, stats);
 		EmbeddedChannel channel = new EmbeddedChannel(getFrameDecoder(), handler);
 
-		int numKeyGroups = 1;
-		AbstractStateBackend abstractBackend = new MemoryStateBackend();
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
-		AbstractKeyedStateBackend<Integer> backend = createKeyedStateBackend(registry, numKeyGroups, abstractBackend, dummyEnv);
+		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+															1,
+															GroupRange.of(0, 1),
+															Thread.currentThread().getContextClassLoader(),
+															TestLocalRecoveryConfig.disabled(),
+															registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
 
 		// Register state
-		ValueStateDescriptor<Integer> desc = new ValueStateDescriptor<>("any", IntSerializer.INSTANCE);
+		KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
 		desc.setQueryable("vanilla");
 
-		ValueState<Integer> state = backend.getPartitionedState(
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE,
-				desc);
+		KeyedValueState<Integer, Integer> state = heapBackend.createKeyedValueState(desc);
 
 		int key = 99812822;
 
 		// Update the KvState
-		backend.setCurrentKey(key);
-		state.update(712828289);
+		state.put(key, 712828289);
 
-		byte[] wrongKeyAndNamespace = KvStateSerializer.serializeKeyAndNamespace(
-				"wrong-key-type",
-				StringSerializer.INSTANCE,
-				"wrong-namespace-type",
-				StringSerializer.INSTANCE);
-
-		byte[] wrongNamespace = KvStateSerializer.serializeKeyAndNamespace(
-				key,
-				IntSerializer.INSTANCE,
-				"wrong-namespace-type",
-				StringSerializer.INSTANCE);
+		byte[] wrongKey = KvStateSerializer.serializeValue("wrong-key-type", StringSerializer.INSTANCE);
 
 		assertTrue(registryListener.registrationName.equals("vanilla"));
 
-		KvStateInternalRequest request = new KvStateInternalRequest(registryListener.kvStateId, wrongKeyAndNamespace);
+		KvStateInternalRequest request = new KvStateInternalRequest(registryListener.kvStateId, wrongKey);
 		ByteBuf serRequest = MessageSerializer.serializeRequest(channel.alloc(), 182828L, request);
 
 		// Write the request and wait for the response
@@ -605,24 +564,8 @@ public class KvStateServerHandlerTest extends TestLogger {
 		assertEquals(182828L, response.getRequestId());
 		assertTrue(response.getCause().getMessage().contains("IOException"));
 
-		// Repeat with wrong namespace only
-		request = new KvStateInternalRequest(registryListener.kvStateId, wrongNamespace);
-		serRequest = MessageSerializer.serializeRequest(channel.alloc(), 182829L, request);
-
-		// Write the request and wait for the response
-		channel.writeInbound(serRequest);
-
-		buf = (ByteBuf) readInboundBlocking(channel);
-		buf.skipBytes(4); // skip frame length
-
-		// Verify the response
-		assertEquals(MessageType.REQUEST_FAILURE, MessageSerializer.deserializeHeader(buf));
-		response = MessageSerializer.deserializeRequestFailure(buf);
-		assertEquals(182829L, response.getRequestId());
-		assertTrue(response.getCause().getMessage().contains("IOException"));
-
-		assertEquals(2L, stats.getNumRequests());
-		assertEquals(2L, stats.getNumFailed());
+		assertEquals(1L, stats.getNumRequests());
+		assertEquals(1L, stats.getNumFailed());
 	}
 
 	/**
@@ -639,23 +582,23 @@ public class KvStateServerHandlerTest extends TestLogger {
 		KvStateServerHandler handler = new KvStateServerHandler(testServer, registry, serializer, stats);
 		EmbeddedChannel channel = new EmbeddedChannel(getFrameDecoder(), handler);
 
-		int numKeyGroups = 1;
-		AbstractStateBackend abstractBackend = new MemoryStateBackend();
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(registry);
-		AbstractKeyedStateBackend<Integer> backend = createKeyedStateBackend(registry, numKeyGroups, abstractBackend, dummyEnv);
+		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+																1,
+																GroupRange.of(0, 1),
+																Thread.currentThread().getContextClassLoader(),
+																TestLocalRecoveryConfig.disabled(),
+																registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 		final TestRegistryListener registryListener = new TestRegistryListener();
 		registry.registerListener(dummyEnv.getJobID(), registryListener);
 
 		// Register state
-		ValueStateDescriptor<byte[]> desc = new ValueStateDescriptor<>("any", BytePrimitiveArraySerializer.INSTANCE);
+		KeyedValueStateDescriptor<Integer, byte[]> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, BytePrimitiveArraySerializer.INSTANCE);
 		desc.setQueryable("vanilla");
 
-		ValueState<byte[]> state = backend.getPartitionedState(
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE,
-				desc);
+		KeyedValueState<Integer, byte[]> state = heapBackend.createKeyedValueState(desc);
 
 		// Update KvState
 		byte[] bytes = new byte[2 * channel.config().getWriteBufferHighWaterMark()];
@@ -666,21 +609,16 @@ public class KvStateServerHandlerTest extends TestLogger {
 		}
 
 		int key = 99812822;
-		backend.setCurrentKey(key);
-		state.update(bytes);
+		state.put(key, bytes);
 
 		// Request
-		byte[] serializedKeyAndNamespace = KvStateSerializer.serializeKeyAndNamespace(
-				key,
-				IntSerializer.INSTANCE,
-				VoidNamespace.INSTANCE,
-				VoidNamespaceSerializer.INSTANCE);
+		byte[] serializedKey = KvStateSerializer.serializeValue(key, IntSerializer.INSTANCE);
 
 		long requestId = Integer.MAX_VALUE + 182828L;
 
 		assertTrue(registryListener.registrationName.equals("vanilla"));
 
-		KvStateInternalRequest request = new KvStateInternalRequest(registryListener.kvStateId, serializedKeyAndNamespace);
+		KvStateInternalRequest request = new KvStateInternalRequest(registryListener.kvStateId, serializedKey);
 		ByteBuf serRequest = MessageSerializer.serializeRequest(channel.alloc(), requestId, request);
 
 		// Write the request and wait for the response

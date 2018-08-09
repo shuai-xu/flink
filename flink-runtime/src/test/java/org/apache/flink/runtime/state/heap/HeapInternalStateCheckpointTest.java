@@ -35,6 +35,6 @@ public class HeapInternalStateCheckpointTest extends InternalStateCheckpointTest
 		GroupSet groups,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) {
-		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig);
+		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, null);
 	}
 }

@@ -19,6 +19,7 @@ package org.apache.flink.runtime.state.gemini;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
+import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.DoneFuture;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
@@ -73,8 +74,9 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 		GroupSet groups,
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig,
-		Configuration configuration) {
-		super(numberOfGroups, groups, userClassLoader);
+		Configuration configuration,
+		TaskKvStateRegistry kvStateRegistry) {
+		super(numberOfGroups, groups, userClassLoader, kvStateRegistry);
 
 		Preconditions.checkNotNull(configuration);
 		Preconditions.checkNotNull(localRecoveryConfig);

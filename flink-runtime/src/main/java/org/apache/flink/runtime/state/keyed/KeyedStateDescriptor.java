@@ -60,6 +60,10 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	@Nullable
 	private final Merger<V> valueMerger;
 
+	/** Name for queries against state created from this StateDescriptor. */
+	@Nullable
+	private String queryableStateName;
+
 	/**
 	 * Constructor for global states with given name and the serializers for
 	 * the keys and the values in the state.
@@ -152,6 +156,43 @@ public abstract class KeyedStateDescriptor<K, V, S extends KeyedState<K, V>> imp
 	 */
 	public Merger<V> getValueMerger() {
 		return valueMerger;
+	}
+
+	/**
+	 * Sets the name for queries of state created from this descriptor.
+	 *
+	 * <p>If a name is set, the created state will be published for queries
+	 * during runtime. The name needs to be unique per job. If there is another
+	 * state instance published under the same name, the job will fail during runtime.
+	 *
+	 * @param queryableStateName State name for queries (unique name per job)
+	 * @throws IllegalStateException If queryable state name already set
+	 */
+	public void setQueryable(String queryableStateName) {
+		if (this.queryableStateName == null) {
+			this.queryableStateName = Preconditions.checkNotNull(queryableStateName, "Registration name");
+		} else {
+			throw new IllegalStateException("Queryable state name already set");
+		}
+	}
+
+	/**
+	 * Returns the queryable state name.
+	 *
+	 * @return Queryable state name or <code>null</code> if not set.
+	 */
+	public String getQueryableStateName() {
+		return queryableStateName;
+	}
+
+	/**
+	 * Returns whether the state created from this descriptor is queryable.
+	 *
+	 * @return <code>true</code> if state is queryable, <code>false</code>
+	 * otherwise.
+	 */
+	public boolean isQueryable() {
+		return queryableStateName != null;
 	}
 
 	//--------------------------------------------------------------------------

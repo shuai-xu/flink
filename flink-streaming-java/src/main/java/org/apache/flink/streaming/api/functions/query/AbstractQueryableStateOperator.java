@@ -75,6 +75,6 @@ abstract class AbstractQueryableStateOperator<S extends State, IN>
 	@Override
 	public void open() throws Exception {
 		super.open();
-		state = getPartitionedState(stateDescriptor);
+		state = getState(stateDescriptor);
 	}
 }

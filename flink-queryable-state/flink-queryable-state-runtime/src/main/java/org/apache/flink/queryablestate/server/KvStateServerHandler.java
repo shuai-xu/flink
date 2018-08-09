@@ -27,9 +27,9 @@ import org.apache.flink.queryablestate.network.AbstractServerHandler;
 import org.apache.flink.queryablestate.network.messages.MessageSerializer;
 import org.apache.flink.queryablestate.network.stats.KvStateRequestStats;
 import org.apache.flink.runtime.query.KvStateEntry;
-import org.apache.flink.runtime.query.KvStateInfo;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.state.internal.InternalKvState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.Preconditions;
 
@@ -79,9 +79,9 @@ public class KvStateServerHandler extends AbstractServerHandler<KvStateInternalR
 			if (kvState == null) {
 				responseFuture.completeExceptionally(new UnknownKvStateIdException(getServerName(), request.getKvStateId()));
 			} else {
-				byte[] serializedKeyAndNamespace = request.getSerializedKeyAndNamespace();
+				byte[] serializedKey = request.getSerializedKey();
 
-				byte[] serializedResult = getSerializedValue(kvState, serializedKeyAndNamespace);
+				byte[] serializedResult = getSerializedValue(kvState, serializedKey);
 				if (serializedResult != null) {
 					responseFuture.complete(new KvStateResponse(serializedResult));
 				} else {
@@ -99,17 +99,11 @@ public class KvStateServerHandler extends AbstractServerHandler<KvStateInternalR
 
 	private static <K, N, V> byte[] getSerializedValue(
 			final KvStateEntry<K, N, V> entry,
-			final byte[] serializedKeyAndNamespace) throws Exception {
+			final byte[] serializedKey) throws Exception {
 
-		final InternalKvState<K, N, V> state = entry.getState();
-		final KvStateInfo<K, N, V> infoForCurrentThread = entry.getInfoForCurrentThread();
+		final KeyedState<K, V> state = entry.getState();
 
-		return state.getSerializedValue(
-				serializedKeyAndNamespace,
-				infoForCurrentThread.getKeySerializer(),
-				infoForCurrentThread.getNamespaceSerializer(),
-				infoForCurrentThread.getStateValueSerializer()
-		);
+		return state.getSerializedValue(serializedKey);
 	}
 
 	@Override

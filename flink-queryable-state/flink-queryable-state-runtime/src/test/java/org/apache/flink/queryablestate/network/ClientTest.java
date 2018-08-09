@@ -19,12 +19,8 @@
 package org.apache.flink.queryablestate.network;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.queryablestate.KvStateID;
-import org.apache.flink.queryablestate.client.VoidNamespace;
-import org.apache.flink.queryablestate.client.VoidNamespaceSerializer;
 import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.queryablestate.messages.KvStateInternalRequest;
 import org.apache.flink.queryablestate.messages.KvStateResponse;
@@ -35,11 +31,13 @@ import org.apache.flink.queryablestate.server.KvStateServerImpl;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.query.KvStateRegistry;
-import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
-import org.apache.flink.runtime.state.AbstractStateBackend;
+import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.internal.InternalKvState;
-import org.apache.flink.runtime.state.memory.MemoryStateBackend;
+import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.NetUtils;
 
@@ -622,21 +620,16 @@ public class ClientTest {
 
 		final int batchSize = 16;
 
-		final int numKeyGroups = 1;
-
-		AbstractStateBackend abstractBackend = new MemoryStateBackend();
 		KvStateRegistry dummyRegistry = new KvStateRegistry();
 		DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 		dummyEnv.setKvStateRegistry(dummyRegistry);
 
-		AbstractKeyedStateBackend<Integer> backend = abstractBackend.createKeyedStateBackend(
-				dummyEnv,
-				new JobID(),
-				"test_op",
-				IntSerializer.INSTANCE,
-				numKeyGroups,
-				new KeyGroupRange(0, 0),
-				dummyRegistry.createTaskRegistry(new JobID(), new JobVertexID()));
+		HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+														1,
+														GroupRange.of(0, 1),
+														Thread.currentThread().getContextClassLoader(),
+														TestLocalRecoveryConfig.disabled(),
+														dummyRegistry.createTaskRegistry(new JobID(), new JobVertexID()));
 
 		final FiniteDuration timeout = new FiniteDuration(10, TimeUnit.SECONDS);
 
@@ -654,7 +647,7 @@ public class ClientTest {
 			clientTaskExecutor = Executors.newFixedThreadPool(numClientsTasks);
 
 			// Create state
-			ValueStateDescriptor<Integer> desc = new ValueStateDescriptor<>("any", IntSerializer.INSTANCE);
+			KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
 			desc.setQueryable("any");
 
 			// Create servers
@@ -675,18 +668,13 @@ public class ClientTest {
 
 				server[i].start();
 
-				backend.setCurrentKey(1010 + i);
-
 				// Value per server
-				ValueState<Integer> state = backend.getPartitionedState(
-						VoidNamespace.INSTANCE,
-						VoidNamespaceSerializer.INSTANCE,
-						desc);
+				KeyedValueState<Integer, Integer> state = heapBackend.getKeyedState(desc);
 
-				state.update(201 + i);
+				state.put(1010 + i, 201 + i);
 
 				// we know it must be a KvState but this is not exposed to the user via State
-				InternalKvState<Integer, ?, Integer> kvState = (InternalKvState<Integer, ?, Integer>) state;
+				KeyedState<Integer, Integer> kvState = (KeyedState<Integer, Integer>) state;
 
 				// Register KvState (one state instance for all server)
 				ids[i] = registry[i].registerKvState(new JobID(), new JobVertexID(), new KeyGroupRange(0, 0), "any", kvState);
@@ -712,13 +700,9 @@ public class ClientTest {
 					for (int j = 0; j < batchSize; j++) {
 						int targetServer = random.get(j) % numServers;
 
-						byte[] serializedKeyAndNamespace = KvStateSerializer.serializeKeyAndNamespace(
-								1010 + targetServer,
-								IntSerializer.INSTANCE,
-								VoidNamespace.INSTANCE,
-								VoidNamespaceSerializer.INSTANCE);
+						byte[] serializedKey = KvStateSerializer.serializeValue(1010 + targetServer, IntSerializer.INSTANCE);
 
-						KvStateInternalRequest request = new KvStateInternalRequest(ids[targetServer], serializedKeyAndNamespace);
+						KvStateInternalRequest request = new KvStateInternalRequest(ids[targetServer], serializedKey);
 						futures.add(finalClient.sendRequest(server[targetServer].getServerAddress(), request));
 					}
 

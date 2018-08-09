@@ -65,6 +65,10 @@ public class ContextStateBinder implements StateBinder {
 				operator.getKeySerializer(),
 				stateDesc.getSerializer()
 			);
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
+
 		KeyedValueState<Object, T> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
 		return new ContextValueState<>(operator, keyedState, stateDesc);
@@ -82,6 +86,10 @@ public class ContextStateBinder implements StateBinder {
 				operator.getKeySerializer(),
 				stateDesc.getElementSerializer()
 			);
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
+
 		KeyedListState<Object, T> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
 		return new ContextListState<>(operator, keyedState);
@@ -102,6 +110,9 @@ public class ContextStateBinder implements StateBinder {
 				stateDesc.getKeySerializer(),
 				stateDesc.getValueSerializer()
 			);
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
 
 		KeyedMapState<Object, MK, MV> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
@@ -122,6 +133,10 @@ public class ContextStateBinder implements StateBinder {
 				operator.getKeySerializer(),
 				stateDesc.getSerializer()
 			);
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
+
 		KeyedValueState<Object, T> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
 		return new ContextReducingState<>(operator, keyedState, stateDesc.getReduceFunction());
@@ -141,6 +156,10 @@ public class ContextStateBinder implements StateBinder {
 				operator.getKeySerializer(),
 				stateDesc.getSerializer()
 			);
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
+
 		KeyedValueState<Object, ACC> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
 		return new ContextFoldingState<>(operator, keyedState, stateDesc);
@@ -159,6 +178,10 @@ public class ContextStateBinder implements StateBinder {
 				stateDesc.getName(),
 				operator.getKeySerializer(),
 				stateDesc.getSerializer());
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
+
 		KeyedValueState<Object, ACC> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
 		return new ContextAggregatingState<>(operator, keyedState, stateDesc.getAggregateFunction());

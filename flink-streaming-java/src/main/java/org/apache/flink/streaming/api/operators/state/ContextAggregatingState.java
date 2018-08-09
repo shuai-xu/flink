@@ -73,7 +73,7 @@ public class ContextAggregatingState<IN, ACC, OUT> implements AggregatingState<I
 			accumulator = aggregateFunction.createAccumulator();
 		}
 
-		aggregateFunction.add(value, accumulator);
+		accumulator = aggregateFunction.add(value, accumulator);
 
 		keyedState.put(operator.getCurrentKey(), accumulator);
 	}

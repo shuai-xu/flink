@@ -27,6 +27,7 @@ import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
+import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
@@ -86,8 +87,9 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) {
-		super(numberOfGroups, groups, userClassLoader);
+		LocalRecoveryConfig localRecoveryConfig,
+		TaskKvStateRegistry kvStateRegistry) {
+		super(numberOfGroups, groups, userClassLoader, kvStateRegistry);
 
 		this.heap = new HashMap<>();
 		this.localRecoveryConfig = Preconditions.checkNotNull(localRecoveryConfig);

@@ -229,19 +229,18 @@ public class QueryableStateClient {
 		Preconditions.checkNotNull(stateDescriptor);
 
 		TypeSerializer<K> keySerializer = keyTypeInfo.createSerializer(executionConfig);
-		TypeSerializer<N> namespaceSerializer = namespaceTypeInfo.createSerializer(executionConfig);
 
 		stateDescriptor.initializeSerializerUnlessSet(executionConfig);
 
-		final byte[] serializedKeyAndNamespace;
+		final byte[] serializedKey;
 		try {
-			serializedKeyAndNamespace = KvStateSerializer
-					.serializeKeyAndNamespace(key, keySerializer, namespace, namespaceSerializer);
+			serializedKey = KvStateSerializer
+					.serializeValue(key, keySerializer);
 		} catch (IOException e) {
 			return FutureUtils.getFailedFuture(e);
 		}
 
-		return getKvState(jobId, queryableStateName, key.hashCode(), serializedKeyAndNamespace).thenApply(
+		return getKvState(jobId, queryableStateName, key.hashCode(), serializedKey).thenApply(
 				stateResponse -> {
 					try {
 						return stateDescriptor.bind(new ImmutableStateBinder(stateResponse.getContent()));
@@ -259,7 +258,7 @@ public class QueryableStateClient {
 	 * @param queryableStateName        Name under which the state is queryable
 	 * @param keyHashCode               Integer hash code of the key (result of
 	 *                                  a call to {@link Object#hashCode()}
-	 * @param serializedKeyAndNamespace Serialized key and namespace to query
+	 * @param serializedKey             Serialized key
 	 *                                  KvState instance with
 	 * @return Future holding the serialized result
 	 */
@@ -267,10 +266,10 @@ public class QueryableStateClient {
 			final JobID jobId,
 			final String queryableStateName,
 			final int keyHashCode,
-			final byte[] serializedKeyAndNamespace) {
+			final byte[] serializedKey) {
 		LOG.debug("Sending State Request to {}.", remoteAddress);
 		try {
-			KvStateRequest request = new KvStateRequest(jobId, queryableStateName, keyHashCode, serializedKeyAndNamespace);
+			KvStateRequest request = new KvStateRequest(jobId, queryableStateName, keyHashCode, serializedKey);
 			return client.sendRequest(remoteAddress, request);
 		} catch (Exception e) {
 			LOG.error("Unable to send KVStateRequest: ", e);

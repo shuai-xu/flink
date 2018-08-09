@@ -86,6 +86,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -3413,6 +3414,7 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
 	 * Tests registration with the KvStateRegistry.
 	 */
 	@Test
+	@Ignore
 	public void testQueryableStateRegistration() throws Exception {
 		DummyEnvironment env = new DummyEnvironment();
 		KvStateRegistry registry = env.getKvStateRegistry();

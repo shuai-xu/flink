@@ -99,4 +99,16 @@ public interface KeyedState<K, V> {
 	 * @return The iterable of all the keys in the state.
 	 */
 	Iterable<K> keys();
+
+	/**
+	 * Returns the serialized value for the given key and namespace.
+	 *
+	 * <p>If no value is associated with key and namespace, <code>null</code>
+	 * is returned.
+	 *
+	 * @param serializedKey Serialized key
+	 * @return Serialized value or <code>null</code> if no value is associated with the key and namespace.
+	 * @throws Exception Exceptions during serialization are forwarded
+	 */
+	byte[] getSerializedValue(byte[] serializedKey) throws Exception;
 }

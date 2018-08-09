@@ -382,16 +382,6 @@ public abstract class AbstractKeyedStateBackend<K> implements
 		InternalKvState<K, N, ?> kvState = (InternalKvState<K, N, ?>) state;
 		keyValueStatesByName.put(stateDescriptor.getName(), kvState);
 
-		// Publish queryable state
-		if (stateDescriptor.isQueryable()) {
-			if (kvStateRegistry == null) {
-				throw new IllegalStateException("State backend has not been initialized for job.");
-			}
-
-			String name = stateDescriptor.getQueryableStateName();
-			kvStateRegistry.registerKvState(keyGroupRange, name, kvState);
-		}
-
 		return state;
 	}
 

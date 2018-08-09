@@ -33,13 +33,11 @@ import org.apache.curator.test.TestingServer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.rules.TemporaryFolder;
 
 /**
  * Several integration tests for queryable state using the {@link FsStateBackend}.
  */
-@Ignore
 public class HAQueryableStateFsBackendITCase extends AbstractQueryableStateTestBase {
 
 	private static final int NUM_JMS = 2;

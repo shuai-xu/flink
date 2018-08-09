@@ -87,7 +87,8 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 			numberOfGroups,
 			groups,
 			true,
-			mock(LocalRecoveryConfig.class));
+			mock(LocalRecoveryConfig.class),
+			null);
 	}
 
 	private void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {

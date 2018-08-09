@@ -25,6 +25,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.io.async.AbstractAsyncCallableWithResources;
 import org.apache.flink.runtime.io.async.AsyncStoppableTaskWithCallback;
+import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
@@ -139,9 +140,10 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		int numberOfGroups,
 		GroupSet groups,
 		boolean enableIncrementalCheckpointing,
-		LocalRecoveryConfig localRecoveryConfig) throws IOException {
+		LocalRecoveryConfig localRecoveryConfig,
+		TaskKvStateRegistry kvStateRegistry) throws IOException {
 
-		super(numberOfGroups, groups, userClassLoader);
+		super(numberOfGroups, groups, userClassLoader, kvStateRegistry);
 
 		this.dbOptions = Preconditions.checkNotNull(dbOptions);
 		// ensure that we use the right merge operator, because other code relies on this

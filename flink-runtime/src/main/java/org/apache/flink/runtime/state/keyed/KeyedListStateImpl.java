@@ -19,7 +19,11 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.HashPartitioner;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
+import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.FieldBasedPartitioner;
+import org.apache.flink.runtime.state.InternalColumnDescriptor;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
@@ -27,6 +31,7 @@ import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,6 +63,11 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	 */
 	private final InternalState internalState;
 
+	/**
+	 * The descriptor of current state.
+	 */
+	private static KeyedListStateDescriptor stateDescriptor;
+
 	//--------------------------------------------------------------------------
 
 	/**
@@ -83,7 +93,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	public static <K, E> InternalStateDescriptor buildInternalStateDescriptor(
 		final KeyedListStateDescriptor<K, E> keyedStateDescriptor
 	) {
-		Preconditions.checkNotNull(keyedStateDescriptor);
+		stateDescriptor = Preconditions.checkNotNull(keyedStateDescriptor);
 
 		return new InternalStateDescriptorBuilder(keyedStateDescriptor.getName())
 			.addKeyColumn("key", keyedStateDescriptor.getKeySerializer())
@@ -418,6 +428,35 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		}
 
 		return element;
+	}
+
+
+	@Override
+	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
+		InternalStateDescriptor descriptor = internalState.getDescriptor();
+		InternalColumnDescriptor<K> keyDescriptor = (InternalColumnDescriptor<K>)descriptor.getKeyColumnDescriptor(KEY_FIELD_INDEX);
+		K key = KvStateSerializer.deserializeValue(serializedKey, keyDescriptor.getSerializer());
+
+		List<E> result = get(key);
+		if (result == null) {
+			return null;
+		}
+
+		TypeSerializer<E> serializer = stateDescriptor.getElementSerializer();
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		DataOutputViewStreamWrapper view = new DataOutputViewStreamWrapper(baos);
+
+		// write the same as RocksDB writes lists, with one ',' separator
+		for (int i = 0; i < result.size(); i++) {
+			serializer.serialize(result.get(i), view);
+			if (i < result.size() -1) {
+				view.writeByte(',');
+			}
+		}
+		view.flush();
+
+		return baos.toByteArray();
 	}
 }
 

@@ -360,7 +360,7 @@ public class StatefulStreamOperatorTest {
 	public static class TestInternalStateBackend extends AbstractInternalStateBackend {
 
 		public TestInternalStateBackend() {
-			super(10, GroupRange.of(0, 10), Thread.currentThread().getContextClassLoader());
+			super(10, GroupRange.of(0, 10), Thread.currentThread().getContextClassLoader(), null);
 		}
 
 		private static final long serialVersionUID = 1661814222618778988L;

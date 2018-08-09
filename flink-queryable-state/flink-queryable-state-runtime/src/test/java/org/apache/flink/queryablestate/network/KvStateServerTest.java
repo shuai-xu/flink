@@ -19,11 +19,7 @@
 package org.apache.flink.queryablestate.network;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
-import org.apache.flink.queryablestate.client.VoidNamespace;
-import org.apache.flink.queryablestate.client.VoidNamespaceSerializer;
 import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.queryablestate.messages.KvStateInternalRequest;
 import org.apache.flink.queryablestate.messages.KvStateResponse;
@@ -35,10 +31,11 @@ import org.apache.flink.queryablestate.server.KvStateServerImpl;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.query.KvStateRegistry;
-import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
-import org.apache.flink.runtime.state.AbstractStateBackend;
-import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.memory.MemoryStateBackend;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 
 import org.apache.flink.shaded.netty4.io.netty.bootstrap.Bootstrap;
 import org.apache.flink.shaded.netty4.io.netty.buffer.ByteBuf;
@@ -105,46 +102,34 @@ public class KvStateServerTest {
 			server.start();
 
 			InetSocketAddress serverAddress = server.getServerAddress();
-			int numKeyGroups = 1;
-			AbstractStateBackend abstractBackend = new MemoryStateBackend();
 			DummyEnvironment dummyEnv = new DummyEnvironment("test", 1, 0);
 			dummyEnv.setKvStateRegistry(registry);
 			final JobID jobId = new JobID();
-			AbstractKeyedStateBackend<Integer> backend = abstractBackend.createKeyedStateBackend(
-				dummyEnv,
-				jobId,
-				"test_op",
-				IntSerializer.INSTANCE,
-				numKeyGroups,
-				new KeyGroupRange(0, 0),
-				registry.createTaskRegistry(jobId, new JobVertexID()));
+			HeapInternalStateBackend heapBackend = new HeapInternalStateBackend(
+																	1,
+																	GroupRange.of(0, 1),
+																	Thread.currentThread().getContextClassLoader(),
+																	TestLocalRecoveryConfig.disabled(),
+																	registry.createTaskRegistry(dummyEnv.getJobID(), new JobVertexID()));
 
 			final KvStateServerHandlerTest.TestRegistryListener registryListener =
 					new KvStateServerHandlerTest.TestRegistryListener();
 
-			registry.registerListener(jobId, registryListener);
+			registry.registerListener(dummyEnv.getJobID(), registryListener);
 
-			ValueStateDescriptor<Integer> desc = new ValueStateDescriptor<>("any", IntSerializer.INSTANCE);
+			KeyedValueStateDescriptor<Integer, Integer> desc = new KeyedValueStateDescriptor("any", IntSerializer.INSTANCE, IntSerializer.INSTANCE);
 			desc.setQueryable("vanilla");
 
-			ValueState<Integer> state = backend.getPartitionedState(
-					VoidNamespace.INSTANCE,
-					VoidNamespaceSerializer.INSTANCE,
-					desc);
+			KeyedValueState<Integer, Integer> state = heapBackend.createKeyedValueState(desc);
 
 			// Update KvState
 			int expectedValue = 712828289;
 
 			int key = 99812822;
-			backend.setCurrentKey(key);
-			state.update(expectedValue);
+			state.put(key, expectedValue);
 
 			// Request
-			byte[] serializedKeyAndNamespace = KvStateSerializer.serializeKeyAndNamespace(
-					key,
-					IntSerializer.INSTANCE,
-					VoidNamespace.INSTANCE,
-					VoidNamespaceSerializer.INSTANCE);
+			byte[] serializedKey = KvStateSerializer.serializeValue(key, IntSerializer.INSTANCE);
 
 			// Connect to the server
 			final BlockingQueue<ByteBuf> responses = new LinkedBlockingQueue<>();
@@ -167,7 +152,7 @@ public class KvStateServerTest {
 
 			final KvStateInternalRequest request = new KvStateInternalRequest(
 					registryListener.kvStateId,
-					serializedKeyAndNamespace);
+					serializedKey);
 
 			ByteBuf serializeRequest = MessageSerializer.serializeRequest(
 					channel.alloc(),

@@ -88,7 +88,8 @@ public class RocksDBInternalStateAccessTest extends InternalStateAccessTestBase 
 			numberOfGroups,
 			groups,
 			true,
-			localRecoveryConfig);
+			localRecoveryConfig,
+			null);
 	}
 
 	private void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {

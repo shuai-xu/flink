@@ -19,7 +19,10 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.HashPartitioner;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.FieldBasedPartitioner;
+import org.apache.flink.runtime.state.InternalColumnDescriptor;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
@@ -38,6 +41,11 @@ import java.util.Map;
 public final class KeyedMapStateImpl<K, MK, MV>
 	extends AbstractKeyedMapStateImpl<K, MK, MV, Map<MK, MV>>
 	implements KeyedMapState<K, MK, MV> {
+
+	/**
+	 * The descriptor of current state.
+	 */
+	private static KeyedMapStateDescriptor stateDescriptor;
 
 	/**
 	 * Constructor with the internal state to store mappings.
@@ -61,7 +69,7 @@ public final class KeyedMapStateImpl<K, MK, MV>
 	public static <K, MK, MV> InternalStateDescriptor createInternalStateDescriptor(
 		final KeyedMapStateDescriptor<K, MK, MV> keyedStateDescriptor
 	) {
-		Preconditions.checkNotNull(keyedStateDescriptor);
+		stateDescriptor = Preconditions.checkNotNull(keyedStateDescriptor);
 
 		return new InternalStateDescriptorBuilder(keyedStateDescriptor.getName())
 			.addKeyColumn("key", keyedStateDescriptor.getKeySerializer())
@@ -76,5 +84,22 @@ public final class KeyedMapStateImpl<K, MK, MV>
 	@Override
 	Map<MK, MV> createMap() {
 		return new HashMap<>();
+	}
+
+	@Override
+	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
+		InternalStateDescriptor descriptor = internalState.getDescriptor();
+		InternalColumnDescriptor<K> keyDescriptor = (InternalColumnDescriptor<K>)descriptor.getKeyColumnDescriptor(KEY_FIELD_INDEX);
+		K key = KvStateSerializer.deserializeValue(serializedKey, keyDescriptor.getSerializer());
+
+		Map<MK, MV> map = get(key);
+		if (map == null) {
+			return null;
+		}
+
+		TypeSerializer<MK> mkSerializer = stateDescriptor.getMapKeySerializer();
+		TypeSerializer<MV> mvSerializer = stateDescriptor.getMapValueSerializer();
+
+		return KvStateSerializer.serializeMap(map.entrySet(), mkSerializer, mvSerializer);
 	}
 }

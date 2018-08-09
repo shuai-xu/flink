@@ -19,7 +19,9 @@
 package org.apache.flink.runtime.state.keyed;
 
 import org.apache.flink.api.common.functions.HashPartitioner;
+import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.FieldBasedPartitioner;
+import org.apache.flink.runtime.state.InternalColumnDescriptor;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
@@ -243,5 +245,21 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 				};
 			}
 		};
+	}
+
+	@Override
+	public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
+		InternalStateDescriptor descriptor = internalState.getDescriptor();
+		InternalColumnDescriptor<K> keyDescriptor = (InternalColumnDescriptor<K>)descriptor.getKeyColumnDescriptor(KEY_FIELD_INDEX);
+		K key = KvStateSerializer.deserializeValue(serializedKey, keyDescriptor.getSerializer());
+
+		V value = get(key);
+		if (value == null) {
+			return null;
+		}
+
+		InternalColumnDescriptor<V> valueDescriptor =
+			(InternalColumnDescriptor<V>) descriptor.getValueColumnDescriptor(VALUE_FIELD_INDEX);
+		return KvStateSerializer.serializeValue(value, valueDescriptor.getSerializer());
 	}
 }
