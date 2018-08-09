@@ -21,6 +21,7 @@ package org.apache.flink.runtime.executiongraph;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.core.testutils.ManuallyTriggeredDirectExecutor;
+import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.checkpoint.CheckpointCoordinator;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
@@ -38,7 +39,6 @@ import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleSlotProvider;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
-import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
@@ -424,8 +424,12 @@ public class IndividualRestartsConcurrencyTest extends TestLogger {
 			SlotProvider slotProvider,
 			int parallelism) throws Exception {
 
+		JobVertex jv = new JobVertex("test vertex");
+		jv.setInvokableClass(NoOpInvokable.class);
+		jv.setParallelism(parallelism);
+
 		// build a simple execution graph with on job vertex, parallelism 2
-		final ExecutionGraph graph = new ExecutionGraph(
+		final ExecutionGraph graph = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			new DummyJobInformation(
 				jid,
 				"test job"),
@@ -434,14 +438,9 @@ public class IndividualRestartsConcurrencyTest extends TestLogger {
 			Time.seconds(10),
 			restartStrategy,
 			failoverStrategy,
-			slotProvider);
-
-		JobVertex jv = new JobVertex("test vertex");
-		jv.setInvokableClass(NoOpInvokable.class);
-		jv.setParallelism(parallelism);
-
-		JobGraph jg = new JobGraph(jid, "testjob", jv);
-		graph.attachJobGraph(jg.getVerticesSortedTopologicallyFromSources());
+			slotProvider,
+			VoidBlobWriter.getInstance(),
+			Collections.singletonList(jv));
 
 		return graph;
 	}

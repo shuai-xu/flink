@@ -16,18 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobgraph;
+package org.apache.flink.runtime.event;
 
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
+import java.io.Serializable;
 
 /**
- * The ScheduleMode decides how vertices are started in {@link DefaultGraphManagerPlugin}.
+ * Subclasses of this event will be handled by graph manager plugin to schedule vertices in graph.
  */
-public enum ScheduleMode {
-
-	/** Schedule vertices lazily from the sources. Downstream vertices are started once their input data are ready */
-	LAZY_FROM_SOURCES,
-
-	/** Schedules all vertices immediately. */
-	EAGER
-}
+public abstract class ExecutionEvent implements Serializable {}

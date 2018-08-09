@@ -33,7 +33,9 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -63,8 +65,14 @@ public class JobGraph implements Serializable {
 	/** List of task vertices included in this job graph. */
 	private final Map<JobVertexID, JobVertex> taskVertices = new LinkedHashMap<JobVertexID, JobVertex>();
 
+	/** Map of results produced by vertices in this job graph. */
+	private final Map<IntermediateDataSetID, IntermediateDataSet> results = new HashMap<>();
+
 	/** The job configuration attached to this job. */
 	private final Configuration jobConfiguration = new Configuration();
+
+	/** The configuration for scheduling. It's not visible to tasks. */
+	private final Configuration schedulingConfiguration = new Configuration();
 
 	/** ID of this job. May be set if specific job id is desired (e.g. session management) */
 	private final JobID jobID;
@@ -78,9 +86,6 @@ public class JobGraph implements Serializable {
 
 	/** flag to enable queued scheduling */
 	private boolean allowQueuedScheduling;
-
-	/** The mode in which the job is scheduled */
-	private ScheduleMode scheduleMode = ScheduleMode.LAZY_FROM_SOURCES;
 
 	// --- checkpointing ---
 
@@ -205,6 +210,16 @@ public class JobGraph implements Serializable {
 	}
 
 	/**
+	 * Returns the configuration object for scheduling.
+	 * Parameters in this config will not be visible to tasks.
+	 *
+	 * @return The configuration object for scheduling.
+	 */
+	public Configuration getSchedulingConfiguration() {
+		return this.schedulingConfiguration;
+	}
+
+	/**
 	 * Returns the {@link ExecutionConfig}
 	 *
 	 * @return ExecutionConfig
@@ -240,11 +255,7 @@ public class JobGraph implements Serializable {
 	}
 
 	public void setScheduleMode(ScheduleMode scheduleMode) {
-		this.scheduleMode = scheduleMode;
-	}
-
-	public ScheduleMode getScheduleMode() {
-		return scheduleMode;
+		this.schedulingConfiguration.setString(ScheduleMode.class.getName(), scheduleMode.toString());
 	}
 
 	/**
@@ -290,6 +301,19 @@ public class JobGraph implements Serializable {
 		if (previous != null) {
 			taskVertices.put(id, previous);
 			throw new IllegalArgumentException("The JobGraph already contains a vertex with that id.");
+		}
+	}
+
+	/**
+	 * Adds new task vertices to the job graph.
+	 *
+	 * @param vertices the new task vertices to be added
+	 */
+	public void addVertices(Collection<JobVertex> vertices) {
+		checkNotNull(vertices);
+
+		for (JobVertex vertex : vertices) {
+			addVertex(vertex);
 		}
 	}
 
@@ -376,6 +400,35 @@ public class JobGraph implements Serializable {
 			maxParallelism = Math.max(vertex.getParallelism(), maxParallelism);
 		}
 		return maxParallelism;
+	}
+
+	public Collection<Collection<ExecutionVertexID>> getResultPartitionConsumerExecutionVertices(
+		IntermediateDataSetID resultID,
+		int partitionNumber) {
+
+		// Lazy build the result map if the result is not found, as edges may be late added
+		if (!results.containsKey(resultID)) {
+			for (JobVertex vertex : getVertices()) {
+				for (IntermediateDataSet result : vertex.getProducedDataSets()) {
+					results.put(result.getId(), result);
+				}
+			}
+		}
+
+		IntermediateDataSet result = results.get(resultID);
+		if (result == null) {
+			throw new IllegalArgumentException("Cannot find the given result " + resultID + " in job graph");
+		}
+		if (partitionNumber >= result.getProducer().getParallelism()) {
+			throw new IllegalArgumentException("Result partition index out of bounds: " + partitionNumber
+				+ "/" + result.getProducer().getParallelism());
+		}
+
+		Collection<Collection<ExecutionVertexID>> consumerVertices = new ArrayList<>();
+		for (JobEdge edge : results.get(resultID).getConsumers()) {
+			consumerVertices.add(edge.getConsumerExecutionVertices(partitionNumber));
+		}
+		return consumerVertices;
 	}
 
 	// --------------------------------------------------------------------------------------------

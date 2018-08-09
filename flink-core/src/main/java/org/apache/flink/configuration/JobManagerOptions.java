@@ -98,6 +98,14 @@ public class JobManagerOptions {
 			.withDescription("The maximum number of prior execution attempts kept in history.");
 
 	/**
+	 * The class name of the graph manager plugin.
+	 */
+	public static final ConfigOption<String> GRAPH_MANAGER_PLUGIN =
+		key("jobmanager.execution.graph-manager-plugin")
+			.noDefaultValue()
+			.withDescription("The class name of the graph manager plugin.");
+
+	/**
 	 * This option specifies the interval in order to trigger a resource manager reconnection if the connection
 	 * to the resource manager has been lost.
 	 *

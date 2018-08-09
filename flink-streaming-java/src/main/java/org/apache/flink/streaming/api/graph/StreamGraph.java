@@ -28,6 +28,7 @@ import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.InputTypeConfigurable;
 import org.apache.flink.api.java.typeutils.MissingTypeInfo;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.optimizer.plan.StreamingPlan;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -96,6 +97,9 @@ public class StreamGraph extends StreamingPlan {
 	private StateBackend stateBackend;
 	private Set<Tuple2<StreamNode, StreamNode>> iterationSourceSinkPairs;
 
+	/** This configuration is for custom parameters. */
+	private final Configuration customConfiguration = new Configuration();
+
 	public StreamGraph(StreamExecutionEnvironment environment) {
 		this.environment = environment;
 		this.executionConfig = environment.getConfig();
@@ -150,6 +154,10 @@ public class StreamGraph extends StreamingPlan {
 
 	public StateBackend getStateBackend() {
 		return this.stateBackend;
+	}
+
+	public Configuration getCustomConfiguration() {
+		return this.customConfiguration;
 	}
 
 	// Checkpointing

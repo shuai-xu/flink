@@ -62,7 +62,7 @@ class TaskManagerLossFailsTasksTest extends WordSpecLike with Matchers {
 
         val jobGraph = new JobGraph("Pointwise job", sender)
 
-        val eg = new ExecutionGraph(
+        val eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
           executor,
           executor,
           new JobID(),
@@ -71,9 +71,8 @@ class TaskManagerLossFailsTasksTest extends WordSpecLike with Matchers {
           new SerializedValue(new ExecutionConfig()),
           AkkaUtils.getDefaultTimeout,
           new NoRestartStrategy(),
-          scheduler)
-
-        eg.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources)
+          scheduler,
+          jobGraph.getVerticesSortedTopologicallyFromSources)
 
         eg.getState should equal(JobStatus.CREATED)
 

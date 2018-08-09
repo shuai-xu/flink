@@ -16,18 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobgraph;
+package org.apache.flink.runtime.event;
 
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 
 /**
- * The ScheduleMode decides how vertices are started in {@link DefaultGraphManagerPlugin}.
+ * Event for consumable result partition.
  */
-public enum ScheduleMode {
+public class ResultPartitionConsumableEvent extends ExecutionEvent {
 
-	/** Schedule vertices lazily from the sources. Downstream vertices are started once their input data are ready */
-	LAZY_FROM_SOURCES,
+	private final IntermediateDataSetID resultID;
 
-	/** Schedules all vertices immediately. */
-	EAGER
+	private final int partitionNumber;
+
+	public ResultPartitionConsumableEvent(
+		final IntermediateDataSetID resultID,
+		final int partitionNumber) {
+
+		this.resultID = resultID;
+		this.partitionNumber = partitionNumber;
+	}
+
+	public IntermediateDataSetID getResultID() {
+		return resultID;
+	}
+
+	public int getPartitionNumber() {
+		return partitionNumber;
+	}
 }

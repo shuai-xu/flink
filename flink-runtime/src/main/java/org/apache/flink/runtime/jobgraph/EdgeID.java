@@ -18,16 +18,24 @@
 
 package org.apache.flink.runtime.jobgraph;
 
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
+import org.apache.flink.util.AbstractID;
 
 /**
- * The ScheduleMode decides how vertices are started in {@link DefaultGraphManagerPlugin}.
+ * A class for statistically unique edge IDs.
  */
-public enum ScheduleMode {
+public class EdgeID extends AbstractID {
 
-	/** Schedule vertices lazily from the sources. Downstream vertices are started once their input data are ready */
-	LAZY_FROM_SOURCES,
+	private static final long serialVersionUID = 1L;
 
-	/** Schedules all vertices immediately. */
-	EAGER
+	public EdgeID() {
+		super();
+	}
+
+	public EdgeID(byte[] bytes) {
+		super(bytes);
+	}
+
+	public EdgeID(long lowerPart, long upperPart) {
+		super(lowerPart, upperPart);
+	}
 }

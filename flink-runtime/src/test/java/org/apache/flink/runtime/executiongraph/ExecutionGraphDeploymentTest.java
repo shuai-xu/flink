@@ -72,7 +72,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -157,7 +156,7 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 				jobId,
 				"some job");
 
-			ExecutionGraph eg = new ExecutionGraph(
+			ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 				expectedJobInformation,
 				new DirectScheduledExecutorService(),
 				TestingUtils.defaultExecutor(),
@@ -165,15 +164,10 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 				new NoRestartStrategy(),
 				new RestartAllStrategy.Factory(),
 				new Scheduler(TestingUtils.defaultExecutionContext()),
-				ExecutionGraph.class.getClassLoader(),
 				blobWriter,
-				AkkaUtils.getDefaultTimeout());
+				Arrays.asList(v1, v2, v3, v4));
 
 			checkJobOffloaded(eg);
-
-			List<JobVertex> ordered = Arrays.asList(v1, v2, v3, v4);
-
-			eg.attachJobGraph(ordered);
 
 			ExecutionJobVertex ejv = eg.getAllVertices().get(jid2);
 			ExecutionVertex vertex = ejv.getTaskVertices()[3];
@@ -440,7 +434,7 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 			"failing test job");
 
 		// execution graph that executes actions synchronously
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			jobInformation,
 			new DirectScheduledExecutorService(),
 			TestingUtils.defaultExecutor(),
@@ -448,16 +442,12 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 			new NoRestartStrategy(),
 			new RestartAllStrategy.Factory(),
 			scheduler,
-			ExecutionGraph.class.getClassLoader(),
 			blobWriter,
-			AkkaUtils.getDefaultTimeout());
+			Arrays.asList(v1, v2));
 
 		checkJobOffloaded(eg);
 
 		eg.setQueuedSchedulingAllowed(false);
-
-		List<JobVertex> ordered = Arrays.asList(v1, v2);
-		eg.attachJobGraph(ordered);
 
 		assertEquals(dop1, scheduler.getNumberOfAvailableSlots());
 
@@ -522,7 +512,7 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 			"some job");
 
 		// execution graph that executes actions synchronously
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			jobInformation,
 			new DirectScheduledExecutorService(),
 			TestingUtils.defaultExecutor(),
@@ -530,15 +520,11 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 			new NoRestartStrategy(),
 			new RestartAllStrategy.Factory(),
 			scheduler,
-			ExecutionGraph.class.getClassLoader(),
 			blobWriter,
-			AkkaUtils.getDefaultTimeout());
+			Arrays.asList(v1, v2));
 		checkJobOffloaded(eg);
 		
 		eg.setQueuedSchedulingAllowed(false);
-
-		List<JobVertex> ordered = Arrays.asList(v1, v2);
-		eg.attachJobGraph(ordered);
 
 		assertEquals(dop1 + dop2, scheduler.getNumberOfAvailableSlots());
 
@@ -606,16 +592,16 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 
 		final ScheduledExecutorService scheduledExecutorService = new ScheduledThreadPoolExecutor(3);
 
+		final JobGraph jobGraph = new JobGraph(sourceVertex, sinkVertex);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
 		final ExecutionGraph executionGraph = ExecutionGraphTestUtils.createExecutionGraph(
-			new JobID(),
+			jobGraph,
 			slotProvider,
 			new NoRestartStrategy(),
 			scheduledExecutorService,
-			timeout,
-			sourceVertex,
-			sinkVertex);
+			timeout);
 
-		executionGraph.setScheduleMode(ScheduleMode.EAGER);
 		executionGraph.scheduleForExecution();
 
 		// all tasks should be in state SCHEDULED
@@ -698,7 +684,7 @@ public class ExecutionGraphDeploymentTest extends TestLogger {
 				null));
 
 		final Time timeout = Time.seconds(10L);
-		return ExecutionGraphBuilder.buildGraph(
+		return ExecutionGraphTestUtils.createExecutionGraph(
 			null,
 			jobGraph,
 			configuration,

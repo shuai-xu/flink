@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobgraph;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.Configuration;
@@ -447,6 +448,7 @@ public class JobVertex implements java.io.Serializable {
 
 	// --------------------------------------------------------------------------------------------
 
+	@VisibleForTesting
 	public IntermediateDataSet createAndAddResultDataSet(ResultPartitionType partitionType) {
 		return createAndAddResultDataSet(new IntermediateDataSetID(), partitionType);
 	}
@@ -460,6 +462,7 @@ public class JobVertex implements java.io.Serializable {
 		return result;
 	}
 
+	@VisibleForTesting
 	public JobEdge connectDataSetAsInput(IntermediateDataSet dataSet, DistributionPattern distPattern) {
 		JobEdge edge = new JobEdge(dataSet, this, distPattern);
 		this.inputs.add(edge);
@@ -472,7 +475,16 @@ public class JobVertex implements java.io.Serializable {
 			DistributionPattern distPattern,
 			ResultPartitionType partitionType) {
 
-		IntermediateDataSet dataSet = input.createAndAddResultDataSet(partitionType);
+		return connectDataSetAsInput(input, new IntermediateDataSetID(), distPattern, partitionType);
+	}
+
+	public JobEdge connectDataSetAsInput(
+			JobVertex input,
+			IntermediateDataSetID dataSetID,
+			DistributionPattern distPattern,
+			ResultPartitionType partitionType) {
+
+		IntermediateDataSet dataSet = input.createAndAddResultDataSet(dataSetID, partitionType);
 
 		JobEdge edge = new JobEdge(dataSet, this, distPattern);
 		this.inputs.add(edge);
@@ -480,6 +492,7 @@ public class JobVertex implements java.io.Serializable {
 		return edge;
 	}
 
+	@VisibleForTesting
 	public void connectIdInput(IntermediateDataSetID dataSetId, DistributionPattern distPattern) {
 		JobEdge edge = new JobEdge(dataSetId, this, distPattern);
 		this.inputs.add(edge);

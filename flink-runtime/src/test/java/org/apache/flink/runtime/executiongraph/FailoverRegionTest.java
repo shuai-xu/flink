@@ -19,8 +19,8 @@
 package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.akka.AkkaUtils;
+import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.concurrent.Executors;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
@@ -31,6 +31,7 @@ import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleSlotProvider;
 import org.apache.flink.runtime.instance.Instance;
+import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
@@ -56,7 +57,6 @@ import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.Si
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilExecutionState;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilFailoverRegionState;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class FailoverRegionTest extends TestLogger {
 
@@ -125,7 +125,7 @@ public class FailoverRegionTest extends TestLogger {
 
 		List<JobVertex> ordered = Arrays.asList(v1, v2, v3, v4);
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			new DummyJobInformation(
 				jobId,
 				jobName),
@@ -134,9 +134,8 @@ public class FailoverRegionTest extends TestLogger {
 			AkkaUtils.getDefaultTimeout(),
 			new InfiniteDelayRestartStrategy(10),
 			new FailoverPipelinedRegionWithDirectExecutor(),
-			slotProvider);
-
-		eg.attachJobGraph(ordered);
+			slotProvider,
+			ordered);
 
 		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy)eg.getFailoverStrategy();
 
@@ -247,7 +246,7 @@ public class FailoverRegionTest extends TestLogger {
 
 		List<JobVertex> ordered = Arrays.asList(v1, v2, v3, v4);
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 				new DummyJobInformation(
 					jobId,
 					jobName),
@@ -256,14 +255,9 @@ public class FailoverRegionTest extends TestLogger {
 				AkkaUtils.getDefaultTimeout(),
 				new InfiniteDelayRestartStrategy(10),
 				new RestartPipelinedRegionStrategy.Factory(),
-				scheduler);
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
+				scheduler,
+				ordered);
+
 		eg.scheduleForExecution();
 		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy)eg.getFailoverStrategy();
 
@@ -317,26 +311,19 @@ public class FailoverRegionTest extends TestLogger {
 
 		v2.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
 
-		List<JobVertex> ordered = new ArrayList<>(Arrays.asList(v1, v2));
+		final JobGraph jobGraph = new JobGraph(jobId, jobName, new JobVertex[] {v1, v2});
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
 
-		ExecutionGraph eg = new ExecutionGraph(
-			new DummyJobInformation(
-				jobId,
-				jobName),
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
+			jobGraph,
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			new InfiniteDelayRestartStrategy(10),
 			new FailoverPipelinedRegionWithDirectExecutor(),
-			scheduler);
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
-		eg.setScheduleMode(ScheduleMode.EAGER);
+			scheduler,
+			VoidBlobWriter.getInstance());
+
 		eg.scheduleForExecution();
 		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy)eg.getFailoverStrategy();
 
@@ -428,7 +415,7 @@ public class FailoverRegionTest extends TestLogger {
 
 		List<JobVertex> ordered = new ArrayList<>(Arrays.asList(v1, v2, v3));
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			new DummyJobInformation(
 				jobId,
 				jobName),
@@ -437,14 +424,8 @@ public class FailoverRegionTest extends TestLogger {
 			AkkaUtils.getDefaultTimeout(),
 			restartStrategy,
 			new FailoverPipelinedRegionWithDirectExecutor(),
-			scheduler);
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
+			scheduler,
+			ordered);
 
 		eg.scheduleForExecution();
 		return eg;

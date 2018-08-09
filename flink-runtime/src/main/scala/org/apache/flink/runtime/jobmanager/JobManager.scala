@@ -77,6 +77,7 @@ import org.apache.flink.runtime.metrics.{MetricRegistryConfiguration, MetricRegi
 import org.apache.flink.runtime.process.ProcessReaper
 import org.apache.flink.runtime.query.KvStateMessage.{LookupKvStateLocation, NotifyKvStateRegistered, NotifyKvStateUnregistered}
 import org.apache.flink.runtime.query.{KvStateMessage, UnknownKvStateLocation}
+import org.apache.flink.runtime.schedule.{DefaultGraphManagerPlugin, SchedulingConfig}
 import org.apache.flink.runtime.security.{SecurityConfiguration, SecurityUtils}
 import org.apache.flink.runtime.taskexecutor.TaskExecutor
 import org.apache.flink.runtime.taskmanager.TaskManager
@@ -1295,6 +1296,14 @@ class JobManager(
           blobServer,
           Time.milliseconds(allocationTimeout),
           log.logger)
+
+        val graphScheduler = executionGraph.getScheduler
+        val graphManagerPlugin = new DefaultGraphManagerPlugin
+        val configuration = new Configuration(jobGraph.getJobConfiguration)
+        configuration.addAll(jobGraph.getSchedulingConfiguration)
+        graphManagerPlugin.open(graphScheduler, jobGraph,
+          new SchedulingConfig(configuration, userCodeLoader))
+        executionGraph.setGraphManagerPlugin(graphManagerPlugin)
         
         if (registerNewGraph) {
           currentJobs.put(jobGraph.getJobID, (executionGraph, jobInfo))

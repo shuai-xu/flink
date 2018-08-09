@@ -23,6 +23,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.WebOptions;
@@ -176,8 +177,6 @@ public class ExecutionGraphBuilder {
 		}
 
 		// set the basic properties
-
-		executionGraph.setScheduleMode(jobGraph.getScheduleMode());
 		executionGraph.setQueuedSchedulingAllowed(jobGraph.getAllowQueuedScheduling());
 
 		try {
@@ -211,6 +210,11 @@ public class ExecutionGraphBuilder {
 				else {
 					vertex.setParallelism(parallelismForAutoMax);
 				}
+			}
+
+			// Set vertex parallelism to default value if it is not set
+			if (vertex.getParallelism() <= 0) {
+				vertex.setParallelism(jobGraph.getJobConfiguration().getInteger(CoreOptions.DEFAULT_PARALLELISM));
 			}
 
 			try {

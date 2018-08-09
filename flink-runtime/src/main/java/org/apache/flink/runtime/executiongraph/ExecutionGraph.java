@@ -26,13 +26,13 @@ import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.accumulators.AccumulatorHelper;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.StoppingException;
 import org.apache.flink.runtime.accumulators.AccumulatorSnapshot;
 import org.apache.flink.runtime.accumulators.StringifiedAccumulatorResult;
 import org.apache.flink.runtime.blob.BlobWriter;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
-import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.checkpoint.CheckpointCoordinator;
 import org.apache.flink.runtime.checkpoint.CheckpointIDCounter;
 import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
@@ -43,25 +43,28 @@ import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.FutureUtils.ConjunctFuture;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
+import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.execution.SuppressRestartsException;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
-import org.apache.flink.runtime.executiongraph.failover.RestartAllStrategy;
 import org.apache.flink.runtime.executiongraph.restart.ExecutionGraphRestartCallback;
 import org.apache.flink.runtime.executiongraph.restart.RestartCallback;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.NoResourceAvailableException;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
+import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
+import org.apache.flink.runtime.schedule.GraphManagerPlugin;
+import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
@@ -242,16 +245,22 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	/** The total number of vertices currently in the execution graph. */
 	private int numVerticesTotal;
 
+	/** Scheduler is responsible to schedule submitted vertices. */
+	private ExecutionGraphVertexScheduler scheduler;
+
+	/** The plugin receives events and decide vertices to schedule. */
+	private GraphManagerPlugin graphManagerPlugin;
+
 	// ------ Configuration of the Execution -------
 
 	/** Flag to indicate whether the scheduler may queue tasks for execution, or needs to be able
 	 * to deploy them immediately. */
 	private boolean allowQueuedScheduling = false;
 
-	/** The mode of scheduling. Decides how to select the initial set of tasks to be deployed.
-	 * May indicate to deploy all sources, or to deploy everything, or to deploy via backtracking
-	 * from results than need to be materialized. */
-	private ScheduleMode scheduleMode = ScheduleMode.LAZY_FROM_SOURCES;
+	/**
+	 * Indicates whether execution vertices can be scheduled before knowing all of its upstream vertex locations.
+	 */
+	private boolean allowLazyDeployment = true;
 
 	// ------ Execution status and progress. These values are volatile, and accessed under the lock -------
 
@@ -277,10 +286,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	private volatile ErrorInfo failureInfo;
 
 	/**
-	 * Future for an ongoing or completed scheduling action.
+	 * Future for an ongoing or completed scheduling action. Use ConcurrentHashMap as concurrent hash set.
 	 */
-	@Nullable
-	private volatile CompletableFuture<Void> schedulingFuture;
+	private volatile ConcurrentHashMap<CompletableFuture<Void>, Object> schedulingFutures;
 
 	// ------ Fields that are relevant to the execution and need to be cleared before archiving  -------
 
@@ -300,90 +308,17 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	//   Constructors
 	// --------------------------------------------------------------------------------------------
 
-	/**
-	 * This constructor is for tests only, because it sets default values for many fields.
-	 */
-	@VisibleForTesting
-	ExecutionGraph(
-		ScheduledExecutorService futureExecutor,
-		Executor ioExecutor,
-		JobID jobId,
-		String jobName,
-		Configuration jobConfig,
-		SerializedValue<ExecutionConfig> serializedConfig,
-		Time timeout,
-		RestartStrategy restartStrategy,
-		SlotProvider slotProvider) throws IOException {
-
-		this(
-			new JobInformation(
-				jobId,
-				jobName,
-				serializedConfig,
-				jobConfig,
-				Collections.emptyList(),
-				Collections.emptyList()),
-			futureExecutor,
-			ioExecutor,
-			timeout,
-			restartStrategy,
-			slotProvider);
-	}
-
-	/**
-	 * This constructor is for tests only, because it does not include class loading information.
-	 */
-	@VisibleForTesting
-	ExecutionGraph(
-		JobInformation jobInformation,
-		ScheduledExecutorService futureExecutor,
-		Executor ioExecutor,
-		Time timeout,
-		RestartStrategy restartStrategy,
-		SlotProvider slotProvider) throws IOException {
-		this(
-			jobInformation,
-			futureExecutor,
-			ioExecutor,
-			timeout,
-			restartStrategy,
-			new RestartAllStrategy.Factory(),
-			slotProvider);
-	}
-
-	@VisibleForTesting
-	ExecutionGraph(
-		JobInformation jobInformation,
-		ScheduledExecutorService futureExecutor,
-		Executor ioExecutor,
-		Time timeout,
-		RestartStrategy restartStrategy,
-		FailoverStrategy.Factory failoverStrategy,
-		SlotProvider slotProvider) throws IOException {
-		this(
-			jobInformation,
-			futureExecutor,
-			ioExecutor,
-			timeout,
-			restartStrategy,
-			failoverStrategy,
-			slotProvider,
-			ExecutionGraph.class.getClassLoader(),
-			VoidBlobWriter.getInstance(),
-			timeout);
-	}
-
 	public ExecutionGraph(
-		JobInformation jobInformation,
-		ScheduledExecutorService futureExecutor,
-		Executor ioExecutor,
-		Time rpcTimeout,
-		RestartStrategy restartStrategy,
-		FailoverStrategy.Factory failoverStrategyFactory,
-		SlotProvider slotProvider,
-		ClassLoader userClassLoader,
-		BlobWriter blobWriter,
-		Time allocationTimeout) throws IOException {
+			JobInformation jobInformation,
+			ScheduledExecutorService futureExecutor,
+			Executor ioExecutor,
+			Time rpcTimeout,
+			RestartStrategy restartStrategy,
+			FailoverStrategy.Factory failoverStrategyFactory,
+			SlotProvider slotProvider,
+			ClassLoader userClassLoader,
+			BlobWriter blobWriter,
+			Time allocationTimeout) throws IOException {
 
 		checkNotNull(futureExecutor);
 
@@ -423,9 +358,11 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		// the failover strategy must be instantiated last, so that the execution graph
 		// is ready by the time the failover strategy sees it
 		this.failoverStrategy = checkNotNull(failoverStrategyFactory.create(this), "null failover strategy");
-
-		this.schedulingFuture = null;
 		LOG.info("Job recovers via failover strategy: {}", failoverStrategy.getStrategyName());
+
+		this.schedulingFutures = new ConcurrentHashMap<>();
+
+		this.scheduler = new ExecutionGraphVertexScheduler();
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -448,12 +385,21 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		this.allowQueuedScheduling = allowed;
 	}
 
-	public void setScheduleMode(ScheduleMode scheduleMode) {
-		this.scheduleMode = scheduleMode;
+	public ExecutionGraphVertexScheduler getScheduler() {
+		return scheduler;
 	}
 
-	public ScheduleMode getScheduleMode() {
-		return scheduleMode;
+	public GraphManagerPlugin getGraphManagerPlugin() {
+		return graphManagerPlugin;
+	}
+
+	public boolean isLazyDeploymentAllowed() {
+		return allowLazyDeployment;
+	}
+
+	public void setGraphManagerPlugin(GraphManagerPlugin graphManagerPlugin) {
+		this.graphManagerPlugin = graphManagerPlugin;
+		this.allowLazyDeployment  = graphManagerPlugin.allowLazyDeployment();
 	}
 
 	public Time getAllocationTimeout() {
@@ -839,7 +785,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 					ExecutionJobVertex ejv = new ExecutionJobVertex(
 						this,
 						jobVertex,
-						1,
+						getJobConfiguration().getInteger(CoreOptions.DEFAULT_PARALLELISM),
 						rpcTimeout,
 						globalModVersion,
 						createTimestamp);
@@ -877,17 +823,17 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		}
 	}
 
-	public void attachJobGraph(List<JobVertex> topologiallySorted) throws JobException {
+	public void attachJobGraph(List<JobVertex> topologicallySorted) throws JobException {
 
 		LOG.debug("Attaching {} topologically sorted vertices to existing job graph with {} " +
 				"vertices and {} intermediate results.",
-			topologiallySorted.size(), tasks.size(), intermediateResults.size());
+			topologicallySorted.size(), tasks.size(), intermediateResults.size());
 
-		final ArrayList<ExecutionJobVertex> newExecJobVertices = new ArrayList<>(topologiallySorted.size());
+		final ArrayList<ExecutionJobVertex> newExecJobVertices = new ArrayList<>(topologicallySorted.size());
 
-		createExecutionJobVertex(topologiallySorted);
+		createExecutionJobVertex(topologicallySorted);
 
-		for (JobVertex jobVertex : topologiallySorted) {
+		for (JobVertex jobVertex : topologicallySorted) {
 
 			if (jobVertex.isInputVertex() && !jobVertex.isStoppable()) {
 				this.isStoppable = false;
@@ -916,75 +862,25 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 	public void scheduleForExecution() throws JobException {
 
-		final long currentGlobalModVersion = globalModVersion;
-
 		if (transitionState(JobStatus.CREATED, JobStatus.RUNNING)) {
 
-			final CompletableFuture<Void> newSchedulingFuture;
+			LOG.info("Start scheduling execution graph with graph manager plugin: {}",
+				graphManagerPlugin.getClass().getName());
 
-			switch (scheduleMode) {
-
-				case LAZY_FROM_SOURCES:
-					newSchedulingFuture = scheduleLazy(slotProvider);
-					break;
-
-				case EAGER:
-					newSchedulingFuture = scheduleEager(slotProvider, allocationTimeout);
-					break;
-
-				default:
-					throw new JobException("Schedule mode is invalid.");
-			}
-
-			if (state == JobStatus.RUNNING && currentGlobalModVersion == globalModVersion) {
-				schedulingFuture = newSchedulingFuture;
-
-				newSchedulingFuture.whenCompleteAsync(
-					(Void ignored, Throwable throwable) -> {
-						if (throwable != null && !(throwable instanceof CancellationException)) {
-							// only fail if the scheduling future was not canceled
-							failGlobal(ExceptionUtils.stripCompletionException(throwable));
-						}
-					},
-					futureExecutor);
-			} else {
-				newSchedulingFuture.cancel(false);
-			}
+			graphManagerPlugin.onSchedulingStarted();
 		}
 		else {
 			throw new IllegalStateException("Job may only be scheduled from state " + JobStatus.CREATED);
 		}
 	}
 
-	private CompletableFuture<Void> scheduleLazy(SlotProvider slotProvider) {
-
-		final ArrayList<CompletableFuture<Void>> schedulingFutures = new ArrayList<>(numVerticesTotal);
-
-		// simply take the vertices without inputs.
-		for (ExecutionJobVertex ejv : verticesInCreationOrder) {
-			if (ejv.getJobVertex().isInputVertex()) {
-				final CompletableFuture<Void> schedulingJobVertexFuture = ejv.scheduleAll(
-					slotProvider,
-					allowQueuedScheduling,
-					LocationPreferenceConstraint.ALL); // since it is an input vertex, the input based location preferences should be empty
-
-				schedulingFutures.add(schedulingJobVertexFuture);
-			}
-		}
-
-		return FutureUtils.waitForAll(schedulingFutures);
-	}
-
 	/**
+	 * Schedule execution vertices. These vertices get to deploy only when they have all allocated resources.
 	 *
-	 *
-	 * @param slotProvider  The resource provider from which the slots are allocated
-	 * @param timeout       The maximum time that the deployment may take, before a
-	 *                      TimeoutException is thrown.
-	 * @returns Future which is completed once the {@link ExecutionGraph} has been scheduled.
-	 * The future can also be completed exceptionally if an error happened.
+	 * @param vertices execution vertices to schedule
 	 */
-	private CompletableFuture<Void> scheduleEager(SlotProvider slotProvider, final Time timeout) {
+	private CompletableFuture<Void> schedule(Collection<ExecutionVertex> vertices) {
+
 		checkState(state == JobStatus.RUNNING, "job is not running currently");
 
 		// Important: reserve all the space we need up front.
@@ -994,18 +890,21 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		final boolean queued = allowQueuedScheduling;
 
 		// collecting all the slots may resize and fail in that operation without slots getting lost
-		final ArrayList<CompletableFuture<Execution>> allAllocationFutures = new ArrayList<>(getNumberOfExecutionJobVertices());
+		final ArrayList<CompletableFuture<Execution>> allAllocationFutures = new ArrayList<>(vertices.size());
 
-		// allocate the slots (obtain all their futures
-		for (ExecutionJobVertex ejv : getVerticesTopologically()) {
+		LocationPreferenceConstraint locationPreferenceConstraint = allowLazyDeployment ?
+			LocationPreferenceConstraint.ANY : LocationPreferenceConstraint.ALL;
+
+		// allocate the slots (obtain all their futures)
+		for (ExecutionVertex ev : vertices) {
+			final Execution exec = ev.getCurrentExecutionAttempt();
 			// these calls are not blocking, they only return futures
-			Collection<CompletableFuture<Execution>> allocationFutures = ejv.allocateResourcesForAll(
+			final CompletableFuture<Execution> allocationFuture = exec.allocateAndAssignSlotForExecution(
 				slotProvider,
 				queued,
-				LocationPreferenceConstraint.ALL,
+				locationPreferenceConstraint,
 				allocationTimeout);
-
-			allAllocationFutures.addAll(allocationFutures);
+			allAllocationFutures.add(allocationFuture);
 		}
 
 		// this future is complete once all slot futures are complete.
@@ -1036,7 +935,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 						int numTotal = allAllocationsFuture.getNumFuturesTotal();
 						int numComplete = allAllocationsFuture.getNumFuturesCompleted();
 						String message = "Could not allocate all requires slots within timeout of " +
-							timeout + ". Slots required: " + numTotal + ", slots allocated: " + numComplete;
+							allocationTimeout + ". Slots required: " + numTotal + ", slots allocated: " + numComplete;
 
 						resultThrowable = new NoResourceAvailableException(message);
 					} else {
@@ -1048,7 +947,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 		currentSchedulingFuture.whenComplete(
 			(Void ignored, Throwable throwable) -> {
-				if (throwable instanceof CancellationException) {
+				final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
+				if (strippedThrowable instanceof CancellationException) {
 					// cancel the individual allocation futures
 					allAllocationsFuture.cancel(false);
 				}
@@ -1067,12 +967,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 					// make sure no concurrent local actions interfere with the cancellation
 					final long globalVersionForRestart = incrementGlobalModVersion();
 
-					final CompletableFuture<Void> ongoingSchedulingFuture = schedulingFuture;
-
-					// cancel ongoing scheduling action
-					if (ongoingSchedulingFuture != null) {
-						ongoingSchedulingFuture.cancel(false);
-					}
+					// cancel ongoing scheduling actions
+					cancelOngoingSchedulings();
 
 					final ArrayList<CompletableFuture<?>> futures = new ArrayList<>(verticesInCreationOrder.size());
 
@@ -1165,12 +1061,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 				// make sure no concurrent local actions interfere with the cancellation
 				incrementGlobalModVersion();
 
-				final CompletableFuture<Void> ongoingSchedulingFuture = schedulingFuture;
+				// cancel ongoing scheduling actions
+				cancelOngoingSchedulings();
 
-				// cancel ongoing scheduling action
-				if (ongoingSchedulingFuture != null) {
-					ongoingSchedulingFuture.cancel(false);
-				}
 				final ArrayList<CompletableFuture<Void>> executionJobVertexTerminationFutures = new ArrayList<>(verticesInCreationOrder.size());
 
 				for (ExecutionJobVertex ejv: verticesInCreationOrder) {
@@ -1233,12 +1126,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 				// make sure no concurrent local or global actions interfere with the failover
 				final long globalVersionForRestart = incrementGlobalModVersion();
 
-				final CompletableFuture<Void> ongoingSchedulingFuture = schedulingFuture;
-
-				// cancel ongoing scheduling action
-				if (ongoingSchedulingFuture != null) {
-					ongoingSchedulingFuture.cancel(false);
-				}
+				// cancel ongoing scheduling actions
+				cancelOngoingSchedulings();
 
 				// we build a future that is complete once all vertices have reached a terminal state
 				final ArrayList<CompletableFuture<?>> futures = new ArrayList<>(verticesInCreationOrder.size());
@@ -1265,6 +1154,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			}
 
 			// else: concurrent change to execution state, retry
+		}
+	}
+
+	private void cancelOngoingSchedulings() {
+		for (CompletableFuture<Void> ongoingSchedulingFuture : schedulingFutures.keySet()) {
+			ongoingSchedulingFuture.cancel(false);
 		}
 	}
 
@@ -1323,6 +1218,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 					checkpointCoordinator.restoreLatestCheckpointedState(getAllVertices(), false, false);
 				}
 			}
+
+			// Reset the graph manager plugin to initial status
+			graphManagerPlugin.reset();
 
 			scheduleForExecution();
 		}
@@ -1805,6 +1703,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			}
 		}
 
+		// Let the graph manager plugin handles task state changes before failover
+		graphManagerPlugin.onExecutionVertexStateChanged(
+			new ExecutionVertexStateChangedEvent(
+				new ExecutionVertexID(execution.getVertex().getJobvertexId(), execution.getParallelSubtaskIndex()),
+				newExecutionState));
+
 		// see what this means for us. currently, the first FAILED state means -> FAILED
 		if (newExecutionState == ExecutionState.FAILED) {
 			final Throwable ex = error != null ? error : new FlinkException("Unknown Error (missing cause)");
@@ -1827,6 +1731,88 @@ public class ExecutionGraph implements AccessExecutionGraph {
 					failGlobal(ex);
 				}
 			}
+		}
+	}
+
+	/**
+	 * This scheduler leverages ExecutionGraph to schedule vertices.
+	 */
+	public class ExecutionGraphVertexScheduler implements VertexScheduler {
+
+		@Override
+		public void scheduleExecutionVertices(Collection<ExecutionVertexID> verticesToSchedule) {
+			try {
+				long currentGlobalModVersion = globalModVersion;
+
+				if (verticesToSchedule == null || verticesToSchedule.isEmpty()) {
+					return;
+				}
+
+				int alreadyScheduledCount = 0;
+				int unhealthyCount = 0;
+				final List<ExecutionVertex> vertices = new ArrayList<>(verticesToSchedule.size());
+				for (ExecutionVertexID executionVertexID : verticesToSchedule) {
+					ExecutionVertex ev = getJobVertex(executionVertexID.getJobVertexID()).getTaskVertices()[executionVertexID.getSubTaskIndex()];
+					if (ev.getExecutionState() == ExecutionState.CREATED) {
+						vertices.add(ev);
+					} else if (ev.getExecutionState() == ExecutionState.SCHEDULED ||
+						ev.getExecutionState() == ExecutionState.DEPLOYING ||
+						ev.getExecutionState() == ExecutionState.RUNNING ||
+						ev.getExecutionState() == ExecutionState.FINISHED) {
+
+						alreadyScheduledCount++;
+					} else {
+
+						unhealthyCount++;
+					}
+				}
+				if (vertices.size() < verticesToSchedule.size()) {
+					throw new IllegalStateException("Not all submitted vertices can be scheduled. " +
+						alreadyScheduledCount + " vertices are already scheduled and " +
+						unhealthyCount + " vertices are in unhealthy state. " +
+						"Please check the schedule logic in " + graphManagerPlugin.getClass().getCanonicalName());
+				}
+
+				LOG.info("Schedule {} vertices: {}", vertices.size(), vertices);
+
+				final CompletableFuture<Void> schedulingFuture = schedule(vertices);
+
+				if (state == JobStatus.RUNNING && currentGlobalModVersion == globalModVersion) {
+
+					schedulingFutures.put(schedulingFuture, schedulingFuture);
+
+					schedulingFuture.whenCompleteAsync(
+						(Void ignored, Throwable throwable) -> {
+							schedulingFutures.remove(schedulingFuture);
+
+							if (throwable != null) {
+								final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
+								if (!(strippedThrowable instanceof CancellationException)
+									&& !(strippedThrowable instanceof IllegalExecutionStateException)) {
+									// only fail if the scheduling future was not canceled
+									failGlobal(strippedThrowable);
+								}
+							}
+						},
+						futureExecutor);
+				} else {
+					schedulingFuture.cancel(false);
+				}
+			} catch (Throwable t) {
+				failGlobal(t);
+			}
+		}
+
+		@Override
+		public ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID) {
+			checkNotNull(executionVertexID);
+
+			ExecutionJobVertex vertex = tasks.get(executionVertexID.getJobVertexID());
+			if (vertex == null) {
+				throw new IllegalArgumentException("Cannot find any vertex with id " + executionVertexID.getJobVertexID());
+			}
+
+			return vertex.getTaskVertices()[executionVertexID.getSubTaskIndex()].getCurrentStatus();
 		}
 	}
 }

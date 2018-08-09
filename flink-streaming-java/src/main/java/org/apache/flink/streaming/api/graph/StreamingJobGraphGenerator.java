@@ -32,6 +32,7 @@ import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.FormatUtil;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
@@ -60,6 +61,7 @@ import org.apache.flink.streaming.runtime.tasks.StreamIterationHead;
 import org.apache.flink.streaming.runtime.tasks.StreamIterationTail;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfig;
 import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.SerializedValue;
 
 import org.apache.commons.lang3.StringUtils;
@@ -90,6 +92,11 @@ public class StreamingJobGraphGenerator {
 	 * no restart strategy has been specified.
 	 */
 	private static final long DEFAULT_RESTART_DELAY = 0L;
+
+	/**
+	 * Maps job vertex id to stream node ids.
+	 */
+	private static final String JOB_VERTEX_TO_STREAM_NODE_MAP = "jobVertexToStreamNodeMap";
 
 	// ------------------------------------------------------------------------
 
@@ -165,6 +172,8 @@ public class StreamingJobGraphGenerator {
 
 		setTransitiveChainedTaskConfigs();
 
+		setSchedulerConfiguration();
+
 		// add registered cache file into job configuration
 		for (Tuple2<String, DistributedCache.DistributedCacheEntry> e : streamGraph.getEnvironment().getCachedFiles()) {
 			DistributedCache.writeFileInfoToConfig(e.f0, e.f1, jobGraph.getJobConfiguration());
@@ -180,6 +189,39 @@ public class StreamingJobGraphGenerator {
 		}
 
 		return jobGraph;
+	}
+
+	/**
+	 * Set parameters for job scheduling. Schedulers may leverage these parameters to schedule tasks.
+	 */
+	private void setSchedulerConfiguration() {
+		Configuration configuration = jobGraph.getSchedulingConfiguration();
+
+		setVertexToStreamNodesMap(configuration);
+		configuration.addAll(streamGraph.getCustomConfiguration());
+	}
+
+	private void setVertexToStreamNodesMap(Configuration configuration) {
+		Map<JobVertexID, ArrayList<Integer>> vertexToStreamNodeIds = new HashMap<>();
+		for (int headStreamNodeId : jobVertices.keySet()) {
+			JobVertex jobVertex = jobVertices.get(headStreamNodeId);
+			ArrayList<Integer> streamNodeIds = new ArrayList<>();
+			// Add head stream node id
+			streamNodeIds.add(headStreamNodeId);
+			// Add non-head stream node ids
+			if (chainedConfigs.containsKey(headStreamNodeId)) {
+				for (int chainedStreamNodeId : chainedConfigs.get(headStreamNodeId).keySet()) {
+					streamNodeIds.add(chainedStreamNodeId);
+				}
+			}
+			vertexToStreamNodeIds.put(jobVertex.getID(), streamNodeIds);
+		}
+
+		try {
+			InstantiationUtil.writeObjectToConfig(vertexToStreamNodeIds, configuration, JOB_VERTEX_TO_STREAM_NODE_MAP);
+		} catch (IOException e) {
+			throw new FlinkRuntimeException("Could not serialize job vertex to stream node map", e);
+		}
 	}
 
 	private void setPhysicalEdges() {
@@ -537,16 +579,19 @@ public class StreamingJobGraphGenerator {
 
 		StreamPartitioner<?> partitioner = edge.getPartitioner();
 		JobEdge jobEdge;
+		IntermediateDataSetID dataSetID = new IntermediateDataSetID(edge.getEdgeID());
 		if (partitioner instanceof ForwardPartitioner || partitioner instanceof RescalePartitioner) {
-			jobEdge = downStreamVertex.connectNewDataSetAsInput(
+			jobEdge = downStreamVertex.connectDataSetAsInput(
 				headVertex,
+				dataSetID,
 				DistributionPattern.POINTWISE,
 				ResultPartitionType.PIPELINED_BOUNDED);
 		} else {
-			jobEdge = downStreamVertex.connectNewDataSetAsInput(
-					headVertex,
-					DistributionPattern.ALL_TO_ALL,
-					ResultPartitionType.PIPELINED_BOUNDED);
+			jobEdge = downStreamVertex.connectDataSetAsInput(
+				headVertex,
+				dataSetID,
+				DistributionPattern.ALL_TO_ALL,
+				ResultPartitionType.PIPELINED_BOUNDED);
 		}
 		// set strategy name so that web interface can show it.
 		jobEdge.setShipStrategyName(partitioner.toString());

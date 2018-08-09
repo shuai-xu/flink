@@ -23,16 +23,21 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.runtime.akka.AkkaUtils;
+import org.apache.flink.runtime.blob.BlobWriter;
 import org.apache.flink.runtime.blob.PermanentBlobService;
 import org.apache.flink.runtime.blob.VoidBlobWriter;
+import org.apache.flink.runtime.checkpoint.CheckpointRecoveryFactory;
 import org.apache.flink.runtime.checkpoint.StandaloneCheckpointRecoveryFactory;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.failover.FailoverRegion;
+import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
+import org.apache.flink.runtime.executiongraph.failover.RestartAllStrategy;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
@@ -56,6 +61,9 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.TaskMessages.CancelTask;
 import org.apache.flink.runtime.messages.TaskMessages.FailIntermediateResultPartitions;
 import org.apache.flink.runtime.messages.TaskMessages.SubmitTask;
+import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
+import org.apache.flink.runtime.schedule.GraphManagerPlugin;
+import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
@@ -70,7 +78,9 @@ import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
@@ -405,35 +415,78 @@ public class ExecutionGraphTestUtils {
 			RestartStrategy restartStrategy,
 			JobVertex... vertices) throws Exception {
 
-		return createExecutionGraph(jid, slotProvider, restartStrategy, TestingUtils.defaultExecutor(), vertices);
+		return createSimpleTestGraph(jid, slotProvider, restartStrategy, TestingUtils.defaultExecutor(), vertices);
 	}
 
-	public static ExecutionGraph createExecutionGraph(
+	public static ExecutionGraph createSimpleTestGraph(
 			JobID jid,
 			SlotProvider slotProvider,
 			RestartStrategy restartStrategy,
 			ScheduledExecutorService executor,
-			JobVertex... vertices) throws Exception {
-
-			return createExecutionGraph(jid, slotProvider, restartStrategy, executor, Time.seconds(10L), vertices);
-	}
-
-	public static ExecutionGraph createExecutionGraph(
-			JobID jid,
-			SlotProvider slotProvider,
-			RestartStrategy restartStrategy,
-			ScheduledExecutorService executor,
-			Time timeout,
 			JobVertex... vertices) throws Exception {
 
 		checkNotNull(jid);
-		checkNotNull(restartStrategy);
 		checkNotNull(vertices);
-		checkNotNull(timeout);
 
-		return ExecutionGraphBuilder.buildGraph(
-			null,
+		return createExecutionGraph(
 			new JobGraph(jid, "test job", vertices),
+			slotProvider,
+			restartStrategy,
+			executor,
+			Time.seconds(10L));
+	}
+
+	public static ExecutionGraph createExecutionGraph(
+		JobGraph jobGraph,
+		TaskManagerGateway taskManagerGateway,
+		RestartStrategy restartStrategy) throws Exception {
+
+		int numSlotsNeeded = 0;
+		for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+			numSlotsNeeded += vertex.getParallelism();
+		}
+
+		SlotProvider slotProvider = new SimpleSlotProvider(jobGraph.getJobID(), numSlotsNeeded, taskManagerGateway);
+
+		return createExecutionGraph(jobGraph, slotProvider, restartStrategy);
+	}
+
+	public static ExecutionGraph createExecutionGraph(
+		JobGraph jobGraph,
+		SlotProvider slotProvider,
+		RestartStrategy restartStrategy) throws Exception {
+
+		return createExecutionGraph(
+			jobGraph,
+			slotProvider,
+			restartStrategy,
+			TestingUtils.defaultExecutor());
+	}
+
+	public static ExecutionGraph createExecutionGraph(
+		JobGraph jobGraph,
+		SlotProvider slotProvider,
+		RestartStrategy restartStrategy,
+		ScheduledExecutorService executor) throws Exception {
+
+		return createExecutionGraph(
+			jobGraph,
+			slotProvider,
+			restartStrategy,
+			executor,
+			Time.seconds(10L));
+	}
+
+	public static ExecutionGraph createExecutionGraph(
+		JobGraph jobGraph,
+		SlotProvider slotProvider,
+		RestartStrategy restartStrategy,
+		ScheduledExecutorService executor,
+		Time timeout) throws Exception {
+
+		return createExecutionGraph(
+			null,
+			jobGraph,
 			new Configuration(),
 			executor,
 			executor,
@@ -446,7 +499,187 @@ public class ExecutionGraphTestUtils {
 			1,
 			VoidBlobWriter.getInstance(),
 			timeout,
-			TEST_LOGGER);
+			TEST_LOGGER
+		);
+	}
+
+	/**
+	 * Create an ExecutionGraph with ExecutionGraphBuilder.
+	 */
+	public static ExecutionGraph createExecutionGraph(
+		@Nullable ExecutionGraph prior,
+		JobGraph jobGraph,
+		Configuration jobManagerConfig,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		SlotProvider slotProvider,
+		ClassLoader classLoader,
+		CheckpointRecoveryFactory recoveryFactory,
+		Time rpcTimeout,
+		RestartStrategy restartStrategy,
+		MetricGroup metrics,
+		int parallelismForAutoMax,
+		BlobWriter blobWriter,
+		Time allocationTimeout,
+		Logger log) throws Exception {
+
+		ExecutionGraph eg = ExecutionGraphBuilder.buildGraph(
+			prior,
+			jobGraph,
+			jobManagerConfig,
+			futureExecutor,
+			ioExecutor,
+			slotProvider,
+			classLoader,
+			recoveryFactory,
+			rpcTimeout,
+			restartStrategy,
+			metrics,
+			parallelismForAutoMax,
+			blobWriter,
+			allocationTimeout,
+			log);
+
+		Configuration conf = new Configuration(jobGraph.getJobConfiguration());
+		conf.addAll(jobGraph.getSchedulingConfiguration());
+		GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
+		graphManagerPlugin.open(eg.getScheduler(), jobGraph,
+			new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
+		eg.setGraphManagerPlugin(graphManagerPlugin);
+
+		return eg;
+	}
+
+	/**
+	 * Create an ExecutionGraph without extra decorations in ExecutionGraphBuilder, such as checkpoint and metrics.
+	 */
+	public static ExecutionGraph createExecutionGraphDirectly(
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		JobID jobId,
+		String jobName,
+		Configuration jobConfig,
+		SerializedValue<ExecutionConfig> serializedConfig,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		SlotProvider slotProvider,
+		List<JobVertex> vertices) throws Exception {
+
+		return createExecutionGraphDirectly(
+			new JobInformation(
+				jobId,
+				jobName,
+				serializedConfig,
+				jobConfig,
+				Collections.emptyList(),
+				Collections.emptyList()),
+			futureExecutor,
+			ioExecutor,
+			timeout,
+			restartStrategy,
+			new RestartAllStrategy.Factory(),
+			slotProvider,
+			vertices);
+	}
+
+	/**
+	 * Create an ExecutionGraph without extra decorations in ExecutionGraphBuilder, such as checkpoint and metrics.
+	 */
+	public static ExecutionGraph createExecutionGraphDirectly(
+		JobInformation jobInformation,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		FailoverStrategy.Factory failoverStrategy,
+		SlotProvider slotProvider,
+		List<JobVertex> vertices) throws Exception {
+
+		return createExecutionGraphDirectly(
+			jobInformation,
+			futureExecutor,
+			ioExecutor,
+			timeout,
+			restartStrategy,
+			failoverStrategy,
+			slotProvider,
+			VoidBlobWriter.getInstance(),
+			vertices);
+	}
+
+	/**
+	 * Create an ExecutionGraph without extra decorations in ExecutionGraphBuilder, such as checkpoint and metrics.
+	 */
+	public static ExecutionGraph createExecutionGraphDirectly(
+		JobGraph jobGraph,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		FailoverStrategy.Factory failoverStrategy,
+		SlotProvider slotProvider,
+		BlobWriter blobWriter) throws Exception {
+
+		final JobInformation jobInformation = new JobInformation(
+			jobGraph.getJobID(),
+			jobGraph.getName(),
+			jobGraph.getSerializedExecutionConfig(),
+			jobGraph.getJobConfiguration(),
+			jobGraph.getUserJarBlobKeys(),
+			jobGraph.getClasspaths());
+
+		return createExecutionGraphDirectly(
+			jobInformation,
+			futureExecutor,
+			ioExecutor,
+			timeout,
+			restartStrategy,
+			failoverStrategy,
+			slotProvider,
+			blobWriter,
+			jobGraph.getVerticesSortedTopologicallyFromSources());
+	}
+
+	/**
+	 * Create an ExecutionGraph without extra decorations in ExecutionGraphBuilder, such as checkpoint and metrics.
+	 */
+	public static ExecutionGraph createExecutionGraphDirectly(
+		JobInformation jobInformation,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time timeout,
+		RestartStrategy restartStrategy,
+		FailoverStrategy.Factory failoverStrategy,
+		SlotProvider slotProvider,
+		BlobWriter blobWriter,
+		List<JobVertex> vertices) throws Exception {
+
+		JobGraph jobGraph = new JobGraph(jobInformation.getJobId(), jobInformation.getJobName());
+		jobGraph.getJobConfiguration().addAll(jobInformation.getJobConfiguration());
+		jobGraph.addVertices(vertices);
+
+		ExecutionGraph eg = new ExecutionGraph(
+			jobInformation,
+			futureExecutor,
+			ioExecutor,
+			timeout,
+			restartStrategy,
+			failoverStrategy,
+			slotProvider,
+			ExecutionGraph.class.getClassLoader(),
+			blobWriter,
+			timeout);
+
+		eg.attachJobGraph(vertices);
+
+		Configuration conf = new Configuration(jobGraph.getJobConfiguration());
+		conf.addAll(jobGraph.getSchedulingConfiguration());
+		GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
+		graphManagerPlugin.open(eg.getScheduler(), jobGraph,
+			new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
+		eg.setGraphManagerPlugin(graphManagerPlugin);
+
+		return eg;
 	}
 
 	public static JobVertex createNoOpVertex(int parallelism) {
@@ -563,15 +796,22 @@ public class ExecutionGraphTestUtils {
 		ajv.setInvokableClass(mock(AbstractInvokable.class).getClass());
 
 		ExecutionGraph graph = new ExecutionGraph(
+			new JobInformation(
+				new JobID(),
+				"test job",
+				new SerializedValue<>(new ExecutionConfig()),
+				new Configuration(),
+				Collections.emptyList(),
+				Collections.emptyList()),
 			executor,
 			executor,
-			new JobID(), 
-			"test job", 
-			new Configuration(),
-			new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			new NoRestartStrategy(),
-			new Scheduler(ExecutionContext$.MODULE$.fromExecutor(executor)));
+			new RestartAllStrategy.Factory(),
+			new Scheduler(ExecutionContext$.MODULE$.fromExecutor(executor)),
+			ExecutionGraph.class.getClassLoader(),
+			VoidBlobWriter.getInstance(),
+			AkkaUtils.getDefaultTimeout());
 
 		return spy(new ExecutionJobVertex(graph, ajv, 1, AkkaUtils.getDefaultTimeout()));
 	}

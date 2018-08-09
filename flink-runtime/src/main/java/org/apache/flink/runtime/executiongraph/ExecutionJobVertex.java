@@ -36,6 +36,7 @@ import org.apache.flink.runtime.blob.BlobWriter;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
@@ -467,9 +468,26 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 			int consumerIndex = ires.registerConsumer();
 
+			// Record execution edges of current input for each execution vertices
+			ArrayList<ArrayList<ExecutionEdge>> executionEdges = new ArrayList<>(parallelism);
+			for (int i = 0; i < parallelism; i++) {
+				executionEdges.add(new ArrayList<>());
+			}
+			for (int i = 0; i < ires.getPartitions().length; i++) {
+				IntermediateResultPartition partition = ires.getPartitions()[i];
+				Collection<ExecutionVertexID> consumerExecutionVertices = edge.getConsumerExecutionVertices(i);
+
+				for (ExecutionVertexID executionVertexID : consumerExecutionVertices) {
+					ExecutionVertex consumerVertex = taskVertices[executionVertexID.getSubTaskIndex()];
+					ExecutionEdge ee = new ExecutionEdge(partition, consumerVertex, num);
+					partition.addConsumer(ee, consumerIndex);
+					executionEdges.get(executionVertexID.getSubTaskIndex()).add(ee);
+				}
+			}
+
 			for (int i = 0; i < parallelism; i++) {
 				ExecutionVertex ev = taskVertices[i];
-				ev.connectSource(num, ires, edge, consumerIndex);
+				ev.setInputExecutionEdges(executionEdges.get(i).toArray(new ExecutionEdge[]{}), num);
 			}
 		}
 	}
@@ -598,11 +616,6 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 				}
 			} catch (Throwable t) {
 				throw new RuntimeException("Re-creating the input split assigner failed: " + t.getMessage(), t);
-			}
-
-			// Reset intermediate results
-			for (IntermediateResult result : producedDataSets) {
-				result.resetForNewExecution();
 			}
 		}
 	}

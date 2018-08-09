@@ -24,6 +24,7 @@ import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.queryablestate.KvStateID;
@@ -102,6 +103,10 @@ import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.rpc.akka.AkkaRpcServiceUtils;
+import org.apache.flink.runtime.schedule.GraphManagerPlugin;
+import org.apache.flink.runtime.schedule.GraphManagerPluginFactory;
+import org.apache.flink.runtime.schedule.SchedulingConfig;
+import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.taskexecutor.AccumulatorReport;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorGateway;
@@ -210,6 +215,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private ExecutionGraph executionGraph;
 
+	/** The graph manager plugin handles execution events and decides vertices to schedule. */
+	private GraphManagerPlugin graphManagerPlugin;
+
 	@Nullable
 	private JobManagerJobStatusListener jobStatusListener;
 
@@ -304,10 +312,13 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		this.jobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
 		this.executionGraph = createAndRestoreExecutionGraph(jobManagerJobMetricGroup);
+
 		this.jobStatusListener = null;
 
 		this.resourceManagerConnection = null;
 		this.establishedResourceManagerConnection = null;
+
+		setupGraphManagerPlugin();
 	}
 
 	//----------------------------------------------------------------------------------------------
@@ -360,6 +371,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	@Override
 	public CompletableFuture<Void> postStop() {
 		log.info("Stopping the JobMaster for job {}({}).", jobGraph.getName(), jobGraph.getJobID());
+
+		// dispose graph manager plugin
+		if (graphManagerPlugin != null) {
+			graphManagerPlugin.close();
+		}
 
 		// disconnect from all registered TaskExecutors
 		final Set<ResourceID> taskManagerResourceIds = new HashSet<>(registeredTaskManagers.keySet());
@@ -1122,6 +1138,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		executionGraph = newExecutionGraph;
 		jobManagerJobMetricGroup = newJobManagerJobMetricGroup;
+
+		setupGraphManagerPlugin();
 	}
 
 	private void resetAndScheduleExecutionGraph() throws Exception {
@@ -1220,6 +1238,34 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	private void clearExecutionGraphFields() {
 		jobManagerJobMetricGroup = null;
 		jobStatusListener = null;
+	}
+
+	private GraphManagerPlugin createGraphManagerPlugin(VertexScheduler scheduler) {
+		Configuration jobConfig = jobGraph.getJobConfiguration();
+		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
+			jobGraph.getJobConfiguration(), userCodeLoader);
+
+		Configuration schedulerConfig = jobGraph.getSchedulingConfiguration();
+		Configuration configuration = new Configuration();
+		if (jobConfig != null) {
+			configuration.addAll(jobConfig);
+		}
+		if (schedulerConfig != null) {
+			configuration.addAll(schedulerConfig);
+		}
+
+		graphManagerPlugin.open(scheduler, jobGraph, new SchedulingConfig(configuration, userCodeLoader));
+
+		return graphManagerPlugin;
+	}
+
+	private void setupGraphManagerPlugin() {
+		if (graphManagerPlugin != null) {
+			graphManagerPlugin.close();
+		}
+		VertexScheduler scheduler = executionGraph.getScheduler();
+		graphManagerPlugin = createGraphManagerPlugin(scheduler);
+		executionGraph.setGraphManagerPlugin(graphManagerPlugin);
 	}
 
 	/**

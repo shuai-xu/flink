@@ -34,6 +34,7 @@ import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
+import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
@@ -753,7 +754,18 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		}
 	}
 
-	void scheduleOrUpdateConsumers(List<List<ExecutionEdge>> allConsumers) {
+	void scheduleOrUpdateConsumers(IntermediateResultPartition partition) {
+
+		// Notify the scheduler to handle the consumable partition
+		getVertex().getExecutionGraph().getGraphManagerPlugin().onResultPartitionConsumable(
+			new ResultPartitionConsumableEvent(
+				partition.getIntermediateResult().getId(),
+				partition.getPartitionNumber()));
+
+		updateConsumers(partition.getConsumers());
+	}
+
+	private void updateConsumers(List<List<ExecutionEdge>> allConsumers) {
 		final int numConsumers = allConsumers.size();
 
 		if (numConsumers > 1) {
@@ -763,6 +775,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			return;
 		}
 
+		// Update partition for vertices which are already running
+		// Cache partition info for vertices which are scheduled but not running yet
 		for (ExecutionEdge edge : allConsumers.get(0)) {
 			final ExecutionVertex consumerVertex = edge.getTarget();
 
@@ -771,73 +785,27 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 			final IntermediateResultPartition partition = edge.getSource();
 
+			if (consumerState == RUNNING) {
+				// cache the partition info and trigger a timer to group them and send in batch
+				final Execution partitionExecution = partition.getProducer()
+					.getCurrentExecutionAttempt();
+				consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor.fromEdge(partition, partitionExecution));
+				consumerVertex.getCurrentExecutionAttempt().sendPartitionInfoAsync();
+			}
 			// ----------------------------------------------------------------
-			// Consumer is created => try to deploy and cache input channel
-			// descriptors if there is a deployment race
+			// Consumer is created, scheduled or deploying => cache input channel
+			// deployment descriptors and send update message later
 			// ----------------------------------------------------------------
-			if (consumerState == CREATED) {
+			else if (consumerState == CREATED || consumerState == SCHEDULED || consumerState == DEPLOYING) {
 				final Execution partitionExecution = partition.getProducer()
 					.getCurrentExecutionAttempt();
 
-				consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor.fromEdge(
-					partition, partitionExecution));
-
-				// When deploying a consuming task, its task deployment descriptor will contain all
-				// deployment information available at the respective time. It is possible that some
-				// of the partitions to be consumed have not been created yet. These are updated
-				// runtime via the update messages.
-				//
-				// TODO The current approach may send many update messages even though the consuming
-				// task has already been deployed with all necessary information. We have to check
-				// whether this is a problem and fix it, if it is.
-				CompletableFuture.supplyAsync(
-					() -> {
-						try {
-							final ExecutionGraph executionGraph = consumerVertex.getExecutionGraph();
-							consumerVertex.scheduleForExecution(
-								executionGraph.getSlotProvider(),
-								executionGraph.isQueuedSchedulingAllowed(),
-								LocationPreferenceConstraint.ANY); // there must be at least one known location
-						} catch (Throwable t) {
-							consumerVertex.fail(new IllegalStateException("Could not schedule consumer " +
-								"vertex " + consumerVertex, t));
-						}
-
-						return null;
-					},
-					executor);
+				consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor
+					.fromEdge(partition, partitionExecution));
 
 				// double check to resolve race conditions
 				if (consumerVertex.getExecutionState() == RUNNING) {
 					consumerVertex.sendPartitionInfos();
-				}
-			}
-			// ----------------------------------------------------------------
-			// Consumer is running => send update message now
-			// ----------------------------------------------------------------
-			else {
-				if (consumerState == RUNNING) {
-					// cache the partition info and trigger a timer to group them and send in batch
-					final Execution partitionExecution = partition.getProducer()
-						.getCurrentExecutionAttempt();
-					consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor.fromEdge(partition, partitionExecution));
-					consumerVertex.getCurrentExecutionAttempt().sendPartitionInfoAsync();
-				}
-				// ----------------------------------------------------------------
-				// Consumer is scheduled or deploying => cache input channel
-				// deployment descriptors and send update message later
-				// ----------------------------------------------------------------
-				else if (consumerState == SCHEDULED || consumerState == DEPLOYING) {
-					final Execution partitionExecution = partition.getProducer()
-						.getCurrentExecutionAttempt();
-
-					consumerVertex.cachePartitionInfo(PartialInputChannelDeploymentDescriptor
-						.fromEdge(partition, partitionExecution));
-
-					// double check to resolve race conditions
-					if (consumerVertex.getExecutionState() == RUNNING) {
-						consumerVertex.sendPartitionInfos();
-					}
 				}
 			}
 		}
@@ -967,7 +935,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 								.getIntermediateResult().getPartitions();
 
 							for (IntermediateResultPartition partition : allPartitions) {
-								scheduleOrUpdateConsumers(partition.getConsumers());
+								scheduleOrUpdateConsumers(partition);
 							}
 						}
 

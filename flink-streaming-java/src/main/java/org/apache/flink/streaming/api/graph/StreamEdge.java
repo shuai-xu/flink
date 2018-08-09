@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.jobgraph.EdgeID;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.util.OutputTag;
 
@@ -34,7 +35,9 @@ public class StreamEdge implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	private final String edgeId;
+	private final EdgeID edgeID;
+
+	private final String edgeName;
 
 	private final StreamNode sourceVertex;
 	private final StreamNode targetVertex;
@@ -69,8 +72,14 @@ public class StreamEdge implements Serializable {
 		this.outputPartitioner = outputPartitioner;
 		this.outputTag = outputTag;
 
-		this.edgeId = sourceVertex + "_" + targetVertex + "_" + typeNumber + "_" + selectedNames
+		this.edgeID = new EdgeID();
+
+		this.edgeName = sourceVertex + "_" + targetVertex + "_" + typeNumber + "_" + selectedNames
 				+ "_" + outputPartitioner;
+	}
+
+	public EdgeID getEdgeID() {
+		return edgeID;
 	}
 
 	public StreamNode getSourceVertex() {
@@ -111,7 +120,7 @@ public class StreamEdge implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return edgeId.hashCode();
+		return edgeName.hashCode();
 	}
 
 	@Override
@@ -125,7 +134,7 @@ public class StreamEdge implements Serializable {
 
 		StreamEdge that = (StreamEdge) o;
 
-		return edgeId.equals(that.edgeId);
+		return edgeName.equals(that.edgeName);
 	}
 
 	@Override

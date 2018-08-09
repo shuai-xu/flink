@@ -31,7 +31,6 @@ import org.apache.flink.runtime.executiongraph.restart.FixedDelayRestartStrategy
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleSlotProvider;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
-import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
@@ -40,6 +39,7 @@ import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.concurrent.Executor;
 
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilExecutionState;
@@ -305,30 +305,24 @@ public class PipelinedRegionFailoverConcurrencyTest extends TestLogger {
 			SlotProvider slotProvider,
 			int parallelism) throws Exception {
 
-		final JobInformation jobInformation = new DummyJobInformation(
-			jid,
-			"test job");
+		JobVertex jv = new JobVertex("test vertex");
+		jv.setInvokableClass(NoOpInvokable.class);
+		jv.setParallelism(parallelism);
 
 		// build a simple execution graph with on job vertex, parallelism 2
 		final Time timeout = Time.seconds(10L);
-		final ExecutionGraph graph = new ExecutionGraph(
-			jobInformation,
+		final ExecutionGraph graph = ExecutionGraphTestUtils.createExecutionGraphDirectly(
+			new DummyJobInformation(
+				jid,
+				"test job"),
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			timeout,
 			restartStrategy,
 			failoverStrategy,
 			slotProvider,
-			getClass().getClassLoader(),
 			VoidBlobWriter.getInstance(),
-			timeout);
-
-		JobVertex jv = new JobVertex("test vertex");
-		jv.setInvokableClass(NoOpInvokable.class);
-		jv.setParallelism(parallelism);
-
-		JobGraph jg = new JobGraph(jid, "testjob", jv);
-		graph.attachJobGraph(jg.getVerticesSortedTopologicallyFromSources());
+			Collections.singletonList(jv));
 
 		return graph;
 	}

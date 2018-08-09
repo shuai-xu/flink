@@ -16,18 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobgraph;
+package org.apache.flink.runtime.event;
 
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+
+import java.util.Collection;
 
 /**
- * The ScheduleMode decides how vertices are started in {@link DefaultGraphManagerPlugin}.
+ * Event for execution vertex failover. Emitted when vertex fails and related vertices has been cancelled and reset.
  */
-public enum ScheduleMode {
+public class ExecutionVertexFailoverEvent extends ExecutionEvent {
 
-	/** Schedule vertices lazily from the sources. Downstream vertices are started once their input data are ready */
-	LAZY_FROM_SOURCES,
+	private final Collection<ExecutionVertexID> affectedExecutionVertexIDs;
 
-	/** Schedules all vertices immediately. */
-	EAGER
+	public ExecutionVertexFailoverEvent(Collection<ExecutionVertexID> affectedExecutionVertexIDs) {
+		this.affectedExecutionVertexIDs = affectedExecutionVertexIDs;
+	}
+
+	public Collection<ExecutionVertexID> getAffectedExecutionVertexIDs() {
+		return affectedExecutionVertexIDs;
+	}
 }

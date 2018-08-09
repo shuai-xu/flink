@@ -20,7 +20,6 @@ package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 import org.apache.flink.runtime.execution.ExecutionState;
@@ -43,7 +42,6 @@ import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -63,7 +61,7 @@ public class ExecutionGraphMetricsTest extends TestLogger {
 	 * This test tests that the restarting time metric correctly displays restarting times.
 	 */
 	@Test
-	public void testExecutionGraphRestartTimeMetric() throws JobException, IOException, InterruptedException {
+	public void testExecutionGraphRestartTimeMetric() throws Exception {
 		final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 		try {
 			// setup execution graph with mocked scheduling logic
@@ -84,7 +82,7 @@ public class ExecutionGraphMetricsTest extends TestLogger {
 
 			TestingRestartStrategy testingRestartStrategy = new TestingRestartStrategy();
 
-			ExecutionGraph executionGraph = new ExecutionGraph(
+			ExecutionGraph executionGraph = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 				executor,
 				executor,
 				jobGraph.getJobID(),
@@ -93,14 +91,13 @@ public class ExecutionGraphMetricsTest extends TestLogger {
 				new SerializedValue<>(null),
 				timeout,
 				testingRestartStrategy,
-				scheduler);
+				scheduler,
+				jobGraph.getVerticesSortedTopologicallyFromSources());
 
 			RestartTimeGauge restartingTime = new RestartTimeGauge(executionGraph);
 
 			// check that the restarting time is 0 since it's the initial start
 			assertEquals(0L, restartingTime.getValue().longValue());
-
-			executionGraph.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
 
 			// start execution
 			executionGraph.scheduleForExecution();

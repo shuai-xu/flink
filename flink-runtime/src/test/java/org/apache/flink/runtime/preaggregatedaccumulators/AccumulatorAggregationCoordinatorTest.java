@@ -199,7 +199,7 @@ public class AccumulatorAggregationCoordinatorTest {
 	private ExecutionGraph createExecutionGraph(int parallelism) throws Exception {
 		JobVertex jobVertex = ExecutionGraphTestUtils.createJobVertex("map", parallelism, NoOpInvokable.class);
 
-		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createExecutionGraph(
+		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createSimpleTestGraph(
 			new JobID(),
 			mock(SlotProvider.class),
 			mock(RestartStrategy.class),

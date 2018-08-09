@@ -37,10 +37,9 @@ import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SimpleSlot;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
-import org.apache.flink.runtime.jobgraph.DistributionPattern;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
-import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
@@ -48,6 +47,7 @@ import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
+import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.util.EvictingBoundedList;
@@ -94,6 +94,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	private final ExecutionEdge[][] inputEdges;
 
 	private final int subTaskIndex;
+
+	private final ExecutionVertexID executionVertexID;
 
 	private final EvictingBoundedList<Execution> priorExecutions;
 
@@ -155,6 +157,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 		this.jobVertex = jobVertex;
 		this.subTaskIndex = subTaskIndex;
+		this.executionVertexID = new ExecutionVertexID(jobVertex.getJobVertexId(), subTaskIndex);
 		this.taskNameWithSubtask = String.format("%s (%d/%d)",
 				jobVertex.getJobVertex().getName(), subTaskIndex + 1, jobVertex.getParallelism());
 
@@ -210,6 +213,10 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	public JobVertexID getJobvertexId() {
 		return this.jobVertex.getJobVertexId();
+	}
+
+	public ExecutionVertexID getExecutionVertexID() {
+		return executionVertexID;
 	}
 
 	public String getTaskName() {
@@ -347,107 +354,55 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		return resultPartitions;
 	}
 
+	/**
+	 * The input data of a task is consumable when
+	 * 1. it is source task(no input).
+	 * 2. one of its source result partition is PIPELINED and has produced data.
+	 * 3. one of its source result is BLOCKING and is FINISHED.
+	 *
+	 * @return whether the input data of this task is consumable
+	 */
+	public boolean isInputDataConsumable() {
+		// Always true for source vertex
+		if (jobVertex.getJobVertex().isInputVertex()) {
+			return true;
+		}
+
+		for (ExecutionEdge[] edges : inputEdges) {
+			if (edges.length > 0) {
+				// True if any blocking input result is consumable
+				// Take one partition as a shortcut for blocking input consumable checking
+				if (edges[0].getSource().getResultType().isBlocking()) {
+					if (edges[0].getSource().isConsumable()) {
+						return true;
+					} else {
+						break;
+					}
+				}
+
+				// True if any pipelined input result partition has produced records or is finished
+				for (ExecutionEdge edge : edges) {
+					if (edge.getSource().getResultType().isPipelined() &&
+						edge.getSource().hasDataProduced()) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	public ExecutionVertexStatus getCurrentStatus() {
+		return new ExecutionVertexStatus(executionVertexID, getExecutionState(), isInputDataConsumable());
+	}
+
 	// --------------------------------------------------------------------------------------------
 	//  Graph building
 	// --------------------------------------------------------------------------------------------
 
-	public void connectSource(int inputNumber, IntermediateResult source, JobEdge edge, int consumerNumber) {
-
-		final DistributionPattern pattern = edge.getDistributionPattern();
-		final IntermediateResultPartition[] sourcePartitions = source.getPartitions();
-
-		ExecutionEdge[] edges;
-
-		switch (pattern) {
-			case POINTWISE:
-				edges = connectPointwise(sourcePartitions, inputNumber);
-				break;
-
-			case ALL_TO_ALL:
-				edges = connectAllToAll(sourcePartitions, inputNumber);
-				break;
-
-			default:
-				throw new RuntimeException("Unrecognized distribution pattern.");
-
-		}
-
+	public void setInputExecutionEdges(ExecutionEdge[] edges, int inputNumber) {
 		this.inputEdges[inputNumber] = edges;
-
-		// add the consumers to the source
-		// for now (until the receiver initiated handshake is in place), we need to register the
-		// edges as the execution graph
-		for (ExecutionEdge ee : edges) {
-			ee.getSource().addConsumer(ee, consumerNumber);
-		}
-	}
-
-	private ExecutionEdge[] connectAllToAll(IntermediateResultPartition[] sourcePartitions, int inputNumber) {
-		ExecutionEdge[] edges = new ExecutionEdge[sourcePartitions.length];
-
-		for (int i = 0; i < sourcePartitions.length; i++) {
-			IntermediateResultPartition irp = sourcePartitions[i];
-			edges[i] = new ExecutionEdge(irp, this, inputNumber);
-		}
-
-		return edges;
-	}
-
-	private ExecutionEdge[] connectPointwise(IntermediateResultPartition[] sourcePartitions, int inputNumber) {
-		final int numSources = sourcePartitions.length;
-		final int parallelism = getTotalNumberOfParallelSubtasks();
-
-		// simple case same number of sources as targets
-		if (numSources == parallelism) {
-			return new ExecutionEdge[] { new ExecutionEdge(sourcePartitions[subTaskIndex], this, inputNumber) };
-		}
-		else if (numSources < parallelism) {
-
-			int sourcePartition;
-
-			// check if the pattern is regular or irregular
-			// we use int arithmetics for regular, and floating point with rounding for irregular
-			if (parallelism % numSources == 0) {
-				// same number of targets per source
-				int factor = parallelism / numSources;
-				sourcePartition = subTaskIndex / factor;
-			}
-			else {
-				// different number of targets per source
-				float factor = ((float) parallelism) / numSources;
-				sourcePartition = (int) (subTaskIndex / factor);
-			}
-
-			return new ExecutionEdge[] { new ExecutionEdge(sourcePartitions[sourcePartition], this, inputNumber) };
-		}
-		else {
-			if (numSources % parallelism == 0) {
-				// same number of targets per source
-				int factor = numSources / parallelism;
-				int startIndex = subTaskIndex * factor;
-
-				ExecutionEdge[] edges = new ExecutionEdge[factor];
-				for (int i = 0; i < factor; i++) {
-					edges[i] = new ExecutionEdge(sourcePartitions[startIndex + i], this, inputNumber);
-				}
-				return edges;
-			}
-			else {
-				float factor = ((float) numSources) / parallelism;
-
-				int start = (int) (subTaskIndex * factor);
-				int end = (subTaskIndex == getTotalNumberOfParallelSubtasks() - 1) ?
-						sourcePartitions.length :
-						(int) ((subTaskIndex + 1) * factor);
-
-				ExecutionEdge[] edges = new ExecutionEdge[end - start];
-				for (int i = 0; i < edges.length; i++) {
-					edges[i] = new ExecutionEdge(sourcePartitions[start + i], this, inputNumber);
-				}
-
-				return edges;
-			}
-		}
 	}
 
 	/**
@@ -616,6 +571,11 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 				//TODO: set this index according to checkpoint when batch support checkpoint.
 				inputSplitIndexMap.clear();;
 
+				// Reset intermediate results
+				for (IntermediateResultPartition resultPartition : resultPartitions.values()) {
+					resultPartition.resetForNewExecution();
+				}
+
 				return newExecution;
 			}
 			else {
@@ -693,7 +653,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 		if (partition.getIntermediateResult().getResultType().isPipelined()) {
 			// Schedule or update receivers of this partition
-			execution.scheduleOrUpdateConsumers(partition.getConsumers());
+			partition.markDataProduced();
+			execution.scheduleOrUpdateConsumers(partition);
 		}
 		else {
 			throw new IllegalArgumentException("ScheduleOrUpdateConsumers msg is only valid for" +
@@ -810,7 +771,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		// Consumed intermediate results
 		List<InputGateDeploymentDescriptor> consumedPartitions = new ArrayList<>(inputEdges.length);
 
-		boolean lazyScheduling = getExecutionGraph().getScheduleMode().allowLazyDeployment();
+		boolean lazyScheduling = getExecutionGraph().isLazyDeploymentAllowed();
 
 		for (IntermediateResultPartition partition : resultPartitions.values()) {
 

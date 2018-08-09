@@ -27,7 +27,7 @@ import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
-import org.apache.flink.runtime.executiongraph.ExecutionGraphBuilder;
+import org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -97,7 +97,7 @@ public class CheckpointSettingsSerializableTest extends TestLogger {
 		final JobGraph copy = CommonTestUtils.createCopySerializable(jobGraph);
 
 		final Time timeout = Time.seconds(10L);
-		final ExecutionGraph eg = ExecutionGraphBuilder.buildGraph(
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
 			null,
 			copy,
 			new Configuration(),

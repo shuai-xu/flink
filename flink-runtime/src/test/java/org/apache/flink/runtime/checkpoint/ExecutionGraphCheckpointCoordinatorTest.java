@@ -19,9 +19,9 @@
 package org.apache.flink.runtime.checkpoint;
 
 import org.apache.flink.api.common.time.Time;
-import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.executiongraph.DummyJobInformation;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
+import org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils;
 import org.apache.flink.runtime.executiongraph.failover.RestartAllStrategy;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.jobgraph.JobStatus;
@@ -34,6 +34,7 @@ import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -79,17 +80,20 @@ public class ExecutionGraphCheckpointCoordinatorTest {
 			CheckpointIDCounter counter,
 			CompletedCheckpointStore store) throws Exception {
 		final Time timeout = Time.days(1L);
-		ExecutionGraph executionGraph = new ExecutionGraph(
+		ScheduledExecutorService executor = TestingUtils.defaultExecutor();
+
+		JobVertex jobVertex = new JobVertex("MockVertex");
+		jobVertex.setInvokableClass(AbstractInvokable.class);
+
+		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			new DummyJobInformation(),
-			TestingUtils.defaultExecutor(),
-			TestingUtils.defaultExecutor(),
+			executor,
+			executor,
 			timeout,
 			new NoRestartStrategy(),
 			new RestartAllStrategy.Factory(),
 			new Scheduler(TestingUtils.defaultExecutionContext()),
-			ClassLoader.getSystemClassLoader(),
-			VoidBlobWriter.getInstance(),
-			timeout);
+			Collections.singletonList(jobVertex));
 
 		executionGraph.enableCheckpointing(
 				100,
@@ -105,10 +109,6 @@ public class ExecutionGraphCheckpointCoordinatorTest {
 				store,
 				new MemoryStateBackend(),
 				CheckpointStatsTrackerTest.createTestTracker());
-
-		JobVertex jobVertex = new JobVertex("MockVertex");
-		jobVertex.setInvokableClass(AbstractInvokable.class);
-		executionGraph.attachJobGraph(Collections.singletonList(jobVertex));
 
 		return executionGraph;
 	}

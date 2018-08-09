@@ -111,7 +111,7 @@ public class ExecutionGraphConstructionTest {
 		
 		List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3, v4, v5));
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			jobId, 
@@ -120,14 +120,8 @@ public class ExecutionGraphConstructionTest {
 			new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			new NoRestartStrategy(),
-			new Scheduler(TestingUtils.defaultExecutionContext()));
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
+			new Scheduler(TestingUtils.defaultExecutionContext()),
+			ordered);
 		
 		verifyTestGraph(eg, v1, v2, v3, v4, v5);
 	}
@@ -162,7 +156,7 @@ public class ExecutionGraphConstructionTest {
 		
 		List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3));
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			jobId, 
@@ -171,14 +165,8 @@ public class ExecutionGraphConstructionTest {
 				new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			new NoRestartStrategy(),
-			new Scheduler(TestingUtils.defaultExecutionContext()));
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
+			new Scheduler(TestingUtils.defaultExecutionContext()),
+			ordered);
 		
 		// attach the second part of the graph
 		
@@ -238,7 +226,7 @@ public class ExecutionGraphConstructionTest {
 
 		List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3));
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			jobId, 
@@ -247,14 +235,8 @@ public class ExecutionGraphConstructionTest {
 			new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			new NoRestartStrategy(),
-			new Scheduler(TestingUtils.defaultExecutionContext()));
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
+			new Scheduler(TestingUtils.defaultExecutionContext()),
+			ordered);
 		
 		// attach the second part of the graph
 		
@@ -309,7 +291,7 @@ public class ExecutionGraphConstructionTest {
 
 		List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1));
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			jobId, 
@@ -318,14 +300,8 @@ public class ExecutionGraphConstructionTest {
 			new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			new NoRestartStrategy(),
-			new Scheduler(TestingUtils.defaultExecutionContext()));
-		try {
-			eg.attachJobGraph(ordered);
-		}
-		catch (JobException e) {
-			e.printStackTrace();
-			fail("Job failed with exception: " + e.getMessage());
-		}
+			new Scheduler(TestingUtils.defaultExecutionContext()),
+			ordered);
 		
 		// attach the second part of the graph
 		JobVertex v2 = new JobVertex("vertex2");
@@ -375,22 +351,24 @@ public class ExecutionGraphConstructionTest {
 		
 		List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3, v5, v4));
 
-		ExecutionGraph eg = new ExecutionGraph(
-			TestingUtils.defaultExecutor(),
-			TestingUtils.defaultExecutor(),
-			jobId, 
-			jobName, 
-			cfg,
-			new SerializedValue<>(new ExecutionConfig()),
-			AkkaUtils.getDefaultTimeout(),
-			new NoRestartStrategy(),
-			new Scheduler(TestingUtils.defaultExecutionContext()));
 		try {
-			eg.attachJobGraph(ordered);
+			ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
+				TestingUtils.defaultExecutor(),
+				TestingUtils.defaultExecutor(),
+				jobId,
+				jobName,
+				cfg,
+				new SerializedValue<>(new ExecutionConfig()),
+				AkkaUtils.getDefaultTimeout(),
+				new NoRestartStrategy(),
+				new Scheduler(TestingUtils.defaultExecutionContext()),
+				ordered);
+
 			fail("Attached wrong jobgraph");
 		}
 		catch (JobException e) {
 			// expected
+			int i = 0;
 		}
 	}
 	
@@ -448,7 +426,7 @@ public class ExecutionGraphConstructionTest {
 			
 			List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3, v4, v5));
 
-			ExecutionGraph eg = new ExecutionGraph(
+			ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 				TestingUtils.defaultExecutor(),
 				TestingUtils.defaultExecutor(),
 				jobId, 
@@ -457,14 +435,8 @@ public class ExecutionGraphConstructionTest {
 				new SerializedValue<>(new ExecutionConfig()),
 				AkkaUtils.getDefaultTimeout(),
 				new NoRestartStrategy(),
-				new Scheduler(TestingUtils.defaultExecutionContext()));
-			try {
-				eg.attachJobGraph(ordered);
-			}
-			catch (JobException e) {
-				e.printStackTrace();
-				fail("Job failed with exception: " + e.getMessage());
-			}
+				new Scheduler(TestingUtils.defaultExecutionContext()),
+				ordered);
 			
 			assertEquals(assigner1, eg.getAllVertices().get(v3.getID()).getSplitAssigner(operatorID1));
 			assertEquals(assigner2, eg.getAllVertices().get(v5.getID()).getSplitAssigner(operatorID2));
@@ -496,19 +468,19 @@ public class ExecutionGraphConstructionTest {
 			
 			List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3));
 
-			ExecutionGraph eg = new ExecutionGraph(
-				TestingUtils.defaultExecutor(),
-				TestingUtils.defaultExecutor(),
-				jobId, 
-				jobName,
-				cfg,
-				new SerializedValue<>(new ExecutionConfig()),
-				AkkaUtils.getDefaultTimeout(),
-				new NoRestartStrategy(),
-				new Scheduler(TestingUtils.defaultExecutionContext()));
-
 			try {
-				eg.attachJobGraph(ordered);
+				ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
+					TestingUtils.defaultExecutor(),
+					TestingUtils.defaultExecutor(),
+					jobId,
+					jobName,
+					cfg,
+					new SerializedValue<>(new ExecutionConfig()),
+					AkkaUtils.getDefaultTimeout(),
+					new NoRestartStrategy(),
+					new Scheduler(TestingUtils.defaultExecutionContext()),
+					ordered);
+
 				fail("Should not be possible");
 			}
 			catch (RuntimeException e) {
@@ -579,7 +551,7 @@ public class ExecutionGraphConstructionTest {
 
 			JobGraph jg = new JobGraph(jobId, jobName, v1, v2, v3, v4, v5, v6, v7, v8);
 			
-			ExecutionGraph eg = new ExecutionGraph(
+			ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 				TestingUtils.defaultExecutor(),
 				TestingUtils.defaultExecutor(),
 				jobId, 
@@ -588,9 +560,8 @@ public class ExecutionGraphConstructionTest {
 				new SerializedValue<>(new ExecutionConfig()),
 				AkkaUtils.getDefaultTimeout(),
 				new NoRestartStrategy(),
-				new Scheduler(TestingUtils.defaultExecutionContext()));
-			
-			eg.attachJobGraph(jg.getVerticesSortedTopologicallyFromSources());
+				new Scheduler(TestingUtils.defaultExecutionContext()),
+				jg.getVerticesSortedTopologicallyFromSources());
 			
 			// check the v1 / v2 co location hints ( assumes parallelism(v1) >= parallelism(v2) )
 			{

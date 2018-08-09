@@ -16,18 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobgraph;
+package org.apache.flink.runtime.event;
 
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
+import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 
 /**
- * The ScheduleMode decides how vertices are started in {@link DefaultGraphManagerPlugin}.
+ * Event for execution vertex state changes.
  */
-public enum ScheduleMode {
+public class ExecutionVertexStateChangedEvent extends ExecutionEvent {
 
-	/** Schedule vertices lazily from the sources. Downstream vertices are started once their input data are ready */
-	LAZY_FROM_SOURCES,
+	private final ExecutionVertexID executionVertexID;
 
-	/** Schedules all vertices immediately. */
-	EAGER
+	private final ExecutionState newExecutionState;
+
+	public ExecutionVertexStateChangedEvent(ExecutionVertexID executionVertexID, ExecutionState newExecutionState) {
+		this.executionVertexID = executionVertexID;
+		this.newExecutionState = newExecutionState;
+	}
+
+	public ExecutionVertexID getExecutionVertexID() {
+		return executionVertexID;
+	}
+
+	public ExecutionState getNewExecutionState() {
+		return newExecutionState;
+	}
 }

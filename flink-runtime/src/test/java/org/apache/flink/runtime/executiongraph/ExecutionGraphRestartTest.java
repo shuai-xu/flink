@@ -63,9 +63,9 @@ import org.apache.flink.util.TestLogger;
 import org.junit.After;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -82,7 +82,6 @@ import scala.concurrent.duration.FiniteDuration;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.SimpleActorGateway;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.completeCancellingForAllVertices;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.createNoOpVertex;
-import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.createSimpleTestGraph;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.finishAllVertices;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.switchToRunning;
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilJobStatus;
@@ -177,8 +176,15 @@ public class ExecutionGraphRestartTest extends TestLogger {
 
 		scheduler.newInstanceAvailable(instance);
 
+
+		JobVertex jobVertex = new JobVertex("NoOpInvokable");
+		jobVertex.setInvokableClass(NoOpInvokable.class);
+		jobVertex.setParallelism(NUM_TASKS);
+
+		JobGraph jobGraph = new JobGraph("TestJob", jobVertex);
+
 		// Blocking program
-		ExecutionGraph executionGraph = new ExecutionGraph(
+		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			new JobID(),
@@ -188,15 +194,8 @@ public class ExecutionGraphRestartTest extends TestLogger {
 			AkkaUtils.getDefaultTimeout(),
 			// We want to manually control the restart and delay
 			new InfiniteDelayRestartStrategy(),
-			scheduler);
-
-		JobVertex jobVertex = new JobVertex("NoOpInvokable");
-		jobVertex.setInvokableClass(NoOpInvokable.class);
-		jobVertex.setParallelism(NUM_TASKS);
-
-		JobGraph jobGraph = new JobGraph("TestJob", jobVertex);
-
-		executionGraph.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
+			scheduler,
+			jobGraph.getVerticesSortedTopologicallyFromSources());
 
 		assertEquals(JobStatus.CREATED, executionGraph.getState());
 
@@ -330,8 +329,8 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		JobVertex sender = ExecutionGraphTestUtils.createJobVertex("Task1", 1, NoOpInvokable.class);
 		JobVertex receiver = ExecutionGraphTestUtils.createJobVertex("Task2", 1, NoOpInvokable.class);
 		JobGraph jobGraph = new JobGraph("Pointwise job", sender, receiver);
-		ExecutionGraph eg = newExecutionGraph(new FixedDelayRestartStrategy(1, 1000), scheduler);
-		eg.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
+		ExecutionGraph eg = newExecutionGraph(new FixedDelayRestartStrategy(1, 1000), scheduler,
+			jobGraph.getVerticesSortedTopologicallyFromSources());
 
 		assertEquals(JobStatus.CREATED, eg.getState());
 
@@ -399,9 +398,8 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		JobGraph jobGraph = new JobGraph("Test Job", vertex);
 		jobGraph.setExecutionConfig(executionConfig);
 
-		ExecutionGraph eg = newExecutionGraph(new InfiniteDelayRestartStrategy(), scheduler);
-
-		eg.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
+		ExecutionGraph eg = newExecutionGraph(new InfiniteDelayRestartStrategy(), scheduler,
+			jobGraph.getVerticesSortedTopologicallyFromSources());
 
 		assertEquals(JobStatus.CREATED, eg.getState());
 
@@ -445,9 +443,8 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		JobGraph jobGraph = new JobGraph("Test Job", vertex);
 		jobGraph.setExecutionConfig(executionConfig);
 
-		ExecutionGraph eg = newExecutionGraph(new InfiniteDelayRestartStrategy(), scheduler);
-
-		eg.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
+		ExecutionGraph eg = newExecutionGraph(new InfiniteDelayRestartStrategy(), scheduler,
+			jobGraph.getVerticesSortedTopologicallyFromSources());
 
 		assertEquals(JobStatus.CREATED, eg.getState());
 
@@ -492,7 +489,7 @@ public class ExecutionGraphRestartTest extends TestLogger {
 
 		ControllableRestartStrategy controllableRestartStrategy = new ControllableRestartStrategy(timeout);
 
-		ExecutionGraph eg = new ExecutionGraph(
+		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			new JobID(),
@@ -501,9 +498,8 @@ public class ExecutionGraphRestartTest extends TestLogger {
 			new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			controllableRestartStrategy,
-			scheduler);
-
-		eg.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
+			scheduler,
+			jobGraph.getVerticesSortedTopologicallyFromSources());
 
 		assertEquals(JobStatus.CREATED, eg.getState());
 
@@ -535,18 +531,19 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		final OneShotLatch restartLatch = new OneShotLatch();
 		final TriggeredRestartStrategy triggeredRestartStrategy = new TriggeredRestartStrategy(restartLatch);
 
-		final ExecutionGraph eg = createSimpleTestGraph(
-			new JobID(),
+		final JobGraph jobGraph = new JobGraph(createNoOpVertex(parallelism));
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+			jobGraph,
 			taskManagerGateway,
-			triggeredRestartStrategy,
-			createNoOpVertex(parallelism));
+			triggeredRestartStrategy);
 
 		WaitForTasks waitForTasks = new WaitForTasks(parallelism);
 		WaitForTasks waitForTasksCancelled = new WaitForTasks(parallelism);
 		taskManagerGateway.setSubmitConsumer(waitForTasks);
 		taskManagerGateway.setCancelConsumer(waitForTasksCancelled);
 
-		eg.setScheduleMode(ScheduleMode.EAGER);
 		eg.scheduleForExecution();
 
 		waitForTasks.getFuture().get(1000, TimeUnit.MILLISECONDS);
@@ -626,12 +623,17 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		final SlotProvider slots = new SimpleSlotProvider(jid, parallelism, taskManagerGateway);
 		final TriggeredRestartStrategy restartStrategy = new TriggeredRestartStrategy(restartTrigger);
 
-		final ExecutionGraph eg = createSimpleTestGraph(jid, slots, restartStrategy, vertex);
+		final JobGraph jobGraph = new JobGraph(jid, "test job", vertex);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+			jobGraph,
+			slots,
+			restartStrategy);
 
 		WaitForTasks waitForTasks = new WaitForTasks(parallelism);
 		taskManagerGateway.setSubmitConsumer(waitForTasks);
 
-		eg.setScheduleMode(ScheduleMode.EAGER);
 		eg.scheduleForExecution();
 
 		waitForTasks.getFuture().get(1000, TimeUnit.MILLISECONDS);
@@ -690,13 +692,18 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		sink.setSlotSharingGroup(sharingGroup);
 		sink.connectNewDataSetAsInput(source, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED_BOUNDED);
 
+		final JobGraph jobGraph = new JobGraph(source, sink);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
 		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
-			new JobID(), scheduler, new FixedDelayRestartStrategy(Integer.MAX_VALUE, 0), executor, source, sink);
+			jobGraph,
+			scheduler,
+			new FixedDelayRestartStrategy(Integer.MAX_VALUE, 0),
+			executor);
 
 		WaitForTasks waitForTasks = new WaitForTasks(parallelism * 2);
 		taskManagerGateway.setSubmitConsumer(waitForTasks);
 
-		eg.setScheduleMode(ScheduleMode.EAGER);
 		eg.scheduleForExecution();
 
 		waitForTasks.getFuture().get(1000, TimeUnit.MILLISECONDS);
@@ -747,10 +754,15 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		sink.setSlotSharingGroup(sharingGroup);
 		sink.connectNewDataSetAsInput(source, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED_BOUNDED);
 
-		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
-				new JobID(), scheduler, new FixedDelayRestartStrategy(numRestarts, 0), executor, source, sink);
+		final JobGraph jobGraph = new JobGraph(source, sink);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
 
-		eg.setScheduleMode(ScheduleMode.EAGER);
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+			jobGraph,
+			scheduler,
+			new FixedDelayRestartStrategy(numRestarts, 0),
+			executor);
+
 		eg.scheduleForExecution();
 
 		// wait until no more changes happen
@@ -866,11 +878,10 @@ public class ExecutionGraphRestartTest extends TestLogger {
 
 		JobGraph jobGraph = new JobGraph("Pointwise job", sender);
 
-		ExecutionGraph eg = newExecutionGraph(restartStrategy, scheduler);
+		ExecutionGraph eg = newExecutionGraph(restartStrategy, scheduler, jobGraph.getVerticesSortedTopologicallyFromSources());
 		if (isSpy) {
 			eg = spy(eg);
 		}
-		eg.attachJobGraph(jobGraph.getVerticesSortedTopologicallyFromSources());
 
 		assertEquals(JobStatus.CREATED, eg.getState());
 
@@ -879,8 +890,11 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		return new Tuple2<>(eg, instance);
 	}
 
-	private static ExecutionGraph newExecutionGraph(RestartStrategy restartStrategy, Scheduler scheduler) throws IOException {
-		return new ExecutionGraph(
+	private static ExecutionGraph newExecutionGraph(
+		RestartStrategy restartStrategy,
+		Scheduler scheduler,
+		List<JobVertex> vertices) throws Exception {
+		return ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			new JobID(),
@@ -889,7 +903,8 @@ public class ExecutionGraphRestartTest extends TestLogger {
 			new SerializedValue<>(new ExecutionConfig()),
 			AkkaUtils.getDefaultTimeout(),
 			restartStrategy,
-			scheduler);
+			scheduler,
+			vertices);
 	}
 
 	private static void restartAfterFailure(ExecutionGraph eg, FiniteDuration timeout, boolean haltAfterRestart) throws InterruptedException, TimeoutException {

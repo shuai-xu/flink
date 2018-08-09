@@ -154,8 +154,8 @@ public class IntermediateResult {
 		return connectionIndex;
 	}
 
-	void resetForNewExecution() {
-		this.numberOfRunningProducers.set(numParallelProducers);
+	int incrementNumberOfRunningProducersAndGetRemaining() {
+		return numberOfRunningProducers.incrementAndGet();
 	}
 
 	int decrementNumberOfRunningProducersAndGetRemaining() {

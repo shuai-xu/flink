@@ -20,12 +20,12 @@ package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy.Factory;
 import org.apache.flink.runtime.executiongraph.restart.InfiniteDelayRestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleSlotProvider;
-import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
@@ -34,6 +34,7 @@ import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Random;
 
 import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilExecutionState;
@@ -159,8 +160,12 @@ public class GlobalModVersionTest extends TestLogger {
 
 		final SimpleSlotProvider slotProvider = new SimpleSlotProvider(jid, parallelism);
 
+		JobVertex jv = new JobVertex("test vertex");
+		jv.setInvokableClass(NoOpInvokable.class);
+		jv.setParallelism(parallelism);
+
 		// build a simple execution graph with on job vertex, parallelism 2
-		final ExecutionGraph graph = new ExecutionGraph(
+		final ExecutionGraph graph = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			new DummyJobInformation(
 				jid,
 				"test job"),
@@ -169,14 +174,9 @@ public class GlobalModVersionTest extends TestLogger {
 			Time.seconds(10),
 			new InfiniteDelayRestartStrategy(),
 			new CustomStrategy(failoverStrategy),
-			slotProvider);
-
-		JobVertex jv = new JobVertex("test vertex");
-		jv.setInvokableClass(NoOpInvokable.class);
-		jv.setParallelism(parallelism);
-
-		JobGraph jg = new JobGraph(jid, "testjob", jv);
-		graph.attachJobGraph(jg.getVerticesSortedTopologicallyFromSources());
+			slotProvider,
+			VoidBlobWriter.getInstance(),
+			Collections.singletonList(jv));
 
 		return graph;
 	}
