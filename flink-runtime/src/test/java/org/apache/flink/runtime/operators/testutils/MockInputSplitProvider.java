@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.InputSplit;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 
 /**
@@ -84,7 +85,7 @@ public class MockInputSplitProvider implements InputSplitProvider {
 
 
 	@Override
-	public InputSplit getNextInputSplit(ClassLoader userCodeClassLoader) {
+	public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) {
 
 		if (this.nextSplit < this.inputSplits.length) {
 			return this.inputSplits[this.nextSplit++];

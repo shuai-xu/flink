@@ -42,6 +42,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Tests for {@link InputFormatSourceFunction}.
  */
@@ -288,7 +290,9 @@ public class InputFormatSourceFunctionTest {
 
 			return new InputSplitProvider() {
 				@Override
-				public InputSplit getNextInputSplit(ClassLoader userCodeClassLoader) {
+				public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) {
+					assertEquals(MockRuntimeContext.this.getOperatorID(), operatorID);
+
 					if (nextSplit < inputSplits.length) {
 						return inputSplits[nextSplit++];
 					}
@@ -302,6 +306,8 @@ public class InputFormatSourceFunctionTest {
 		private static class MockStreamOperator extends AbstractStreamOperator<Integer> {
 			private static final long serialVersionUID = -1153976702711944427L;
 
+			private final OperatorID operatorID = new OperatorID();
+
 			@Override
 			public ExecutionConfig getExecutionConfig() {
 				return new ExecutionConfig();
@@ -309,7 +315,7 @@ public class InputFormatSourceFunctionTest {
 
 			@Override
 			public OperatorID getOperatorID() {
-				return new OperatorID();
+				return operatorID;
 			}
 		}
 	}

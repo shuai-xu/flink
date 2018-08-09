@@ -28,6 +28,7 @@ import org.apache.flink.api.java.io.DiscardingOutputFormat;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.GenericInputSplit;
 import org.apache.flink.core.io.InputSplit;
+import org.apache.flink.core.io.InputSplitSource;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.util.ExceptionUtils;
@@ -44,6 +45,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -144,8 +146,13 @@ public class JobTaskVertexTest {
 			final ClassLoader cl = getClass().getClassLoader();
 
 			vertex.initializeOnMaster(cl);
-			InputSplit[] splits = vertex.getInputSplitSource().createInputSplits(77);
 
+			OperatorID sourceOperatorID = OperatorID.fromJobVertexID(vertex.getID());
+			Map<OperatorID, InputSplitSource<?>> inputSplitSourceMap = vertex.getInputSplitSources();
+			assertEquals(1, inputSplitSourceMap.size());
+			assertTrue(inputSplitSourceMap.containsKey(sourceOperatorID));
+
+			InputSplit[] splits = inputSplitSourceMap.get(sourceOperatorID).createInputSplits(77);
 			assertNotNull(splits);
 			assertEquals(1, splits.length);
 			assertEquals(TestSplit.class, splits[0].getClass());
@@ -159,18 +166,18 @@ public class JobTaskVertexTest {
 	@Test
 	public void testMultiInputOutputFormatVertex() {
 		try {
-			OperatorID inputOperatorId1 = new OperatorID();
-			OperatorID inputOperatorId2 = new OperatorID();
-			OperatorID outputOperatorId1 = new OperatorID();
-			OperatorID outputOperatorId2 = new OperatorID();
+			OperatorID inputOperatorID1 = new OperatorID();
+			OperatorID inputOperatorID2 = new OperatorID();
+			OperatorID outputOperatorID1 = new OperatorID();
+			OperatorID outputOperatorID2 = new OperatorID();
 
 			final Map<OperatorID, InputFormat> inputFormatMap = new HashMap<>();
-			inputFormatMap.put(inputOperatorId1, new TestInputFormat());
-			inputFormatMap.put(inputOperatorId2, new TestInputFormat());
+			inputFormatMap.put(inputOperatorID1, new TestInputFormat("test input format 1"));
+			inputFormatMap.put(inputOperatorID2, new TestInputFormat("test input format 2"));
 
 			final Map<OperatorID, OutputFormat> outputFormatMap = new HashMap<>();
-			outputFormatMap.put(outputOperatorId1, new TestOutputFormatWithCalledCount());
-			outputFormatMap.put(outputOperatorId2, new TestOutputFormatWithCalledCount());
+			outputFormatMap.put(outputOperatorID1, new TestOutputFormatWithCalledCount());
+			outputFormatMap.put(outputOperatorID2, new TestOutputFormatWithCalledCount());
 
 			final MultiInputOutputFormatVertex vertex = new MultiInputOutputFormatVertex("Name");
 			FormatUtil.MultiFormatStub.setStubFormats(new TaskConfig(vertex.getConfiguration()), inputFormatMap, outputFormatMap);
@@ -182,10 +189,24 @@ public class JobTaskVertexTest {
 			// test initializeOnMaster()
 			vertex.initializeOnMaster(cl);
 
-			InputSplit[] splits = vertex.getInputSplitSource().createInputSplits(77);
-			assertNotNull(splits);
-			assertEquals(1, splits.length);
-			assertEquals(TestSplit.class, splits[0].getClass());
+			Map<OperatorID, InputSplitSource<?>> inputSplitSourceMap = vertex.getInputSplitSources();
+			assertEquals(2, inputSplitSourceMap.size());
+			assertTrue(inputSplitSourceMap.containsKey(inputOperatorID1));
+			assertTrue(inputSplitSourceMap.containsKey(inputOperatorID2));
+
+			TestInputFormat inputFormat1 = (TestInputFormat) inputSplitSourceMap.get(inputOperatorID1);
+			assertEquals("test input format 1", inputFormat1.getName());
+			InputSplit[] splits1 = inputFormat1.createInputSplits(77);
+			assertNotNull(splits1);
+			assertEquals(1, splits1.length);
+			assertEquals(TestSplit.class, splits1[0].getClass());
+
+			TestInputFormat inputFormat2 = (TestInputFormat) inputSplitSourceMap.get(inputOperatorID2);
+			assertEquals("test input format 2", inputFormat2.getName());
+			InputSplit[] splits2 = inputFormat2.createInputSplits(77);
+			assertNotNull(splits2);
+			assertEquals(1, splits2.length);
+			assertEquals(TestSplit.class, splits2[0].getClass());
 
 			assertEquals(2, TestOutputFormatWithCalledCount.getTotalInitializeCalledCount());
 			assertEquals(0, TestOutputFormatWithCalledCount.getTotalFinalizeCalledCount());
@@ -195,7 +216,23 @@ public class JobTaskVertexTest {
 
 			assertEquals(2, TestOutputFormatWithCalledCount.getTotalInitializeCalledCount());
 			assertEquals(2, TestOutputFormatWithCalledCount.getTotalFinalizeCalledCount());
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+	}
 
+	@Test
+	public void testNonFormatVertex() {
+		try {
+			final JobVertex vertex = new JobVertex("Name");
+			ClassLoader cl = getClass().getClassLoader();
+
+			vertex.initializeOnMaster(cl);
+			assertNull(vertex.getInputSplitSources());
+
+			vertex.finalizeOnMaster(cl);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -215,6 +252,20 @@ public class JobTaskVertexTest {
 	}
 
 	private static final class TestInputFormat extends GenericInputFormat<Object> {
+
+		private final String name;
+
+		TestInputFormat() {
+			this(null);
+		}
+
+		TestInputFormat(String name) {
+			this.name = name;
+		}
+
+		public String getName() {
+			return name;
+		}
 
 		@Override
 		public boolean reachedEnd()  {

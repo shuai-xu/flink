@@ -36,6 +36,7 @@ import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.runtime.execution.Environment;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.graph.StreamConfig;
@@ -100,6 +101,10 @@ public class StreamingRuntimeContext extends AbstractRuntimeUDFContext {
 	 */
 	public String getOperatorUniqueID() {
 		return operatorUniqueID;
+	}
+
+	public OperatorID getOperatorID() {
+		return operator.getOperatorID();
 	}
 
 	// ------------------------------------------------------------------------

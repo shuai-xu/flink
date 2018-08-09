@@ -66,6 +66,7 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
@@ -562,6 +563,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	@Override
 	public CompletableFuture<SerializedInputSplit> requestNextInputSplit(
 			final JobVertexID vertexID,
+			final OperatorID operatorID,
 			final ExecutionAttemptID executionAttempt) {
 
 		final Execution execution = executionGraph.getRegisteredExecutions().get(executionAttempt);
@@ -582,12 +584,12 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		}
 
 		ExecutionVertex executionVertex = execution.getVertex();
-		InputSplit nextInputSplit = executionVertex.getNextInputSplitFromAssgined();
+		InputSplit nextInputSplit = executionVertex.getNextInputSplitFromAssgined(operatorID);
 		if (nextInputSplit == null) {
-			final InputSplitAssigner splitAssigner = vertex.getSplitAssigner();
+			final InputSplitAssigner splitAssigner = vertex.getSplitAssigner(operatorID);
 			if (splitAssigner == null) {
-				log.error("No InputSplitAssigner for vertex ID {}.", vertexID);
-				return FutureUtils.completedExceptionally(new Exception("No InputSplitAssigner for vertex ID " + vertexID));
+				log.error("No InputSplitAssigner for vertexID {}, operatorID {}.", vertexID, operatorID);
+				return FutureUtils.completedExceptionally(new Exception("No InputSplitAssigner for vertexID " + vertexID + ", operatorID " + operatorID));
 			}
 
 			final LogicalSlot slot = execution.getAssignedResource();
@@ -596,7 +598,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			nextInputSplit = splitAssigner.getNextInputSplit(host, taskId);
 
 			if (nextInputSplit != null) {
-				executionVertex.inputSplitAssigned(nextInputSplit);
+				executionVertex.inputSplitAssigned(operatorID, nextInputSplit);
 			}
 
 			if (log.isDebugEnabled()) {

@@ -30,7 +30,9 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -86,8 +88,8 @@ public class JobVertex implements java.io.Serializable {
 	/** Indicates of this job vertex is stoppable or not. */
 	private boolean isStoppable = false;
 
-	/** Optionally, a source of input splits */
-	private InputSplitSource<?> inputSplitSource;
+	/** Optionally, one or more sources of input splits */
+	private Map<OperatorID, InputSplitSource<?>> inputSplitSourceMap;
 
 	/** The name of the vertex. This will be shown in runtime logs and will be in the runtime environment */
 	private String name;
@@ -339,12 +341,16 @@ public class JobVertex implements java.io.Serializable {
 		this.preferredResources = checkNotNull(preferredResources);
 	}
 
-	public InputSplitSource<?> getInputSplitSource() {
-		return inputSplitSource;
+	public Map<OperatorID, InputSplitSource<?>> getInputSplitSources() {
+		return inputSplitSourceMap;
 	}
 
-	public void setInputSplitSource(InputSplitSource<?> inputSplitSource) {
-		this.inputSplitSource = inputSplitSource;
+	public void setInputSplitSource(OperatorID operatorID, InputSplitSource<?> inputSplitSource) {
+		if (this.inputSplitSourceMap == null) {
+			// lazy assignment
+			this.inputSplitSourceMap = new HashMap<>();
+		}
+		this.inputSplitSourceMap.put(operatorID, inputSplitSource);
 	}
 
 	public List<IntermediateDataSet> getProducedDataSets() {

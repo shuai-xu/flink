@@ -64,6 +64,7 @@ import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
@@ -89,8 +90,9 @@ import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
-import org.apache.flink.util.InstantiationUtil;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
+import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.TestLogger;
 
 import org.hamcrest.Matchers;
@@ -122,6 +124,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for {@link JobMaster}.
@@ -370,7 +374,7 @@ public class JobMasterTest extends TestLogger {
 	}
 
 	/**
-	 * Tests that an existing checkpoint will have precedence over an savepoint
+	 * Tests that an existing checkpoint will have precedence over an savepoint.
 	 */
 	@Test
 	public void testCheckpointPrecedesSavepointRecovery() throws Exception {
@@ -422,7 +426,7 @@ public class JobMasterTest extends TestLogger {
 
 	/**
 	 * Tests that the JobMaster retries the scheduling of a job
-	 * in case of a missing slot offering from a registered TaskExecutor
+	 * in case of a missing slot offering from a registered TaskExecutor.
 	 */
 	@Test
 	public void testSlotRequestTimeoutWhenNoSlotOffering() throws Exception {
@@ -681,8 +685,8 @@ public class JobMasterTest extends TestLogger {
 			final CompletableFuture<TaskDeploymentDescriptor> tddFuture = new CompletableFuture<>();
 			final TestingTaskExecutorGateway testingTaskExecutorGateway = new TestingTaskExecutorGatewayBuilder()
 				.setSubmitTaskConsumer((taskDeploymentDescriptor, jobMasterId) -> {
-                    tddFuture.complete(taskDeploymentDescriptor);
-                    return CompletableFuture.completedFuture(Acknowledge.get());
+					tddFuture.complete(taskDeploymentDescriptor);
+					return CompletableFuture.completedFuture(Acknowledge.get());
                 })
 				.createTestingTaskExecutorGateway();
 			rpcService.registerGateway(testingTaskExecutorGateway.getAddress(), testingTaskExecutorGateway);
@@ -727,11 +731,12 @@ public class JobMasterTest extends TestLogger {
 	@Test
 	public void testRequestNextInputSplit() throws Exception {
 		// build one node JobGraph
+		OperatorID sourceOperatorID = new OperatorID();
 		InputSplitSource<TestingInputSplit> inputSplitSource = new TestingInputSplitSource();
 
 		JobVertex source = new JobVertex("vertex1");
 		source.setParallelism(1);
-		source.setInputSplitSource(inputSplitSource);
+		source.setInputSplitSource(sourceOperatorID, inputSplitSource);
 		source.setInvokableClass(AbstractInvokable.class);
 
 		final JobGraph jobGraph = new JobGraph(source);
@@ -762,55 +767,82 @@ public class JobMasterTest extends TestLogger {
 			ExecutionGraph eg = jobMaster.getExecutionGraph();
 			ExecutionVertex ev = eg.getAllExecutionVertices().iterator().next();
 
-			SerializedInputSplit serializedInputSplit1 = jobMasterGateway
-				.requestNextInputSplit(
-					source.getID(),
-					ev.getCurrentExecutionAttempt().getAttemptId())
-				.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit1 = InstantiationUtil
-				.deserializeObject(
-					serializedInputSplit1.getInputSplitData(),
-					ClassLoader.getSystemClassLoader());
-			assertEquals(0, inputSplit1.getSplitNumber());
+			verifyGetNextInputSplit(0, jobMasterGateway, source, ev, sourceOperatorID);
+			verifyGetNextInputSplit(1, jobMasterGateway, source, ev, sourceOperatorID);
 
-			SerializedInputSplit serializedInputSplit2 = jobMasterGateway
-				.requestNextInputSplit(
+			try {
+				jobMasterGateway.requestNextInputSplit(
 					source.getID(),
-					ev.getCurrentExecutionAttempt().getAttemptId())
-				.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit2 = InstantiationUtil
-				.deserializeObject(
-					serializedInputSplit2.getInputSplitData(),
-					ClassLoader.getSystemClassLoader());
-			assertEquals(1, inputSplit2.getSplitNumber());
+					new OperatorID(),
+					eg.getAllExecutionVertices().iterator().next().getCurrentExecutionAttempt().getAttemptId())
+					.get(testingTimeout.getSize(), testingTimeout.getUnit());
+				fail("Should throw no InputSplitAssigner exception");
+			} catch (Throwable t) {
+				assertTrue(ExceptionUtils.findThrowableWithMessage(t, "No InputSplitAssigner").isPresent());
+			}
 
-			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev, ExecutionState.SCHEDULED, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev, ExecutionState.SCHEDULED, testingTimeout.toMilliseconds());
 
 			eg.failGlobal(new Exception("Testing exception"));
 
-			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev, ExecutionState.SCHEDULED, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev, ExecutionState.SCHEDULED, testingTimeout.toMilliseconds());
 
-			SerializedInputSplit serializedInputSplit3 = jobMasterGateway
-				.requestNextInputSplit(
-					source.getID(),
-					ev.getCurrentExecutionAttempt().getAttemptId())
-				.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit3 = InstantiationUtil
-				.deserializeObject(
-					serializedInputSplit3.getInputSplitData(),
-					ClassLoader.getSystemClassLoader());
-			assertEquals(0, inputSplit3.getSplitNumber());
+			verifyGetNextInputSplit(0, jobMasterGateway, source, ev, sourceOperatorID);
+			verifyGetNextInputSplit(1, jobMasterGateway, source, ev, sourceOperatorID);
 
-			SerializedInputSplit serializedInputSplit4 = jobMasterGateway
-				.requestNextInputSplit(
+			// check if a concurrent error occurred
+			testingFatalErrorHandler.rethrowError();
+
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
+	public void testRequestEmptyNextInputSplit() throws Exception {
+
+		JobVertex source = new JobVertex("vertex1");
+		source.setParallelism(1);
+		source.setInvokableClass(AbstractInvokable.class);
+
+		final ExecutionConfig executionConfig = new ExecutionConfig();
+		executionConfig.setRestartStrategy(RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 0L));
+
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+		jobGraph.setExecutionConfig(executionConfig);
+
+		final JobMaster jobMaster = createJobMaster(
+			configuration,
+			jobGraph,
+			haServices,
+			new TestingJobManagerSharedServicesBuilder().build(),
+			heartbeatServices);
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			ExecutionGraph eg = jobMaster.getExecutionGraph();
+
+			try {
+				jobMasterGateway.requestNextInputSplit(
 					source.getID(),
-					ev.getCurrentExecutionAttempt().getAttemptId())
-				.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit4 = InstantiationUtil
-				.deserializeObject(
-					serializedInputSplit4.getInputSplitData(),
-					ClassLoader.getSystemClassLoader());
-			assertEquals(1, inputSplit4.getSplitNumber());
+					OperatorID.fromJobVertexID(source.getID()),
+					eg.getAllExecutionVertices().iterator().next().getCurrentExecutionAttempt().getAttemptId())
+					.get(testingTimeout.getSize(), testingTimeout.getUnit());
+				fail("Should throw no InputSplitAssigner exception");
+			} catch (Throwable t) {
+				assertTrue(ExceptionUtils.findThrowableWithMessage(t, "No InputSplitAssigner").isPresent());
+			}
+
+			// check if a concurrent error occurred
+			testingFatalErrorHandler.rethrowError();
+
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -819,11 +851,12 @@ public class JobMasterTest extends TestLogger {
 	@Test
 	public void testRequestNextInputSplitForRegionFailover() throws Exception {
 
+		OperatorID sourceOperatorID = new OperatorID();
 		InputSplitSource<TestingInputSplit> inputSplitSource = new TestingInputSplitSource();
 
 		JobVertex source = new JobVertex("vertex1");
 		source.setParallelism(2);
-		source.setInputSplitSource(inputSplitSource);
+		source.setInputSplitSource(sourceOperatorID, inputSplitSource);
 		source.setInvokableClass(AbstractInvokable.class);
 
 		final ExecutionConfig executionConfig = new ExecutionConfig();
@@ -855,44 +888,21 @@ public class JobMasterTest extends TestLogger {
 			ExecutionVertex ev1 = evIterator.next();
 			ExecutionVertex ev2 = evIterator.next();
 
-			SerializedInputSplit serializedInputSplit1 = jobMasterGateway.requestNextInputSplit(
-					source.getID(),
-					ev1.getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit1 = InstantiationUtil.deserializeObject(
-					serializedInputSplit1.getInputSplitData(), ClassLoader.getSystemClassLoader());
-			assertEquals(0, inputSplit1.getSplitNumber());
-
-			SerializedInputSplit serializedInputSplit2 = jobMasterGateway.requestNextInputSplit(
-					source.getID(),
-					ev2.getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit2 = InstantiationUtil.deserializeObject(
-					serializedInputSplit2.getInputSplitData(), ClassLoader.getSystemClassLoader());
-			assertEquals(1, inputSplit2.getSplitNumber());
+			verifyGetNextInputSplit(0, jobMasterGateway, source, ev1, sourceOperatorID);
+			verifyGetNextInputSplit(1, jobMasterGateway, source, ev2, sourceOperatorID);
+			verifyGetNextInputSplit(2, jobMasterGateway, source, ev2, sourceOperatorID);
 
 			jobMasterGateway.updateTaskExecutionState(new TaskExecutionState(
 					jobGraph.getJobID(),
 					ev2.getCurrentExecutionAttempt().getAttemptId(),
 					ExecutionState.FAILED,
 					new Exception("Testing exception"))).get();
-			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev2, ExecutionState.SCHEDULED, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev2, ExecutionState.SCHEDULED, testingTimeout.toMilliseconds());
 
-			SerializedInputSplit serializedInputSplit3 = jobMasterGateway.requestNextInputSplit(
-					source.getID(),
-					ev2.getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit3 = InstantiationUtil.deserializeObject(
-					serializedInputSplit3.getInputSplitData(), ClassLoader.getSystemClassLoader());
-			assertEquals(1, inputSplit3.getSplitNumber());
-
-			SerializedInputSplit serializedInputSplit4 = jobMasterGateway.requestNextInputSplit(
-					source.getID(),
-					ev1.getCurrentExecutionAttempt().getAttemptId())
-					.get(1L, TimeUnit.SECONDS);
-			InputSplit inputSplit4 = InstantiationUtil.deserializeObject(
-					serializedInputSplit4.getInputSplitData(), ClassLoader.getSystemClassLoader());
-			assertEquals(2, inputSplit4.getSplitNumber());
+			verifyGetNextInputSplit(3, jobMasterGateway, source, ev1, sourceOperatorID);
+			verifyGetNextInputSplit(1, jobMasterGateway, source, ev2, sourceOperatorID);
+			verifyGetNextInputSplit(2, jobMasterGateway, source, ev2, sourceOperatorID);
+			verifyGetNextInputSplit(4, jobMasterGateway, source, ev2, sourceOperatorID);
 
 			// check if a concurrent error occurred
 			testingFatalErrorHandler.rethrowError();
@@ -900,6 +910,24 @@ public class JobMasterTest extends TestLogger {
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
+	}
+
+	private void verifyGetNextInputSplit(int expectedSplitNumber,
+			final JobMasterGateway jobMasterGateway,
+			final JobVertex jobVertex,
+			final ExecutionVertex executionVertex,
+			final OperatorID operatorID) throws Exception {
+
+		SerializedInputSplit serializedInputSplit = jobMasterGateway.requestNextInputSplit(
+			jobVertex.getID(),
+			operatorID,
+			executionVertex.getCurrentExecutionAttempt().getAttemptId())
+			.get(testingTimeout.getSize(), testingTimeout.getUnit());
+
+		InputSplit inputSplit = InstantiationUtil.deserializeObject(
+			serializedInputSplit.getInputSplitData(), Thread.currentThread().getContextClassLoader());
+
+		assertEquals(expectedSplitNumber, inputSplit.getSplitNumber());
 	}
 
 	private JobGraph producerConsumerJobGraph() {

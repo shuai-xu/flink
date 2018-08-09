@@ -21,6 +21,8 @@ package org.apache.flink.runtime.jobgraph;
 import org.apache.flink.runtime.jobgraph.FormatUtil.OutputFormatStub;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 
+import javax.annotation.Nullable;
+
 import java.util.Collections;
 
 /**
@@ -33,13 +35,20 @@ public class OutputFormatVertex extends JobVertex {
 
 	private String formatDescription;
 
+	private OperatorID sinkOperatorId;
+
 	/**
 	 * Creates a new task vertex with the specified name.
 	 *
 	 * @param name The name of the task vertex.
 	 */
 	public OutputFormatVertex(String name) {
+		this(name, null);
+	}
+
+	public OutputFormatVertex(String name, @Nullable OperatorID sinkOperatorId) {
 		super(name);
+		this.sinkOperatorId = (sinkOperatorId != null) ? sinkOperatorId : OperatorID.fromJobVertexID(this.getID());
 	}
 
 	public void setFormatDescription(String formatDescription) {
@@ -54,17 +63,17 @@ public class OutputFormatVertex extends JobVertex {
 	public void initializeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		OutputFormatStub stub = new OutputFormatStub(cfg, loader);
+		OutputFormatStub stub = new OutputFormatStub(cfg, loader, sinkOperatorId);
 
-		FormatUtil.initializeOutputFormatsOnMaster(this, stub, Collections.singletonMap(OutputFormatStub.STUB_KEY, formatDescription));
+		FormatUtil.initializeOutputFormatsOnMaster(this, stub, Collections.singletonMap(sinkOperatorId, formatDescription));
 	}
 
 	@Override
 	public void finalizeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		OutputFormatStub stub = new OutputFormatStub(cfg, loader);
+		OutputFormatStub stub = new OutputFormatStub(cfg, loader, sinkOperatorId);
 
-		FormatUtil.finalizeOutputFormatsOnMaster(this, stub, Collections.singletonMap(OutputFormatStub.STUB_KEY, formatDescription));
+		FormatUtil.finalizeOutputFormatsOnMaster(this, stub, Collections.singletonMap(sinkOperatorId, formatDescription));
 	}
 }

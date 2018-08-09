@@ -57,14 +57,14 @@ public class FormatUtilTest {
 			new TestFormatStub(null, getClass().getClassLoader());
 			fail();
 		} catch (Exception e) {
-			assertTrue(e instanceof IllegalStateException);
+			assertTrue(e instanceof NullPointerException);
 		}
 
 		try {
 			new TestFormatStub(new TaskConfig(new Configuration()), null);
 			fail();
 		} catch (Exception e) {
-			assertTrue(e instanceof IllegalStateException);
+			assertTrue(e instanceof NullPointerException);
 		}
 
 		try {
@@ -77,24 +77,27 @@ public class FormatUtilTest {
 
 	@Test
 	public void testInputFormatStub() throws Exception {
+		OperatorID sourceOperatorId = new OperatorID(5L, 2L);
+		OperatorID anotherOperatorId = new OperatorID(3L, 8L);
+
 		// sub case:
 		{
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 			taskConfig.setStubWrapper(new UserCodeObjectWrapper<>(new TestInputFormat("test input format stub")));
 			taskConfig.setStubParameter("abc", "123");
 
-			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader());
+			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader(), sourceOperatorId);
 			assertFalse(stub.getFormat(FormatType.OUTPUT).hasNext());
 
-			Iterator<Pair<Integer, InputFormat>> it = stub.getFormat(FormatType.INPUT);
+			Iterator<Pair<OperatorID, InputFormat>> it = stub.getFormat(FormatType.INPUT);
 			assertTrue(it.hasNext());
 			assertEquals("test input format stub", ((TestInputFormat) it.next().getValue()).getName());
 			assertFalse(it.hasNext());
 			assertTrue(stub.getFormat(FormatType.INPUT).hasNext());
 
-			assertEquals(0, stub.getParameters(123456).keySet().size());
+			assertEquals(0, stub.getParameters(anotherOperatorId).keySet().size());
 
-			Configuration parameters = stub.getParameters(InputFormatStub.STUB_KEY);
+			Configuration parameters = stub.getParameters(sourceOperatorId);
 			assertEquals(1, parameters.keySet().size());
 			assertEquals("123", parameters.getString("abc", null));
 		}
@@ -107,18 +110,18 @@ public class FormatUtilTest {
 			param.setString("abc", "123");
 			InputFormatStub.setStubParameters(taskConfig, param);
 
-			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader());
+			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader(), sourceOperatorId);
 			assertFalse(stub.getFormat(FormatType.OUTPUT).hasNext());
 
-			Iterator<Pair<Integer, InputFormat>> it = stub.getFormat(FormatType.INPUT);
+			Iterator<Pair<OperatorID, InputFormat>> it = stub.getFormat(FormatType.INPUT);
 			assertTrue(it.hasNext());
 			assertEquals("test input format stub", ((TestInputFormat) it.next().getValue()).getName());
 			assertFalse(it.hasNext());
 			assertTrue(stub.getFormat(FormatType.INPUT).hasNext());
 
-			assertEquals(0, stub.getParameters(123456).keySet().size());
+			assertEquals(0, stub.getParameters(anotherOperatorId).keySet().size());
 
-			Configuration parameters = stub.getParameters(InputFormatStub.STUB_KEY);
+			Configuration parameters = stub.getParameters(sourceOperatorId);
 			assertEquals(1, parameters.keySet().size());
 			assertEquals("123", parameters.getString("abc", null));
 		}
@@ -128,33 +131,36 @@ public class FormatUtilTest {
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 			InputFormatStub.setStubFormat(taskConfig, new TestInputFormat("test input format stub"));
 
-			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader());
+			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader(), sourceOperatorId);
 
-			Configuration parameters = stub.getParameters(InputFormatStub.STUB_KEY);
+			Configuration parameters = stub.getParameters(sourceOperatorId);
 			assertEquals(0, parameters.keySet().size());
 		}
 	}
 
 	@Test
 	public void testOutputFormatStub() throws Exception {
+		OperatorID sinkOperatorId = new OperatorID(7L, 0L);
+		OperatorID anotherOperatorId = new OperatorID(9L, 1L);
+
 		// sub case:
 		{
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 			taskConfig.setStubParameter("abc", "456");
 			taskConfig.setStubWrapper(new UserCodeObjectWrapper<>(new TestOutputFormat("test output format stub")));
 
-			OutputFormatStub stub = new OutputFormatStub(taskConfig, getClass().getClassLoader());
+			OutputFormatStub stub = new OutputFormatStub(taskConfig, getClass().getClassLoader(), sinkOperatorId);
 			assertFalse(stub.getFormat(FormatType.INPUT).hasNext());
 
-			Iterator<Pair<Integer, OutputFormat>> it = stub.getFormat(FormatType.OUTPUT);
+			Iterator<Pair<OperatorID, OutputFormat>> it = stub.getFormat(FormatType.OUTPUT);
 			assertTrue(it.hasNext());
 			assertEquals("test output format stub", ((TestOutputFormat) it.next().getValue()).getName());
 			assertFalse(it.hasNext());
 			assertTrue(stub.getFormat(FormatType.OUTPUT).hasNext());
 
-			assertEquals(0, stub.getParameters(123456).keySet().size());
+			assertEquals(0, stub.getParameters(anotherOperatorId).keySet().size());
 
-			Configuration parameters = stub.getParameters(InputFormatStub.STUB_KEY);
+			Configuration parameters = stub.getParameters(sinkOperatorId);
 			assertEquals(1, parameters.keySet().size());
 			assertEquals("456", parameters.getString("abc", null));
 		}
@@ -167,18 +173,18 @@ public class FormatUtilTest {
 			param.setString("abc", "456");
 			OutputFormatStub.setStubParameters(taskConfig, param);
 
-			OutputFormatStub stub = new OutputFormatStub(taskConfig, getClass().getClassLoader());
+			OutputFormatStub stub = new OutputFormatStub(taskConfig, getClass().getClassLoader(), sinkOperatorId);
 			assertFalse(stub.getFormat(FormatType.INPUT).hasNext());
 
-			Iterator<Pair<Integer, OutputFormat>> it = stub.getFormat(FormatType.OUTPUT);
+			Iterator<Pair<OperatorID, OutputFormat>> it = stub.getFormat(FormatType.OUTPUT);
 			assertTrue(it.hasNext());
 			assertEquals("test output format stub", ((TestOutputFormat) it.next().getValue()).getName());
 			assertFalse(it.hasNext());
 			assertTrue(stub.getFormat(FormatType.OUTPUT).hasNext());
 
-			assertEquals(0, stub.getParameters(123456).keySet().size());
+			assertEquals(0, stub.getParameters(anotherOperatorId).keySet().size());
 
-			Configuration parameters = stub.getParameters(InputFormatStub.STUB_KEY);
+			Configuration parameters = stub.getParameters(sinkOperatorId);
 			assertEquals(1, parameters.keySet().size());
 			assertEquals("456", parameters.getString("abc", null));
 		}
@@ -188,9 +194,9 @@ public class FormatUtilTest {
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 			OutputFormatStub.setStubFormat(taskConfig, new TestOutputFormat("test output format stub"));
 
-			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader());
+			InputFormatStub stub = new InputFormatStub(taskConfig, getClass().getClassLoader(), sinkOperatorId);
 
-			Configuration parameters = stub.getParameters(InputFormatStub.STUB_KEY);
+			Configuration parameters = stub.getParameters(sinkOperatorId);
 			assertEquals(0, parameters.keySet().size());
 		}
 	}
@@ -201,10 +207,10 @@ public class FormatUtilTest {
 		{
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 
-			OperatorID inputOperatorId1 = new OperatorID();
-			OperatorID inputOperatorId2 = new OperatorID();
-			OperatorID outputOperatorId1 = new OperatorID();
-			OperatorID outputOperatorId2 = new OperatorID();
+			OperatorID inputOperatorId1 = new OperatorID(123L, 0L);
+			OperatorID inputOperatorId2 = new OperatorID(456L, 987L);
+			OperatorID outputOperatorId1 = new OperatorID(222L, 3L);
+			OperatorID outputOperatorId2 = new OperatorID(777L, 678L);
 
 			{
 				Map<OperatorID, InputFormat> inputFormatMap = new HashMap<>();
@@ -226,7 +232,7 @@ public class FormatUtilTest {
 				MultiFormatStub.setStubParameters(taskConfig, outputOperatorId2, outputFormatParams);
 			}
 
-			MultiFormatStub<?> stub = new MultiFormatStub(taskConfig, getClass().getClassLoader());
+			MultiFormatStub stub = new MultiFormatStub(taskConfig, getClass().getClassLoader());
 			{
 				Map<OperatorID, TestInputFormat> inputFormatResultMap = new HashMap<>();
 				Iterator<? extends Pair<OperatorID, ?>> it = stub.getFormat(FormatType.INPUT);
@@ -267,8 +273,8 @@ public class FormatUtilTest {
 		{
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 
-			OperatorID inputOperatorId1 = new OperatorID();
-			OperatorID inputOperatorId2 = new OperatorID();
+			OperatorID inputOperatorId1 = new OperatorID(543L, 21L);
+			OperatorID inputOperatorId2 = new OperatorID(345L, 98L);
 
 			{
 				Map<OperatorID, InputFormat> inputFormatMap = new HashMap<>();
@@ -279,7 +285,7 @@ public class FormatUtilTest {
 
 			}
 
-			MultiFormatStub<?> stub = new MultiFormatStub(taskConfig, getClass().getClassLoader());
+			MultiFormatStub stub = new MultiFormatStub(taskConfig, getClass().getClassLoader());
 			{
 				Map<OperatorID, TestInputFormat> inputFormatResultMap = new HashMap<>();
 				Iterator<? extends Pair<OperatorID, ?>> it = stub.getFormat(FormatType.INPUT);
@@ -302,8 +308,8 @@ public class FormatUtilTest {
 		{
 			TaskConfig taskConfig = new TaskConfig(new Configuration());
 
-			OperatorID outputOperatorId1 = new OperatorID();
-			OperatorID outputOperatorId2 = new OperatorID();
+			OperatorID outputOperatorId1 = new OperatorID(65L, 23L);
+			OperatorID outputOperatorId2 = new OperatorID(78L, 35L);
 
 			{
 				Map<OperatorID, OutputFormat> outputFormatMap = new HashMap<>();
@@ -313,7 +319,7 @@ public class FormatUtilTest {
 				MultiFormatStub.setStubFormats(taskConfig, null, outputFormatMap);
 			}
 
-			MultiFormatStub<?> stub = new MultiFormatStub(taskConfig, getClass().getClassLoader());
+			MultiFormatStub stub = new MultiFormatStub(taskConfig, getClass().getClassLoader());
 			{
 				Map<OperatorID, TestOutputFormat> outputFormatResultMap = new HashMap<>();
 				Iterator<? extends Pair<OperatorID, ?>> it = stub.getFormat(FormatType.OUTPUT);
@@ -335,14 +341,14 @@ public class FormatUtilTest {
 
 	// --------------------------------------------------------------------------------------------
 
-	private static class TestFormatStub extends AbstractFormatStub<String, InputFormat, InputFormat> {
+	private static class TestFormatStub<W> extends AbstractFormatStub<String, W> {
 
 		TestFormatStub(TaskConfig config, ClassLoader classLoader) throws Exception {
 			super(config, classLoader);
 		}
 
 		@Override
-		public Iterator<Pair<String, InputFormat>> getFormat(FormatType type) {
+		public <F> Iterator<Pair<String, F>> getFormat(FormatType<F> type) {
 			return null;
 		}
 

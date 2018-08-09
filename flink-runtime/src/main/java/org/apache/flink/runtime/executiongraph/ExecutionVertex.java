@@ -42,6 +42,7 @@ import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
@@ -63,6 +64,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -105,9 +107,9 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	/** The current or latest execution attempt of this vertex's task */
 	private volatile Execution currentExecution;	// this field must never be null
 
-	private final List<InputSplit> assignedInputSplits = new LinkedList<>();
+	private final Map<OperatorID, List<InputSplit>> assignedInputSplitsMap = new HashMap<>();
 
-	private int inputSplitIndex = 0;
+	private final Map<OperatorID, Integer> inputSplitIndexMap = new HashMap<>();
 
 	// --------------------------------------------------------------------------------------------
 
@@ -612,7 +614,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 				}
 
 				//TODO: set this index according to checkpoint when batch support checkpoint.
-				inputSplitIndex = 0;
+				inputSplitIndexMap.clear();;
 
 				return newExecution;
 			}
@@ -708,8 +710,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	}
 
 	void clearAssignedInputSplits() {
-		assignedInputSplits.clear();
-		inputSplitIndex = 0;
+		assignedInputSplitsMap.clear();
+		inputSplitIndexMap.clear();
 	}
 
 	/**
@@ -738,17 +740,26 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	// the following two method is added for region failover
 	// record the input split assigned to this task
-	public void inputSplitAssigned(InputSplit inputSplit) {
-		this.assignedInputSplits.add(inputSplit);
-		inputSplitIndex++;
-		Preconditions.checkArgument(inputSplitIndex == assignedInputSplits.size());
+	public void inputSplitAssigned(OperatorID operatorID, InputSplit inputSplit) {
+		assignedInputSplitsMap.putIfAbsent(operatorID, new LinkedList<>());
+
+		assignedInputSplitsMap.get(operatorID).add(inputSplit);
+		inputSplitIndexMap.put(operatorID, inputSplitIndexMap.getOrDefault(operatorID, 0) + 1);
+		Preconditions.checkArgument(inputSplitIndexMap.get(operatorID) == assignedInputSplitsMap.get(operatorID).size());
 	}
 
-	public InputSplit getNextInputSplitFromAssgined() {
+	public InputSplit getNextInputSplitFromAssgined(OperatorID operatorID) {
+		List<InputSplit> assignedInputSplits = assignedInputSplitsMap.getOrDefault(operatorID, Collections.emptyList());
+		Integer inputSplitIndex = inputSplitIndexMap.getOrDefault(operatorID, 0);
+
 		if (assignedInputSplits.isEmpty() || inputSplitIndex >= assignedInputSplits.size()) {
 			return null;
 		}
-		return assignedInputSplits.get(inputSplitIndex++);
+
+		InputSplit split = assignedInputSplits.get(inputSplitIndex++);
+		inputSplitIndexMap.put(operatorID, inputSplitIndex);
+
+		return split;
 	}
 
 	// --------------------------------------------------------------------------------------------

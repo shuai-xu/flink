@@ -33,6 +33,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmaster.message.ClassloadingProps;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
@@ -117,16 +118,18 @@ public interface JobMasterGateway extends
 			final TaskExecutionState taskExecutionState);
 
 	/**
-	 * Requests the next input split for the {@link ExecutionJobVertex}.
+	 * Requests the next input split for a source operator of the {@link ExecutionJobVertex}.
 	 * The next input split is sent back to the sender as a
 	 * {@link SerializedInputSplit} message.
 	 *
 	 * @param vertexID         The job vertex id
+	 * @param operatorID       The operator id
 	 * @param executionAttempt The execution attempt id
 	 * @return The future of the input split. If there is no further input split, will return an empty object.
 	 */
 	CompletableFuture<SerializedInputSplit> requestNextInputSplit(
 			final JobVertexID vertexID,
+			final OperatorID operatorID,
 			final ExecutionAttemptID executionAttempt);
 
 	/**

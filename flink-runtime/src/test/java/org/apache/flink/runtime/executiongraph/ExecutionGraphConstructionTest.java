@@ -30,6 +30,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobmanager.scheduler.Scheduler;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
@@ -438,9 +439,12 @@ public class ExecutionGraphConstructionTest {
 			v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 			v5.connectNewDataSetAsInput(v4, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 			v5.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
-			
-			v3.setInputSplitSource(source1);
-			v5.setInputSplitSource(source2);
+
+			OperatorID operatorID1 = new OperatorID();
+			OperatorID operatorID2 = new OperatorID();
+
+			v3.setInputSplitSource(operatorID1, source1);
+			v5.setInputSplitSource(operatorID2, source2);
 			
 			List<JobVertex> ordered = new ArrayList<JobVertex>(Arrays.asList(v1, v2, v3, v4, v5));
 
@@ -462,8 +466,8 @@ public class ExecutionGraphConstructionTest {
 				fail("Job failed with exception: " + e.getMessage());
 			}
 			
-			assertEquals(assigner1, eg.getAllVertices().get(v3.getID()).getSplitAssigner());
-			assertEquals(assigner2, eg.getAllVertices().get(v5.getID()).getSplitAssigner());
+			assertEquals(assigner1, eg.getAllVertices().get(v3.getID()).getSplitAssigner(operatorID1));
+			assertEquals(assigner2, eg.getAllVertices().get(v5.getID()).getSplitAssigner(operatorID2));
 		}
 		catch (Exception e) {
 			e.printStackTrace();

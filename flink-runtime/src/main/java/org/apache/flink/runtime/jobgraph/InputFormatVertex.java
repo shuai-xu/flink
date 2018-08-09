@@ -21,6 +21,8 @@ package org.apache.flink.runtime.jobgraph;
 import org.apache.flink.runtime.jobgraph.FormatUtil.InputFormatStub;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 
+import javax.annotation.Nullable;
+
 import java.util.Collections;
 
 /**
@@ -33,13 +35,20 @@ public class InputFormatVertex extends JobVertex {
 
 	private String formatDescription;
 
+	private OperatorID sourceOperatorId;
+
 	/**
 	 * Creates a new task vertex with the specified name.
 	 *
 	 * @param name The name of the task vertex.
 	 */
 	public InputFormatVertex(String name) {
+		this(name, null);
+	}
+
+	public InputFormatVertex(String name, @Nullable OperatorID sourceOperatorId) {
 		super(name);
+		this.sourceOperatorId = (sourceOperatorId != null) ? sourceOperatorId : OperatorID.fromJobVertexID(this.getID());
 	}
 
 	public void setFormatDescription(String formatDescription) {
@@ -54,8 +63,8 @@ public class InputFormatVertex extends JobVertex {
 	public void initializeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		InputFormatStub stub = new InputFormatStub(cfg, loader);
+		InputFormatStub stub = new InputFormatStub(cfg, loader, sourceOperatorId);
 
-		FormatUtil.initializeInputFormatsOnMaster(this, stub, Collections.singletonMap(InputFormatStub.STUB_KEY, formatDescription));
+		FormatUtil.initializeInputFormatsOnMaster(this, stub, Collections.singletonMap(sourceOperatorId, formatDescription));
 	}
 }

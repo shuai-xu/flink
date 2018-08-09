@@ -38,38 +38,38 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.apache.flink.util.Preconditions.checkState;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * Utilities for deserialize input/output formats and initializing/finalizing them on master.
  */
 public class FormatUtil {
 
-	public static <STUB_KEY> void initializeInputFormatsOnMaster(
+	public static void initializeInputFormatsOnMaster(
 		JobVertex jobVertex,
-		AbstractFormatStub<STUB_KEY, ?, ?> stub,
-		final Map<STUB_KEY, String> formatDescriptions) throws RuntimeException {
+		AbstractFormatStub<OperatorID, ?> stub,
+		final Map<OperatorID, String> formatDescriptions) throws RuntimeException {
 
 		// set user classloader before calling user code
 		final ClassLoader original = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(stub.getClassLoader());
 
 		try {
-			Iterator<? extends Pair<STUB_KEY, ?>> it = stub.getFormat(FormatType.INPUT);
+			Iterator<? extends Pair<OperatorID, ?>> it = stub.getFormat(FormatType.INPUT);
 			it.forEachRemaining(
 				(pair) -> {
-					STUB_KEY key = pair.getKey();
+					OperatorID operatorID = pair.getKey();
 					InputFormat inputFormat = (InputFormat) pair.getValue();
 					try {
-						inputFormat.configure(stub.getParameters(key));
+						inputFormat.configure(stub.getParameters(operatorID));
 					} catch (Throwable t) {
 						throw new RuntimeException("Configuring the OutputFormat ("
-							+ "description: " + formatDescriptions.get(key)
-							+ ", stubKey: " + key + ") failed: " + t.getMessage(), t);
+							+ "description: " + formatDescriptions.get(operatorID)
+							+ ", stubKey: " + operatorID + ") failed: " + t.getMessage(), t);
 					}
 
 					// TODO: support multi InputFormat on multi-head chaining mode
-					jobVertex.setInputSplitSource(inputFormat);
+					jobVertex.setInputSplitSource(operatorID, inputFormat);
 				}
 			);
 		} finally {
@@ -78,20 +78,20 @@ public class FormatUtil {
 		}
 	}
 
-	public static <STUB_KEY> void initializeOutputFormatsOnMaster(
+	public static void initializeOutputFormatsOnMaster(
 		JobVertex jobVertex,
-		AbstractFormatStub<STUB_KEY, ?, ?> stub,
-		final Map<STUB_KEY, String> formatDescriptions)	throws RuntimeException {
+		AbstractFormatStub<OperatorID, ?> stub,
+		final Map<OperatorID, String> formatDescriptions)	throws RuntimeException {
 
 		// set user classloader before calling user code
 		final ClassLoader original = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(stub.getClassLoader());
 
 		try {
-			Iterator<? extends Pair<STUB_KEY, ?>> it = stub.getFormat(FormatType.OUTPUT);
+			Iterator<? extends Pair<OperatorID, ?>> it = stub.getFormat(FormatType.OUTPUT);
 			it.forEachRemaining(
 				(pair) -> {
-					STUB_KEY key = pair.getKey();
+					OperatorID key = pair.getKey();
 					OutputFormat outputFormat = (OutputFormat) pair.getValue();
 					if (outputFormat instanceof InitializeOnMaster) {
 						try {
@@ -112,20 +112,20 @@ public class FormatUtil {
 		}
 	}
 
-	public static <STUB_KEY> void finalizeOutputFormatsOnMaster(
+	public static void finalizeOutputFormatsOnMaster(
 		JobVertex jobVertex,
-		AbstractFormatStub<STUB_KEY, ?, ?> stub,
-		final Map<STUB_KEY, String> formatDescriptions)	throws RuntimeException {
+		AbstractFormatStub<OperatorID, ?> stub,
+		final Map<OperatorID, String> formatDescriptions)	throws RuntimeException {
 
 		// set user classloader before calling user code
 		final ClassLoader original = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(stub.getClassLoader());
 
 		try {
-			Iterator<? extends Pair<STUB_KEY, ?>> it = stub.getFormat(FormatType.OUTPUT);
+			Iterator<? extends Pair<OperatorID, ?>> it = stub.getFormat(FormatType.OUTPUT);
 			it.forEachRemaining(
 				(pair) -> {
-					STUB_KEY key = pair.getKey();
+					OperatorID key = pair.getKey();
 					OutputFormat outputFormat = (OutputFormat) pair.getValue();
 					if (outputFormat instanceof FinalizeOnMaster) {
 						try {
@@ -149,35 +149,39 @@ public class FormatUtil {
 	/**
 	 * Types for {@link InputFormat} and {@link OutputFormat}.
 	 */
-	public enum FormatType {
-		INPUT,
-		OUTPUT
+	@SuppressWarnings("unused")
+	public static class FormatType<F> {
+		public static final FormatType<InputFormat> INPUT = new FormatType<>();
+
+		public static final FormatType<OutputFormat> OUTPUT = new FormatType<>();
 	}
 
 	/**
 	 * Wrapper of {@link InputFormat} stub.
 	 */
-	public static class InputFormatStub extends AbstractFormatStub<Integer, InputFormat, InputFormat> {
-		public static final Integer STUB_KEY = 0;
+	public static class InputFormatStub extends AbstractFormatStub<OperatorID, InputFormat> {
+		private final OperatorID stubKey;
 
-		public InputFormatStub(TaskConfig config, ClassLoader classLoader) throws Exception {
+		public InputFormatStub(TaskConfig config, ClassLoader classLoader, OperatorID operatorID) throws Exception {
 			super(config, classLoader);
+			this.stubKey = checkNotNull(operatorID);
 		}
 
 		@Override
-		public Iterator<Pair<Integer, InputFormat>> getFormat(FormatType type) {
+		@SuppressWarnings("unchecked")
+		public <F> Iterator<Pair<OperatorID, F>> getFormat(FormatType<F> type) {
 			if (type != FormatType.INPUT) {
 				return EmptyIterator.get();
 			}
 
-			SingleElementIterator<Pair<Integer, InputFormat>> iterator = new SingleElementIterator<>();
-			iterator.set(new DefaultPair<>(STUB_KEY, wrapper.getUserCodeObject(InputFormat.class, classLoader)));
+			SingleElementIterator<Pair<OperatorID, F>> iterator = new SingleElementIterator<>();
+			iterator.set(new DefaultPair<>(stubKey, (F) wrapper.getUserCodeObject(InputFormat.class, classLoader)));
 			return iterator;
 		}
 
 		@Override
-		public Configuration getParameters(Integer key) {
-			if (!STUB_KEY.equals(key)) {
+		public Configuration getParameters(OperatorID key) {
+			if (!stubKey.equals(key)) {
 				return new Configuration();
 			}
 
@@ -196,27 +200,29 @@ public class FormatUtil {
 	/**
 	 * Wrapper of {@link OutputFormat} stub.
 	 */
-	public static class OutputFormatStub extends AbstractFormatStub<Integer, OutputFormat, OutputFormat> {
-		public static final Integer STUB_KEY = 0;
+	public static class OutputFormatStub extends AbstractFormatStub<OperatorID, OutputFormat> {
+		private final OperatorID stubKey;
 
-		public OutputFormatStub(TaskConfig config, ClassLoader classLoader) throws Exception {
+		public OutputFormatStub(TaskConfig config, ClassLoader classLoader, OperatorID operatorID) throws Exception {
 			super(config, classLoader);
+			this.stubKey = checkNotNull(operatorID);
 		}
 
 		@Override
-		public Iterator<Pair<Integer, OutputFormat>> getFormat(FormatType type) {
+		@SuppressWarnings("unchecked")
+		public <F> Iterator<Pair<OperatorID, F>> getFormat(FormatType<F> type) {
 			if (type != FormatType.OUTPUT) {
 				return EmptyIterator.get();
 			}
 
-			SingleElementIterator<Pair<Integer, OutputFormat>> iterator = new SingleElementIterator<>();
-			iterator.set(new DefaultPair<>(STUB_KEY, wrapper.getUserCodeObject(OutputFormat.class, classLoader)));
+			SingleElementIterator<Pair<OperatorID, F>> iterator = new SingleElementIterator<>();
+			iterator.set(new DefaultPair<>(stubKey, (F) wrapper.getUserCodeObject(OutputFormat.class, classLoader)));
 			return iterator;
 		}
 
 		@Override
-		public Configuration getParameters(Integer key) {
-			if (!STUB_KEY.equals(key)) {
+		public Configuration getParameters(OperatorID key) {
+			if (!stubKey.equals(key)) {
 				return new Configuration();
 			}
 
@@ -235,14 +241,14 @@ public class FormatUtil {
 	/**
 	 * Wrapper of multi {@link InputFormat} and {@link OutputFormat} stubs.
 	 */
-	public static class MultiFormatStub<F> extends AbstractFormatStub<OperatorID, F, Tuple2<Map<OperatorID, InputFormat>, Map<OperatorID, OutputFormat>>> {
+	public static class MultiFormatStub extends AbstractFormatStub<OperatorID, Tuple2<Map<OperatorID, InputFormat>, Map<OperatorID, OutputFormat>>> {
 
 		public MultiFormatStub(TaskConfig config, ClassLoader classLoader) throws Exception {
 			super(config, classLoader);
 		}
 
 		@Override
-		public Iterator<Pair<OperatorID, F>> getFormat(FormatType type) {
+		public <F> Iterator<Pair<OperatorID, F>> getFormat(FormatType<F> type) {
 			Tuple2<Map<OperatorID, InputFormat>, Map<OperatorID, OutputFormat>> tuple = wrapper.getUserCodeObject(Tuple2.class, classLoader);
 			if (type == FormatType.INPUT && tuple.f0 != null) {
 				final Iterator<Map.Entry<OperatorID, InputFormat>> iterator = tuple.f0.entrySet().iterator();
@@ -252,11 +258,11 @@ public class FormatUtil {
 						return iterator.hasNext();
 					}
 
-					@SuppressWarnings("unchecked")
 					@Override
+					@SuppressWarnings("unchecked")
 					public Pair<OperatorID, F> next() {
 						Map.Entry<OperatorID, InputFormat> entry = iterator.next();
-						return new DefaultPair(entry.getKey(), entry.getValue());
+						return new DefaultPair<>(entry.getKey(), (F) entry.getValue());
 					}
 				};
 			} else if (type == FormatType.OUTPUT && tuple.f1 != null) {
@@ -267,11 +273,11 @@ public class FormatUtil {
 						return iterator.hasNext();
 					}
 
-					@SuppressWarnings("unchecked")
 					@Override
+					@SuppressWarnings("unchecked")
 					public Pair<OperatorID, F> next() {
 						Map.Entry<OperatorID, OutputFormat> entry = iterator.next();
-						return new DefaultPair(entry.getKey(), entry.getValue());
+						return new DefaultPair(entry.getKey(), (F) entry.getValue());
 					}
 				};
 			}
@@ -280,8 +286,8 @@ public class FormatUtil {
 		}
 
 		@Override
-		public Configuration getParameters(OperatorID operatorId) {
-			return new DelegatingConfiguration(config.getStubParameters(), operatorId + ".");
+		public Configuration getParameters(OperatorID operatorID) {
+			return new DelegatingConfiguration(config.getStubParameters(), operatorID + ".");
 		}
 
 		public static void setStubFormats(
@@ -292,9 +298,9 @@ public class FormatUtil {
 			config.setStubWrapper(new UserCodeObjectWrapper<>(new Tuple2<>(idInputFormatMap, idOutputFormatMap)));
 		}
 
-		public static void setStubParameters(TaskConfig config, OperatorID operatorId, Configuration parameters) {
+		public static void setStubParameters(TaskConfig config, OperatorID operatorID, Configuration parameters) {
 			for (String key : parameters.keySet()) {
-				config.setStubParameter(operatorId + "." + key, parameters.getString(key, null));
+				config.setStubParameter(operatorID + "." + key, parameters.getString(key, null));
 			}
 		}
 	}
@@ -302,7 +308,7 @@ public class FormatUtil {
 	/**
 	 * Abstract wrapper for {@link InputFormat} and {@link OutputFormat} stubs.
 	 */
-	public abstract static class AbstractFormatStub<STUB_KEY, F, W> {
+	public abstract static class AbstractFormatStub<STUB_KEY, W> {
 
 		protected final TaskConfig config;
 		protected final ClassLoader classLoader;
@@ -311,9 +317,8 @@ public class FormatUtil {
 		protected final Configuration parameters;
 
 		public AbstractFormatStub(TaskConfig config, ClassLoader classLoader) throws Exception {
-			checkState(config != null && classLoader != null);
-			this.config = config;
-			this.classLoader = classLoader;
+			this.config = checkNotNull(config);
+			this.classLoader = checkNotNull(classLoader);
 
 			try {
 				this.wrapper = config.getStubWrapper(classLoader);
@@ -332,7 +337,7 @@ public class FormatUtil {
 			return classLoader;
 		}
 
-		public abstract Iterator<Pair<STUB_KEY, F>> getFormat(FormatType type);
+		public abstract <F> Iterator<Pair<STUB_KEY, F>> getFormat(FormatType<F> type);
 
 		public abstract Configuration getParameters(STUB_KEY key);
 

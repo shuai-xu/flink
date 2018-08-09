@@ -116,7 +116,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 	private final CoLocationGroup coLocationGroup;
 
-	private final InputSplit[] inputSplits;
+	private final Map<OperatorID, InputSplit[]> inputSplitsMap;
 
 	private final boolean maxParallelismConfigured;
 
@@ -138,7 +138,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 	private Either<SerializedValue<TaskInformation>, PermanentBlobKey> taskInformationOrBlobKey = null;
 
-	private InputSplitAssigner splitAssigner;
+	private final Map<OperatorID, InputSplitAssigner> splitAssignerMap;
 
 	/**
 	 * Convenience constructor for testing.
@@ -248,25 +248,35 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 		// set up the input splits, if the vertex has any
 		try {
-			@SuppressWarnings("unchecked")
-			InputSplitSource<InputSplit> splitSource = (InputSplitSource<InputSplit>) jobVertex.getInputSplitSource();
+			Map<OperatorID, InputSplitSource<?>> splitSourceMap = jobVertex.getInputSplitSources();
 
-			if (splitSource != null) {
+			if (splitSourceMap != null) {
+				// lazy assignment
+				this.inputSplitsMap = new HashMap<>();
+				this.splitAssignerMap = new HashMap<>();
+
 				Thread currentThread = Thread.currentThread();
 				ClassLoader oldContextClassLoader = currentThread.getContextClassLoader();
 				currentThread.setContextClassLoader(graph.getUserClassLoader());
-				try {
-					inputSplits = splitSource.createInputSplits(numTaskVertices);
 
-					if (inputSplits != null) {
-						splitAssigner = splitSource.getInputSplitAssigner(inputSplits);
+				try {
+					for (Map.Entry<OperatorID, InputSplitSource<?>> entry : splitSourceMap.entrySet()) {
+						OperatorID operatorID = entry.getKey();
+						@SuppressWarnings("unchecked")
+						InputSplitSource<InputSplit> splitSource = ((InputSplitSource<InputSplit>) entry.getValue());
+
+						InputSplit[] inputSplits = splitSource.createInputSplits(numTaskVertices);
+						if (inputSplits != null) {
+							this.inputSplitsMap.put(operatorID, inputSplits);
+							this.splitAssignerMap.put(operatorID, splitSource.getInputSplitAssigner(inputSplits));
+						}
 					}
 				} finally {
 					currentThread.setContextClassLoader(oldContextClassLoader);
 				}
-			}
-			else {
-				inputSplits = null;
+			} else {
+				this.inputSplitsMap = null;
+				this.splitAssignerMap = null;
 			}
 		}
 		catch (Throwable t) {
@@ -317,7 +327,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 	public ExecutionGraph getGraph() {
 		return graph;
 	}
-	
+
 	public JobVertex getJobVertex() {
 		return jobVertex;
 	}
@@ -344,33 +354,33 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 	public JobID getJobId() {
 		return graph.getJobID();
 	}
-	
+
 	@Override
 	public JobVertexID getJobVertexId() {
 		return jobVertex.getID();
 	}
-	
+
 	@Override
 	public ExecutionVertex[] getTaskVertices() {
 		return taskVertices;
 	}
-	
+
 	public IntermediateResult[] getProducedDataSets() {
 		return producedDataSets;
 	}
-	
-	public InputSplitAssigner getSplitAssigner() {
-		return splitAssigner;
+
+	public InputSplitAssigner getSplitAssigner(OperatorID operatorID) {
+		return splitAssignerMap == null ? null : splitAssignerMap.get(operatorID);
 	}
-	
+
 	public SlotSharingGroup getSlotSharingGroup() {
 		return slotSharingGroup;
 	}
-	
+
 	public CoLocationGroup getCoLocationGroup() {
 		return coLocationGroup;
 	}
-	
+
 	public List<IntermediateResult> getInputs() {
 		return inputs;
 	}
@@ -423,28 +433,28 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 
 	//---------------------------------------------------------------------------------------------
-	
+
 	public void connectToPredecessors(Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets) throws JobException {
-		
+
 		List<JobEdge> inputs = jobVertex.getInputs();
-		
+
 		if (LOG.isDebugEnabled()) {
 			LOG.debug(String.format("Connecting ExecutionJobVertex %s (%s) to %d predecessors.", jobVertex.getID(), jobVertex.getName(), inputs.size()));
 		}
-		
+
 		for (int num = 0; num < inputs.size(); num++) {
 			JobEdge edge = inputs.get(num);
-			
+
 			if (LOG.isDebugEnabled()) {
 				if (edge.getSource() == null) {
-					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via ID %s.", 
+					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via ID %s.",
 							num, jobVertex.getID(), jobVertex.getName(), edge.getSourceId()));
 				} else {
 					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via predecessor %s (%s).",
 							num, jobVertex.getID(), jobVertex.getName(), edge.getSource().getProducer().getID(), edge.getSource().getProducer().getName()));
 				}
 			}
-			
+
 			// fetch the intermediate result via ID. if it does not exist, then it either has not been created, or the order
 			// in which this method is called for the job vertices is not a topological order
 			IntermediateResult ires = intermediateDataSets.get(edge.getSourceId());
@@ -452,18 +462,18 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 				throw new JobException("Cannot connect this job graph to the previous graph. No previous intermediate result found for ID "
 						+ edge.getSourceId());
 			}
-			
+
 			this.inputs.add(ires);
-			
+
 			int consumerIndex = ires.registerConsumer();
-			
+
 			for (int i = 0; i < parallelism; i++) {
 				ExecutionVertex ev = taskVertices[i];
 				ev.connectSource(num, ires, edge, consumerIndex);
 			}
 		}
 	}
-	
+
 	//---------------------------------------------------------------------------------------------
 	//  Actions
 	//---------------------------------------------------------------------------------------------
@@ -480,7 +490,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 			SlotProvider slotProvider,
 			boolean queued,
 			LocationPreferenceConstraint locationPreferenceConstraint) {
-		
+
 		final ExecutionVertex[] vertices = this.taskVertices;
 
 		final ArrayList<CompletableFuture<Void>> scheduleFutures = new ArrayList<>(vertices.length);
@@ -497,9 +507,9 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 	 * Acquires a slot for all the execution vertices of this ExecutionJobVertex. The method returns
 	 * pairs of the slots and execution attempts, to ease correlation between vertices and execution
 	 * attempts.
-	 * 
+	 *
 	 * <p>If this method throws an exception, it makes sure to release all so far requested slots.
-	 * 
+	 *
 	 * @param resourceProvider The resource provider from whom the slots are requested.
 	 * @param queued if the allocation can be queued
 	 * @param locationPreferenceConstraint constraint for the location preferences
@@ -576,14 +586,17 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 			// set up the input splits again
 			try {
-				if (this.inputSplits != null) {
-					// lazy assignment
-					@SuppressWarnings("unchecked")
-					InputSplitSource<InputSplit> splitSource = (InputSplitSource<InputSplit>) jobVertex.getInputSplitSource();
-					this.splitAssigner = splitSource.getInputSplitAssigner(this.inputSplits);
+				if (this.inputSplitsMap != null) {
+					splitAssignerMap.clear();
+
+					Map<OperatorID, InputSplitSource<?>> splitSourceMap = jobVertex.getInputSplitSources();
+					for (Map.Entry<OperatorID, InputSplit[]> entry : inputSplitsMap.entrySet()) {
+						OperatorID operatorID = entry.getKey();
+						splitAssignerMap.put(operatorID,
+							((InputSplitSource<InputSplit>) splitSourceMap.get(operatorID)).getInputSplitAssigner(entry.getValue()));
+					}
 				}
-			}
-			catch (Throwable t) {
+			} catch (Throwable t) {
 				throw new RuntimeException("Re-creating the input split assigner failed: " + t.getMessage(), t);
 			}
 

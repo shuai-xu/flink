@@ -61,7 +61,7 @@ public class MultiInputOutputFormatVertex extends JobVertex {
 	public void initializeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		MultiFormatStub stub = new MultiFormatStub<>(cfg, loader);
+		MultiFormatStub stub = new MultiFormatStub(cfg, loader);
 
 		FormatUtil.initializeInputFormatsOnMaster(this, stub, Collections.unmodifiableMap(formatDescriptionMap));
 		FormatUtil.initializeOutputFormatsOnMaster(this, stub, Collections.unmodifiableMap(formatDescriptionMap));
@@ -71,7 +71,7 @@ public class MultiInputOutputFormatVertex extends JobVertex {
 	public void finalizeOnMaster(ClassLoader loader) throws Exception {
 		final TaskConfig cfg = new TaskConfig(getConfiguration());
 
-		MultiFormatStub stub = new MultiFormatStub<>(cfg, loader);
+		MultiFormatStub stub = new MultiFormatStub(cfg, loader);
 
 		FormatUtil.finalizeOutputFormatsOnMaster(this, stub, Collections.unmodifiableMap(formatDescriptionMap));
 	}

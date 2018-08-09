@@ -44,6 +44,8 @@ public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<O
 
 	private InputFormat<OUT, InputSplit> format;
 
+	private transient StreamingRuntimeContext context;
+
 	private transient InputSplitProvider provider;
 	private transient Iterator<InputSplit> splitIterator;
 
@@ -58,7 +60,7 @@ public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<O
 	@Override
 	@SuppressWarnings("unchecked")
 	public void open(Configuration parameters) throws Exception {
-		StreamingRuntimeContext context = (StreamingRuntimeContext) getRuntimeContext();
+		context = (StreamingRuntimeContext) getRuntimeContext();
 
 		if (format instanceof RichInputFormat) {
 			((RichInputFormat) format).setRuntimeContext(context);
@@ -152,7 +154,7 @@ public class InputFormatSourceFunction<OUT> extends RichParallelSourceFunction<O
 
 				final InputSplit split;
 				try {
-					split = provider.getNextInputSplit(getRuntimeContext().getUserCodeClassLoader());
+					split = provider.getNextInputSplit(context.getOperatorID(), context.getUserCodeClassLoader());
 				} catch (InputSplitProviderException e) {
 					throw new RuntimeException("Could not retrieve next input split.", e);
 				}

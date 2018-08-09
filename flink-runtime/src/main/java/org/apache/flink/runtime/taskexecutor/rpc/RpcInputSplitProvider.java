@@ -22,6 +22,7 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProviderException;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
@@ -50,11 +51,13 @@ public class RpcInputSplitProvider implements InputSplitProvider {
 
 
 	@Override
-	public InputSplit getNextInputSplit(ClassLoader userCodeClassLoader) throws InputSplitProviderException {
+	public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) throws InputSplitProviderException {
+		Preconditions.checkNotNull(operatorID);
 		Preconditions.checkNotNull(userCodeClassLoader);
 
 		CompletableFuture<SerializedInputSplit> futureInputSplit = jobMasterGateway.requestNextInputSplit(
 			jobVertexID,
+			operatorID,
 			executionAttemptID);
 
 		try {

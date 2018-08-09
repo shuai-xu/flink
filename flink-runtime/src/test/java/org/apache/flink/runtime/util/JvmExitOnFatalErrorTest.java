@@ -50,6 +50,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNo
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.memory.MemoryManager;
@@ -271,7 +272,7 @@ public class JvmExitOnFatalErrorTest {
 		private static final class NoOpInputSplitProvider implements InputSplitProvider {
 
 			@Override
-			public InputSplit getNextInputSplit(ClassLoader userCodeClassLoader) {
+			public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) {
 				return null;
 			}
 		}

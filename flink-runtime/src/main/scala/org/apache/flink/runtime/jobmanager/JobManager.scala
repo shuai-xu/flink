@@ -690,7 +690,7 @@ class JobManager(
         }
       }
 
-    case RequestNextInputSplit(jobID, vertexID, executionAttempt) =>
+    case RequestNextInputSplit(jobID, vertexID, operatorID, executionAttempt) =>
       val serializedInputSplit = currentJobs.get(jobID) match {
         case Some((executionGraph,_)) =>
           val execution = executionGraph.getRegisteredExecutions.get(executionAttempt)
@@ -709,7 +709,7 @@ class JobManager(
             }
 
             executionGraph.getJobVertex(vertexID) match {
-              case vertex: ExecutionJobVertex => vertex.getSplitAssigner match {
+              case vertex: ExecutionJobVertex => vertex.getSplitAssigner(operatorID) match {
                 case splitAssigner: InputSplitAssigner =>
                   val nextInputSplit = splitAssigner.getNextInputSplit(host, taskId)
 

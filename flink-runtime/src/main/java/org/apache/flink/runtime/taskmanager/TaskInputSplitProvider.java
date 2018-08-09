@@ -23,6 +23,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.instance.ActorGateway;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProviderException;
 import org.apache.flink.runtime.messages.JobManagerMessages;
@@ -64,11 +65,12 @@ public class TaskInputSplitProvider implements InputSplitProvider {
 	}
 
 	@Override
-	public InputSplit getNextInputSplit(ClassLoader userCodeClassLoader) throws InputSplitProviderException {
+	public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) throws InputSplitProviderException {
+		Preconditions.checkNotNull(operatorID);
 		Preconditions.checkNotNull(userCodeClassLoader);
 
 		final Future<Object> response = jobManager.ask(
-			new JobManagerMessages.RequestNextInputSplit(jobID, vertexID, executionID),
+			new JobManagerMessages.RequestNextInputSplit(jobID, vertexID, operatorID, executionID),
 			timeout);
 
 		final Object result;
