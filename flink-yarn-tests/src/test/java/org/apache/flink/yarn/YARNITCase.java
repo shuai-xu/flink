@@ -31,8 +31,11 @@ import org.apache.flink.streaming.api.functions.source.ParallelSourceFunction;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.junit.After;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -46,11 +49,15 @@ public class YARNITCase extends YarnTestBase {
 
 	@BeforeClass
 	public static void setup() {
-		YARN_CONFIGURATION.set(YarnTestBase.TEST_CLUSTER_NAME_KEY, "flink-yarn-tests-ha");
+		YARN_CONFIGURATION.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+		YARN_CONFIGURATION.set("yarn.scheduler.capacity.root.queues", "default,qa-team");
+		YARN_CONFIGURATION.setInt("yarn.scheduler.capacity.root.default.capacity", 40);
+		YARN_CONFIGURATION.setInt("yarn.scheduler.capacity.root.qa-team.capacity", 60);
+		YARN_CONFIGURATION.set(YarnTestBase.TEST_CLUSTER_NAME_KEY, "flink-yarn-it-case-tests");
+		YARN_CONFIGURATION.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 2222);
 		startYARNWithConfig(YARN_CONFIGURATION);
 	}
 
-	@Ignore("The cluster cannot be stopped yet.")
 	@Test
 	public void testPerJobMode() throws Exception {
 		Configuration configuration = new Configuration();
@@ -90,7 +97,10 @@ public class YARNITCase extends YarnTestBase {
 			ClusterClient<ApplicationId> clusterClient = yarnClusterDescriptor.deployJobCluster(
 				clusterSpecification,
 				jobGraph,
-				true);
+				false);
+
+			// TODO: any better way? Setting detached false still could not make it wait for termination.
+			Thread.sleep(10000);
 
 			clusterClient.shutdown();
 		}
@@ -122,5 +132,10 @@ public class YARNITCase extends YarnTestBase {
 		public void cancel() {
 			running = false;
 		}
+	}
+
+	@After
+	public void checkForProhibitedLogContents() {
+		ensureNoProhibitedStringInLogFiles(PROHIBITED_STRINGS, WHITELISTED_STRINGS);
 	}
 }

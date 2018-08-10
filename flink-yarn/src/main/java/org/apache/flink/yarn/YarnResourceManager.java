@@ -400,7 +400,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			log.info("Container {} did not register in {}, will stop it and request a new one if needed.", containerId, containerRegisterTimeout);
 			if (stopWorker(node)) {
 				Priority priority = node.getContainer().getPriority();
-				requestYarnContainer(node.getContainer().getResource(), priority);
+				requestYarnContainer(getOrigContainerResource(priority.getPriority()), priority);
 			}
 		}
 	}
@@ -471,7 +471,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 						if (priorityToResourceMap.containsKey(yarnWorkerNode.getContainer().getPriority().getPriority())) {
 							// Container completed unexpectedly ~> start a new one
 							final Container container = yarnWorkerNode.getContainer();
-							internalRequestYarnContainer(container.getResource(), yarnWorkerNode.getContainer().getPriority());
+							internalRequestYarnContainer(
+								getOrigContainerResource(yarnWorkerNode.getContainer().getPriority().getPriority()),
+								yarnWorkerNode.getContainer().getPriority());
 						} else {
 							log.info("Not found resource for priority {}, this is usually due to job master failover.",
 								yarnWorkerNode.getContainer().getPriority().getPriority());
@@ -498,7 +500,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 				if (pendingNumber != null && pendingNumber.get() > 0) {
 					pendingNumber.decrementAndGet();
 					resourceManagerClient.removeContainerRequest(new AMRMClient.ContainerRequest(
-						container.getResource(), null, null, Priority.newInstance(priority)));
+						getOrigContainerResource(priority), null, null, Priority.newInstance(priority)));
 					if (pendingNumber.get() == 0) {
 						priorityToSpareSlots.put(priority, 0);
 					}
@@ -527,7 +529,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 								log.error("Could not start TaskManager in container {},", container, t);
 								resourceManagerClient.releaseAssignedContainer(container.getId());
 								if (workerNodeMap.remove(resourceId) != null) {
-									requestYarnContainer(container.getResource(), container.getPriority());
+									requestYarnContainer(
+										getOrigContainerResource(container.getPriority().getPriority()),
+										container.getPriority());
 								} else {
 									log.info("The container {} has already been stopped.", container);
 								}
@@ -806,5 +810,18 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			return tmResource;
 		}
 		throw new IllegalArgumentException("The priority " + priority + " doesn't exist!");
+	}
+
+	/**
+	 * Resources of containers allocated from Yarn RM may not be exactly the same as originally requested.
+	 * When we removeContainerResource or requestYarnRequest, we should make sure not to use any container's
+	 * allocated resources, or errors may occur when using AMRMClientAsync.
+	 *
+	 * @param priority Priority of this request.
+	 * @return Original resource request.
+	 */
+	private Resource getOrigContainerResource(int priority) {
+		TaskManagerResource tmResource = getTaskManagerResource(priority);
+		return generateContainerResource(tmResource);
 	}
 }
