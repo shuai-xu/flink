@@ -513,7 +513,7 @@ public class KeyedSortedMapStateTest {
 	public void testBoundAccess() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
-				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
 		assertNotNull(state);
@@ -561,7 +561,7 @@ public class KeyedSortedMapStateTest {
 	public void testIterator() {
 		KeyedSortedMapStateDescriptor<Integer, Integer, Float> descriptor =
 			new KeyedSortedMapStateDescriptor<>("test", IntSerializer.INSTANCE,
-				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		KeyedSortedMapState<Integer, Integer, Float> state = backend.getKeyedState(descriptor);
 		assertNotNull(state);

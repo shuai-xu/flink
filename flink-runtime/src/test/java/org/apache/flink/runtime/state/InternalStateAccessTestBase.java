@@ -417,9 +417,9 @@ public abstract class InternalStateAccessTestBase {
 
 		InternalStateDescriptor descriptor =
 			new InternalStateDescriptorBuilder("test")
-				.addKeyColumn("key1", IntSerializer.INSTANCE, new BytewiseComparator<>(IntSerializer.INSTANCE))
-				.addKeyColumn("key2", IntSerializer.INSTANCE, new BytewiseComparator<>(IntSerializer.INSTANCE))
-				.addKeyColumn("key3", IntSerializer.INSTANCE, new BytewiseComparator<>(IntSerializer.INSTANCE))
+				.addKeyColumn("key1", IntSerializer.INSTANCE, BytewiseComparator.INT_INSTANCE)
+				.addKeyColumn("key2", IntSerializer.INSTANCE, BytewiseComparator.INT_INSTANCE)
+				.addKeyColumn("key3", IntSerializer.INSTANCE, BytewiseComparator.INT_INSTANCE)
 				.addValueColumn("value1", FloatSerializer.INSTANCE)
 				.addValueColumn("value2", StringSerializer.INSTANCE)
 				.getDescriptor();

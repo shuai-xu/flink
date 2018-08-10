@@ -451,7 +451,7 @@ public class SubKeyedSortedMapStateTest {
 		SubKeyedSortedMapStateDescriptor<Integer, String, Integer, Float> descriptor =
 			new SubKeyedSortedMapStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		SubKeyedSortedMapState<Integer, String, Integer, Float> state = backend.getSubKeyedState(descriptor);
 		assertNotNull(state);
@@ -512,7 +512,7 @@ public class SubKeyedSortedMapStateTest {
 		SubKeyedSortedMapStateDescriptor<Integer, String, Integer, Float> descriptor =
 			new SubKeyedSortedMapStateDescriptor<>("test",
 				IntSerializer.INSTANCE, StringSerializer.INSTANCE,
-				new BytewiseComparator<>(IntSerializer.INSTANCE), IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
+				BytewiseComparator.INT_INSTANCE, IntSerializer.INSTANCE, FloatSerializer.INSTANCE);
 
 		SubKeyedSortedMapState<Integer, String, Integer, Float> state = backend.getSubKeyedState(descriptor);
 		assertNotNull(state);

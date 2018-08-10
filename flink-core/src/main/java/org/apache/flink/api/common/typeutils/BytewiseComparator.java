@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.base.DoubleSerializer;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
+import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -95,7 +96,7 @@ public class BytewiseComparator<T> implements Comparator<T>, Serializable {
 
 			return compareBytes(leftBytes, rightBytes);
 		} catch (IOException e) {
-			throw new RuntimeException("Error while serializing the value.", e);
+			throw new SerializationException(e);
 		}
 	}
 
@@ -117,18 +118,13 @@ public class BytewiseComparator<T> implements Comparator<T>, Serializable {
 			")";
 	}
 
-	private static class ComparableByteArraySerializer extends TypeSerializer<byte[]> {
+	private static class ComparableByteArraySerializer extends TypeSerializerSingleton<byte[]> {
 
 		static final ComparableByteArraySerializer INSTANCE = new ComparableByteArraySerializer();
 
 		@Override
 		public boolean isImmutableType() {
 			return false;
-		}
-
-		@Override
-		public TypeSerializer<byte[]> duplicate() {
-			return new ComparableByteArraySerializer();
 		}
 
 		@Override
@@ -159,6 +155,7 @@ public class BytewiseComparator<T> implements Comparator<T>, Serializable {
 				throw new IllegalArgumentException("The record must not be null.");
 			}
 
+			target.skipBytesToWrite(1);
 			target.write(record);
 		}
 
@@ -168,6 +165,7 @@ public class BytewiseComparator<T> implements Comparator<T>, Serializable {
 			byte[] buffer = new byte[1024];
 			int numBytes;
 
+			source.skipBytesToRead(1);
 			while ((numBytes = source.read(buffer)) != -1) {
 				output.write(buffer, 0, numBytes);
 			}
@@ -193,8 +191,7 @@ public class BytewiseComparator<T> implements Comparator<T>, Serializable {
 		@Override
 		public boolean equals(Object obj) {
 			return (this == obj) ||
-				((obj != null) && (obj instanceof ComparableByteArraySerializer));
-
+				(obj instanceof ComparableByteArraySerializer);
 		}
 
 		@Override
@@ -205,16 +202,6 @@ public class BytewiseComparator<T> implements Comparator<T>, Serializable {
 		@Override
 		public int hashCode() {
 			return getClass().hashCode();
-		}
-
-		@Override
-		public TypeSerializerConfigSnapshot snapshotConfiguration() {
-			return null;
-		}
-
-		@Override
-		public CompatibilityResult<byte[]> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
-			return null;
 		}
 
 		@Override
