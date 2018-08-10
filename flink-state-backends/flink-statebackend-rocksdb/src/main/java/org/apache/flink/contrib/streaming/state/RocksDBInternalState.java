@@ -137,7 +137,7 @@ public class RocksDBInternalState implements InternalState {
 
 		List<Row> rowValues = deserializeStateValues(dbValue, this.descriptor);
 		if (rowValues.size() > 1) {
-			return mergeMultiValues(rowValues, dbKey);
+			return mergeMultiValues(rowValues);
 		} else {
 			return rowValues.get(0);
 		}
@@ -211,7 +211,7 @@ public class RocksDBInternalState implements InternalState {
 				List<Row> rowValues = deserializeStateValues(dbValue, descriptor);
 				Row value;
 				if (rowValues.size() > 1) {
-					value =  mergeMultiValues(rowValues, dbKey);
+					value =  mergeMultiValues(rowValues);
 				} else {
 					value = rowValues.get(0);
 				}
@@ -713,10 +713,8 @@ public class RocksDBInternalState implements InternalState {
 		}
 	}
 
-	private Row mergeMultiValues(List<Row> rowValues, byte[] dbKey) {
-		Row row = mergeMultiValues(rowValues, descriptor.getValueMerger());
-		backend.getDbInstance().put(dbKey, serializeStateValue(row, descriptor));
-		return row;
+	private Row mergeMultiValues(List<Row> rowValues) {
+		return mergeMultiValues(rowValues, descriptor.getValueMerger());
 	}
 
 	static Row mergeMultiValues(List<Row> rowValues, Merger<Row> merger) {
