@@ -1024,11 +1024,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	void sendPartitionInfos() {
-		if (updatePartitionFuture != null) {
-			synchronized (updatePartitionLock) {
-				updatePartitionFuture = null;
-			}
+		synchronized (updatePartitionLock) {
+			updatePartitionFuture = null;
 		}
+
 		// check if the ExecutionVertex has already been archived and thus cleared the
 		// partial partition infos queue
 		if (partialInputChannelDeploymentDescriptors != null && !partialInputChannelDeploymentDescriptors.isEmpty()) {
