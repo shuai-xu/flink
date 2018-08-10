@@ -38,7 +38,7 @@ public class GeminiFullHeapWithoutCopyCheckpointTest extends InternalStateCheckp
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) {
 		Configuration configuration = getStateBackendConfiguration();
-		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration);
+		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration, null);
 	}
 
 	private Configuration getStateBackendConfiguration() {
