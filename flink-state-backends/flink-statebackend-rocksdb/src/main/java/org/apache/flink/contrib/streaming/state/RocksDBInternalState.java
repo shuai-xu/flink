@@ -23,10 +23,10 @@ import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.core.memory.ByteArrayInputStreamWithPos;
+import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.FieldBasedPartitioner;
@@ -90,6 +90,9 @@ public class RocksDBInternalState implements InternalState {
 	 * The byte-wise comparator for RocksDB internal state.
 	 */
 	private final RocksDBKeyComparator defaultComparator;
+
+	/** Since max parallelism for Flink is not larger than 32768, only three bytes is enough. */
+	private static final int GROUP_BYTES_TO_SKIP = 3;
 
 	RocksDBInternalState(RocksDBInternalStateBackend backend, InternalStateDescriptor descriptor) {
 		this.backend = Preconditions.checkNotNull(backend);
@@ -660,9 +663,9 @@ public class RocksDBInternalState implements InternalState {
 
 	private byte[] serializeStateKey(int group, Row key) {
 		try {
-			ByteArrayOutputStreamWithPosition outputStream = new ByteArrayOutputStreamWithPosition();
+			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 
-			outputStream.writeInt(group);
+			writeInt(outputStream, group);
 			outputStream.write(stateNameBytes);
 
 			serializeRow(key, outputStream, descriptor.getKeySerializer(), KEY);
@@ -678,7 +681,7 @@ public class RocksDBInternalState implements InternalState {
 			ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(bytes);
 			DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 
-			inputView.skipBytesToRead(IntSerializer.INSTANCE.getLength());
+			inputView.skipBytesToRead(GROUP_BYTES_TO_SKIP);
 			StringSerializer.INSTANCE.deserialize(inputView);
 
 			return deserializeRow(descriptor, inputView, KEY);
@@ -692,7 +695,7 @@ public class RocksDBInternalState implements InternalState {
 			return null;
 		}
 		try {
-			ByteArrayOutputStreamWithPosition outputStream = new ByteArrayOutputStreamWithPosition();
+			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 
 			serializeRow(value, outputStream, descriptor.getValueSerializer(), VALUE);
 
@@ -733,7 +736,7 @@ public class RocksDBInternalState implements InternalState {
 		}
 	}
 
-	private static void serializeRow(Row row, ByteArrayOutputStreamWithPosition outputStream, RowSerializer rowSerializer, int flag) throws IOException {
+	private static void serializeRow(Row row, ByteArrayOutputStreamWithPos outputStream, RowSerializer rowSerializer, int flag) throws IOException {
 		int len = row.getArity();
 
 		DataOutputViewStreamWrapper outputView = new DataOutputViewStreamWrapper(outputStream);
@@ -745,31 +748,11 @@ public class RocksDBInternalState implements InternalState {
 			if (filed != null) {
 				outputView.writeBoolean(false);
 				TypeSerializer<Object> serializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[i];
-				if (flag == KEY) {
-					if (serializer.getLength() > 0) {
-						outputView.writeInt(serializer.getLength());
-						serializer.serialize(filed, outputView);
-					} else {
-						int lengthPos = outputStream.getPosition();
-						outputView.writeInt(-1);
-						serializer.serialize(filed, outputView);
-						int currentPos = outputStream.getPosition();
-						writeIntAtPosition(currentPos - lengthPos - 4, outputStream, lengthPos);
-					}
-				} else {
-					serializer.serialize(filed, outputView);
-				}
+				serializer.serialize(filed, outputView);
 			} else {
 				outputView.writeBoolean(true);
 			}
 		}
-	}
-
-	private static void writeIntAtPosition(int v, ByteArrayOutputStreamWithPosition out, int position) throws IOException {
-		out.writeByteAtPos((v >>> 24) & 0xFF, position);
-		out.writeByteAtPos((v >>> 16) & 0xFF, position + 1);
-		out.writeByteAtPos((v >>>  8) & 0xFF, position + 2);
-		out.writeByteAtPos((v >>>  0) & 0xFF, position + 3);
 	}
 
 	static Row deserializeRow(
@@ -790,9 +773,6 @@ public class RocksDBInternalState implements InternalState {
 				result.setField(i, null);
 			} else {
 				TypeSerializer<Object> serializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[i];
-				if (flag == KEY) {
-					inputView.skipBytesToRead(4);
-				}
 				result.setField(i, serializer.deserialize(inputView));
 			}
 		}
@@ -840,10 +820,10 @@ public class RocksDBInternalState implements InternalState {
 	 */
 	private <K> byte[] serializePrefixKeys(int group, Row prefixKeys, K nextKey) {
 		try {
-			ByteArrayOutputStreamWithPosition outputStream = new ByteArrayOutputStreamWithPosition();
+			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 			int numPrefixKeys = prefixKeys == null ? 0 : prefixKeys.getArity();
 
-			outputStream.writeInt(group);
+			writeInt(outputStream, group);
 			outputStream.write(stateNameBytes);
 
 			// We should add null masks to output view.
@@ -862,9 +842,9 @@ public class RocksDBInternalState implements InternalState {
 
 	private byte[] serializePrefixKeysEnd(int group, Row prefixKeys) {
 		try {
-			ByteArrayOutputStreamWithPosition outputStream = new ByteArrayOutputStreamWithPosition();
+			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 
-			outputStream.writeInt(group);
+			writeInt(outputStream, group);
 			outputStream.write(stateNameBytes);
 
 			// We should add null masks to output view.
@@ -909,22 +889,19 @@ public class RocksDBInternalState implements InternalState {
 	}
 
 	/**
-	 * Helper class which could write byte at specific position of internal byte buffer.
+	 * Write integer to byte stream.
+	 * Since max parallelism for Flink is not larger than 32768, only three bytes is enough.
+	 *
+	 * @param outputStream The output stream to write integer.
+	 * @param v The value of integer to write.
 	 */
-	private static class ByteArrayOutputStreamWithPosition extends org.apache.flink.core.memory.ByteArrayOutputStreamWithPos {
-
-		void writeByteAtPos(int b, int position) {
-			Preconditions.checkArgument(position <= count, "Position out of bound.");
-			buffer[position] = (byte) b;
-		}
-
-		void writeInt(int v) {
-			write((v >>> 24) & 0xFF);
-			write((v >>> 16) & 0xFF);
-			write((v >>> 8) & 0xFF);
-			write((v >>> 0) & 0xFF);
-		}
+	static void writeInt(ByteArrayOutputStreamWithPos outputStream, int v) {
+		outputStream.write((v >>> 16) & 0xFF);
+		outputStream.write((v >>> 8) & 0xFF);
+		outputStream.write((v >>> 0) & 0xFF);
 	}
+
+
 
 	/**
 	 * Bytes comparator for {@link RocksDBInternalState}'s key.
@@ -939,7 +916,7 @@ public class RocksDBInternalState implements InternalState {
 		private RowSerializer rowSerializer;
 
 		RocksDBKeyComparator() {
-			this.prefixLength = IntSerializer.INSTANCE.getLength() + stateNameBytes.length;
+			this.prefixLength = GROUP_BYTES_TO_SKIP + stateNameBytes.length;
 			this.rowSerializer = descriptor.getKeySerializer();
 		}
 
@@ -953,17 +930,29 @@ public class RocksDBInternalState implements InternalState {
 			skipFirstToFiledKeys(inputViewA, field);
 			skipFirstToFiledKeys(inputViewB, field);
 
+			boolean isANullField;
+			boolean isBNullField;
 			try {
 				// skip KEY flag
 				inputViewA.skipBytesToRead(1);
+				isANullField = inputViewA.readBoolean();
 
 				// skip KEY flag
 				inputViewB.skipBytesToRead(1);
+				isBNullField = inputViewB.readBoolean();
 			} catch (IOException e) {
 				throw new SerializationException(e);
 			}
 
-			return RocksDBInstance.compare(getFieldBytes(inputViewA, field), getFieldBytes(inputViewB, field));
+			if (isANullField && isBNullField) {
+				return 0;
+			} else if (isANullField) {
+				return 1;
+			} else if (isBNullField) {
+				return -1;
+			} else {
+				return RocksDBInstance.compare(getFieldBytes(inputViewA, field), getFieldBytes(inputViewB, field));
+			}
 		}
 
 		private byte[] getFieldBytes(DataInputViewStreamWrapper inputView, int field) {
@@ -985,8 +974,13 @@ public class RocksDBInternalState implements InternalState {
 					inputView.skipBytesToRead(1);
 					boolean isNullField = inputView.readBoolean();
 					if (!isNullField) {
-						int bytesToSkip = inputView.readInt();
-						inputView.skipBytesToRead(bytesToSkip);
+						TypeSerializer<Object> typeSerializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[i];
+
+						if (typeSerializer.getLength() > 0) {
+							inputView.skipBytesToRead(typeSerializer.getLength());
+						} else {
+							typeSerializer.deserialize(inputView);
+						}
 					}
 				} catch (IOException e) {
 					throw new SerializationException(e);

@@ -20,7 +20,6 @@ package org.apache.flink.contrib.streaming.state;
 
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.Path;
@@ -259,7 +258,7 @@ public class RocksDBFullSnapshotOperation {
 			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
 			DataOutputViewStreamWrapper outputView = new DataOutputViewStreamWrapper(outputStream);
 
-			IntSerializer.INSTANCE.serialize(group, outputView);
+			RocksDBInternalState.writeInt(outputStream, group);
 			outputView.write(stateNameBytes);
 
 			return outputStream.toByteArray();
@@ -271,11 +270,10 @@ public class RocksDBFullSnapshotOperation {
 	private static byte[] serializeGroupPrefixEnd(int group, byte[] stateNameBytes) {
 		try {
 			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
-			DataOutputViewStreamWrapper outputView = new DataOutputViewStreamWrapper(outputStream);
 
-			IntSerializer.INSTANCE.serialize(group, outputView);
-			outputView.write(stateNameBytes);
-			outputView.writeByte(KEY_END_BYTE);
+			RocksDBInternalState.writeInt(outputStream, group);
+			outputStream.write(stateNameBytes);
+			outputStream.write(KEY_END_BYTE);
 
 			return outputStream.toByteArray();
 		} catch (IOException e) {

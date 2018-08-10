@@ -18,8 +18,6 @@
 
 package org.apache.flink.contrib.streaming.state;
 
-import org.apache.flink.api.common.typeutils.SerializationException;
-import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.FSDataInputStream;
@@ -28,7 +26,6 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
-import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
@@ -381,16 +378,10 @@ public class RocksDBIncrementalRestoreOperation {
 	}
 
 	private static byte[] serializeGroupPrefix(int group) {
-		try {
-			ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
-			DataOutputViewStreamWrapper outputView = new DataOutputViewStreamWrapper(outputStream);
+		ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos();
+		RocksDBInternalState.writeInt(outputStream, group);
 
-			IntSerializer.INSTANCE.serialize(group, outputView);
-
-			return outputStream.toByteArray();
-		} catch (IOException e) {
-			throw new SerializationException(e);
-		}
+		return outputStream.toByteArray();
 	}
 
 	private RocksDBInstance createRocksDBInstance(File instanceRocksDBPath) throws RocksDBException {

@@ -99,7 +99,11 @@ public class RocksDBEntry {
 
 			@Override
 			public Row setValue(Row value) {
-				throw new UnsupportedOperationException();
+				Row oldValue = getValue();
+				byte[] valueBytes = RocksDBInternalState.serializeStateValue(value, descriptor);
+				dbInstance.put(dbKey, valueBytes);
+				this.value = value;
+				return oldValue;
 			}
 		};
 	}
