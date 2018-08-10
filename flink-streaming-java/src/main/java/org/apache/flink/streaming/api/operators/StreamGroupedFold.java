@@ -78,7 +78,7 @@ public class StreamGroupedFold<IN, OUT, KEY>
 		}
 
 		ValueStateDescriptor<OUT> stateId = new ValueStateDescriptor<>(STATE_NAME, outTypeSerializer);
-		values = getPartitionedState(stateId);
+		values = getState(stateId);
 	}
 
 	@Override

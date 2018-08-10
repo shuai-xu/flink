@@ -68,6 +68,7 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.state.ContextStateBinder;
+import org.apache.flink.streaming.api.operators.state.ContextSubKeyedStateBinder;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -156,6 +157,9 @@ public abstract class AbstractStreamOperator<OUT>
 	/** The binder to create user-facing states. */
 	private transient StateBinder contextStateBinder;
 
+	/** The binder to create sub keyed states. */
+	protected transient ContextSubKeyedStateBinder contextSubKeyedStateBinder;
+
 	// ---------------- operator state ------------------
 
 	/** Operator state backend / store. */
@@ -226,6 +230,7 @@ public abstract class AbstractStreamOperator<OUT>
 
 		initInternalState();
 		contextStateBinder = new ContextStateBinder(this);
+		contextSubKeyedStateBinder = new ContextSubKeyedStateBinder(this);
 	}
 
 	@Override
@@ -587,6 +592,21 @@ public abstract class AbstractStreamOperator<OUT>
 		}
 	}
 
+	protected <S extends State, T, N> S getSubKeyedStateWithNamespace(
+		final StateDescriptor<S, T> stateDescriptor,
+		final N namespace,
+		final TypeSerializer<N> namespaceSerializer
+	) {
+		Preconditions.checkNotNull(stateDescriptor);
+		Preconditions.checkNotNull(namespace);
+		Preconditions.checkNotNull(namespaceSerializer);
+		try {
+			return contextSubKeyedStateBinder.getSubKeyedStateWithNamespace(stateDescriptor, namespace, namespaceSerializer);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public <K> KeyedStateBackend<K> getKeyedStateBackend() {
 		return (KeyedStateBackend<K>) keyedStateBackend;
@@ -616,20 +636,6 @@ public abstract class AbstractStreamOperator<OUT>
 	 */
 	protected <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) throws Exception {
 		return getPartitionedState(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescriptor);
-	}
-
-	protected <N, S extends State, T> S getOrCreateKeyedState(
-			TypeSerializer<N> namespaceSerializer,
-			StateDescriptor<S, T> stateDescriptor) throws Exception {
-
-		if (keyedStateStore != null) {
-			return keyedStateBackend.getOrCreateKeyedState(namespaceSerializer, stateDescriptor);
-		}
-		else {
-			throw new IllegalStateException("Cannot create partitioned state. " +
-					"The keyed state backend has not been set." +
-					"This indicates that the operator is not partitioned/keyed.");
-		}
 	}
 
 	/**

@@ -48,11 +48,6 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.state.DefaultKeyedStateStore;
 import org.apache.flink.runtime.state.KeyedStateBackend;
-import org.apache.flink.runtime.state.VoidNamespace;
-import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.internal.InternalAppendingState;
-import org.apache.flink.runtime.state.internal.InternalListState;
-import org.apache.flink.runtime.state.internal.InternalMergingState;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.InternalTimer;
@@ -60,6 +55,8 @@ import org.apache.flink.streaming.api.operators.InternalTimerService;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
+import org.apache.flink.streaming.api.operators.state.ContextMergingState;
+import org.apache.flink.streaming.api.operators.state.ContextSubKeyedAppendingState;
 import org.apache.flink.streaming.api.windowing.assigners.BaseAlignedWindowAssigner;
 import org.apache.flink.streaming.api.windowing.assigners.MergingWindowAssigner;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
@@ -147,16 +144,16 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 	// ------------------------------------------------------------------------
 
 	/** The state in which the window contents is stored. Each window is a namespace */
-	private transient InternalAppendingState<K, W, IN, ACC, ACC> windowState;
+	private transient ContextSubKeyedAppendingState<W, IN, ACC> windowState;
 
 	/**
 	 * The {@link #windowState}, typed to merging state for merging windows.
 	 * Null if the window state is not mergeable.
 	 */
-	private transient InternalMergingState<K, W, IN, ACC, ACC> windowMergingState;
+	private transient ContextMergingState<W> windowMergingState;
 
 	/** The state that holds the merging window metadata (the sets that describe what is merged). */
-	private transient InternalListState<K, VoidNamespace, Tuple2<W, W>> mergingSetsState;
+	private transient ListState<Tuple2<W, W>> mergingSetsState;
 
 	/**
 	 * This is given to the {@code InternalWindowFunction} for emitting elements with a given
@@ -237,15 +234,16 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		// create (or restore) the state that hold the actual window contents
 		// NOTE - the state may be null in the case of the overriding evicting window operator
 		if (windowStateDescriptor != null) {
-			windowState = (InternalAppendingState<K, W, IN, ACC, ACC>) getOrCreateKeyedState(windowSerializer, windowStateDescriptor);
+			windowState =
+				this.contextSubKeyedStateBinder.getContextSubKeyedAppendingState(windowStateDescriptor, windowSerializer);
 		}
 
 		// create the typed and helper states for merging windows
 		if (windowAssigner instanceof MergingWindowAssigner) {
 
 			// store a typed reference for the state of merging windows - sanity check
-			if (windowState instanceof InternalMergingState) {
-				windowMergingState = (InternalMergingState<K, W, IN, ACC, ACC>) windowState;
+			if (windowState instanceof ContextMergingState) {
+				windowMergingState = (ContextMergingState<W>) windowState;
 			}
 			// TODO this sanity check should be here, but is prevented by an incorrect test (pending validation)
 			// TODO see WindowOperatorTest.testCleanupTimerWithEmptyFoldingStateForSessionWindows()
@@ -266,9 +264,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 					new ListStateDescriptor<>("merging-window-set", tupleSerializer);
 
 			// get the state that stores the merging sets
-			mergingSetsState = (InternalListState<K, VoidNamespace, Tuple2<W, W>>)
-					getOrCreateKeyedState(VoidNamespaceSerializer.INSTANCE, mergingSetsStateDescriptor);
-			mergingSetsState.setCurrentNamespace(VoidNamespace.INSTANCE);
+			mergingSetsState = getState(mergingSetsStateDescriptor);
 		}
 	}
 
@@ -354,7 +350,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 					throw new IllegalStateException("Window " + window + " is not in in-flight window set.");
 				}
 
-				windowState.setCurrentNamespace(stateWindow);
+				windowState.setNamespace(stateWindow);
 				windowState.add(element.getValue());
 
 				triggerContext.key = key;
@@ -387,7 +383,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 				}
 				isSkippedElement = false;
 
-				windowState.setCurrentNamespace(window);
+				windowState.setNamespace(window);
 				windowState.add(element.getValue());
 
 				triggerContext.key = key;
@@ -439,10 +435,10 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 				// window and therefore the Trigger state, however, so nothing to do.
 				return;
 			} else {
-				windowState.setCurrentNamespace(stateWindow);
+				windowState.setNamespace(stateWindow);
 			}
 		} else {
-			windowState.setCurrentNamespace(triggerContext.window);
+			windowState.setNamespace(triggerContext.window);
 			mergingWindows = null;
 		}
 
@@ -487,10 +483,10 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 				// window and therefore the Trigger state, however, so nothing to do.
 				return;
 			} else {
-				windowState.setCurrentNamespace(stateWindow);
+				windowState.setNamespace(stateWindow);
 			}
 		} else {
-			windowState.setCurrentNamespace(triggerContext.window);
+			windowState.setNamespace(triggerContext.window);
 			mergingWindows = null;
 		}
 
@@ -720,10 +716,9 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
 		@Override
 		protected  <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) throws Exception {
-			return keyedStateBackend.getPartitionedState(
+			return WindowOperator.this.getSubKeyedStateWithNamespace(stateDescriptor,
 				window,
-				windowSerializer,
-				stateDescriptor);
+				windowSerializer);
 		}
 	}
 
@@ -842,7 +837,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		@SuppressWarnings("unchecked")
 		public <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor) {
 			try {
-				return WindowOperator.this.getPartitionedState(window, windowSerializer, stateDescriptor);
+				return WindowOperator.this.getSubKeyedStateWithNamespace(stateDescriptor, window, windowSerializer);
 			} catch (Exception e) {
 				throw new RuntimeException("Could not retrieve state", e);
 			}
@@ -852,16 +847,12 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		public <S extends MergingState<?, ?>> void mergePartitionedState(StateDescriptor<S, ?> stateDescriptor) {
 			if (mergedWindows != null && mergedWindows.size() > 0) {
 				try {
-					S rawState = getKeyedStateBackend().getOrCreateKeyedState(windowSerializer, stateDescriptor);
-
-					if (rawState instanceof InternalMergingState) {
-						@SuppressWarnings("unchecked")
-						InternalMergingState<K, W, ?, ?, ?> mergingState = (InternalMergingState<K, W, ?, ?, ?>) rawState;
-						mergingState.mergeNamespaces(window, mergedWindows);
-					}
-					else {
-						throw new IllegalArgumentException(
-								"The given state descriptor does not refer to a mergeable state (MergingState)");
+					ContextSubKeyedAppendingState state =
+						WindowOperator.this.contextSubKeyedStateBinder.getContextSubKeyedAppendingState(
+							stateDescriptor,
+							windowSerializer);
+					if (state instanceof ContextMergingState) {
+						((ContextMergingState<W>) state).mergeNamespaces(window, mergedWindows);
 					}
 				}
 				catch (Exception e) {
