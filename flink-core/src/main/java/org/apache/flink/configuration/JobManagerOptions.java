@@ -98,6 +98,13 @@ public class JobManagerOptions {
 			.withDescription("The maximum number of prior execution attempts kept in history.");
 
 	/**
+	 * The maximum number that a region can attempt to restart.
+	 */
+	public static final ConfigOption<Integer> EXECUTION_FAILOVER_STRATEGY_REGION_MAX_ATTEMPTS =
+		key("jobmanager.execution.failover-strategy.region.attempts")
+			.defaultValue(100);
+
+	/**
 	 * The class name of the graph manager plugin.
 	 */
 	public static final ConfigOption<String> GRAPH_MANAGER_PLUGIN =

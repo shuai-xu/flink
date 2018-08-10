@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.blob.VoidBlobWriter;
 import org.apache.flink.runtime.concurrent.Executors;
@@ -48,7 +49,6 @@ import org.apache.flink.util.TestLogger;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -168,6 +168,7 @@ public class FailoverRegionTest extends TestLogger {
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev31).getState());
 
 		ev11.getCurrentExecutionAttempt().markFinished();
+		ev21.scheduleForExecution(slotProvider, true, LocationPreferenceConstraint.ALL);
 		ev21.getCurrentExecutionAttempt().markFinished();
 		ev22.scheduleForExecution(slotProvider, true, LocationPreferenceConstraint.ALL);
 		ev22.getCurrentExecutionAttempt().markFinished();
@@ -376,7 +377,9 @@ public class FailoverRegionTest extends TestLogger {
 		ev1.getCurrentExecutionAttempt().fail(new Exception("new fail"));
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev1).getState());
 
-		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
+		// mark cancelingComplete for v1 vertices, as others vertices are still in CREATED state
+		// and can change to CANCELED directly
+		for (ExecutionVertex evs : ev1.getJobVertex().getTaskVertices()) {
 			evs.getCurrentExecutionAttempt().cancelingComplete();
 		}
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev1).getState());
@@ -385,7 +388,45 @@ public class FailoverRegionTest extends TestLogger {
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev1).getState());
 	}
 
+	@Test
+	public void testRegionFailedExceedingMaxLimit() throws Exception {
+		RestartStrategy restartStrategy = new InfiniteDelayRestartStrategy(10);
+		ExecutionGraph eg = createSingleRegionExecutionGraph(restartStrategy, 1);
+
+		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy) eg.getFailoverStrategy();
+
+		ExecutionVertex ev = eg.getAllExecutionVertices().iterator().next();
+
+		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev).getState());
+
+		// Recover for the first time
+		ev.getCurrentExecutionAttempt().fail(new Exception("Test Exception"));
+		assertEquals(JobStatus.RUNNING, eg.getState());
+		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev).getState());
+
+		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
+			if (!ExecutionState.CREATED.equals(evs.getExecutionState())) {
+				evs.getCurrentExecutionAttempt().cancelingComplete();
+			}
+		}
+		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev).getState());
+		assertEquals(JobStatus.RUNNING, eg.getState());
+
+		// Failed for the second time
+		ev.getCurrentExecutionAttempt().fail(new Exception("Test Exception"));
+		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
+			if (!ExecutionState.CREATED.equals(evs.getExecutionState())) {
+				evs.getCurrentExecutionAttempt().cancelingComplete();
+			}
+		}
+		assertEquals(JobStatus.RESTARTING, eg.getState());
+	}
+
 	private static ExecutionGraph createSingleRegionExecutionGraph(RestartStrategy restartStrategy) throws Exception {
+		return createSingleRegionExecutionGraph(restartStrategy, 100);
+	}
+
+	private static ExecutionGraph createSingleRegionExecutionGraph(RestartStrategy restartStrategy, int regionMaxAttempts) throws Exception {
 		Instance instance = ExecutionGraphTestUtils.getInstance(
 				new ActorTaskManagerGateway(
 						new SimpleActorGateway(TestingUtils.directExecutionContext())),
@@ -413,19 +454,18 @@ public class FailoverRegionTest extends TestLogger {
 		v3.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 		v3.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 
-		List<JobVertex> ordered = new ArrayList<>(Arrays.asList(v1, v2, v3));
-
+		JobGraph jobGraph = new JobGraph(jobId, jobName, new JobVertex[] {v1, v2, v3});
+		jobGraph.getJobConfiguration().setInteger(
+			JobManagerOptions.EXECUTION_FAILOVER_STRATEGY_REGION_MAX_ATTEMPTS, regionMaxAttempts);
 		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
-			new DummyJobInformation(
-				jobId,
-				jobName),
+			jobGraph,
 			TestingUtils.defaultExecutor(),
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			restartStrategy,
 			new FailoverPipelinedRegionWithDirectExecutor(),
 			scheduler,
-			ordered);
+			VoidBlobWriter.getInstance());
 
 		eg.scheduleForExecution();
 		return eg;
