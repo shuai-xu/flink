@@ -193,6 +193,7 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 		// Writes state descriptors into the checkpoint stream
 		try {
 			streamWithResultProvider = checkpointStreamSupplier.get();
+			cancelStreamRegistry.registerCloseable(streamWithResultProvider);
 
 			CheckpointStreamFactory.CheckpointStateOutputStream outputStream =
 				streamWithResultProvider.getCheckpointOutputStream();
@@ -243,12 +244,9 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 			}
 
 		} finally {
-			try {
-				if (streamWithResultProvider != null) {
-					IOUtils.closeQuietly(streamWithResultProvider);
-				}
-			} catch (Exception e) {
-				LOG.warn("Could not properly close the output stream.", e);
+			if (streamWithResultProvider != null) {
+				IOUtils.closeQuietly(streamWithResultProvider);
+				cancelStreamRegistry.unregisterCloseable(streamWithResultProvider);
 			}
 		}
 	}

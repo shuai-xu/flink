@@ -34,11 +34,13 @@ public class GeminiConfiguration {
 
 	/**
 	 * Config parameter defining the type of snapshot to take. It can be "FULL" or "INCREMENTAL".
+	 * The default value is "FULL".
 	 */
 	public static final String GEMINI_SNAPSHOT_TYPE = STATEBACKEND_PREFIX + "snapshot.type";
 
 	/**
 	 * Config parameter defining the type of memory to use. It can be "HEAP" or "OFFHEAP".
+	 * The default value is "HEAP".
 	 */
 	public static final String GEMINI_MEMORY_TYPE = STATEBACKEND_PREFIX + "memory.type";
 
@@ -46,7 +48,7 @@ public class GeminiConfiguration {
 	 * Whether to copy the value when user adds or gets state. The user will hold the references of state
 	 * if this parameter is "false". In this case, the state can be changed during one checkpoint, and a
 	 * inconsistent snapshot may be taken. If the parameter is set to "true", user will sacrifice some
-	 * performance to guarantee consistency.
+	 * performance to guarantee consistency. The default value is true.
 	 */
 	public static final String GEMINI_COPY_VALUE = STATEBACKEND_PREFIX + "copy.value";
 

@@ -25,10 +25,11 @@ import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 
 /**
- * Unit tests to validates that internal states can be correctly saved and
- * restored in {@link GeminiInternalStateBackend}.
+ * Unit tests to validate that internal states can be correctly saved and
+ * restored in {@link GeminiInternalStateBackend} with the configuration of full heap
+ * and no value copy.
  */
-public class GeminiFullHeapInternalStateCheckpointTest extends InternalStateCheckpointTestBase {
+public class GeminiFullHeapWithoutCopyCheckpointTest extends InternalStateCheckpointTestBase {
 
 	@Override
 	protected AbstractInternalStateBackend createStateBackend(
@@ -37,13 +38,14 @@ public class GeminiFullHeapInternalStateCheckpointTest extends InternalStateChec
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) {
 		Configuration configuration = getStateBackendConfiguration();
-		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration, null);
+		return new GeminiInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, configuration);
 	}
 
 	private Configuration getStateBackendConfiguration() {
 		Configuration configuration = new Configuration();
 		configuration.setString(GeminiConfiguration.GEMINI_SNAPSHOT_TYPE, "FULL");
 		configuration.setString(GeminiConfiguration.GEMINI_MEMORY_TYPE, "HEAP");
+		configuration.setString(GeminiConfiguration.GEMINI_COPY_VALUE, "false");
 
 		return configuration;
 	}

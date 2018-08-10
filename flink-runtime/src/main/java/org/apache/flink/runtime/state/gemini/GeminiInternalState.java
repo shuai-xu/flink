@@ -17,6 +17,7 @@
 
 package org.apache.flink.runtime.state.gemini;
 
+import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
@@ -109,10 +110,7 @@ public class GeminiInternalState implements InternalState {
 
 	@Override
 	public void put(Row key, Row value) {
-		Preconditions.checkNotNull(key);
-		Preconditions.checkNotNull(value);
-		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
-		Preconditions.checkArgument(value.getArity() == descriptor.getNumValueColumns());
+		checkKeyAndValue(key, value);
 
 		Row newValue = isCopyValue() ? descriptor.getValueSerializer().copy(value) : value;
 
@@ -121,16 +119,18 @@ public class GeminiInternalState implements InternalState {
 
 	@Override
 	public void merge(Row key, Row value) {
-		Preconditions.checkNotNull(key);
-		Preconditions.checkNotNull(value);
-		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
-		Preconditions.checkArgument(value.getArity() == descriptor.getNumValueColumns());
+		checkKeyAndValue(key, value);
 		Preconditions.checkNotNull(descriptor.getValueMerger());
 
-		Row newValue = isCopyValue() ? descriptor.getValueSerializer().copy(value) : value;
+		RowSerializer valueSerializer = descriptor.getValueSerializer();
+
+		Row copiedValue = isCopyValue() ? valueSerializer.copy(value) : value;
 		Row oldValue = stateStore.get(key);
+
+		Row newValue = copiedValue;
 		if (oldValue != null) {
-			newValue = descriptor.getValueMerger().merge(oldValue, newValue);
+			Row copiedOldValue = valueSerializer.copy(oldValue);
+			newValue = descriptor.getValueMerger().merge(copiedOldValue, copiedValue);
 		}
 		stateStore.put(key, newValue);
 	}
@@ -253,6 +253,14 @@ public class GeminiInternalState implements InternalState {
 
 		return isCopyValue() ? new CopyValueIterator(iterator) : iterator;
 	}
+
+	private void checkKeyAndValue(Row key, Row value) {
+		Preconditions.checkNotNull(key);
+		Preconditions.checkNotNull(value);
+		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
+		Preconditions.checkArgument(value.getArity() == descriptor.getNumValueColumns());
+	}
+
 
 	/**
 	 * Implementation of {@link Pair} where {@link #getValue()} will copy the return value

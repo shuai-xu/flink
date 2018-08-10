@@ -18,9 +18,9 @@
 
 package org.apache.flink.runtime.state.gemini;
 
-import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
@@ -76,9 +76,12 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	 */
 	private Map<String, StateStoreSnapshot> stateStoreSnapshotMap;
 
+	/**
+	 * Snapshot for all key serializers and value serializers.
+	 */
+	private Map<String, Tuple2<RowSerializer, RowSerializer>> snapshottedSerializers;
 
 	private final CloseableRegistry cancelStreamRegistry;
-
 
 	public FullSnapshotOperator(
 		GeminiInternalStateBackend stateBackend,
@@ -91,10 +94,19 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 		this.primaryStreamFactory = Preconditions.checkNotNull(primaryStreamFactory);
 		this.cancelStreamRegistry = Preconditions.checkNotNull(cancelStreamRegistry);
 		this.stateStoreSnapshotMap = new HashMap<>();
+		this.snapshottedSerializers = new HashMap<>();
 	}
 
 	@Override
 	public void takeSnapshot() {
+		for (Map.Entry<String, InternalState> entry : stateBackend.getStates().entrySet()) {
+			String stateName = entry.getKey();
+			InternalStateDescriptor descriptor = entry.getValue().getDescriptor();
+			RowSerializer duplicatedKeySerializer = (RowSerializer) descriptor.getKeySerializer().duplicate();
+			RowSerializer duplicatedValueSerializer = (RowSerializer) descriptor.getValueSerializer().duplicate();
+			snapshottedSerializers.put(stateName, Tuple2.of(duplicatedKeySerializer, duplicatedValueSerializer));
+		}
+
 		for (Map.Entry<String, StateStore> entry : stateBackend.getStateStoreMap().entrySet()) {
 			stateStoreSnapshotMap.put(entry.getKey(),
 				entry.getValue().createSnapshot(checkpointId));
@@ -148,7 +160,7 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 			Map<Integer, Tuple2<Long, Integer>> metaInfos =
 				snapshotData(outputStream, outputView);
 
-			LOG.info("GeminiStateBackend snapshot asynchronous part took " +
+			LOG.info("GeminiInternalStateBackend snapshot asynchronous part took " +
 				(System.currentTimeMillis() - asyncStartTime) + " ms.");
 
 
@@ -217,8 +229,12 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 				InternalStateDescriptor stateDescriptor = state.getDescriptor();
 
 				String stateName = stateDescriptor.getName();
-				TypeSerializer<Row> keySerializer = stateDescriptor.getKeySerializer();
-				TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
+				Tuple2<RowSerializer, RowSerializer> stateSerializer =
+					snapshottedSerializers.get(stateName);
+				Preconditions.checkNotNull(stateSerializer);
+
+				RowSerializer keySerializer = stateSerializer.f0;
+				RowSerializer valueSerializer = stateSerializer.f1;
 				StateStoreSnapshot stateStoreSnapshot = stateStoreSnapshotMap.get(stateName);
 
 				if (stateStoreSnapshot == null) {

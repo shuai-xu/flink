@@ -86,7 +86,7 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 		this.geminiConfiguration = new GeminiConfiguration(configuration);
 		this.geminiAgent = new GeminiAgent(this, geminiConfiguration);
 
-		LOG.info("GeminiStateBackend is created with configuration: " + configuration);
+		LOG.info("GeminiInternalStateBackend is created with configuration: " + this.geminiConfiguration);
 	}
 
 	public LocalRecoveryConfig getLocalRecoveryConfig() {
@@ -140,7 +140,7 @@ public class GeminiInternalStateBackend extends AbstractInternalStateBackend {
 
 		snapshotOperator.takeSnapshot();
 
-		LOG.info("GeminiStateBackend snapshot synchronous part took " +
+		LOG.info("GeminiInternalStateBackend snapshot synchronous part took " +
 			(System.currentTimeMillis() - syncStartTime) + " ms.");
 
 		return new FutureTask<SnapshotResult<StatePartitionSnapshot>>(
