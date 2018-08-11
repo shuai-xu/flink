@@ -62,6 +62,8 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
@@ -106,7 +108,16 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for the checkpoint coordinator.
  */
+@RunWith(Parameterized.class)
 public class CheckpointCoordinatorTest extends TestLogger {
+
+	@Parameterized.Parameters(name = "fullRestartStrategy: {0}")
+	public static Collection<Boolean> parameters() {
+		return Arrays.asList(true, false);
+	}
+
+	@Parameterized.Parameter
+	public boolean fullRestartStrategy;
 
 	@Rule
 	public TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -2058,7 +2069,14 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		tasks.put(jobVertexID1, jobVertex1);
 		tasks.put(jobVertexID2, jobVertex2);
 
-		coord.restoreLatestCheckpointedState(tasks, true, false);
+		if (fullRestartStrategy) {
+			coord.restoreLatestCheckpointedState(tasks, true, false);
+		} else {
+			// restore the store using region failover strategy
+			List<ExecutionVertex> executionVertices = getExecutionVertices(jobVertex1, jobVertex2);
+
+			coord.restoreLatestCheckpointedState(executionVertices, true, false);
+		}
 
 		// validate that all shared states are registered again after the recovery.
 		for (CompletedCheckpoint completedCheckpoint : completedCheckpoints) {
@@ -2968,6 +2986,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		for (int i = 0; i < parallelism; i++) {
 			executionVertices[i] = mockExecutionVertex(
+				executionJobVertex,
 				new ExecutionAttemptID(),
 				jobVertexID,
 				jobVertexIDs,
@@ -3029,6 +3048,39 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 		ExecutionJobVertex jobVertex = mock(ExecutionJobVertex.class);
 		when(jobVertex.getOperatorIDs()).thenReturn(jobVertexIDs);
+
+		when(vertex.getJobVertex()).thenReturn(jobVertex);
+
+		return vertex;
+	}
+
+	private static ExecutionVertex mockExecutionVertex(
+		ExecutionJobVertex jobVertex,
+		ExecutionAttemptID attemptID,
+		JobVertexID jobVertexID,
+		List<OperatorID> jobVertexIDs,
+		int parallelism,
+		int maxParallelism,
+		ExecutionState state,
+		ExecutionState ... successiveStates) {
+
+		ExecutionVertex vertex = mock(ExecutionVertex.class);
+
+		final Execution exec = spy(new Execution(
+			mock(Executor.class),
+			vertex,
+			1,
+			1L,
+			1L,
+			Time.milliseconds(500L)
+		));
+		when(exec.getAttemptId()).thenReturn(attemptID);
+		when(exec.getState()).thenReturn(state, successiveStates);
+
+		when(vertex.getJobvertexId()).thenReturn(jobVertexID);
+		when(vertex.getCurrentExecutionAttempt()).thenReturn(exec);
+		when(vertex.getTotalNumberOfParallelSubtasks()).thenReturn(parallelism);
+		when(vertex.getMaxParallelism()).thenReturn(maxParallelism);
 
 		when(vertex.getJobVertex()).thenReturn(jobVertex);
 
@@ -3791,5 +3843,15 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 			coord.receiveAcknowledgeMessage(acknowledgeCheckpoint);
 		}
+	}
+
+	private List<ExecutionVertex> getExecutionVertices(ExecutionJobVertex... executionJobVertices) {
+		List<ExecutionVertex> executionVertices = new ArrayList<>();
+		for (ExecutionJobVertex executionJobVertex : executionJobVertices) {
+			for (int i = 0; i < executionJobVertex.getParallelism(); i++) {
+				executionVertices.add(executionJobVertex.getTaskVertices()[i]);
+			}
+		}
+		return executionVertices;
 	}
 }

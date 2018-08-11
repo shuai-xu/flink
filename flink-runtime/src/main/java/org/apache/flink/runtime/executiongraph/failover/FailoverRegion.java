@@ -224,13 +224,10 @@ public class FailoverRegion {
 		try {
 			if (transitionState(JobStatus.CREATED, JobStatus.RUNNING)) {
 				// if we have checkpointed state, reload it into the executions
-				//TODO: checkpoint support restore part ExecutionVertex cp
-				/**
 				if (executionGraph.getCheckpointCoordinator() != null) {
 					executionGraph.getCheckpointCoordinator().restoreLatestCheckpointedState(
 							connectedExecutionVertices, false, false);
 				}
-				*/
 				//TODO, use restart strategy to schedule them.
 				// Let the scheduler event to reschedule connected ExecutionVertices
 				executionGraph.getGraphManagerPlugin().onExecutionVertexFailover(
