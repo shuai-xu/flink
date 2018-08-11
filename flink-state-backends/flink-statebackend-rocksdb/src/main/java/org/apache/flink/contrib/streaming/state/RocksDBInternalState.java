@@ -92,7 +92,7 @@ public class RocksDBInternalState implements InternalState {
 	private final RocksDBKeyComparator defaultComparator;
 
 	/** Since max parallelism for Flink is not larger than 32768, only three bytes is enough. */
-	private static final int GROUP_BYTES_TO_SKIP = 3;
+	static final int GROUP_BYTES_TO_SKIP = 3;
 
 	RocksDBInternalState(RocksDBInternalStateBackend backend, InternalStateDescriptor descriptor) {
 		this.backend = Preconditions.checkNotNull(backend);

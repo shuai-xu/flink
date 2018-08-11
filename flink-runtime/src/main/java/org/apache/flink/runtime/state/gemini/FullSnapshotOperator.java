@@ -76,11 +76,6 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	 */
 	private Map<String, StateStoreSnapshot> stateStoreSnapshotMap;
 
-	/**
-	 * Snapshot for all key serializers and value serializers.
-	 */
-	private Map<String, Tuple2<RowSerializer, RowSerializer>> snapshottedSerializers;
-
 	private final CloseableRegistry cancelStreamRegistry;
 
 	public FullSnapshotOperator(
@@ -94,18 +89,10 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 		this.primaryStreamFactory = Preconditions.checkNotNull(primaryStreamFactory);
 		this.cancelStreamRegistry = Preconditions.checkNotNull(cancelStreamRegistry);
 		this.stateStoreSnapshotMap = new HashMap<>();
-		this.snapshottedSerializers = new HashMap<>();
 	}
 
 	@Override
 	public void takeSnapshot() {
-		for (Map.Entry<String, InternalState> entry : stateBackend.getStates().entrySet()) {
-			String stateName = entry.getKey();
-			InternalStateDescriptor descriptor = entry.getValue().getDescriptor();
-			RowSerializer duplicatedKeySerializer = (RowSerializer) descriptor.getKeySerializer().duplicate();
-			RowSerializer duplicatedValueSerializer = (RowSerializer) descriptor.getValueSerializer().duplicate();
-			snapshottedSerializers.put(stateName, Tuple2.of(duplicatedKeySerializer, duplicatedValueSerializer));
-		}
 
 		for (Map.Entry<String, StateStore> entry : stateBackend.getStateStoreMap().entrySet()) {
 			stateStoreSnapshotMap.put(entry.getKey(),
@@ -229,8 +216,9 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 				InternalStateDescriptor stateDescriptor = state.getDescriptor();
 
 				String stateName = stateDescriptor.getName();
+
 				Tuple2<RowSerializer, RowSerializer> stateSerializer =
-					snapshottedSerializers.get(stateName);
+					stateBackend.getDuplicatedKVSerializers().get(stateName);
 				Preconditions.checkNotNull(stateSerializer);
 
 				RowSerializer keySerializer = stateSerializer.f0;

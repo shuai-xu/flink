@@ -19,8 +19,8 @@
 package org.apache.flink.contrib.streaming.state;
 
 import org.apache.flink.api.common.typeutils.SerializationException;
-import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
@@ -217,6 +217,12 @@ public class RocksDBFullSnapshotOperation {
 
 				for (InternalState state : stateBackend.getStates().values()) {
 					InternalStateDescriptor stateDescriptor = state.getDescriptor();
+					Tuple2<RowSerializer, RowSerializer> stateSerializer =
+						stateBackend.getDuplicatedKVSerializers().get(stateDescriptor.getName());
+					Preconditions.checkNotNull(stateSerializer);
+
+					RowSerializer keySerializer = stateSerializer.f0;
+					RowSerializer valueSerializer = stateSerializer.f1;
 
 					byte[] stateNameBytes = ((RocksDBInternalState) state).stateNameBytes;
 
@@ -227,12 +233,9 @@ public class RocksDBFullSnapshotOperation {
 						new RocksDBStateRangeIterator<Pair<Row, Row>>(backupInstance, groupPrefix, groupPrefixEnd) {
 							@Override
 							public Pair<Row, Row> next() {
-								return getNextEntry().getRowPair(stateDescriptor);
+								return getNextEntry().getRowPair(stateDescriptor, keySerializer, valueSerializer);
 							}
 						};
-
-					TypeSerializer<Row> keySerializer = stateDescriptor.getKeySerializer();
-					TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
 
 					while (iterator.hasNext()) {
 						Pair<Row, Row> pair = iterator.next();

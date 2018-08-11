@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.heap;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
@@ -325,8 +326,11 @@ public final class HeapInternalStateBackend extends AbstractInternalStateBackend
 				InternalStateDescriptor stateDescriptor = state.getDescriptor();
 
 				String stateName = stateDescriptor.getName();
-				TypeSerializer<Row> keySerializer = stateDescriptor.getKeySerializer();
-				TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
+				Tuple2<RowSerializer, RowSerializer> stateSerializer = getDuplicatedKVSerializers().get(stateName);
+				Preconditions.checkNotNull(stateSerializer);
+
+				RowSerializer keySerializer = stateSerializer.f0;
+				RowSerializer valueSerializer = stateSerializer.f1;
 
 				Iterator<Pair<Row, Row>> iterator = iterator(group, stateDescriptor);
 				while (iterator.hasNext()) {
