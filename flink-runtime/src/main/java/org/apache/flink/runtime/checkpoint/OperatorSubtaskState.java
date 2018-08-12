@@ -213,14 +213,23 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 	public void registerSharedStates(SharedStateRegistry sharedStateRegistry) {
 		registerSharedState(sharedStateRegistry, managedKeyedState);
 		registerSharedState(sharedStateRegistry, rawKeyedState);
-		// regist managedInternalState???
-		// registerSharedState(sharedStateRegistry, managedInternalState);
+		registerSharedInternalState(sharedStateRegistry, managedInternalState);
 	}
 
 	private static void registerSharedState(
 		SharedStateRegistry sharedStateRegistry,
 		Iterable<KeyedStateHandle> stateHandles) {
 		for (KeyedStateHandle stateHandle : stateHandles) {
+			if (stateHandle != null) {
+				stateHandle.registerSharedStates(sharedStateRegistry);
+			}
+		}
+	}
+
+	private static void registerSharedInternalState(
+		SharedStateRegistry sharedStateRegistry,
+		Iterable<StatePartitionSnapshot> stateHandles) {
+		for (StatePartitionSnapshot stateHandle : stateHandles) {
 			if (stateHandle != null) {
 				stateHandle.registerSharedStates(sharedStateRegistry);
 			}

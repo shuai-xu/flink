@@ -390,7 +390,24 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 
 			serializeStreamStateHandle(statePartitionSnapshot.getSnapshotHandle(), dos);
 		} else if (stateHandle instanceof IncrementalStatePartitionSnapshot) {
-			throw new IllegalStateException("");
+			IncrementalStatePartitionSnapshot incrementSnapshot = (IncrementalStatePartitionSnapshot) stateHandle;
+
+			dos.writeByte(INCREMENTAL_STATE_PARTITION_SNAPSHOT);
+			dos.writeInt(((GroupRange)incrementSnapshot.getGroups()).getStartGroup());
+			dos.writeInt(((GroupRange)incrementSnapshot.getGroups()).getEndGroup());
+
+			dos.writeLong(incrementSnapshot.getCheckpointId());
+
+			serializeStreamStateHandle(incrementSnapshot.getMetaStateHandle(), dos);
+
+			dos.writeInt(incrementSnapshot.getSharedState().size());
+			for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> entry : incrementSnapshot.getSharedState().entrySet()) {
+				dos.writeUTF(entry.getKey().toString());
+				dos.writeUTF(entry.getValue().f0);
+				serializeStreamStateHandle(entry.getValue().f1, dos);
+			}
+
+			serializeStreamStateHandleMap(incrementSnapshot.getPrivateState(), dos);
 		} else {
 			throw new IllegalStateException("Unknown KeyedStateHandle type: " + stateHandle.getClass());
 		}
@@ -504,7 +521,25 @@ class SavepointV2Serializer implements SavepointSerializer<SavepointV2> {
 				return new DefaultStatePartitionSnapshot(groupRange, metaInfos, stateHandle);
 			}
 		} else if (INCREMENTAL_STATE_PARTITION_SNAPSHOT == type) {
-			throw new IllegalStateException();
+			int start = dis.readInt();
+			int end = dis.readInt();
+			GroupRange range = GroupRange.of(start, end);
+
+			Long checkpointId = dis.readLong();
+			StreamStateHandle metaStateHandle = deserializeStreamStateHandle(dis);
+
+			int size = dis.readInt();
+			Map<StateHandleID, Tuple2<String, StreamStateHandle>> shared = new HashMap<>(size);
+
+			for (int i = 0; i < size; ++i) {
+				StateHandleID stateHandleID = new StateHandleID(dis.readUTF());
+				String uniqueId = dis.readUTF();
+				StreamStateHandle stateHandle = deserializeStreamStateHandle(dis);
+				shared.put(stateHandleID, new Tuple2<>(uniqueId, stateHandle));
+			}
+
+			Map<StateHandleID, StreamStateHandle> privateStates = deserializeStreamStateHandleMap(dis);
+			return new IncrementalStatePartitionSnapshot(range, checkpointId, shared, privateStates, metaStateHandle);
 		} else {
 			throw new IllegalStateException("Reading invalid KeyedStateHandle, type: " + type);
 		}

@@ -31,6 +31,7 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
 import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.GroupRangePartitioner;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
@@ -44,7 +45,6 @@ import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.TaskStateManager;
-import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.util.OperatorSubtaskDescriptionText;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.util.CloseableIterable;
@@ -144,7 +144,9 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 			// -------------- Internal State Backend --------------
 			internalStateBackend = internalStateBackend(
 				keySerializer,
-				prioritizedOperatorSubtaskStates
+				operatorIdentifierText,
+				prioritizedOperatorSubtaskStates,
+				streamTaskCloseableRegistry
 			);
 
 			// -------------- Operator State Backend --------------
@@ -187,8 +189,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 			}
 
 			if (internalStateBackend != null) {
-				// need anything else???
-				internalStateBackend.close();
+				internalStateBackend.dispose();
 			}
 			if (operatorStateBackend != null) {
 				if (streamTaskCloseableRegistry.unregisterCloseable(operatorStateBackend)) {
@@ -260,24 +261,36 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
 	protected <K> AbstractInternalStateBackend internalStateBackend(
 		TypeSerializer<K> keySerializer,
-		PrioritizedOperatorSubtaskState prioritizedOperatorSubtaskStates
+		String operatorIdentifierText,
+		PrioritizedOperatorSubtaskState prioritizedOperatorSubtaskStates,
+		CloseableRegistry backendCloseableRegistry
 	) throws Exception {
-//		if (keySerializer == null) {
-//			return null;
-//		}
-		List<StateObjectCollection<StatePartitionSnapshot>> managedInternalStateList = prioritizedOperatorSubtaskStates.getPrioritizedManagedInternalState();
-		StateObjectCollection managedInternalState = managedInternalStateList.get(0);
-		// init heap internalstatebackend
-		MemoryStateBackend memoryStateBackend = new MemoryStateBackend();
-		AbstractInternalStateBackend internalStateBackend =
-			memoryStateBackend.createInternalStateBackend(
-				environment,
-				environment.getTaskInfo().getTaskName(),
-				environment.getTaskInfo().getMaxNumberOfParallelSubtasks(),
-				getGroups());
+		if (keySerializer == null) {
+			return null;
+		}
 
-		internalStateBackend.restore(managedInternalState);
-		return internalStateBackend;
+		String logDescription = "internal state backend for " + operatorIdentifierText;
+
+		TaskInfo taskInfo = environment.getTaskInfo();
+
+		final GroupRange range = GroupRangePartitioner.getPartitionRange(
+			GroupRange.of(0, taskInfo.getMaxNumberOfParallelSubtasks()),
+			taskInfo.getNumberOfParallelSubtasks(),
+			taskInfo.getIndexOfThisSubtask()
+		);
+
+		BackendRestorerProcedure<AbstractInternalStateBackend, StatePartitionSnapshot> backendRestorer =
+			new BackendRestorerProcedure<>(
+				() -> stateBackend.createInternalStateBackend(
+					environment,
+					operatorIdentifierText,
+					taskInfo.getMaxNumberOfParallelSubtasks(),
+					range),
+				backendCloseableRegistry,
+				logDescription);
+
+		return backendRestorer.createAndRestore(
+			prioritizedOperatorSubtaskStates.getPrioritizedManagedInternalState());
 	}
 
 	protected <K> AbstractKeyedStateBackend<K> keyedStatedBackend(

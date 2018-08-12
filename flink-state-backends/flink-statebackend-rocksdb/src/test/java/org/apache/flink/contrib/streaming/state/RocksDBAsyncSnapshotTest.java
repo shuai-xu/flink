@@ -470,7 +470,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 
 			verify(outputStream).close();
 		} finally {
-			internalBackend.close();
+			internalBackend.dispose();
 		}
 	}
 

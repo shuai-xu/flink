@@ -43,12 +43,9 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.DefaultKeyedStateStore;
-import org.apache.flink.runtime.state.GroupRange;
-import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.KeyGroupsList;
 import org.apache.flink.runtime.state.KeyedStateBackend;
@@ -63,7 +60,6 @@ import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.streaming.api.graph.StreamConfig;
@@ -228,7 +224,6 @@ public abstract class AbstractStreamOperator<OUT>
 		stateKeySelector1 = config.getStatePartitioner(0, getUserCodeClassloader());
 		stateKeySelector2 = config.getStatePartitioner(1, getUserCodeClassloader());
 
-		initInternalState();
 		contextStateBinder = new ContextStateBinder(this);
 		contextSubKeyedStateBinder = new ContextSubKeyedStateBinder(this);
 	}
@@ -370,7 +365,7 @@ public abstract class AbstractStreamOperator<OUT>
 		}
 
 		if (internalStateBackend != null) {
-			internalStateBackend.close();
+			internalStateBackend.dispose();
 		}
 
 		if (exception != null) {
@@ -884,24 +879,5 @@ public abstract class AbstractStreamOperator<OUT>
 	public int numEventTimeTimers() {
 		return timeServiceManager == null ? 0 :
 			timeServiceManager.numEventTimeTimers();
-	}
-
-	private void initInternalState() {
-		MemoryStateBackend memoryStateBackend = new MemoryStateBackend(false);
-
-		internalStateBackend = memoryStateBackend.createInternalStateBackend(
-			container.getEnvironment(),
-			container.getName(),
-			container.getEnvironment().getTaskInfo().getMaxNumberOfParallelSubtasks(),
-			getGroups());
-	}
-
-	private GroupSet getGroups() {
-		int maxParallelism = container.getEnvironment().getTaskInfo().getMaxNumberOfParallelSubtasks();
-		int parallelism = container.getEnvironment().getTaskInfo().getNumberOfParallelSubtasks();
-		int subtaskIndex = container.getEnvironment().getTaskInfo().getIndexOfThisSubtask();
-
-		KeyGroupRange range = KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(maxParallelism, parallelism, subtaskIndex);
-		return GroupRange.of(range.getStartKeyGroup(), range.getEndKeyGroup() + 1);
 	}
 }

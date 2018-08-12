@@ -23,7 +23,9 @@ import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.util.Disposable;
 
+import java.io.Closeable;
 import java.util.Collection;
 
 /**
@@ -31,13 +33,14 @@ import java.util.Collection;
  * execution instance of an operator will deploy a backend to manage its
  * internal states.
  */
-public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>> {
+public interface InternalStateBackend extends Snapshotable<SnapshotResult<StatePartitionSnapshot>, Collection<StatePartitionSnapshot>>, Closeable, Disposable {
 
 	/**
-	 * Closes the backend. This method is called when the task completes its
+	 * Dispose the backend. This method is called when the task completes its
 	 * execution.
 	 */
-	void close();
+	@Override
+	void dispose();
 
 	/**
 	 * Returns the internal state described by the given descriptor. If the

@@ -179,6 +179,10 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 
 	@Override
 	public void close() {
+	}
+
+	@Override
+	public void dispose() {
 		closeImpl();
 
 		IOUtils.closeQuietly(cancelStreamRegistry);

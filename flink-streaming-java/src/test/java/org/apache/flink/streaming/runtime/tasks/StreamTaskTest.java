@@ -282,9 +282,11 @@ public class StreamTaskTest extends TestLogger {
 		verify(TestStreamSource.keyedStateBackend).close();
 		verify(TestStreamSource.rawOperatorStateInputs).close();
 		verify(TestStreamSource.rawKeyedStateInputs).close();
+		verify(TestStreamSource.internalStateBackend).close();
 		// ... and disposed
 		verify(TestStreamSource.operatorStateBackend).dispose();
 		verify(TestStreamSource.keyedStateBackend).dispose();
+		verify(TestStreamSource.internalStateBackend).dispose();
 
 		assertEquals(ExecutionState.FAILED, task.getExecutionState());
 	}
@@ -1313,6 +1315,7 @@ public class StreamTaskTest extends TestLogger {
 
 		static AbstractKeyedStateBackend<?> keyedStateBackend;
 		static OperatorStateBackend operatorStateBackend;
+		static AbstractInternalStateBackend internalStateBackend;
 		static CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs;
 		static CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs;
 
@@ -1324,6 +1327,7 @@ public class StreamTaskTest extends TestLogger {
 		public void initializeState(StateInitializationContext context) throws Exception {
 			keyedStateBackend = (AbstractKeyedStateBackend<?>) getKeyedStateBackend();
 			operatorStateBackend = getOperatorStateBackend();
+			internalStateBackend = getInternalStateBackend();
 			rawOperatorStateInputs =
 				(CloseableIterable<StatePartitionStreamProvider>) context.getRawOperatorStateInputs();
 			rawKeyedStateInputs =

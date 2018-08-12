@@ -74,9 +74,9 @@ public abstract class InternalStateAccessTestBase {
 	}
 
 	@After
-	public void closeStateBackend() {
+	public void disposeStateBackend() {
 		if (backend != null) {
-			backend.close();
+			backend.dispose();
 		}
 	}
 

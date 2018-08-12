@@ -156,7 +156,7 @@ public class StreamTaskStateInitializerImplTest {
 				String operatorIdentifier,
 				int numberOfGroups,
 				GroupSet groups) throws Exception {
-				return null;
+				return mock(AbstractInternalStateBackend.class);
 			}
 		});
 

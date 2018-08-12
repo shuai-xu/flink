@@ -21,7 +21,9 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.functions.HashPartitioner;
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -53,7 +55,7 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
+import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.apache.flink.types.Row;
 
 import org.junit.Test;
@@ -103,11 +105,12 @@ public class StatefulStreamOperatorTest {
 			Thread.currentThread().getContextClassLoader());
 
 		InternalStateAccessOperator operator = new InternalStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> testHarness =
-			new OneInputStreamOperatorTestHarness<>(operator, mockEnvironment);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
+			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, mockEnvironment);
 
 //		testHarness.setConfiguration(configuration);
 		testHarness.setup();
+		testHarness.initializeState(null);
 
 		AbstractInternalStateBackend stateBackend = Whitebox.getInternalState(operator, "internalStateBackend");
 		assertTrue(stateBackend instanceof AbstractInternalStateBackend);
@@ -119,8 +122,8 @@ public class StatefulStreamOperatorTest {
 	@Test
 	public void testKeyedStateAccess() throws Exception {
 		KeyedStateAccessOperator operator = new KeyedStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> testHarness =
-			new OneInputStreamOperatorTestHarness<>(operator);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
+			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.open();
 
@@ -145,8 +148,8 @@ public class StatefulStreamOperatorTest {
 	@Test
 	public void testSubKeyedStateAccess() throws Exception {
 		SubKeyedStateAccessOperator operator = new SubKeyedStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> testHarness =
-			new OneInputStreamOperatorTestHarness<>(operator);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
+			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.open();
 
@@ -174,8 +177,8 @@ public class StatefulStreamOperatorTest {
 	@Test
 	public void testInternalStateAccess() throws Exception {
 		InternalStateAccessOperator operator = new InternalStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> testHarness =
-			new OneInputStreamOperatorTestHarness<>(operator);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
+			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.open();
 
@@ -201,8 +204,8 @@ public class StatefulStreamOperatorTest {
 	@Test
 	public void testStateCheckpointWithoutParallelismChange() throws Exception {
 		InternalStateAccessOperator operator = new InternalStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> testHarness =
-			new OneInputStreamOperatorTestHarness<>(operator);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
+			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.open();
 
@@ -216,7 +219,7 @@ public class StatefulStreamOperatorTest {
 		testHarness.close();
 
 		operator = new InternalStateAccessOperator();
-		testHarness = new OneInputStreamOperatorTestHarness<>(operator);
+		testHarness = new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO);
 
 		testHarness.setup();
 		testHarness.initializeState(snapshot);
@@ -241,8 +244,8 @@ public class StatefulStreamOperatorTest {
 	@Test
 	public void testStateCheckpointWithParallelismChange() throws Exception {
 		InternalStateAccessOperator operator = new InternalStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> testHarness =
-			new OneInputStreamOperatorTestHarness<>(operator, 10, 1, 0);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> testHarness =
+			new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, 10, 1, 0);
 
 		testHarness.open();
 
@@ -276,8 +279,8 @@ public class StatefulStreamOperatorTest {
 
 		OperatorSubtaskState leftStateSnapshot = getSplitSnapshot(operatorSnapshot, leftGroups);
 		InternalStateAccessOperator leftOperator = new InternalStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> leftTestHarness =
-			new OneInputStreamOperatorTestHarness<>(leftOperator, 10, 3, 0);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> leftTestHarness =
+			new KeyedOneInputStreamOperatorTestHarness(leftOperator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, 10, 3, 0);
 		leftTestHarness.setup();
 		leftTestHarness.initializeState(leftStateSnapshot);
 		leftTestHarness.open();
@@ -292,8 +295,8 @@ public class StatefulStreamOperatorTest {
 
 		OperatorSubtaskState rightStateSnapshot = getSplitSnapshot(operatorSnapshot, rightGroups);
 		InternalStateAccessOperator rightOperator = new InternalStateAccessOperator();
-		OneInputStreamOperatorTestHarness<Tuple2<String, String>, String> rightTestHarness =
-			new OneInputStreamOperatorTestHarness<>(rightOperator, 10, 3, 2);
+		KeyedOneInputStreamOperatorTestHarness<String, Tuple2<String, String>, String> rightTestHarness =
+			new KeyedOneInputStreamOperatorTestHarness(rightOperator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, 10, 3, 2);
 		rightTestHarness.setup();
 		rightTestHarness.initializeState(rightStateSnapshot);
 		rightTestHarness.open();
@@ -336,7 +339,7 @@ public class StatefulStreamOperatorTest {
 		rightTestHarness.close();
 
 		operator = new InternalStateAccessOperator();
-		testHarness = new OneInputStreamOperatorTestHarness<>(operator, 10, 1, 0);
+		testHarness = new KeyedOneInputStreamOperatorTestHarness(operator, new Selector<String>(), BasicTypeInfo.STRING_TYPE_INFO, 10, 1, 0);
 		testHarness.setup();
 		testHarness.initializeState(mergeSnapshot(leftOperatorSnapshot1, rightOperatorSnapshot1));
 		testHarness.open();
@@ -670,5 +673,14 @@ public class StatefulStreamOperatorTest {
 			newManagedKeyedState,
 			newRawKeyedState,
 			newManagedInternalState);
+	}
+
+	private static class Selector<T> implements KeySelector<Tuple2<T, String>, T> {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public T getKey(Tuple2<T, String> value) throws Exception {
+			return value.f0;
+		}
 	}
 }

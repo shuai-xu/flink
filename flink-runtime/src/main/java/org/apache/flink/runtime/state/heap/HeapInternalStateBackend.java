@@ -66,7 +66,7 @@ import java.util.concurrent.RunnableFuture;
  * Implementation of {@link AbstractInternalStateBackend} which stores the key-value
  * pairs of internal states in a nested in-memory map and makes snapshots synchronously.
  */
-public final class HeapInternalStateBackend extends AbstractInternalStateBackend {
+public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 
 	private static final Logger LOG = LoggerFactory.getLogger(HeapInternalStateBackend.class);
 

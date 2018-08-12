@@ -284,7 +284,7 @@ public class StreamTaskTerminationTest extends TestLogger {
 			String operatorIdentifier,
 			int numberOfGroups,
 			GroupSet groups) throws Exception {
-			return null;
+				return null;
 		}
 	}
 

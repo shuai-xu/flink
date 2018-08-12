@@ -123,7 +123,7 @@ public class RocksDBStateBackendConfigTest {
 			assertNull(rocksDbBackend.getDbStoragePaths());
 		}
 		finally {
-			internalStateBackend.close();
+			internalStateBackend.dispose();
 		}
 
 		final RocksDBKeyedStateBackend<Integer> keyedBackend = createKeyedStateBackend(rocksDbBackend);
@@ -199,7 +199,7 @@ public class RocksDBStateBackendConfigTest {
 			rocksDbBackend.setDbStoragePaths(null);
 			assertNull(rocksDbBackend.getDbStoragePaths());
 		} finally {
-			internalStateBackend.close();
+			internalStateBackend.dispose();
 		}
 
 		RocksDBKeyedStateBackend<Integer> keyedBackend = createKeyedStateBackend(rocksDbBackend);
@@ -274,7 +274,7 @@ public class RocksDBStateBackendConfigTest {
 			File instanceBasePath = internalStateBackend.getInstanceBasePath();
 			assertThat(instanceBasePath.getAbsolutePath(), anyOf(startsWith(dir1.getAbsolutePath()), startsWith(dir2.getAbsolutePath())));
 		} finally {
-			internalStateBackend.close();
+			internalStateBackend.dispose();
 		}
 
 		RocksDBKeyedStateBackend<Integer> keyedBackend = (RocksDBKeyedStateBackend<Integer>) rocksDbBackend.
@@ -380,7 +380,7 @@ public class RocksDBStateBackendConfigTest {
 					1,
 					new GroupRange(0, 1));
 
-				internalStateBackend.close();
+				internalStateBackend.dispose();
 			}
 			catch (Exception e) {
 				e.printStackTrace();

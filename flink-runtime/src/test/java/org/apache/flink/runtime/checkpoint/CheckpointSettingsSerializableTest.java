@@ -186,7 +186,7 @@ public class CheckpointSettingsSerializableTest extends TestLogger {
 			String operatorIdentifier,
 			int numberOfGroups,
 			GroupSet groups) throws Exception {
-			return null;
+			throw new UnsupportedOperationException();
 		}
 	}
 }

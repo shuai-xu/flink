@@ -72,7 +72,7 @@ public class SubKeyedSortedMapStateTest {
 	@After
 	public void closeStateBackend() {
 		if (backend != null) {
-			backend.close();
+			backend.dispose();
 		}
 	}
 

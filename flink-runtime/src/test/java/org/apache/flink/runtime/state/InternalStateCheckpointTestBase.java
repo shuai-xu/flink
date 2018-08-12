@@ -123,9 +123,9 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	}
 
 	@After
-	public void close() {
+	public void dispose() {
 		if (stateBackend != null) {
-			stateBackend.close();
+			stateBackend.dispose();
 		}
 	}
 
@@ -138,7 +138,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 		StatePartitionSnapshot snapshot = runSnapshot(snapshotFuture);
 		assertNull(snapshot);
-		stateBackend.close();
+		stateBackend.dispose();
 
 		stateBackend = createStateBackend(
 			maxParallelism,
@@ -167,7 +167,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 		StatePartitionSnapshot snapshot = runSnapshot(snapshotFuture);
 		assertNotNull(snapshot);
-		stateBackend.close();
+		stateBackend.dispose();
 
 		stateBackend = createStateBackend(
 			maxParallelism,
@@ -234,7 +234,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			index++;
 		}
 
-		stateBackend.close();
+		stateBackend.dispose();
 
 		// Restores the stateBackend from the snapshot
 		stateBackend = createStateBackend(
@@ -300,7 +300,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			index++;
 		}
 
-		stateBackend.close();
+		stateBackend.dispose();
 
 		// Restores the stateBackend from the snapshot
 		stateBackend = createStateBackend(
@@ -378,7 +378,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			index++;
 		}
 
-		stateBackend.close();
+		stateBackend.dispose();
 
 		// Restores the stateBackend from a subset of the snapshot
 		GroupRange firstGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 0);
@@ -430,7 +430,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		StatePartitionSnapshot firstSnapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
-		stateBackend.close();
+		stateBackend.dispose();
 
 		// Restores the stateBackend from a subset of the snapshot
 		GroupRange secondGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 1);
@@ -483,7 +483,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		StatePartitionSnapshot secondSnapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
-		stateBackend.close();
+		stateBackend.dispose();
 
 		// Restores the stateBackend from a subset of the snapshot
 		GroupRange thirdGroups1 = (GroupRange) getGroupsForSubtask(maxParallelism, 3, 2);
@@ -536,7 +536,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		StatePartitionSnapshot thirdSnapshot2 =
 			runSnapshot(stateBackend, 1, 1, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
 
-		stateBackend.close();
+		stateBackend.dispose();
 
 		// Merge the local states
 		GroupSet leftGroups3 = getGroupsForSubtask(maxParallelism, 2, 0);
@@ -585,8 +585,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			validateStateDataWithGroupSet(globalGroupMaps, rightGlobalIterator2, rightGroups3, globalStateDescriptor2.getName());
 
 		} finally {
-			newLeftBackend.close();
-			newRightBackend.close();
+			newLeftBackend.dispose();
+			newRightBackend.dispose();
 		}
 	}
 
