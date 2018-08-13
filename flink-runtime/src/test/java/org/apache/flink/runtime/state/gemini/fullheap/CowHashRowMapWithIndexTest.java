@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.gemini.fullheap;
 
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.runtime.state.gemini.RowMap;
+import org.apache.flink.runtime.state.gemini.RowMapSnapshot;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 
@@ -27,13 +28,17 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -166,11 +171,11 @@ public class CowHashRowMapWithIndexTest {
 		cowHashRowMapWithIndex.put(Row.of(18, 22, "34"), Row.of("row_18_22_34"));
 		cowHashRowMapWithIndex.put(Row.of(19, 23, "35"), Row.of("row_19_23_35"));
 
-		when(cowHashRowMapWithIndex.get(Row.of(18, 21, "31"))).thenReturn(Row.of("row_18_21_31"));
-		when(cowHashRowMapWithIndex.get(Row.of(18, 21, "32"))).thenReturn(Row.of("row_18_21_32"));
-		when(cowHashRowMapWithIndex.get(Row.of(18, 22, "33"))).thenReturn(Row.of("row_18_22_33"));
-		when(cowHashRowMapWithIndex.get(Row.of(18, 22, "34"))).thenReturn(Row.of("row_18_22_34"));
-		when(cowHashRowMapWithIndex.get(Row.of(19, 23, "35"))).thenReturn(Row.of("row_19_23_35"));
+		when(dataRowMap.get(Row.of(18, 21, "31"))).thenReturn(Row.of("row_18_21_31"));
+		when(dataRowMap.get(Row.of(18, 21, "32"))).thenReturn(Row.of("row_18_21_32"));
+		when(dataRowMap.get(Row.of(18, 22, "33"))).thenReturn(Row.of("row_18_22_33"));
+		when(dataRowMap.get(Row.of(18, 22, "34"))).thenReturn(Row.of("row_18_22_34"));
+		when(dataRowMap.get(Row.of(19, 23, "35"))).thenReturn(Row.of("row_19_23_35"));
 
 		Map keyIndexMap = ((MultipleKeysIndex) cowHashRowMapWithIndex.getPrefixKeyIndex()).getKeyIndexMap();
 		assertEquals(2,	((Map) keyIndexMap.get(18)).size());
@@ -277,5 +282,153 @@ public class CowHashRowMapWithIndexTest {
 		assertEquals(1, count);
 
 		assertEquals(null, keyIndexMap.get(19));
+	}
+
+	@Test
+	public void testPairOperation() {
+		// use ordered key to ensure the index is built
+		Comparator[] comparators = {INTEGER_COMPARATOR, INTEGER_COMPARATOR};
+		RowMap dataRowMap = new MockRowMap();
+		CowHashRowMapWithIndex cowHashRowMapWithIndex =
+			new CowHashRowMapWithIndex(2, comparators, dataRowMap);
+
+		Random random = new Random(System.currentTimeMillis());
+		Map<Row, Row> referenceMap = new HashMap<>();
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+			Row value = Row.of(random.nextInt());
+			cowHashRowMapWithIndex.put(key, value);
+			referenceMap.put(key, value);
+		}
+		assertEquals(referenceMap.size(), cowHashRowMapWithIndex.size());
+
+		Iterator<Pair<Row, Row>> iterator = cowHashRowMapWithIndex.getIterator(null);
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			assertEquals(referenceMap.get(pair.getKey()), pair.getValue());
+		}
+
+		iterator = cowHashRowMapWithIndex.getIterator(null);
+		Set<Row> removedKey = new HashSet<>();
+		Set<Row> setValueKey = new HashSet<>();
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			Row key = pair.getKey();
+
+			boolean op = random.nextBoolean();
+			if (op) {
+				removedKey.add(key);
+				referenceMap.remove(key);
+				iterator.remove();
+			} else {
+				setValueKey.add(key);
+				Row newValue = Row.of(random.nextInt());
+				pair.setValue(newValue);
+				referenceMap.put(key, newValue);
+			}
+		}
+
+		assertEquals(referenceMap.size(), cowHashRowMapWithIndex.size());
+		iterator = cowHashRowMapWithIndex.getIterator(null);
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			assertEquals(referenceMap.get(pair.getKey()), pair.getValue());
+		}
+
+		for (Row key : removedKey) {
+			assertNull(cowHashRowMapWithIndex.get(key));
+		}
+
+		for (Row key : setValueKey) {
+			assertEquals(cowHashRowMapWithIndex.get(key), referenceMap.get(key));
+		}
+
+		cowHashRowMapWithIndex.put(Row.of(1, 1), Row.of(2));
+		iterator = cowHashRowMapWithIndex.getIterator(null);
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			iterator.remove();
+			try {
+				pair.setValue(Row.of(1));
+				fail("Should throw IllegalStateException");
+			} catch (Exception e) {
+				assertTrue(e instanceof IllegalStateException);
+			}
+		}
+	}
+
+	private class MockRowMap implements RowMap {
+
+		private Map<Row, Row> data;
+
+		MockRowMap() {
+			data = new HashMap<>();
+		}
+
+		@Override
+		public int size() {
+			return data.size();
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return data.isEmpty();
+		}
+
+		@Override
+		public Row get(Row key) {
+			if (key == null) {
+				return null;
+			}
+			return data.get(key);
+		}
+
+		@Override
+		public Row put(Row key, Row value) {
+			if (key == null) {
+				return null;
+			}
+
+			return data.put(key, value);
+		}
+
+		@Override
+		public Row remove(Row key) {
+			if (key == null) {
+				return null;
+			}
+
+			return data.remove(key);
+		}
+
+		@Override
+		public Iterator<Pair<Row, Row>> getIterator(Row prefixKeys) {
+			throw new UnsupportedOperationException();
+		};
+
+		@Override
+		public <K> Iterator<Pair<Row, Row>> getSubIterator(Row prefixKeys, K startKey, K endKey) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Pair<Row, Row> firstPair(Row prefixKeys) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Pair<Row, Row> lastPair(Row prefixKeys) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public RowMapSnapshot createSnapshot() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void releaseSnapshot(RowMapSnapshot snapshot) {
+			throw new UnsupportedOperationException();
+		}
 	}
 }

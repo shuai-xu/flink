@@ -71,7 +71,7 @@ public class GeminiConfiguration {
 	private void loadDefaultConfiguration() {
 		this.configMap.put(GEMINI_SNAPSHOT_TYPE, SnapshotType.FULL.toString());
 		this.configMap.put(GEMINI_MEMORY_TYPE, MemoryType.HEAP.toString());
-		this.configMap.put(GEMINI_COPY_VALUE, String.valueOf(false));
+		this.configMap.put(GEMINI_COPY_VALUE, String.valueOf(true));
 	}
 
 	private void loadConfiguration(Configuration configuration) {

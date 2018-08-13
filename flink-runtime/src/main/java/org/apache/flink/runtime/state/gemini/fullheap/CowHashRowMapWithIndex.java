@@ -22,7 +22,6 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.runtime.state.gemini.RowMap;
 import org.apache.flink.runtime.state.gemini.RowMapSnapshot;
-import org.apache.flink.types.DefaultPair;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
@@ -142,7 +141,7 @@ public class CowHashRowMapWithIndex implements RowMap {
 		// no need to check prefixKey num against row's key num
 		Row key = prefixKeyIndex.firstRowKey(prefixKey);
 		Row value = dataRowMap.get(key);
-		return value != null ? new DefaultPair<>(key, value) : null;
+		return value != null ? new CowHashRowMapWithIndexPair(key, value) : null;
 	}
 
 	@Override
@@ -150,7 +149,7 @@ public class CowHashRowMapWithIndex implements RowMap {
 		// no need to check prefixKey num against row's key num
 		Row key = prefixKeyIndex.lastRowKey(prefixKey);
 		Row value = dataRowMap.get(key);
-		return value != null ? new DefaultPair<>(key, value) : null;
+		return value != null ? new CowHashRowMapWithIndexPair(key, value) : null;
 	}
 
 	@Override
@@ -168,17 +167,59 @@ public class CowHashRowMapWithIndex implements RowMap {
 		return prefixKeyIndex;
 	}
 
-	static class CowHashRowMapWithIndexIterator implements Iterator<Pair<Row, Row>> {
+	private class CowHashRowMapWithIndexPair implements Pair<Row, Row> {
+
+		private final Row key;
+
+		private Row value;
+
+		private boolean isDeleted;
+
+		CowHashRowMapWithIndexPair(Row key, Row value) {
+			this.key = key;
+			this.value = value;
+			this.isDeleted = false;
+		}
+
+		@Override
+		public Row getKey() {
+			return key;
+		}
+
+		@Override
+		public Row getValue() {
+			return value;
+		}
+
+		@Override
+		public Row setValue(Row newValue) {
+			if (isDeleted) {
+				throw new IllegalStateException("This pair is already deleted");
+			}
+
+			value = newValue;
+			return CowHashRowMapWithIndex.this.dataRowMap.put(key, newValue);
+		}
+
+		private void remove() {
+			if (isDeleted) {
+				return;
+			}
+
+			isDeleted = true;
+			CowHashRowMapWithIndex.this.dataRowMap.remove(key);
+		}
+	}
+
+	private class CowHashRowMapWithIndexIterator implements Iterator<Pair<Row, Row>> {
 
 		private final Iterator<Row> keyIndexIterator;
 
 		private final RowMap dataRowMap;
 
-		private Row currentKey;
+		private CowHashRowMapWithIndexPair currentPair;
 
-		private Row currentValue;
-
-		public CowHashRowMapWithIndexIterator(
+		CowHashRowMapWithIndexIterator(
 			Iterator<Row> keyIndexIterator,
 			RowMap dataRowMap
 		) {
@@ -193,23 +234,26 @@ public class CowHashRowMapWithIndex implements RowMap {
 
 		@Override
 		public Pair<Row, Row> next() {
-			currentKey = keyIndexIterator.next();
-			currentValue = dataRowMap.get(currentKey);
-			Preconditions.checkNotNull(currentValue);
+			Row key = keyIndexIterator.next();
+			Row value = dataRowMap.get(key);
+			Preconditions.checkNotNull(value);
 
-			return new DefaultPair<>(currentKey, currentValue);
+			CowHashRowMapWithIndexPair pair =
+				new CowHashRowMapWithIndexPair(key, value);
+			currentPair = pair;
+
+			return pair;
 		}
 
 		@Override
 		public void remove() {
-			if (currentKey == null) {
+			if (currentPair == null) {
 				throw new IllegalStateException();
 			}
 
 			keyIndexIterator.remove();
-			dataRowMap.remove(currentKey);
-
-			currentKey = null;
+			currentPair.remove();
+			currentPair = null;
 		}
 	}
 

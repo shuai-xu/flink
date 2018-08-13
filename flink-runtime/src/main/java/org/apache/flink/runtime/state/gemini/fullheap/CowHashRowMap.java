@@ -36,7 +36,8 @@ import java.util.Objects;
 import java.util.TreeSet;
 
 /**
- * Hash table based implementation of {@link RowMap} with copy-on-write and incremental rehash support.
+ * Hash table based implementation of {@link RowMap} with copy-on-write and incremental rehash support. We assume
+ * that the value won't be modified outside the map.
  * <p>
  * {@link CowHashRowMap} sacrifices some peak performance and memory efficiency for features like incremental
  * rehashing and asynchronous snapshots through copy-on-write. Copy-on-write tries to minimize the amount of
@@ -491,10 +492,39 @@ public class CowHashRowMap implements RowMap {
 	}
 
 	/**
-	 * Removes a key without rehashing.
-	 * It's only used in {@link CowHashRowMapIterator#remove()} currently.
-	 * Rehashing can move a visited key-value mapping to the position where
-	 * we are going to iterate, so we may visit a mapping repeatedly.
+	 * Replaces the value associated with the key without rehashing, and return the old value
+	 * if it exists. It's only used in {@link CowHashRowMapPair#setValue(Row)}. Rehashing can
+	 * move a visited key-value mapping to the position where we are going to iterate so that
+	 * we may visit a mapping repeatedly.
+	 */
+	private Row replaceWithoutRehash(Row key, Row value) {
+		if (key == null) {
+			return null;
+		}
+
+		int hash = hashValue(key);
+		CowHashRowMapEntry[] table = selectActiveTable(hash);
+		int index = hash & (table.length - 1);
+
+		for (CowHashRowMapEntry e = table[index]; e != null; e = e.next) {
+			if (e.hash == hash && key.equals(e.key)) {
+				if (e.entryVersion < highestSnapshotVersion) {
+					e = handleChainedEntryCopyOnWrite(table, index, e);
+				}
+				Row oldValue = e.value;
+				e.value = value;
+
+				return oldValue;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Removes a key without rehashing. It's only used in {@link CowHashRowMapPair#remove()}
+	 * currently.Rehashing can move a visited key-value mapping to the position where
+	 * we are going to iterate so that we may visit a mapping repeatedly.
 	 */
 	private Row removeWithoutRehash(Row key) {
 		if (key == null) {
@@ -701,17 +731,20 @@ public class CowHashRowMap implements RowMap {
 	}
 
 	/**
-	 * Implementation for {@link Pair}.
+	 * Implementation for {@link Pair}. All of
 	 */
-	private static class CowHashRowMapPair implements Pair<Row, Row> {
+	private class CowHashRowMapPair implements Pair<Row, Row> {
 
 		private final Row key;
 
-		private final CowHashRowMapEntry rowMapEntry;
+		private Row value;
 
-		CowHashRowMapPair(Row key, CowHashRowMapEntry entry) {
+		private boolean isDeleted;
+
+		CowHashRowMapPair(Row key, Row value) {
 			this.key = key;
-			this.rowMapEntry = entry;
+			this.value = value;
+			this.isDeleted = false;
 		}
 
 		@Override
@@ -721,15 +754,30 @@ public class CowHashRowMap implements RowMap {
 
 		@Override
 		public Row getValue() {
-			return rowMapEntry.getValue();
+			return value;
 		}
 
 		@Override
 		public Row setValue(Row newValue) {
+			if (isDeleted) {
+				throw new IllegalStateException("This pair is already deleted");
+			}
+
 			Preconditions.checkNotNull(newValue);
-			return rowMapEntry.setValue(newValue);
+			value = newValue;
+			// copy-on-write may happen
+			return CowHashRowMap.this.replaceWithoutRehash(key, newValue);
 		}
 
+		private void remove() {
+			if (isDeleted) {
+				return;
+			}
+
+			isDeleted = true;
+			// copy-on-write may happen
+			CowHashRowMap.this.removeWithoutRehash(key);
+		}
 	}
 
 	/**
@@ -739,7 +787,7 @@ public class CowHashRowMap implements RowMap {
 
 		CowHashRowMapEntry[] activeTable;
 
-		CowHashRowMapEntry currentEntry;
+		CowHashRowMapPair currentPair;
 
 		CowHashRowMapEntry nextEntry;
 
@@ -749,7 +797,7 @@ public class CowHashRowMap implements RowMap {
 
 		CowHashRowMapIterator() {
 			this.activeTable = primaryTable;
-			this.currentEntry = null;
+			this.currentPair = null;
 			this.nextEntry = ITERATOR_BOOTSTRAP_ENTRY;
 			this.nextIndex = rehashIndex;
 			this.expectedModCount = modCount;
@@ -797,8 +845,8 @@ public class CowHashRowMap implements RowMap {
 				throw new NoSuchElementException();
 			}
 
-			Pair<Row, Row> pair = new CowHashRowMapPair(nextEntry.key, nextEntry);
-			currentEntry = nextEntry;
+			CowHashRowMapPair pair = new CowHashRowMapPair(nextEntry.key, nextEntry.value);
+			currentPair = pair;
 			advanceIterator();
 
 			return pair;
@@ -806,9 +854,9 @@ public class CowHashRowMap implements RowMap {
 
 		@Override
 		public void remove() {
-			CowHashRowMapEntry e = currentEntry;
+			CowHashRowMapPair pair = currentPair;
 
-			if (e == null) {
+			if (pair == null) {
 				throw new IllegalStateException();
 			}
 
@@ -816,8 +864,8 @@ public class CowHashRowMap implements RowMap {
 				throw new ConcurrentModificationException();
 			}
 
-			CowHashRowMap.this.removeWithoutRehash(e.key);
-			currentEntry = null;
+			currentPair.remove();
+			currentPair = null;
 
 			expectedModCount = modCount;
 		}

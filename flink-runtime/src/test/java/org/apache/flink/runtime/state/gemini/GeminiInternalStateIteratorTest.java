@@ -90,7 +90,7 @@ public class GeminiInternalStateIteratorTest extends InternalStateIteratorTestBa
 
 	@Test
 	public void testCopyValue() {
-		if (copyValue == "false") {
+		if (copyValue.equals("false")) {
 			return;
 		}
 

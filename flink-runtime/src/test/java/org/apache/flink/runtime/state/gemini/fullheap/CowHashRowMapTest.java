@@ -162,7 +162,7 @@ public class CowHashRowMapTest extends TestLogger {
 	}
 
 	@Test
-	public void testCowHashRowMapIterator() {
+	public void testIteratorWhenRehashing() {
 
 		InternalStateDescriptor descriptor =
 			new InternalStateDescriptorBuilder("test")
@@ -310,9 +310,9 @@ public class CowHashRowMapTest extends TestLogger {
 
 			Row key = Row.of(random.nextInt(1000));
 			Row value = Row.of(random.nextInt(1000000));
-			boolean op = random.nextBoolean();
+			int op = random.nextInt(3);
 
-			if (op) {
+			if (op < 2) {
 				rowMap.put(key, value);
 				referenceMap.put(key, value);
 			} else {
@@ -374,7 +374,159 @@ public class CowHashRowMapTest extends TestLogger {
 		validateGroupSnapshot(totalGroup, group3, rowMap3, partitioner);
 	}
 
-	private boolean checkRowMap(CowHashRowMap rowMap, HashMap<Row, Row > reference) {
+	@Test
+	public void testIteratorWhenSnapshot() {
+		// partitioner based the first Integer column.
+		Partitioner<Row> partitioner = new IntRowPartitioner();
+		// total groups is 10,
+		int totalGroup = 10;
+
+		AbstractInternalStateBackend stateBackend = mock(AbstractInternalStateBackend.class);
+		// row map stores keys in group 0-9
+		GroupRange group = new GroupRange(0, 10);
+		when(stateBackend.getNumGroups()).thenReturn(totalGroup);
+		when(stateBackend.getGroups()).thenReturn(group);
+
+		InternalStateDescriptor descriptor =
+			new InternalStateDescriptorBuilder("test")
+				.addKeyColumn("key1", IntSerializer.INSTANCE)
+				.addKeyColumn("key2", IntSerializer.INSTANCE)
+				.addValueColumn("value", IntSerializer.INSTANCE)
+				.getDescriptor();
+
+		CowHashRowMap rowMap = new CowHashRowMap(stateBackend, descriptor);
+
+		Map<Row, Row> referenceMap = new HashMap<>();
+
+		Random random = new Random(System.currentTimeMillis());
+		for (int i = 0; i < 1000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+			Row value = Row.of(random.nextInt());
+			rowMap.put(key, value);
+			referenceMap.put(key, value);
+		}
+		assertEquals(referenceMap.size(), rowMap.size());
+
+		checkRowMap(rowMap, referenceMap);
+
+		CowHashRowMapSnapshot snapshot1 = (CowHashRowMapSnapshot) rowMap.createSnapshot();
+
+		Iterator<Pair<Row, Row>>iterator = rowMap.getIterator(null);
+		while (iterator.hasNext()) {
+			iterator.next();
+			iterator.remove();
+		}
+		assertTrue(rowMap.isEmpty());
+		for (Map.Entry<Row, Row> entry : referenceMap.entrySet()) {
+			assertNull(rowMap.get(entry.getKey()));
+		}
+		assertFalse(rowMap.getIterator(null).hasNext());
+		checkSnapshot(snapshot1, referenceMap);
+		snapshot1.releaseSnapshot();
+
+		referenceMap.clear();
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+			Row value = Row.of(random.nextInt());
+			rowMap.put(key, value);
+			referenceMap.put(key, value);
+		}
+		assertEquals(referenceMap.size(), rowMap.size());
+
+		snapshot1 = (CowHashRowMapSnapshot) rowMap.createSnapshot();
+		Map<Row, Row> refSnapshot1 = new HashMap<>(referenceMap);
+
+		iterator = rowMap.getIterator(null);
+		Set<Row> removedKey = new HashSet<>();
+		Set<Row> setValueKey = new HashSet<>();
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			Row key = pair.getKey();
+
+			boolean op = random.nextBoolean();
+			if (op) {
+				removedKey.add(key);
+				referenceMap.remove(key);
+				iterator.remove();
+			} else {
+				setValueKey.add(key);
+				Row newValue = Row.of(random.nextInt());
+				pair.setValue(newValue);
+				referenceMap.put(key, newValue);
+			}
+		}
+
+		checkRowMap(rowMap, referenceMap);
+		for (Row key : removedKey) {
+			assertNull(rowMap.get(key));
+		}
+
+		for (Row key : setValueKey) {
+			assertEquals(rowMap.get(key), referenceMap.get(key));
+		}
+		checkSnapshot(snapshot1, refSnapshot1);
+
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+			Row value = Row.of(random.nextInt());
+			rowMap.put(key, value);
+			referenceMap.put(key, value);
+		}
+		assertEquals(referenceMap.size(), rowMap.size());
+		checkRowMap(rowMap, referenceMap);
+
+		CowHashRowMapSnapshot snapshot2 = (CowHashRowMapSnapshot) rowMap.createSnapshot();
+		Map<Row, Row> refSnapshot2 = new HashMap<>(referenceMap);
+
+		iterator = rowMap.getIterator(null);
+		removedKey = new HashSet<>();
+		setValueKey = new HashSet<>();
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			Row key = pair.getKey();
+
+			boolean op = random.nextBoolean();
+			if (op) {
+				removedKey.add(key);
+				referenceMap.remove(key);
+				iterator.remove();
+			} else {
+				setValueKey.add(key);
+				Row newValue = Row.of(random.nextInt());
+				pair.setValue(newValue);
+				referenceMap.put(key, newValue);
+			}
+		}
+		checkRowMap(rowMap, referenceMap);
+
+		for (Row key : removedKey) {
+			assertNull(rowMap.get(key));
+		}
+
+		for (Row key : setValueKey) {
+			assertEquals(rowMap.get(key), referenceMap.get(key));
+		}
+		checkSnapshot(snapshot1, refSnapshot1);
+		checkSnapshot(snapshot2, refSnapshot2);
+
+		rowMap.put(Row.of(1, 1), Row.of(2));
+		iterator = rowMap.getIterator(null);
+		while (iterator.hasNext()) {
+			Pair<Row, Row> pair = iterator.next();
+			iterator.remove();
+			try {
+				pair.setValue(Row.of(1));
+				fail("Should throw IllegalStateException");
+			} catch (Exception e) {
+				assertTrue(e instanceof IllegalStateException);
+			}
+		}
+
+		snapshot1.releaseSnapshot();
+		snapshot2.releaseSnapshot();
+	}
+
+	private boolean checkRowMap(CowHashRowMap rowMap, Map<Row, Row > reference) {
 		if (rowMap.size() != reference.size()) {
 			return false;
 		}
@@ -391,7 +543,7 @@ public class CowHashRowMapTest extends TestLogger {
 		return true;
 	}
 
-	private boolean checkSnapshot(CowHashRowMapSnapshot snapshot, HashMap<Row, Row> reference) {
+	private boolean checkSnapshot(CowHashRowMapSnapshot snapshot, Map<Row, Row> reference) {
 		if (snapshot.size() != reference.size()) {
 			return false;
 		}
@@ -449,6 +601,7 @@ public class CowHashRowMapTest extends TestLogger {
 			Map<Row, Row> map = reference.get(partiton);
 			if (map == null) {
 				map = new HashMap<>();
+				reference.put(partiton, map);
 			}
 			map.put(Row.of(key), Row.of(value));
 			rowMap.put(Row.of(key), Row.of(value));
