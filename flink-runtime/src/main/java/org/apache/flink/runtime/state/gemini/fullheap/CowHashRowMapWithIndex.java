@@ -112,6 +112,16 @@ public class CowHashRowMapWithIndex implements RowMap {
 	}
 
 	@Override
+	public Row merge(Row key, Row value) {
+		Row result = dataRowMap.merge(key, value);
+		if (result == null) {
+			prefixKeyIndex.addKey(key);
+		}
+
+		return result;
+	}
+
+	@Override
 	public Row remove(Row key) {
 		Row result = dataRowMap.remove(key);
 		if (result != null) {

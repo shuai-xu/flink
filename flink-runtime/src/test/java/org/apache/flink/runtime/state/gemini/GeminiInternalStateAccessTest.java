@@ -18,9 +18,7 @@
 
 package org.apache.flink.runtime.state.gemini;
 
-import org.apache.flink.api.common.functions.ListMerger;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
-import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
@@ -36,16 +34,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotSame;
 
 /**
  * Unit tests to validate that internal states can be correctly accessed in
@@ -124,42 +119,6 @@ public class GeminiInternalStateAccessTest extends InternalStateAccessTestBase {
 
 			Row oldValue = state.get(rowKey);
 			assertNotEquals(rowValue, oldValue);
-		}
-	}
-
-	@Test
-	public void testMergeCopy() {
-		if (copyValue.equals("true")) {
-			return;
-		}
-
-		InternalStateDescriptor descriptor =
-			new InternalStateDescriptorBuilder("test_merge_copy")
-				.addKeyColumn("key", IntSerializer.INSTANCE)
-				.addValueColumn("value",
-					new ListSerializer<>(IntSerializer.INSTANCE),
-					new ListMerger<>())
-				.getDescriptor();
-
-		InternalState state = backend.getInternalState(descriptor);
-
-		for (int i = 0; i < 1000; i++) {
-			Row rowKey = Row.of(i);
-			List<Integer> list = new ArrayList<>();
-			list.add(i);
-			Row rowValue = Row.of(list);
-			state.put(rowKey, rowValue);
-		}
-
-		for (int i = 0; i < 1000; i++) {
-			Row rowKey = Row.of(i);
-			Row oldValue = state.get(rowKey);
-			List<Integer> listToMerge = new ArrayList<>();
-			listToMerge.add(i + 1);
-			state.merge(rowKey, Row.of(listToMerge));
-			Row newValue = state.get(rowKey);
-			assertNotSame(oldValue, newValue);
-			assertNotSame(oldValue.getField(0), newValue.getField(0));
 		}
 	}
 }

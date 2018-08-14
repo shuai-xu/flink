@@ -217,8 +217,64 @@ public class CowHashRowMap implements RowMap {
 		CowHashRowMapEntry e = putEntry(key);
 		Row oldValue = e.value;
 		e.value = value;
+		e.valueVersion = rowMapVersion;
 
 		return oldValue;
+	}
+
+	@Override
+	public Row merge(Row key, Row value) {
+		if (key == null) {
+			return null;
+		}
+
+		incrementalRehash();
+
+		int hash = hashValue(key);
+		CowHashRowMapEntry[] table = selectActiveTable(hash);
+		int index = hash & (table.length - 1);
+
+		for (CowHashRowMapEntry e = table[index]; e != null; e = e.next) {
+			if (e.hash == hash && key.equals(e.key)) {
+				InternalStateDescriptor localDescriptor = descriptor;
+				Row oldValue = e.value;
+				if (e.valueVersion < highestSnapshotVersion) {
+					if (e.entryVersion < highestSnapshotVersion) {
+						e = handleChainedEntryCopyOnWrite(table, index, e);
+
+					}
+					// copy the old value
+					e.value = localDescriptor.getValueSerializer().copy(oldValue);
+				}
+				e.value = localDescriptor.getValueMerger().merge(e.value, value);
+				e.valueVersion = rowMapVersion;
+
+				return oldValue;
+			}
+		}
+
+		if (size() >= threshold) {
+			doubleCapacity();
+		}
+
+		CowHashRowMapEntry e = new CowHashRowMapEntry(
+			key,
+			value,
+			rowMapVersion,
+			rowMapVersion,
+			hash,
+			table[index]);
+		table[index] = e;
+
+		if (table == primaryTable) {
+			++primaryTableSize;
+		} else {
+			++rehashTableSize;
+		}
+
+		++modCount;
+
+		return null;
 	}
 
 	@Override
@@ -292,6 +348,7 @@ public class CowHashRowMap implements RowMap {
 		CowHashRowMapEntry e = new CowHashRowMapEntry(
 			key,
 			null,
+			rowMapVersion,
 			rowMapVersion,
 			hash,
 			table[index]);
@@ -654,6 +711,11 @@ public class CowHashRowMap implements RowMap {
 		int entryVersion;
 
 		/**
+		 * The version of the value.
+		 */
+		int valueVersion;
+
+		/**
 		 * The computed secondary hash.
 		 */
 		final int hash;
@@ -665,23 +727,25 @@ public class CowHashRowMap implements RowMap {
 		CowHashRowMapEntry next;
 
 		CowHashRowMapEntry() {
-			this(null, null, 0,  0, null);
+			this(null, null, 0,  0, 0, null);
 		}
 
 		CowHashRowMapEntry(CowHashRowMapEntry e, int entryVersion) {
-			this(e.key, e.value, entryVersion, e.hash, e.next);
+			this(e.key, e.value, entryVersion, e.valueVersion, e.hash, e.next);
 		}
 
 		CowHashRowMapEntry(
 			Row key,
 			Row value,
 			int entryVersion,
+			int valueVersion,
 			int hash,
 			CowHashRowMapEntry next
 		) {
 			this.key = key;
 			this.value = value;
 			this.entryVersion = entryVersion;
+			this.valueVersion = valueVersion;
 			this.hash = hash;
 			this.next = next;
 		}

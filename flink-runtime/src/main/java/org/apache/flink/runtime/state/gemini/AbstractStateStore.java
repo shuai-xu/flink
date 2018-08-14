@@ -64,6 +64,11 @@ public abstract class AbstractStateStore implements StateStore {
 	}
 
 	@Override
+	public void merge(Row key, Row value) {
+		rowMap.merge(key, value);
+	}
+
+	@Override
 	public void remove(Row key) {
 		rowMap.remove(key);
 	}

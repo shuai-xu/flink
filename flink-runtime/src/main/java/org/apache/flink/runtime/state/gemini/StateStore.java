@@ -48,6 +48,15 @@ public interface StateStore {
 	void put(Row key, Row value);
 
 	/**
+	 * Merge the value into the already existed value associated with the key.
+	 * If there is no value associated with the key, the value will be added.
+	 *
+	 * @param key The key with which the value is associated.
+	 * @param value The value to be merged.
+	 */
+	void merge(Row key, Row value);
+
+	/**
 	 * Removes the row for the given key from the state if it is present.
 	 *
 	 * @param key The key of the row to be removed.

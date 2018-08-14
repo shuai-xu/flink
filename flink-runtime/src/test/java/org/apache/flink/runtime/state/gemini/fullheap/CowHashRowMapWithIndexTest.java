@@ -19,11 +19,15 @@
 package org.apache.flink.runtime.state.gemini.fullheap;
 
 import org.apache.flink.api.common.functions.Comparator;
+import org.apache.flink.api.common.functions.ListMerger;
+import org.apache.flink.api.common.functions.Merger;
+import org.apache.flink.api.common.functions.RowMerger;
 import org.apache.flink.runtime.state.gemini.RowMap;
 import org.apache.flink.runtime.state.gemini.RowMapSnapshot;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 
+import org.apache.flink.util.Preconditions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -357,12 +361,102 @@ public class CowHashRowMapWithIndexTest {
 		}
 	}
 
+	@Test
+	public void testMergeOperation() {
+		RowMerger rowMerger = new RowMerger(new Merger[]{new ListMerger()});
+		RowMap dataRowMap = new MockRowMap(rowMerger);
+
+		CowHashRowMapWithIndex cowHashRowMapWithIndex =
+			new CowHashRowMapWithIndex(2, new Comparator[]{null, null}, dataRowMap);
+
+		Map<Row, Row> referenceMap = new HashMap<>();
+		Set<Row> referenceKeys = new HashSet<>();
+
+		Random random = new Random(System.currentTimeMillis());
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+			int v1 = random.nextInt();
+			int v2 = random.nextInt();
+
+			List<Integer> list1 = new ArrayList<>();
+			list1.add(v1);
+			list1.add(v2);
+			referenceMap.put(key, Row.of(list1));
+
+			List<Integer> list2 = new ArrayList<>();
+			list2.add(v1);
+			list2.add(v2);
+			cowHashRowMapWithIndex.put(key, Row.of(list2));
+
+			referenceKeys.add(key);
+		}
+
+		assertEquals(referenceKeys.size(), cowHashRowMapWithIndex.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), cowHashRowMapWithIndex.get(key));
+		}
+
+		// merge operation on all key-value mappings
+		for (Row key : referenceKeys) {
+			int v = random.nextInt();
+			List<Integer> list = new ArrayList<>();
+			list.add(v);
+			Row toMergeValue = Row.of(list);
+
+			Row mergedValue = rowMerger.merge(referenceMap.get(key), toMergeValue);
+			referenceMap.put(key, mergedValue);
+
+			cowHashRowMapWithIndex.merge(key, toMergeValue);
+		}
+
+		assertEquals(referenceKeys.size(), cowHashRowMapWithIndex.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), cowHashRowMapWithIndex.get(key));
+		}
+
+		// merge on the key that does not exist before
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+
+			if (referenceKeys.contains(key)) {
+				continue;
+			}
+
+			int v1 = random.nextInt();
+			int v2 = random.nextInt();
+
+			List<Integer> list1 = new ArrayList<>();
+			list1.add(v1);
+			list1.add(v2);
+			referenceMap.put(key, Row.of(list1));
+
+			List<Integer> list2 = new ArrayList<>();
+			list2.add(v1);
+			list2.add(v2);
+			cowHashRowMapWithIndex.merge(key, Row.of(list2));
+
+			referenceKeys.add(key);
+		}
+
+		assertEquals(referenceKeys.size(), cowHashRowMapWithIndex.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), cowHashRowMapWithIndex.get(key));
+		}
+	}
+
 	private class MockRowMap implements RowMap {
+
+		private final Merger valueMerger;
 
 		private Map<Row, Row> data;
 
 		MockRowMap() {
-			data = new HashMap<>();
+			this(null);
+		}
+
+		MockRowMap(Merger valueMerger) {
+			this.valueMerger = valueMerger;
+			this.data = new HashMap<>();
 		}
 
 		@Override
@@ -390,6 +484,23 @@ public class CowHashRowMapWithIndexTest {
 			}
 
 			return data.put(key, value);
+		}
+
+		@Override
+		public Row merge(Row key, Row value) {
+			Preconditions.checkNotNull(valueMerger);
+			if (key == null) {
+				return null;
+			}
+
+			Row oldValue = data.get(key);
+			if (oldValue == null) {
+				data.put(key, value);
+				return null;
+			}
+			Row newValue = (Row) valueMerger.merge(oldValue, value);
+			data.put(key, newValue);
+			return oldValue;
 		}
 
 		@Override

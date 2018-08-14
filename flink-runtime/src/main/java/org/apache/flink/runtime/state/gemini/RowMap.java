@@ -62,6 +62,16 @@ public interface RowMap {
 	Row put(Row key, Row value);
 
 	/**
+	 * Merge the value into the already existed value associated with the key.
+	 * If there is no value associated with the key before, the value will be added.
+	 *
+	 * @param key The key with which the value is associated.
+	 * @param value The value to be merged.
+	 * @return The previous value associated with the key, or null if there is no mapping.
+	 */
+	Row merge(Row key, Row value);
+
+	/**
 	 * Removes the mapping for the specified key from this map if present.
 	 *
 	 * @param key The key to remove.

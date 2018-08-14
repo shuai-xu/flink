@@ -123,16 +123,9 @@ public class GeminiInternalState implements InternalState {
 		Preconditions.checkNotNull(descriptor.getValueMerger());
 
 		RowSerializer valueSerializer = descriptor.getValueSerializer();
-
 		Row copiedValue = isCopyValue() ? valueSerializer.copy(value) : value;
-		Row oldValue = stateStore.get(key);
 
-		Row newValue = copiedValue;
-		if (oldValue != null) {
-			Row copiedOldValue = valueSerializer.copy(oldValue);
-			newValue = descriptor.getValueMerger().merge(copiedOldValue, copiedValue);
-		}
-		stateStore.put(key, newValue);
+		stateStore.merge(key, copiedValue);
 	}
 
 	@Override

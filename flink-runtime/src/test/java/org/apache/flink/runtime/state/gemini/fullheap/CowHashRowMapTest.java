@@ -18,8 +18,12 @@
 
 package org.apache.flink.runtime.state.gemini.fullheap;
 
+import org.apache.flink.api.common.functions.ListMerger;
+import org.apache.flink.api.common.functions.Merger;
 import org.apache.flink.api.common.functions.Partitioner;
+import org.apache.flink.api.common.functions.RowMerger;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
@@ -33,12 +37,13 @@ import org.apache.flink.util.TestLogger;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 
@@ -321,11 +326,11 @@ public class CowHashRowMapTest extends TestLogger {
 			}
 
 			if (i > 0 && i % 1000 == 0) {
-				Assert.assertTrue(checkRowMap(rowMap, referenceMap));
+				checkRowMap(rowMap, referenceMap);
 
 				int idx = snapshotCounter & 1;
 				if (snapshots[idx] != null) {
-					Assert.assertTrue(checkSnapshot(snapshots[idx], references[idx]));
+					checkSnapshot(snapshots[idx], references[idx]);
 					snapshots[idx].releaseSnapshot();
 				}
 
@@ -526,45 +531,150 @@ public class CowHashRowMapTest extends TestLogger {
 		snapshot2.releaseSnapshot();
 	}
 
-	private boolean checkRowMap(CowHashRowMap rowMap, Map<Row, Row > reference) {
-		if (rowMap.size() != reference.size()) {
-			return false;
+	@Test
+	public void testMergeOperation() {
+		RowMerger rowMerger = new RowMerger(new Merger[]{new ListMerger()});
+		InternalStateDescriptor descriptor =
+			new InternalStateDescriptorBuilder("test")
+				.addKeyColumn("k1", IntSerializer.INSTANCE)
+				.addKeyColumn("k2", IntSerializer.INSTANCE)
+				.addValueColumn("v1",
+					new ListSerializer(IntSerializer.INSTANCE),
+					new ListMerger<>())
+				.getDescriptor();
+
+		CowHashRowMap rowMap = new CowHashRowMap(mock(AbstractInternalStateBackend.class), descriptor);
+		Map<Row, Row> referenceMap = new HashMap<>();
+		Set<Row> referenceKeys = new HashSet<>();
+
+		Random random = new Random(System.currentTimeMillis());
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+			int v1 = random.nextInt();
+			int v2 = random.nextInt();
+
+			List<Integer> list1 = new ArrayList<>();
+			list1.add(v1);
+			list1.add(v2);
+			referenceMap.put(key, Row.of(list1));
+
+			List<Integer> list2 = new ArrayList<>();
+			list2.add(v1);
+			list2.add(v2);
+			rowMap.put(key, Row.of(list2));
+
+			referenceKeys.add(key);
 		}
+
+		assertEquals(referenceKeys.size(), rowMap.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), rowMap.get(key));
+		}
+
+		// merge operation on all key-value mappings
+		for (Row key : referenceKeys) {
+			int v = random.nextInt();
+			List<Integer> list = new ArrayList<>();
+			list.add(v);
+			Row toMergeValue = Row.of(list);
+
+			Row mergedValue = rowMerger.merge(referenceMap.get(key), toMergeValue);
+			referenceMap.put(key, mergedValue);
+
+			rowMap.merge(key, toMergeValue);
+		}
+
+		assertEquals(referenceKeys.size(), rowMap.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), rowMap.get(key));
+		}
+
+		// merge on the key that does not exist before
+		for (int i = 0; i < 10000; i++) {
+			Row key = Row.of(random.nextInt(), random.nextInt());
+
+			if (referenceKeys.contains(key)) {
+				continue;
+			}
+
+			int v1 = random.nextInt();
+			int v2 = random.nextInt();
+
+			List<Integer> list1 = new ArrayList<>();
+			list1.add(v1);
+			list1.add(v2);
+			referenceMap.put(key, Row.of(list1));
+
+			List<Integer> list2 = new ArrayList<>();
+			list2.add(v1);
+			list2.add(v2);
+			rowMap.merge(key, Row.of(list2));
+
+			referenceKeys.add(key);
+		}
+
+		assertEquals(referenceKeys.size(), rowMap.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), rowMap.get(key));
+		}
+
+		CowHashRowMapSnapshot snapshot = (CowHashRowMapSnapshot) rowMap.createSnapshot();
+		Map<Row, Row> referenceSnapshot = new HashMap<>();
+		// make a deep copy
+		for (Map.Entry<Row, Row> entry : referenceMap.entrySet()) {
+			Row key = entry.getKey();
+			Row copiedValue = descriptor.getValueSerializer().copy(entry.getValue());
+			referenceSnapshot.put(key, copiedValue);
+		}
+
+		for (Row key : referenceKeys) {
+			int v = random.nextInt();
+			List<Integer> list = new ArrayList<>();
+			list.add(v);
+			Row toMergeValue = Row.of(list);
+
+			Row mergedValue = rowMerger.merge(referenceMap.get(key), toMergeValue);
+			referenceMap.put(key, mergedValue);
+
+			rowMap.merge(key, toMergeValue);
+		}
+
+		assertEquals(referenceKeys.size(), rowMap.size());
+		for (Row key : referenceKeys) {
+			assertEquals(referenceMap.get(key), rowMap.get(key));
+		}
+		checkSnapshot(snapshot, referenceSnapshot);
+
+		snapshot.releaseSnapshot();
+	}
+
+	private void checkRowMap(CowHashRowMap rowMap, Map<Row, Row > reference) {
+		assertEquals(rowMap.size(), reference.size());
 
 		Iterator<Pair<Row, Row>> rowMapIter = rowMap.getIterator(null);
 		while (rowMapIter.hasNext()) {
 			Pair<Row, Row> pair = rowMapIter.next();
 			Row referenceValue = reference.get(pair.getKey());
-			if (!Objects.equals(pair.getValue(), referenceValue)) {
-				return false;
-			}
+			assertEquals(referenceValue, pair.getValue());
 		}
-
-		return true;
 	}
 
-	private boolean checkSnapshot(CowHashRowMapSnapshot snapshot, Map<Row, Row> reference) {
-		if (snapshot.size() != reference.size()) {
-			return false;
-		}
+	private void checkSnapshot(CowHashRowMapSnapshot snapshot, Map<Row, Row> reference) {
+		assertEquals(snapshot.size(), reference.size());
 
 		Map<Row, Row> data = convert(snapshot.getSnapshotTable(), snapshot.size());
 		for (Map.Entry<Row, Row> entry : data.entrySet()) {
 			Row value = entry.getValue();
 			Row expectedValue = reference.get(entry.getKey());
-			if (!Objects.equals(value, expectedValue)) {
-				return false;
-			}
+			assertEquals(expectedValue, value);
 		}
-
-		return true;
 	}
 
 	private Map<Row, Row> convert(CowHashRowMap.CowHashRowMapEntry[] snapshot, int snapshotSize) {
-
-		Map<Row, Row> result = new HashMap();
+		Map<Row, Row> result = new HashMap<>();
 		for (CowHashRowMap.CowHashRowMapEntry entry : snapshot) {
 			while (null != entry) {
+				assertFalse(result.containsKey(entry.getKey()));
 				result.put(entry.getKey(), entry.getValue());
 				entry = entry.next;
 			}
