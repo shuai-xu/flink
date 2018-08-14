@@ -303,6 +303,13 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		}
 
 		nodeManagerClient = createAndStartNodeManagerClient(yarnConfig);
+
+		try {
+			String curDir = env.get(ApplicationConstants.Environment.PWD.key());
+			Utils.uploadTaskManagerConf(flinkConfig, yarnConfig, env, curDir);
+		} catch (Exception e) {
+			throw new ResourceManagerException("Could not upload TaskManager config file.", e);
+		}
 	}
 
 	@Override

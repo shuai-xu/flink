@@ -19,11 +19,12 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.runtime.clusterframework.ContaineredTaskManagerParameters;
 import org.apache.flink.runtime.util.HadoopUtils;
-import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +51,8 @@ import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -60,7 +63,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.apache.flink.yarn.YarnConfigKeys.ENV_FLINK_CLASSPATH;
 
@@ -132,15 +134,55 @@ public final class Utils {
 	 * 		remote home directory base (will be extended)
 	 * @param relativeTargetPath
 	 * 		relative target path of the file (will be prefixed be the full home directory we set up)
+	 * @param preCopiedPublicPath
+	 * 		the remote public path to beforehand copy
 	 *
 	 * @return Path to remote file (usually hdfs)
 	 */
-	static Tuple2<Path, LocalResource> setupLocalResource(
+	public static Tuple2<Path, LocalResource> setupLocalResource(
 		FileSystem fs,
 		String appId,
 		Path localSrcPath,
 		Path homedir,
-		String relativeTargetPath) throws IOException {
+		String relativeTargetPath,
+		@Nullable Path preCopiedPublicPath) throws IOException {
+
+		return setupLocalResource(fs, appId, localSrcPath, homedir, relativeTargetPath, preCopiedPublicPath, null);
+	}
+
+	/**
+	 * Copy a local file to a remote file system.
+	 *
+	 * @param fs
+	 * 		remote filesystem
+	 * @param appId
+	 * 		application ID
+	 * @param localSrcPath
+	 * 		path to the local file
+	 * @param homedir
+	 * 		remote home directory base (will be extended)
+	 * @param relativeTargetPath
+	 * 		relative target path of the file (will be prefixed be the full home directory we set up)
+	 * @param preCopiedPublicPath
+	 * 		the remote public path to beforehand copy
+	 * @param visibility
+	 * 		local resource visibility
+	 *
+	 * @return Path to remote file (usually hdfs)
+	 */
+	public static Tuple2<Path, LocalResource> setupLocalResource(
+		FileSystem fs,
+		String appId,
+		Path localSrcPath,
+		Path homedir,
+		String relativeTargetPath,
+		@Nullable Path preCopiedPublicPath,
+		@Nullable LocalResourceVisibility visibility) throws IOException {
+
+		// default visibility
+		if (visibility == null) {
+			visibility = LocalResourceVisibility.APPLICATION;
+		}
 
 		File localFile = new File(localSrcPath.toUri().getPath());
 		if (localFile.isDirectory()) {
@@ -148,27 +190,38 @@ public final class Utils {
 				localSrcPath);
 		}
 
-		// copy resource to HDFS
-		String suffix =
-			".flink/"
-				+ appId
-				+ (relativeTargetPath.isEmpty() ? "" : "/" + relativeTargetPath)
-				+ "/" + localSrcPath.getName();
+		Path dst;
+		LocalResource resource;
+		if (preCopiedPublicPath == null) {
+			// copy resource to HDFS
+			String suffix =
+				".flink/"
+					+ appId
+					+ (relativeTargetPath.isEmpty() ? "" : "/" + relativeTargetPath)
+					+ "/" + localSrcPath.getName();
 
-		Path dst = new Path(homedir, suffix);
+			dst = new Path(homedir, suffix);
 
-		LOG.debug("Copying from {} to {}", localSrcPath, dst);
+			LOG.info("Use the local resource {}. Visibility: {}.", localSrcPath, visibility.toString());
+			LOG.debug("Copying from {} to {}", localSrcPath, dst);
 
-		fs.copyFromLocalFile(false, true, localSrcPath, dst);
+			fs.copyFromLocalFile(false, true, localSrcPath, dst);
 
-		// Note: If we used registerLocalResource(FileSystem, Path) here, we would access the remote
-		//       file once again which has problems with eventually consistent read-after-write file
-		//       systems. Instead, we decide to preserve the modification time at the remote
-		//       location because this and the size of the resource will be checked by YARN based on
-		//       the values we provide to #registerLocalResource() below.
-		fs.setTimes(dst, localFile.lastModified(), -1);
-		// now create the resource instance
-		LocalResource resource = registerLocalResource(dst, localFile.length(), localFile.lastModified());
+			// Note: If we used registerLocalResource(FileSystem, Path) here, we would access the remote
+			//       file once again which has problems with eventually consistent read-after-write file
+			//       systems. Instead, we decide to preserve the modification time at the remote
+			//       location because this and the size of the resource will be checked by YARN based on
+			//       the values we provide to #registerLocalResource() below.
+			fs.setTimes(dst, localFile.lastModified(), -1);
+			// now create the resource instance
+			resource = registerLocalResource(dst, localFile.length(), localFile.lastModified(), visibility);
+		} else {
+			dst = preCopiedPublicPath;
+
+			LOG.info("Use the beforehand copied resource {} (the corresponding local path: {}). Visibility: {}.", dst, localSrcPath, visibility.toString());
+
+			resource = registerLocalResource(fs, dst, visibility);
+		}
 
 		return Tuple2.of(dst, resource);
 	}
@@ -196,37 +249,33 @@ public final class Utils {
 		}
 	}
 
-	/**
-	 * Creates a YARN resource for the remote object at the given location.
-	 *
-	 * @param remoteRsrcPath	remote location of the resource
-	 * @param resourceSize		size of the resource
-	 * @param resourceModificationTime last modification time of the resource
-	 *
-	 * @return YARN resource
-	 */
 	private static LocalResource registerLocalResource(
-			Path remoteRsrcPath,
-			long resourceSize,
-			long resourceModificationTime) {
+		Path remoteRsrcPath,
+		long resourceSize,
+		long resourceModificationTime,
+		LocalResourceVisibility visibility) {
+
 		LocalResource localResource = Records.newRecord(LocalResource.class);
 		localResource.setResource(ConverterUtils.getYarnUrlFromURI(remoteRsrcPath.toUri()));
 		localResource.setSize(resourceSize);
 		localResource.setTimestamp(resourceModificationTime);
 		localResource.setType(LocalResourceType.FILE);
-		localResource.setVisibility(LocalResourceVisibility.APPLICATION);
+		localResource.setVisibility(visibility);
 		return localResource;
 	}
 
-	private static LocalResource registerLocalResource(FileSystem fs, Path remoteRsrcPath) throws IOException {
-		LocalResource localResource = Records.newRecord(LocalResource.class);
+	private static LocalResource registerLocalResource(
+		FileSystem fs,
+		Path remoteRsrcPath,
+		LocalResourceVisibility visibility) throws IOException {
+
 		FileStatus jarStat = fs.getFileStatus(remoteRsrcPath);
-		localResource.setResource(ConverterUtils.getYarnUrlFromURI(remoteRsrcPath.toUri()));
-		localResource.setSize(jarStat.getLen());
-		localResource.setTimestamp(jarStat.getModificationTime());
-		localResource.setType(LocalResourceType.FILE);
-		localResource.setVisibility(LocalResourceVisibility.APPLICATION);
-		return localResource;
+		return registerLocalResource(remoteRsrcPath, jarStat.getLen(), jarStat.getModificationTime(), visibility);
+	}
+
+	private static LocalResource registerLocalResource(FileSystem fs, Path remoteRsrcPath) throws IOException {
+		FileStatus jarStat = fs.getFileStatus(remoteRsrcPath);
+		return registerLocalResource(remoteRsrcPath, jarStat.getLen(), jarStat.getModificationTime(), LocalResourceVisibility.APPLICATION);
 	}
 
 	public static void setTokensFor(ContainerLaunchContext amContainer, List<Path> paths, Configuration conf) throws IOException {
@@ -346,6 +395,36 @@ public final class Utils {
 		return result;
 	}
 
+	public static void uploadTaskManagerConf(
+		org.apache.flink.configuration.Configuration flinkConfig,
+		YarnConfiguration yarnConfig,
+		Map<String, String> env,
+		String workingDirectory) throws IOException {
+
+		String appId = env.get(YarnConfigKeys.ENV_APP_ID);
+		require(appId != null, "Environment variable %s not set", YarnConfigKeys.ENV_APP_ID);
+
+		String clientHomeDir = env.get(YarnConfigKeys.ENV_CLIENT_HOME_DIR);
+		require(clientHomeDir != null, "Environment variable %s not set", YarnConfigKeys.ENV_CLIENT_HOME_DIR);
+
+		// write taskmanager configuration to file
+
+		File taskManagerConfigFile = new File(workingDirectory, "taskmanager-conf.yaml");
+		LOG.debug("Writing TaskManager configuration to {}", taskManagerConfigFile.getAbsolutePath());
+		BootstrapTools.writeConfiguration(flinkConfig, taskManagerConfigFile);
+
+		Path homeDirPath = new Path(clientHomeDir);
+		FileSystem fs = homeDirPath.getFileSystem(yarnConfig);
+
+		// upload taskmanager config file
+		Path src = new Path(taskManagerConfigFile.toURI());
+		String suffix = ".flink/" + appId + "/taskmanager-conf.yaml";
+		Path dst = new Path(homeDirPath, suffix);
+
+		LOG.debug("Copying from {} to {}", src, dst);
+		fs.copyFromLocalFile(false, true, src, dst);
+	}
+
 	/**
 	 * Creates the launch context, which describes how to bring up a TaskExecutor / TaskManager process in
 	 * an allocated YARN container.
@@ -457,32 +536,23 @@ public final class Utils {
 		// register conf with local fs
 		final LocalResource flinkConf;
 		{
-			// write the TaskManager configuration to a local file
-			final File taskManagerConfigFile =
-					new File(workingDirectory, UUID.randomUUID() + "-taskmanager-conf.yaml");
-			log.debug("Writing TaskManager configuration to {}", taskManagerConfigFile.getAbsolutePath());
-			BootstrapTools.writeConfiguration(taskManagerConfig, taskManagerConfigFile);
+			Path homeDirPath = new Path(clientHomeDir);
+			FileSystem fs = homeDirPath.getFileSystem(yarnConfig);
 
-			try {
-				Path homeDirPath = new Path(clientHomeDir);
-				FileSystem fs = homeDirPath.getFileSystem(yarnConfig);
+			final File taskManagerConfigFile = new File(workingDirectory, "taskmanager-conf.yaml");
+			String suffix = ".flink/" + appId + "/taskmanager-conf.yaml";
+			Path preCopiedPublicPath = new Path(homeDirPath, suffix);
 
-				flinkConf = setupLocalResource(
-					fs,
-					appId,
-					new Path(taskManagerConfigFile.toURI()),
-					homeDirPath,
-					"").f1;
+			flinkConf = setupLocalResource(
+				fs,
+				appId,
+				new Path(taskManagerConfigFile.toURI()),
+				homeDirPath,
+				"",
+				preCopiedPublicPath,
+				LocalResourceVisibility.APPLICATION).f1;
 
-				log.debug("Prepared local resource for modified yaml: {}", flinkConf);
-			} finally {
-				try {
-					FileUtils.deleteFileOrDirectory(taskManagerConfigFile);
-				} catch (IOException e) {
-					log.info("Could not delete temporary configuration file " +
-						taskManagerConfigFile.getAbsolutePath() + '.', e);
-				}
-			}
+			log.debug("Prepared local resource for taskmanager config: {}", flinkConf);
 		}
 
 		Map<String, LocalResource> taskManagerLocalResources = new HashMap<>();
@@ -503,9 +573,28 @@ public final class Utils {
 		for (String pathStr : shipListString.split(",")) {
 			if (!pathStr.isEmpty()) {
 				String[] keyAndPath = pathStr.split("=");
-				require(keyAndPath.length == 2, "Invalid entry in ship file list: %s", pathStr);
+				require(keyAndPath.length == 2 || keyAndPath.length == 3, "Invalid entry in ship file list: %s", pathStr);
 				Path path = new Path(keyAndPath[1]);
-				LocalResource resource = registerLocalResource(path.getFileSystem(yarnConfig), path);
+
+				LocalResource resource = null;
+				if (keyAndPath.length == 3 && !keyAndPath[2].isEmpty()) {
+					Map<String, String> attributeMap = new HashMap<>();
+					for (String attribute : keyAndPath[2].split("\\|")) {
+						String[] attKeyAndValue = attribute.split(":");
+						require(attKeyAndValue.length == 2, "Invalid attribute in ship file list: %s (file: %s)", attribute, pathStr);
+
+						attributeMap.put(attKeyAndValue[0], attKeyAndValue[1]);
+					}
+
+					final String visibilityKey = LocalResourceVisibility.class.getSimpleName();
+					if (attributeMap.containsKey(visibilityKey)) {
+						resource = registerLocalResource(path.getFileSystem(yarnConfig), path, LocalResourceVisibility.valueOf(attributeMap.get(visibilityKey)));
+					}
+				}
+				if (resource == null){
+					resource = registerLocalResource(path.getFileSystem(yarnConfig), path);
+				}
+
 				taskManagerLocalResources.put(keyAndPath[0], resource);
 			}
 		}
@@ -544,6 +633,23 @@ public final class Utils {
 			containerEnv.put(YarnConfigKeys.KEYTAB_PATH, remoteKeytabPath);
 			containerEnv.put(YarnConfigKeys.KEYTAB_PRINCIPAL, remoteKeytabPrincipal);
 		}
+
+		// overwrite taskmanager specific environment
+
+		if (taskManagerConfig.contains(JobManagerOptions.ADDRESS)) {
+			containerEnv.put(YarnConfigKeys.ENV_JM_ADDRESS, taskManagerConfig.getString(JobManagerOptions.ADDRESS));
+		}
+		if (taskManagerConfig.contains(JobManagerOptions.PORT)) {
+			containerEnv.put(YarnConfigKeys.ENV_JM_PORT, String.valueOf(taskManagerConfig.getInteger(JobManagerOptions.PORT)));
+		}
+		containerEnv.put(YarnConfigKeys.ENV_TM_REGISTRATION_TIMEOUT, taskManagerConfig.getString(TaskManagerOptions.REGISTRATION_TIMEOUT));
+		if (taskManagerConfig.contains(TaskManagerOptions.NUM_TASK_SLOTS)) {
+			containerEnv.put(YarnConfigKeys.ENV_TM_NUM_TASK_SLOT, String.valueOf(taskManagerConfig.getInteger(TaskManagerOptions.NUM_TASK_SLOTS)));
+		}
+		containerEnv.put(YarnConfigKeys.ENV_TM_RESOURCE_PROFILE_KEY, taskManagerConfig.getString(TaskManagerOptions.TASK_MANAGER_RESOURCE_PROFILE_KEY));
+		containerEnv.put(YarnConfigKeys.ENV_TM_MANAGED_MEMORY_SIZE, String.valueOf(taskManagerConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE)));
+		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_NUM_BUFFERS, String.valueOf(taskManagerConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS)));
+		containerEnv.put(YarnConfigKeys.ENV_TM_PROCESS_NETTY_MEMORY, String.valueOf(taskManagerConfig.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY)));
 
 		ctx.setEnvironment(containerEnv);
 

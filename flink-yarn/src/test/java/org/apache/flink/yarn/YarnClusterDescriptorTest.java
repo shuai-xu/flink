@@ -47,10 +47,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -443,7 +441,7 @@ public class YarnClusterDescriptorTest extends TestLogger {
 			Assert.assertTrue(descriptor.shipFiles.contains(libFolder));
 
 			// only execute part of the deployment to test for shipped files
-			Set<File> effectiveShipFiles = new HashSet<>();
+			Map<File, Path> effectiveShipFiles = new HashMap<>();
 			descriptor.addLibFolderToShipFiles(effectiveShipFiles);
 
 			Assert.assertEquals(0, effectiveShipFiles.size());
@@ -472,7 +470,7 @@ public class YarnClusterDescriptorTest extends TestLogger {
 			File libFile = new File(libFolder, "libFile.jar");
 			libFile.createNewFile();
 
-			Set<File> effectiveShipFiles = new HashSet<>();
+			Map<File, Path> effectiveShipFiles = new HashMap<>();
 
 			final Map<String, String> oldEnv = System.getenv();
 			try {
@@ -486,8 +484,8 @@ public class YarnClusterDescriptorTest extends TestLogger {
 			}
 
 			// only add the ship the folder, not the contents
-			Assert.assertFalse(effectiveShipFiles.contains(libFile));
-			Assert.assertTrue(effectiveShipFiles.contains(libFolder));
+			Assert.assertFalse(effectiveShipFiles.keySet().contains(libFile));
+			Assert.assertTrue(effectiveShipFiles.keySet().contains(libFolder));
 			Assert.assertFalse(descriptor.shipFiles.contains(libFile));
 			Assert.assertFalse(descriptor.shipFiles.contains(libFolder));
 		} finally {

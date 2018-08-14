@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -83,15 +84,16 @@ import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -129,6 +131,10 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 	private String configurationDirectory;
 
 	private Path flinkJarPath;
+
+	private boolean isFlinkJarCustomized;
+
+	private Path flinkSharedLibPath;
 
 	private String dynamicPropertiesEncoded;
 
@@ -201,17 +207,26 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 	}
 
 	public void setLocalJarPath(Path localJarPath) {
+		setLocalJarPath(localJarPath, false);
+	}
+
+	public void setLocalJarPath(Path localJarPath, boolean customized) {
 		if (!localJarPath.toString().endsWith("jar")) {
 			throw new IllegalArgumentException("The passed jar path ('" + localJarPath + "') does not end with the 'jar' extension");
 		}
 		this.flinkJarPath = localJarPath;
+		this.isFlinkJarCustomized = customized;
+	}
+
+	public void setSharedLibPath(Path sharedLibPath) {
+		this.flinkSharedLibPath = sharedLibPath;
 	}
 
 	/**
 	 * Adds the given files to the list of files to ship.
 	 *
 	 * <p>Note that any file matching "<tt>flink-dist*.jar</tt>" will be excluded from the upload by
-	 * {@link #uploadAndRegisterFiles(Collection, FileSystem, Path, ApplicationId, List, Map, StringBuilder)}
+	 * {@link #uploadAndRegisterFiles(Map, FileSystem, Path, ApplicationId, List, Map, StringBuilder)}
 	 * since we upload the Flink uber jar ourselves and do not need to deploy it multiple times.
 	 *
 	 * @param shipFiles files to ship
@@ -716,22 +731,22 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		}
 
 		ApplicationSubmissionContext appContext = yarnApplication.getApplicationSubmissionContext();
-		Set<File> systemShipFiles = new HashSet<>(shipFiles.size());
+		HashMap<File, Path> systemShipFiles = new HashMap<>(shipFiles.size());
 		for (File file : shipFiles) {
-			systemShipFiles.add(file.getAbsoluteFile());
+			systemShipFiles.put(file.getAbsoluteFile(), null);
 		}
 
 		//check if there is a logback or log4j file
 		File logbackFile = new File(configurationDirectory + File.separator + CONFIG_FILE_LOGBACK_NAME);
 		final boolean hasLogback = logbackFile.exists();
 		if (hasLogback) {
-			systemShipFiles.add(logbackFile);
+			systemShipFiles.put(logbackFile, null);
 		}
 
 		File log4jFile = new File(configurationDirectory + File.separator + CONFIG_FILE_LOG4J_NAME);
 		final boolean hasLog4j = log4jFile.exists();
 		if (hasLog4j) {
-			systemShipFiles.add(log4jFile);
+			systemShipFiles.put(log4jFile, null);
 			if (hasLogback) {
 				// this means there is already a logback configuration file --> fail
 				LOG.warn("The configuration directory ('" + configurationDirectory + "') contains both LOG4J and " +
@@ -799,7 +814,7 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		List<String> userClassPaths;
 		if (userJarInclusion != YarnConfigOptions.UserJarInclusion.DISABLED) {
 			userClassPaths = uploadAndRegisterFiles(
-				userJarFiles,
+				userJarFiles.stream().collect(HashMap::new, (map, file) -> map.put(file, null), HashMap::putAll),
 				fs,
 				homeDir,
 				appId,
@@ -835,6 +850,13 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		}
 
 		// Setup jar for ApplicationMaster
+		Path preUploadedRemotePath = null;
+		if (flinkSharedLibPath != null && !isFlinkJarCustomized) {
+			java.nio.file.Path libDirPath = Paths.get(System.getenv().get(ENV_FLINK_LIB_DIR));
+			java.nio.file.Path flinkJarNioPath = Paths.get(new URI(flinkJarPath.toString()));
+			preUploadedRemotePath = new Path(flinkSharedLibPath,
+				libDirPath.relativize(flinkJarNioPath).toString());
+		}
 		Path remotePathJar = setupSingleLocalResource(
 			"flink.jar",
 			fs,
@@ -842,7 +864,17 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 			flinkJarPath,
 			localResources,
 			homeDir,
-			"");
+			"",
+			preUploadedRemotePath);
+		if (flinkSharedLibPath != null && !isFlinkJarCustomized) {
+			envShipFileList.append("flink.jar").append("=").append(remotePathJar);
+			if (preUploadedRemotePath != null) {
+				envShipFileList.append("=")
+					.append(LocalResourceVisibility.class.getSimpleName())
+					.append(":").append(LocalResourceVisibility.PUBLIC);
+			}
+			envShipFileList.append(",");
+		}
 
 		// set the right configuration values for the TaskManager
 		configuration.setInteger(
@@ -1116,20 +1148,63 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 	 * @return the remote path to the uploaded resource
 	 */
 	private static Path setupSingleLocalResource(
+		String key,
+		FileSystem fs,
+		ApplicationId appId,
+		Path localSrcPath,
+		Map<String, LocalResource> localResources,
+		Path targetHomeDir,
+		String relativeTargetPath) throws IOException, URISyntaxException {
+
+		return setupSingleLocalResource(key,
+			fs,
+			appId,
+			localSrcPath,
+			localResources,
+			targetHomeDir,
+			relativeTargetPath,
+			null);
+	}
+
+	/**
+	 * Uploads and registers a single resource and adds it to <tt>localResources</tt>.
+	 *
+	 * @param key
+	 * 		the key to add the resource under
+	 * @param fs
+	 * 		the remote file system to upload to
+	 * @param appId
+	 * 		application ID
+	 * @param localSrcPath
+	 * 		local path to the file
+	 * @param localResources
+	 * 		map of resources
+	 * @param targetHomeDir
+	 * 		remote home directory base
+	 * @param relativeTargetPath
+	 * 		relative target path of the file (will be prefixed be the full home directory we set up)
+	 * @param preUploadedPublicPath
+	 * 		the remote public path to beforehand upload
+	 *
+	 * @return the remote path to the uploaded resource
+	 */
+	private static Path setupSingleLocalResource(
 			String key,
 			FileSystem fs,
 			ApplicationId appId,
 			Path localSrcPath,
 			Map<String, LocalResource> localResources,
 			Path targetHomeDir,
-			String relativeTargetPath) throws IOException, URISyntaxException {
+			String relativeTargetPath,
+			@Nullable Path preUploadedPublicPath) throws IOException, URISyntaxException {
 
 		Tuple2<Path, LocalResource> resource = Utils.setupLocalResource(
 			fs,
 			appId.toString(),
 			localSrcPath,
 			targetHomeDir,
-			relativeTargetPath);
+			relativeTargetPath,
+			preUploadedPublicPath);
 
 		localResources.put(key, resource.f1);
 
@@ -1158,7 +1233,7 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 	 * @return list of class paths with the the proper resource keys from the registration
 	 */
 	static List<String> uploadAndRegisterFiles(
-			Collection<File> shipFiles,
+			Map<File, Path> shipFiles,
 			FileSystem fs,
 			Path targetHomeDir,
 			ApplicationId appId,
@@ -1167,7 +1242,9 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 			StringBuilder envShipFileList) throws IOException, URISyntaxException {
 
 		final List<String> classPaths = new ArrayList<>(2 + shipFiles.size());
-		for (File shipFile : shipFiles) {
+		for (Map.Entry<File, Path> entry : shipFiles.entrySet()) {
+			File shipFile = entry.getKey();
+			Path preUploadedRemotePath = entry.getValue();
 			if (shipFile.isDirectory()) {
 				// add directories to the classpath
 				java.nio.file.Path shipPath = shipFile.toPath();
@@ -1177,14 +1254,17 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 					@Override
 					public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs)
 						throws IOException {
-
-						if (!(file.getFileName().startsWith("flink-dist") &&
-								file.getFileName().endsWith("jar"))) {
-
+						if (!(file.getFileName().toString().startsWith("flink-dist") &&
+								file.getFileName().toString().endsWith("jar"))) {
 							java.nio.file.Path relativePath = parentPath.relativize(file);
 
 							String key = relativePath.toString();
 							try {
+								Path preUploadedDstPath = null;
+								if (preUploadedRemotePath != null) {
+									preUploadedDstPath = new Path(preUploadedRemotePath, shipPath.relativize(file).toString());
+								}
+
 								Path remotePath = setupSingleLocalResource(
 									key,
 									fs,
@@ -1192,10 +1272,17 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 									new Path(file.toUri()),
 									localResources,
 									targetHomeDir,
-									relativePath.getParent().toString());
+									relativePath.getParent().toString(),
+									preUploadedDstPath);
 								remotePaths.add(remotePath);
-								envShipFileList.append(key).append("=")
-									.append(remotePath).append(",");
+								envShipFileList.append(key).append("=").append(remotePath);
+								if (preUploadedDstPath != null) {
+									envShipFileList.append("=")
+										.append(LocalResourceVisibility.class.getSimpleName())
+										.append(":")
+										.append(LocalResourceVisibility.PUBLIC);
+								}
+								envShipFileList.append(",");
 
 								// add files to the classpath
 								classPaths.add(key);
@@ -1212,9 +1299,15 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 					Path shipLocalPath = new Path(shipFile.toURI());
 					String key = shipFile.getName();
 					Path remotePath = setupSingleLocalResource(
-						key, fs, appId, shipLocalPath, localResources, targetHomeDir, "");
+						key, fs, appId, shipLocalPath, localResources, targetHomeDir, "", preUploadedRemotePath);
 					remotePaths.add(remotePath);
-					envShipFileList.append(key).append("=").append(remotePath).append(",");
+
+					envShipFileList.append(key).append("=").append(remotePath);
+					if (preUploadedRemotePath != null) {
+						envShipFileList.append("=")
+							.append(LocalResourceVisibility.class.getSimpleName()).append(":").append(LocalResourceVisibility.PUBLIC);
+					}
+					envShipFileList.append(",");
 
 					// add files to the classpath
 					classPaths.add(key);
@@ -1507,7 +1600,7 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		}
 	}
 
-	protected void addLibFolderToShipFiles(Collection<File> effectiveShipFiles) {
+	protected void addLibFolderToShipFiles(Map<File, Path> effectiveShipFiles) {
 		// Add lib folder to the ship files if the environment variable is set.
 		// This is for convenience when running from the command-line.
 		// (for other files users explicitly set the ship files)
@@ -1515,7 +1608,7 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		if (libDir != null) {
 			File libDirFile = new File(libDir);
 			if (libDirFile.isDirectory()) {
-				effectiveShipFiles.add(libDirFile);
+				effectiveShipFiles.put(libDirFile, flinkSharedLibPath);
 			} else {
 				throw new YarnDeploymentException("The environment variable '" + ENV_FLINK_LIB_DIR +
 					"' is set to '" + libDir + "' but the directory doesn't exist.");

@@ -23,7 +23,9 @@ import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.SecurityOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.security.SecurityConfiguration;
@@ -98,6 +100,24 @@ public class YarnTaskExecutorRunner {
 			LOG.info("TM: remote keytab principal obtained {}", remoteKeytabPrincipal);
 
 			final Configuration configuration = GlobalConfiguration.loadConfiguration(currDir);
+
+			// overwrite taskmanager specific configuration
+
+			if (ENV.containsKey(YarnConfigKeys.ENV_JM_ADDRESS)) {
+				configuration.setString(JobManagerOptions.ADDRESS, ENV.get(YarnConfigKeys.ENV_JM_ADDRESS));
+			}
+			if (ENV.containsKey(YarnConfigKeys.ENV_JM_PORT)) {
+				configuration.setInteger(JobManagerOptions.PORT, Integer.valueOf(ENV.get(YarnConfigKeys.ENV_JM_PORT)));
+			}
+			configuration.setString(TaskManagerOptions.REGISTRATION_TIMEOUT, ENV.get(YarnConfigKeys.ENV_TM_REGISTRATION_TIMEOUT));
+			if (ENV.containsKey(YarnConfigKeys.ENV_TM_NUM_TASK_SLOT)) {
+				configuration.setInteger(TaskManagerOptions.NUM_TASK_SLOTS, Integer.valueOf(ENV.get(YarnConfigKeys.ENV_TM_NUM_TASK_SLOT)));
+			}
+			configuration.setString(TaskManagerOptions.TASK_MANAGER_RESOURCE_PROFILE_KEY, ENV.get(YarnConfigKeys.ENV_TM_RESOURCE_PROFILE_KEY));
+			configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, Long.valueOf(ENV.get(YarnConfigKeys.ENV_TM_MANAGED_MEMORY_SIZE)));
+			configuration.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, Integer.valueOf(ENV.get(YarnConfigKeys.ENV_TM_NETWORK_NUM_BUFFERS)));
+			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, Integer.valueOf(ENV.get(YarnConfigKeys.ENV_TM_PROCESS_NETTY_MEMORY)));
+
 			FileSystem.initialize(configuration);
 
 			// configure local directory

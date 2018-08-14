@@ -123,6 +123,7 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 	private final Option queue;
 	private final Option shipPath;
 	private final Option flinkJar;
+	private final Option flinkSharedLibPath;
 	private final Option jmMemory;
 	private final Option tmMemory;
 	private final Option container;
@@ -188,6 +189,13 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		queue = new Option(shortPrefix + "qu", longPrefix + "queue", true, "Specify YARN queue.");
 		shipPath = new Option(shortPrefix + "t", longPrefix + "ship", true, "Ship files in the specified directory (t for transfer)");
 		flinkJar = new Option(shortPrefix + "j", longPrefix + "jar", true, "Path to Flink jar file");
+		flinkSharedLibPath = Option.builder(shortPrefix + "sl")
+			.longOpt(longPrefix + "sharedLib")
+			.required(false)
+			.hasArg(true)
+			.argName("path")
+			.desc("Upload a copy of Flink lib beforehand and specify the path to use public visibility feature of YARN NM localizing resources.")
+			.build();
 		jmMemory = new Option(shortPrefix + "jm", longPrefix + "jobManagerMemory", true, "Memory for JobManager Container [in MB]");
 		tmMemory = new Option(shortPrefix + "tm", longPrefix + "taskManagerMemory", true, "Memory per TaskManager Container [in MB]");
 		container = new Option(shortPrefix + "n", longPrefix + "container", true, "Number of YARN container to allocate (=Number of Task Managers)");
@@ -205,6 +213,7 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 
 		allOptions = new Options();
 		allOptions.addOption(flinkJar);
+		allOptions.addOption(flinkSharedLibPath);
 		allOptions.addOption(jmMemory);
 		allOptions.addOption(tmMemory);
 		allOptions.addOption(container);
@@ -273,12 +282,14 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 
 		// Jar Path
 		final Path localJarPath;
+		final boolean customized;
 		if (cmd.hasOption(flinkJar.getOpt())) {
 			String userPath = cmd.getOptionValue(flinkJar.getOpt());
 			if (!userPath.startsWith("file://")) {
 				userPath = "file://" + userPath;
 			}
 			localJarPath = new Path(userPath);
+			customized = true;
 		} else {
 			LOG.info("No path for the flink jar passed. Using the location of "
 				+ yarnClusterDescriptor.getClass() + " to locate the jar");
@@ -300,10 +311,19 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 			} else {
 				localJarPath = null;
 			}
+			customized = false;
 		}
 
 		if (localJarPath != null) {
-			yarnClusterDescriptor.setLocalJarPath(localJarPath);
+			yarnClusterDescriptor.setLocalJarPath(localJarPath, customized);
+		}
+
+		// set the remote path of the flink lib
+		if (cmd.hasOption(flinkSharedLibPath.getOpt())) {
+			String sharedLibPath = cmd.getOptionValue(flinkSharedLibPath.getOpt());
+			yarnClusterDescriptor.setSharedLibPath(new Path(sharedLibPath));
+
+			LOG.info("Use the shared Flink lib path: {}.", sharedLibPath);
 		}
 
 		List<File> shipFiles = new ArrayList<>();
