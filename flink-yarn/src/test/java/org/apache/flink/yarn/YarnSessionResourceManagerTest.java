@@ -224,4 +224,46 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 		assertFalse(yarnSessionResourceManager.checkAndRegisterContainer(new ResourceID(containerId2.toString())));
 		assertEquals(5, yarnSessionResourceManager.getPendingContainerRequest().get());
 	}
+
+	@Test
+	public void testReleaseOverAllocatedContainers() throws Exception {
+		AMRMClientAsync yarnClient = mock(AMRMClientAsync.class);
+		yarnSessionResourceManager.setAMRMClient(yarnClient);
+		yarnSessionResourceManager.setNMClient(mock(NMClient.class));
+		yarnSessionResourceManager.setExecutor(new ManuallyTriggeredScheduledExecutor());
+		try {
+			yarnSessionResourceManager.start();
+		} catch (ResourceManagerException e) {}
+		yarnSessionResourceManager.startClusterWorkers();
+
+		assertEquals(5, yarnSessionResourceManager.getPendingContainerRequest().get());
+
+		List<Container> containers = new LinkedList<>();
+		for (int i = 1; i < 11; i++) {
+			Container container = mock(Container.class);
+			ContainerId containerId = ContainerId.newInstance(applicationAttemptId, i);
+			when(container.getId()).thenReturn(containerId);
+			when(container.getResource()).thenReturn(Resource.newInstance(1024, 1));
+			containers.add(container);
+		}
+
+		YarnSessionResourceManager.YarnAMRMClientCallback callback = yarnSessionResourceManager.getYarnAMRMClientCallback();
+		// YARN resource manager return more container than allocated
+		callback.onContainersAllocated(containers);
+		assertEquals(0, yarnSessionResourceManager.getPendingContainerRequest().get());
+		assertEquals(5, yarnSessionResourceManager.getNumberAllocatedWorkers());
+
+		// Container[6-10] should be released
+		ArgumentCaptor<ContainerId> containerReleaseCaptor = ArgumentCaptor.forClass(ContainerId.class);
+		verify(yarnClient, times(5)).releaseAssignedContainer(containerReleaseCaptor.capture());
+		ArgumentCaptor<AMRMClient.ContainerRequest> containerRemoveCaptor =
+				ArgumentCaptor.forClass(AMRMClient.ContainerRequest.class);
+		verify(yarnClient, times(5)).removeContainerRequest(containerRemoveCaptor.capture());
+		assertEquals(5, containerReleaseCaptor.getAllValues().size());
+		int start = 6;
+		for (ContainerId containerId : containerReleaseCaptor.getAllValues()) {
+			assertEquals(ContainerId.newInstance(applicationAttemptId, start++), containerId);
+		}
+		assertEquals(5, yarnSessionResourceManager.getNumberAllocatedWorkers());
+	}
 }

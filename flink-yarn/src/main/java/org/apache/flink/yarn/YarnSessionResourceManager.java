@@ -660,7 +660,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 					log.info("Received more than asked containers, will release the {} with resource {}",
 							container.getId(), container.getResource());
 					resourceManagerClient.releaseAssignedContainer(container.getId());
-					return;
+					continue;
 				}
 
 				log.info("Received new container: {} - Remaining pending container requests: {}",
