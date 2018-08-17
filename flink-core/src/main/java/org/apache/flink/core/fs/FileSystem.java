@@ -519,6 +519,80 @@ public abstract class FileSystem {
 	public abstract FileStatus[] listStatus(Path f) throws IOException;
 
 	/**
+	 * List the statuses with location of the files/directories in the given path if the path is
+	 * a directory.
+	 *
+	 * @param f
+	 *        given path
+	 * @return the statuses of the files/directories in the given path
+	 * @throws IOException
+	 */
+	public LocatedFileStatus[] listLocatedStatus(Path f) throws IOException {
+		FileStatus[] fileStatuses = listStatus(f);
+		if (fileStatuses == null) {
+			return null;
+		}
+		LocatedFileStatus[] result = new LocatedFileStatus[fileStatuses.length];
+		for (int i = 0; i < fileStatuses.length; i++) {
+			result[i] = new DefaultLocatedFileStatus(
+				fileStatuses[i],
+				getFileBlockLocations(fileStatuses[i], 0, fileStatuses[i].getLen()));
+		}
+		return result;
+	}
+
+	static class DefaultLocatedFileStatus implements LocatedFileStatus {
+
+		FileStatus fileStatus;
+		BlockLocation[] locations;
+
+		public DefaultLocatedFileStatus(FileStatus fileStatus, BlockLocation[] blockLocations) {
+			this.fileStatus = fileStatus;
+			this.locations = blockLocations;
+		}
+
+		@Override
+		public BlockLocation[] getBlockLocation() {
+			return locations;
+		}
+
+		@Override
+		public long getLen() {
+			return fileStatus.getLen();
+		}
+
+		@Override
+		public long getBlockSize() {
+			return fileStatus.getBlockSize();
+		}
+
+		@Override
+		public short getReplication() {
+			return fileStatus.getReplication();
+		}
+
+		@Override
+		public long getModificationTime() {
+			return fileStatus.getModificationTime();
+		}
+
+		@Override
+		public long getAccessTime() {
+			return fileStatus.getAccessTime();
+		}
+
+		@Override
+		public boolean isDir() {
+			return fileStatus.isDir();
+		}
+
+		@Override
+		public Path getPath() {
+			return fileStatus.getPath();
+		}
+	}
+
+	/**
 	 * Check if exists.
 	 *
 	 * @param f

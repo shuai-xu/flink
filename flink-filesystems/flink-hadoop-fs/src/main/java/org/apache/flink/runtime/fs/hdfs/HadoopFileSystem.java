@@ -22,10 +22,14 @@ import org.apache.flink.core.fs.BlockLocation;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystemKind;
+import org.apache.flink.core.fs.LocatedFileStatus;
 import org.apache.flink.core.fs.Path;
+
+import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -162,6 +166,17 @@ public class HadoopFileSystem extends FileSystem {
 		}
 
 		return files;
+	}
+
+	@Override
+	public LocatedFileStatus[] listLocatedStatus(final Path f) throws IOException {
+		RemoteIterator<org.apache.hadoop.fs.LocatedFileStatus> fileStatus =
+			this.fs.listLocatedStatus(new org.apache.hadoop.fs.Path(f.toString()));
+		ArrayList<HadoopLocatedFileStatus> result = new ArrayList<>();
+		while (fileStatus.hasNext()) {
+			result.add(new HadoopLocatedFileStatus(fileStatus.next()));
+		}
+		return result.toArray(new HadoopLocatedFileStatus[0]);
 	}
 
 	@Override
