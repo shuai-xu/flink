@@ -102,8 +102,8 @@ public class YarnApplicationMasterRunnerTest {
 
 		ContaineredTaskManagerParameters tmParams = mock(ContaineredTaskManagerParameters.class);
 		Configuration taskManagerConf = new Configuration();
-
 		String workingDirectory = root.getAbsolutePath();
+		Utils.uploadTaskManagerConf(flinkConf, yarnConf, env, workingDirectory);
 		Class<?> taskManagerMainClass = YarnApplicationMasterRunnerTest.class;
 		ContainerLaunchContext ctx = Utils.createTaskExecutorContext(flinkConf, yarnConf, env, tmParams,
 			taskManagerConf, workingDirectory, taskManagerMainClass, LOG);
