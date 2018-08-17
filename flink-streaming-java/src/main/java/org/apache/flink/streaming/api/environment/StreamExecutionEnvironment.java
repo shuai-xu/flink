@@ -136,6 +136,8 @@ public abstract class StreamExecutionEnvironment {
 
 	protected boolean isChainingEnabled = true;
 
+	protected boolean isMultiHeadChainMode = false;
+
 	/** The state backend used for storing k/v state and state snapshots. */
 	private StateBackend defaultStateBackend;
 
@@ -281,6 +283,24 @@ public abstract class StreamExecutionEnvironment {
 	@PublicEvolving
 	public boolean isChainingEnabled() {
 		return isChainingEnabled;
+	}
+
+	/**
+	 * Sets the multi-head chain mode of operator chaining to true or false.
+	 *
+	 * @param multiHeadChainMode
+	 */
+	public void setMultiHeadChainMode(boolean multiHeadChainMode) {
+		this.isMultiHeadChainMode = multiHeadChainMode;
+	}
+
+	/**
+	 * Returns whether multi-head chain mode is enabled.
+	 *
+	 * @return {@code true} if multi-head chain mode is enabled, false otherwise.
+	 */
+	public boolean isMultiHeadChainMode() {
+		return isMultiHeadChainMode;
 	}
 
 	// ------------------------------------------------------------------------

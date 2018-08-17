@@ -84,6 +84,7 @@ public class StreamGraph extends StreamingPlan {
 	private final CheckpointConfig checkpointConfig;
 
 	private boolean chaining;
+	private boolean isMultiHeadChainMode;
 
 	private Map<Integer, StreamNode> streamNodes;
 	private Set<Integer> sources;
@@ -148,6 +149,10 @@ public class StreamGraph extends StreamingPlan {
 		this.chaining = chaining;
 	}
 
+	public void setMultiHeadChainMode(boolean multiHeadChainMode) {
+		this.isMultiHeadChainMode = multiHeadChainMode;
+	}
+
 	public void setStateBackend(StateBackend backend) {
 		this.stateBackend = backend;
 	}
@@ -164,6 +169,10 @@ public class StreamGraph extends StreamingPlan {
 
 	public boolean isChainingEnabled() {
 		return chaining;
+	}
+
+	public boolean isMultiHeadChainMode() {
+		return isMultiHeadChainMode;
 	}
 
 	public boolean isIterative() {

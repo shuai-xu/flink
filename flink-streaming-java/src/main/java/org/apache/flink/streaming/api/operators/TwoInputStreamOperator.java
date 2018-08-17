@@ -48,8 +48,8 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 * the next input selection. This method is guaranteed to not be called concurrently with
 	 * other methods of the operator.
 	 *
-	 * <p>Warning: The default implementation is only to be compatible {@link #processElement1(StreamRecord)}
-	 * and will be deleted synchronously when {@link #processElement1(StreamRecord)} is removed.
+	 * <p>You have to override this method when implementing a {@code TwoInputStreamOperator}, this is a
+	 * {@code default} method for backward compatibility with the old-style method only.
 	 */
 	default TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
 		processElement1(element);
@@ -62,8 +62,8 @@ public interface TwoInputStreamOperator<IN1, IN2, OUT> extends StreamOperator<OU
 	 * the next input selection. This method is guaranteed to not be called concurrently with
 	 * other methods of the operator.
 	 *
-	 * <p>Warning: The default implementation is only to be compatible {@link #processElement2(StreamRecord)}
-	 * and will be deleted synchronously when {@link #processElement2(StreamRecord)} is removed.
+	 * <p>You have to override this method when implementing a {@code TwoInputStreamOperator}, this is a
+	 * {@code default} method for backward compatibility with the old-style method only.
 	 */
 	default TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
 		processElement2(element);

@@ -70,7 +70,6 @@ public class StreamConfig implements Serializable {
 	private static final String TYPE_SERIALIZER_SIDEOUT_PREFIX = "typeSerializer_sideout_";
 	private static final String ITERATON_WAIT = "iterationWait";
 	private static final String NONCHAINED_OUTPUTS = "nonChainedOutputs";
-	private static final String OUT_STREAM_EDGES = "outStreamEdges";
 	private static final String OPERATOR_NAME = "operatorName";
 	private static final String OPERATOR_ID = "operatorID";
 	private static final String CHAIN_END = "chainEnd";
@@ -317,23 +316,6 @@ public class StreamConfig implements Serializable {
 			return chainedOutputs == null ? new ArrayList<StreamEdge>() : chainedOutputs;
 		} catch (Exception e) {
 			throw new StreamTaskException("Could not instantiate chained outputs.", e);
-		}
-	}
-
-	public void setOutEdges(List<StreamEdge> outEdges) {
-		try {
-			InstantiationUtil.writeObjectToConfig(outEdges, this.config, OUT_STREAM_EDGES);
-		} catch (IOException e) {
-			throw new StreamTaskException("Cannot serialize outward edges.", e);
-		}
-	}
-
-	public List<StreamEdge> getOutEdges(ClassLoader cl) {
-		try {
-			List<StreamEdge> outEdges = InstantiationUtil.readObjectFromConfig(this.config, OUT_STREAM_EDGES, cl);
-			return outEdges == null ? new ArrayList<StreamEdge>() : outEdges;
-		} catch (Exception e) {
-			throw new StreamTaskException("Could not instantiate outputs.", e);
 		}
 	}
 

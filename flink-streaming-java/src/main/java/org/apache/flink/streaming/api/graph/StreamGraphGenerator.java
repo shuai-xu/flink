@@ -106,6 +106,7 @@ public class StreamGraphGenerator {
 	private StreamGraphGenerator(StreamExecutionEnvironment env) {
 		this.streamGraph = new StreamGraph(env);
 		this.streamGraph.setChaining(env.isChainingEnabled());
+		this.streamGraph.setMultiHeadChainMode(env.isMultiHeadChainMode());
 		this.streamGraph.setStateBackend(env.getStateBackend());
 		this.env = env;
 		this.alreadyTransformed = new HashMap<>();

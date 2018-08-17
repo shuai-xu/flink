@@ -73,6 +73,19 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 		}
 	}
 
+	public void clear() {
+		timeChar = null;
+
+		chainedNodeConfigMap = null;
+		chainedHeadNodeIds = null;
+		inStreamEdgesOfChain = null;
+		outStreamEdgesOfChain = null;
+
+		isCheckpointingEnabled = false;
+		checkpointMode = null;
+		stateBackend = null;
+	}
+
 	public void serializeTo(StreamTaskConfig config) {
 		checkNotNull(config);
 
