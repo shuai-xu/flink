@@ -18,6 +18,7 @@
 
 package org.apache.flink.contrib.streaming.state;
 
+import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateBackend;
 import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
@@ -27,6 +28,7 @@ import org.apache.flink.util.AbstractID;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
@@ -89,6 +91,16 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 			true,
 			mock(LocalRecoveryConfig.class),
 			null);
+	}
+
+	@Test
+	public void testDuplicateSerializersWhenAsyncSnapshot() throws Exception {
+		if (checkpointType == CheckpointType.CHECKPOINT) {
+			// ignore serializer duplication test for checkpoint
+			return;
+		}
+
+		super.testDuplicateSerializersWhenAsyncSnapshot();
 	}
 
 	private void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {

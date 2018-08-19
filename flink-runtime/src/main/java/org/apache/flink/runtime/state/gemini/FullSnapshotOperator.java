@@ -72,6 +72,16 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	private final CheckpointStreamFactory primaryStreamFactory;
 
 	/**
+	 * States to take a snapshot.
+	 */
+	private final Map<String, InternalState> states;
+
+	/**
+	 * Duplicated key/value serializers.
+	 */
+	private Map<String, Tuple2<RowSerializer, RowSerializer>> duplicatedKVSerializers;
+
+	 /**
 	 * Map for holding the snapshots of all {@link StateStore}.
 	 */
 	private Map<String, StateStoreSnapshot> stateStoreSnapshotMap;
@@ -88,11 +98,21 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 		this.checkpointId = checkpointId;
 		this.primaryStreamFactory = Preconditions.checkNotNull(primaryStreamFactory);
 		this.cancelStreamRegistry = Preconditions.checkNotNull(cancelStreamRegistry);
+		this.states = new HashMap<>();
+		this.duplicatedKVSerializers = new HashMap<>();
 		this.stateStoreSnapshotMap = new HashMap<>();
 	}
 
 	@Override
 	public void takeSnapshot() {
+		states.putAll(stateBackend.getStates());
+
+		for (Map.Entry<String, InternalState> entry : stateBackend.getStates().entrySet()) {
+			InternalStateDescriptor descriptor = entry.getValue().getDescriptor();
+			RowSerializer keySerializer = (RowSerializer) descriptor.getKeySerializer().duplicate();
+			RowSerializer valueSerializer = (RowSerializer) descriptor.getValueSerializer().duplicate();
+			duplicatedKVSerializers.put(entry.getKey(), Tuple2.of(keySerializer, valueSerializer));
+		}
 
 		for (Map.Entry<String, StateStore> entry : stateBackend.getStateStoreMap().entrySet()) {
 			stateStoreSnapshotMap.put(entry.getKey(),
@@ -103,7 +123,7 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	@Override
 	public SnapshotResult<StatePartitionSnapshot> materializeSnapshot() throws Exception {
 
-		if (stateBackend.getStates().isEmpty()) {
+		if (states.isEmpty()) {
 			return SnapshotResult.empty();
 		}
 
@@ -137,7 +157,6 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 
 			long asyncStartTime = System.currentTimeMillis();
 
-			Map<String, InternalState> states = stateBackend.getStates();
 			outputView.writeInt(states.size());
 			for (InternalState state : states.values()) {
 				InternalStateDescriptor stateDescriptor = state.getDescriptor();
@@ -149,7 +168,6 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 
 			LOG.info("GeminiInternalStateBackend snapshot asynchronous part took " +
 				(System.currentTimeMillis() - asyncStartTime) + " ms.");
-
 
 			SnapshotResult<StreamStateHandle> streamSnapshotResult =
 				streamWithResultProvider.closeAndFinalizeCheckpointStreamResult();
@@ -204,7 +222,6 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 	) throws IOException {
 
 		Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>();
-		Map<String, InternalState> states = stateBackend.getStates();
 
 		GroupSet groups = stateBackend.getGroups();
 		for (int group : groups) {
@@ -218,7 +235,7 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 				String stateName = stateDescriptor.getName();
 
 				Tuple2<RowSerializer, RowSerializer> stateSerializer =
-					stateBackend.getDuplicatedKVSerializers().get(stateName);
+					duplicatedKVSerializers.get(stateName);
 				Preconditions.checkNotNull(stateSerializer);
 
 				RowSerializer keySerializer = stateSerializer.f0;

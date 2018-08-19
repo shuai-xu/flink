@@ -54,6 +54,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * The base unit tests to validate that internal states can be correctly saved
@@ -587,6 +588,57 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		} finally {
 			newLeftBackend.dispose();
 			newRightBackend.dispose();
+		}
+	}
+
+	/**
+	 * Test whether the key/value serializers are duplicated for async snapshot.
+	 */
+	@Test
+	public void testDuplicateSerializersWhenAsyncSnapshot() throws Exception {
+		SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+
+		// test whether key serializer is duplicated.
+		InternalStateDescriptor keySerializerDescriptor =
+			new InternalStateDescriptorBuilder("keySerializerState")
+				.addKeyColumn("key", new TestDuplicateIntSerializer())
+				.addValueColumn("value", IntSerializer.INSTANCE)
+				.getDescriptor();
+		InternalState keySerializerState = stateBackend.getInternalState(keySerializerDescriptor);
+
+		keySerializerState.put(Row.of(1), Row.of(2));
+
+		try {
+			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
+			fail("Should throw DuplicateSerializerException");
+		} catch (Exception e) {
+			assertTrue(e.getCause() instanceof TestDuplicateIntSerializer.DuplicateSerializerException);
+		}
+
+		stateBackend.dispose();
+
+		stateBackend = createStateBackend(
+			maxParallelism,
+			getGroupsForSubtask(maxParallelism, initParallelism, initSubtaskIndex),
+			classLoader,
+			localRecoveryConfig);
+		stateBackend.restore(null);
+
+		// test whether value serializer is duplicated.
+		InternalStateDescriptor valueSerializerDescriptor =
+			new InternalStateDescriptorBuilder("valueSerializerState")
+				.addKeyColumn("key", IntSerializer.INSTANCE)
+				.addValueColumn("value", new TestDuplicateIntSerializer())
+				.getDescriptor();
+		InternalState valueSerializerState = stateBackend.getInternalState(valueSerializerDescriptor);
+
+		valueSerializerState.put(Row.of(1), Row.of(2));
+
+		try {
+			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
+			fail("Should throw DuplicateSerializerException");
+		} catch (Exception e) {
+			assertTrue(e.getCause() instanceof TestDuplicateIntSerializer.DuplicateSerializerException);
 		}
 	}
 

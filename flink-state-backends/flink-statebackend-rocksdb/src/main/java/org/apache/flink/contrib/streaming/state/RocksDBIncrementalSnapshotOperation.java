@@ -95,6 +95,8 @@ public class RocksDBIncrementalSnapshotOperation {
 
 	private final ResourceGuard.Lease dbLease;
 
+	private final Map<String, InternalState> states;
+
 	private SnapshotResult<StreamStateHandle> metaStateHandle = null;
 
 	RocksDBIncrementalSnapshotOperation(
@@ -108,9 +110,11 @@ public class RocksDBIncrementalSnapshotOperation {
 		this.checkpointId = checkpointId;
 		this.dbLease = this.stateBackend.rocksDBResourceGuard.acquireResource();
 		this.localBackupDirectory = localBackupDirectory;
+		this.states = new HashMap<>();
 	}
 
 	void takeSnapshot() throws Exception {
+		states.putAll(stateBackend.getStates());
 
 		final long lastCompletedCheckpoint;
 
@@ -365,8 +369,8 @@ public class RocksDBIncrementalSnapshotOperation {
 				new DataOutputViewStreamWrapper(outputStream);
 
 			// Writes state descriptors
-			outputView.writeInt(stateBackend.getStates().size());
-			for (InternalState state : stateBackend.getStates().values()) {
+			outputView.writeInt(states.size());
+			for (InternalState state : states.values()) {
 				InternalStateDescriptor stateDescriptor = state.getDescriptor();
 				InstantiationUtil.serializeObject(outputStream, stateDescriptor);
 			}

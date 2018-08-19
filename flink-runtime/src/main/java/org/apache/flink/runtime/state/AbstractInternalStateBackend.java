@@ -18,8 +18,6 @@
 
 package org.apache.flink.runtime.state;
 
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.keyed.KeyedListState;
@@ -86,11 +84,6 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 */
 	protected transient Map<String, InternalState> states;
 
-	/**
-	 * The duplicated key/value row-serializers, this is used to avoid multi-thread access the same serializer.
-	 */
-	protected transient Map<String, Tuple2<RowSerializer, RowSerializer>> duplicatedKVSerializers;
-
 	/** Registry for all opened streams, so they can be closed if the task using this backend is closed */
 	protected CloseableRegistry cancelStreamRegistry;
 
@@ -124,7 +117,6 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		this.groups = Preconditions.checkNotNull(groups);
 		this.userClassLoader = Preconditions.checkNotNull(userClassLoader);
 		this.states = new HashMap<>();
-		this.duplicatedKVSerializers = new HashMap<>();
 		this.cancelStreamRegistry = new CloseableRegistry();
 		this.kvStateRegistry = kvStateRegistry;
 	}
@@ -165,16 +157,6 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		return states;
 	}
 
-
-	/**
-	 * Return the duplicated key/value serializers backed by the state backend.
-	 *
-	 * @return The duplicated key/value serializers backed by the state backend.
-	 */
-	public Map<String, Tuple2<RowSerializer, RowSerializer>> getDuplicatedKVSerializers() {
-		return duplicatedKVSerializers;
-	}
-
 	//--------------------------------------------------------------------------
 
 	@Override
@@ -187,7 +169,6 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 
 		IOUtils.closeQuietly(cancelStreamRegistry);
 		this.states.clear();
-		this.duplicatedKVSerializers.clear();
 	}
 
 	@Override
@@ -203,9 +184,6 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 		} else {
 			state = createInternalState(stateDescriptor);
 			states.put(stateName, state);
-			duplicatedKVSerializers.put(stateName,
-				Tuple2.of((RowSerializer) stateDescriptor.getKeySerializer().duplicate(),
-					(RowSerializer) stateDescriptor.getValueSerializer().duplicate()));
 		}
 
 		return state;

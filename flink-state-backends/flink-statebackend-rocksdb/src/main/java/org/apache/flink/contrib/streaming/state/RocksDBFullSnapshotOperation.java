@@ -78,6 +78,10 @@ public class RocksDBFullSnapshotOperation {
 
 	private DataOutputView outputView;
 
+	private final Map<String, InternalState> states;
+
+	private Map<String, Tuple2<RowSerializer, RowSerializer>> duplicatedKVSerializers;
+
 	private Map<Integer, Tuple2<Long, Integer>> metaInfo;
 
 	/** The snapshot directory containing all the data. */
@@ -94,6 +98,8 @@ public class RocksDBFullSnapshotOperation {
 		this.checkpointStreamSupplier = checkpointStreamSupplier;
 		this.snapshotCloseableRegistry = registry;
 		this.dbLease = stateBackend.rocksDBResourceGuard.acquireResource();
+		this.states = new HashMap<>();
+		this.duplicatedKVSerializers = new HashMap<>();
 	}
 
 	/**
@@ -102,6 +108,15 @@ public class RocksDBFullSnapshotOperation {
 	 */
 	public void takeDBSnapShot() throws IOException, RocksDBException {
 		Preconditions.checkArgument(snapshotDirectory == null, "Only one ongoing snapshot allowed!");
+
+		states.putAll(stateBackend.getStates());
+
+		for (Map.Entry<String, InternalState> entry : stateBackend.getStates().entrySet()) {
+			InternalStateDescriptor descriptor = entry.getValue().getDescriptor();
+			RowSerializer keySerializer = (RowSerializer) descriptor.getKeySerializer().duplicate();
+			RowSerializer valueSerializer = (RowSerializer) descriptor.getValueSerializer().duplicate();
+			duplicatedKVSerializers.put(entry.getKey(), Tuple2.of(keySerializer, valueSerializer));
+		}
 
 		// create a "temporary" snapshot directory because local recovery is inactive.
 		Path path = new Path(stateBackend.getInstanceBasePath().getAbsolutePath(), "chk-" + checkpointId);
@@ -191,8 +206,8 @@ public class RocksDBFullSnapshotOperation {
 
 	private void materializeMetaData() throws Exception {
 		// Writes state descriptors
-		outputView.writeInt(stateBackend.getStates().size());
-		for (InternalState state : stateBackend.getStates().values()) {
+		outputView.writeInt(states.size());
+		for (InternalState state : states.values()) {
 			InternalStateDescriptor stateDescriptor = state.getDescriptor();
 			InstantiationUtil.serializeObject(checkpointStreamWithResultProvider.getCheckpointOutputStream(), stateDescriptor);
 		}
@@ -215,10 +230,10 @@ public class RocksDBFullSnapshotOperation {
 				long offset = outputStream.getPos();
 				int numEntries = 0;
 
-				for (InternalState state : stateBackend.getStates().values()) {
+				for (InternalState state : states.values()) {
 					InternalStateDescriptor stateDescriptor = state.getDescriptor();
 					Tuple2<RowSerializer, RowSerializer> stateSerializer =
-						stateBackend.getDuplicatedKVSerializers().get(stateDescriptor.getName());
+						duplicatedKVSerializers.get(stateDescriptor.getName());
 					Preconditions.checkNotNull(stateSerializer);
 
 					RowSerializer keySerializer = stateSerializer.f0;

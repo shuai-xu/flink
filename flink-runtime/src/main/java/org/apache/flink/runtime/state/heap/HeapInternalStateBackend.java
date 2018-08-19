@@ -326,11 +326,9 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				InternalStateDescriptor stateDescriptor = state.getDescriptor();
 
 				String stateName = stateDescriptor.getName();
-				Tuple2<RowSerializer, RowSerializer> stateSerializer = getDuplicatedKVSerializers().get(stateName);
-				Preconditions.checkNotNull(stateSerializer);
 
-				RowSerializer keySerializer = stateSerializer.f0;
-				RowSerializer valueSerializer = stateSerializer.f1;
+				RowSerializer keySerializer = stateDescriptor.getKeySerializer();
+				RowSerializer valueSerializer = stateDescriptor.getValueSerializer();
 
 				Iterator<Pair<Row, Row>> iterator = iterator(group, stateDescriptor);
 				while (iterator.hasNext()) {

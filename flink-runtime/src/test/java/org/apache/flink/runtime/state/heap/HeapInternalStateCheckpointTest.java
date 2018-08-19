@@ -22,6 +22,7 @@ import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateCheckpointTestBase;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
+import org.junit.Test;
 
 /**
  * Unit tests to validates that internal states can be correctly saved and
@@ -36,5 +37,10 @@ public class HeapInternalStateCheckpointTest extends InternalStateCheckpointTest
 		ClassLoader userClassLoader,
 		LocalRecoveryConfig localRecoveryConfig) {
 		return new HeapInternalStateBackend(numberOfGroups, groups, userClassLoader, localRecoveryConfig, null);
+	}
+
+	@Test
+	public void testDuplicateSerializersWhenAsyncSnapshot() throws Exception {
+		// ignore serializer duplication test.
 	}
 }
