@@ -38,6 +38,23 @@ public class NettyConfig {
 
 	private static final Logger LOG = LoggerFactory.getLogger(NettyConfig.class);
 
+	/**
+	 * Arenas allocate chunks of pageSize << maxOrder bytes. With these defaults, this results in
+	 * chunks of 16 MB.
+	 *
+	 * @see #MAX_ORDER
+	 */
+	public static final int PAGE_SIZE = 8192;
+
+	/**
+	 * Arenas allocate chunks of pageSize << maxOrder bytes. With these defaults, this results in
+	 * chunks of 16 MB.
+	 *
+	 * @see #PAGE_SIZE
+	 */
+	public static final int MAX_ORDER = 11;
+
+
 	// - Config keys ----------------------------------------------------------
 
 	public static final ConfigOption<Integer> NUM_ARENAS = ConfigOptions
@@ -252,5 +269,12 @@ public class NettyConfig {
 				getServerConnectBacklog(), getServerConnectBacklog() == 0 ? def : man,
 				getClientConnectTimeoutSeconds(), getSendAndReceiveBufferSize(),
 				getSendAndReceiveBufferSize() == 0 ? def : man);
+	}
+
+	public static int getChunkSize() {
+		// Arenas allocate chunks of pageSize << maxOrder bytes. With these
+		// defaults, this results in chunks of 16 MB.
+
+		return PAGE_SIZE << MAX_ORDER;
 	}
 }

@@ -29,6 +29,8 @@ import java.lang.reflect.Field;
 
 import scala.Option;
 
+import static org.apache.flink.runtime.io.network.netty.NettyConfig.MAX_ORDER;
+import static org.apache.flink.runtime.io.network.netty.NettyConfig.PAGE_SIZE;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
@@ -50,22 +52,6 @@ public class NettyBufferPool extends PooledByteBufAllocator {
 
 	/** We strictly prefer direct buffers and disallow heap allocations. */
 	private static final boolean PREFER_DIRECT = true;
-
-	/**
-	 * Arenas allocate chunks of pageSize << maxOrder bytes. With these defaults, this results in
-	 * chunks of 16 MB.
-	 *
-	 * @see #MAX_ORDER
-	 */
-	private static final int PAGE_SIZE = 8192;
-
-	/**
-	 * Arenas allocate chunks of pageSize << maxOrder bytes. With these defaults, this results in
-	 * chunks of 16 MB.
-	 *
-	 * @see #PAGE_SIZE
-	 */
-	private static final int MAX_ORDER = 11;
 
 	/**
 	 * Creates Netty's buffer pool with the specified number of direct arenas.
@@ -94,7 +80,7 @@ public class NettyBufferPool extends PooledByteBufAllocator {
 		// Arenas allocate chunks of pageSize << maxOrder bytes. With these
 		// defaults, this results in chunks of 16 MB.
 
-		this.chunkSize = PAGE_SIZE << MAX_ORDER;
+		this.chunkSize = NettyConfig.getChunkSize();
 
 		Object[] allocDirectArenas = null;
 		try {

@@ -46,7 +46,7 @@ import java.util.concurrent.ThreadFactory;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
-class NettyServer {
+public class NettyServer {
 
 	private static final ThreadFactoryBuilder THREAD_FACTORY_BUILDER =
 		new ThreadFactoryBuilder()
@@ -65,12 +65,12 @@ class NettyServer {
 
 	private InetSocketAddress localAddress;
 
-	NettyServer(NettyConfig config) {
+	public NettyServer(NettyConfig config) {
 		this.config = checkNotNull(config);
 		localAddress = null;
 	}
 
-	void init(final NettyProtocol protocol, NettyBufferPool nettyBufferPool) throws IOException {
+	public void init(final NettyProtocol protocol, NettyBufferPool nettyBufferPool) throws IOException {
 		checkState(bootstrap == null, "Netty server has already been initialized.");
 
 		long start = System.currentTimeMillis();
@@ -186,7 +186,7 @@ class NettyServer {
 		return localAddress;
 	}
 
-	void shutdown() {
+	public void shutdown() {
 		long start = System.currentTimeMillis();
 		if (bindFuture != null) {
 			bindFuture.channel().close().awaitUninterruptibly();

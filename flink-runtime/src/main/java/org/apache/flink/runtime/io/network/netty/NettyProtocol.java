@@ -41,7 +41,7 @@ public class NettyProtocol {
 
 	private final boolean creditBasedEnabled;
 
-	NettyProtocol(ResultPartitionProvider partitionProvider, TaskEventDispatcher taskEventDispatcher, boolean creditBasedEnabled) {
+	public NettyProtocol(ResultPartitionProvider partitionProvider, TaskEventDispatcher taskEventDispatcher, boolean creditBasedEnabled) {
 		this.partitionProvider = partitionProvider;
 		this.taskEventDispatcher = taskEventDispatcher;
 		this.creditBasedEnabled = creditBasedEnabled;
