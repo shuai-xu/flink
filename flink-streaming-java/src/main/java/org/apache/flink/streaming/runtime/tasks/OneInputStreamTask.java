@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
 @Internal
 public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamOperator<IN, OUT>> {
 
-	private StreamInputProcessor<IN> inputProcessor;
+	protected StreamInputProcessor<IN> inputProcessor;
 
 	private volatile boolean running = true;
 
@@ -75,6 +75,8 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 	public void init() throws Exception {
 		StreamConfig configuration = getConfiguration();
 
+		final OneInputStreamOperator<IN, OUT> headOperator = getHeadOperator();
+
 		TypeSerializer<IN> inSerializer = configuration.getTypeSerializerIn1(getUserCodeClassLoader());
 		int numberOfInputs = configuration.getNumberOfInputs();
 
@@ -91,7 +93,7 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 					getEnvironment().getIOManager(),
 					getEnvironment().getTaskManagerInfo().getConfiguration(),
 					getStreamStatusMaintainer(),
-					this.headOperator,
+					headOperator,
 					getEnvironment().getMetricGroup().getIOMetricGroup(),
 					inputWatermarkGauge,
 					getExecutionConfig().isObjectReuseEnabled());
@@ -112,9 +114,9 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 		// the input is finished, notify non-head operators
 		if (running) {
 			synchronized (getCheckpointLock()) {
-				OneInputStreamOperator<?, ?> headOperator = operatorChain.getHeadOperator();
-				for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
-					if (operator == headOperator) {
+				OneInputStreamOperator<IN, OUT> headOperator = getHeadOperator();
+				for (StreamOperator<?> operator : operatorChain.getAllOperatorsTopologySorted()) {
+					if (operator.getOperatorID().equals(headOperator.getOperatorID())) {
 						continue;
 					}
 
@@ -135,5 +137,12 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 	@Override
 	protected void cancelTask() {
 		running = false;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected OneInputStreamOperator<IN, OUT> getHeadOperator() {
+		Preconditions.checkState(operatorChain.getHeadOperators().length == 1,
+			"There should only one head operator, not " + operatorChain.getHeadOperators().length);
+		return (OneInputStreamOperator<IN, OUT>) operatorChain.getHeadOperators()[0];
 	}
 }

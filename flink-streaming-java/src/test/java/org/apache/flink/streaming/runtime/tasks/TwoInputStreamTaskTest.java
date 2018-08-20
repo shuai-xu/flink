@@ -630,7 +630,7 @@ public class TwoInputStreamTaskTest {
 	@Test
 	public void testMutableObjectReuse() throws Exception {
 		final TwoInputStreamTaskTestHarness<String, String, String> testHarness = new TwoInputStreamTaskTestHarness<>(
-			TwoInputStreamTask::new,
+			env -> new TwoInputStreamTask((Environment) env),
 			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
 			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
 			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO));
@@ -758,7 +758,7 @@ public class TwoInputStreamTaskTest {
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();
 
-		TestEndInputNotificationOperator headOperator = (TestEndInputNotificationOperator) testHarness.getTask().headOperator;
+		TestEndInputNotificationOperator headOperator = (TestEndInputNotificationOperator) testHarness.getTask().operatorChain.getHeadOperators()[0];
 
 		testHarness.processElement(new StreamRecord<>("Hello-1"), 0, 0);
 		testHarness.endInput(0,  0);

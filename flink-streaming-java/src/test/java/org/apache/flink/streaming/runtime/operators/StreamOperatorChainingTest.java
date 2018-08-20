@@ -47,6 +47,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -154,11 +155,13 @@ public class StreamOperatorChainingTest {
 
 		try (MockEnvironment environment = createMockEnvironment(chainedVertex.getName(), chainedVertex.getConfiguration())) {
 			StreamTask<Integer, StreamMap<Integer, Integer>> mockTask = createMockTask(streamTaskConfig, environment);
-			OperatorChain<Integer, StreamMap<Integer, Integer>> operatorChain = createOperatorChain(streamTaskConfig, environment, mockTask);
+			OperatorChain operatorChain = createOperatorChain(streamTaskConfig, environment, mockTask);
 
-			headOperator.setup(mockTask, streamConfig, operatorChain.getChainEntryPoint());
+			((StreamMap) headOperator).setup(mockTask, streamConfig, operatorChain.getChainEntryPoints()[0]);
 
-			for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+			final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+			while (it.hasNext()) {
+				final StreamOperator<?> operator = it.next();
 				if (operator != null) {
 					operator.open();
 				}
@@ -305,11 +308,13 @@ public class StreamOperatorChainingTest {
 
 		try (MockEnvironment environment = createMockEnvironment(chainedVertex.getName(), chainedVertex.getConfiguration())) {
 			StreamTask<Integer, StreamMap<Integer, Integer>> mockTask = createMockTask(streamTaskConfig, environment);
-			OperatorChain<Integer, StreamMap<Integer, Integer>> operatorChain = createOperatorChain(streamTaskConfig, environment, mockTask);
+			OperatorChain operatorChain = createOperatorChain(streamTaskConfig, environment, mockTask);
 
-			headOperator.setup(mockTask, streamConfig, operatorChain.getChainEntryPoint());
+			((StreamMap) headOperator).setup(mockTask, streamConfig, operatorChain.getChainEntryPoints()[0]);
 
-			for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+			final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+			while (it.hasNext()) {
+				final StreamOperator<?> operator = it.next();
 				if (operator != null) {
 					operator.open();
 				}
@@ -325,11 +330,11 @@ public class StreamOperatorChainingTest {
 		}
 	}
 
-	private <IN, OT extends StreamOperator<IN>> OperatorChain<IN, OT> createOperatorChain(
+	private OperatorChain createOperatorChain(
 			StreamTaskConfigSnapshot streamTaskConfig,
 			Environment environment,
-			StreamTask<IN, OT> task) {
-		return new OperatorChain<>(task, StreamTask.createStreamRecordWriters(streamTaskConfig, environment));
+			StreamTask<?, ?> task) {
+		return new OperatorChain(task, StreamTask.createStreamRecordWriters(streamTaskConfig, environment));
 	}
 
 	private <IN, OT extends StreamOperator<IN>> StreamTask<IN, OT> createMockTask(

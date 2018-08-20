@@ -100,6 +100,7 @@ import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.InternalTimeServiceManager;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFinalizer;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
 import org.apache.flink.streaming.api.operators.Output;
@@ -129,9 +130,11 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.CompletableFuture;
@@ -368,10 +371,14 @@ public class StreamTaskTest extends TestLogger {
 
 		// set up the task
 
-		StreamOperator<?>[] streamOperators = {streamOperator1, streamOperator2, streamOperator3};
+		final Deque<StreamOperator<?>> streamOperators = new ArrayDeque<StreamOperator<?>>() {{
+			add(streamOperator3);
+			add(streamOperator2);
+			add(streamOperator1);
+		}};
 
-		OperatorChain<Void, AbstractStreamOperator<Void>> operatorChain = mock(OperatorChain.class);
-		when(operatorChain.getAllOperators()).thenReturn(streamOperators);
+		OperatorChain operatorChain = mock(OperatorChain.class);
+		when(operatorChain.getAllOperatorsTopologySorted()).thenReturn(streamOperators);
 
 		Whitebox.setInternalState(streamTask, "isRunning", true);
 		Whitebox.setInternalState(streamTask, "lock", new Object());
@@ -439,10 +446,14 @@ public class StreamTaskTest extends TestLogger {
 		when(streamOperator2.getOperatorID()).thenReturn(operatorID2);
 		when(streamOperator3.getOperatorID()).thenReturn(operatorID3);
 
-		StreamOperator<?>[] streamOperators = {streamOperator1, streamOperator2, streamOperator3};
+		final Deque<StreamOperator<?>> streamOperators = new ArrayDeque<StreamOperator<?>>() {{
+			add(streamOperator1);
+			add(streamOperator2);
+			add(streamOperator3);
+		}};
 
-		OperatorChain<Void, AbstractStreamOperator<Void>> operatorChain = mock(OperatorChain.class);
-		when(operatorChain.getAllOperators()).thenReturn(streamOperators);
+		OperatorChain operatorChain = mock(OperatorChain.class);
+		when(operatorChain.getAllOperatorsTopologySorted()).thenReturn(streamOperators);
 
 		Whitebox.setInternalState(streamTask, "isRunning", true);
 		Whitebox.setInternalState(streamTask, "lock", new Object());
@@ -538,10 +549,12 @@ public class StreamTaskTest extends TestLogger {
 
 		when(streamOperator.snapshotState(anyLong(), anyLong(), any(CheckpointOptions.class), any(CheckpointStreamFactory.class))).thenReturn(operatorSnapshotResult);
 
-		StreamOperator<?>[] streamOperators = {streamOperator};
+		final Deque<StreamOperator<?>> streamOperators = new ArrayDeque<StreamOperator<?>>() {{
+			add(streamOperator);
+		}};
 
-		OperatorChain<Void, AbstractStreamOperator<Void>> operatorChain = mock(OperatorChain.class);
-		when(operatorChain.getAllOperators()).thenReturn(streamOperators);
+		OperatorChain operatorChain = mock(OperatorChain.class);
+		when(operatorChain.getAllOperatorsTopologySorted()).thenReturn(streamOperators);
 
 		CheckpointStorage checkpointStorage = new MemoryBackendCheckpointStorage(new JobID(), null, null, Integer.MAX_VALUE);
 
@@ -644,10 +657,12 @@ public class StreamTaskTest extends TestLogger {
 
 		when(streamOperator.snapshotState(anyLong(), anyLong(), any(CheckpointOptions.class), any(CheckpointStreamFactory.class))).thenReturn(operatorSnapshotResult);
 
-		StreamOperator<?>[] streamOperators = {streamOperator};
+		final Deque<StreamOperator<?>> streamOperators = new ArrayDeque<StreamOperator<?>>() {{
+			add(streamOperator);
+		}};
 
-		OperatorChain<Void, AbstractStreamOperator<Void>> operatorChain = mock(OperatorChain.class);
-		when(operatorChain.getAllOperators()).thenReturn(streamOperators);
+		OperatorChain operatorChain = mock(OperatorChain.class);
+		when(operatorChain.getAllOperatorsTopologySorted()).thenReturn(streamOperators);
 
 		CheckpointStorage checkpointStorage = new MemoryBackendCheckpointStorage(new JobID(), null, null, Integer.MAX_VALUE);
 
@@ -745,9 +760,11 @@ public class StreamTaskTest extends TestLogger {
 				.thenReturn(statelessOperatorSnapshotResult);
 
 		// set up the task
-		StreamOperator<?>[] streamOperators = {statelessOperator};
-		OperatorChain<Void, AbstractStreamOperator<Void>> operatorChain = mock(OperatorChain.class);
-		when(operatorChain.getAllOperators()).thenReturn(streamOperators);
+		final Deque<StreamOperator<?>> streamOperators = new ArrayDeque<StreamOperator<?>>() {{
+			add(statelessOperator);
+		}};
+		OperatorChain operatorChain = mock(OperatorChain.class);
+		when(operatorChain.getAllOperatorsTopologySorted()).thenReturn(streamOperators);
 
 		Whitebox.setInternalState(streamTask, "isRunning", true);
 		Whitebox.setInternalState(streamTask, "lock", new Object());
@@ -848,7 +865,8 @@ public class StreamTaskTest extends TestLogger {
 		protected void cancelTask() throws Exception {}
 	}
 
-	private static class BlockingCloseStreamOperator extends AbstractStreamOperator<Void> {
+	private static class BlockingCloseStreamOperator extends AbstractStreamOperator<Void> implements
+		OneInputStreamOperator<Void, Void> {
 		private static final long serialVersionUID = -9042150529568008847L;
 
 		public static final OneShotLatch IN_CLOSE = new OneShotLatch();
@@ -859,6 +877,11 @@ public class StreamTaskTest extends TestLogger {
 			IN_CLOSE.trigger();
 			FINISH_CLOSE.await();
 			super.close();
+		}
+
+		@Override
+		public void processElement(StreamRecord<Void> element) throws Exception {
+
 		}
 	}
 

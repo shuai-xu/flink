@@ -128,7 +128,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 	 * Checks whether the source has been canceled or stopped.
 	 * @return True, if the source is canceled or stopped, false is not.
 	 */
-	protected boolean isCanceledOrStopped() {
+	public boolean isCanceledOrStopped() {
 		return canceledOrStopped;
 	}
 

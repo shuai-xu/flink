@@ -48,7 +48,6 @@ import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFinalizer;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
-import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.operators.StreamTaskStateInitializer;
 import org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl;
@@ -68,7 +67,9 @@ import javax.annotation.Nullable;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -135,14 +136,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	 */
 	private final Object lock = new Object();
 
-	/** the head operator that consumes the input streams of this task. */
-	protected OP headOperator;
-
 	/** The configuration of the head operator. */
 	protected final StreamConfig configuration;
 
 	/** The chain of operators executed by this task. */
-	protected OperatorChain<OUT, OP> operatorChain;
+	protected OperatorChain operatorChain;
 
 	/** The configuration of this streaming task. */
 	protected final StreamTaskConfigSnapshot streamTaskConfig;
@@ -184,7 +182,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	/** Wrapper for synchronousCheckpointExceptionHandler to deal with rethrown exceptions. Used in the async part. */
 	private AsyncCheckpointExceptionHandler asynchronousCheckpointExceptionHandler;
 
-	private final List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> streamRecordWriters;
+	private final List<StreamRecordWriter<SerializationDelegate<StreamRecord<?>>>> streamRecordWriters;
 
 	// ------------------------------------------------------------------------
 
@@ -239,6 +237,21 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	//  Core work methods of the Stream Task
 	// ------------------------------------------------------------------------
 
+	/**
+	 * Allows the user to specify his own {@link ProcessingTimeService TimerServiceProvider}.
+	 * By default a {@link SystemProcessingTimeService DefaultTimerService} is going to be provided.
+	 * Changing it can be useful for testing processing time functionality, such as
+	 * {@link org.apache.flink.streaming.api.windowing.assigners.WindowAssigner WindowAssigners}
+	 * and {@link org.apache.flink.streaming.api.windowing.triggers.Trigger Triggers}.
+	 * */
+	@VisibleForTesting
+	public void setProcessingTimeService(ProcessingTimeService timeProvider) {
+		if (timeProvider == null) {
+			throw new RuntimeException("The timeProvider cannot be set to null.");
+		}
+		timerService = timeProvider;
+	}
+
 	public StreamTaskStateInitializer createStreamTaskStateInitializer() {
 		return new StreamTaskStateInitializerImpl(
 			getEnvironment(),
@@ -277,8 +290,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 				timerService = new SystemProcessingTimeService(this, getCheckpointLock(), timerThreadFactory);
 			}
 
-			operatorChain = new OperatorChain<>(this, streamRecordWriters);
-			headOperator = operatorChain.getHeadOperator();
+			operatorChain = new OperatorChain(this, streamRecordWriters);
 
 			// task specific initialization
 			init();
@@ -349,8 +361,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			// still let the computation fail
 			tryDisposeAllOperators();
 			disposed = true;
-		}
-		finally {
+		} catch (Throwable t) {
+			LOG.error("Could not execute the task " + getName() + ", aborting the execution", t);
+			throw t;
+		} finally {
 			// clean up everything we initialized
 			isRunning = false;
 
@@ -422,7 +436,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	 * (see {@link #closeAllOperators()}.
 	 */
 	private void openAllOperators() throws Exception {
-		for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+		final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+		while (it.hasNext()) {
+			final StreamOperator<?> operator = it.next();
 			if (operator != null) {
 				operator.open();
 			}
@@ -438,9 +454,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	private void closeAllOperators() throws Exception {
 		// We need to close them first to last, since upstream operators in the chain might emit
 		// elements in their close methods.
-		StreamOperator<?>[] allOperators = operatorChain.getAllOperators();
-		for (int i = allOperators.length - 1; i >= 0; i--) {
-			StreamOperator<?> operator = allOperators[i];
+		for (StreamOperator<?> operator : operatorChain.getAllOperatorsTopologySorted()) {
 			if (operator != null) {
 				operator.close();
 			}
@@ -452,7 +466,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	 * {@link StreamTask}. Disposing happens from <b>tail to head</b> operator in the chain.
 	 */
 	private void tryDisposeAllOperators() throws Exception {
-		for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+		final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+		while (it.hasNext()) {
+			final StreamOperator<?> operator = it.next();
 			if (operator != null) {
 				operator.dispose();
 			}
@@ -474,7 +490,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	 */
 	private void disposeAllOperators() {
 		if (operatorChain != null) {
-			for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+			final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+			while (it.hasNext()) {
+				final StreamOperator<?> operator = it.next();
 				try {
 					if (operator != null) {
 						operator.dispose();
@@ -550,10 +568,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 	public StreamStatusMaintainer getStreamStatusMaintainer() {
 		return operatorChain;
-	}
-
-	Output<StreamRecord<OUT>> getHeadOutput() {
-		return operatorChain.getChainEntryPoint();
 	}
 
 	RecordWriterOutput<?>[] getStreamOutputs() {
@@ -653,7 +667,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 				final CancelCheckpointMarker message = new CancelCheckpointMarker(checkpointMetaData.getCheckpointId());
 				Exception exception = null;
 
-				for (StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>> streamRecordWriter : streamRecordWriters) {
+				for (StreamRecordWriter<SerializationDelegate<StreamRecord<?>>> streamRecordWriter : streamRecordWriters) {
 					try {
 						streamRecordWriter.broadcastEvent(message);
 					} catch (Exception e) {
@@ -682,7 +696,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			if (isRunning) {
 				LOG.debug("Notification of complete checkpoint for task {}", getName());
 
-				for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
+				final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+				while (it.hasNext()) {
+					final StreamOperator<?> operator = it.next();
 					if (operator != null) {
 						operator.notifyCheckpointComplete(checkpointId);
 					}
@@ -734,9 +750,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 	private void initializeState() throws Exception {
 
-		StreamOperator<?>[] allOperators = operatorChain.getAllOperators();
-
-		for (StreamOperator<?> operator : allOperators) {
+		final Iterator<StreamOperator<?>> it = operatorChain.getAllOperatorsTopologySorted().descendingIterator();
+		while (it.hasNext()) {
+			final StreamOperator<?> operator = it.next();
 			if (null != operator) {
 				operator.initializeState();
 			}
@@ -1055,7 +1071,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			this.checkpointOptions = Preconditions.checkNotNull(checkpointOptions);
 			this.checkpointMetrics = Preconditions.checkNotNull(checkpointMetrics);
 			this.storageLocation = Preconditions.checkNotNull(checkpointStorageLocation);
-			this.allOperators = owner.operatorChain.getAllOperators();
+			final List<StreamOperator<?>> operators = new ArrayList<>(owner.operatorChain.getAllOperatorsTopologySorted());
+			Collections.reverse(operators);
+			this.allOperators = operators.toArray(new StreamOperator[0]);
 			this.operatorSnapshotsInProgress = new HashMap<>(allOperators.length);
 		}
 
@@ -1169,10 +1187,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	}
 
 	@VisibleForTesting
-	public static <OUT> List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> createStreamRecordWriters(
+	public static List<StreamRecordWriter<SerializationDelegate<StreamRecord<?>>>> createStreamRecordWriters(
 			StreamTaskConfigSnapshot config,
 			Environment environment) {
-		List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> streamRecordWriters = new ArrayList<>();
+		List<StreamRecordWriter<SerializationDelegate<StreamRecord<?>>>> streamRecordWriters = new ArrayList<>();
 		List<StreamEdge> outEdges = config.getOutStreamEdgesOfChain();
 		Map<Integer, StreamConfig> chainedConfigs = config.getChainedNodeConfigs();
 
@@ -1189,14 +1207,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 		return streamRecordWriters;
 	}
 
-	private static <OUT> StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>> createStreamRecordWriter(
+	private static StreamRecordWriter<SerializationDelegate<StreamRecord<?>>> createStreamRecordWriter(
 			StreamEdge edge,
 			int outputIndex,
 			Environment environment,
 			String taskName,
 			long bufferTimeout) {
 		@SuppressWarnings("unchecked")
-		StreamPartitioner<OUT> outputPartitioner = (StreamPartitioner<OUT>) edge.getPartitioner();
+		StreamPartitioner<?> outputPartitioner = edge.getPartitioner();
 
 		LOG.debug("Using partitioner {} for output {} of task {}", outputPartitioner, outputIndex, taskName);
 
@@ -1210,8 +1228,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			}
 		}
 
-		StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>> output =
-			new StreamRecordWriter<>(bufferWriter, outputPartitioner, bufferTimeout, taskName);
+		StreamRecordWriter<SerializationDelegate<StreamRecord<?>>> output =
+			new StreamRecordWriter(bufferWriter, outputPartitioner, bufferTimeout, taskName);
 		output.setMetricGroup(environment.getMetricGroup().getIOMetricGroup());
 		return output;
 	}

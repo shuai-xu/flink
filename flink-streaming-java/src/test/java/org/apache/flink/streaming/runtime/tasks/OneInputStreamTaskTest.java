@@ -41,6 +41,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
+import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -773,7 +774,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 	@Test
 	public void testMutableObjectReuse() throws Exception {
 		final OneInputStreamTaskTestHarness<String, String> testHarness = new OneInputStreamTaskTestHarness<>(
-			OneInputStreamTask::new,
+			env -> new OneInputStreamTask((Environment) env),
 			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
 			new TupleTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO));
 
@@ -875,7 +876,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();
 
-		TestEndInputNotificationOperator headOperator = (TestEndInputNotificationOperator) testHarness.getTask().headOperator;
+		TestEndInputNotificationOperator headOperator = (TestEndInputNotificationOperator) testHarness.getTask().operatorChain.getHeadOperators()[0];
 
 		testHarness.processElement(new StreamRecord<>("Hello-0-0"), 0, 0);
 		testHarness.endInput(0,  0);

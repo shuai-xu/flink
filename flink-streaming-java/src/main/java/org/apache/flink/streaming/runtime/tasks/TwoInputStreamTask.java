@@ -66,6 +66,8 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 		StreamConfig configuration = getConfiguration();
 		ClassLoader userClassLoader = getUserCodeClassLoader();
 
+		TwoInputStreamOperator<IN1, IN2, OUT> headOperator = getHeadOperator();
+
 		TypeSerializer<IN1> inputDeserializer1 = configuration.getTypeSerializerIn1(userClassLoader);
 		TypeSerializer<IN2> inputDeserializer2 = configuration.getTypeSerializerIn2(userClassLoader);
 
@@ -101,7 +103,7 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 				getEnvironment().getIOManager(),
 				getEnvironment().getTaskManagerInfo().getConfiguration(),
 				getStreamStatusMaintainer(),
-				this.headOperator,
+				headOperator,
 				getEnvironment().getMetricGroup().getIOMetricGroup(),
 				input1WatermarkGauge,
 				input2WatermarkGauge,
@@ -125,9 +127,9 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 		// all inputs are finished, notify non-head operators
 		if (running) {
 			synchronized (getCheckpointLock()) {
-				TwoInputStreamOperator<?, ?, ?> headOperator = operatorChain.getHeadOperator();
-				for (StreamOperator<?> operator : operatorChain.getAllOperators()) {
-					if (operator == headOperator) {
+				TwoInputStreamOperator<?, ?, ?> headOperator = getHeadOperator();
+				for (StreamOperator<?> operator : operatorChain.getAllOperatorsTopologySorted()) {
+					if (operator.getOperatorID().equals(headOperator.getOperatorID())) {
 						continue;
 					}
 
@@ -148,5 +150,12 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 	@Override
 	protected void cancelTask() {
 		running = false;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected TwoInputStreamOperator<IN1, IN2, OUT> getHeadOperator() {
+		Preconditions.checkState(operatorChain.getHeadOperators().length == 1,
+			"There should only one head operator, not " + operatorChain.getHeadOperators().length);
+		return (TwoInputStreamOperator<IN1, IN2, OUT>) operatorChain.getHeadOperators()[0];
 	}
 }

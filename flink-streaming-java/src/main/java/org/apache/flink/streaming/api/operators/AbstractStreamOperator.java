@@ -869,6 +869,10 @@ public abstract class AbstractStreamOperator<OUT>
 		return config.getOperatorID();
 	}
 
+	public Output<StreamRecord<OUT>> getOutput() {
+		return output;
+	}
+
 	@VisibleForTesting
 	public int numProcessingTimeTimers() {
 		return timeServiceManager == null ? 0 :

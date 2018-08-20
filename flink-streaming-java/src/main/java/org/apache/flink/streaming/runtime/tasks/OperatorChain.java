@@ -22,23 +22,31 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Gauge;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.OperatorIOMetricGroup;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.streaming.api.collector.selector.CopyingDirectedOutput;
 import org.apache.flink.streaming.api.collector.selector.DirectedOutput;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
+import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.operators.StreamSource;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
+import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.io.RecordWriterOutput;
 import org.apache.flink.streaming.runtime.io.StreamRecordWriter;
@@ -49,37 +57,44 @@ import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusProvider;
 import org.apache.flink.util.OutputTag;
+import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.XORShiftRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
+
+import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * The {@code OperatorChain} contains all operators that are executed as one chain within a single
  * {@link StreamTask}.
- *
- * @param <OUT> The type of elements accepted by the chain, i.e., the input type of the chain's
- *              head operator.
  */
 @Internal
-public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements StreamStatusMaintainer {
+public class OperatorChain implements StreamStatusMaintainer {
 
 	private static final Logger LOG = LoggerFactory.getLogger(OperatorChain.class);
 
-	private final StreamOperator<?>[] allOperators;
+	private final Map<Integer, AbstractStreamOperatorProxy<?>> allOperators;
+
+	private final Deque<StreamOperator<?>> allOperatorsTopologySorted;
 
 	private final RecordWriterOutput<?>[] streamOutputs;
 
-	private final WatermarkGaugeExposingOutput<StreamRecord<OUT>> chainEntryPoint;
+	private final Map<Integer, WatermarkGaugeExposingOutput<StreamRecord<?>>> chainEntryPoints = new HashMap<>();
 
-	private final OP headOperator;
+	private final Map<Integer, StreamOperator> headOperators = new HashMap<>();
+
+	private final StreamTaskConfigSnapshot streamTaskConfig;
 
 	/**
 	 * Current status of the input stream of the operator chain.
@@ -90,14 +105,11 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 	private StreamStatus streamStatus = StreamStatus.ACTIVE;
 
 	public OperatorChain(
-			StreamTask<OUT, OP> containingTask,
-			List<StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>>> streamRecordWriters) {
+			StreamTask containingTask,
+			List<StreamRecordWriter<SerializationDelegate<StreamRecord<?>>>> streamRecordWriters) {
 
 		final ClassLoader userCodeClassloader = containingTask.getUserCodeClassLoader();
-		final StreamTaskConfigSnapshot streamTaskConfig = containingTask.getStreamTaskConfig();
-
-		final StreamConfig headNodeConfig = streamTaskConfig.getChainedHeadNodeConfigs().get(0);
-		headOperator = headNodeConfig.getStreamOperator(userCodeClassloader);
+		streamTaskConfig = containingTask.getStreamTaskConfig();
 
 		// we read the chained configs, and the order of record writer registrations by output name
 		Map<Integer, StreamConfig> chainedConfigs = streamTaskConfig.getChainedNodeConfigs();
@@ -125,26 +137,58 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			}
 
 			// we create the chain of operators and grab the collector that leads into the chain
-			List<StreamOperator<?>> allOps = new ArrayList<>(chainedConfigs.size());
-			this.chainEntryPoint = createOutputCollector(
-				containingTask,
-				headNodeConfig,
-				chainedConfigs,
-				userCodeClassloader,
-				streamOutputMap,
-				allOps);
+			final Map<Integer, AbstractStreamOperatorProxy<?>> allOps = new HashMap<>(chainedConfigs.size());
 
-			if (headOperator != null) {
-				WatermarkGaugeExposingOutput<StreamRecord<OUT>> output = getChainEntryPoint();
-				headOperator.setup(containingTask, headNodeConfig, output);
+			List<Integer> headIds = streamTaskConfig.getChainedHeadNodeIds();
+			Preconditions.checkNotNull(headIds);
 
-				headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_OUTPUT_WATERMARK, output.getWatermarkGauge());
+			if (!chainedConfigs.isEmpty()) {
+				for (int headId : headIds) {
+					if (!allOps.containsKey(headId)) {
+						Tuple2<WatermarkGaugeExposingOutput, List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>>> outputAndSuccessors =
+							createOutputCollector(
+								containingTask,
+								chainedConfigs.get(headId),
+								chainedConfigs,
+								userCodeClassloader,
+								streamOutputMap,
+								allOps);
+
+						WatermarkGaugeExposingOutput output = outputAndSuccessors.f0;
+						List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors = outputAndSuccessors.f1;
+
+						StreamOperator originalHeadOperator = chainedConfigs.get(headId).getStreamOperator(
+							userCodeClassloader);
+
+						// There might be a null head operator in iteration mode.
+						if (originalHeadOperator != null) {
+
+							AbstractStreamOperatorProxy headOperator = AbstractStreamOperatorProxy.proxy(originalHeadOperator, successors);
+							//noinspection unchecked
+							headOperator.setup(containingTask, chainedConfigs.get(headId), output);
+							headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_OUTPUT_WATERMARK, output.getWatermarkGauge());
+
+							headOperators.put(headId, originalHeadOperator);
+							allOps.put(headId, headOperator);
+							chainEntryPoints.put(headId, output);
+						}
+					} else {
+						headOperators.put(headId, allOps.get(headId).getOperator());
+					}
+				}
 			}
 
-			// add head operator to end of chain
-			allOps.add(headOperator);
+			// There might be an empty allOps and some in edges in iteration mode.
+			if (!allOps.isEmpty()) {
+				for (StreamEdge streamEdge : streamTaskConfig.getInStreamEdgesOfChain()) {
+					allOps.get(streamEdge.getTargetId()).addInputEdge(streamEdge);
+				}
+			}
 
-			this.allOperators = allOps.toArray(new StreamOperator<?>[allOps.size()]);
+			this.allOperators = allOps;
+
+			// Here we got all inputs inside the chain, get the topology sorted operators.
+			allOperatorsTopologySorted = getTopologySortedOperators(headIds, userCodeClassloader, allOperators, chainedConfigs);
 
 			success = true;
 		}
@@ -207,12 +251,13 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		return streamOutputs;
 	}
 
-	public StreamOperator<?>[] getAllOperators() {
-		return allOperators;
+	public Deque<StreamOperator<?>> getAllOperatorsTopologySorted() {
+		return allOperatorsTopologySorted;
 	}
 
-	public WatermarkGaugeExposingOutput<StreamRecord<OUT>> getChainEntryPoint() {
-		return chainEntryPoint;
+	public Output<StreamRecord<?>>[] getChainEntryPoints() {
+		//noinspection unchecked
+		return chainEntryPoints.values().toArray(new Output[0]);
 	}
 
 	/**
@@ -241,26 +286,47 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		}
 	}
 
-	public OP getHeadOperator() {
-		return headOperator;
+	public StreamOperator[] getHeadOperators() {
+		//noinspection unchecked
+		return headOperators.values().toArray(new StreamOperator[0]);
+	}
+
+	public StreamOperator getHeadOperator(int headNodeId) {
+		return headOperators.get(headNodeId);
+	}
+
+	public AbstractStreamOperatorProxy getOperatorProxy(int nodeId) {
+		return allOperators.get(nodeId);
 	}
 
 	public int getChainLength() {
-		return allOperators == null ? 0 : allOperators.length;
+		return allOperators == null ? 0 : allOperators.size();
 	}
 
+	public List<StreamEdge> getNextSelectedEdges() {
+		// TODO: optimize cost
+		final Map<StreamEdge, Boolean> visited = new HashMap<>(allOperators.size());
+		final List<StreamEdge> selectedEdges = new ArrayList<>();
+		for (StreamEdge inEdge : streamTaskConfig.getInStreamEdgesOfChain()) {
+			if (allOperators.get(inEdge.getTargetId()).isSelected(inEdge, visited)) {
+				selectedEdges.add(inEdge);
+			}
+		}
+		return selectedEdges;
+	}
 	// ------------------------------------------------------------------------
 	//  initialization utilities
 	// ------------------------------------------------------------------------
 
-	private <T> WatermarkGaugeExposingOutput<StreamRecord<T>> createOutputCollector(
+	private <T> Tuple2<WatermarkGaugeExposingOutput, List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>>> createOutputCollector(
 			StreamTask<?, ?> containingTask,
 			StreamConfig operatorConfig,
 			Map<Integer, StreamConfig> chainedConfigs,
 			ClassLoader userCodeClassloader,
 			Map<StreamEdge, RecordWriterOutput<?>> streamOutputs,
-			List<StreamOperator<?>> allOperators) {
+			Map<Integer, AbstractStreamOperatorProxy<?>> allOperators) {
 		List<Tuple2<WatermarkGaugeExposingOutput<StreamRecord<T>>, StreamEdge>> allOutputs = new ArrayList<>(4);
+		List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> allSuccessors = new ArrayList<>(4);
 
 		// create collectors for the network outputs
 		for (StreamEdge outputEdge : operatorConfig.getNonChainedOutputs(userCodeClassloader)) {
@@ -282,8 +348,9 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 				userCodeClassloader,
 				streamOutputs,
 				allOperators,
-				outputEdge.getOutputTag());
+				outputEdge);
 			allOutputs.add(new Tuple2<>(output, outputEdge));
+			allSuccessors.add(Tuple2.of(allOperators.get(outputId), outputEdge));
 		}
 
 		// if there are multiple outputs, or the outputs are directed, we need to
@@ -294,7 +361,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		if (selectors == null || selectors.isEmpty()) {
 			// simple path, no selector necessary
 			if (allOutputs.size() == 1) {
-				return allOutputs.get(0).f0;
+				return Tuple2.of(allOutputs.get(0).f0, allSuccessors);
 			}
 			else {
 				// send to N outputs. Note that this includes teh special case
@@ -309,9 +376,9 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 				// If the chaining output does not copy we need to copy in the broadcast output,
 				// otherwise multi-chaining would not work correctly.
 				if (containingTask.getExecutionConfig().isObjectReuseEnabled()) {
-					return new CopyingBroadcastingOutputCollector<>(asArray, this);
-				} else  {
-					return new BroadcastingOutputCollector<>(asArray, this);
+					return Tuple2.of(new CopyingBroadcastingOutputCollector<>(asArray, this), allSuccessors);
+				} else {
+					return Tuple2.of(new BroadcastingOutputCollector<>(asArray, this), allSuccessors);
 				}
 			}
 		}
@@ -322,9 +389,9 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			// If the chaining output does not copy we need to copy in the broadcast output,
 			// otherwise multi-chaining would not work correctly.
 			if (containingTask.getExecutionConfig().isObjectReuseEnabled()) {
-				return new CopyingDirectedOutput<>(selectors, allOutputs);
+				return Tuple2.of(new CopyingDirectedOutput<>(selectors, allOutputs), allSuccessors);
 			} else {
-				return new DirectedOutput<>(selectors, allOutputs);
+				return Tuple2.of(new DirectedOutput<>(selectors, allOutputs), allSuccessors);
 			}
 
 		}
@@ -336,41 +403,56 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			Map<Integer, StreamConfig> chainedConfigs,
 			ClassLoader userCodeClassloader,
 			Map<StreamEdge, RecordWriterOutput<?>> streamOutputs,
-			List<StreamOperator<?>> allOperators,
-			OutputTag<IN> outputTag) {
-		// create the output that the operator writes to first. this may recursively create more operators
-		WatermarkGaugeExposingOutput<StreamRecord<OUT>> chainedOperatorOutput = createOutputCollector(
-			containingTask,
-			operatorConfig,
-			chainedConfigs,
-			userCodeClassloader,
-			streamOutputs,
-			allOperators);
+			Map<Integer, AbstractStreamOperatorProxy<?>> allOperators,
+			StreamEdge inputEdge) {
 
-		// now create the operator and give it the output collector to write its output to
-		OneInputStreamOperator<IN, OUT> chainedOperator = operatorConfig.getStreamOperator(userCodeClassloader);
+		// This chained operator may has been traversed from the other edge
+		@SuppressWarnings("unchecked")
+		AbstractStreamOperatorProxy<OUT> chainedOperator = (AbstractStreamOperatorProxy<OUT>) allOperators.get(inputEdge.getTargetId());
 
-		chainedOperator.setup(containingTask, operatorConfig, chainedOperatorOutput);
+		if (chainedOperator == null) {
+			// create the output that the operator writes to first. this may recursively create more operators
+			Tuple2<WatermarkGaugeExposingOutput, List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>>> outputAndSuccessors = createOutputCollector(
+				containingTask,
+				operatorConfig,
+				chainedConfigs,
+				userCodeClassloader,
+				streamOutputs,
+				allOperators);
 
-		allOperators.add(chainedOperator);
+			//noinspection unchecked
+			WatermarkGaugeExposingOutput<StreamRecord<OUT>> chainedOperatorOutput = outputAndSuccessors.f0;
+			List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors = outputAndSuccessors.f1;
+
+			// now create the operator and give it the output collector to write its output to
+			//noinspection unchecked
+			chainedOperator = AbstractStreamOperatorProxy.proxy(operatorConfig.getStreamOperator(userCodeClassloader), successors);
+
+			chainedOperator.setup(containingTask, operatorConfig, chainedOperatorOutput);
+
+			allOperators.put(inputEdge.getTargetId(), chainedOperator);
+
+			chainedOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_OUTPUT_WATERMARK, chainedOperatorOutput.getWatermarkGauge()::getValue);
+		}
+
+		chainedOperator.addInputEdge(inputEdge);
 
 		WatermarkGaugeExposingOutput<StreamRecord<IN>> currentOperatorOutput;
 		if (containingTask.getExecutionConfig().isObjectReuseEnabled()) {
-			currentOperatorOutput = new ChainingOutput<>(chainedOperator, this, outputTag);
+			currentOperatorOutput = new ChainingOutput<>(chainedOperator, this, inputEdge);
 		}
 		else {
 			TypeSerializer<IN> inSerializer = operatorConfig.getTypeSerializerIn1(userCodeClassloader);
-			currentOperatorOutput = new CopyingChainingOutput<>(chainedOperator, inSerializer, outputTag, this);
+			currentOperatorOutput = new CopyingChainingOutput<>(chainedOperator, inSerializer, inputEdge, this);
 		}
 
 		chainedOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_INPUT_WATERMARK, currentOperatorOutput.getWatermarkGauge()::getValue);
-		chainedOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_OUTPUT_WATERMARK, chainedOperatorOutput.getWatermarkGauge()::getValue);
 
 		return currentOperatorOutput;
 	}
 
-	private RecordWriterOutput<OUT> createStreamOutput(
-			StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>> streamRecordWriter,
+	private RecordWriterOutput<?> createStreamOutput(
+			StreamRecordWriter<SerializationDelegate<StreamRecord<?>>> streamRecordWriter,
 			StreamEdge edge,
 			StreamConfig upStreamConfig,
 			Environment taskEnvironment) {
@@ -387,7 +469,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			outSerializer = upStreamConfig.getTypeSerializerOut(taskEnvironment.getUserClassLoader());
 		}
 
-		return new RecordWriterOutput<>(streamRecordWriter, outSerializer, sideOutputTag, this);
+		return new RecordWriterOutput(streamRecordWriter, outSerializer, sideOutputTag, this);
 	}
 
 	// ------------------------------------------------------------------------
@@ -405,7 +487,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 
 	private static class ChainingOutput<T> implements WatermarkGaugeExposingOutput<StreamRecord<T>> {
 
-		protected final OneInputStreamOperator<T, ?> operator;
+		protected final OutputBinder<T> binder;
 		protected final Counter numRecordsIn;
 		protected final WatermarkGauge watermarkGauge = new WatermarkGauge();
 
@@ -414,10 +496,10 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		protected final OutputTag<T> outputTag;
 
 		public ChainingOutput(
-				OneInputStreamOperator<T, ?> operator,
+				StreamOperator<?> operator,
 				StreamStatusProvider streamStatusProvider,
-				OutputTag<T> outputTag) {
-			this.operator = operator;
+				StreamEdge edge) {
+			this.binder = OutputBinder.bind(operator, edge);
 
 			{
 				Counter tmpNumRecordsIn;
@@ -432,7 +514,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			}
 
 			this.streamStatusProvider = streamStatusProvider;
-			this.outputTag = outputTag;
+			this.outputTag = edge.getOutputTag();
 		}
 
 		@Override
@@ -464,8 +546,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 				StreamRecord<T> castRecord = (StreamRecord<T>) record;
 
 				numRecordsIn.inc();
-				operator.setKeyContextElement1(castRecord);
-				operator.processElement(castRecord);
+				binder.processElement(castRecord);
 			}
 			catch (Exception e) {
 				throw new ExceptionInChainedOperatorException(e);
@@ -477,7 +558,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 			try {
 				watermarkGauge.setCurrentWatermark(mark.getTimestamp());
 				if (streamStatusProvider.getStreamStatus().isActive()) {
-					operator.processWatermark(mark);
+					binder.processWatermark(mark);
 				}
 			}
 			catch (Exception e) {
@@ -488,7 +569,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		@Override
 		public void emitLatencyMarker(LatencyMarker latencyMarker) {
 			try {
-				operator.processLatencyMarker(latencyMarker);
+				binder.processLatencyMarker(latencyMarker);
 			}
 			catch (Exception e) {
 				throw new ExceptionInChainedOperatorException(e);
@@ -498,7 +579,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		@Override
 		public void close() {
 			try {
-				operator.close();
+				binder.close();
 			}
 			catch (Exception e) {
 				throw new ExceptionInChainedOperatorException(e);
@@ -516,11 +597,11 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 		private final TypeSerializer<T> serializer;
 
 		public CopyingChainingOutput(
-				OneInputStreamOperator<T, ?> operator,
+				StreamOperator<?> operator,
 				TypeSerializer<T> serializer,
-				OutputTag<T> outputTag,
+				StreamEdge edge,
 				StreamStatusProvider streamStatusProvider) {
-			super(operator, streamStatusProvider, outputTag);
+			super(operator, streamStatusProvider, edge);
 			this.serializer = serializer;
 		}
 
@@ -555,8 +636,7 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 
 				numRecordsIn.inc();
 				StreamRecord<T> copy = castRecord.copy(serializer.copy(castRecord.getValue()));
-				operator.setKeyContextElement1(copy);
-				operator.processElement(copy);
+				binder.processElement(copy);
 			} catch (ClassCastException e) {
 				if (outputTag != null) {
 					// Enrich error message
@@ -686,5 +766,526 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> implements Strea
 				outputs[outputs.length - 1].collect(outputTag, record);
 			}
 		}
+	}
+
+	abstract static class AbstractStreamOperatorProxy<OUT> implements StreamOperator<OUT> {
+
+		private final StreamOperator<OUT> operator;
+		protected final List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors;
+
+		AbstractStreamOperatorProxy(
+				StreamOperator<OUT> operator,
+				List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+			this.operator = operator;
+			this.successors = successors;
+		}
+
+		public StreamOperator<OUT> getOperator() {
+			return operator;
+		}
+
+		@SuppressWarnings("unchecked")
+		public static AbstractStreamOperatorProxy proxy(StreamOperator operator, List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+			if (operator instanceof OneInputStreamOperator) {
+				return new OneInputStreamOperatorProxy((OneInputStreamOperator) operator, successors);
+			} else if (operator instanceof TwoInputStreamOperator) {
+				return new TwoInputStreamOperatorProxy((TwoInputStreamOperator) operator, successors);
+			} else if (operator instanceof StreamSource) {
+				return new SourceStreamOperatorProxy((StreamSource) operator, successors);
+			} else {
+				throw new RuntimeException("Unknown input stream operator " + operator);
+			}
+		}
+
+		public abstract void addInputEdge(StreamEdge inputEdge);
+
+		public abstract void endInput(StreamEdge inputEdge) throws Exception;
+
+		public boolean isSelected(StreamEdge inputEdge, Map<StreamEdge, Boolean> visited) {
+			final Boolean isSelected = visited.get(inputEdge);
+			if (isSelected != null) {
+				return isSelected;
+			}
+
+			for (Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge> successor : successors) {
+				if (!successor.f0.isSelected(successor.f1, visited)) {
+					visited.put(inputEdge, false);
+					return false;
+				}
+			}
+			visited.put(inputEdge, true);
+			return true;
+		}
+
+		public void endSuccessorsInput() throws Exception {
+			for (Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge> successor : successors) {
+				successor.f0.endInput(successor.f1);
+			}
+		}
+
+		public StreamOperator<OUT> getStreamOperator() {
+			return operator;
+		}
+
+		@Override
+		public void setCurrentKey(Object key) {
+			operator.setCurrentKey(key);
+		}
+
+		@Override
+		public Object getCurrentKey() {
+			return operator.getCurrentKey();
+		}
+
+		@Override
+		public void notifyCheckpointComplete(long checkpointId) throws Exception {
+			operator.notifyCheckpointComplete(checkpointId);
+		}
+
+		@Override
+		public void setup(
+				StreamTask<?, ?> containingTask,
+				StreamConfig config,
+				Output<StreamRecord<OUT>> output) {
+			operator.setup(containingTask, config, output);
+		}
+
+		@Override
+		public void open() throws Exception {
+			operator.open();
+		}
+
+		@Override
+		public void close() throws Exception {
+			operator.close();
+		}
+
+		@Override
+		public void dispose() throws Exception {
+			operator.dispose();
+		}
+
+		@Override
+		public OperatorSnapshotFutures snapshotState(
+				long checkpointId,
+				long timestamp,
+				CheckpointOptions checkpointOptions,
+				CheckpointStreamFactory storageLocation) throws Exception {
+
+			return operator.snapshotState(checkpointId, timestamp, checkpointOptions, storageLocation);
+		}
+
+		@Override
+		public void initializeState() throws Exception {
+			operator.initializeState();
+		}
+
+		@Override
+		public void setKeyContextElement1(StreamRecord<?> record) throws Exception {
+			operator.setKeyContextElement1(record);
+		}
+
+		@Override
+		public void setKeyContextElement2(StreamRecord<?> record) throws Exception {
+			operator.setKeyContextElement2(record);
+		}
+
+		@Override
+		public ChainingStrategy getChainingStrategy() {
+			return operator.getChainingStrategy();
+		}
+
+		@Override
+		public void setChainingStrategy(ChainingStrategy strategy) {
+			operator.setChainingStrategy(strategy);
+		}
+
+		@Override
+		public MetricGroup getMetricGroup() {
+			return operator.getMetricGroup();
+		}
+
+		@Override
+		public OperatorID getOperatorID() {
+			return operator.getOperatorID();
+		}
+	}
+
+	private static class OneInputStreamOperatorProxy<IN, OUT> extends AbstractStreamOperatorProxy<OUT> implements OneInputStreamOperator<IN, OUT> {
+
+		private final OneInputStreamOperator<IN, OUT> operator;
+		private volatile int unfinishedInputEdges = 0;
+
+		OneInputStreamOperatorProxy(
+				OneInputStreamOperator<IN, OUT> operator,
+				List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+			super(operator, successors);
+			this.operator = operator;
+		}
+
+		public void addInputEdge(StreamEdge inputEdge) {
+			unfinishedInputEdges++;
+		}
+
+		public void endInput(StreamEdge inputEdge) throws Exception {
+			if (--unfinishedInputEdges == 0) {
+				endInput();
+				endSuccessorsInput();
+			}
+		}
+
+		@Override
+		public void processElement(StreamRecord<IN> element) throws Exception {
+			operator.processElement(element);
+		}
+
+		@Override
+		public void processWatermark(Watermark mark) throws Exception {
+			operator.processWatermark(mark);
+		}
+
+		@Override
+		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+			operator.processLatencyMarker(latencyMarker);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+			operator.endInput();
+		}
+	}
+
+	private static class TwoInputStreamOperatorProxy<IN1, IN2, OUT> extends AbstractStreamOperatorProxy<OUT> implements TwoInputStreamOperator<IN1, IN2, OUT> {
+
+		private final TwoInputStreamOperator<IN1, IN2, OUT> operator;
+
+		private volatile int unfinishedInputEdges1 = 0;
+		private volatile int unfinishedInputEdges2 = 0;
+
+		private TwoInputSelection lastSelection = null;
+
+		TwoInputStreamOperatorProxy(
+				TwoInputStreamOperator<IN1, IN2, OUT> operator,
+				List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+			super(operator, successors);
+			this.operator = operator;
+		}
+
+		@Override
+		public TwoInputSelection firstInputSelection() {
+			lastSelection = operator.firstInputSelection();
+			return lastSelection;
+		}
+
+		@Override
+		public TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
+			lastSelection = operator.processRecord1(element);
+			return lastSelection;
+		}
+
+		@Override
+		public TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
+			lastSelection = operator.processRecord2(element);
+			return lastSelection;
+		}
+
+		@Override
+		public void processElement1(StreamRecord<IN1> element) throws Exception {
+			operator.processElement1(element);
+			lastSelection = TwoInputSelection.ANY;
+		}
+
+		@Override
+		public void processElement2(StreamRecord<IN2> element) throws Exception {
+			operator.processElement2(element);
+			lastSelection = TwoInputSelection.ANY;
+		}
+
+		@Override
+		public void processWatermark1(Watermark mark) throws Exception {
+			operator.processWatermark1(mark);
+		}
+
+		@Override
+		public void processWatermark2(Watermark mark) throws Exception {
+			operator.processWatermark2(mark);
+		}
+
+		@Override
+		public void processLatencyMarker1(LatencyMarker latencyMarker) throws Exception {
+			operator.processLatencyMarker1(latencyMarker);
+		}
+
+		@Override
+		public void processLatencyMarker2(LatencyMarker latencyMarker) throws Exception {
+			operator.processLatencyMarker2(latencyMarker);
+		}
+
+		@Override
+		public void endInput1() throws Exception {
+			operator.endInput1();
+		}
+
+		@Override
+		public void endInput2() throws Exception {
+			operator.endInput2();
+		}
+
+		@Override
+		public void addInputEdge(StreamEdge inputEdge) {
+			if (inputEdge.getTypeNumber() == 1) {
+				unfinishedInputEdges1++;
+			} else if (inputEdge.getTypeNumber() == 2) {
+				unfinishedInputEdges2++;
+			} else {
+				throw new RuntimeException("Unknown stream edge type number " + inputEdge.getTypeNumber());
+			}
+		}
+
+		@Override
+		public void endInput(StreamEdge inputEdge) throws Exception {
+			if (inputEdge.getTypeNumber() == 1) {
+				if (--unfinishedInputEdges1 == 0) {
+					endInput1();
+				}
+			} else if (inputEdge.getTypeNumber() == 2) {
+				if (--unfinishedInputEdges2 == 0) {
+					endInput2();
+				}
+			} else {
+				throw new RuntimeException("Unknown stream edge type number " + inputEdge.getTypeNumber());
+			}
+
+			if (unfinishedInputEdges1 == 0 && unfinishedInputEdges2 == 0) {
+				endSuccessorsInput();
+			}
+		}
+
+		@Override
+		public boolean isSelected(StreamEdge inputEdge, Map<StreamEdge, Boolean> visited) {
+			if (lastSelection == null) {
+				// For the first visiting
+				lastSelection = firstInputSelection();
+			}
+			if ((inputEdge.getTypeNumber() == 1 && lastSelection == TwoInputSelection.SECOND) ||
+				(inputEdge.getTypeNumber() == 2 && lastSelection == TwoInputSelection.FIRST)) {
+				visited.put(inputEdge, false);
+				return false;
+			}
+			Boolean isSelected = visited.get(inputEdge);
+			if (isSelected != null) {
+				return isSelected;
+			}
+
+			isSelected = super.isSelected(inputEdge, visited);
+			visited.put(inputEdge, isSelected);
+			return isSelected;
+		}
+	}
+
+	private static class SourceStreamOperatorProxy<OUT> extends AbstractStreamOperatorProxy<OUT> implements OneInputStreamOperator<OUT, OUT> {
+
+		private final StreamSource<OUT, ?> operator;
+
+		SourceStreamOperatorProxy(StreamSource<OUT, ?> operator, List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+			super(operator, successors);
+
+			this.operator = operator;
+		}
+
+		@Override
+		public void addInputEdge(StreamEdge inputEdge) {
+			throw new UnsupportedOperationException("There should not be a input edge in source operator");
+		}
+
+		@Override
+		public void endInput(StreamEdge inputEdge) throws Exception {
+			endInput();
+		}
+
+		@Override
+		public void processElement(StreamRecord<OUT> element) throws Exception {
+			operator.getOutput().collect(element);
+		}
+
+		@Override
+		public void processWatermark(Watermark mark) throws Exception {
+			operator.getOutput().emitWatermark(mark);
+		}
+
+		@Override
+		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+			operator.getOutput().emitLatencyMarker(latencyMarker);
+		}
+
+		@Override
+		public void endInput() throws Exception {
+			endSuccessorsInput();
+		}
+	}
+
+	private interface OutputBinder<IN> {
+
+		void processElement(StreamRecord<IN> element) throws Exception;
+
+		void processWatermark(Watermark mark) throws Exception;
+
+		void processLatencyMarker(LatencyMarker latencyMarker) throws Exception;
+
+		void close() throws Exception;
+
+		@SuppressWarnings("unchecked")
+		static <IN, OUT> OutputBinder<IN> bind(StreamOperator<OUT> streamOperator, StreamEdge edge) {
+			if (streamOperator instanceof OneInputStreamOperator) {
+				return new OneInputOutputBinder<>((OneInputStreamOperator) streamOperator);
+			} else if (streamOperator instanceof TwoInputStreamOperator) {
+				if (edge.getTypeNumber() == 1) {
+					return new FirstInputOutputBinder<>((TwoInputStreamOperator) streamOperator);
+				} else if (edge.getTypeNumber() == 2) {
+					return new SecondInputOutputBinder<>((TwoInputStreamOperator) streamOperator);
+				} else {
+					throw new RuntimeException("Unknown type number " + edge.getTypeNumber());
+				}
+			} else {
+				throw new RuntimeException("Unknown stream operator " + streamOperator);
+			}
+		}
+	}
+
+	private static class OneInputOutputBinder<IN> implements OutputBinder<IN> {
+
+		private final OneInputStreamOperator<IN, ?> operator;
+
+		public OneInputOutputBinder(OneInputStreamOperator<IN, ?> operator) {
+			this.operator = operator;
+		}
+
+		public void processElement(StreamRecord<IN> element) throws Exception {
+			operator.setKeyContextElement1(element);
+			operator.processElement(element);
+		}
+
+		public void processWatermark(Watermark mark) throws Exception {
+			operator.processWatermark(mark);
+		}
+
+		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+			operator.processLatencyMarker(latencyMarker);
+		}
+
+		@Override
+		public void close() throws Exception {
+			operator.close();
+		}
+	}
+
+	private static class FirstInputOutputBinder<IN> implements OutputBinder<IN> {
+
+		private final TwoInputStreamOperator<IN, ?, ?> operator;
+
+		public FirstInputOutputBinder(TwoInputStreamOperator<IN, ?, ?> operator) {
+			this.operator = operator;
+		}
+
+		public void processElement(StreamRecord<IN> element) throws Exception {
+			operator.setKeyContextElement1(element);
+			operator.processRecord1(element);
+		}
+
+		public void processWatermark(Watermark mark) throws Exception {
+			operator.processWatermark1(mark);
+		}
+
+		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+			operator.processLatencyMarker1(latencyMarker);
+		}
+
+		@Override
+		public void close() throws Exception {
+			operator.close();
+		}
+	}
+
+	private static class SecondInputOutputBinder<IN> implements OutputBinder<IN> {
+
+		private final TwoInputStreamOperator<?, IN, ?> operator;
+
+		public SecondInputOutputBinder(TwoInputStreamOperator<?, IN, ?> operator) {
+			this.operator = operator;
+		}
+
+		public void processElement(StreamRecord<IN> element) throws Exception {
+			operator.setKeyContextElement2(element);
+			operator.processRecord2(element);
+		}
+
+		public void processWatermark(Watermark mark) throws Exception {
+			operator.processWatermark2(mark);
+		}
+
+		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+			operator.processLatencyMarker2(latencyMarker);
+		}
+
+		@Override
+		public void close() throws Exception {
+			operator.close();
+		}
+	}
+
+	/**
+	 * To get the topology sorted operators, https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm.
+	 * @param headIds
+	 * @param userCodeClassloader
+	 * @param allOperators
+	 * @param chainedConfigs
+	 * @return topology sorted operators.
+	 */
+	static Deque<StreamOperator<?>> getTopologySortedOperators(
+		List<Integer> headIds,
+		ClassLoader userCodeClassloader,
+		Map<Integer, ? extends StreamOperator<?>> allOperators,
+		Map<Integer, StreamConfig> chainedConfigs) {
+
+		// For iteration mode
+		if (allOperators == null || allOperators.isEmpty()) {
+			return new ArrayDeque<>();
+		}
+
+		final Queue<Integer> toTraversed = new ArrayDeque<>();
+
+		final Map<Integer, Integer> operatorInputs = new HashMap<>();
+		for (StreamConfig streamConfig : chainedConfigs.values()) {
+			for (StreamEdge edgeInChain : streamConfig.getChainedOutputs(userCodeClassloader)) {
+				operatorInputs.put(edgeInChain.getTargetId(), operatorInputs.getOrDefault(edgeInChain.getTargetId(), 0) + 1);
+			}
+		}
+
+		// Traverse the operators which are without input edges in chain first
+		for (int headId : headIds) {
+			if (operatorInputs.getOrDefault(headId, 0) == 0) {
+				toTraversed.add(headId);
+			}
+		}
+
+		checkState(!toTraversed.isEmpty());
+
+		final Deque<StreamOperator<?>> topologySortedOperators = new ArrayDeque<>();
+
+		while (!toTraversed.isEmpty()) {
+			final int currentOperatorId = toTraversed.poll();
+			topologySortedOperators.add(allOperators.get(currentOperatorId));
+
+			for (StreamEdge edge : chainedConfigs.get(currentOperatorId).getChainedOutputs(userCodeClassloader)) {
+				final int targetOperatorId = edge.getTargetId();
+				int inputCountsLeft = operatorInputs.get(targetOperatorId);
+				// Reduce one input edge of target operator
+				operatorInputs.put(targetOperatorId, --inputCountsLeft);
+				if (inputCountsLeft == 0) {
+					toTraversed.add(targetOperatorId);
+				}
+			}
+		}
+		return topologySortedOperators;
 	}
 }

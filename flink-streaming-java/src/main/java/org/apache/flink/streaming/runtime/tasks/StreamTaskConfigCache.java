@@ -196,4 +196,16 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 	public StateBackend getStateBackend() {
 		return this.stateBackend;
 	}
+
+	@Override
+	public String toString() {
+		return "TimeCharacteristic: " + timeChar +
+			", chainedNodeConfigMap: " + chainedNodeConfigMap +
+			", chainedHeadNodeIds: " + chainedHeadNodeIds +
+			", inStreamEdgesOfChain: " + inStreamEdgesOfChain +
+			", outStreamEdgesOfChain: " + outStreamEdgesOfChain +
+			", isCheckpointingEnabled: " + isCheckpointingEnabled +
+			", checkpointMode: " + checkpointMode +
+			", stateBackend: " + stateBackend;
+	}
 }

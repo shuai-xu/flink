@@ -73,7 +73,9 @@ import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.util.TestingTaskManagerRuntimeInfo;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.TestLogger;
@@ -239,8 +241,14 @@ public class StreamTaskTerminationTest extends TestLogger {
 		}
 	}
 
-	private static class NoOpStreamOperator<T> extends AbstractStreamOperator<T> {
+	private static class NoOpStreamOperator<T> extends AbstractStreamOperator<T> implements
+		OneInputStreamOperator<T, T> {
 		private static final long serialVersionUID = 4517845269225218312L;
+
+		@Override
+		public void processElement(StreamRecord<T> element) throws Exception {
+
+		}
 	}
 
 	static class BlockingStateBackend implements StateBackend {
