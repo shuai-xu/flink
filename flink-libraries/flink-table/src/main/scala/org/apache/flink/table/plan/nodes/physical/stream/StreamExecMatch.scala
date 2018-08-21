@@ -40,7 +40,6 @@ import org.apache.flink.cep.nfa.AfterMatchSkipStrategy
 import org.apache.flink.cep.nfa.compiler.NFACompiler
 import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCepOperator, SelectCepOperator, SelectTimeoutCepOperator}
 import org.apache.flink.cep.pattern.Pattern
-import org.apache.flink.cep.pattern.triggers.{FixedIntervalTrigger, PeriodicIntervalTrigger}
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.operators.co.CoStreamMap
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, SideOutputTransformation, StreamTransformation, TwoInputTransformation}
@@ -144,12 +143,6 @@ class StreamExecMatch(
         s", "
       }
     }${
-      if (emit != null) {
-        s"EMIT: $emit, "
-      } else {
-        s""
-      }
-    }${
       if (!subsets.isEmpty) {
         s"SUBSET: ${subsets.asScala.map {
           case (k, v) => s"$k = (${v.toArray.mkString(", ")})"
@@ -193,13 +186,6 @@ class StreamExecMatch(
           null
         },
         interval != null)
-      .itemIf("emit",
-        if (emit != null) {
-          emit.toString
-        } else {
-          null
-        },
-        emit != null)
       .itemIf("subset",
         subsets.asScala.map { case (k, v) => s"$k = (${v.toArray.mkString(", ")})"}.mkString(", "),
         !subsets.isEmpty)
@@ -366,49 +352,6 @@ class StreamExecMatch(
     interval match {
       case intervalLiteral: RexLiteral =>
         cepPattern.within(Time.milliseconds(convertToMs(intervalLiteral)))
-
-      case intervalNode: RexNode =>
-        val patternWindowTimeFunction =
-          MatchUtil.generatePatternWindowTimeFunction(
-            config,
-            relBuilder,
-            intervalNode,
-            patternNames,
-            inputTypeInfo)
-        cepPattern.within(patternWindowTimeFunction)
-
-      case _ =>
-    }
-
-    // set pattern emit strategy
-    emit match {
-      case emitCall: RexCall if emitCall.getKind == SqlKind.EMIT_TIMEOUT =>
-        if (cepPattern.getWindowTimeFunction == null) {
-          throw new TableException("EMIT TIMEOUT must be used with WITHIN clause.")
-        }
-        val emitIntervals = new util.ArrayList[JLong]()
-        emitCall.getOperands.asScala.foreach {
-          case emitIntervalLiteral: RexLiteral =>
-            emitIntervals.add(convertToMs(emitIntervalLiteral))
-
-          case _ =>
-            throw new TableException("Currently, EMIT TIMEOUT only support literal interval.")
-        }
-        cepPattern.trigger(new FixedIntervalTrigger(emitIntervals))
-
-      case emitEvery: RexCall if emitEvery.getKind == SqlKind.EMIT_TIMEOUT_EVERY =>
-        if (cepPattern.getWindowTimeFunction == null) {
-          throw new TableException("EMIT TIMEOUT must be used with WITHIN clause.")
-        }
-
-        val emitInterval = emitEvery.getOperands.get(0) match {
-          case emitIntervalLiteral: RexLiteral =>
-            convertToMs(emitIntervalLiteral)
-
-          case _ =>
-            throw new TableException("Currently, EMIT TIMEOUT only support literal interval.")
-        }
-        cepPattern.trigger(new PeriodicIntervalTrigger(emitInterval))
 
       case _ =>
     }
@@ -613,8 +556,6 @@ class StreamExecMatch(
         nfaFactory,
         comparator,
         cepPattern.getAfterMatchSkipStrategy,
-        cepPattern.getWindowTimeFunction,
-        cepPattern.getTrigger,
         patternSelectFunction),
       outputTypeInfo,
       inputTransform.getParallelism)
@@ -645,8 +586,6 @@ class StreamExecMatch(
         nfaFactory,
         comparator,
         cepPattern.getAfterMatchSkipStrategy,
-        cepPattern.getWindowTimeFunction,
-        cepPattern.getTrigger,
         patternFlatSelectFunction),
       outputTypeInfo,
       inputTransform.getParallelism)
@@ -679,8 +618,6 @@ class StreamExecMatch(
         nfaFactory,
         comparator,
         cepPattern.getAfterMatchSkipStrategy,
-        cepPattern.getWindowTimeFunction,
-        cepPattern.getTrigger,
         patternSelectFunction,
         patternTimeoutFunction,
         timeoutOutputTag),
@@ -725,8 +662,6 @@ class StreamExecMatch(
         nfaFactory,
         comparator,
         cepPattern.getAfterMatchSkipStrategy,
-        cepPattern.getWindowTimeFunction,
-        cepPattern.getTrigger,
         patternFlatSelectFunction,
         patternFlatTimeoutFunction,
         timeoutOutputTag),

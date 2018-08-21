@@ -189,18 +189,6 @@ case class GeneratedPatternFlatTimeoutFunction(
   extends GeneratedClass[PatternFlatTimeoutFunction[BaseRow, BaseRow]]
 
 /**
-  * Describes a generated [[org.apache.flink.cep.pattern.interval.PatternWindowTimeFunction]].
-  *
-  * @param name class name of the generated PatternWindowTimeFunction.
-  * @param code code of the generated PatternWindowTimeFunction.
-  */
-case class GeneratedPatternWindowTimeFunction(
-    name: String,
-    code: String,
-    references: Array[AnyRef])
-  extends GeneratedClass[PatternWindowTimeFunction[BaseRow]]
-
-/**
   * Describes a generated [[org.apache.flink.streaming.api.operators.StreamOperator]].
   *
   * @param name class name of the generated StreamOperator.

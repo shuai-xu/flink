@@ -26,10 +26,9 @@ import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.cep.{EventComparator, PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
-import org.apache.flink.cep.pattern.conditions.RichIterativeCondition
-import org.apache.flink.cep.pattern.interval.PatternWindowTimeFunction
+import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GenConditionFunction, GenSelectFunction, GenTimeWindowFunction, GeneratedSorter, MatchCodeGenerator}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GenConditionFunction, GenSelectFunction, GeneratedSorter, MatchCodeGenerator}
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.{CollectionBaseRowComparator, SortUtil}
@@ -50,7 +49,7 @@ object MatchUtil {
     patternName: String,
     patternNames: Seq[String],
     patternDefinition: RexNode,
-    inputTypeInfo: TypeInformation[_]): RichIterativeCondition[BaseRow] = {
+    inputTypeInfo: TypeInformation[_]): IterativeCondition[BaseRow] = {
 
     val ctx = CodeGeneratorContext(config, supportReference = true)
     val generator = new MatchCodeGenerator(
@@ -223,38 +222,6 @@ object MatchUtil {
       "MatchRecognizePatternFlatTimeoutFunction",
       body, config)
     new PatternFlatTimeoutFunctionRunner(genFunction)
-  }
-
-  private[flink] def generatePatternWindowTimeFunction(
-    config: TableConfig,
-    relBuilder: RelBuilder,
-    interval: RexNode,
-    patternNames: Seq[String],
-    inputTypeInfo: TypeInformation[_]): PatternWindowTimeFunction[BaseRow] = {
-
-    val ctx = CodeGeneratorContext(config, supportReference = true)
-    val generator = new MatchCodeGenerator(
-      ctx,
-      relBuilder,
-      false,
-      config.getNullCheck,
-      patternNames,
-      GenTimeWindowFunction)
-        .bindInput(DataTypes.internal(inputTypeInfo))
-        .asInstanceOf[MatchCodeGenerator]
-
-    val resultExpression = generator.generateExpression(interval)
-    val body =
-      s"""
-         |${resultExpression.code}
-         |return ${resultExpression.resultTerm};
-         |""".stripMargin
-
-    generator.addReusableStatements()
-    val genFunction = generator.generatePatternWindowTimeFunction(
-      "MatchRecognizePatternWindowTimeFunction",
-      body, config)
-    new PatternWindowTimeFunctionRunner(genFunction)
   }
 
   private[flink] def createRowTimeSortFunction(

@@ -29,8 +29,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.sql.{SqlAggFunction, SqlOperator}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.java.typeutils.ListTypeInfo
-import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
-import org.apache.flink.cep.pattern.interval.PatternWindowTimeFunction
+import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -51,7 +50,6 @@ import scala.collection.mutable
 sealed trait GenMode
 case object GenConditionFunction extends GenMode
 case object GenSelectFunction extends GenMode
-case object GenTimeWindowFunction extends GenMode
 
 /**
   * A code generator for generating CEP related functions.
@@ -155,7 +153,7 @@ class MatchCodeGenerator(
     val funcCode = if (unboxingCodeSplit.isSplit) {
       j"""
       public class $funcName
-          extends ${classOf[RichIterativeCondition[_]].getCanonicalName} {
+          extends ${classOf[IterativeCondition[_]].getCanonicalName} {
 
         ${ctx.reuseMemberCode()}
         ${ctx.reuseFieldCode()}
@@ -192,7 +190,7 @@ class MatchCodeGenerator(
     } else {
       j"""
       public class $funcName
-          extends ${classOf[RichIterativeCondition[_]].getCanonicalName} {
+          extends ${classOf[IterativeCondition[_]].getCanonicalName} {
 
         ${ctx.reuseMemberCode()}
 
@@ -592,93 +590,6 @@ class MatchCodeGenerator(
     GeneratedPatternFlatTimeoutFunction(funcName, funcCode, ctx.references.toArray)
   }
 
-  /**
-    * Generates a [[PatternWindowTimeFunction]] that can be passed to Java compiler.
-    *
-    * @param name Class name of the function. Must not be unique but has to be a
-    *             valid Java class identifier.
-    * @param bodyCode body code for the function
-    * @return a GeneratedPatternFlatTimeoutFunction
-    */
-  def generatePatternWindowTimeFunction(
-      name: String,
-      bodyCode: String,
-      config: TableConfig)
-    : GeneratedPatternWindowTimeFunction = {
-
-    val funcName = newName(name)
-    val inputTypeTerm = classOf[BaseRow].getCanonicalName
-
-    val unboxingCodeSplit = generateSplitFunctionCalls(
-      ctx.reusableInputUnboxingExprs.values.map(_.code).toSeq,
-      config.getMaxGeneratedCodeLength,
-      "inputUnbox",
-      "private final void",
-      ctx.reuseFieldCode().length,
-      defineParams = s"$inputTypeTerm $input1Term",
-      callingParams = input1Term
-    )
-
-    val funcCode = if (unboxingCodeSplit.isSplit) {
-      j"""
-      public class $funcName
-          implements ${classOf[PatternWindowTimeFunction[_]].getCanonicalName} {
-
-        ${ctx.reuseMemberCode()}
-        ${ctx.reuseFieldCode()}
-
-        public $funcName(Object[] references) throws Exception {
-          ${ctx.reuseInitCode()}
-        }
-
-        @Override
-        public long getWindowTime(Object _in1) throws Exception {
-          $inputTypeTerm $input1Term = ($inputTypeTerm) _in1;
-          ${ctx.reusePerRecordCode()}
-          ${unboxingCodeSplit.callings.mkString("\n")}
-          $bodyCode
-        }
-
-        ${
-          unboxingCodeSplit.definitions.zip(unboxingCodeSplit.bodies) map {
-            case (define, body) => {
-              s"""
-                 |$define throws Exception {
-                 |  ${ctx.reusePerRecordCode()}
-                 |  $body
-                 |}
-                 """.stripMargin
-            }
-          } mkString "\n"
-        }
-      }
-    """.stripMargin
-    } else {
-      j"""
-      public class $funcName
-          implements ${classOf[PatternWindowTimeFunction[_]].getCanonicalName} {
-
-        ${ctx.reuseMemberCode()}
-
-        public $funcName(Object[] references) throws Exception {
-          ${ctx.reuseInitCode()}
-        }
-
-        @Override
-        public long getWindowTime(Object _in1) throws Exception {
-          $inputTypeTerm $input1Term = ($inputTypeTerm) _in1;
-          ${ctx.reusePerRecordCode()}
-          ${ctx.reuseFieldCode()}
-          ${ctx.reuseInputUnboxingCode()}
-          $bodyCode
-        }
-      }
-    """.stripMargin
-    }
-
-    GeneratedPatternWindowTimeFunction(funcName, funcCode, ctx.references.toArray)
-  }
-
   def generateSelectOutputExpression(
     partitionKeys: util.List[RexNode],
     measures: util.Map[String, RexNode],
@@ -909,20 +820,6 @@ class MatchCodeGenerator(
           |  }
           |}
           |""".stripMargin
-
-      case GenTimeWindowFunction =>
-        resultType = FlinkTypeFactory.toInternalType(fieldRef.getType)
-        val resultTypeTerm = boxedTypeTermForType(resultType)
-
-        s"""
-           |boolean $nullTerm = false;
-           |$resultTypeTerm $resultTerm = ($resultTypeTerm)
-           |  ${CodeGenUtils.baseRowFieldReadAccess(
-                ctx,
-                fieldRef.getIndex,
-                input1Term,
-                inputFieldTypeInfos(fieldRef.getIndex))};
-           |""".stripMargin
     }
 
     GeneratedExpression(resultTerm, nullTerm, findEventsByPatternName, resultType)
