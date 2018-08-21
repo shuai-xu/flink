@@ -18,15 +18,28 @@
 
 package org.apache.flink.table.plan.cost
 
-import org.apache.calcite.plan.{RelOptCost, RelOptCostFactory}
+import org.apache.calcite.plan.RelOptCost
 
 /**
   * This class is based on Apache Calcite's `org.apache.calcite.plan.volcano.VolcanoCost#Factory`.
   */
-class DataSetCostFactory extends RelOptCostFactory {
+class DataSetCostFactory extends FlinkCostFactory {
+
+  override def makeCost(
+    rowCount: Double,
+    cpu: Double,
+    io: Double,
+    network: Double,
+    memory: Double): RelOptCost = {
+    new DataSetCost(rowCount, cpu, io, network, memory)
+  }
+
+  override def makeCost(rowCount: Double, cpu: Double, io: Double, network: Double): RelOptCost = {
+    new DataSetCost(rowCount, cpu, io, network, 0.0)
+  }
 
   override def makeCost(dRows: Double, dCpu: Double, dIo: Double): RelOptCost = {
-    new DataSetCost(dRows, dCpu, dIo)
+    new DataSetCost(dRows, dCpu, dIo, 0.0, 0.0)
   }
 
   override def makeHugeCost: RelOptCost = {

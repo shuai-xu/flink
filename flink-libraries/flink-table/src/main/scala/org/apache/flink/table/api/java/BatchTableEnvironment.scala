@@ -17,194 +17,395 @@
  */
 package org.apache.flink.table.api.java
 
+import java.lang.{Iterable => JIterable}
+
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.TypeExtractor
-import org.apache.flink.api.java.{DataSet, ExecutionEnvironment}
-import org.apache.flink.table.api._
+import org.apache.flink.api.scala.getCallLocationName
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.expressions.ExpressionParser
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
+
+import scala.collection.JavaConverters._
+import scala.reflect.ClassTag
+import org.apache.flink.table.api._
+import org.apache.flink.table.functions.TableFunction
+import org.apache.flink.table.dataformat.BoxedWrapperRow
+import org.apache.flink.table.sources.RangeInputFormat
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**
-  * The [[TableEnvironment]] for a Java batch [[DataSet]]
-  * [[ExecutionEnvironment]].
+  * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].
   *
   * A TableEnvironment can be used to:
-  * - convert a [[DataSet]] to a [[Table]]
-  * - register a [[DataSet]] in the [[TableEnvironment]]'s catalog
+  * - convert a [[DataStream]] to a [[Table]]
+  * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
   * - register a [[Table]] in the [[TableEnvironment]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
-  * - convert a [[Table]] into a [[DataSet]]
+  * - convert a [[Table]] into a [[DataStream]]
   * - explain the AST and execution plan of a [[Table]]
   *
-  * @param execEnv The Java batch [[ExecutionEnvironment]] of the TableEnvironment.
-  * @param config The configuration of the TableEnvironment.
+  * @param execEnv The Java [[StreamExecutionEnvironment]] of the TableEnvironment.
+  * @param config  The configuration of the TableEnvironment.
   */
 class BatchTableEnvironment(
-    execEnv: ExecutionEnvironment,
+    execEnv: StreamExecutionEnvironment,
     config: TableConfig)
   extends org.apache.flink.table.api.BatchTableEnvironment(execEnv, config) {
 
   /**
-    * Converts the given [[DataSet]] into a [[Table]].
+    * Converts the given [[DataStream]] into a [[Table]].
     *
-    * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
+    * The field names and field nullables attributes of the [[Table]] are automatically
+    * derived from the type of the
+    * [[DataStream]].
     *
-    * @param dataSet The [[DataSet]] to be converted.
-    * @tparam T The type of the [[DataSet]].
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromDataSet[T](dataSet: DataSet[T]): Table = {
+  def fromBoundedStream[T](boundedStream: DataStream[T]): Table = {
 
     val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet)
+    registerBoundedStreamInternal(name, boundedStream)
     scan(name)
   }
 
   /**
-    * Converts the given [[DataSet]] into a [[Table]] with specified field names.
+    * Converts the given [[DataStream]] into a [[Table]].
+    *
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]].
+    *
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromBoundedStream[T](
+      boundedStream: DataStream[T],
+      fieldNullables: Iterable[Boolean]): Table = {
+
+    val name = createUniqueTableName()
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray)
+    scan(name)
+  }
+
+  /**
+    * Registers the given [[Iterable]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    *
+    * @param tableName name of table.
+    * @param data The [[Iterable]] to be converted.
+    * @param fields field names, eg: "a, b, c"
+    * @tparam T The type of the [[Iterable]].
+    * @return The converted [[Table]].
+    */
+  def registerCollection[T : ClassTag : TypeInformation](
+      tableName: String, data: Iterable[T], fields: String): Unit = {
+    val typeInfo = implicitly[TypeInformation[T]]
+    registerCollection(tableName, data, typeInfo, fields)
+  }
+
+  /**
+    * Registers the given [[Iterable]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    *
+    * @param tableName name of table.
+    * @param data The [[Iterable]] to be converted.
+    * @param fieldNullables The field isNullables attributes of data.
+    * @param fields field names, eg: "a, b, c"
+    * @tparam T The type of the [[Iterable]].
+    * @return The converted [[Table]].
+    */
+  def registerCollection[T : ClassTag : TypeInformation](
+      tableName: String,
+      data: Iterable[T],
+      fieldNullables: Iterable[Boolean],
+      fields: String
+  ): Unit = {
+    val typeInfo = implicitly[TypeInformation[T]]
+    registerCollection(tableName, data, typeInfo, fieldNullables, fields)
+  }
+
+  /**
+    * Registers the given [[Iterable]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    *
+    * @param tableName name of table.
+    * @param data The [[Iterable]] to be converted.
+    * @param information information of [[Iterable]].
+    * @param fields field names, eg: "a, b, c"
+    * @tparam T The type of the [[Iterable]].
+    * @return The converted [[Table]].
+    */
+  def registerCollection[T](tableName: String, data: Iterable[T],
+      information: TypeInformation[T], fields: String): Unit = {
+    val boundedStream = streamEnv.createInput(new CollectionInputFormat[T](
+      data.asJavaCollection,
+      information.createSerializer(execEnv.getConfig)),
+      information, tableName)
+    if (fields == null) {
+      registerBoundedStream(tableName, boundedStream)
+    } else {
+      registerBoundedStream(tableName, boundedStream, fields)
+    }
+  }
+
+  /**
+    * Registers the given [[Iterable]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    *
+    * @param tableName name of table.
+    * @param data The [[Iterable]] to be converted.
+    * @param information information of [[Iterable]].
+    * @param fieldNullables The field isNullables attributes of data.
+    * @param fields field names, eg: "a, b, c"
+    * @tparam T The type of the [[Iterable]].
+    * @return The converted [[Table]].
+    */
+  def registerCollection[T](
+      tableName: String,
+      data: Iterable[T],
+      information: TypeInformation[T],
+      fieldNullables: Iterable[Boolean],
+      fields: String): Unit = {
+    val boundedStream = streamEnv.createInput(new CollectionInputFormat[T](
+        data.asJavaCollection,
+        information.createSerializer(execEnv.getConfig)),
+      information, tableName)
+    registerBoundedStream(tableName, boundedStream, fieldNullables, fields)
+  }
+
+  /**
+    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
     *
     * Example:
     *
     * {{{
-    *   DataSet<Tuple2<String, Long>> set = ...
-    *   Table tab = tableEnv.fromDataSet(set, "a, b")
+    *   DataStream<Tuple2<String, Long>> stream = ...
+    *   Table tab = tableEnv.fromBoundedStream(stream, "a, b")
     * }}}
     *
-    * @param dataSet The [[DataSet]] to be converted.
-    * @param fields The field names of the resulting [[Table]].
-    * @tparam T The type of the [[DataSet]].
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fields         The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromDataSet[T](dataSet: DataSet[T], fields: String): Table = {
+  def fromBoundedStream[T](boundedStream: DataStream[T], fields: String): Table = {
     val exprs = ExpressionParser
       .parseExpressionList(fields)
       .toArray
 
     val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet, exprs)
+    registerBoundedStreamInternal(name, boundedStream, exprs)
     scan(name)
   }
 
   /**
-    * Registers the given [[DataSet]] as table in the
-    * [[TableEnvironment]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
+    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
     *
-    * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
+    * Example:
     *
-    * @param name The name under which the [[DataSet]] is registered in the catalog.
-    * @param dataSet The [[DataSet]] to register.
-    * @tparam T The type of the [[DataSet]] to register.
+    * {{{
+    *   DataStream<Tuple2<String, Long>> stream = ...
+    *   List<Boolean> fieldNullables = ...
+    *   Table tab = tableEnv.fromBoundedStream(stream, fieldNullables, "a, b")
+    * }}}
+    *
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
     */
-  def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
+  def fromBoundedStream[T](
+      boundedStream: DataStream[T],
+      fieldNullables: Iterable[Boolean],
+      fields: String): Table = {
+    val exprs = ExpressionParser
+        .parseExpressionList(fields)
+        .toArray
 
-    checkValidTableName(name)
-    registerDataSetInternal(name, dataSet)
+    val name = createUniqueTableName()
+    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray)
+    scan(name)
   }
 
   /**
-    * Registers the given [[DataSet]] as table with specified field names in the
+    * Registers the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fieldNullables: Iterable[Boolean]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table with specified field names in the
     * [[TableEnvironment]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
     *
     * {{{
-    *   DataSet<Tuple2<String, Long>> set = ...
-    *   tableEnv.registerDataSet("myTable", set, "a, b")
+    *   DataStream<Tuple2<String, Long>> set = ...
+    *   tableEnv.registerBoundedStream("myTable", set, "a, b")
     * }}}
     *
-    * @param name The name under which the [[DataSet]] is registered in the catalog.
-    * @param dataSet The [[DataSet]] to register.
-    * @param fields The field names of the registered table.
-    * @tparam T The type of the [[DataSet]] to register.
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
     */
-  def registerDataSet[T](name: String, dataSet: DataSet[T], fields: String): Unit = {
+  def registerBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fields: String): Unit = {
     val exprs = ExpressionParser
       .parseExpressionList(fields)
       .toArray
 
     checkValidTableName(name)
-    registerDataSetInternal(name, dataSet, exprs)
+    registerBoundedStreamInternal(name, boundedStream, exprs)
   }
 
   /**
-    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
+    * Registers the given [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
     *
-    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
+    * Example:
     *
-    * @param table The [[Table]] to convert.
-    * @param clazz The class of the type of the resulting [[DataSet]].
-    * @tparam T The type of the resulting [[DataSet]].
-    * @return The converted [[DataSet]].
+    * {{{
+    *   DataStream<Tuple2<String, Long>> set = ...
+    *   List<Boolean> fieldNullables = ...
+    *   tableEnv.registerBoundedStream("myTable", set, fieldNullables, "a, b")
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
     */
-  def toDataSet[T](table: Table, clazz: Class[T]): DataSet[T] = {
-    // Use the default query config.
-    translate[T](table, queryConfig)(TypeExtractor.createTypeInfo(clazz))
+  def registerBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fieldNullables: Iterable[Boolean],
+      fields: String): Unit = {
+    val exprs = ExpressionParser
+        .parseExpressionList(fields)
+        .toArray
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray)
   }
 
-  /**
-    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
-    *
-    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param typeInfo The [[TypeInformation]] that specifies the type of the resulting [[DataSet]].
-    * @tparam T The type of the resulting [[DataSet]].
-    * @return The converted [[DataSet]].
-    */
-  def toDataSet[T](table: Table, typeInfo: TypeInformation[T]): DataSet[T] = {
-    // Use the default batch query config.
-    translate[T](table, queryConfig)(typeInfo)
+  def registerJavaCollection[T](tableName: String, data: JIterable[T], fields: String): Unit = {
+    require(data != null, "Data must not be null.")
+    val typeInfo = TypeExtractor.createTypeInfo(data.iterator().next().getClass)
+    registerCollection(tableName, data.asScala, typeInfo.asInstanceOf[TypeInformation[T]], fields)
   }
 
-  /**
-    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
-    *
-    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param clazz The class of the type of the resulting [[DataSet]].
-    * @param queryConfig The configuration for the query to generate.
-    * @tparam T The type of the resulting [[DataSet]].
-    * @return The converted [[DataSet]].
-    */
-  def toDataSet[T](
-      table: Table,
-      clazz: Class[T],
-      queryConfig: BatchQueryConfig): DataSet[T] = {
-    translate[T](table, queryConfig)(TypeExtractor.createTypeInfo(clazz))
+  def fromElements[T: ClassTag : TypeInformation](data: T*): Table = {
+    require(data != null, "Data must not be null.")
+    val typeInfo = implicitly[TypeInformation[T]]
+    fromCollection(data)(implicitly[ClassTag[T]], typeInfo)
   }
 
-  /**
-    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
-    *
-    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param typeInfo The [[TypeInformation]] that specifies the type of the resulting [[DataSet]].
-    * @param queryConfig The configuration for the query to generate.
-    * @tparam T The type of the resulting [[DataSet]].
-    * @return The converted [[DataSet]].
-    */
-  def toDataSet[T](
-      table: Table,
+  def fromCollection[T: ClassTag : TypeInformation](data: Iterable[T]): Table = {
+    fromCollection(data, null)
+  }
+
+  def fromCollection[T: ClassTag : TypeInformation](data: Iterable[T], fields: String): Table = {
+    require(data != null, "Data must not be null.")
+    val typeInfo = implicitly[TypeInformation[T]]
+    fromCollection(data, typeInfo, fields)
+  }
+
+  def fromJavaCollection[T](data: JIterable[T], fields: String): Table = {
+    require(data != null, "Data must not be null.")
+    val typeInfo = TypeExtractor.createTypeInfo(data.iterator().next().getClass)
+    fromCollection(data.asScala, typeInfo.asInstanceOf[TypeInformation[T]], fields)
+  }
+
+  def fromJavaCollection[T](
+      data: JIterable[T],
       typeInfo: TypeInformation[T],
-      queryConfig: BatchQueryConfig): DataSet[T] = {
-    translate[T](table, queryConfig)(typeInfo)
+      fields: String): Table = {
+    require(data != null, "Data must not be null.")
+    fromCollection(data.asScala, typeInfo, fields)
+  }
+
+  def fromCollection[T](data: Iterable[T], typeInfo: TypeInformation[T], fields: String): Table = {
+    CollectionInputFormat.checkCollection(data.asJavaCollection, typeInfo.getTypeClass)
+    val boundedStream = streamEnv.createInput(new CollectionInputFormat[T](
+      data.asJavaCollection,
+      typeInfo.createSerializer(execEnv.getConfig)),
+      typeInfo, getCallLocationName())
+    if (fields == null) {
+      fromBoundedStream(boundedStream)
+    } else {
+      fromBoundedStream(boundedStream, fields)
+    }
+  }
+
+  /**
+    * Creates a [[Table]] with a single `DataTypes.Long` column named `id`, containing elements
+    * in a range from 0 to `end` (exclusive) with step value 1.
+    */
+  def range(end: Long): Table = {
+    range(0, end)
+  }
+
+  /**
+    * Creates a [[Table]] with a single `DataTypes.Long` column named `id`, containing elements
+    * in a range from `start` to `end` (exclusive) with step value 1.
+    */
+  def range(start: Long, end: Long): Table = {
+    val typeInfo = new BaseRowTypeInfo[BoxedWrapperRow](classOf[BoxedWrapperRow], Types.LONG)
+    val boundedStream = streamEnv.createInput(new RangeInputFormat(start, end),
+      typeInfo, getCallLocationName())
+    fromBoundedStream(boundedStream, "id")
   }
 
   /**
@@ -213,37 +414,9 @@ class BatchTableEnvironment(
     *
     * @param name The name under which the function is registered.
     * @param tf The TableFunction to register.
-    * @tparam T The type of the output row.
+    * @tparam T The type of the output row, it can be a scala class.
     */
-  def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
-    implicit val typeInfo: TypeInformation[T] = TypeExtractor
-      .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
-      .asInstanceOf[TypeInformation[T]]
-
-    registerTableFunctionInternal[T](name, tf)
-  }
-
-  /**
-    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param f The AggregateFunction to register.
-    * @tparam T The type of the output value.
-    * @tparam ACC The type of aggregate accumulator.
-    */
-  def registerFunction[T, ACC](
-      name: String,
-      f: AggregateFunction[T, ACC])
-  : Unit = {
-    implicit val typeInfo: TypeInformation[T] = TypeExtractor
-      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 0)
-      .asInstanceOf[TypeInformation[T]]
-
-    implicit val accTypeInfo: TypeInformation[ACC] = TypeExtractor
-      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 1)
-      .asInstanceOf[TypeInformation[ACC]]
-
-    registerAggregateFunctionInternal[T, ACC](name, f)
+  def registerScalaTableFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
+    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
   }
 }

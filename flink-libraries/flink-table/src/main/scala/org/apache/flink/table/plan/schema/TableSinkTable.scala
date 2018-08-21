@@ -24,6 +24,7 @@ import org.apache.calcite.schema.impl.AbstractTable
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
+import org.apache.flink.table.types.DataTypes
 
 /** Table which defines an external table via a [[TableSink]] */
 class TableSinkTable[T](
@@ -33,7 +34,9 @@ class TableSinkTable[T](
 
   override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
     val flinkTypeFactory = typeFactory.asInstanceOf[FlinkTypeFactory]
-    flinkTypeFactory.buildLogicalRowType(tableSink.getFieldNames, tableSink.getFieldTypes)
+    flinkTypeFactory.buildRelDataType(
+      tableSink.getFieldNames,
+      tableSink.getFieldTypes.map(DataTypes.internal))
   }
 
   /**

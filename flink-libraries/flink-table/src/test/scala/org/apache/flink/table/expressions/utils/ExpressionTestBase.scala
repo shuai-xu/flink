@@ -19,7 +19,6 @@
 package org.apache.flink.table.expressions.utils
 
 import java.util
-import java.util.concurrent.Future
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.hep.{HepMatchOrder, HepPlanner, HepProgramBuilder}
@@ -28,28 +27,25 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{Programs, RelBuilder}
 import org.apache.flink.api.common.TaskInfo
-import org.apache.flink.api.common.accumulators.{AbstractAccumulatorRegistry, Accumulator}
 import org.apache.flink.api.common.functions._
 import org.apache.flink.api.common.functions.util.RuntimeUDFContext
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.api.java.{DataSet => JDataSet}
-import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
-import org.apache.flink.table.codegen.{Compiler, FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.dataset.{DataSetCalc, DataSetScan}
-import org.apache.flink.table.plan.rules.FlinkRuleSets
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecScan}
+import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter
+import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.{After, Before}
-import org.mockito.Mockito._
 
 import scala.collection.mutable
 
@@ -60,37 +56,37 @@ abstract class ExpressionTestBase {
 
   private val testExprs = mutable.ArrayBuffer[(RexNode, String)]()
 
+  val config = new TableConfig()
+
   // setup test utils
   private val tableName = "testTable"
-  private val context = prepareContext(typeInfo)
+  private val context = prepareContext(baseRowType)
   private val planner = new FlinkPlannerImpl(
     context._2.getFrameworkConfig,
     context._2.getPlanner,
-    context._2.getTypeFactory)
-  private val logicalOptProgram = Programs.ofRules(FlinkRuleSets.LOGICAL_OPT_RULES)
-  private val dataSetOptProgram = Programs.ofRules(FlinkRuleSets.DATASET_OPT_RULES)
+    context._2.getTypeFactory,
+    context._2.sqlToRelConverterConfig,
+    context._2.getRelBuilder.getCluster)
+  private val logicalOptProgram = Programs.ofRules(
+    FlinkBatchExecRuleSets.BATCH_EXEC_LOGICAL_OPT_RULES)
+  private val dataSetOptProgram = Programs.ofRules(FlinkBatchExecRuleSets.BATCH_EXEC_OPT_RULES)
 
   private def hepPlanner = {
     val builder = new HepProgramBuilder
     builder.addMatchOrder(HepMatchOrder.BOTTOM_UP)
-    val it = FlinkRuleSets.DATASET_NORM_RULES.iterator()
+    val it = FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES.iterator()
     while (it.hasNext) {
       builder.addRuleInstance(it.next())
     }
     new HepPlanner(builder.build, context._2.getFrameworkConfig.getContext)
   }
 
-  private def prepareContext(typeInfo: TypeInformation[Any])
-    : (RelBuilder, TableEnvironment, ExecutionEnvironment) = {
-    // create DataSetTable
-    val dataSetMock = mock(classOf[DataSet[Any]])
-    val jDataSetMock = mock(classOf[JDataSet[Any]])
-    when(dataSetMock.javaSet).thenReturn(jDataSetMock)
-    when(jDataSetMock.getType).thenReturn(typeInfo)
+  private def prepareContext(t: BaseRowType)
+    : (RelBuilder, TableEnvironment, StreamExecutionEnvironment) = {
 
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-    tEnv.registerDataSet(tableName, dataSetMock)
+    val env = StreamExecutionEnvironment.createFlip6LocalEnvironment(4)
+    val tEnv = TableEnvironment.getBatchTableEnvironment(env, config)
+    tEnv.registerCollection(tableName, Seq(), DataTypes.toTypeInfo(t), null)
     functions.foreach(f => tEnv.registerFunction(f._1, f._2))
 
     // prepare RelBuilder
@@ -100,9 +96,21 @@ abstract class ExpressionTestBase {
     (relBuilder, tEnv, env)
   }
 
-  def testData: Any
+  def testData: Any = {
+    baseRowTestData
+  }
 
-  def typeInfo: TypeInformation[Any]
+  def rowToBaseRow(row: Row): BaseRow = {
+    createToInternalConverter(DataTypes.of(rowType)).apply(row).asInstanceOf[BaseRow]
+  }
+
+  def baseRowTestData: BaseRow = rowToBaseRow(rowTestData)
+
+  def rowTestData: Row
+
+  def baseRowType: BaseRowType = DataTypes.internal(rowType).asInstanceOf[BaseRowType]
+
+  def rowType: RowTypeInfo
 
   def functions: Map[String, ScalarFunction] = Map()
 
@@ -114,18 +122,20 @@ abstract class ExpressionTestBase {
   @After
   def evaluateExprs() = {
     val relBuilder = context._1
-    val config = new TableConfig()
-    val generator = new FunctionCodeGenerator(config, false, typeInfo)
+    val ctx = CodeGeneratorContext(config)
+    val exprGenerator = new ExprCodeGenerator(
+      ctx, false, config.getNullCheck).bindInput(baseRowType)
 
     // cast expressions to String
     val stringTestExprs = testExprs.map(expr => relBuilder.cast(expr._1, VARCHAR))
 
     // generate code
-    val resultType = new RowTypeInfo(Seq.fill(testExprs.size)(STRING_TYPE_INFO): _*)
-    val genExpr = generator.generateResultExpression(
-      resultType,
-      resultType.getFieldNames,
-      stringTestExprs)
+    val resultType = new BaseRowType(
+      classOf[BinaryRow], Seq.fill(testExprs.size)(DataTypes.STRING): _*)
+
+    val exprs = stringTestExprs.map(exprGenerator.generateExpression)
+    val genExpr = exprGenerator.generateResultExpression(
+      exprs, DataTypes.internal(resultType).asInstanceOf[BaseRowType])
 
     val bodyCode =
       s"""
@@ -133,14 +143,17 @@ abstract class ExpressionTestBase {
         |return ${genExpr.resultTerm};
         |""".stripMargin
 
-    val genFunc = generator.generateFunction[MapFunction[Any, Row], Row](
+    val genFunc = FunctionCodeGenerator.generateFunction[MapFunction[Any, BinaryRow], BinaryRow](
+      ctx,
       "TestFunction",
-      classOf[MapFunction[Any, Row]],
+      classOf[MapFunction[Any, BinaryRow]],
       bodyCode,
-      resultType)
+      resultType,
+      baseRowType,
+      config)
 
     // compile and evaluate
-    val clazz = new TestCompiler[MapFunction[Any, Row], Row]().compile(genFunc)
+    val clazz = new TestCompiler().compile(genFunc)
     val mapper = clazz.newInstance()
 
     val isRichFunction = mapper.isInstanceOf[RichFunction]
@@ -152,8 +165,8 @@ abstract class ExpressionTestBase {
         new TaskInfo("ExpressionTest", 1, 0, 1, 1),
         null,
         context._3.getConfig,
-        new util.HashMap[String, Future[Path]](),
-        mock(classOf[AbstractAccumulatorRegistry]),
+        new util.HashMap(),
+        new util.HashMap(),
         null)
       richMapper.setRuntimeContext(t)
       richMapper.open(new Configuration())
@@ -171,7 +184,13 @@ abstract class ExpressionTestBase {
       .zipWithIndex
       .foreach {
         case ((expr, expected), index) =>
-          val actual = result.getField(index)
+
+          val actual = if(!result.asInstanceOf[BinaryRow].isNullAt(index)) {
+            result.asInstanceOf[BinaryRow].getBinaryString(index).toString
+          } else {
+            null
+          }
+
           assertEquals(
             s"Wrong result for: $expr",
             expected,
@@ -188,7 +207,7 @@ abstract class ExpressionTestBase {
     val decorPlan = RelDecorrelator.decorrelateQuery(converted)
 
     // normalize
-    val normalizedPlan = if (FlinkRuleSets.DATASET_NORM_RULES.iterator().hasNext) {
+    val normalizedPlan = if (FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES.iterator().hasNext) {
       val planner = hepPlanner
       planner.setRoot(decorPlan)
       planner.findBestExp
@@ -202,18 +221,18 @@ abstract class ExpressionTestBase {
       ImmutableList.of(), ImmutableList.of())
 
     // convert to dataset plan
-    val physicalProps = converted.getTraitSet.replace(FlinkConventions.DATASET).simplify()
+    val physicalProps = converted.getTraitSet.replace(FlinkConventions.BATCHEXEC).simplify()
     val dataSetCalc = dataSetOptProgram.run(context._2.getPlanner, logicalCalc, physicalProps,
       ImmutableList.of(), ImmutableList.of())
 
     // throw exception if plan contains more than a calc
-    if (!dataSetCalc.getInput(0).isInstanceOf[DataSetScan]) {
+    if (!dataSetCalc.getInput(0).isInstanceOf[BatchExecScan]) {
       fail("Expression is converted into more than a Calc operation. Use a different test method.")
     }
 
     // extract RexNode
     val calcProgram = dataSetCalc
-     .asInstanceOf[DataSetCalc]
+     .asInstanceOf[BatchExecCalc]
      .getProgram
     val expanded = calcProgram.expandLocalRef(calcProgram.getProjectList.get(0))
 
@@ -224,7 +243,6 @@ abstract class ExpressionTestBase {
     // create RelNode from Table API expression
     val env = context._2
     val converted = env
-      .asInstanceOf[BatchTableEnvironment]
       .scan(tableName)
       .select(tableApiExpr)
       .getRelNode
@@ -238,13 +256,13 @@ abstract class ExpressionTestBase {
       ImmutableList.of(), ImmutableList.of())
 
     // convert to dataset plan
-    val flinkPhysicalProps = converted.getTraitSet.replace(FlinkConventions.DATASET).simplify()
+    val flinkPhysicalProps = converted.getTraitSet.replace(FlinkConventions.BATCHEXEC).simplify()
     val dataSetCalc = dataSetOptProgram.run(context._2.getPlanner, logicalCalc, flinkPhysicalProps,
       ImmutableList.of(), ImmutableList.of())
 
     // extract RexNode
     val calcProgram = dataSetCalc
-     .asInstanceOf[DataSetCalc]
+     .asInstanceOf[BatchExecCalc]
      .getProgram
     val expanded = calcProgram.expandLocalRef(calcProgram.getProjectList.get(0))
 

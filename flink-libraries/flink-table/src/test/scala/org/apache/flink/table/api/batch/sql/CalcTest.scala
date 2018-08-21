@@ -20,31 +20,16 @@ package org.apache.flink.table.api.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.TableTestUtil._
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Test
 
-class CalcTest extends TableTestBase {
+class CalcTest extends TableTestBatchExecBase {
 
   @Test
   def testMultipleFlattening(): Unit = {
     val util = batchTestUtil()
     util.addTable[((Int, Long), (String, Boolean), String)]("MyTable", 'a, 'b, 'c)
-
-    val expected = unaryNode(
-      "DataSetCalc",
-      batchTableNode(0),
-      term("select",
-        "a._1 AS _1",
-        "a._2 AS _2",
-        "c",
-        "b._1 AS _10",
-        "b._2 AS _20"
-      )
-    )
-
-    util.verifySql(
-      "SELECT MyTable.a.*, c, MyTable.b.* FROM MyTable",
-      expected)
+    util.verifyPlan(
+      "SELECT MyTable.a.*, c, MyTable.b.* FROM MyTable")
   }
 }

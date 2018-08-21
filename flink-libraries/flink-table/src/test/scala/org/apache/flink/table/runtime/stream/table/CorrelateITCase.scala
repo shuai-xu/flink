@@ -24,12 +24,12 @@ import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironm
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, Types, ValidationException}
 import org.apache.flink.table.expressions.utils.{Func18, RichFunc2}
-import org.apache.flink.table.runtime.utils.{StreamITCase, StreamTestData, _}
-import org.apache.flink.table.utils._
+import org.apache.flink.table.runtime.utils.{StreamTestData, _}
+import org.apache.flink.table.util._
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert._
-import org.junit.{Before, Test}
+import org.junit.Test
 
 import scala.collection.mutable
 
@@ -37,11 +37,6 @@ class CorrelateITCase extends AbstractTestBase {
 
   val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
   val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
-
-  @Before
-  def clear(): Unit = {
-    StreamITCase.clear
-  }
 
   @Test
   def testCrossJoin(): Unit = {
@@ -57,11 +52,12 @@ class CorrelateITCase extends AbstractTestBase {
       .select('c, 'name, 'age)
       .toAppendStream[Row]
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList("Jack#22,Jack,22", "Anna#44,Anna,44")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -74,13 +70,14 @@ class CorrelateITCase extends AbstractTestBase {
       .select('c, 'd, 'e)
       .toAppendStream[Row]
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList(
       "nosharp,null,null", "Jack#22,Jack,22",
       "John#19,John,19", "Anna#44,Anna,44")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   /**
@@ -92,16 +89,17 @@ class CorrelateITCase extends AbstractTestBase {
     val func0 = new TableFunc0
 
     val result = t
-      .leftOuterJoin(func0('c) as ('s, 'l), 'a === 'l)
-      .select('c, 's, 'l)
-      .toAppendStream[Row]
+        .leftOuterJoin(func0('c) as ('s, 'l), 'a === 'l)
+        .select('c, 's, 'l)
+        .toAppendStream[Row]
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = "John#19,null,null\n" + "John#22,null,null\n" + "Anna44,null,null\n" +
-      "nosharp,null,null"
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+        "nosharp,null,null"
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -115,11 +113,12 @@ class CorrelateITCase extends AbstractTestBase {
       .select('c, 'd, 'e)
       .toAppendStream[Row]
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList("Jack#22,Jack,22", "John#19,John,19")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -127,19 +126,19 @@ class CorrelateITCase extends AbstractTestBase {
     val tableFunc1 = new RichTableFunc1
     tEnv.registerFunction("RichTableFunc1", tableFunc1)
     UserDefinedFunctionTestUtils.setJobParameters(env, Map("word_separator" -> " "))
-    StreamITCase.testResults = mutable.MutableList()
 
     val result = StreamTestData.getSmall3TupleDataStream(env)
       .toTable(tEnv, 'a, 'b, 'c)
       .join(tableFunc1('c) as 's)
       .select('a, 's)
 
+    val sink = new TestingAppendSink
     val results = result.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList("3,Hello", "3,world")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -151,15 +150,15 @@ class CorrelateITCase extends AbstractTestBase {
     UserDefinedFunctionTestUtils.setJobParameters(
       env,
       Map("word_separator" -> "#", "string.value" -> "test"))
-    StreamITCase.testResults = mutable.MutableList()
 
     val result = StreamTestData.getSmall3TupleDataStream(env)
       .toTable(tEnv, 'a, 'b, 'c)
       .join(tableFunc1(richFunc2('c)) as 's)
       .select('a, 's)
 
+    val sink = new TestingAppendSink
     val results = result.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -169,7 +168,7 @@ class CorrelateITCase extends AbstractTestBase {
       "2,test",
       "3,Hello world",
       "3,test")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -189,7 +188,8 @@ class CorrelateITCase extends AbstractTestBase {
       .select('c, 'd, 'f, 'h, 'e, 'g, 'i)
       .toAppendStream[Row]
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -200,7 +200,7 @@ class CorrelateITCase extends AbstractTestBase {
       "John#19,John,OneConf_John,TwoConf__key=key1_value=value1_John,19,19,19",
       "John#19,John,OneConf_John,TwoConf__key=key2_value=value2_John,19,19,19"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -213,7 +213,8 @@ class CorrelateITCase extends AbstractTestBase {
       .select('c)
       .join(varArgsFunc0("1", "2", 'c))
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList(
@@ -229,7 +230,7 @@ class CorrelateITCase extends AbstractTestBase {
       "nosharp,1",
       "nosharp,2",
       "nosharp,nosharp")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -243,19 +244,22 @@ class CorrelateITCase extends AbstractTestBase {
     val rowType = Types.ROW(Types.INT, Types.BOOLEAN, Types.ROW(Types.INT, Types.INT, Types.INT))
     val in = env.fromElements(row, row)(rowType).toTable(tEnv).as('a, 'b, 'c)
 
-    val tableFunc5 = new TableFunc5()
+    val tableFunc = new TableFunc6()
     val result = in
-      .join(tableFunc5('c) as ('f0, 'f1, 'f2))
+      .join(tableFunc('c) as ('f0, 'f1, 'f2))
       .select('c, 'f2)
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+
+    result.addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList(
-      "1,2,3,3",
-      "1,2,3,3")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+      "0,1,2,3,3",
+      "0,1,2,3,3")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
+
 
   private def testData(
       env: StreamExecutionEnvironment)

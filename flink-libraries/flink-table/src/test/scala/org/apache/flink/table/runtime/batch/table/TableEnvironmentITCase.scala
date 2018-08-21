@@ -21,35 +21,27 @@ package org.apache.flink.table.runtime.batch.table
 import java.util
 
 import org.apache.flink.api.scala._
-import org.apache.flink.api.scala.util.CollectionDataSets
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
-import org.apache.flink.table.runtime.utils.{TableProgramsCollectionTestBase, TableProgramsTestBase}
-import org.apache.flink.table.utils.MemoryTableSinkUtil
+import org.apache.flink.table.runtime.batch.sql.QueryTest
+import org.apache.flink.table.runtime.utils.TableProgramsTestBase
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
-import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit._
-import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 import scala.collection.JavaConverters._
 
-@RunWith(classOf[Parameterized])
-class TableEnvironmentITCase(
-    configMode: TableConfigMode)
-  extends TableProgramsCollectionTestBase(configMode) {
+class TableEnvironmentITCase extends QueryTest {
 
   @Test
   def testSimpleRegister(): Unit = {
 
     val tableName = "MyTable"
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
 
-    val ds = CollectionDataSets.get3TupleDataSet(env)
-    tEnv.registerDataSet(tableName, ds)
+    val ds = CollectionBatchExecTable.get3TupleDataSet(tEnv)
+    tEnv.registerTable(tableName, ds)
     val t = tEnv.scan(tableName).select('_1, '_2, '_3)
 
     val expected = "1,1,Hi\n" + "2,2,Hello\n" + "3,2,Hello world\n" +
@@ -58,43 +50,7 @@ class TableEnvironmentITCase(
       "11,5,Comment#5\n" + "12,5,Comment#6\n" + "13,5,Comment#7\n" + "14,5,Comment#8\n" +
       "15,5,Comment#9\n" + "16,6,Comment#10\n" + "17,6,Comment#11\n" + "18,6,Comment#12\n" +
       "19,6,Comment#13\n" + "20,6,Comment#14\n" + "21,6,Comment#15\n"
-    val results = t.toDataSet[Row].collect()
-    TestBaseUtils.compareResultAsText(results.asJava, expected)
-  }
-
-  @Test
-  def testRegisterWithFieldsByPosition(): Unit = {
-
-    val tableName = "MyTable"
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
-
-    val ds = CollectionDataSets.get3TupleDataSet(env)
-    tEnv.registerDataSet(tableName, ds, 'a, 'b, 'c) // new alias
-    val t = tEnv.scan(tableName).select('a, 'b)
-
-    val expected = "1,1\n" + "2,2\n" + "3,2\n" + "4,3\n" + "5,3\n" + "6,3\n" +
-      "7,4\n" + "8,4\n" + "9,4\n" + "10,4\n" + "11,5\n" + "12,5\n" + "13,5\n" + "14,5\n" +
-      "15,5\n" + "16,6\n" + "17,6\n" + "18,6\n" + "19,6\n" + "20,6\n" + "21,6\n"
-    val results = t.toDataSet[Row].collect()
-    TestBaseUtils.compareResultAsText(results.asJava, expected)
-  }
-
-  @Test
-  def testRegisterWithFieldsByName(): Unit = {
-
-    val tableName = "MyTable"
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
-
-    val ds = CollectionDataSets.get3TupleDataSet(env)
-    tEnv.registerDataSet(tableName, ds, '_3, '_1, '_2) // new order
-    val t = tEnv.scan(tableName).select('_1, '_2)
-
-    val expected = "1,1\n" + "2,2\n" + "3,2\n" + "4,3\n" + "5,3\n" + "6,3\n" +
-      "7,4\n" + "8,4\n" + "9,4\n" + "10,4\n" + "11,5\n" + "12,5\n" + "13,5\n" + "14,5\n" +
-      "15,5\n" + "16,6\n" + "17,6\n" + "18,6\n" + "19,6\n" + "20,6\n" + "21,6\n"
-    val results = t.toDataSet[Row].collect()
+    val results = t.collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
@@ -102,10 +58,7 @@ class TableEnvironmentITCase(
   def testTableRegister(): Unit = {
 
     val tableName = "MyTable"
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
-
-    val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
+    val t = CollectionBatchExecTable.get3TupleDataSet(tEnv, "a, b, c")
     tEnv.registerTable(tableName, t)
 
     val regT = tEnv.scan(tableName).select('a, 'b).filter('a > 8)
@@ -115,17 +68,13 @@ class TableEnvironmentITCase(
       "15,5\n" + "16,6\n" + "17,6\n" + "18,6\n" +
       "19,6\n" + "20,6\n" + "21,6\n"
 
-    val results = regT.toDataSet[Row].collect()
+    val results = regT.collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
   @Test
   def testToTable(): Unit = {
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
-
-    val t = CollectionDataSets.get3TupleDataSet(env)
-      .toTable(tEnv, 'a, 'b, 'c)
+    val t = CollectionBatchExecTable.get3TupleDataSet(tEnv, "a, b, c")
       .select('a, 'b, 'c)
 
     val expected = "1,1,Hi\n" + "2,2,Hello\n" + "3,2,Hello world\n" +
@@ -134,72 +83,62 @@ class TableEnvironmentITCase(
       "11,5,Comment#5\n" + "12,5,Comment#6\n" + "13,5,Comment#7\n" + "14,5,Comment#8\n" +
       "15,5,Comment#9\n" + "16,6,Comment#10\n" + "17,6,Comment#11\n" + "18,6,Comment#12\n" +
       "19,6,Comment#13\n" + "20,6,Comment#14\n" + "21,6,Comment#15\n"
-    val results = t.toDataSet[Row].collect()
+    val results = t.collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
   @Test
   def testToTableFromCaseClass(): Unit = {
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
-
     val data = List(
       SomeCaseClass("Peter", 28, 4000.00, "Sales"),
       SomeCaseClass("Anna", 56, 10000.00, "Engineering"),
       SomeCaseClass("Lucy", 42, 6000.00, "HR"))
 
-    val t =  env.fromCollection(data)
-      .toTable(tEnv, 'a, 'b, 'c, 'd)
+    val t =  tEnv.fromCollection(data, "a, b, c, d")
       .select('a, 'b, 'c, 'd)
 
     val expected: String =
       "Peter,28,4000.0,Sales\n" +
       "Anna,56,10000.0,Engineering\n" +
       "Lucy,42,6000.0,HR\n"
-    val results = t.toDataSet[Row].collect()
+    val results = t.collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
   @Test
   def testToTableFromAndToCaseClass(): Unit = {
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, config)
-
     val data = List(
       SomeCaseClass("Peter", 28, 4000.00, "Sales"),
       SomeCaseClass("Anna", 56, 10000.00, "Engineering"),
       SomeCaseClass("Lucy", 42, 6000.00, "HR"))
 
-    val t =  env.fromCollection(data)
-      .toTable(tEnv, 'a, 'b, 'c, 'd)
+    val t = tEnv.fromCollection(data, "a, b, c, d")
       .select('a, 'b, 'c, 'd)
 
     val expected: String =
       "SomeCaseClass(Peter,28,4000.0,Sales)\n" +
       "SomeCaseClass(Anna,56,10000.0,Engineering)\n" +
       "SomeCaseClass(Lucy,42,6000.0,HR)\n"
-    val results = t.toDataSet[SomeCaseClass].collect()
+    val results = t.collectAsT(DataTypes.of(createTypeInformation[SomeCaseClass]))
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
   @Test
   def testInsertIntoMemoryTable(): Unit = {
-    val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     MemoryTableSinkUtil.clear
 
-    val t = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a, 'b, 'c)
+    val t = CollectionBatchExecTable.getSmall3TupleDataSet(tEnv).as('a, 'b, 'c)
     tEnv.registerTable("sourceTable", t)
 
     val fieldNames = Array("d", "e", "f")
-    val fieldTypes = tEnv.scan("sourceTable").getSchema.getTypes
+    val fieldTypes = tEnv.scan("sourceTable").getSchema.getTypes.asInstanceOf[Array[DataType]]
     val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     tEnv.scan("sourceTable")
       .select('a, 'b, 'c)
       .insertInto("targetTable")
-    env.execute()
+    tEnv.execute()
 
     val expected = List("1,1,Hi", "2,2,Hello", "3,2,Hello world")
     assertEquals(expected.sorted, MemoryTableSinkUtil.results.sorted)

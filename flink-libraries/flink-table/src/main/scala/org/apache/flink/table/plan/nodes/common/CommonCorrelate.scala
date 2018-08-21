@@ -1,0 +1,456 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.flink.table.plan.nodes.common
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SemiJoinType
+import org.apache.flink.api.common.functions.Function
+import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException, TableSchema}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.CodeGenUtils._
+import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generateOneInputStreamOperator
+import org.apache.flink.table.codegen._
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getEvalMethodSignature
+import org.apache.flink.table.functions.utils.{TableSqlFunction, UserDefinedFunctionUtils}
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
+import org.apache.flink.table.plan.schema.FlinkTableFunction
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
+import org.apache.flink.table.runtime.operator.{StreamRecordCollector, SubstituteStreamOperator}
+import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+
+/**
+  * Join a user-defined table function
+  */
+trait CommonCorrelate {
+
+  private[flink] def generateCorrelateTransformation(
+      tableEnv: TableEnvironment,
+      operatorCtx: CodeGeneratorContext,
+      inputTransformation: StreamTransformation[BaseRow],
+      inputRelType: RelDataType,
+      projectProgram: Option[RexProgram],
+      scan: FlinkLogicalTableFunctionScan,
+      condition: Option[RexNode],
+      outDataType: RelDataType,
+      joinType: SemiJoinType,
+      parallelism: Int,
+      retainHeader: Boolean,
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String,
+      ruleDescription: String): StreamTransformation[BaseRow] = {
+    val config = tableEnv.getConfig
+    val funcRel = scan.asInstanceOf[FlinkLogicalTableFunctionScan]
+    val rexCall = funcRel.getCall.asInstanceOf[RexCall]
+    val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
+    // we need result Type to do code generation
+    val arguments = UserDefinedFunctionUtils.transformRexNodes(rexCall.operands)
+    val argTypes = getEvalMethodSignature(
+      sqlFunction.getTableFunction,
+      rexCall.operands
+        .map(_.getType)
+        .map(FlinkTypeFactory.toInternalType).toArray)
+    val udtfExternalType = sqlFunction
+        .getFunction
+        .asInstanceOf[FlinkTableFunction]
+        .getExternalResultType(arguments, argTypes)
+    val pojoFieldMapping = Some(UserDefinedFunctionUtils.getFieldInfo(udtfExternalType)._2)
+    val inputType = FlinkTypeFactory.toInternalBaseRowType(inputRelType, classOf[BaseRow])
+    val (returnType, swallowInputOnly ) = if (projectProgram.isDefined) {
+      val program = projectProgram.get
+      val selects = program.getProjectList.map(_.getIndex)
+      val inputFieldCnt = program.getInputRowType.getFieldCount
+      val swallowInputOnly = selects(0) > inputFieldCnt &&
+        (inputFieldCnt - outDataType.getFieldCount == inputRelType.getFieldCount)
+      // partial output or output right only
+      (FlinkTypeFactory.toInternalBaseRowType(outDataType, classOf[GenericRow]), swallowInputOnly)
+    } else {
+      // completely output left input + right
+      (FlinkTypeFactory.toInternalBaseRowType(outDataType, classOf[JoinedRow]), false)
+    }
+    // adjust indicies of InputRefs to adhere to schema expected by generator
+    val changeInputRefIndexShuttle = new RexShuttle {
+      override def visitInputRef(inputRef: RexInputRef): RexNode = {
+        new RexInputRef(inputRelType.getFieldCount + inputRef.getIndex, inputRef.getType)
+      }
+    }
+
+    val collectorCtx = CodeGeneratorContext(config, true)
+    val collector = generateCollector(
+      collectorCtx,
+      config,
+      inputType,
+      projectProgram,
+      swallowInputOnly,
+      udtfExternalType,
+      returnType,
+      condition.map(_.accept(changeInputRefIndexShuttle)),
+      pojoFieldMapping,
+      retainHeader)
+
+    val substituteStreamOperator = generateOperator(
+      operatorCtx,
+      collectorCtx,
+      config,
+      inputType,
+      projectProgram,
+      swallowInputOnly,
+      DataTypes.internal(udtfExternalType),
+      returnType,
+      joinType,
+      rexCall,
+      pojoFieldMapping,
+      ruleDescription,
+      classOf[ProcessFunction[BaseRow, BaseRow]],
+      collector,
+      retainHeader)
+
+    new OneInputTransformation(
+      inputTransformation,
+      correlateOpName(
+        inputRelType,
+        rexCall,
+        sqlFunction,
+        outDataType,
+        expression),
+      substituteStreamOperator,
+      DataTypes.toTypeInfo(returnType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      parallelism)
+  }
+
+  /**
+    * Generates the flat map operator to run the user-defined table function.
+    */
+  private[flink] def generateOperator[T <: Function](
+      ctx: CodeGeneratorContext,
+      collectorCtx: CodeGeneratorContext,
+      config: TableConfig,
+      inputType: BaseRowType,
+      projectProgram: Option[RexProgram],
+      swallowInputOnly: Boolean = false,
+      udtfType: InternalType,
+      returnType: BaseRowType,
+      joinType: SemiJoinType,
+      rexCall: RexCall,
+      pojoFieldMapping: Option[Array[Int]],
+      ruleDescription: String,
+      functionClass: Class[T],
+      udtfCollector: GeneratedCollector,
+      retainHeader: Boolean = true): SubstituteStreamOperator[BaseRow] = {
+    ctx.references ++= collectorCtx.references
+    val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
+      .bindInput(inputType)
+      .bindSecondInput(udtfType, inputFieldMapping = pojoFieldMapping)
+
+    // 1.compile and init udtf collector
+    val udtfCollectorTerm = newName("udtfCollectorTerm")
+    ctx.addReusableMember(s"private ${udtfCollector.name} $udtfCollectorTerm = null;")
+    ctx.addReusableInnerClass(udtfCollector.name, udtfCollector.code) // add a inner class.
+
+    val call = exprGenerator.generateExpression(rexCall)
+    val openUDTFCollector =
+      s"""
+         |$udtfCollectorTerm = new ${udtfCollector.name}();
+         |$udtfCollectorTerm.setCollector(
+         | new ${classOf[StreamRecordCollector[_]].getCanonicalName}(
+         |     ${CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM }));
+         |${call.resultTerm}.setCollector($udtfCollectorTerm);
+         |""".stripMargin
+    ctx.addReusableOpenStatement(openUDTFCollector)
+
+    // 2. call udtf
+    var body =
+      s"""
+         |$udtfCollectorTerm.setInput(${exprGenerator.input1Term});
+         |$udtfCollectorTerm.reset();
+         |${call.code}
+         |""".stripMargin
+
+    // 3. left join
+    if (joinType == SemiJoinType.LEFT) {
+      if (swallowInputOnly) {
+        // and the returned row table function is empty, collect a null
+        val nullRowTerm = CodeGenUtils.newName("nullRow")
+        ctx.addOutputRecord(toGenericRowType(udtfType), nullRowTerm)
+        ctx.addReusableNullRow(nullRowTerm, DataTypes.getArity(udtfType))
+        val header = if (retainHeader) {
+          s"$nullRowTerm.setHeader(${exprGenerator.input1Term}.getHeader());"
+        } else {
+          ""
+        }
+        body +=
+          s"""
+             |boolean hasOutput = $udtfCollectorTerm.isCollected();
+             |if (!hasOutput) {
+             |  $header
+             |  $udtfCollectorTerm.getCollector().collect($nullRowTerm);
+             |}
+             |""".stripMargin
+      } else if (projectProgram.isDefined) {
+        // output partial fields of left and right
+        val outputTerm = CodeGenUtils.newName("projectOut")
+        ctx.addOutputRecord(returnType, outputTerm)
+
+        val header = if (retainHeader) {
+          s"$outputTerm.setHeader(${CodeGeneratorContext.DEFAULT_INPUT1_TERM}.getHeader());"
+        } else {
+          ""
+        }
+        val projectionExpression = generateProjectResultExpr(
+          ctx,
+          config,
+          inputType,
+          udtfType,
+          pojoFieldMapping,
+          udtfAlwaysNull = true,
+          returnType,
+          outputTerm,
+          projectProgram.get)
+
+        body +=
+          s"""
+             |boolean hasOutput = $udtfCollectorTerm.isCollected();
+             |if (!hasOutput) {
+             |  ${projectionExpression.code}
+             |  $header
+             |  $udtfCollectorTerm.getCollector().collect($outputTerm);
+             |}
+             |""".stripMargin
+
+      } else {
+        // output all fields of left and right
+        // in case of left outer join and the returned row of table function is empty,
+        // fill all fields of row with null
+        val joinedRowTerm = CodeGenUtils.newName("joinedRow")
+        val nullRowTerm = CodeGenUtils.newName("nullRow")
+        ctx.addOutputRecord(returnType, joinedRowTerm)
+        ctx.addReusableNullRow(nullRowTerm, DataTypes.getArity(udtfType))
+        val header = if (retainHeader) {
+          s"$joinedRowTerm.setHeader(${exprGenerator.input1Term}.getHeader());"
+        } else {
+          ""
+        }
+        body +=
+          s"""
+             |boolean hasOutput = $udtfCollectorTerm.isCollected();
+             |if (!hasOutput) {
+             |  $joinedRowTerm.replace(${exprGenerator.input1Term}, $nullRowTerm);
+             |  $header
+             |  $udtfCollectorTerm.getCollector().collect($joinedRowTerm);
+             |}
+             |""".stripMargin
+
+        }
+    } else if (joinType != SemiJoinType.INNER) {
+      throw TableException(s"Unsupported SemiJoinType: $joinType for correlate join.")
+    }
+
+    val genOperator = generateOneInputStreamOperator[BaseRow, BaseRow](
+      ctx,
+      ruleDescription,
+      body,
+      "",
+      inputType,
+      config)
+    new SubstituteStreamOperator[BaseRow](
+      genOperator.name,
+      genOperator.code,
+      references = ctx.references)
+  }
+
+  private def toGenericRowType(fromType: InternalType): BaseRowType = {
+    val tableSchema = TableSchema.fromDataType(fromType)
+    val fieldNames = tableSchema.getColumnNames
+    val fieldTypes = tableSchema.getTypes
+    new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
+  }
+
+  private def generateProjectResultExpr(
+      ctx: CodeGeneratorContext,
+      config: TableConfig,
+      input1Type: BaseRowType,
+      udtfType: InternalType,
+      udtfPojoFieldMapping: Option[Array[Int]],
+      udtfAlwaysNull: Boolean,
+      returnType: BaseRowType,
+      outputTerm: String,
+      program: RexProgram): GeneratedExpression = {
+    val projectExprGenerator = new ExprCodeGenerator(ctx, udtfAlwaysNull, config.getNullCheck)
+      .bindInput(input1Type, CodeGeneratorContext.DEFAULT_INPUT1_TERM)
+    if (udtfAlwaysNull) {
+      val udtfNullRow = CodeGenUtils.newName("udtfNullRow")
+      ctx.addReusableNullRow(udtfNullRow, DataTypes.getArity(udtfType))
+
+      projectExprGenerator.bindSecondInput(
+        toGenericRowType(udtfType),
+        udtfNullRow,
+        inputFieldMapping = udtfPojoFieldMapping)
+    } else {
+      projectExprGenerator.bindSecondInput(
+        udtfType,
+        inputFieldMapping = udtfPojoFieldMapping)
+    }
+    val projection = program.getProjectList.map(program.expandLocalRef)
+    val projectionExprs = projection.map(projectExprGenerator.generateExpression)
+    projectExprGenerator.generateResultExpression(projectionExprs, returnType, outputTerm)
+  }
+
+  /**
+    * Generates table function collector.
+    */
+  private[flink] def generateCollector(
+      ctx: CodeGeneratorContext,
+      config: TableConfig,
+      inputType: BaseRowType,
+      projectProgram: Option[RexProgram],
+      swallowInputOnly: Boolean,
+      udtfExternalType: DataType,
+      resultType: BaseRowType,
+      condition: Option[RexNode],
+      pojoFieldMapping: Option[Array[Int]],
+      retainHeader: Boolean = true): GeneratedCollector = {
+    val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
+    val udtfInputTerm = CodeGeneratorContext.DEFAULT_INPUT2_TERM
+
+    val udtfType = DataTypes.internal(udtfExternalType)
+    val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck).bindInput(
+      udtfType, inputTerm = udtfInputTerm, inputFieldMapping = pojoFieldMapping)
+
+    val udtfBaseRowType = toGenericRowType(udtfType)
+    val udtfResultExpr = exprGenerator.generateConverterResultExpression(udtfBaseRowType)
+
+    val body = if (projectProgram.isDefined) {
+      // partial output
+      if (swallowInputOnly) {
+        // output right only
+        val header = if (retainHeader) {
+          s"${udtfResultExpr.resultTerm}.setHeader($inputTerm.getHeader());"
+        } else {
+          ""
+        }
+        s"""
+           |${udtfResultExpr.code}
+           |$header
+           |getCollector().collect(${udtfResultExpr.resultTerm});
+        """.stripMargin
+      } else {
+        val outputTerm = CodeGenUtils.newName("projectOut")
+        ctx.addOutputRecord(resultType, outputTerm)
+
+        val header = if (retainHeader) {
+          s"$outputTerm.setHeader($inputTerm.getHeader());"
+        } else {
+          ""
+        }
+        val projectionExpression = generateProjectResultExpr(
+          ctx,
+          config,
+          inputType,
+          udtfType,
+          pojoFieldMapping,
+          udtfAlwaysNull = false,
+          resultType,
+          outputTerm,
+          projectProgram.get)
+
+        s"""
+           |$header
+           |${projectionExpression.code}
+           |getCollector().collect(${projectionExpression.resultTerm});
+        """.stripMargin
+      }
+    } else {
+      // completely output left input + right
+      val joinedRowTerm = CodeGenUtils.newName("joinedRow")
+      ctx.addOutputRecord(resultType, joinedRowTerm)
+
+      val header = if (retainHeader) {
+        s"$joinedRowTerm.setHeader($inputTerm.getHeader());"
+      } else {
+        ""
+      }
+      s"""
+        |${udtfResultExpr.code}
+        |$joinedRowTerm.replace($inputTerm, ${udtfResultExpr.resultTerm});
+        |$header
+        |getCollector().collect($joinedRowTerm);
+      """.stripMargin
+    }
+
+    val collectorCode = if (condition.isEmpty) {
+      body
+    } else {
+
+      val filterGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
+        .bindInput(inputType, inputTerm)
+        .bindSecondInput(udtfType, udtfInputTerm, pojoFieldMapping)
+      val filterCondition = filterGenerator.generateExpression(condition.get)
+
+      s"""
+         |${filterCondition.code}
+         |if (${filterCondition.resultTerm}) {
+         |  $body
+         |}
+         |""".stripMargin
+    }
+
+    CollectorCodeGenerator.generateTableFunctionCollector(
+      ctx,
+      "TableFunctionCollector",
+      collectorCode,
+      inputType,
+      udtfType,
+      config,
+      inputTerm = inputTerm,
+      collectedTerm = udtfInputTerm,
+      converter = genToInternal(ctx, udtfExternalType))
+  }
+
+  private[flink] def selectToString(rowType: RelDataType): String = {
+    rowType.getFieldNames.asScala.mkString(",")
+  }
+
+  private[flink] def correlateOpName(
+      inputType: RelDataType,
+      rexCall: RexCall,
+      sqlFunction: TableSqlFunction,
+      rowType: RelDataType,
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String)
+    : String = {
+
+    s"correlate: ${correlateToString(inputType, rexCall, sqlFunction, expression)}," +
+      s" select: ${selectToString(rowType)}"
+  }
+
+  private[flink] def correlateToString(
+      inputType: RelDataType,
+      rexCall: RexCall,
+      sqlFunction: TableSqlFunction,
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
+    val inFields = inputType.getFieldNames.asScala.toList
+    val udtfName = sqlFunction.toString
+    val operands = rexCall.getOperands.asScala.map(expression(_, inFields, None)).mkString(",")
+    s"table($udtfName($operands))"
+  }
+}

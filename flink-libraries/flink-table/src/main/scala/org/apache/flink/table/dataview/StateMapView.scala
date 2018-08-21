@@ -19,36 +19,134 @@ package org.apache.flink.table.dataview
 
 import java.util
 import java.lang.{Iterable => JIterable}
+import java.util.Map
 
-import org.apache.flink.api.common.state.MapState
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedMapState
+import org.apache.flink.runtime.state2.keyed.KeyedMapState
 import org.apache.flink.table.api.dataview.MapView
 
-/**
-  * [[MapView]] use state backend.
-  *
-  * @param state map state
-  * @tparam K key type
-  * @tparam V value type
-  */
-class StateMapView[K, V](state: MapState[K, V]) extends MapView[K, V] {
+class SubKeyedStateMapView[K, N, MK, MV](state: SubKeyedMapState[K, N, MK, MV])
+  extends MapView[MK, MV] {
 
-  override def get(key: K): V = state.get(key)
+  private var key: K = _
+  private var namespace: N = _
 
-  override def put(key: K, value: V): Unit = state.put(key, value)
+  def setKeyNamespace(key: K, namespace: N): Unit = {
+    this.key = key
+    this.namespace = namespace
+  }
 
-  override def putAll(map: util.Map[K, V]): Unit = state.putAll(map)
+  override def get(mapKey: MK): MV = state.get(key, namespace, mapKey)
 
-  override def remove(key: K): Unit = state.remove(key)
+  override def put(mapKey: MK, mapValue: MV): Unit = state.add(key, namespace, mapKey, mapValue)
 
-  override def contains(key: K): Boolean = state.contains(key)
+  override def putAll(map: util.Map[MK, MV]): Unit = state.addAll(key, namespace, map)
 
-  override def entries: JIterable[util.Map.Entry[K, V]] = state.entries()
+  override def remove(mapKey: MK): Unit = state.remove(key, namespace, mapKey)
 
-  override def keys: JIterable[K] = state.keys()
+  override def contains(mapKey: MK): Boolean = state.contains(key, namespace, mapKey)
 
-  override def values: JIterable[V] = state.values()
+  override def entries: JIterable[util.Map.Entry[MK, MV]] = {
+    new JIterable[util.Map.Entry[MK, MV]]() {
+      override def iterator(): util.Iterator[util.Map.Entry[MK, MV]] =
+        state.iterator(key, namespace)
+    }
+  }
 
-  override def iterator: util.Iterator[util.Map.Entry[K, V]] = state.iterator()
+  override def keys: JIterable[MK] = new JIterable[MK]() {
+    override def iterator(): util.Iterator[MK] = new util.Iterator[MK] {
+      val iter: util.Iterator[util.Map.Entry[MK, MV]] = state.iterator(key, namespace)
 
-  override def clear(): Unit = state.clear()
+      override def next(): MK = iter.next().getKey
+
+      override def hasNext: Boolean = iter.hasNext
+    }
+  }
+
+  override def values: JIterable[MV] = new JIterable[MV]() {
+    override def iterator(): util.Iterator[MV] = new util.Iterator[MV] {
+      val iter: util.Iterator[util.Map.Entry[MK, MV]] = state.iterator(key, namespace)
+
+      override def next(): MV = iter.next().getValue
+
+      override def hasNext: Boolean = iter.hasNext
+    }
+  }
+
+  override def iterator: util.Iterator[util.Map.Entry[MK, MV]] = state.iterator(key, namespace)
+
+  override def clear(): Unit = state.remove(key, namespace)
 }
+
+/**
+  * used for minibatch
+  * @param state
+  * @tparam K key type
+  * @tparam MK
+  * @tparam MV
+  */
+class KeyedStateMapView[K, MK, MV](state: KeyedMapState[K, MK, MV])
+  extends MapView[MK, MV] {
+
+  private var stateKey: K = null.asInstanceOf[K]
+
+  def setKey(key: K) = this.stateKey = key
+
+  override def get(key: MK): MV = {
+    state.get(stateKey, key)
+  }
+
+  override def put(key: MK, value: MV): Unit = {
+    state.add(stateKey, key, value)
+  }
+
+  override def putAll(map: util.Map[MK, MV]): Unit = {
+    state.addAll(stateKey, map)
+  }
+
+  override def remove(key: MK): Unit = {
+    state.remove(stateKey, key)
+  }
+
+  override def contains(key: MK): Boolean = {
+    state.contains(stateKey, key)
+  }
+
+  override def entries: JIterable[Map.Entry[MK, MV]] = {
+    new JIterable[Map.Entry[MK, MV]] {
+      override def iterator(): util.Iterator[Map.Entry[MK, MV]] =
+        new util.Iterator[Map.Entry[MK, MV]] {
+          val it = state.iterator(stateKey)
+          override def next(): Map.Entry[MK, MV] = it.next()
+          override def hasNext: Boolean = it.hasNext
+        }
+    }
+  }
+
+  override def keys: JIterable[MK] = {
+    new JIterable[MK] {
+      override def iterator(): util.Iterator[MK] = new util.Iterator[MK] {
+        val it = state.iterator(stateKey)
+        override def next(): MK = it.next().getKey
+        override def hasNext: Boolean = it.hasNext
+      }
+    }
+  }
+
+  override def values: JIterable[MV] = {
+    new JIterable[MV] {
+      override def iterator(): util.Iterator[MV] = new util.Iterator[MV] {
+        val it = state.iterator(stateKey)
+        override def next(): MV = it.next().getValue
+        override def hasNext: Boolean = it.hasNext
+      }
+    }
+  }
+
+  override def iterator: util.Iterator[Map.Entry[MK, MV]] = {
+    state.iterator(stateKey)
+  }
+
+  override def clear(): Unit = state.remove(stateKey)
+}
+

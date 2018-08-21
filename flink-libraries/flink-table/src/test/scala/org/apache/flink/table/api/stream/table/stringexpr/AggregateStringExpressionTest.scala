@@ -21,7 +21,7 @@ package org.apache.flink.table.api.stream.table.stringexpr
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvg
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
 class AggregateStringExpressionTest extends TableTestBase {

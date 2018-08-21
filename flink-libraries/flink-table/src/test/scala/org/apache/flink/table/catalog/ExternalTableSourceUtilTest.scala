@@ -20,13 +20,14 @@ package org.apache.flink.table.catalog
 
 import java.util.{Collections => JCollections, Set => JSet}
 
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo
+import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableSchema, Types}
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.schema.StreamTableSourceTable
 import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.utils.MockTableEnvironment
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertTrue
 import org.junit.{Before, Test}
@@ -34,35 +35,34 @@ import org.junit.{Before, Test}
 class ExternalTableSourceUtilTest {
 
   @Before
-  def setUp() : Unit = {
+  def setUp(): Unit = {
     ExternalTableSourceUtil.injectTableSourceConverter("mock", classOf[MockTableSourceConverter])
   }
 
   @Test
   def testExternalStreamTable() = {
-    val schema = new TableSchema(Array("foo"), Array(BasicTypeInfo.INT_TYPE_INFO))
+    val schema = new TableSchema(Array("foo"), Array(DataTypes.INT))
     val table = ExternalCatalogTable("mock", schema)
-    val tableSource = ExternalTableSourceUtil.fromExternalCatalogTable(
-      new MockTableEnvironment, table)
+    val tableSource = ExternalTableSourceUtil.fromExternalCatalogTable(table)
     assertTrue(tableSource.isInstanceOf[StreamTableSourceTable[_]])
   }
 }
 
 class MockTableSourceConverter extends TableSourceConverter[StreamTableSource[Row]] {
   override def requiredProperties: JSet[String] = JCollections.emptySet()
+
   override def fromExternalCatalogTable(externalCatalogTable: ExternalCatalogTable)
-    : StreamTableSource[Row] = {
+  : StreamTableSource[Row] = {
     new StreamTableSource[Row] {
       override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[Row] =
         throw new UnsupportedOperationException
 
-      override def getReturnType: TypeInformation[Row] = {
+      override def getReturnType: DataType = {
         val schema = externalCatalogTable.schema
-        Types.ROW(schema.getColumnNames, schema.getTypes)
+        DataTypes.createRowType(
+          schema.getTypes.asInstanceOf[Array[DataType]],
+          schema.getColumnNames)
       }
-
-      override def getTableSchema: TableSchema = externalCatalogTable.schema
-
     }
   }
 }

@@ -29,19 +29,18 @@ import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
+import org.apache.flink.table.api.{TableEnvironment, Types}
 import org.apache.flink.table.expressions.{ExpressionParser, TimeIntervalUnit}
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc
 import org.apache.flink.table.runtime.stream.TimeAttributesITCase.{AtomicTimestampWithEqualWatermark, TestPojo, TimestampWithEqualWatermark, TimestampWithEqualWatermarkPojo}
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
-import org.apache.flink.table.runtime.utils.StreamITCase
-import org.apache.flink.table.utils.{MemoryTableSinkUtil, TestTableSourceWithTime}
+import org.apache.flink.table.runtime.utils.{TestingAppendPojoSink, TestingAppendSink}
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.util.TestTableSourceWithTime
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.Test
-
-import scala.collection.mutable
 
 /**
   * Tests for access and materialization of time attributes.
@@ -62,7 +61,7 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
+    val sink = new TestingAppendSink
 
     val stream = env
       .fromCollection(Seq(1L, 2L, 3L, 4L, 7L, 8L, 16L))
@@ -71,11 +70,11 @@ class TimeAttributesITCase extends AbstractTestBase {
       tEnv, 'rowtime.rowtime, 'proctime.proctime)
 
     val t = table
-      .where('proctime.cast(Types.LONG) > 0)
-      .select('rowtime.cast(Types.STRING))
+      .where('proctime.cast(DataTypes.LONG) > 0)
+      .select('rowtime.cast(DataTypes.STRING))
 
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -86,7 +85,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.007",
       "1970-01-01 00:00:00.008",
       "1970-01-01 00:00:00.016")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -94,20 +93,20 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
+    val sink = new TestingAppendSink
 
     val stream = env
       .fromCollection(Seq(1L, 2L, 3L, 4L, 7L, 8L, 16L))
       .assignTimestampsAndWatermarks(new AtomicTimestampWithEqualWatermark())
-    val table = stream.toTable(
-      tEnv, 'l, 'rowtime.rowtime, 'proctime.proctime)
+      val table = stream.toTable(
+        tEnv, 'l, 'rowtime.rowtime, 'proctime.proctime)
 
     val t = table
-      .where('proctime.cast(Types.LONG) > 0)
-      .select('l, 'rowtime.cast(Types.STRING))
+      .where('proctime.cast(DataTypes.LONG) > 0)
+      .select('l, 'rowtime.cast(DataTypes.STRING))
 
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -118,7 +117,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "7,1970-01-01 00:00:00.007",
       "8,1970-01-01 00:00:00.008",
       "16,1970-01-01 00:00:00.016")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -126,7 +125,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -134,10 +132,11 @@ class TimeAttributesITCase extends AbstractTestBase {
     val table = stream.toTable(
       tEnv, 'rowtime.rowtime, 'int, 'double, 'float, 'bigdec, 'string, 'proctime.proctime)
 
-    val t = table.select('rowtime.cast(Types.STRING))
+    val t = table.select('rowtime.cast(DataTypes.STRING))
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -148,7 +147,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.007",
       "1970-01-01 00:00:00.008",
       "1970-01-01 00:00:00.016")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -156,7 +155,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -164,42 +162,19 @@ class TimeAttributesITCase extends AbstractTestBase {
     val table = stream.toTable(tEnv, 'rowtime.rowtime, 'int, 'double, 'float, 'bigdec, 'string)
 
     val t = table
-      .filter('rowtime.cast(Types.LONG) > 4)
+      .filter('rowtime.cast(DataTypes.DOUBLE) > 0.004)
       .select('rowtime, 'rowtime.floor(TimeIntervalUnit.DAY), 'rowtime.ceil(TimeIntervalUnit.DAY))
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
       "1970-01-01 00:00:00.007,1970-01-01 00:00:00.0,1970-01-02 00:00:00.0",
       "1970-01-01 00:00:00.008,1970-01-01 00:00:00.0,1970-01-02 00:00:00.0",
       "1970-01-01 00:00:00.016,1970-01-01 00:00:00.0,1970-01-02 00:00:00.0")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
-  }
-
-  @Test
-  def testTableSink(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-    MemoryTableSinkUtil.clear
-
-    val stream = env
-      .fromCollection(data)
-      .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
-    stream.toTable(tEnv, 'rowtime.rowtime, 'int, 'double, 'float, 'bigdec, 'string)
-      .filter('rowtime.cast(Types.LONG) > 4)
-      .select('rowtime, 'rowtime.floor(TimeIntervalUnit.DAY), 'rowtime.ceil(TimeIntervalUnit.DAY))
-      .writeToSink(new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink)
-
-    env.execute()
-
-    val expected = Seq(
-      "1970-01-01 00:00:00.007,1970-01-01 00:00:00.0,1970-01-02 00:00:00.0",
-      "1970-01-01 00:00:00.008,1970-01-01 00:00:00.0,1970-01-02 00:00:00.0",
-      "1970-01-01 00:00:00.016,1970-01-01 00:00:00.0,1970-01-02 00:00:00.0")
-    assertEquals(expected.sorted, MemoryTableSinkUtil.results.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -207,7 +182,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -225,8 +199,8 @@ class TimeAttributesITCase extends AbstractTestBase {
     // we can only test rowtime, not proctime
     val t = table.join(func('rowtime, 'proctime, 'string) as 's).select('rowtime, 's)
 
-    val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    t.toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -237,7 +211,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.007,7trueHello",
       "1970-01-01 00:00:00.008,8trueHello world",
       "1970-01-01 00:00:00.016,16trueHello world")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -245,7 +219,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -260,15 +233,16 @@ class TimeAttributesITCase extends AbstractTestBase {
       .groupBy('w)
       .select('w.rowtime, 's.count)
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
       "1970-01-01 00:00:00.004,4",
       "1970-01-01 00:00:00.009,2",
       "1970-01-01 00:00:00.019,1")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -276,7 +250,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -286,8 +259,9 @@ class TimeAttributesITCase extends AbstractTestBase {
 
     val t = table.unionAll(table).select('rowtime)
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -305,7 +279,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.008",
       "1970-01-01 00:00:00.016",
       "1970-01-01 00:00:00.016")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -313,7 +287,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -324,8 +297,9 @@ class TimeAttributesITCase extends AbstractTestBase {
     val t = tEnv.sqlQuery("SELECT COUNT(`rowtime`) FROM MyTable " +
       "GROUP BY TUMBLE(rowtime, INTERVAL '0.003' SECOND)")
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -334,7 +308,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "2",
       "2"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -342,7 +316,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -357,8 +330,9 @@ class TimeAttributesITCase extends AbstractTestBase {
       .groupBy('w2)
       .select('w2.rowtime, 'w2.end, 'int.count)
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -367,7 +341,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.011,1970-01-01 00:00:00.012,1",
       "1970-01-01 00:00:00.019,1970-01-01 00:00:00.02,1"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -375,7 +349,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -396,8 +369,9 @@ class TimeAttributesITCase extends AbstractTestBase {
         FROM $window1
         GROUP BY TUMBLE(rowtime, INTERVAL '0.004' SECOND)""")
 
+    val sink = new TestingAppendSink
     val results = window2.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -406,7 +380,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.011,1970-01-01 00:00:00.012",
       "1970-01-01 00:00:00.019,1970-01-01 00:00:00.02"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -414,7 +388,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -435,8 +408,9 @@ class TimeAttributesITCase extends AbstractTestBase {
         )
         GROUP BY TUMBLE(rowtime, INTERVAL '0.004' SECOND)""")
 
+    val sink = new TestingAppendSink
     val results = window.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -445,7 +419,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.011,1970-01-01 00:00:00.012,1",
       "1970-01-01 00:00:00.019,1970-01-01 00:00:00.02,1"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -453,7 +427,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -474,8 +447,9 @@ class TimeAttributesITCase extends AbstractTestBase {
         )
         GROUP BY TUMBLE(rowtime2, INTERVAL '0.004' SECOND)""")
 
+    val sink = new TestingAppendSink
     val results = window.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -484,7 +458,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.011,1970-01-01 00:00:00.012,1",
       "1970-01-01 00:00:00.019,1970-01-01 00:00:00.02,1"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -492,7 +466,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -502,7 +475,8 @@ class TimeAttributesITCase extends AbstractTestBase {
     val querySql = "select rowtime as ts, string as msg from T1"
 
     val results = tEnv.sqlQuery(querySql).toAppendStream[Pojo1]
-    results.addSink(new StreamITCase.StringSink[Pojo1])
+    val sink = new TestingAppendPojoSink
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -514,7 +488,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "Pojo1{ts=1970-01-01 00:00:00.008, msg='Hello world'}",
       "Pojo1{ts=1970-01-01 00:00:00.016, msg='Hello world'}")
 
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -522,7 +496,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val p1 = new TestPojo
     p1.a = 12
@@ -561,8 +534,9 @@ class TimeAttributesITCase extends AbstractTestBase {
       .unionAll(table4.select('b, 'c, 'a))
       .unionAll(table5.select('b, 'c, 'a))
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -576,13 +550,12 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.043,And me.,13",
       "1970-01-01 00:00:00.043,And me.,13",
       "1970-01-01 00:00:00.043,And me.,13")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
   def testTableSourceWithTimeIndicators(): Unit = {
 
-    StreamITCase.clear
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
@@ -594,17 +567,14 @@ class TimeAttributesITCase extends AbstractTestBase {
       Row.of(new JInt(4), "D", new JLong(4000L)),
       Row.of(new JInt(5), "E", new JLong(5000L)),
       Row.of(new JInt(6), "F", new JLong(6000L)))
-
-    val fieldNames = Array("a", "b", "rowtime")
-    val schema = new TableSchema(
-      fieldNames :+ "proctime",
-      Array(Types.INT, Types.STRING, Types.SQL_TIMESTAMP, Types.SQL_TIMESTAMP))
     val rowType = new RowTypeInfo(
       Array(Types.INT, Types.STRING, Types.LONG).asInstanceOf[Array[TypeInformation[_]]],
-      fieldNames)
+      Array("a", "b", "rowtime")
+    )
 
-    val tableSource = new TestTableSourceWithTime(schema, rowType, rows, "rowtime", "proctime")
-    tEnv.registerTableSource("testTable", tableSource)
+    tEnv.registerTableSource(
+      "testTable",
+      new TestTableSourceWithTime(rows, rowType, "rowtime", "proctime"))
 
     val result = tEnv
       .scan("testTable")
@@ -612,7 +582,8 @@ class TimeAttributesITCase extends AbstractTestBase {
       .select('rowtime, 'a, 'b)
       .toAppendStream[Row]
 
-    result.addSink(new StreamITCase.StringSink[Row])
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -620,7 +591,7 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:03.0,3,C",
       "1970-01-01 00:00:05.0,5,E")
 
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -628,7 +599,6 @@ class TimeAttributesITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
-    StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
       .fromCollection(data)
@@ -639,8 +609,9 @@ class TimeAttributesITCase extends AbstractTestBase {
     val t = tEnv.sqlQuery("SELECT TUMBLE_ROWTIME(rowtime, INTERVAL '0.003' SECOND) FROM MyTable " +
       "GROUP BY TUMBLE(rowtime, INTERVAL '0.003' SECOND)")
 
+    val sink = new TestingAppendSink
     val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    results.addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -649,31 +620,13 @@ class TimeAttributesITCase extends AbstractTestBase {
       "1970-01-01 00:00:00.008",
       "1970-01-01 00:00:00.017"
     )
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 }
 
 object TimeAttributesITCase {
-
-  class AtomicTimestampWithEqualWatermark
-    extends AssignerWithPunctuatedWatermarks[Long] {
-
-    override def checkAndGetNextWatermark(
-        lastElement: Long,
-        extractedTimestamp: Long)
-    : Watermark = {
-      new Watermark(extractedTimestamp)
-    }
-
-    override def extractTimestamp(
-        element: Long,
-        previousElementTimestamp: Long): Long = {
-      element
-    }
-  }
-
   class TimestampWithEqualWatermark
-    extends AssignerWithPunctuatedWatermarks[(Long, Int, Double, Float, BigDecimal, String)] {
+  extends AssignerWithPunctuatedWatermarks[(Long, Int, Double, Float, BigDecimal, String)] {
 
     override def checkAndGetNextWatermark(
         lastElement: (Long, Int, Double, Float, BigDecimal, String),
@@ -690,7 +643,7 @@ object TimeAttributesITCase {
   }
 
   class TimestampWithEqualWatermarkPojo
-    extends AssignerWithPunctuatedWatermarks[TestPojo] {
+  extends AssignerWithPunctuatedWatermarks[TestPojo] {
 
     override def checkAndGetNextWatermark(
         lastElement: TestPojo,
@@ -704,6 +657,23 @@ object TimeAttributesITCase {
         previousElementTimestamp: Long): Long = {
       element.b
     }
+  }
+
+  class AtomicTimestampWithEqualWatermark
+    extends AssignerWithPunctuatedWatermarks[Long] {
+
+      override def checkAndGetNextWatermark(
+          lastElement: Long,
+          extractedTimestamp: Long)
+      : Watermark = {
+        new Watermark(extractedTimestamp)
+      }
+
+      override def extractTimestamp(
+          element: Long,
+          previousElementTimestamp: Long): Long = {
+        element
+      }
   }
 
   class TestPojo() {

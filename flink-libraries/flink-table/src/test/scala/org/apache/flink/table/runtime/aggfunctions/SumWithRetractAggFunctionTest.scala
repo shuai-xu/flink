@@ -21,7 +21,8 @@ package org.apache.flink.table.runtime.aggfunctions
 import java.math.BigDecimal
 
 import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.functions.aggfunctions._
+import org.apache.flink.table.runtime.functions.aggfunctions._
+import org.apache.flink.table.types.DecimalType
 
 /**
   * Test case for built-in sum with retract aggregate function
@@ -154,7 +155,7 @@ class DecimalSumWithRetractAggFunctionTest
   )
 
   override def aggregator: AggregateFunction[BigDecimal, DecimalSumWithRetractAccumulator] =
-    new DecimalSumWithRetractAggFunction()
+    new DecimalSumWithRetractAggFunction(new DecimalType(24, 12))
 
   override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
 }

@@ -21,16 +21,16 @@ package org.apache.flink.table.api.batch.table.stringexpr
 import org.apache.flink.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMergeAndReset
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.aggfunctions.CountAggFunction
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.functions.aggregate.CountAggFunction
+import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit._
 
-class AggregateStringExpressionTest extends TableTestBase {
+class AggregateStringExpressionTest extends TableTestBatchExecBase {
 
   @Test
   def testAggregationTypes(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Int, Long, String)]("Table3")
+    val t = util.addTable[(Int, Long, String)]("Table3", '_1, '_2, '_3)
 
     val t1 = t.select('_1.sum, '_1.sum0, '_1.min, '_1.max, '_1.count, '_1.avg)
     val t2 = t.select("_1.sum, _1.sum0, _1.min, _1.max, _1.count, _1.avg")
@@ -41,10 +41,13 @@ class AggregateStringExpressionTest extends TableTestBase {
   @Test
   def testWorkingAggregationDataTypes(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Byte, Short, Int, Long, Float, Double, String)]("Table7")
+    val t = util.addTable[(Byte, Short, Int, Long, Float, Double, String)](
+      "Table7", '_1, '_2, '_3, '_4, '_5, '_6, '_7)
 
-    val t1 = t.select('_1.avg, '_2.avg, '_3.avg, '_4.avg, '_5.avg, '_6.avg, '_7.count, '_7.collect)
-    val t2 = t.select("_1.avg, _2.avg, _3.avg, _4.avg, _5.avg, _6.avg, _7.count, _7.collect")
+    val t1 = t.select(
+      '_1.avg, '_2.avg, '_3.avg, '_4.avg, '_5.avg, '_6.avg, '_7.count, '_7.collect)
+    val t2 = t.select(
+      "_1.avg, _2.avg, _3.avg, _4.avg, _5.avg, _6.avg, _7.count, _7.collect")
 
     verifyTableEquals(t1, t2)
   }
@@ -52,7 +55,7 @@ class AggregateStringExpressionTest extends TableTestBase {
   @Test
   def testProjection(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Byte, Short)]("Table2")
+    val t = util.addTable[(Byte, Short)]("Table2", '_1, '_2)
 
     val t1 = t.select('_1.avg, '_1.sum, '_1.count, '_2.avg, '_2.sum)
     val t2 = t.select("_1.avg, _1.sum, _1.count, _2.avg, _2.sum")
@@ -63,7 +66,7 @@ class AggregateStringExpressionTest extends TableTestBase {
   @Test
   def testAggregationWithArithmetic(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Long, String)]("Table2")
+    val t = util.addTable[(Long, String)]("Table2", '_1, '_2)
 
     val t1 = t.select(('_1 + 2).avg + 2, '_2.count + 5)
     val t2 = t.select("(_1 + 2).avg + 2, _2.count + 5")
@@ -74,7 +77,7 @@ class AggregateStringExpressionTest extends TableTestBase {
   @Test
   def testAggregationWithTwoCount(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Long, String)]("Table2")
+    val t = util.addTable[(Long, String)]("Table2", '_1, '_2)
 
     val t1 = t.select('_1.count, '_2.count)
     val t2 = t.select("_1.count, _2.count")
@@ -85,7 +88,8 @@ class AggregateStringExpressionTest extends TableTestBase {
   @Test
   def testAggregationAfterProjection(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Byte, Short, Int, Long, Float, Double, String)]("Table7")
+    val t = util.addTable[(Byte, Short, Int, Long, Float, Double, String)](
+      "Table7", '_1, '_2, '_3, '_4, '_5, '_6, '_7)
 
     val t1 = t.select('_1, '_2, '_3)
       .select('_1.avg, '_2.sum, '_3.count)

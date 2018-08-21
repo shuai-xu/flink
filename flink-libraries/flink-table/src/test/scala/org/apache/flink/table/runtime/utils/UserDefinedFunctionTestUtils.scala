@@ -44,6 +44,16 @@ object UserDefinedFunctionTestUtils {
     env.getConfig.setGlobalJobParameters(conf)
   }
 
+  def setJobParameters(
+      env: org.apache.flink.streaming.api.environment.StreamExecutionEnvironment,
+      parameters: Map[String, String]): Unit = {
+    val conf = new Configuration()
+    parameters.foreach {
+      case (k, v) => conf.setString(k, v)
+    }
+    env.getConfig.setGlobalJobParameters(conf)
+  }
+
   def writeCacheFile(fileName: String, contents: String): String = {
     val tempFile = File.createTempFile(this.getClass.getName + "-" + fileName, "tmp")
     tempFile.deleteOnExit()

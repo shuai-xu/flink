@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.expressions.validation
 
+import org.apache.calcite.avatica.util.TimeUnit
 import org.apache.flink.table.api.{SqlParserException, ValidationException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.ScalarTypesTestBase
@@ -39,7 +40,7 @@ class ScalarFunctionsValidationTest extends ScalarTypesTestBase {
   }
 
   @Test(expected = classOf[IllegalArgumentException])
-  def testInvalidLog2(): Unit = {
+  def testInvalidLog2(): Unit ={
     // invalid arithmetic argument
     testSqlApi(
       "LOG(-1)",
@@ -83,17 +84,17 @@ class ScalarFunctionsValidationTest extends ScalarTypesTestBase {
   // ----------------------------------------------------------------------------------------------
 
   @Test(expected = classOf[SqlParserException])
-  def testTimestampAddWithWrongTimestampInterval(): Unit = {
+  def testTimestampAddWithWrongTimestampInterval(): Unit ={
     testSqlApi("TIMESTAMPADD(XXX, 1, timestamp '2016-02-24'))", "2016-06-16")
   }
 
   @Test(expected = classOf[SqlParserException])
-  def testTimestampAddWithWrongTimestampFormat(): Unit = {
+  def testTimestampAddWithWrongTimestampFormat(): Unit ={
     testSqlApi("TIMESTAMPADD(YEAR, 1, timestamp '2016-02-24'))", "2016-06-16")
   }
 
   @Test(expected = classOf[ValidationException])
-  def testTimestampAddWithWrongQuantity(): Unit = {
+  def testTimestampAddWithWrongQuantity(): Unit ={
     testSqlApi("TIMESTAMPADD(YEAR, 1.0, timestamp '2016-02-24 12:42:25')", "2016-06-16")
   }
 
@@ -104,9 +105,14 @@ class ScalarFunctionsValidationTest extends ScalarTypesTestBase {
   @Test(expected = classOf[ValidationException])
   def testInValidationExceptionMoreThanOneTypes(): Unit = {
     testTableApi(
+      'f2.in('f3, 'f8),
+      "f2.in(f3, f8)",
+      "true"
+    )
+    testTableApi(
       'f2.in('f3, 'f4, 4),
       "f2.in(f3, f4, 4)",
-      "true"
+      "false"  // OK if all numeric
     )
   }
 
@@ -126,5 +132,44 @@ class ScalarFunctionsValidationTest extends ScalarTypesTestBase {
       "f1.in('Hi','Hello world','Comment#1')",
       "true"
     )
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testDOWWithTimeWhichIsUnsupported(): Unit = {
+    testSqlApi("EXTRACT(DOW FROM TIME '12:42:25')", "0")
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testDOYWithTimeWhichIsUnsupported(): Unit = {
+    testSqlApi("EXTRACT(DOY FROM TIME '12:42:25')", "0")
+  }
+
+  private def testExtractFromTimeZeroResult(unit: TimeUnit): Unit = {
+    testSqlApi("EXTRACT(" + unit + " FROM TIME '00:00:00')", "0")
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testMillenniumWithTime(): Unit = {
+    testExtractFromTimeZeroResult(TimeUnit.MILLENNIUM)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testCenturyWithTime(): Unit = {
+    testExtractFromTimeZeroResult(TimeUnit.CENTURY)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testYearWithTime(): Unit = {
+    testExtractFromTimeZeroResult(TimeUnit.YEAR)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testMonthWithTime(): Unit = {
+    testExtractFromTimeZeroResult(TimeUnit.MONTH)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testDayWithTime(): Unit = {
+    testExtractFromTimeZeroResult(TimeUnit.DAY)
   }
 }

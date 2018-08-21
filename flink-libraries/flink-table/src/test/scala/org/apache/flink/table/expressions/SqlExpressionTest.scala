@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.expressions
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.types.Row
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.expressions.utils.ExpressionTestBase
@@ -91,7 +90,7 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("5+5", "10")
     testSqlApi("5-5", "0")
     testSqlApi("5*5", "25")
-    testSqlApi("5/5", "1")
+    testSqlApi("5/5", "1.0")
     testSqlApi("POWER(5, 5)", "3125.0")
     testSqlApi("ABS(-5)", "5")
     testSqlApi("MOD(-26, 5)", "-1")
@@ -111,11 +110,34 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("ATAN(0.5)", "0.4636476090008061")
     testSqlApi("DEGREES(0.5)", "28.64788975654116")
     testSqlApi("RADIANS(0.5)", "0.008726646259971648")
-    testSqlApi("SIGN(-1.1)", "-1")
+    testSqlApi("SIGN(-1.1)", "-1.0")  // calcite: SIGN(Decimal(p,s)) => Decimal(p,s)
     testSqlApi("ROUND(-12.345, 2)", "-12.35")
-    testSqlApi("PI", "3.141592653589793")
+    testSqlApi("PI()", "3.141592653589793")
     testSqlApi("E()", "2.718281828459045")
-    testSqlApi("BIN(12)", "1100")
+  }
+
+  @Test
+  def testDivideFunctions(): Unit = {
+
+    //slash
+
+    // Decimal(2,1) / Decimal(2,1) => Decimal(8,6)
+    testSqlApi("1.0/8.0", "0.125000")
+    testSqlApi("2.0/3.0", "0.666667")
+
+    // Integer => Decimal(10, 0)
+    // Decimal(10,0) / Decimal(2,1) => Decimal(17,6)
+    testSqlApi("-2/3.0", "-0.666667")
+
+    // Decimal(2,1) / Decimal(10,0) => Decimal(23,12)
+    testSqlApi("2.0/(-3)", "-0.666666666667")
+    testSqlApi("-7.9/2", "-3.950000000000")
+
+    //div function
+    testSqlApi("div(7, 2)", "3")
+    testSqlApi("div(7.9, 2.009)", "3")
+    testSqlApi("div(7, -2.009)", "-3")
+    testSqlApi("div(-7.9, 2)", "-3")
   }
 
   @Test
@@ -134,23 +156,12 @@ class SqlExpressionTest extends ExpressionTestBase {
       "This is a new string")
     testSqlApi("SUBSTRING('hello world', 2)", "ello world")
     testSqlApi("SUBSTRING('hello world', 2, 3)", "ell")
+    testSqlApi("SUBSTRING('hello world', 2, 300)", "ello world")
+    testSqlApi("SUBSTR('hello world', 2, 3)", "ell")
+    testSqlApi("SUBSTR('hello world', 2)", "ello world")
+    testSqlApi("SUBSTR('hello world', 2, 300)", "ello world")
+    testSqlApi("SUBSTR('hello world', 0, 3)", "hel")
     testSqlApi("INITCAP('hello world')", "Hello World")
-  }
-
-  @Test
-  def testHashFunctions(): Unit = {
-    testSqlApi("MD5('')", "d41d8cd98f00b204e9800998ecf8427e")
-    testSqlApi("MD5('test')", "098f6bcd4621d373cade4e832627b4f6")
-
-    testSqlApi("SHA1('')", "da39a3ee5e6b4b0d3255bfef95601890afd80709")
-    testSqlApi("SHA1('test')", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
-
-    testSqlApi("SHA256('')", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-    testSqlApi("SHA256('test')", "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08")
-
-    testSqlApi("MD5(CAST(NULL AS VARCHAR))", "null")
-    testSqlApi("SHA1(CAST(NULL AS VARCHAR))", "null")
-    testSqlApi("SHA256(CAST(NULL AS VARCHAR))", "null")
   }
 
   @Test
@@ -159,6 +170,8 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("CASE WHEN 1 = 2 THEN 2 WHEN 1 = 1 THEN 3 ELSE 3 END", "3")
     testSqlApi("NULLIF(1, 1)", "null")
     testSqlApi("COALESCE(NULL, 5)", "5")
+    testSqlApi("COALESCE(keyvalue('', ';', ':', 'isB2C'), '5')", "5")
+    testSqlApi("COALESCE(json_value('xx', '$x'), '5')", "5")
   }
 
   @Test
@@ -201,8 +214,57 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("ELEMENT(ARRAY['HELLO WORLD'])", "HELLO WORLD")
   }
 
-  override def testData: Any = new Row(0)
+  @Test
+  def testHashFunctions(): Unit = {
+    testSqlApi("MD5('')", "d41d8cd98f00b204e9800998ecf8427e")
+    testSqlApi("MD5('test')", "098f6bcd4621d373cade4e832627b4f6")
 
-  override def typeInfo: TypeInformation[Any] =
-    new RowTypeInfo().asInstanceOf[TypeInformation[Any]]
+    testSqlApi("SHA1('')", "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    testSqlApi("SHA1('test')", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+
+    testSqlApi("SHA224('')", "d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f")
+    testSqlApi("SHA2('', 224)", "d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f")
+
+    testSqlApi("SHA224('test')", "90a3ed9e32b2aaf4c61c410eb925426119e1a9dc53d4286ade99a809")
+    testSqlApi("SHA2('test', 224)", "90a3ed9e32b2aaf4c61c410eb925426119e1a9dc53d4286ade99a809")
+
+    testSqlApi("SHA256('')", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    testSqlApi("SHA2('', 256)", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+
+    testSqlApi("SHA256('test')", "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08")
+    testSqlApi("SHA2('test', 256)",
+      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08")
+
+    testSqlApi("SHA384('')", "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc" +
+      "7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b")
+    testSqlApi("SHA2('', 384)", "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0" +
+      "cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b")
+
+    testSqlApi("SHA384('test')", "768412320f7b0aa5812fce428dc4706b3cae50e02a64caa16a782249bfe8efc" +
+      "4b7ef1ccb126255d196047dfedf17a0a9")
+    testSqlApi("SHA2('test', 384)", "768412320f7b0aa5812fce428dc4706b3cae50e02a64caa16a782249bfe8" +
+      "efc4b7ef1ccb126255d196047dfedf17a0a9")
+
+    testSqlApi("SHA512('')", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d" +
+      "0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e")
+    testSqlApi("SHA2('',512)", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce4" +
+      "7d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e")
+
+    testSqlApi("SHA512('test')", "ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db" +
+      "27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff")
+    testSqlApi("SHA2('test',512)", "ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0" +
+      "db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff")
+
+    testSqlApi("MD5(CAST(NULL AS VARCHAR))", "null")
+    testSqlApi("SHA1(CAST(NULL AS VARCHAR))", "null")
+    testSqlApi("SHA224(CAST(NULL AS VARCHAR))", "null")
+    testSqlApi("SHA256(CAST(NULL AS VARCHAR))", "null")
+    testSqlApi("SHA384(CAST(NULL AS VARCHAR))", "null")
+    testSqlApi("SHA512(CAST(NULL AS VARCHAR))", "null")
+    testSqlApi("SHA2(CAST(NULL AS VARCHAR), 256)", "null")
+  }
+
+  override def rowTestData: Row = new Row(0)
+
+  override def rowType: RowTypeInfo = new RowTypeInfo()
 }

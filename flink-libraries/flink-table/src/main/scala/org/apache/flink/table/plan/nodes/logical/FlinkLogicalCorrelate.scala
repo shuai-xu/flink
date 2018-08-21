@@ -25,6 +25,7 @@ import org.apache.calcite.rel.core.{Correlate, CorrelationId}
 import org.apache.calcite.rel.logical.LogicalCorrelate
 import org.apache.calcite.sql.SemiJoinType
 import org.apache.calcite.util.ImmutableBitSet
+import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 
 class FlinkLogicalCorrelate(
@@ -66,13 +67,9 @@ class FlinkLogicalCorrelateConverter
 
   override def convert(rel: RelNode): RelNode = {
     val correlate = rel.asInstanceOf[LogicalCorrelate]
-    val traitSet = rel.getTraitSet.replace(FlinkConventions.LOGICAL)
     val newLeft = RelOptRule.convert(correlate.getLeft, FlinkConventions.LOGICAL)
     val newRight = RelOptRule.convert(correlate.getRight, FlinkConventions.LOGICAL)
-
-    new FlinkLogicalCorrelate(
-      rel.getCluster,
-      traitSet,
+    FlinkLogicalCorrelate.create(
       newLeft,
       newRight,
       correlate.getCorrelationId,
@@ -83,4 +80,28 @@ class FlinkLogicalCorrelateConverter
 
 object FlinkLogicalCorrelate {
   val CONVERTER: ConverterRule = new FlinkLogicalCorrelateConverter()
+
+  def create(
+      left: RelNode,
+      right: RelNode,
+      correlationId: CorrelationId,
+      requiredColumns: ImmutableBitSet,
+      joinType: SemiJoinType): FlinkLogicalCorrelate = {
+    val cluster = left.getCluster
+    val traitSet = cluster.traitSetOf(Convention.NONE)
+    // FIXME: FlinkRelMdDistribution requires the current RelNode to compute
+    // the distribution trait, so we have to create FlinkLogicalCorrelate to
+    // calculate the distribution trait
+    val correlate = new FlinkLogicalCorrelate(
+      cluster,
+      traitSet,
+      left,
+      right,
+      correlationId,
+      requiredColumns,
+      joinType)
+    val newTraitSet = FlinkRelMetadataQuery.traitSet(correlate)
+      .replace(FlinkConventions.LOGICAL).simplify()
+    correlate.copy(newTraitSet, correlate.getInputs).asInstanceOf[FlinkLogicalCorrelate]
+  }
 }

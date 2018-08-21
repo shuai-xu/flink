@@ -1,0 +1,573 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.	See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.	You may obtain a copy of the License at
+ *
+ *		http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.dataformat;
+
+import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.core.memory.MemorySegmentFactory;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.flink.table.dataformat.BinaryString.EMPTY_UTF8;
+import static org.apache.flink.table.dataformat.BinaryString.blankString;
+import static org.apache.flink.table.dataformat.BinaryString.concat;
+import static org.apache.flink.table.dataformat.BinaryString.concatWs;
+import static org.apache.flink.table.dataformat.BinaryString.fromBytes;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+/**
+ * Test of {@link BinaryString}.
+ *
+ * <p>Caution that you must construct a string by {@link #fromString} to cover all the
+ * test cases.
+ *
+ */
+@RunWith(Parameterized.class)
+public class BinaryStringTest {
+
+	private final boolean varSeg;
+
+	public BinaryStringTest(boolean varSeg) {
+		this.varSeg = varSeg;
+	}
+
+	@Parameterized.Parameters
+	public static List<Boolean> getVarSeg() {
+		List<Boolean> result = new ArrayList<>();
+		result.add(true);
+		result.add(false);
+		return result;
+	}
+
+	private BinaryString fromString(String str) {
+		BinaryString string = BinaryString.fromString(str);
+		if (!varSeg || string.numBytes() < 2) {
+			return string;
+		} else {
+			int numBytes = string.numBytes();
+			int segSize = numBytes / 2 + 1;
+			byte[] bytes1 = new byte[segSize];
+			byte[] bytes2 = new byte[segSize];
+			if (numBytes - segSize > 0) {
+				string.getSegments()[0].get(
+						0, bytes1, segSize * 2 - numBytes, numBytes - segSize);
+			}
+			string.getSegments()[0].get(numBytes - segSize, bytes2, 0, segSize);
+			return BinaryString.fromAddress(
+					new MemorySegment[] {
+							MemorySegmentFactory.wrap(bytes1),
+							MemorySegmentFactory.wrap(bytes2)
+					}, segSize * 2 - numBytes, numBytes);
+		}
+	}
+
+	private void checkBasic(String str, int len) {
+		BinaryString s1 = fromString(str);
+		BinaryString s2 = fromBytes(str.getBytes(StandardCharsets.UTF_8));
+		assertEquals(s1.numChars(), len);
+		assertEquals(s2.numChars(), len);
+
+		assertEquals(s1.toString(), str);
+		assertEquals(s2.toString(), str);
+		assertEquals(s1, s2);
+
+		assertEquals(s1.hashCode(), s2.hashCode());
+
+		assertEquals(0, s1.compareTo(s2));
+
+		assertTrue(s1.contains(s2));
+		assertTrue(s2.contains(s1));
+		assertTrue(s1.startsWith(s1));
+		assertTrue(s1.endsWith(s1));
+	}
+
+	@Test
+	public void basicTest() {
+		checkBasic("", 0);
+		checkBasic(",", 1);
+		checkBasic("hello", 5);
+		checkBasic("hello world", 11);
+		checkBasic("Flink中文社区", 9);
+		checkBasic("中 文 社 区", 7);
+	}
+
+	@Test
+	public void emptyStringTest() {
+		assertEquals(EMPTY_UTF8, fromString(""));
+		assertEquals(EMPTY_UTF8, fromBytes(new byte[0]));
+		assertEquals(0, EMPTY_UTF8.numChars());
+		assertEquals(0, EMPTY_UTF8.numBytes());
+	}
+
+	@Test
+	public void compareTo() {
+		assertEquals(0, fromString("   ").compareTo(blankString(3)));
+		assertTrue(fromString("").compareTo(fromString("a")) < 0);
+		assertTrue(fromString("abc").compareTo(fromString("ABC")) > 0);
+		assertTrue(fromString("abc0").compareTo(fromString("abc")) > 0);
+		assertEquals(0, fromString("abcabcabc").compareTo(fromString("abcabcabc")));
+		assertTrue(fromString("aBcabcabc").compareTo(fromString("Abcabcabc")) > 0);
+		assertTrue(fromString("Abcabcabc").compareTo(fromString("abcabcabC")) < 0);
+		assertTrue(fromString("abcabcabc").compareTo(fromString("abcabcabC")) > 0);
+
+		assertTrue(fromString("abc").compareTo(fromString("世界")) < 0);
+		assertTrue(fromString("你好").compareTo(fromString("世界")) > 0);
+		assertTrue(fromString("你好123").compareTo(fromString("你好122")) > 0);
+	}
+
+	@Test
+	public void testMultiSegments() {
+
+		// prepare
+		MemorySegment[] segments1 = new MemorySegment[2];
+		segments1[0] = MemorySegmentFactory.wrap(new byte[10]);
+		segments1[1] = MemorySegmentFactory.wrap(new byte[10]);
+		segments1[0].put(5, "abcde".getBytes(UTF_8), 0, 5);
+		segments1[1].put(0, "aaaaa".getBytes(UTF_8), 0, 5);
+
+		MemorySegment[] segments2 = new MemorySegment[2];
+		segments2[0] = MemorySegmentFactory.wrap(new byte[5]);
+		segments2[1] = MemorySegmentFactory.wrap(new byte[5]);
+		segments2[0].put(0, "abcde".getBytes(UTF_8), 0, 5);
+		segments2[1].put(0, "b".getBytes(UTF_8), 0, 1);
+
+		// test go ahead both
+		BinaryString binaryString1 = BinaryString.fromAddress(segments1, 5, 10);
+		BinaryString binaryString2 = BinaryString.fromAddress(segments2, 0, 6);
+		assertEquals("abcdeaaaaa", binaryString1.toString());
+		assertEquals("abcdeb", binaryString2.toString());
+		assertEquals(-1, binaryString1.compareTo(binaryString2));
+
+		// test needCompare == len
+		binaryString1 = BinaryString.fromAddress(segments1, 5, 5);
+		binaryString2 = BinaryString.fromAddress(segments2, 0, 5);
+		assertEquals("abcde", binaryString1.toString());
+		assertEquals("abcde", binaryString2.toString());
+		assertEquals(0, binaryString1.compareTo(binaryString2));
+
+		// test find the first segment of this string
+		binaryString1 = BinaryString.fromAddress(segments1, 10, 5);
+		binaryString2 = BinaryString.fromAddress(segments2, 0, 5);
+		assertEquals("aaaaa", binaryString1.toString());
+		assertEquals("abcde", binaryString2.toString());
+		assertEquals(-1, binaryString1.compareTo(binaryString2));
+		assertEquals(1, binaryString2.compareTo(binaryString1));
+
+		// test go ahead single
+		segments2 = new MemorySegment[]{MemorySegmentFactory.wrap(new byte[10])};
+		segments2[0].put(4, "abcdeb".getBytes(UTF_8), 0, 6);
+		binaryString1 = BinaryString.fromAddress(segments1, 5, 10);
+		binaryString2 = BinaryString.fromAddress(segments2, 4, 6);
+		assertEquals("abcdeaaaaa", binaryString1.toString());
+		assertEquals("abcdeb", binaryString2.toString());
+		assertEquals(-1, binaryString1.compareTo(binaryString2));
+		assertEquals(1, binaryString2.compareTo(binaryString1));
+
+	}
+
+	@Test
+	public void concatTest() {
+		assertEquals(EMPTY_UTF8, concat());
+		assertEquals(EMPTY_UTF8, concat((BinaryString) null));
+		assertEquals(EMPTY_UTF8, concat(EMPTY_UTF8));
+		assertEquals(fromString("ab"), concat(fromString("ab")));
+		assertEquals(fromString("ab"), concat(fromString("a"), fromString("b")));
+		assertEquals(fromString("abc"), concat(fromString("a"), fromString("b"), fromString("c")));
+		assertEquals(fromString("ac"), concat(fromString("a"), null, fromString("c")));
+		assertEquals(fromString("a"), concat(fromString("a"), null, null));
+		assertEquals(EMPTY_UTF8, concat(null, null, null));
+		assertEquals(fromString("数据砖头"), concat(fromString("数据"), fromString("砖头")));
+	}
+
+	@Test
+	public void concatWsTest() {
+		// Returns EMPTY_UTF8 if the separator is null
+		assertEquals(EMPTY_UTF8, concatWs(null, (BinaryString) null));
+		assertEquals(fromString("a"), concatWs(null, fromString("a")));
+
+		// If separator is null, concatWs should skip all null inputs and never return null.
+		BinaryString sep = fromString("哈哈");
+		assertEquals(
+				EMPTY_UTF8,
+				concatWs(sep, EMPTY_UTF8));
+		assertEquals(
+				fromString("ab"),
+				concatWs(sep, fromString("ab")));
+		assertEquals(
+				fromString("a哈哈b"),
+				concatWs(sep, fromString("a"), fromString("b")));
+		assertEquals(
+				fromString("a哈哈b哈哈c"),
+				concatWs(sep, fromString("a"), fromString("b"), fromString("c")));
+		assertEquals(
+				fromString("a哈哈c"),
+				concatWs(sep, fromString("a"), null, fromString("c")));
+		assertEquals(
+				fromString("a"),
+				concatWs(sep, fromString("a"), null, null));
+		assertEquals(
+				EMPTY_UTF8,
+				concatWs(sep, null, null, null));
+		assertEquals(
+				fromString("数据哈哈砖头"),
+				concatWs(sep, fromString("数据"), fromString("砖头")));
+	}
+
+	@Test
+	public void contains() {
+		assertTrue(EMPTY_UTF8.contains(EMPTY_UTF8));
+		assertTrue(fromString("hello").contains(fromString("ello")));
+		assertFalse(fromString("hello").contains(fromString("vello")));
+		assertFalse(fromString("hello").contains(fromString("hellooo")));
+		assertTrue(fromString("大千世界").contains(fromString("千世界")));
+		assertFalse(fromString("大千世界").contains(fromString("世千")));
+		assertFalse(fromString("大千世界").contains(fromString("大千世界好")));
+	}
+
+	@Test
+	public void startsWith() {
+		assertTrue(EMPTY_UTF8.startsWith(EMPTY_UTF8));
+		assertTrue(fromString("hello").startsWith(fromString("hell")));
+		assertFalse(fromString("hello").startsWith(fromString("ell")));
+		assertFalse(fromString("hello").startsWith(fromString("hellooo")));
+		assertTrue(fromString("数据砖头").startsWith(fromString("数据")));
+		assertFalse(fromString("大千世界").startsWith(fromString("千")));
+		assertFalse(fromString("大千世界").startsWith(fromString("大千世界好")));
+	}
+
+	@Test
+	public void endsWith() {
+		assertTrue(EMPTY_UTF8.endsWith(EMPTY_UTF8));
+		assertTrue(fromString("hello").endsWith(fromString("ello")));
+		assertFalse(fromString("hello").endsWith(fromString("ellov")));
+		assertFalse(fromString("hello").endsWith(fromString("hhhello")));
+		assertTrue(fromString("大千世界").endsWith(fromString("世界")));
+		assertFalse(fromString("大千世界").endsWith(fromString("世")));
+		assertFalse(fromString("数据砖头").endsWith(fromString("我的数据砖头")));
+	}
+
+	@Test
+	public void substring() {
+		assertEquals(EMPTY_UTF8, fromString("hello").substring(0, 0));
+		assertEquals(fromString("el"), fromString("hello").substring(1, 3));
+		assertEquals(fromString("数"), fromString("数据砖头").substring(0, 1));
+		assertEquals(fromString("据砖"), fromString("数据砖头").substring(1, 3));
+		assertEquals(fromString("头"), fromString("数据砖头").substring(3, 5));
+		assertEquals(fromString("ߵ梷"), fromString("ߵ梷").substring(0, 2));
+	}
+
+	@Test
+	public void trims() {
+		assertEquals(fromString("1"), fromString("1").trim());
+
+		assertEquals(fromString("hello"), fromString("  hello ").trim());
+		assertEquals(fromString("hello "), fromString("  hello ").trimLeft());
+		assertEquals(fromString("  hello"), fromString("  hello ").trimRight());
+
+		assertEquals(fromString("  hello "),
+				fromString("  hello ").trim(false, false, fromString(" ")));
+		assertEquals(fromString("hello"),
+				fromString("  hello ").trim(true, true, fromString(" ")));
+		assertEquals(fromString("hello "),
+				fromString("  hello ").trim(true, false, fromString(" ")));
+		assertEquals(fromString("  hello"),
+				fromString("  hello ").trim(false, true, fromString(" ")));
+		assertEquals(fromString("hello"),
+				fromString("xxxhellox").trim(true, true, fromString("x")));
+
+		assertEquals(fromString("ell"),
+				fromString("xxxhellox").trim(fromString("xoh")));
+
+		assertEquals(fromString("ellox"),
+				fromString("xxxhellox").trimLeft(fromString("xoh")));
+
+		assertEquals(fromString("xxxhell"),
+				fromString("xxxhellox").trimRight(fromString("xoh")));
+
+		assertEquals(EMPTY_UTF8, EMPTY_UTF8.trim());
+		assertEquals(EMPTY_UTF8, fromString("  ").trim());
+		assertEquals(EMPTY_UTF8, fromString("  ").trimLeft());
+		assertEquals(EMPTY_UTF8, fromString("  ").trimRight());
+
+		assertEquals(fromString("数据砖头"), fromString("  数据砖头 ").trim());
+		assertEquals(fromString("数据砖头 "), fromString("  数据砖头 ").trimLeft());
+		assertEquals(fromString("  数据砖头"), fromString("  数据砖头 ").trimRight());
+
+		assertEquals(fromString("数据砖头"), fromString("数据砖头").trim());
+		assertEquals(fromString("数据砖头"), fromString("数据砖头").trimLeft());
+		assertEquals(fromString("数据砖头"), fromString("数据砖头").trimRight());
+
+		assertEquals(fromString(","), fromString("年年岁岁, 岁岁年年").trim(fromString("年岁 ")));
+		assertEquals(fromString(", 岁岁年年"),
+				fromString("年年岁岁, 岁岁年年").trimLeft(fromString("年岁 ")));
+		assertEquals(fromString("年年岁岁,"),
+				fromString("年年岁岁, 岁岁年年").trimRight(fromString("年岁 ")));
+
+		char[] charsLessThan0x20 = new char[10];
+		Arrays.fill(charsLessThan0x20, (char) (' ' - 1));
+		String stringStartingWithSpace =
+				new String(charsLessThan0x20) + "hello" + new String(charsLessThan0x20);
+		assertEquals(fromString(stringStartingWithSpace), fromString(stringStartingWithSpace).trim());
+		assertEquals(fromString(stringStartingWithSpace),
+				fromString(stringStartingWithSpace).trimLeft());
+		assertEquals(fromString(stringStartingWithSpace),
+				fromString(stringStartingWithSpace).trimRight());
+	}
+
+	@Test
+	public void testSqlSubstring() {
+		assertEquals(fromString("ello"), fromString("hello").substringSQL(2));
+		assertEquals(fromString("ell"), fromString("hello").substringSQL(2, 3));
+		assertEquals(EMPTY_UTF8, EMPTY_UTF8.substringSQL(2, 3));
+		assertNull(fromString("hello").substringSQL(0, -1));
+		assertEquals(EMPTY_UTF8, fromString("hello").substringSQL(10));
+		assertEquals(fromString("hel"), fromString("hello").substringSQL(0, 3));
+		assertEquals(fromString("lo"), fromString("hello").substringSQL(-2, 3));
+		assertEquals(EMPTY_UTF8, fromString("hello").substringSQL(-100, 3));
+	}
+
+	@Test
+	public void reverse() {
+		assertEquals(fromString("olleh"), fromString("hello").reverse());
+		assertEquals(fromString("国中"), fromString("中国").reverse());
+		assertEquals(fromString("国中 ,olleh"), fromString("hello, 中国").reverse());
+		assertEquals(EMPTY_UTF8, EMPTY_UTF8.reverse());
+	}
+
+	@Test
+	public void indexOf() {
+		assertEquals(0, EMPTY_UTF8.indexOf(EMPTY_UTF8, 0));
+		assertEquals(-1, EMPTY_UTF8.indexOf(fromString("l"), 0));
+		assertEquals(0, fromString("hello").indexOf(EMPTY_UTF8, 0));
+		assertEquals(2, fromString("hello").indexOf(fromString("l"), 0));
+		assertEquals(3, fromString("hello").indexOf(fromString("l"), 3));
+		assertEquals(-1, fromString("hello").indexOf(fromString("a"), 0));
+		assertEquals(2, fromString("hello").indexOf(fromString("ll"), 0));
+		assertEquals(-1, fromString("hello").indexOf(fromString("ll"), 4));
+		assertEquals(1, fromString("数据砖头").indexOf(fromString("据砖"), 0));
+		assertEquals(-1, fromString("数据砖头").indexOf(fromString("数"), 3));
+		assertEquals(0, fromString("数据砖头").indexOf(fromString("数"), 0));
+		assertEquals(3, fromString("数据砖头").indexOf(fromString("头"), 0));
+	}
+
+	@Test
+	public void testToNumeric() {
+		// Test to integer.
+		assertEquals(Byte.valueOf("123"), fromString("123").toByte());
+		assertEquals(Byte.valueOf("123"), fromString("+123").toByte());
+		assertEquals(Byte.valueOf("-123"), fromString("-123").toByte());
+
+		assertEquals(Short.valueOf("123"), fromString("123").toShort());
+		assertEquals(Short.valueOf("123"), fromString("+123").toShort());
+		assertEquals(Short.valueOf("-123"), fromString("-123").toShort());
+
+		assertEquals(Integer.valueOf("123"), fromString("123").toInt());
+		assertEquals(Integer.valueOf("123"), fromString("+123").toInt());
+		assertEquals(Integer.valueOf("-123"), fromString("-123").toInt());
+
+		assertEquals(Long.valueOf("1234567890"),
+			fromString("1234567890").toLong());
+		assertEquals(Long.valueOf("+1234567890"),
+			fromString("+1234567890").toLong());
+		assertEquals(Long.valueOf("-1234567890"),
+			fromString("-1234567890").toLong());
+
+		// Test decimal string to integer.
+		assertEquals(Integer.valueOf("123"), fromString("123.456789").toInt());
+		assertEquals(Long.valueOf("123"), fromString("123.456789").toLong());
+
+		// Test negative cases.
+		assertNull(fromString("1a3.456789").toInt());
+		assertNull(fromString("123.a56789").toInt());
+
+		// Test composite in BinaryRow.
+		BinaryRow row = new BinaryRow(20);
+		BinaryRowWriter writer = new BinaryRowWriter(row);
+		writer.writeString(0, "1");
+		writer.writeString(1, "123");
+		writer.writeString(2, "12345");
+		writer.writeString(3, "123456789");
+		writer.complete();
+
+		assertEquals(Byte.valueOf("1"), row.getBinaryString(0).toByte());
+		assertEquals(Short.valueOf("123"), row.getBinaryString(1).toShort());
+		assertEquals(Integer.valueOf("12345"), row.getBinaryString(2).toInt());
+		assertEquals(Long.valueOf("123456789"), row.getBinaryString(3).toLong());
+	}
+
+	@Test
+	public void testToUpperLowerCase() {
+		assertEquals(fromString("我是中国人"),
+			fromString("我是中国人").toLowerCase());
+		assertEquals(fromString("我是中国人"),
+			fromString("我是中国人").toUpperCase());
+
+		assertEquals(fromString("abcdefg"),
+			fromString("aBcDeFg").toLowerCase());
+		assertEquals(fromString("ABCDEFG"),
+			fromString("aBcDeFg").toUpperCase());
+
+		assertEquals(fromString("!@#$%^*"),
+			fromString("!@#$%^*").toLowerCase());
+		assertEquals(fromString("!@#$%^*"),
+			fromString("!@#$%^*").toLowerCase());
+		// Test composite in BinaryRow.
+		BinaryRow row = new BinaryRow(20);
+		BinaryRowWriter writer = new BinaryRowWriter(row);
+		writer.writeString(0, "a");
+		writer.writeString(1, "我是中国人");
+		writer.writeString(3, "aBcDeFg");
+		writer.writeString(5, "!@#$%^*");
+		writer.complete();
+
+		assertEquals(fromString("A"),
+			row.getBinaryString(0).toUpperCase());
+		assertEquals(fromString("我是中国人"),
+			row.getBinaryString(1).toUpperCase());
+		assertEquals(fromString("我是中国人"),
+			row.getBinaryString(1).toLowerCase());
+		assertEquals(fromString("ABCDEFG"),
+			row.getBinaryString(3).toUpperCase());
+		assertEquals(fromString("abcdefg"),
+			row.getBinaryString(3).toLowerCase());
+		assertEquals(fromString("!@#$%^*"),
+			row.getBinaryString(5).toUpperCase());
+		assertEquals(fromString("!@#$%^*"),
+			row.getBinaryString(5).toLowerCase());
+	}
+
+	@Test
+	public void testToDecimal() {
+		class DecimalData {
+			private String str;
+			private int precision, scale;
+
+			private DecimalData(String str, int precision, int scale) {
+				this.str = str;
+				this.precision = precision;
+				this.scale = scale;
+			}
+		}
+
+		DecimalData[] data = {
+			new DecimalData("12.345", 5, 3),
+			new DecimalData("-12.345", 5, 3),
+			new DecimalData("+12345", 5, 0),
+			new DecimalData("-12345", 5, 0),
+			new DecimalData("12345.", 5, 0),
+			new DecimalData("-12345.", 5, 0),
+			new DecimalData(".12345", 5, 5),
+			new DecimalData("-.12345", 5, 5),
+			new DecimalData("+12.345E3", 5, 0),
+			new DecimalData("-12.345e3", 5, 0),
+			new DecimalData("12.345e-3", 6, 6),
+			new DecimalData("-12.345E-3", 6, 6),
+			new DecimalData("12345E3", 8, 0),
+			new DecimalData("-12345e3", 8, 0),
+			new DecimalData("12345e-3", 5, 3),
+			new DecimalData("-12345E-3", 5, 3),
+			new DecimalData("+.12345E3", 5, 2),
+			new DecimalData("-.12345e3", 5, 2),
+			new DecimalData(".12345e-3", 8, 8),
+			new DecimalData("-.12345E-3", 8, 8),
+			new DecimalData("1234512345.1234", 18, 8),
+			new DecimalData("-1234512345.1234", 18, 8),
+			new DecimalData("1234512345.1234", 12, 2),
+			new DecimalData("-1234512345.1234", 12, 2),
+			new DecimalData("1234512345.1299", 12, 2),
+			new DecimalData("-1234512345.1299", 12, 2),
+			new DecimalData("999999999999999999", 18, 0),
+			new DecimalData("1234512345.1234512345", 20, 10),
+			new DecimalData("-1234512345.1234512345", 20, 10),
+			new DecimalData("1234512345.1234512345", 15, 5),
+			new DecimalData("-1234512345.1234512345", 15, 5),
+			new DecimalData("12345123451234512345E-10", 20, 10),
+			new DecimalData("-12345123451234512345E-10", 20, 10),
+			new DecimalData("12345123451234512345E-10", 15, 5),
+			new DecimalData("-12345123451234512345E-10", 15, 5),
+			new DecimalData("999999999999999999999", 21, 0),
+			new DecimalData("-999999999999999999999", 21, 0),
+			new DecimalData("0.00000000000000000000123456789123456789", 38, 38),
+			new DecimalData("-0.00000000000000000000123456789123456789", 38, 38),
+			new DecimalData("0.00000000000000000000123456789123456789", 29, 29),
+			new DecimalData("-0.00000000000000000000123456789123456789", 29, 29),
+			new DecimalData("123456789123E-27", 18, 18),
+			new DecimalData("-123456789123E-27", 18, 18),
+			new DecimalData("123456789999E-27", 18, 18),
+			new DecimalData("-123456789999E-27", 18, 18),
+			new DecimalData("123456789123456789E-36", 18, 18),
+			new DecimalData("-123456789123456789E-36", 18, 18),
+			new DecimalData("123456789999999999E-36", 18, 18),
+			new DecimalData("-123456789999999999E-36", 18, 18)
+		};
+
+		for (DecimalData d : data) {
+			assertEquals(
+				Decimal.fromBigDecimal(new BigDecimal(d.str), d.precision, d.scale),
+				fromString(d.str).toDecimal(d.precision, d.scale));
+		}
+
+		BinaryRow row = new BinaryRow(data.length);
+		BinaryRowWriter writer = new BinaryRowWriter(row);
+		for (int i = 0; i < data.length; i++) {
+			writer.writeString(i, data[i].str);
+		}
+		writer.complete();
+		for (int i = 0; i < data.length; i++) {
+			DecimalData d = data[i];
+			assertEquals(
+				Decimal.fromBigDecimal(new BigDecimal(d.str), d.precision, d.scale),
+				row.getBinaryString(i).toDecimal(d.precision, d.scale));
+		}
+	}
+
+	@Test
+	public void testEmptyString() {
+		BinaryString str2 = fromString("hahahahah");
+		BinaryString str3 = new BinaryString();
+		{
+			MemorySegment[] segments = new MemorySegment[2];
+			segments[0] = MemorySegmentFactory.wrap(new byte[10]);
+			segments[1] = MemorySegmentFactory.wrap(new byte[10]);
+			str3.pointTo(segments, 15, 0);
+		}
+
+		assertTrue(BinaryString.EMPTY_UTF8.compareTo(str2) < 0);
+		assertTrue(str2.compareTo(BinaryString.EMPTY_UTF8) > 0);
+
+		assertTrue(BinaryString.EMPTY_UTF8.compareTo(str3) == 0);
+		assertTrue(str3.compareTo(BinaryString.EMPTY_UTF8) == 0);
+
+		assertFalse(BinaryString.EMPTY_UTF8.equals(str2));
+		assertFalse(str2.equals(BinaryString.EMPTY_UTF8));
+
+		assertTrue(BinaryString.EMPTY_UTF8.equals(str3));
+		assertTrue(str3.equals(BinaryString.EMPTY_UTF8));
+	}
+}

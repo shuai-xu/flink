@@ -21,10 +21,10 @@ package org.apache.flink.table.api.batch.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit._
 
-class SortValidationTest extends TableTestBase {
+class SortValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testOffsetWithoutOrder(): Unit = {

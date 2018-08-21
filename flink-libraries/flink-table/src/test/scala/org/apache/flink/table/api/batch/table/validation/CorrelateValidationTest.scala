@@ -21,10 +21,10 @@ package org.apache.flink.table.api.batch.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.{TableFunc1, TableTestBase}
-import org.junit.Test
+import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
+import org.junit.{Ignore, Test}
 
-class CorrelateValidationTest extends TableTestBase {
+class CorrelateValidationTest extends TableTestBatchExecBase {
 
   /**
     * Due to the improper translation of TableFunction left outer join (see CALCITE-2004), the
@@ -39,6 +39,6 @@ class CorrelateValidationTest extends TableTestBase {
     val result = table
       .leftOuterJoin(function('c) as 's, 'c === 's)
       .select('c, 's)
-    util.verifyTable(result, "")
+    util.verifyPlan(result)
   }
 }

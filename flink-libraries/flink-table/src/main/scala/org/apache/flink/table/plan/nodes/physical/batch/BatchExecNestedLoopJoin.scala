@@ -1,0 +1,537 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.plan.nodes.physical.batch
+
+import java.util
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.core._
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.util.ImmutableIntList
+import org.apache.flink.streaming.api.graph.StreamEdge.InputOrder
+import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
+import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.codegen.CodeGenUtils.newName
+import org.apache.flink.table.codegen.CodeGeneratorContext._
+import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
+import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{FIRST, NONE, SECOND, generatorCollect}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
+import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.nodes.ExpressionFormat
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.typeutils.BinaryRowSerializer
+import org.apache.flink.table.util.{BatchExecResourceUtil, ResettableExternalBuffer}
+
+import scala.collection.JavaConversions._
+
+trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
+
+  val leftIsBuild: Boolean
+  val singleRowJoin: Boolean
+
+  val input1Term: String = DEFAULT_INPUT1_TERM
+  val input2Term: String = DEFAULT_INPUT2_TERM
+  val (buildRow, buildArity, probeRow, probeArity, probeSelection) = {
+    val leftArity = getLeft.getRowType.getFieldCount
+    val rightArity = getRight.getRowType.getFieldCount
+    if (leftIsBuild) {
+      (input1Term, leftArity, input2Term, rightArity, SECOND)
+    } else {
+      (input2Term, rightArity, input1Term, leftArity, FIRST)
+    }
+  }
+
+  lazy val joinOperatorName: String = {
+    val joinExpressionStr = if (getCondition != null) {
+      val inFields = inputDataType.getFieldNames.toList
+      s"where: ${getExpressionString(getCondition, inFields, None, ExpressionFormat.Infix)}, "
+    } else {
+      ""
+    }
+    s"NestedLoopJoin($joinExpressionStr${if (leftIsBuild) "buildLeft" else "buildRight"})"
+  }
+
+  override def toString: String = joinOperatorName
+
+  override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def explainTerms(pw: RelWriter): RelWriter = {
+    super.explainTerms(pw).item("build", if (leftIsBuild) "left" else "right")
+      .item("singleRow", singleRowJoin)
+      .itemIf("reuse_id", getReuseId, isReused)
+  }
+
+  override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
+    // Assume NestedLoopJoin always broadcast data from child which smaller.
+    pushDownTraitsIntoBroadcastJoin(requiredTraitSet, leftIsBuild)
+  }
+
+  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
+    val leftRowCnt = mq.getRowCount(getLeft)
+    val rightRowCnt = mq.getRowCount(getRight)
+    if (leftRowCnt == null || rightRowCnt == null) {
+      return null
+    }
+    val buildRel= if (leftIsBuild) getLeft else getRight
+    val memoryCost = mq.getRowCount(buildRel) *
+          (mq.getAverageRowSize(buildRel) + BinaryRowSerializer.LENGTH_SIZE_IN_BYTES) *
+        shuffleBuildCount(mq)
+    val cpuCost = leftRowCnt * rightRowCnt
+    val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
+    costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memoryCost)
+  }
+
+  private[flink] def shuffleBuildCount(mq: RelMetadataQuery): Int = {
+    val probeRel = if (leftIsBuild) getRight else getLeft
+    val rowCount = mq.getRowCount(probeRel)
+    if (rowCount == null) {
+      1
+    } else {
+      Math.max(1,
+        (rowCount * mq.getAverageRowSize(probeRel) /
+          SQL_DEFAULT_PARALLELISM_WORKER_PROCESS_SIZE).toInt)
+    }
+  }
+
+  /**
+    * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
+    *
+    * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
+    * @param queryConfig The configuration for the query to generate.
+    */
+  override def translateToPlanInternal(
+      tableEnv: BatchTableEnvironment,
+      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+    val config = tableEnv.getConfig
+
+    val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    val rightInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+
+    val leftType = DataTypes.internal(leftInput.getOutputType).asInstanceOf[BaseRowType]
+    val rightType = DataTypes.internal(rightInput.getOutputType).asInstanceOf[BaseRowType]
+
+    val ctx = CodeGeneratorContext(config)
+    val exprGenerator = new ExprCodeGenerator(ctx, flinkJoinType.isOuter, config.getNullCheck)
+        .bindInput(leftType, inputTerm = input1Term)
+        .bindSecondInput(rightType, inputTerm = input2Term)
+
+    // otherwise we use ResettableExternalBuffer to prevent OOM
+    val buffer = newName("resettableExternalBuffer")
+    val iter = newName("iter")
+
+    // input row might not be binary row, need a serializer
+    val isFirstRow = newName("isFirstRow")
+    val isBinaryRow = newName("isBinaryRow")
+    val baseRowSerializer = newName("baseRowSerializer")
+
+    val externalBufferMemorySize =
+      reservedResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB
+
+    if (singleRowJoin) {
+      ctx.addReusableMember(s"$BASE_ROW $buildRow = null;")
+    } else {
+      ctx.addReusableMember(s"boolean $isFirstRow = true;")
+      ctx.addReusableMember(s"boolean $isBinaryRow = false;")
+      ctx.addReusableMember(s"$BASE_ROW_SERIALIZER $baseRowSerializer = null;")
+
+      val binaryRowSerializer = newName("binaryRowSerializer")
+      def initSerializer(i: Int): Unit = {
+        ctx.addReusableOpenStatement(
+          s"""
+             |$BINARY_ROW_SERIALIZER $binaryRowSerializer = new $BINARY_ROW_SERIALIZER(
+             |(($ABSTRACT_ROW_SERIALIZER) getOperatorContext().getTypeSerializerIn$i()).getTypes());
+             |""".stripMargin)
+      }
+      if (leftIsBuild) initSerializer(1) else initSerializer(2)
+
+      ctx.addReusableResettableExternalBuffer(buffer, externalBufferMemorySize, binaryRowSerializer)
+      ctx.addReusableCloseStatement(s"$buffer.close();")
+
+      val iterTerm = classOf[ResettableExternalBuffer#BufferIterator].getCanonicalName
+      ctx.addReusableMember(s"$iterTerm $iter = null;")
+    }
+
+    val condExpr = exprGenerator.generateExpression(getCondition)
+
+    val buildProcessCode = if (singleRowJoin) {
+      s"this.$buildRow = ($BASE_ROW) $buildRow.copy();"
+    } else {
+      s"""
+         |if ($isFirstRow) {
+         |  $isFirstRow = false;
+         |  if ($buildRow instanceof $BINARY_ROW) {
+         |    $isBinaryRow = true;
+         |  } else {
+         |    $isBinaryRow = false;
+         |    $baseRowSerializer = new $BASE_ROW_SERIALIZER(
+         |    (($ABSTRACT_ROW_SERIALIZER) getOperatorContext().getTypeSerializerIn${
+              if (leftIsBuild) 1 else 2}()).getTypes());
+         |  }
+         |}
+         |
+         |if ($isBinaryRow) {
+         |  $buffer.add(($BINARY_ROW) $buildRow.copy());
+         |} else {
+         |  $buffer.add($baseRowSerializer.baseRowToBinary($buildRow));
+         |}
+       """.stripMargin
+    }
+
+    val (probeProcessCode, buildEndCode, probeEndCode) =
+      genProcessAndEndCode(ctx, condExpr, iter, buffer)
+
+    // build first or second
+    val (firstInputCode, processCode1, endInputCode1, processCode2, endInputCode2)  =
+      if (leftIsBuild) {
+        (
+            FIRST,
+            s"""
+               |$buildProcessCode
+               |return $FIRST;
+             """.stripMargin,
+            s"""
+               |sendStageDoneEvent(0);
+               |$buildEndCode
+               |return $SECOND;
+             """.stripMargin,
+            probeProcessCode,
+            s"""
+               |$probeEndCode
+               |return $NONE;
+             """.stripMargin
+            )
+      }  else {
+        (
+            SECOND,
+            probeProcessCode,
+            s"""
+               |$probeEndCode
+               |return $NONE;
+             """.stripMargin,
+            s"""
+               |$buildProcessCode
+               |return $SECOND;
+             """.stripMargin,
+            s"""
+               |sendStageDoneEvent(0);
+               |$buildEndCode
+               |return $FIRST;
+             """.stripMargin
+            )
+      }
+
+    // generator operatorExpression
+    val operatorExpression =
+      OperatorCodeGenerator.generateTwoInputStreamOperator[BaseRow, BaseRow, BaseRow](
+        ctx,
+        description,
+        s"return $firstInputCode;",
+        processCode1,
+        endInputCode1,
+        processCode2,
+        endInputCode2,
+        leftType,
+        rightType,
+        input1Term = input1Term,
+        input2Term = input2Term
+      )
+
+    val substituteStreamOperator = new SubstituteStreamOperator[BaseRow](
+      operatorExpression.name,
+      operatorExpression.code)
+
+    LOG.info(
+      this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
+    val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
+      leftInput,
+      rightInput,
+      joinOperatorName,
+      substituteStreamOperator,
+      getOutputType,
+      resultPartitionCount
+    )
+    substituteStreamOperator.setRelID(transformation.getId)
+    transformation.setParallelismLocked(true)
+    tableEnv.getRUKeeper().addTransformation(this, transformation)
+    tableEnv.getRUKeeper().setRelID(this, transformation.getId)
+    transformation.setFirstReadAllInput(if (leftIsBuild) InputOrder.FIRST else InputOrder.SECOND)
+    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation
+  }
+
+  def newIter(iter: String, buffer: String): String = {
+    s"""
+       |if ($iter == null) {
+       |  $iter = $buffer.newIterator();
+       |} else {
+       |  $iter.reset();
+       |}
+       |""".stripMargin
+  }
+
+  /**
+    * @return (processCode, buildEndCode, probeEndCode).
+    */
+  def genProcessAndEndCode(
+      ctx: CodeGeneratorContext,
+      condExpr: GeneratedExpression,
+      iter: String,
+      buffer: String): (String, String, String)
+}
+
+class BatchExecNestedLoopJoin(
+    cluster: RelOptCluster,
+    traitSet: RelTraitSet,
+    left: RelNode,
+    right: RelNode,
+    val leftIsBuild: Boolean,
+    joinCondition: RexNode,
+    joinType: JoinRelType,
+    val singleRowJoin: Boolean,
+    val description: String)
+  extends Join(cluster, traitSet, left, right, joinCondition, Set.empty[CorrelationId], joinType)
+  with BatchExecNestedLoopJoinBase {
+
+  override def copy(
+      traitSet: RelTraitSet,
+      conditionExpr: RexNode,
+      left: RelNode,
+      right: RelNode,
+      joinType: JoinRelType,
+      semiJoinDone: Boolean): Join =
+    super.supplement(new BatchExecNestedLoopJoin(
+      cluster,
+      traitSet,
+      left,
+      right,
+      leftIsBuild,
+      conditionExpr,
+      joinType,
+      singleRowJoin,
+      description))
+
+  override def genProcessAndEndCode(
+      ctx: CodeGeneratorContext,
+      condExpr: GeneratedExpression,
+      iter: String,
+      buffer: String): (String, String, String) = {
+    val joinedRow = newName("joinedRow")
+    val buildRowMatched: String = newName("buildRowMatched")
+    val buildNullRow = newName("buildNullRow")
+    val probeNullRow = newName("probeNullRow")
+
+    val isFull: Boolean = flinkJoinType == FlinkJoinRelType.FULL
+    val probeOuter = flinkJoinType.isOuter
+
+    ctx.addOutputRecord(getOutputRowType, joinedRow)
+    ctx.addReusableNullRow(buildNullRow, buildArity)
+
+    val bitSetTerm = classOf[util.BitSet].getCanonicalName
+    if (isFull) {
+      ctx.addReusableNullRow(probeNullRow, probeArity)
+      if (singleRowJoin) {
+        ctx.addReusableMember(s"boolean $buildRowMatched = false;")
+      } else {
+        // BitSet is slower than boolean[].
+        // We can use boolean[] when there are a small number of records.
+        ctx.addReusableMember(s"$bitSetTerm $buildRowMatched = null;")
+      }
+    }
+
+    val probeOuterCode =
+      s"""
+         |if (!matched) {
+         |  ${generatorCollect(
+                if (leftIsBuild) {
+                  s"$joinedRow.replace($buildNullRow, $probeRow)"
+                } else {
+                  s"$joinedRow.replace($probeRow, $buildNullRow)"
+                })}
+         |}
+            """.stripMargin
+
+    val goJoin = {
+      s"""
+         |${ctx.reusePerRecordCode()}
+         |${ctx.reuseInputUnboxingCode(Set(buildRow))}
+         |${condExpr.code}
+         |if (${condExpr.resultTerm}) {
+         |  ${generatorCollect(s"$joinedRow.replace($input1Term, $input2Term)")}
+         |  ${if (probeOuter) "matched = true;" else ""}
+         |""".stripMargin
+    }
+
+    val checkMatched = if (singleRowJoin) {
+      s"""
+         |if ($buildRow != null) {
+         |  $goJoin
+         |  ${if (isFull) s"$buildRowMatched = true;" else ""}
+         |  }
+         |}
+       """.stripMargin
+    } else {
+      s"""
+         |${newIter(iter, buffer)}
+         |${if (isFull) s"int iterCnt = -1;" else ""}
+         |while ($iter.advanceNext()) {
+         |  ${if (isFull) s"iterCnt++;" else ""}
+         |  $BINARY_ROW $buildRow = $iter.getRow();
+         |  $goJoin
+         |  ${if (isFull) s"$buildRowMatched.set(iterCnt);" else ""}
+         |  }
+         |}
+         |""".stripMargin
+    }
+
+    val processCode =
+      s"""
+         |${if (probeOuter) "boolean matched = false;" else ""}
+         |${ctx.reuseInputUnboxingCode(Set(probeRow))}
+         |$checkMatched
+         |${if (probeOuter) probeOuterCode else ""}
+         |return $probeSelection;
+         |""".stripMargin
+
+    val buildEndCode = if (!singleRowJoin && isFull) {
+      s"$buildRowMatched = new $bitSetTerm($buffer.size());"
+    } else {
+      ""
+    }
+
+    val buildOuterEmit = generatorCollect(
+      if (leftIsBuild) {
+        s"$joinedRow.replace($buildRow, $probeNullRow)"
+      } else {
+        s"$joinedRow.replace($probeNullRow, $buildRow)"
+      })
+
+    val probeEndCode = if (isFull) {
+      if (singleRowJoin) {
+        s"""
+           |if ($buildRow != null && !$buildRowMatched) {
+           |  $buildOuterEmit
+           |}
+         """.stripMargin
+      } else {
+        s"""
+           |${newIter(iter, buffer)}
+           |int iterCnt = -1;
+           |while ($iter.advanceNext()) {
+           |  iterCnt++;
+           |  $BINARY_ROW $buildRow = $iter.getRow();
+           |  if (!$buildRowMatched.get(iterCnt)) {
+           |    $buildOuterEmit
+           |  }
+           |}
+           |""".stripMargin
+      }
+    } else {
+      ""
+    }
+
+    (processCode, buildEndCode, probeEndCode)
+  }
+}
+
+class BatchExecNestedLoopSemiJoin(
+    cluster: RelOptCluster,
+    traitSet: RelTraitSet,
+    left: RelNode,
+    right: RelNode,
+    joinCondition: RexNode,
+    leftKeys: ImmutableIntList,
+    rightKeys: ImmutableIntList,
+    isAntiJoin: Boolean,
+    val singleRowJoin: Boolean,
+    val description: String)
+  extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
+  with BatchExecNestedLoopJoinBase {
+
+  val leftIsBuild: Boolean = false
+
+  override def copy(
+      traitSet: RelTraitSet,
+      condition: RexNode,
+      left: RelNode,
+      right: RelNode,
+      joinType: JoinRelType,
+      semiJoinDone: Boolean): SemiJoin = {
+    val joinInfo = JoinInfo.of(left, right, condition)
+    super.supplement(new BatchExecNestedLoopSemiJoin(
+      cluster,
+      traitSet,
+      left,
+      right,
+      condition,
+      joinInfo.leftKeys,
+      joinInfo.rightKeys,
+      isAnti,
+      singleRowJoin,
+      description))
+  }
+
+  override def genProcessAndEndCode(
+      ctx: CodeGeneratorContext,
+      condExpr: GeneratedExpression,
+      iter: String,
+      buffer: String): (String, String, String) = {
+    val checkMatchedCode = if (singleRowJoin) {
+      s"""
+         |if ($buildRow != null) {
+         |  ${ctx.reusePerRecordCode()}
+         |  ${ctx.reuseInputUnboxingCode(Set(buildRow))}
+         |  ${condExpr.code}
+         |  if (${condExpr.resultTerm}) {
+         |    matched = true;
+         |  }
+         |}
+         |""".stripMargin
+    } else {
+      s"""
+         |${newIter(iter, buffer)}
+         |while ($iter.advanceNext()) {
+         |  $BINARY_ROW $buildRow = $iter.getRow();
+         |  ${ctx.reusePerRecordCode()}
+         |  ${ctx.reuseInputUnboxingCode(Set(buildRow))}
+         |  ${condExpr.code}
+         |  if (${condExpr.resultTerm}) {
+         |    matched = true;
+         |    break;
+         |  }
+         |}
+         |""".stripMargin
+    }
+
+    (s"""
+       |boolean matched = false;
+       |${ctx.reuseInputUnboxingCode(Set(probeRow))}
+       |$checkMatchedCode
+       |if (${if (isAnti) "!" else ""}matched) {
+       |  ${generatorCollect(probeRow)}
+       |}
+       |return $probeSelection;
+       |""".stripMargin, "", "")
+  }
+}

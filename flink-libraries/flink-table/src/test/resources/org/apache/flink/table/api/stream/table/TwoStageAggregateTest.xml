@@ -1,0 +1,89 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+  <TestCase name="testGroupAggregate">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[TMP_0])
+  StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, Final_COUNT(count$0) AS TMP_0])
+    StreamExecExchange(distribution=[hash[b]])
+      StreamExecLocalGroupAggregate(groupBy=[b], select=[b, Partial_COUNT(a) AS count$0])
+        StreamExecCalc(select=[a, b])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupAggregateWithAverage">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, Final_AVG(sum$0, count$1) AS TMP_0])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecLocalGroupAggregate(groupBy=[b], select=[b, Partial_AVG(a0) AS (sum$0, count$1)])
+      StreamExecCalc(select=[b, a, CAST(a) AS a0])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupAggregateWithExpressionInSelect">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[TMP_0, TMP_1])
+  StreamExecGlobalGroupAggregate(groupBy=[d], select=[d, Final_MIN(min$0) AS TMP_0, Final_AVG(sum$1, count$2) AS TMP_1])
+    StreamExecExchange(distribution=[hash[d]])
+      StreamExecLocalGroupAggregate(groupBy=[d], select=[d, Partial_MIN(c) AS min$0, Partial_AVG(a) AS (sum$1, count$2)])
+        StreamExecCalc(select=[c, a, MOD(b, 3) AS d])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupAggregateWithConstant1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[4 AS four, TMP_0])
+  StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS TMP_0])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
+        StreamExecCalc(select=[4 AS four, b, a])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupAggregateWithConstant2">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[4 AS four, TMP_0])
+  StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, Final_SUM(sum$0) AS TMP_0])
+    StreamExecExchange(distribution=[hash[b]])
+      StreamExecLocalGroupAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
+        StreamExecCalc(select=[4 AS four, a, b])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupAggregateWithFilter">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, Final_SUM(sum$0) AS TMP_0])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecLocalGroupAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
+      StreamExecCalc(select=[CAST(2) AS b, a], where=[=(b, 2)])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+</Root>

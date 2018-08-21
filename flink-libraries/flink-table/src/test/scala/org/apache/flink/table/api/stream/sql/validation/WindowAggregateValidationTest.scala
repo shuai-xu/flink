@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
-import org.apache.flink.table.utils.{StreamTableTestUtil, TableTestBase}
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Test
 
 class WindowAggregateValidationTest extends TableTestBase {
@@ -37,7 +37,7 @@ class WindowAggregateValidationTest extends TableTestBase {
         "FROM MyTable " +
         "GROUP BY TUMBLE(proctime, INTERVAL '2' HOUR, TIME '10:00:00')"
 
-    streamUtil.verifySql(sqlQuery, "n/a")
+    streamUtil.explainSql(sqlQuery)
   }
 
   @Test(expected = classOf[TableException])
@@ -47,7 +47,7 @@ class WindowAggregateValidationTest extends TableTestBase {
         "FROM MyTable " +
         "GROUP BY HOP(proctime, INTERVAL '1' HOUR, INTERVAL '2' HOUR, TIME '10:00:00')"
 
-    streamUtil.verifySql(sqlQuery, "n/a")
+    streamUtil.explainSql(sqlQuery)
   }
 
   @Test(expected = classOf[TableException])
@@ -57,13 +57,13 @@ class WindowAggregateValidationTest extends TableTestBase {
         "FROM MyTable " +
         "GROUP BY SESSION(proctime, INTERVAL '2' HOUR, TIME '10:00:00')"
 
-    streamUtil.verifySql(sqlQuery, "n/a")
+    streamUtil.explainSql(sqlQuery)
   }
 
   @Test(expected = classOf[TableException])
-  def testVariableWindowSize() = {
+  def testVariableWindowSize(): Unit = {
     val sql = "SELECT COUNT(*) FROM MyTable GROUP BY TUMBLE(proctime, c * INTERVAL '1' MINUTE)"
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -75,6 +75,6 @@ class WindowAggregateValidationTest extends TableTestBase {
         "FROM MyTable " +
         "GROUP BY TUMBLE(proctime(), INTERVAL '2' HOUR, TIME '10:00:00')"
 
-    streamUtil.verifySql(sqlQuery, "n/a")
+    streamUtil.explainSql(sqlQuery)
   }
 }

@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.runtime.utils
 
+import java.util.TimeZone
+
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
 import org.apache.flink.test.util.MultipleProgramsTestBase
@@ -27,6 +29,8 @@ class TableProgramsTestBase(
     mode: TestExecutionMode,
     tableConfigMode: TableConfigMode)
   extends MultipleProgramsTestBase(mode) {
+
+  TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
   def config: TableConfig = {
     val conf = new TableConfig

@@ -18,10 +18,16 @@
 
 package org.apache.flink.table.catalog
 
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+
+import java.util.{LinkedHashMap => JLinkedHashMap, LinkedHashSet => JLinkedHashSet}
+
+import com.google.common.collect.{ImmutableMap, ImmutableSet}
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.table.api._
-import org.junit.{Before, Test}
+import org.apache.flink.table.plan.stats.TableStats
+import org.apache.flink.table.types.DataTypes
 import org.junit.Assert._
+import org.junit.{Before, Test}
 
 class InMemoryExternalCatalogTest {
 
@@ -32,6 +38,168 @@ class InMemoryExternalCatalogTest {
   @Before
   def setUp(): Unit = {
     catalog = new InMemoryExternalCatalog(databaseName)
+  }
+
+  @Test
+  def testCreatePartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    assertTrue(catalog.listPartitions(tableName).isEmpty)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("hour", "12", "ds", "2016-02-01"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, false)
+    val partitionSpecs = catalog.listPartitions(tableName)
+    assertEquals(partitionSpecs.size(), 1)
+    assertEquals(partitionSpecs.get(0), newPartitionSpec)
+  }
+
+  @Test(expected = classOf[UnsupportedOperationException])
+  def testCreatePartitionOnUnPartitionedTable(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createNonPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, ignoreIfExists = false)
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testCreateInvalidPartitionSpec(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "h", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, false)
+  }
+
+  @Test(expected = classOf[PartitionAlreadyExistException])
+  def testCreateExistedPartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, false)
+    val newPartitionSpec1 = new JLinkedHashMap[String, String](
+      ImmutableMap.of("hour", "12", "ds", "2016-02-01"))
+    val newPartition1 = ExternalCatalogTablePartition(newPartitionSpec1)
+    catalog.createPartition(tableName, newPartition1, false)
+  }
+
+  @Test(expected = classOf[TableNotExistException])
+  def testCreatePartitionOnNotExistTable(): Unit = {
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition("notexistedTb", newPartition, false)
+  }
+
+  @Test
+  def testGetPartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, ignoreIfExists = false)
+    assertEquals(catalog.getPartition(tableName, newPartitionSpec), newPartition)
+  }
+
+  @Test(expected = classOf[PartitionNotExistException])
+  def testGetNotExistPartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    assertEquals(catalog.getPartition(tableName, newPartitionSpec), newPartition)
+  }
+
+  @Test
+  def testDropPartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, ignoreIfExists = false)
+    assertTrue(catalog.listPartitions(tableName).contains(newPartitionSpec))
+    catalog.dropPartition(tableName, newPartitionSpec, ignoreIfNotExists = false)
+    assertFalse(catalog.listPartitions(tableName).contains(newPartitionSpec))
+  }
+
+  @Test(expected = classOf[PartitionNotExistException])
+  def testDropNotExistPartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val partitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    catalog.dropPartition(tableName, partitionSpec, ignoreIfNotExists = false)
+  }
+
+  @Test
+  def testListPartitionSpec(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    assertTrue(catalog.listPartitions(tableName).isEmpty)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(newPartitionSpec)
+    catalog.createPartition(tableName, newPartition, false)
+    val partitionSpecs = catalog.listPartitions(tableName)
+    assertEquals(partitionSpecs.size(), 1)
+    assertEquals(partitionSpecs.get(0), newPartitionSpec)
+  }
+
+  @Test
+  def testAlterPartition(): Unit = {
+    val tableName = "t1"
+    catalog.createTable(
+      tableName,
+      createPartitionedTableInstance,
+      ignoreIfExists = false)
+    val newPartitionSpec = new JLinkedHashMap[String, String](
+      ImmutableMap.of("ds", "2016-02-01", "hour", "12"))
+    val newPartition = ExternalCatalogTablePartition(
+      newPartitionSpec,
+      properties = ImmutableMap.of("location", "/tmp/ds=2016-02-01/hour=12"))
+    catalog.createPartition(tableName, newPartition, false)
+    val updatedPartition = ExternalCatalogTablePartition(
+      newPartitionSpec,
+      properties = ImmutableMap.of("location", "/tmp1/ds=2016-02-01/hour=12"))
+    catalog.alterPartition(tableName, updatedPartition, false)
+    val currentPartition = catalog.getPartition(tableName, newPartitionSpec)
+    assertEquals(currentPartition, updatedPartition)
+    assertNotEquals(currentPartition, newPartition)
   }
 
   @Test
@@ -68,7 +236,7 @@ class InMemoryExternalCatalogTest {
     val table = createTableInstance()
     catalog.createTable(tableName, table, ignoreIfExists = false)
     assertEquals(catalog.getTable(tableName), table)
-    val newTable = createTableInstance(Array("number"), Array(Types.INT))
+    val newTable = createTableInstance()
     catalog.alterTable(tableName, newTable, ignoreIfNotExists = false)
     val currentTable = catalog.getTable(tableName)
     // validate the table is really replaced after alter table
@@ -132,21 +300,67 @@ class InMemoryExternalCatalogTest {
     assertEquals("table", tables.get(0))
   }
 
+  @Test
+  def testAlterTableStats(): Unit = {
+    val tableName = "t1"
+    val table = createTableInstance()
+    assertNull(table.stats)
+    catalog.createTable(tableName, table, ignoreIfExists = false)
+    assertEquals(catalog.getTable(tableName), table)
+
+    val newTableStats = new TableStats(1000L)
+    catalog.alterTableStats(tableName, Some(newTableStats), ignoreIfNotExists = false)
+    val currentTable = catalog.getTable(tableName)
+    assertNotEquals(table, currentTable)
+    assertEquals(table.copy(stats = newTableStats), currentTable)
+    assertEquals(newTableStats, currentTable.stats)
+
+    // update TableStats with None
+    catalog.alterTableStats(tableName, None, ignoreIfNotExists = false)
+    val currentTable2 = catalog.getTable(tableName)
+    assertEquals(table, currentTable2)
+    assertNull(currentTable2.stats)
+  }
+
+  @Test(expected = classOf[TableNotExistException])
+  def testAlterTableStatsWithNotExistTable(): Unit = {
+    catalog.alterTableStats("nonexisted", Some(new TableStats(1000L)), ignoreIfNotExists = false)
+  }
+
   private def createTableInstance(): ExternalCatalogTable = {
     val schema = new TableSchema(
       Array("first", "second"),
       Array(
-        BasicTypeInfo.STRING_TYPE_INFO,
-        BasicTypeInfo.INT_TYPE_INFO
+        DataTypes.STRING,
+        DataTypes.INT
       )
     )
     ExternalCatalogTable("csv", schema)
   }
 
-  private def createTableInstance(
-      fieldNames: Array[String],
-      fieldTypes: Array[TypeInformation[_]]): ExternalCatalogTable = {
-    val schema = new TableSchema(fieldNames, fieldTypes)
+  private def createNonPartitionedTableInstance: ExternalCatalogTable = {
+    val schema = new TableSchema(
+      Array("first", "second"),
+      Array(
+        DataTypes.STRING,
+        DataTypes.INT
+      ))
     ExternalCatalogTable("csv", schema)
   }
+
+  private def createPartitionedTableInstance: ExternalCatalogTable = {
+    val schema = new TableSchema(
+      Array("first", "second"),
+      Array(
+        DataTypes.STRING,
+        DataTypes.INT
+      ))
+    ExternalCatalogTable(
+      "hive",
+      schema,
+      partitionColumnNames = new JLinkedHashSet(ImmutableSet.of("ds", "hour")),
+      isPartitioned = true
+    )
+  }
+
 }

@@ -18,12 +18,12 @@
 package org.apache.flink.table.expressions
 
 import org.apache.calcite.avatica.util.DateTimeUtils.{MILLIS_PER_DAY, MILLIS_PER_HOUR, MILLIS_PER_MINUTE, MILLIS_PER_SECOND}
-import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.ExpressionUtils.{toMilliInterval, toMonthInterval}
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
 import org.apache.flink.table.expressions.TrimMode.TrimMode
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 
 import _root_.scala.language.implicitConversions
 import _root_.scala.util.parsing.combinator.{JavaTokenParsers, PackratParsers}
@@ -57,6 +57,7 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
   lazy val EXTRACT: Keyword = Keyword("extract")
   lazy val FLOOR: Keyword = Keyword("floor")
   lazy val CEIL: Keyword = Keyword("ceil")
+  lazy val LOG: Keyword = Keyword("log")
   lazy val YEARS: Keyword = Keyword("years")
   lazy val YEAR: Keyword = Keyword("year")
   lazy val MONTHS: Keyword = Keyword("months")
@@ -139,24 +140,25 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
 
   // data types
 
-  lazy val dataType: PackratParser[TypeInformation[_]] =
-    PRIMITIVE_ARRAY ~ "(" ~> dataType <~ ")" ^^ { ct => Types.PRIMITIVE_ARRAY(ct) } |
-    OBJECT_ARRAY ~ "(" ~> dataType <~ ")" ^^ { ct => Types.OBJECT_ARRAY(ct) } |
-    MAP ~ "(" ~> dataType ~ "," ~ dataType <~ ")" ^^ { mt => Types.MAP(mt._1._1, mt._2)} |
-    BYTE ^^ { e => Types.BYTE } |
-    SHORT ^^ { e => Types.SHORT } |
-    INTERVAL_MONTHS ^^ { e => Types.INTERVAL_MONTHS } |
-    INTERVAL_MILLIS ^^ { e => Types.INTERVAL_MILLIS } |
-    INT ^^ { e => Types.INT } |
-    LONG ^^ { e => Types.LONG } |
-    FLOAT ^^ { e => Types.FLOAT } |
-    DOUBLE ^^ { e => Types.DOUBLE } |
-    BOOLEAN ^^ { { e => Types.BOOLEAN } } |
-    STRING ^^ { e => Types.STRING } |
-    SQL_DATE ^^ { e => Types.SQL_DATE } |
-    SQL_TIMESTAMP ^^ { e => Types.SQL_TIMESTAMP } |
-    SQL_TIME ^^ { e => Types.SQL_TIME } |
-    DECIMAL ^^ { e => Types.DECIMAL }
+  lazy val dataType: PackratParser[InternalType] =
+    PRIMITIVE_ARRAY ~ "(" ~> dataType <~ ")" ^^ { ct => DataTypes.createPrimitiveArrayType(ct) } |
+    OBJECT_ARRAY ~ "(" ~> dataType <~ ")" ^^ { ct => DataTypes.createArrayType(ct) } |
+    MAP ~ "(" ~> dataType ~ "," ~ dataType <~ ")" ^^ {
+      mt => DataTypes.createMapType(mt._1._1, mt._2)} |
+    BYTE ^^ { e => DataTypes.BYTE } |
+    SHORT ^^ { e => DataTypes.SHORT } |
+    INTERVAL_MONTHS ^^ { e => DataTypes.INTERVAL_MONTHS } |
+    INTERVAL_MILLIS ^^ { e => DataTypes.INTERVAL_MILLIS } |
+    INT ^^ { e => DataTypes.INT } |
+    LONG ^^ { e => DataTypes.LONG } |
+    FLOAT ^^ { e => DataTypes.FLOAT } |
+    DOUBLE ^^ { e => DataTypes.DOUBLE } |
+    BOOLEAN ^^ { { e => DataTypes.BOOLEAN } } |
+    STRING ^^ { e => DataTypes.STRING } |
+    SQL_DATE ^^ { e => DataTypes.DATE } |
+    SQL_TIMESTAMP ^^ { e => DataTypes.TIMESTAMP } |
+    SQL_TIME ^^ { e => DataTypes.TIME } |
+    DECIMAL ^^ { e => DecimalType.of(38, 0) } // same as calcite default
 
   // literals
 
@@ -246,6 +248,12 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
       case operand ~ _  ~ _ ~ _ ~ unit ~ _ => TemporalCeil(unit, operand)
     }
 
+  // required because op.log(base) changes order of a parameters
+  lazy val suffixLog: PackratParser[Expression] =
+    composite ~ "." ~ LOG ~ "(" ~ expression ~ ")" ^^ {
+      case operand ~ _ ~ _ ~ _ ~ base ~ _ => Log(base, operand)
+    }
+
   lazy val suffixFunctionCall: PackratParser[Expression] =
     composite ~ "." ~ functionIdent ~ "(" ~ repsep(expression, ",") ~ ")" ^^ {
     case operand ~ _ ~ name ~ _ ~ args ~ _ => Call(name.toUpperCase, operand :: args)
@@ -257,13 +265,13 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
     }
 
   lazy val suffixToDate: PackratParser[Expression] =
-    composite <~ "." ~ TO_DATE ~ opt("()") ^^ { e => Cast(e, SqlTimeTypeInfo.DATE) }
+    composite <~ "." ~ TO_DATE ~ opt("()") ^^ { e => Cast(e, DataTypes.DATE) }
 
   lazy val suffixToTimestamp: PackratParser[Expression] =
-    composite <~ "." ~ TO_TIMESTAMP ~ opt("()") ^^ { e => Cast(e, SqlTimeTypeInfo.TIMESTAMP) }
+    composite <~ "." ~ TO_TIMESTAMP ~ opt("()") ^^ { e => Cast(e, DataTypes.TIMESTAMP) }
 
   lazy val suffixToTime: PackratParser[Expression] =
-    composite <~ "." ~ TO_TIME ~ opt("()") ^^ { e => Cast(e, SqlTimeTypeInfo.TIME) }
+    composite <~ "." ~ TO_TIME ~ opt("()") ^^ { e => Cast(e, DataTypes.TIME) }
 
   lazy val suffixTimeInterval : PackratParser[Expression] =
     composite ~ "." ~ (YEARS | MONTHS | DAYS | HOURS | MINUTES | SECONDS | MILLIS |
@@ -307,6 +315,8 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
     // expressions that need special expression conversion
     suffixAs | suffixTimeInterval | suffixRowInterval | suffixToTimestamp | suffixToTime |
     suffixToDate |
+    // expression for log
+    suffixLog |
     // expressions that take enumerations
     suffixCast | suffixTrim | suffixTrimWithoutArgs | suffixExtract | suffixFloor | suffixCeil |
     // expressions that take literals
@@ -372,13 +382,13 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
     FLATTEN ~ "(" ~> composite <~ ")" ^^ { e => Flattening(e) }
 
   lazy val prefixToDate: PackratParser[Expression] =
-    TO_DATE ~ "(" ~> expression <~ ")" ^^ { e => Cast(e, SqlTimeTypeInfo.DATE) }
+    TO_DATE ~ "(" ~> expression <~ ")" ^^ { e => Cast(e, DataTypes.DATE) }
 
   lazy val prefixToTimestamp: PackratParser[Expression] =
-    TO_TIMESTAMP ~ "(" ~> expression <~ ")" ^^ { e => Cast(e, SqlTimeTypeInfo.TIMESTAMP) }
+    TO_TIMESTAMP ~ "(" ~> expression <~ ")" ^^ { e => Cast(e, DataTypes.TIMESTAMP) }
 
   lazy val prefixToTime: PackratParser[Expression] =
-    TO_TIME ~ "(" ~> expression <~ ")" ^^ { e => Cast(e, SqlTimeTypeInfo.TIME) }
+    TO_TIME ~ "(" ~> expression <~ ")" ^^ { e => Cast(e, DataTypes.TIME) }
 
   lazy val prefixAs: PackratParser[Expression] =
     AS ~ "(" ~ expression ~ "," ~ rep1sep(fieldReference, ",") ~ ")" ^^ {

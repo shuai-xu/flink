@@ -29,14 +29,18 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.runtime.utils.JavaStreamTestData;
-import org.apache.flink.table.runtime.utils.StreamITCase;
+import org.apache.flink.table.runtime.utils.TestingAppendSink;
 import org.apache.flink.test.util.AbstractTestBase;
 import org.apache.flink.types.Row;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import scala.collection.JavaConversions;
 
 /**
  * Integration tests for streaming SQL.
@@ -47,7 +51,6 @@ public class JavaSqlITCase extends AbstractTestBase {
 	public void testRowRegisterRowWithNames() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-		StreamITCase.clear();
 
 		List<Row> data = new ArrayList<>();
 		data.add(Row.of(1, 1L, "Hi"));
@@ -71,7 +74,8 @@ public class JavaSqlITCase extends AbstractTestBase {
 		Table result = tableEnv.sqlQuery(sqlQuery);
 
 		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
-		resultSet.addSink(new StreamITCase.StringSink<Row>());
+		TestingAppendSink sink = new TestingAppendSink();
+		resultSet.addSink(sink);
 		env.execute();
 
 		List<String> expected = new ArrayList<>();
@@ -79,14 +83,16 @@ public class JavaSqlITCase extends AbstractTestBase {
 		expected.add("2,Hello");
 		expected.add("3,Hello world");
 
-		StreamITCase.compareWithList(expected);
+		List<String> results = new ArrayList<>(JavaConversions.seqAsJavaList(sink.getAppendResults()));
+		Collections.sort(expected);
+		Collections.sort(results);
+		Assert.assertEquals(expected, results);
 	}
 
 	@Test
 	public void testSelect() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds = JavaStreamTestData.getSmall3TupleDataSet(env);
 		Table in = tableEnv.fromDataStream(ds, "a,b,c");
@@ -96,7 +102,8 @@ public class JavaSqlITCase extends AbstractTestBase {
 		Table result = tableEnv.sqlQuery(sqlQuery);
 
 		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
-		resultSet.addSink(new StreamITCase.StringSink<Row>());
+		TestingAppendSink sink = new TestingAppendSink();
+		resultSet.addSink(sink);
 		env.execute();
 
 		List<String> expected = new ArrayList<>();
@@ -104,14 +111,16 @@ public class JavaSqlITCase extends AbstractTestBase {
 		expected.add("2,2,Hello");
 		expected.add("3,2,Hello world");
 
-		StreamITCase.compareWithList(expected);
+		List<String> results = new ArrayList<>(JavaConversions.seqAsJavaList(sink.getAppendResults()));
+		Collections.sort(expected);
+		Collections.sort(results);
+		Assert.assertEquals(expected, results);
 	}
 
 	@Test
 	public void testFilter() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-		StreamITCase.clear();
 
 		DataStream<Tuple5<Integer, Long, Integer, String, Long>> ds = JavaStreamTestData.get5TupleDataStream(env);
 		tableEnv.registerDataStream("MyTable", ds, "a, b, c, d, e");
@@ -120,7 +129,8 @@ public class JavaSqlITCase extends AbstractTestBase {
 		Table result = tableEnv.sqlQuery(sqlQuery);
 
 		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
-		resultSet.addSink(new StreamITCase.StringSink<Row>());
+		TestingAppendSink sink = new TestingAppendSink();
+		resultSet.addSink(sink);
 		env.execute();
 
 		List<String> expected = new ArrayList<>();
@@ -129,14 +139,16 @@ public class JavaSqlITCase extends AbstractTestBase {
 		expected.add("2,3,1");
 		expected.add("3,4,2");
 
-		StreamITCase.compareWithList(expected);
+		List<String> results = new ArrayList<>(JavaConversions.seqAsJavaList(sink.getAppendResults()));
+		Collections.sort(expected);
+		Collections.sort(results);
+		Assert.assertEquals(expected, results);
 	}
 
 	@Test
 	public void testUnion() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds1 = JavaStreamTestData.getSmall3TupleDataSet(env);
 		Table t1 = tableEnv.fromDataStream(ds1, "a,b,c");
@@ -151,7 +163,8 @@ public class JavaSqlITCase extends AbstractTestBase {
 		Table result = tableEnv.sqlQuery(sqlQuery);
 
 		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
-		resultSet.addSink(new StreamITCase.StringSink<Row>());
+		TestingAppendSink sink = new TestingAppendSink();
+		resultSet.addSink(sink);
 		env.execute();
 
 		List<String> expected = new ArrayList<>();
@@ -162,6 +175,9 @@ public class JavaSqlITCase extends AbstractTestBase {
 		expected.add("2,2,Hallo Welt");
 		expected.add("2,3,Hallo Welt wie");
 
-		StreamITCase.compareWithList(expected);
+		List<String> results = new ArrayList<>(JavaConversions.seqAsJavaList(sink.getAppendResults()));
+		Collections.sort(expected);
+		Collections.sort(results);
+		Assert.assertEquals(expected, results);
 	}
 }

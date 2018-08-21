@@ -1,0 +1,184 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.flink.table.plan.rules.physical.batch
+
+import java.util.{ArrayList => JArrayList}
+
+import org.apache.calcite.plan.RelOptRuleCall
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Aggregate
+import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
+import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
+import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
+import org.apache.flink.table.plan.util.AggregateUtil
+import org.apache.flink.table.dataformat.BinaryRow
+import org.apache.flink.table.runtime.aggregate.RelFieldCollations
+import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.util.FlinkRelOptUtil
+
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+
+trait BatchExecAggRuleBase {
+
+  protected def inferLocalAggType(
+      inputType: RelDataType,
+      agg: Aggregate,
+      groupSet: Array[Int],
+      auxGroupSet: Array[Int],
+      aggregates: Array[UserDefinedFunction],
+      aggBufferTypes: Array[Array[InternalType]]): RelDataType = {
+
+    val aggNames = agg.getNamedAggCalls.map(_.right)
+
+    val aggBufferFieldNames = new Array[Array[String]](aggregates.length)
+    var index = -1
+    aggregates.zipWithIndex.foreach{ case (udf, aggIndex) =>
+      aggBufferFieldNames(aggIndex) = udf match {
+          case _: TableAggregateFunction[_, _] =>
+            Array(aggNames(aggIndex))
+          case agf: DeclarativeAggregateFunction =>
+            agf.aggBufferAttributes.map { attr =>
+              index += 1
+              s"${attr.name}$$$index"}.toArray
+          case _: UserDefinedFunction =>
+            throw new TableException(s"Don't get localAgg merge name")
+        }
+    }
+
+    //localAggType
+    // local agg output order: groupSet + auxGroupSet + aggCalls
+    val typeFactory = agg.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    val aggBufferSqlTypes = aggBufferTypes.flatten.map { t =>
+      val nullable = !FlinkTypeFactory.isTimeIndicatorType(t)
+      typeFactory.createTypeFromInternalType(t, nullable)
+    }
+
+    val localAggFieldTypes = (
+      groupSet.map(inputType.getFieldList.get(_).getType) ++ // groupSet
+        auxGroupSet.map(inputType.getFieldList.get(_).getType) ++ // auxGroupSet
+        aggBufferSqlTypes // aggCalls
+      ).toList
+
+    val localAggFieldNames = (
+      groupSet.map(inputType.getFieldList.get(_).getName) ++ // groupSet
+        auxGroupSet.map(inputType.getFieldList.get(_).getName) ++ // auxGroupSet
+        aggBufferFieldNames.flatten.toArray[String] // aggCalls
+      ).toList
+
+    typeFactory.createStructType(localAggFieldTypes.asJava, localAggFieldNames.asJava)
+  }
+
+  protected def inferLocalWindowAggType(
+      enableAssignPane: Boolean,
+      inputType: RelDataType,
+      agg: Aggregate,
+      groupSet: Array[Int],
+      auxGroupSet: Array[Int],
+      windowType: InternalType,
+      aggregates: Array[UserDefinedFunction],
+      aggBufferTypes: Array[Array[InternalType]]): RelDataType = {
+    val aggNames = agg.getNamedAggCalls.map(_.right)
+
+    val aggBufferFieldNames = new Array[Array[String]](aggregates.length)
+    var index = -1
+    aggregates.zipWithIndex.foreach{ case (udf, aggIndex) =>
+      aggBufferFieldNames(aggIndex) = udf match {
+        case _: TableAggregateFunction[_, _] =>
+          Array(aggNames(aggIndex))
+        case agf: DeclarativeAggregateFunction =>
+          agf.aggBufferAttributes.map { attr =>
+            index += 1
+            s"${attr.name}$$$index"}.toArray
+        case _: UserDefinedFunction =>
+          throw new TableException(s"Don't get localAgg merge name")
+      }
+    }
+
+    // local win-agg output order: groupSet + assignTs + auxGroupSet + aggCalls
+    val typeFactory = agg.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    val aggBufferSqlTypes = aggBufferTypes.flatten.map { t =>
+      val nullable = !FlinkTypeFactory.isTimeIndicatorType(t)
+      typeFactory.createTypeFromInternalType(t, nullable)
+    }
+
+    val localAggFieldTypes = (
+      groupSet.map(inputType.getFieldList.get(_).getType) ++ // groupSet
+        Array(typeFactory.createTypeFromInternalType(windowType, isNullable = false)) ++ // assignTs
+        auxGroupSet.map(inputType.getFieldList.get(_).getType) ++ // auxGroupSet
+        aggBufferSqlTypes // aggCalls
+      ).toList
+
+    val assignTsFieldName = if (enableAssignPane) "assignedPane$" else "assignedWindow$"
+    val localAggFieldNames = (
+      groupSet.map(inputType.getFieldList.get(_).getName) ++ // groupSet
+        Array(assignTsFieldName) ++ // assignTs
+        auxGroupSet.map(inputType.getFieldList.get(_).getName) ++ // auxGroupSet
+        aggBufferFieldNames.flatten.toArray[String] // aggCalls
+      ).toList
+
+    typeFactory.createStructType(localAggFieldTypes.asJava, localAggFieldNames.asJava)
+  }
+
+  protected def doAllSupportMerge(
+      aggregateList: Array[UserDefinedFunction]): Boolean = {
+    val supportLocalAgg = aggregateList.forall {
+      case _: DeclarativeAggregateFunction => true
+      case a => ifMethodExistInFunction("merge", a)
+    }
+    //it means grouping without aggregate functions
+    aggregateList.isEmpty || supportLocalAgg
+  }
+
+  protected def isPreferTwoPhaseAgg(
+      call: RelOptRuleCall): Boolean = {
+    val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
+    tableConfig.getParameters.getBoolean(
+      TableConfig.SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED,
+      TableConfig.SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED_DEFAULT)
+  }
+
+  protected def isAggBufferFixedLength(call: RelOptRuleCall): Boolean = {
+    val agg = call.rels(0).asInstanceOf[Aggregate]
+    val input = call.rels(1)
+
+    val (_, aggCallsWithoutAuxGroupCalls) = FlinkRelOptUtil.checkAndSplitAggCalls(agg)
+    val aggBufferTypes = AggregateUtil.transformToBatchAggregateFunctions(
+      aggCallsWithoutAuxGroupCalls, input.getRowType)._2
+
+    isAggBufferFixedLength(aggBufferTypes.map(_.map(DataTypes.internal)))
+  }
+
+  protected def isAggBufferFixedLength(
+      aggBufferTypes: Array[Array[InternalType]]): Boolean = {
+    val aggBuffAttributesTypes = aggBufferTypes.flatten
+    val isAggBufferFixedLength = aggBuffAttributesTypes.forall(BinaryRow.isMutable)
+    //it means grouping without aggregate functions
+    aggBuffAttributesTypes.isEmpty || isAggBufferFixedLength
+  }
+
+  protected def createRelCollation(groupSet: Array[Int]) = {
+    val fields = new JArrayList[RelFieldCollation]()
+    for (field <- groupSet) {
+      fields.add(RelFieldCollations.of(field))
+    }
+    RelCollations.of(fields)
+  }
+}

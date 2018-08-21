@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+	<TestCase name="testAggWithMicroBatch">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(DISTINCT a) AS EXPR$1, MAX(b) AS EXPR$2, SUM(c) AS EXPR$3])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecCalc(select=[b, a, c])
+      StreamExecMicroBatchAssigner(interval=[1000ms])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggAfterUnionWithMicroBatch">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) AS EXPR$1, COUNT(DISTINCT c) AS EXPR$2])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecUnion(union all=[a, b, c])
+      StreamExecMicroBatchAssigner(interval=[1000ms])
+        StreamExecScan(table=[[_DataStreamTable_1]])
+      StreamExecMicroBatchAssigner(interval=[1000ms])
+        StreamExecScan(table=[[_DataStreamTable_2]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testGroupbyWithoutWindow">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[EXPR$0])
+  StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS EXPR$0])
+    StreamExecExchange(distribution=[hash[b]])
+      StreamExecCalc(select=[b, a])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testDistinctAfterAggregate">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[EXPR$0])
+  StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS EXPR$0])
+    StreamExecExchange(distribution=[hash[b]])
+      StreamExecCalc(select=[b, a])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testCountDistinct">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT c) AS EXPR$2])
+  StreamExecExchange(distribution=[hash[a, b]])
+    StreamExecCalc(select=[a, b, c])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testDistinct">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c])
+  StreamExecExchange(distribution=[hash[a, b, c]])
+    StreamExecCalc(select=[a, b, c])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testLocalGlobalAggAfterUnion">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS EXPR$1, Final_COUNT(DISTINCT EXPR$2) AS EXPR$2])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecUnion(union all=[a, sum$0, EXPR$2])
+      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(c) AS sum$0, Partial_COUNT(DISTINCT b) AS EXPR$2])
+        StreamExecCalc(select=[a, c, b])
+          StreamExecScan(table=[[_DataStreamTable_1]])
+      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(c) AS sum$0, Partial_COUNT(DISTINCT b) AS EXPR$2])
+        StreamExecCalc(select=[a, c, b])
+          StreamExecScan(table=[[_DataStreamTable_2]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggWithFilterClause">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS EXPR$1, COUNT(DISTINCT c) FILTER $f4 AS EXPR$2, MAX(b) AS EXPR$3])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4])
+      StreamExecScan(table=[[_DataStreamTable_1]])
+]]>
+		</Resource>
+	</TestCase>
+</Root>

@@ -18,16 +18,38 @@
 
 package org.apache.flink.table.plan.nodes
 
-import org.apache.calcite.plan.Convention
-import org.apache.flink.table.plan.nodes.dataset.DataSetRel
-import org.apache.flink.table.plan.nodes.datastream.DataStreamRel
+import org.apache.calcite.plan.{Convention, RelTraitSet}
+import org.apache.calcite.rel.RelNode
+import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalRel
+
+/**
+ * Override the default convention implementation to support using AbstractConverter for conversion
+ */
+class FlinkConvention(name: String, relClass: Class[_ <: RelNode])
+  extends Convention.Impl(name, relClass) {
+
+  override def useAbstractConvertersForConversion(
+      fromTraits: RelTraitSet,
+      toTraits: RelTraitSet): Boolean = {
+    if (relClass == classOf[StreamExecRel]) {
+      //stream
+      !fromTraits.satisfies(toTraits) &&
+        fromTraits.containsIfApplicable(FlinkConventions.STREAMEXEC) &&
+        toTraits.containsIfApplicable(FlinkConventions.STREAMEXEC)
+    } else {
+      //batch
+      !fromTraits.satisfies(toTraits) &&
+        fromTraits.containsIfApplicable(FlinkConventions.BATCHEXEC) &&
+        toTraits.containsIfApplicable(FlinkConventions.BATCHEXEC)
+    }
+  }
+}
 
 object FlinkConventions {
 
   val LOGICAL: Convention = new Convention.Impl("LOGICAL", classOf[FlinkLogicalRel])
-
-  val DATASET: Convention = new Convention.Impl("DATASET", classOf[DataSetRel])
-
-  val DATASTREAM: Convention = new Convention.Impl("DATASTREAM", classOf[DataStreamRel])
+  val STREAMEXEC: Convention = new FlinkConvention("STREAMEXEC", classOf[StreamExecRel])
+  val BATCHEXEC: Convention = new FlinkConvention("BATCHEXEC", classOf[RowBatchExecRel])
 }

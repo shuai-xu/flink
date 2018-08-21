@@ -52,9 +52,14 @@ class ScalarOperatorsValidationTest extends ScalarOperatorsTestBase {
   @Test(expected = classOf[ValidationException])
   def testInMoreThanOneTypes(): Unit = {
     testTableApi(
-      'f2.in('f3, 'f4, 4),
+      'f2.in('f3, 'f10, 4),
       "FAIL",
       "FAIL"
+    )
+    testTableApi(
+      'f2.in('f3, 'f4, 4),  // OK if all numeric
+      "true",
+      "true"
     )
   }
 
@@ -63,6 +68,24 @@ class ScalarOperatorsValidationTest extends ScalarOperatorsTestBase {
     testTableApi(
       'f1.in("Hi", "Hello world", "Comment#1"),
       "FAIL",
+      "FAIL"
+    )
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testBetweenWithDifferentOperandTypeScala(): Unit = {
+    testTableApi(
+      2.between(1, "a"),
+      "FAIL",
+      "FAIL"
+    )
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testBetweenWithDifferentOperandTypeJava(): Unit = {
+    testTableApi(
+      "FAIL",
+      "2.between(1, 'a')",
       "FAIL"
     )
   }

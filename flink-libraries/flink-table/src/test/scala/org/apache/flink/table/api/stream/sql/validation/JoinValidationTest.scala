@@ -21,7 +21,7 @@ package org.apache.flink.table.api.stream.sql.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.utils.{StreamTableTestUtil, TableTestBase}
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Test
 
 class JoinValidationTest extends TableTestBase {
@@ -32,19 +32,19 @@ class JoinValidationTest extends TableTestBase {
 
   /** There should exist exactly two time conditions **/
   @Test(expected = classOf[TableException])
-  def testWindowJoinSingleTimeCondition() = {
+  def testWindowJoinSingleTimeCondition(): Unit = {
     val sql =
       """
         |SELECT t2.a
         |FROM MyTable t1 JOIN MyTable2 t2 ON
         |  t1.a = t2.a AND
         |  t1.proctime > t2.proctime - INTERVAL '5' SECOND""".stripMargin
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 
   /** Both time attributes in a join condition must be of the same type **/
   @Test(expected = classOf[TableException])
-  def testWindowJoinDiffTimeIndicator() = {
+  def testWindowJoinDiffTimeIndicator(): Unit = {
     val sql =
       """
         |SELECT t2.a FROM
@@ -52,12 +52,12 @@ class JoinValidationTest extends TableTestBase {
         |  t1.a = t2.a AND
         |  t1.proctime > t2.proctime - INTERVAL '5' SECOND AND
         |  t1.proctime < t2.c + INTERVAL '5' SECOND""".stripMargin
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 
   /** The time conditions should be an And condition **/
   @Test(expected = classOf[TableException])
-  def testWindowJoinNotCnfCondition() = {
+  def testWindowJoinNotCnfCondition(): Unit = {
     val sql =
       """
         |SELECT t2.a
@@ -65,7 +65,7 @@ class JoinValidationTest extends TableTestBase {
         |  t1.a = t2.a AND
         |  (t1.proctime > t2.proctime - INTERVAL '5' SECOND OR
         |   t1.proctime < t2.c + INTERVAL '5' SECOND)""".stripMargin
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 
   /** Validates that no rowtime attribute is in the output schema **/
@@ -79,36 +79,7 @@ class JoinValidationTest extends TableTestBase {
         |  t1.proctime BETWEEN t2.proctime - INTERVAL '5' SECOND AND t2.proctime
         | """.stripMargin
 
-    streamUtil.verifySql(sql, "n/a")
-  }
-
-  /** Validates that range and equality predicate are not accepted **/
-  @Test(expected = classOf[TableException])
-  def testRangeAndEqualityPredicates(): Unit = {
-    val sql =
-      """
-        |SELECT *
-        |FROM MyTable t1, MyTable2 t2
-        |WHERE t1.a = t2.a AND
-        |  t1.proctime > t2.proctime - INTERVAL '5' SECOND AND
-        |  t1.proctime = t2.proctime
-        | """.stripMargin
-
-    streamUtil.verifySql(sql, "n/a")
-  }
-
-  /** Validates that equality predicate with offset are not accepted **/
-  @Test(expected = classOf[TableException])
-  def testEqualityPredicateWithOffset(): Unit = {
-    val sql =
-      """
-        |SELECT *
-        |FROM MyTable t1, MyTable2 t2
-        |WHERE t1.a = t2.a AND
-        |  t1.proctime = t2.proctime - INTERVAL '5' SECOND
-        | """.stripMargin
-
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 
   /** Validates that no rowtime attribute is in the output schema for non-window inner join **/
@@ -121,7 +92,7 @@ class JoinValidationTest extends TableTestBase {
         |WHERE t1.a = t2.a
         | """.stripMargin
 
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 
   /** Validates that no proctime attribute is in remaining predicate for non-window inner join **/
@@ -134,6 +105,6 @@ class JoinValidationTest extends TableTestBase {
         |WHERE t1.a = t2.a AND t1.proctime > t2.proctime
         | """.stripMargin
 
-    streamUtil.verifySql(sql, "n/a")
+    streamUtil.explainSql(sql)
   }
 }

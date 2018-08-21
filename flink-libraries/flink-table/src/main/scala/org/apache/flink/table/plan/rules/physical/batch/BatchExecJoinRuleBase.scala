@@ -1,0 +1,108 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.plan.rules.physical.batch
+
+import java.lang.Double
+import java.util.Collections
+
+import org.apache.calcite.plan.RelOptRule
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
+import org.apache.calcite.rel.core.Join
+import org.apache.calcite.sql.validate.SqlValidatorUtil
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.util.ImmutableBitSet
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalHashAggregate
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
+
+import scala.collection.JavaConverters._
+
+trait BatchExecJoinRuleBase {
+
+  def addLocalDistinctAgg(
+      node: RelNode,
+      distinctKeys: Seq[Int],
+      relBuilder: RelBuilder): RelNode = {
+    val localRequiredTraitSet = node.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+    val newInput = RelOptRule.convert(node, localRequiredTraitSet)
+    val providedTraitSet = localRequiredTraitSet
+
+    new BatchExecLocalHashAggregate(
+      node.getCluster,
+      relBuilder,
+      providedTraitSet,
+      newInput,
+      Seq(),
+      node.getRowType,
+      node.getRowType,
+      distinctKeys.toArray,
+      Array.empty)
+  }
+
+  def chooseSemiBuildDistinct(
+      buildRel: RelNode,
+      distinctKeys: Seq[Int],
+      conf: TableConfig): Boolean = {
+    val mq = buildRel.getCluster.getMetadataQuery
+    val ratioConf = conf.getParameters.getDouble(
+      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO,
+      TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO_DEFAULT)
+    val inputRows = mq.getRowCount(buildRel)
+    val ndvOfGroupKey = mq.getDistinctRowCount(
+      buildRel, ImmutableBitSet.builder().addAll(
+        distinctKeys.map(Integer.valueOf).asJava).build(), null)
+    if (ndvOfGroupKey == null) false else ndvOfGroupKey / inputRows < ratioConf
+  }
+
+  def getFlinkJoinRelType(join: Join): FlinkJoinRelType = join match {
+    case j: FlinkLogicalJoin =>
+      FlinkJoinRelType.toFlinkJoinRelType(j.getJoinType)
+    case sj: FlinkLogicalSemiJoin =>
+      if (sj.isAnti) FlinkJoinRelType.ANTI else FlinkJoinRelType.SEMI
+    case _ => throw new IllegalArgumentException(s"Illegal join node: ${join.getClass.getName}")
+  }
+
+  def getInputRowType(join: Join): RelDataType = join match {
+    case j: FlinkLogicalJoin => j.getRowType
+    case sj: FlinkLogicalSemiJoin =>
+      // Combines inputs' RowType, the result is different from SemiJoin's RowType.
+      SqlValidatorUtil.deriveJoinRowType(
+        sj.getLeft.getRowType,
+        sj.getRight.getRowType,
+        sj.getJoinType,
+        sj.getCluster.getTypeFactory,
+        null,
+        Collections.emptyList[RelDataTypeField]
+      )
+    case _ => throw new IllegalArgumentException(s"Illegal join node: ${join.getClass.getName}")
+  }
+
+  def getRelNodeSize(relNode: RelNode): Double = {
+    val mq = relNode.getCluster.getMetadataQuery
+    val rowCount = mq.getRowCount(relNode)
+    if(rowCount == null) {
+      null
+    } else {
+      rowCount * mq.getAverageRowSize(relNode)
+    }
+  }
+}

@@ -22,10 +22,10 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Test
 
-class GroupWindowValidationTest extends TableTestBase {
+class GroupWindowValidationTest extends TableTestBatchExecBase {
 
   //===============================================================================================
   // Common test

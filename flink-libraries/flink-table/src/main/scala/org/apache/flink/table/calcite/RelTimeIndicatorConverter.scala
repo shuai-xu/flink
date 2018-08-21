@@ -27,12 +27,13 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
-import org.apache.flink.table.functions.sql.ProctimeSqlFunction
-import org.apache.flink.table.plan.logical.rel.LogicalWindowAggregate
+import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner, LogicalWindowAggregate}
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 /**
@@ -48,50 +49,15 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
       .createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, isNullable = false)
 
   override def visit(intersect: LogicalIntersect): RelNode =
-    throw new TableException("Logical intersect in a stream environment is not supported yet.")
+    visitSetOp(intersect)
 
-  override def visit(union: LogicalUnion): RelNode = {
-    // visit children and update inputs
-    val inputs = union.getInputs.map(_.accept(this))
-
-    // make sure that time indicator types match
-    val inputTypes = inputs.map(_.getRowType)
-
-    val head = inputTypes.head.getFieldList.map(_.getType)
-
-    val isValid = inputTypes.forall { t =>
-      val fieldTypes = t.getFieldList.map(_.getType)
-
-      fieldTypes.zip(head).forall { case (l, r) =>
-        // check if time indicators match
-        if (isTimeIndicatorType(l) && isTimeIndicatorType(r)) {
-          val leftTime = l.asInstanceOf[TimeIndicatorRelDataType].isEventTime
-          val rightTime = r.asInstanceOf[TimeIndicatorRelDataType].isEventTime
-          leftTime == rightTime
-        }
-        // one side is not an indicator
-        else if (isTimeIndicatorType(l) || isTimeIndicatorType(r)) {
-          false
-        }
-        // uninteresting types
-        else {
-          true
-        }
-      }
-    }
-
-    if (!isValid) {
-      throw new ValidationException(
-        "Union fields with time attributes have different types.")
-    }
-
-    LogicalUnion.create(inputs, union.all)
-  }
+  override def visit(union: LogicalUnion): RelNode =
+    visitSetOp(union)
 
   override def visit(aggregate: LogicalAggregate): RelNode = convertAggregate(aggregate)
 
   override def visit(minus: LogicalMinus): RelNode =
-    throw new TableException("Logical minus in a stream environment is not supported yet.")
+    visitSetOp(minus)
 
   override def visit(sort: LogicalSort): RelNode = {
 
@@ -100,9 +66,11 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
   }
 
   override def visit(`match`: LogicalMatch): RelNode =
-    throw new TableException("Logical match in a stream environment is not supported yet.")
+    convertMatch(`match`)
 
   override def visit(other: RelNode): RelNode = other match {
+    case collect: Collect =>
+      collect
 
     case uncollect: Uncollect =>
       // visit children and update inputs
@@ -120,10 +88,31 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
         aggregate.getNamedProperties,
         convAggregate)
 
+    case semiJoin: SemiJoin =>
+      val convLeft = semiJoin.getLeft.accept(this)
+      val convRight = semiJoin.getRight.accept(this)
+      SemiJoin.create(
+        convLeft,
+        convRight,
+        semiJoin.getCondition,
+        semiJoin.leftKeys,
+        semiJoin.rightKeys,
+        semiJoin.isAnti)
+
+    case watermarkAssigner: LogicalWatermarkAssigner =>
+      watermarkAssigner
+
+    case lastRow: LogicalLastRow =>
+      val input = lastRow.getInput.accept(this)
+      new LogicalLastRow(
+        lastRow.getCluster,
+        lastRow.getTraitSet,
+        input,
+        lastRow.uniqueKeys)
+
     case _ =>
       throw new TableException(s"Unsupported logical operator: ${other.getClass.getSimpleName}")
   }
-
 
   override def visit(exchange: LogicalExchange): RelNode =
     throw new TableException("Logical exchange in a stream environment is not supported yet.")
@@ -169,7 +158,6 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
 
   }
 
-
   override def visit(correlate: LogicalCorrelate): RelNode = {
     // visit children and update inputs
     val inputs = correlate.getInputs.map(_.accept(this))
@@ -205,6 +193,92 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
       correlate.getCorrelationId,
       correlate.getRequiredColumns,
       correlate.getJoinType)
+  }
+
+  def visitSetOp(setOp: SetOp): RelNode = {
+    // visit children and update inputs
+    val inputs = setOp.getInputs.map(_.accept(this))
+
+    // make sure that time indicator types match
+    val inputTypes = inputs.map(_.getRowType)
+
+    val head = inputTypes.head.getFieldList.map(_.getType)
+
+    val isValid = inputTypes.forall { t =>
+      val fieldTypes = t.getFieldList.map(_.getType)
+
+      fieldTypes.zip(head).forall { case (l, r) =>
+        // check if time indicators match
+        if (isTimeIndicatorType(l) && isTimeIndicatorType(r)) {
+          val leftTime = l.asInstanceOf[TimeIndicatorRelDataType].isEventTime
+          val rightTime = r.asInstanceOf[TimeIndicatorRelDataType].isEventTime
+          leftTime == rightTime
+        }
+        // one side is not an indicator
+        else if (isTimeIndicatorType(l) || isTimeIndicatorType(r)) {
+          false
+        }
+        // uninteresting types
+        else {
+          true
+        }
+      }
+    }
+
+    if (!isValid) {
+      throw new ValidationException(
+        "Union fields with time attributes have different types.")
+    }
+
+    setOp.copy(setOp.getTraitSet, inputs, setOp.all)
+  }
+
+  private def convertMatch(`match`: Match): LogicalMatch = {
+    val rowType = `match`.getInput.getRowType
+
+    val materializer = new RexTimeIndicatorMaterializer(
+      rexBuilder,
+      rowType.getFieldList.map(_.getType))
+
+    val patternDefinitions =
+      `match`.getPatternDefinitions.foldLeft(mutable.Map[String, RexNode]()) {
+        case (m, (k, v)) => m += k -> v.accept(materializer)
+      }
+
+    val measures = `match`.getMeasures.foldLeft(mutable.Map[String, RexNode]()) {
+      case (m, (k, v)) => m += k -> v.accept(materializer)
+    }
+
+    val interval = `match`.getInterval match {
+      case interval: RexNode => interval.accept(materializer)
+      case _ => null
+    }
+
+    val outputTypeBuilder = rexBuilder
+      .getTypeFactory
+      .asInstanceOf[FlinkTypeFactory]
+      .builder()
+    `match`.getRowType.getFieldList.asScala
+      .foreach(x => measures.get(x.getName) match {
+        case Some(measure) => outputTypeBuilder.add(x.getName, measure.getType)
+        case None => outputTypeBuilder.add(x)
+      })
+
+    LogicalMatch.create(
+      `match`.getInput,
+      outputTypeBuilder.build(),
+      `match`.getPattern,
+      `match`.isStrictStart,
+      `match`.isStrictEnd,
+      patternDefinitions,
+      measures,
+      `match`.getAfter,
+      `match`.getSubsets.asInstanceOf[java.util.Map[String, java.util.TreeSet[String]]],
+      `match`.getRowsPerMatch,
+      `match`.getPartitionKeys,
+      `match`.getOrderKeys,
+      interval,
+      `match`.getEmit)
   }
 
   private def convertAggregate(aggregate: Aggregate): LogicalAggregate = {
@@ -318,7 +392,7 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
 
 object RelTimeIndicatorConverter {
 
-  def convert(rootRel: RelNode, rexBuilder: RexBuilder): RelNode = {
+  def convert(rootRel: RelNode, rexBuilder: RexBuilder, isSinkBlock: Boolean): RelNode = {
     val converter = new RelTimeIndicatorConverter(rexBuilder)
     val convertedRoot = rootRel.accept(converter)
 
@@ -337,7 +411,7 @@ object RelTimeIndicatorConverter {
     )
 
     // add final conversion if necessary
-    if (needsConversion) {
+    if (needsConversion && isSinkBlock) {
       LogicalProject.create(
       convertedRoot,
       projects,
@@ -441,8 +515,13 @@ class RexTimeIndicatorMaterializer(
       updatedCall
 
       // materialize function's result and operands
-      case _ if isTimeIndicatorType(updatedCall.getType) =>
-        updatedCall.clone(timestamp, materializedOperands)
+      case _ if isTimeIndicatorType(updatedCall.getType) => {
+        if (updatedCall.getOperator == ScalarSqlFunctions.PROCTIME) {
+          updatedCall
+        } else {
+          updatedCall.clone(timestamp, materializedOperands)
+        }
+      }
 
       // materialize function's operands only
       case _ =>

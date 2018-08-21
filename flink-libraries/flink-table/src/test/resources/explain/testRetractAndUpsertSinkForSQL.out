@@ -1,0 +1,76 @@
+== Abstract Syntax Tree ==
+LogicalProject(num=[$0], cnt=[$1])
+  LogicalFilter(condition=[<($0, 4)])
+    LogicalTableScan(table=[[T1]])
+
+LogicalProject(num=[$0], cnt=[$1])
+  LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
+    LogicalTableScan(table=[[T1]])
+
+== Optimized Logical Plan ==
+[[IntermediateTable=_DataStreamTable_1]]
+StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
+  StreamExecExchange(distribution=[hash[num]])
+    StreamExecCalc(select=[num, id])
+      StreamExecScan(table=[[T]])
+StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
+  StreamExecExchange(retract=[true], accMode=[Acc])
+    StreamExecCalc(retract=[true], accMode=[Acc])
+      StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
+  StreamExecScan(table=[[_DataStreamTable_1]])
+StreamExecCalc(retract=[true], accMode=[AccRetract])
+  StreamExecScan(retract=[true], accMode=[AccRetract])
+
+[[Sink]]
+StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
+  StreamExecScan(table=[[_DataStreamTable_1]])
+StreamExecCalc(retract=[false], accMode=[AccRetract])
+  StreamExecScan(retract=[false], accMode=[AccRetract])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[T], fields:(id, num, text))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : Calc(select: (num, id))
+			ship_strategy : FORWARD
+
+			 : Operator
+				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
+				ship_strategy : HASH
+
+				 : Operator
+					content : Calc(where: (num < 4), select: (num, cnt))
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : SinkConversion to Tuple2
+						ship_strategy : FORWARD
+
+						 : Operator
+							content : Map
+							ship_strategy : FORWARD
+
+							 : Operator
+								content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
+								ship_strategy : FORWARD
+
+								 : Operator
+									content : SinkConversion to Tuple2
+									ship_strategy : FORWARD
+
+									 : Data Sink
+										content : Sink: TestingRetractTableSink
+										ship_strategy : FORWARD
+
+										 : Data Sink
+											content : Sink: TestingUpsertTableSink(keys=())
+											ship_strategy : FORWARD
+

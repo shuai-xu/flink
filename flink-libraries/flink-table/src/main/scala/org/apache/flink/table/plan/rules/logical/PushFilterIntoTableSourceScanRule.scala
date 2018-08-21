@@ -22,57 +22,78 @@ import java.util
 
 import org.apache.calcite.plan.RelOptRule.{none, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rex.RexProgram
+import org.apache.calcite.rel.logical.LogicalTableScan
+import org.apache.calcite.rel.core.Filter
+import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.schema.TableSourceTable
-import org.apache.flink.table.plan.util.RexProgramExtractor
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalTableSourceScan}
+import org.apache.flink.table.plan.util.RexNodeExtractor
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.sinks.orc.OrcTableSink
 import org.apache.flink.table.sources.FilterableTableSource
+import org.apache.flink.table.sources.orc.OrcTableSource
+import org.apache.flink.table.sources.parquet.ParquetTableSource
+import org.apache.flink.table.util.FlinkRelOptUtil
 import org.apache.flink.table.validate.FunctionCatalog
-import org.apache.flink.util.Preconditions
 
 import scala.collection.JavaConverters._
 
 class PushFilterIntoTableSourceScanRule extends RelOptRule(
-  operand(classOf[FlinkLogicalCalc],
-    operand(classOf[FlinkLogicalTableSourceScan], none)),
+  operand(classOf[Filter],
+    operand(classOf[LogicalTableScan], none)),
   "PushFilterIntoTableSourceScanRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val calc: FlinkLogicalCalc = call.rel(0).asInstanceOf[FlinkLogicalCalc]
-    val scan: FlinkLogicalTableSourceScan = call.rel(1).asInstanceOf[FlinkLogicalTableSourceScan]
-    scan.tableSource match {
-      case source: FilterableTableSource[_] =>
-        calc.getProgram.getCondition != null && !source.isFilterPushedDown
+
+    val filter: Filter = call.rel(0).asInstanceOf[Filter]
+    if (filter.getCondition == null) return false
+    val scan: LogicalTableScan = call.rel(1).asInstanceOf[LogicalTableScan]
+    scan.getTable.unwrap(classOf[TableSourceTable[_]]) match {
+      case table: TableSourceTable[_] =>
+        table.tableSource match {
+          case source: ParquetTableSource[_] if !source.isFilterPushedDown  =>
+            //FIXME This is not a very elegant solution.
+            val tableConfig = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+            tableConfig.getParameters.getBoolean(
+              TableConfig.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN,
+              TableConfig.SQL_EXEC_SOURCE_PARQUET_ENABLE_PREDICATE_PUSHDOWN_DEFAULT)
+          case source: OrcTableSource[_] if !source.isFilterPushedDown =>
+            val tableConfig = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+            tableConfig.getParameters.getBoolean(
+              TableConfig.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN,
+              TableConfig.SQL_EXEC_SOURCE_ORC_ENABLE_PREDICATE_PUSHDOWN_DEFAULT)
+          case source: FilterableTableSource if !source.isFilterPushedDown => true
+          case _ => false
+        }
       case _ => false
     }
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val calc: FlinkLogicalCalc = call.rel(0).asInstanceOf[FlinkLogicalCalc]
-    val scan: FlinkLogicalTableSourceScan = call.rel(1).asInstanceOf[FlinkLogicalTableSourceScan]
-    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable[_]])
-    val filterableSource = scan.tableSource.asInstanceOf[FilterableTableSource[_]]
-    pushFilterIntoScan(call, calc, scan, tableSourceTable, filterableSource, description)
+    val filter: Filter = call.rel(0).asInstanceOf[Filter]
+    val scan: LogicalTableScan = call.rel(1).asInstanceOf[LogicalTableScan]
+    val table: FlinkRelOptTable = scan.getTable.asInstanceOf[FlinkRelOptTable]
+    pushFilterIntoScan(call, filter, scan, table, description)
   }
 
   private def pushFilterIntoScan(
       call: RelOptRuleCall,
-      calc: FlinkLogicalCalc,
-      scan: FlinkLogicalTableSourceScan,
-      tableSourceTable: TableSourceTable[_],
-      filterableSource: FilterableTableSource[_],
+      filter: Filter,
+      scan: LogicalTableScan,
+      relOptTable: FlinkRelOptTable,
       description: String): Unit = {
 
-    Preconditions.checkArgument(!filterableSource.isFilterPushedDown)
-
-    val program = calc.getProgram
+    val relBuilder = call.builder()
     val functionCatalog = FunctionCatalog.withBuiltIns
+    val maxCnfNodeCount = FlinkRelOptUtil.getMaxCnfNodeCount(scan)
     val (predicates, unconvertedRexNodes) =
-      RexProgramExtractor.extractConjunctiveConditions(
-        program,
-        call.builder().getRexBuilder,
+      RexNodeExtractor.extractConjunctiveConditions(
+        filter.getCondition,
+        maxCnfNodeCount,
+        filter.getInput.getRowType.getFieldNames,
+        relBuilder.getRexBuilder,
         functionCatalog)
+
     if (predicates.isEmpty) {
       // no condition can be translated to expression
       return
@@ -81,48 +102,39 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
     val remainingPredicates = new util.LinkedList[Expression]()
     predicates.foreach(e => remainingPredicates.add(e))
 
-    val newTableSource = filterableSource.applyPredicate(remainingPredicates)
+    val newRelOptTable = applyPredicate(remainingPredicates, relOptTable, relBuilder)
+
+    val newScan = new LogicalTableScan(scan.getCluster, scan.getTraitSet, newRelOptTable)
 
     // check whether framework still need to do a filter
-    val relBuilder = call.builder()
-    val remainingCondition = {
-      if (!remainingPredicates.isEmpty || unconvertedRexNodes.nonEmpty) {
-        relBuilder.push(scan)
-        val remainingConditions =
-          (remainingPredicates.asScala.map(expr => expr.toRexNode(relBuilder))
-              ++ unconvertedRexNodes)
-        remainingConditions.reduce((l, r) => relBuilder.and(l, r))
-      } else {
-        null
-      }
-    }
-
-    // check whether we still need a RexProgram. An RexProgram is needed when either
-    // projection or filter exists.
-    val newScan = scan.copy(scan.getTraitSet, newTableSource, scan.selectedFields)
-    val newRexProgram = {
-      if (remainingCondition != null || !program.projectsOnlyIdentity) {
-        val expandedProjectList = program.getProjectList.asScala
-            .map(ref => program.expandLocalRef(ref)).asJava
-        RexProgram.create(
-          program.getInputRowType,
-          expandedProjectList,
-          remainingCondition,
-          program.getOutputRowType,
-          relBuilder.getRexBuilder)
-      } else {
-        null
-      }
-    }
-
-    if (newRexProgram != null) {
-      val newCalc = calc.copy(calc.getTraitSet, newScan, newRexProgram)
-      call.transformTo(newCalc)
-    } else {
+    if (remainingPredicates.isEmpty && unconvertedRexNodes.isEmpty) {
       call.transformTo(newScan)
+    } else {
+      relBuilder.push(scan)
+      val remainingConditions =
+        (remainingPredicates.asScala.map(expr => expr.toRexNode(relBuilder))
+            ++ unconvertedRexNodes)
+      val remainingCondition = remainingConditions.reduce((l, r) => relBuilder.and(l, r))
+      val newFilter = filter.copy(filter.getTraitSet, newScan, remainingCondition)
+      call.transformTo(newFilter)
     }
   }
+
+  private def applyPredicate(
+      predicates: util.List[Expression],
+      relOptTable: FlinkRelOptTable,
+      relBuilder: RelBuilder): FlinkRelOptTable = {
+
+    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable[_]])
+    val filterableSource = tableSourceTable.tableSource.asInstanceOf[FilterableTableSource]
+    filterableSource.setRelBuilder(relBuilder)
+    val newTableSource = filterableSource.applyPredicate(predicates)
+    val newTableSourceTable = new TableSourceTable(newTableSource)
+    relOptTable.copy(newTableSourceTable, relOptTable.getRowType)
+  }
+
 }
+
 
 object PushFilterIntoTableSourceScanRule {
   val INSTANCE: RelOptRule = new PushFilterIntoTableSourceScanRule

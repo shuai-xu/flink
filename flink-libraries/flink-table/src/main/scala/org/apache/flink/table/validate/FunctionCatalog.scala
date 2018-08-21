@@ -18,15 +18,20 @@
 
 package org.apache.flink.table.validate
 
-import org.apache.calcite.sql.`type`.{OperandTypes, ReturnTypes, SqlTypeTransforms}
+import org.apache.calcite.sql.`type`.OperandTypes
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.util.{ChainedSqlOperatorTable, ListSqlOperatorTable, ReflectiveSqlOperatorTable}
-import org.apache.calcite.sql._
+import org.apache.calcite.sql.{fun, _}
 import org.apache.flink.table.api._
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction}
+import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
+import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction, UserDefinedFunctionUtils}
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, StringSplit}
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.typeutils.TypeUtils
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.mutable
@@ -49,15 +54,13 @@ class FunctionCatalog {
     sqlFunctions += sqlFunction
   }
 
-  def getUserDefinedFunctions: Seq[String] = {
-    sqlFunctions.map(_.getName)
+  def getSqlOperatorTable: SqlOperatorTable = {
+    ChainedSqlOperatorTable.of(
+      new ListSqlOperatorTable(sqlFunctions),
+      new BasicOperatorTable()
+    )
   }
 
-  def getSqlOperatorTable: SqlOperatorTable =
-    ChainedSqlOperatorTable.of(
-      new BasicOperatorTable(),
-      new ListSqlOperatorTable(sqlFunctions)
-    )
 
   /**
     * Lookup and create an expression if we find a match.
@@ -83,9 +86,9 @@ class FunctionCatalog {
           .find(f => f.getName.equalsIgnoreCase(name) && f.isInstanceOf[TableSqlFunction])
           .getOrElse(throw ValidationException(s"Undefined table function: $name"))
           .asInstanceOf[TableSqlFunction]
-        val typeInfo = tableSqlFunction.getRowTypeInfo
-        val function = tableSqlFunction.getTableFunction
-        TableFunctionCall(name, function, children, typeInfo)
+        val func = tableSqlFunction.getTableFunction
+        TableFunctionCall(name, func, children, getResultTypeOfCTDFunction(
+          func, children.toArray, () => tableSqlFunction.getImplicitResultType))
 
       // user-defined aggregate function call
       case af if classOf[AggregateFunction[_, _]].isAssignableFrom(af) =>
@@ -94,9 +97,13 @@ class FunctionCatalog {
           .getOrElse(throw ValidationException(s"Undefined table function: $name"))
           .asInstanceOf[AggSqlFunction]
         val function = aggregateFunction.getFunction
-        val returnType = aggregateFunction.returnType
-        val accType = aggregateFunction.accType
-        AggFunctionCall(function, returnType, accType, children)
+        val externalResultType = aggregateFunction.externalResultType
+        val externalAccType = aggregateFunction.externalAccType
+        AggFunctionCall(
+          function,
+          externalResultType,
+          externalAccType,
+          children)
 
       // general expression call
       case expression if classOf[Expression].isAssignableFrom(expression) =>
@@ -168,6 +175,8 @@ object FunctionCatalog {
     "isNotTrue" -> classOf[IsNotTrue],
     "isNotFalse" -> classOf[IsNotFalse],
     "if" -> classOf[If],
+    "between" -> classOf[Between],
+    "notBetween" -> classOf[NotBetween],
 
     // aggregate functions
     "avg" -> classOf[Avg],
@@ -178,12 +187,19 @@ object FunctionCatalog {
     "sum0" -> classOf[Sum0],
     "stddevPop" -> classOf[StddevPop],
     "stddevSamp" -> classOf[StddevSamp],
+    "stddev" -> classOf[Stddev],
     "varPop" -> classOf[VarPop],
     "varSamp" -> classOf[VarSamp],
+    "variance" -> classOf[Variance],
+    "lead" -> classOf[Lead],
+    "lag" -> classOf[Lag],
     "collect" -> classOf[Collect],
+    "firstValue" -> classOf[FirstValue],
+    "lastValue" -> classOf[LastValue],
 
     // string functions
     "charLength" -> classOf[CharLength],
+    "length" -> classOf[CharLength],
     "initCap" -> classOf[InitCap],
     "like" -> classOf[Like],
     "concat" -> classOf[Plus],
@@ -191,7 +207,11 @@ object FunctionCatalog {
     "lowerCase" -> classOf[Lower],
     "similar" -> classOf[Similar],
     "substring" -> classOf[Substring],
+    "left" -> classOf[Left],
+    "right" -> classOf[Right],
     "trim" -> classOf[Trim],
+    "ltrim" -> classOf[Ltrim],
+    "rtrim" -> classOf[Rtrim],
     "upper" -> classOf[Upper],
     "upperCase" -> classOf[Upper],
     "position" -> classOf[Position],
@@ -200,6 +220,11 @@ object FunctionCatalog {
     "concat_ws" -> classOf[ConcatWs],
     "lpad" -> classOf[Lpad],
     "rpad" -> classOf[Rpad],
+    "locate" -> classOf[Locate],
+    "ascii" -> classOf[Ascii],
+    "encode" -> classOf[Encode],
+    "decode" -> classOf[Decode],
+    "instr" -> classOf[Instr],
 
     // math functions
     "plus" -> classOf[Plus],
@@ -212,6 +237,7 @@ object FunctionCatalog {
     "floor" -> classOf[Floor],
     "log10" -> classOf[Log10],
     "ln" -> classOf[Ln],
+    "log" -> classOf[Log],
     "power" -> classOf[Power],
     "mod" -> classOf[Mod],
     "sqrt" -> classOf[Sqrt],
@@ -245,11 +271,8 @@ object FunctionCatalog {
     "dateTimePlus" -> classOf[Plus],
     "dateFormat" -> classOf[DateFormat],
 
-    // item
-    "at" -> classOf[ItemAt],
-
-    // cardinality
-    "cardinality" -> classOf[Cardinality],
+    // row
+    "row" -> classOf[RowConstructor],
 
     // array
     "array" -> classOf[ArrayConstructor],
@@ -258,8 +281,11 @@ object FunctionCatalog {
     // map
     "map" -> classOf[MapConstructor],
 
-    // row
-    "row" -> classOf[RowConstructor],
+    // item
+    "at" -> classOf[ItemAt],
+
+    // cardinality
+    "cardinality" -> classOf[Cardinality],
 
     // window properties
     "start" -> classOf[WindowStart],
@@ -268,11 +294,25 @@ object FunctionCatalog {
     // ordering
     "asc" -> classOf[Asc],
     "desc" -> classOf[Desc],
+    "nullsFirst" -> classOf[NullsFirst],
+    "nullsLast" -> classOf[NullsLast],
 
     // crypto hash
     "md5" -> classOf[Md5],
     "sha1" -> classOf[Sha1],
-    "sha256" -> classOf[Sha256]
+    "sha224" -> classOf[Sha224],
+    "sha256" -> classOf[Sha256],
+    "sha384" -> classOf[Sha384],
+    "sha512" -> classOf[Sha512],
+    "sha2" -> classOf[Sha2],
+
+    "proctime" -> classOf[Proctime]
+  )
+
+  val buildInTableFunctions: Map[String, TableFunction[_]] = Map(
+    "string_split" -> new StringSplit,
+    "json_tuple" -> new JsonTuple,
+    "generate_series" -> new GenerateSeries
   )
 
   /**
@@ -280,7 +320,20 @@ object FunctionCatalog {
     */
   def withBuiltIns: FunctionCatalog = {
     val catalog = new FunctionCatalog()
-    builtInFunctions.foreach { case (n, c) => catalog.registerFunction(n, c) }
+    builtInFunctions.foreach { case (name, clazz) => catalog.registerFunction(name, clazz) }
+    buildInTableFunctions.foreach { case (name, tableFunction) =>
+      List(name, name.toUpperCase).foreach { regName =>
+        catalog.registerSqlFunction(
+          createTableSqlFunction(
+            regName,
+            regName,
+            tableFunction,
+            // TODO correct args for builtInTableFunctions.
+            tableFunction.getResultType(Array[AnyRef](), Array[Class[_]]()),
+            new FlinkTypeFactory(new FlinkTypeSystem())))
+      }
+
+    }
     catalog
   }
 }
@@ -304,7 +357,7 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     SqlStdOperatorTable.AND,
     SqlStdOperatorTable.AS,
     SqlStdOperatorTable.CONCAT,
-    SqlStdOperatorTable.DIVIDE,
+    ScalarSqlFunctions.DIVIDE,
     SqlStdOperatorTable.DIVIDE_INTEGER,
     SqlStdOperatorTable.DOT,
     SqlStdOperatorTable.EQUALS,
@@ -323,6 +376,7 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     // POSTFIX OPERATORS
     SqlStdOperatorTable.DESC,
     SqlStdOperatorTable.NULLS_FIRST,
+    SqlStdOperatorTable.NULLS_LAST,
     SqlStdOperatorTable.IS_NOT_NULL,
     SqlStdOperatorTable.IS_NULL,
     SqlStdOperatorTable.IS_NOT_TRUE,
@@ -343,14 +397,23 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     SqlStdOperatorTable.SUM,
     SqlStdOperatorTable.SUM0,
     SqlStdOperatorTable.COUNT,
+    SqlStdOperatorTable.APPROX_COUNT_DISTINCT,
+    AggSqlFunctions.CARDINALITY_COUNT,
     SqlStdOperatorTable.COLLECT,
+    SqlStdOperatorTable.MULTISET_VALUE,
     SqlStdOperatorTable.MIN,
     SqlStdOperatorTable.MAX,
+    AggSqlFunctions.MAX2ND,
     SqlStdOperatorTable.AVG,
+    SqlStdOperatorTable.STDDEV,
     SqlStdOperatorTable.STDDEV_POP,
     SqlStdOperatorTable.STDDEV_SAMP,
+    SqlStdOperatorTable.VARIANCE,
     SqlStdOperatorTable.VAR_POP,
     SqlStdOperatorTable.VAR_SAMP,
+    AggSqlFunctions.FIRST_VALUE,
+    AggSqlFunctions.LAST_VALUE,
+    AggSqlFunctions.CONCAT_AGG,
     // ARRAY OPERATORS
     SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
     SqlStdOperatorTable.ELEMENT,
@@ -376,7 +439,6 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     SqlStdOperatorTable.EXTRACT,
     SqlStdOperatorTable.IN,
     // FUNCTIONS
-    SqlStdOperatorTable.SUBSTRING,
     SqlStdOperatorTable.OVERLAY,
     SqlStdOperatorTable.TRIM,
     SqlStdOperatorTable.POSITION,
@@ -417,22 +479,26 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     SqlStdOperatorTable.DEGREES,
     SqlStdOperatorTable.RADIANS,
     SqlStdOperatorTable.SIGN,
-    SqlStdOperatorTable.ROUND,
+    ScalarSqlFunctions.ROUND,
+    ScalarSqlFunctions.PI,
     SqlStdOperatorTable.PI,
     ScalarSqlFunctions.E,
     SqlStdOperatorTable.RAND,
     SqlStdOperatorTable.RAND_INTEGER,
     ScalarSqlFunctions.CONCAT,
     ScalarSqlFunctions.CONCAT_WS,
-    ScalarSqlFunctions.BIN,
     SqlStdOperatorTable.TIMESTAMP_ADD,
     ScalarSqlFunctions.LOG,
-    ScalarSqlFunctions.LPAD,
-    ScalarSqlFunctions.RPAD,
-    ScalarSqlFunctions.MD5,
-    ScalarSqlFunctions.SHA1,
-    ScalarSqlFunctions.SHA256,
 
+    // MATCH_RECOGNIZE
+    SqlStdOperatorTable.FIRST,
+    SqlStdOperatorTable.LAST,
+    SqlStdOperatorTable.PREV,
+    SqlStdOperatorTable.NEXT,
+    SqlStdOperatorTable.CLASSIFIER,
+    SqlStdOperatorTable.MATCH_NUMBER,
+    SqlStdOperatorTable.FINAL,
+    SqlStdOperatorTable.RUNNING,
     // EXTENSIONS
     BasicOperatorTable.TUMBLE,
     BasicOperatorTable.HOP,
@@ -448,7 +514,77 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     BasicOperatorTable.HOP_PROCTIME,
     BasicOperatorTable.HOP_ROWTIME,
     BasicOperatorTable.SESSION_PROCTIME,
-    BasicOperatorTable.SESSION_ROWTIME
+    BasicOperatorTable.SESSION_ROWTIME,
+    SqlStdOperatorTable.RANK,
+    SqlStdOperatorTable.DENSE_RANK,
+    SqlStdOperatorTable.ROW_NUMBER,
+    SqlStdOperatorTable.LEAD,
+    SqlStdOperatorTable.LAG,
+
+    // BLINK-build-in functions
+    ScalarSqlFunctions.LENGTH,
+    ScalarSqlFunctions.JSON_VALUE,
+    ScalarSqlFunctions.STR_TO_MAP,
+    ScalarSqlFunctions.LOG2,
+    ScalarSqlFunctions.IS_DECIMAL,
+    ScalarSqlFunctions.IS_DIGIT,
+    ScalarSqlFunctions.IS_ALPHA,
+    ScalarSqlFunctions.IF,
+    ScalarSqlFunctions.CHR,
+    ScalarSqlFunctions.LPAD,
+    ScalarSqlFunctions.RPAD,
+    ScalarSqlFunctions.REPEAT,
+    ScalarSqlFunctions.REVERSE,
+    ScalarSqlFunctions.REPLACE,
+    ScalarSqlFunctions.SPLIT_INDEX,
+    ScalarSqlFunctions.REGEXP_REPLACE,
+    ScalarSqlFunctions.REGEXP_EXTRACT,
+    ScalarSqlFunctions.KEYVALUE,
+    ScalarSqlFunctions.HASH_CODE,
+    ScalarSqlFunctions.MD5,
+    ScalarSqlFunctions.SHA1,
+    ScalarSqlFunctions.SHA224,
+    ScalarSqlFunctions.SHA256,
+    ScalarSqlFunctions.SHA384,
+    ScalarSqlFunctions.SHA512,
+    ScalarSqlFunctions.SHA2,
+    ScalarSqlFunctions.REGEXP,
+    ScalarSqlFunctions.PARSE_URL,
+    ScalarSqlFunctions.PRINT,
+    ScalarSqlFunctions.SUBSTRING,
+    ScalarSqlFunctions.SUBSTR,
+    ScalarSqlFunctions.LEFT,
+    ScalarSqlFunctions.RIGHT,
+    ScalarSqlFunctions.LOCATE,
+    ScalarSqlFunctions.NOW,
+    ScalarSqlFunctions.UNIX_TIMESTAMP,
+    ScalarSqlFunctions.FROM_UNIXTIME,
+    ScalarSqlFunctions.DATEDIFF,
+    ScalarSqlFunctions.DATE_SUB,
+    ScalarSqlFunctions.DATE_ADD,
+    ScalarSqlFunctions.BIN,
+    ScalarSqlFunctions.BITAND,
+    ScalarSqlFunctions.BITNOT,
+    ScalarSqlFunctions.BITOR,
+    ScalarSqlFunctions.BITXOR,
+    ScalarSqlFunctions.DIV,
+    ScalarSqlFunctions.DIV_INT,
+    ScalarSqlFunctions.TO_BASE64,
+    ScalarSqlFunctions.FROM_BASE64,
+    ScalarSqlFunctions.UUID,
+    ScalarSqlFunctions.TO_TIMESTAMP,
+    ScalarSqlFunctions.TO_TIMESTAMP_TZ,
+    ScalarSqlFunctions.DATE_FORMAT_TZ,
+    ScalarSqlFunctions.CONVERT_TZ,
+    ScalarSqlFunctions.FROM_TIMESTAMP,
+    ScalarSqlFunctions.TO_DATE,
+    ScalarSqlFunctions.PROCTIME,
+    ScalarSqlFunctions.ASCII,
+    ScalarSqlFunctions.ENCODE,
+    ScalarSqlFunctions.DECODE,
+    ScalarSqlFunctions.INSTR,
+    ScalarSqlFunctions.LTRIM,
+    ScalarSqlFunctions.RTRIM
   )
 
   builtInSqlOperators.foreach(register)
@@ -456,87 +592,62 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
 
 object BasicOperatorTable {
 
-  /**
-    * We need custom group auxiliary functions in order to support nested windows.
-    */
+   /**
+     * We need custom group auxiliary functions in order to support nested windows.
+     */
+   val TUMBLE: SqlGroupedWindowFunction = new SqlGroupedWindowFunction(
+     SqlKind.TUMBLE,
+     null,
+     OperandTypes.or(OperandTypes.DATETIME_INTERVAL, OperandTypes.DATETIME_INTERVAL_TIME)) {
+     override def getAuxiliaryFunctions: _root_.java.util.List[SqlGroupedWindowFunction] =
+       Seq(
+         TUMBLE_START,
+         TUMBLE_END,
+         TUMBLE_ROWTIME,
+         TUMBLE_PROCTIME)
+   }
+   val TUMBLE_START: SqlGroupedWindowFunction = TUMBLE.auxiliary(SqlKind.TUMBLE_START)
+   val TUMBLE_END: SqlGroupedWindowFunction = TUMBLE.auxiliary(SqlKind.TUMBLE_END)
+   val TUMBLE_ROWTIME: SqlGroupedWindowFunction =
+     TUMBLE.auxiliary("TUMBLE_ROWTIME", SqlKind.OTHER_FUNCTION)
+   val TUMBLE_PROCTIME: SqlGroupedWindowFunction =
+     TUMBLE.auxiliary("TUMBLE_PROCTIME", SqlKind.OTHER_FUNCTION)
 
-  val TUMBLE: SqlGroupedWindowFunction = new SqlGroupedWindowFunction(
-    SqlKind.TUMBLE,
-    null,
-    OperandTypes.or(OperandTypes.DATETIME_INTERVAL, OperandTypes.DATETIME_INTERVAL_TIME)) {
-    override def getAuxiliaryFunctions: _root_.java.util.List[SqlGroupedWindowFunction] =
-      Seq(
-        TUMBLE_START,
-        TUMBLE_END,
-        TUMBLE_ROWTIME,
-        TUMBLE_PROCTIME)
-  }
-  val TUMBLE_START: SqlGroupedWindowFunction = TUMBLE.auxiliary(SqlKind.TUMBLE_START)
-  val TUMBLE_END: SqlGroupedWindowFunction = TUMBLE.auxiliary(SqlKind.TUMBLE_END)
-  val TUMBLE_ROWTIME: SqlGroupedWindowFunction =
-    new SqlGroupedWindowFunction(
-      "TUMBLE_ROWTIME",
-      SqlKind.OTHER_FUNCTION,
-      TUMBLE,
-      // ensure that returned rowtime is always NOT_NULLABLE
-      ReturnTypes.cascade(ReturnTypes.ARG0, SqlTypeTransforms.TO_NOT_NULLABLE),
-      null,
-      TUMBLE.getOperandTypeChecker,
-      SqlFunctionCategory.SYSTEM)
-  val TUMBLE_PROCTIME: SqlGroupedWindowFunction =
-    TUMBLE.auxiliary("TUMBLE_PROCTIME", SqlKind.OTHER_FUNCTION)
+   val HOP: SqlGroupedWindowFunction = new SqlGroupedWindowFunction(
+     SqlKind.HOP,
+     null,
+     OperandTypes.or(
+       OperandTypes.DATETIME_INTERVAL_INTERVAL,
+       OperandTypes.DATETIME_INTERVAL_INTERVAL_TIME)) {
+     override def getAuxiliaryFunctions: _root_.java.util.List[SqlGroupedWindowFunction] =
+       Seq(
+         HOP_START,
+         HOP_END,
+         HOP_ROWTIME,
+         HOP_PROCTIME)
+   }
+   val HOP_START: SqlGroupedWindowFunction = HOP.auxiliary(SqlKind.HOP_START)
+   val HOP_END: SqlGroupedWindowFunction = HOP.auxiliary(SqlKind.HOP_END)
+   val HOP_ROWTIME: SqlGroupedWindowFunction = HOP.auxiliary("HOP_ROWTIME", SqlKind.OTHER_FUNCTION)
+   val HOP_PROCTIME: SqlGroupedWindowFunction =
+     HOP.auxiliary("HOP_PROCTIME", SqlKind.OTHER_FUNCTION)
 
-  val HOP: SqlGroupedWindowFunction = new SqlGroupedWindowFunction(
-    SqlKind.HOP,
-    null,
-    OperandTypes.or(
-      OperandTypes.DATETIME_INTERVAL_INTERVAL,
-      OperandTypes.DATETIME_INTERVAL_INTERVAL_TIME)) {
-    override def getAuxiliaryFunctions: _root_.java.util.List[SqlGroupedWindowFunction] =
-      Seq(
-        HOP_START,
-        HOP_END,
-        HOP_ROWTIME,
-        HOP_PROCTIME)
-  }
-  val HOP_START: SqlGroupedWindowFunction = HOP.auxiliary(SqlKind.HOP_START)
-  val HOP_END: SqlGroupedWindowFunction = HOP.auxiliary(SqlKind.HOP_END)
-  val HOP_ROWTIME: SqlGroupedWindowFunction =
-    new SqlGroupedWindowFunction(
-      "HOP_ROWTIME",
-      SqlKind.OTHER_FUNCTION,
-      HOP,
-      // ensure that returned rowtime is always NOT_NULLABLE
-      ReturnTypes.cascade(ReturnTypes.ARG0, SqlTypeTransforms.TO_NOT_NULLABLE),
-      null,
-      HOP.getOperandTypeChecker,
-      SqlFunctionCategory.SYSTEM)
-  val HOP_PROCTIME: SqlGroupedWindowFunction = HOP.auxiliary("HOP_PROCTIME", SqlKind.OTHER_FUNCTION)
+   val SESSION: SqlGroupedWindowFunction = new SqlGroupedWindowFunction(
+     SqlKind.SESSION,
+     null,
+     OperandTypes.or(OperandTypes.DATETIME_INTERVAL, OperandTypes.DATETIME_INTERVAL_TIME)) {
+     override def getAuxiliaryFunctions: _root_.java.util.List[SqlGroupedWindowFunction] =
+       Seq(
+         SESSION_START,
+         SESSION_END,
+         SESSION_ROWTIME,
+         SESSION_PROCTIME)
+   }
+   val SESSION_START: SqlGroupedWindowFunction = SESSION.auxiliary(SqlKind.SESSION_START)
+   val SESSION_END: SqlGroupedWindowFunction = SESSION.auxiliary(SqlKind.SESSION_END)
+   val SESSION_ROWTIME: SqlGroupedWindowFunction =
+     SESSION.auxiliary("SESSION_ROWTIME", SqlKind.OTHER_FUNCTION)
+   val SESSION_PROCTIME: SqlGroupedWindowFunction =
+     SESSION.auxiliary("SESSION_PROCTIME", SqlKind.OTHER_FUNCTION)
 
-  val SESSION: SqlGroupedWindowFunction = new SqlGroupedWindowFunction(
-    SqlKind.SESSION,
-    null,
-    OperandTypes.or(OperandTypes.DATETIME_INTERVAL, OperandTypes.DATETIME_INTERVAL_TIME)) {
-    override def getAuxiliaryFunctions: _root_.java.util.List[SqlGroupedWindowFunction] =
-      Seq(
-        SESSION_START,
-        SESSION_END,
-        SESSION_ROWTIME,
-        SESSION_PROCTIME)
-  }
-  val SESSION_START: SqlGroupedWindowFunction = SESSION.auxiliary(SqlKind.SESSION_START)
-  val SESSION_END: SqlGroupedWindowFunction = SESSION.auxiliary(SqlKind.SESSION_END)
-  val SESSION_ROWTIME: SqlGroupedWindowFunction =
-    new SqlGroupedWindowFunction(
-      "SESSION_ROWTIME",
-      SqlKind.OTHER_FUNCTION,
-      SESSION,
-      // ensure that returned rowtime is always NOT_NULLABLE
-      ReturnTypes.cascade(ReturnTypes.ARG0, SqlTypeTransforms.TO_NOT_NULLABLE),
-      null,
-      SESSION.getOperandTypeChecker,
-      SqlFunctionCategory.SYSTEM)
-  val SESSION_PROCTIME: SqlGroupedWindowFunction =
-    SESSION.auxiliary("SESSION_PROCTIME", SqlKind.OTHER_FUNCTION)
-
-}
+ }

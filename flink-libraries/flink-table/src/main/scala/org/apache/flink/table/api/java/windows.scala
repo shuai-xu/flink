@@ -97,7 +97,7 @@ object Over {
     * For batch tables, refer to a timestamp or long attribute.
     */
   def orderBy(orderBy: String): OverWindowWithOrderBy = {
-    val orderByExpr = ExpressionParser.parseExpression(orderBy)
+    val orderByExpr = ExpressionParser.parseExpressionList(orderBy).toArray
     new OverWindowWithOrderBy(Array[Expression](), orderByExpr)
   }
 
@@ -123,7 +123,7 @@ class PartitionedOver(private val partitionByExpr: Array[Expression]) {
     * For batch tables, refer to a timestamp or long attribute.
     */
   def orderBy(orderBy: String): OverWindowWithOrderBy = {
-    val orderByExpr = ExpressionParser.parseExpression(orderBy)
+    val orderByExpr = ExpressionParser.parseExpressionList(orderBy).toArray
     new OverWindowWithOrderBy(partitionByExpr, orderByExpr)
   }
 }
@@ -131,7 +131,7 @@ class PartitionedOver(private val partitionByExpr: Array[Expression]) {
 
 class OverWindowWithOrderBy(
   private val partitionByExpr: Array[Expression],
-  private val orderByExpr: Expression) {
+  private val orderByExpr: Array[Expression]) {
 
   /**
     * Set the preceding offset (based on time or row-count intervals) for over window.

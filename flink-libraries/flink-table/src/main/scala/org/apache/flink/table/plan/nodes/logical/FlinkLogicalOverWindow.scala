@@ -27,6 +27,7 @@ import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Window
 import org.apache.calcite.rel.logical.LogicalWindow
 import org.apache.calcite.rex.RexLiteral
+import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 
 class FlinkLogicalOverWindow(
@@ -59,7 +60,7 @@ class FlinkLogicalOverWindowConverter
 
   override def convert(rel: RelNode): RelNode = {
     val window = rel.asInstanceOf[LogicalWindow]
-    val traitSet = rel.getTraitSet.replace(FlinkConventions.LOGICAL)
+    val traitSet = FlinkRelMetadataQuery.traitSet(rel).replace(FlinkConventions.LOGICAL).simplify()
     val newInput = RelOptRule.convert(window.getInput, FlinkConventions.LOGICAL)
 
     new FlinkLogicalOverWindow(

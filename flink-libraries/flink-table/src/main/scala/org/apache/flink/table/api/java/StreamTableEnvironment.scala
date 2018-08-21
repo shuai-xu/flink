@@ -17,15 +17,16 @@
  */
 package org.apache.flink.table.api.java
 
+import _root_.java.lang.{Boolean => JBool}
+
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.table.api._
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.table.expressions.ExpressionParser
+import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import _root_.java.lang.{Boolean => JBool}
+import org.apache.flink.table.api._
+import org.apache.flink.table.expressions.ExpressionParser
+import org.apache.flink.table.types.DataTypes
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].
@@ -303,9 +304,9 @@ class StreamTableEnvironment(
       table: Table,
       clazz: Class[T],
       queryConfig: StreamQueryConfig): DataStream[T] = {
-    val typeInfo = TypeExtractor.createTypeInfo(clazz)
-    TableEnvironment.validateType(typeInfo)
-    translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(typeInfo)
+    val t = DataTypes.extractType(clazz)
+    TableEnvironment.validateType(t)
+    translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false, t)
   }
 
   /**
@@ -329,8 +330,9 @@ class StreamTableEnvironment(
       table: Table,
       typeInfo: TypeInformation[T],
       queryConfig: StreamQueryConfig): DataStream[T] = {
-    TableEnvironment.validateType(typeInfo)
-    translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(typeInfo)
+    val t = DataTypes.of(typeInfo)
+    TableEnvironment.validateType(t)
+    translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false, t)
   }
 
   /**
@@ -405,13 +407,14 @@ class StreamTableEnvironment(
       queryConfig: StreamQueryConfig): DataStream[JTuple2[JBool, T]] = {
 
     val typeInfo = TypeExtractor.createTypeInfo(clazz)
-    TableEnvironment.validateType(typeInfo)
+    TableEnvironment.validateType(DataTypes.of(typeInfo))
     val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
     translate[JTuple2[JBool, T]](
       table,
       queryConfig,
       updatesAsRetraction = true,
-      withChangeFlag = true)(resultType)
+      withChangeFlag = true,
+      DataTypes.of(resultType))
   }
 
   /**
@@ -437,7 +440,7 @@ class StreamTableEnvironment(
       typeInfo: TypeInformation[T],
       queryConfig: StreamQueryConfig): DataStream[JTuple2[JBool, T]] = {
 
-    TableEnvironment.validateType(typeInfo)
+    TableEnvironment.validateType(DataTypes.of(typeInfo))
     val resultTypeInfo = new TupleTypeInfo[JTuple2[JBool, T]](
       Types.BOOLEAN,
       typeInfo
@@ -446,46 +449,7 @@ class StreamTableEnvironment(
       table,
       queryConfig,
       updatesAsRetraction = true,
-      withChangeFlag = true)(resultTypeInfo)
-  }
-
-  /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register.
-    * @tparam T The type of the output row.
-    */
-  def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
-    implicit val typeInfo: TypeInformation[T] = TypeExtractor
-      .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
-      .asInstanceOf[TypeInformation[T]]
-
-    registerTableFunctionInternal[T](name, tf)
-  }
-
-  /**
-    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param f The AggregateFunction to register.
-    * @tparam T The type of the output value.
-    * @tparam ACC The type of aggregate accumulator.
-    */
-  def registerFunction[T, ACC](
-      name: String,
-      f: AggregateFunction[T, ACC])
-  : Unit = {
-    implicit val typeInfo: TypeInformation[T] = TypeExtractor
-      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 0)
-      .asInstanceOf[TypeInformation[T]]
-
-    implicit val accTypeInfo: TypeInformation[ACC] = TypeExtractor
-      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 1)
-      .asInstanceOf[TypeInformation[ACC]]
-
-    registerAggregateFunctionInternal[T, ACC](name, f)
+      withChangeFlag = true,
+      DataTypes.of(resultTypeInfo))
   }
 }

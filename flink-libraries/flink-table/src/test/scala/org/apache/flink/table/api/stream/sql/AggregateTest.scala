@@ -18,18 +18,17 @@
 
 package org.apache.flink.table.api.stream.sql
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableException, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.AggFunctionCall
 import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.utils.TableTestUtil.{streamTableNode, term, unaryNode}
-import org.apache.flink.table.utils.{StreamTableTestUtil, TableTestBase}
+import org.apache.flink.table.types.{DataType, DataTypes, TypeInfoWrappedType}
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.apache.flink.types.Row
-import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 
 class AggregateTest extends TableTestBase {
@@ -39,66 +38,112 @@ class AggregateTest extends TableTestBase {
     "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
 
   @Test
-  def testGroupbyWithoutWindow() = {
-    val sql = "SELECT COUNT(a) FROM MyTable GROUP BY b"
+  def testCannotCountDistinctOnMultiFields(): Unit = {
+    val sql = "SELECT b, count(distinct a, c) FROM MyTable GROUP BY b"
+    thrown.expect(classOf[TableException])
+    thrown.expectMessage("We now only support the count of one field")
+    streamUtil.explainSql(sql)
+  }
 
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamGroupAggregate",
-          unaryNode(
-            "DataStreamCalc",
-            streamTableNode(0),
-            term("select", "b", "a")
-          ),
-          term("groupBy", "b"),
-          term("select", "b", "COUNT(a) AS EXPR$0")
-        ),
-        term("select", "EXPR$0")
-      )
-    streamUtil.verifySql(sql, expected)
+  @Test
+  def testAggWithMicroBatch(): Unit = {
+    streamUtil.tableEnv.queryConfig
+      .enableMicroBatch
+      .withMicroBatchTriggerTime(1000L)
+    val sql = "SELECT b, COUNT(DISTINCT a), MAX(b), SUM(c)  FROM MyTable GROUP BY b"
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testAggAfterUnionWithMicroBatch(): Unit = {
+    streamUtil.tableEnv.queryConfig
+      .enableMicroBatch
+      .withMicroBatchTriggerTime(1000L)
+
+    streamUtil.addTable[(Long, Int, String)]("T1", 'a, 'b, 'c)
+    streamUtil.addTable[(Long, Int, String)]("T2", 'a, 'b, 'c)
+
+    val sql =
+      """
+        |SELECT a, sum(b), count(distinct c)
+        |FROM (
+        |  SELECT * FROM T1
+        |  UNION ALL
+        |  SELECT * FROM T2
+        |) GROUP BY a
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testGroupbyWithoutWindow(): Unit = {
+    val sql = "SELECT COUNT(a) FROM MyTable GROUP BY b"
+    streamUtil.verifyPlan(sql)
   }
 
   @Test
   def testDistinct(): Unit = {
     val sql = "SELECT DISTINCT a, b, c FROM MyTable"
-
-    val expected =
-      unaryNode(
-        "DataStreamGroupAggregate",
-        unaryNode(
-          "DataStreamCalc",
-          streamTableNode(0),
-          term("select", "a, b, c")
-        ),
-        term("groupBy", "a, b, c"),
-        term("select", "a, b, c")
-      )
-    streamUtil.verifySql(sql, expected)
+    streamUtil.verifyPlan(sql)
   }
 
-  // TODO: this query should be optimized to only have a single DataStreamGroupAggregate
+  // TODO: this query should be optimized to only have a single StreamExecGroupAggregate
   // TODO: reopen this until FLINK-7144 fixed
   @Ignore
   @Test
   def testDistinctAfterAggregate(): Unit = {
     val sql = "SELECT DISTINCT a FROM MyTable GROUP BY a, b, c"
-
-    val expected =
-      unaryNode(
-        "DataStreamGroupAggregate",
-        unaryNode(
-          "DataStreamCalc",
-          streamTableNode(0),
-          term("select", "a")
-        ),
-        term("groupBy", "a"),
-        term("select", "a")
-      )
-    streamUtil.verifySql(sql, expected)
+    streamUtil.verifyPlan(sql)
   }
 
+  @Test
+  def testCountDistinct(): Unit = {
+    val sql = "SELECT a, b, count(distinct c) FROM MyTable GROUP BY a, b"
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testLocalGlobalAggAfterUnion(): Unit = {
+    // enable local global optimize
+    streamUtil.tableEnv.queryConfig
+      .enableMiniBatch
+      .withMiniBatchTriggerTime(1000L)
+      .withMiniBatchTriggerSize(3)
+      .enableLocalAgg
+
+    streamUtil.addTable[(Int, String, Long)]("T1", 'a, 'b, 'c)
+    streamUtil.addTable[(Int, String, Long)]("T2", 'a, 'b, 'c)
+
+    val sql =
+      """
+        |SELECT a, sum(c), count(distinct b)
+        |FROM (
+        |  SELECT * FROM T1
+        |  UNION ALL
+        |  SELECT * FROM T2
+        |) GROUP BY a
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testAggWithFilterClause(): Unit = {
+    streamUtil.addTable[(Int, Long, String, Boolean)]("T", 'a, 'b, 'c, 'd)
+
+    val sql =
+      """
+        |SELECT
+        |  a,
+        |  sum(b) filter (where c = 'A'),
+        |  count(distinct c) filter (where d is true),
+        |  max(b)
+        |FROM T GROUP BY a
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
 
   @Test
   def testUserDefinedAggregateFunctionWithScalaAccumulator(): Unit = {
@@ -109,10 +154,12 @@ class AggregateTest extends TableTestBase {
       .lookupFunction("udag", Seq())
       .asInstanceOf[AggFunctionCall]
 
-    val typeInfo = call.accTypeInfo
-    assertTrue(typeInfo.isInstanceOf[CaseClassTypeInfo[_]])
-    assertEquals(2, typeInfo.getTotalFields)
-    val caseTypeInfo = typeInfo.asInstanceOf[CaseClassTypeInfo[_]]
+    val typeInfo = call.externalAccType
+    assertEquals(2,
+      typeInfo.asInstanceOf[TypeInfoWrappedType].
+          getTypeInfo.asInstanceOf[CaseClassTypeInfo[_]].getTotalFields)
+    val caseTypeInfo = typeInfo.asInstanceOf[TypeInfoWrappedType].
+        getTypeInfo.asInstanceOf[CaseClassTypeInfo[_]]
     assertEquals(Types.LONG, caseTypeInfo.getTypeAt(0))
     assertEquals(Types.LONG, caseTypeInfo.getTypeAt(1))
 
@@ -123,10 +170,12 @@ class AggregateTest extends TableTestBase {
       .lookupFunction("udag2", Seq())
       .asInstanceOf[AggFunctionCall]
 
-    val typeInfo2 = call2.accTypeInfo
-    assertTrue(s"actual type: $typeInfo2", typeInfo2.isInstanceOf[RowTypeInfo])
-    assertEquals(2, typeInfo2.getTotalFields)
-    val rowTypeInfo = typeInfo2.asInstanceOf[RowTypeInfo]
+    val typeInfo2 = call2.externalAccType
+    assertEquals(2,
+      typeInfo2.asInstanceOf[TypeInfoWrappedType].
+          getTypeInfo.asInstanceOf[RowTypeInfo].getTotalFields)
+    val rowTypeInfo = typeInfo2.asInstanceOf[TypeInfoWrappedType].
+        getTypeInfo.asInstanceOf[RowTypeInfo]
     assertEquals(Types.LONG, rowTypeInfo.getTypeAt(0))
     assertEquals(Types.INT, rowTypeInfo.getTypeAt(1))
   }
@@ -153,5 +202,6 @@ class MyAgg2 extends AggregateFunction[Long, Row] {
 
   override def getValue(accumulator: Row): Long = 1L
 
-  override def getAccumulatorType: TypeInformation[Row] = new RowTypeInfo(Types.LONG, Types.INT)
+  override def getAccumulatorType: DataType =
+    DataTypes.createRowType(DataTypes.LONG, DataTypes.INT)
 }

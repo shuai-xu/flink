@@ -23,20 +23,26 @@ import java.lang.{Double, Long}
 /**
   * column statistics
   *
-  * @param ndv       number of distinct values
-  * @param nullCount number of nulls
-  * @param avgLen    average length of column values
-  * @param maxLen    max length of column values
-  * @param max       max value of column values
-  * @param min       min value of column values
+  * @param ndv       number of distinct values (it may be an inaccurate value.)
+  * @param nullCount number of nulls (it may be an inaccurate value.)
+  * @param avgLen    average length of column values (it may be an inaccurate value.)
+  * @param maxLen    max length of column values (it may be an inaccurate value.)
+  * @param max       max value of column values (it must be a correct value,
+  *                  the accurate max value may be less than this value.)
+  * @param min       min value of column values (it must be a correct value,
+  *                  the accurate min value may be greater than this value.)
   */
 case class ColumnStats(
     ndv: Long,
     nullCount: Long,
     avgLen: Double,
     maxLen: Integer,
-    max: Number,
-    min: Number) {
+    max: Any,
+    min: Any) {
+
+  require(max == null || max.isInstanceOf[Comparable[_]])
+  require(min == null || min.isInstanceOf[Comparable[_]])
+  require(min == null || max == null || max.getClass == min.getClass)
 
   override def toString: String = {
     val columnStatsStr = Seq(
@@ -44,11 +50,11 @@ case class ColumnStats(
       if (nullCount != null) s"nullCount=$nullCount" else "",
       if (avgLen != null) s"avgLen=$avgLen" else "",
       if (maxLen != null) s"maxLen=$maxLen" else "",
-      if (max != null) s"max=${max}" else "",
-      if (min != null) s"min=${min}" else ""
+      if (max != null) s"max=$max" else "",
+      if (min != null) s"min=$min" else ""
     ).filter(_.nonEmpty).mkString(", ")
 
-    s"ColumnStats(${columnStatsStr})"
+    s"ColumnStats($columnStatsStr)"
   }
 
 }

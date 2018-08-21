@@ -1,0 +1,222 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.runtime.functions;
+
+import org.apache.flink.api.common.functions.RuntimeContext;
+import org.apache.flink.api.common.state2.ListState;
+import org.apache.flink.api.common.state2.ListStateDescriptor;
+import org.apache.flink.api.common.state2.MapState;
+import org.apache.flink.api.common.state2.MapStateDescriptor;
+import org.apache.flink.api.common.state2.SortedMapState;
+import org.apache.flink.api.common.state2.SortedMapStateDescriptor;
+import org.apache.flink.api.common.state2.ValueState;
+import org.apache.flink.api.common.state2.ValueStateDescriptor;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state2.keyed.KeyedListState;
+import org.apache.flink.runtime.state2.keyed.KeyedMapState;
+import org.apache.flink.runtime.state2.keyed.KeyedSortedMapState;
+import org.apache.flink.runtime.state2.keyed.KeyedState;
+import org.apache.flink.runtime.state2.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state2.keyed.KeyedValueState;
+import org.apache.flink.runtime.state2.partitioned.PartitionedListStateDescriptor;
+import org.apache.flink.runtime.state2.partitioned.PartitionedMapStateDescriptor;
+import org.apache.flink.runtime.state2.partitioned.PartitionedSortedMapStateDescriptor;
+import org.apache.flink.runtime.state2.partitioned.PartitionedValueStateDescriptor;
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedListState;
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedMapState;
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedSortedMapState;
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedValueState;
+import org.apache.flink.table.dataformat.BaseRow;
+
+/**
+ * A ExecutionContext contains information about the context in which functions are executed and
+ * the APIs to create v2 state.
+ */
+public interface ExecutionContext {
+
+	/**
+	 * Creates a keyed state described by the given descriptor.
+	 *
+	 * @param descriptor The descriptor of the keyed state to be created.
+	 * @param <K> Type of the keys in the state.
+	 * @param <V> Type of the values in the state.
+	 * @param <S> Type of the state to be created.
+	 * @return The state described by the given descriptor.
+	 */
+	<K, V, S extends KeyedState<K, V>> S getKeyedState(
+		final KeyedStateDescriptor<K, V, S> descriptor);
+
+	/**
+	 * Creates a subkeyed state described by the given descriptor.
+	 *
+	 * @param descriptor The descriptor of the subkeyed state to be created.
+	 * @param <K> Type of the keys in the state.
+	 * @param <N> Type of the namespaces in the state.
+	 * @param <V> Type of the values in the state.
+	 * @param <S> Type of the state to be created.
+	 * @return The state described by the given descriptor.
+	 */
+	<K, N, V, S extends SubKeyedState<K, N, V>> S getSubKeyedState(
+		final SubKeyedStateDescriptor<K, N, V, S> descriptor);
+
+	/**
+	 * Creates a keyed value state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <V> Type of the element in the value state
+	 * @return a keyed value state
+	 */
+	<K, V> KeyedValueState<K, V> getKeyedValueState(
+		final ValueStateDescriptor<V> descriptor);
+
+	/**
+	 * Creates a keyed list state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <V> Type of the elements in the list state
+	 * @return a keyed list state
+	 */
+	<K, V> KeyedListState<K, V> getKeyedListState(
+		final ListStateDescriptor<V> descriptor);
+
+	/**
+	 * Creates a keyed map state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <UK> Type of the keys in the map state
+	 * @param <UV> Type of the values in the map state
+	 * @return a keyed map state
+	 */
+	<K, UK, UV> KeyedMapState<K, UK, UV> getKeyedMapState(
+		final MapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Creates a keyed sorted map state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <UK> Type of the keys in the sorted map state
+	 * @param <UV> Type of the values in the sorted map state
+	 * @return a keyed sorted map state
+	 */
+	<K, UK, UV> KeyedSortedMapState<K, UK, UV> getKeyedSortedMapState(
+		final SortedMapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Creates a subkeyed value state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <N> Type of the namespace
+	 * @param <V> Type of the element in the value state
+	 * @return a subkeyed value state
+	 */
+	<K, N, V> SubKeyedValueState<K, N, V> getSubKeyedValueState(
+		final ValueStateDescriptor<V> descriptor);
+
+	/**
+	 * Creates a subkeyed list state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <N> Type of the namespace
+	 * @param <V> Type of the elements in the list state
+	 * @return a subkeyed list state
+	 */
+	<K, N, V> SubKeyedListState<K, N, V> getSubKeyedListState(
+		final ListStateDescriptor<V> descriptor);
+
+	/**
+	 * Creates a subkeyed map state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <N> Type of the namespace
+	 * @param <UK> Type of the keys in the map state
+	 * @param <UV> Type of the values in the map state
+	 * @return a subkeyed map state
+	 */
+	<K, N, UK, UV> SubKeyedMapState<K, N, UK, UV> getSubKeyedMapState(
+		final MapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Creates a subkeyed sorted map state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <K> Type of the key
+	 * @param <N> Type of the namespace
+	 * @param <UK> Type of the keys in the sorted map state
+	 * @param <UV> Type of the values in the sorted map state
+	 * @return a subkeyed sorted map state
+	 */
+	<K, N, UK, UV> SubKeyedSortedMapState<K, N, UK, UV> getSubKeyedSortedMapState(
+		final SortedMapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Creates a partitioned value state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <V> Type of the element in the value state
+	 * @return a partitioned value state
+	 */
+	<V> ValueState<V> getPartitionedValueState(
+		final PartitionedValueStateDescriptor<V> descriptor);
+
+	/**
+	 * Creates a partitioned list state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <V> Type of the elements in the list state
+	 * @return a partitioned list state
+	 */
+	<V> ListState<V> getPartitionedListState(
+		final PartitionedListStateDescriptor<V> descriptor);
+
+	/**
+	 * Creates a partitioned map state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <UK> Type of the keys in the map state
+	 * @param <UV> Type of the values in the map state
+	 * @return a partitioned map state
+	 */
+	<UK, UV> MapState<UK, UV> getPartitionedMapState(
+		final PartitionedMapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Creates a partitioned sorted map state.
+	 * @param descriptor The descriptor defining the properties of the state.
+	 * @param <UK> Type of the keys in the sorted map state
+	 * @param <UV> Type of the values in the sorted map state
+	 * @return a partitioned sorted map state
+	 */
+	<UK, UV> SortedMapState<UK, UV> getPartitionedSortedMapState(
+		final PartitionedSortedMapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * @return the key serializer of state key
+	 */
+	<K> TypeSerializer<K> getKeySerializer();
+
+	/**
+	 * @return key of the current processed element.
+	 */
+	BaseRow currentKey();
+
+	/**
+	 * Sets current key.
+	 */
+	void setCurrentKey(BaseRow key);
+
+	RuntimeContext getRuntimeContext();
+}

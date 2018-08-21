@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.api.stream.sql.validation
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, Types, ValidationException}
+import org.apache.flink.table.api.{TableEnvironment, ValidationException}
 import org.apache.flink.table.runtime.utils.StreamTestData
-import org.apache.flink.table.utils.MemoryTableSinkUtil
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.util.MemoryTableSinkUtil
 import org.junit.Test
 
 class InsertIntoValidationTest {
@@ -37,7 +37,7 @@ class InsertIntoValidationTest {
     tEnv.registerTable("sourceTable", t)
 
     val fieldNames = Array("d", "e")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.INT, Types.LONG)
+    val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.LONG)
     val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
@@ -56,7 +56,7 @@ class InsertIntoValidationTest {
     tEnv.registerTable("sourceTable", t)
 
     val fieldNames = Array("d", "e", "f")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.STRING, Types.INT, Types.LONG)
+    val fieldTypes: Array[DataType] = Array(DataTypes.STRING, DataTypes.INT, DataTypes.LONG)
     val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
@@ -75,7 +75,7 @@ class InsertIntoValidationTest {
     tEnv.registerTable("sourceTable", t)
 
     val fieldNames = Array("d", "e", "f")
-    val fieldTypes = tEnv.scan("sourceTable").getSchema.getTypes
+    val fieldTypes = tEnv.scan("sourceTable").getSchema.getTypes.asInstanceOf[Array[DataType]]
     val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 

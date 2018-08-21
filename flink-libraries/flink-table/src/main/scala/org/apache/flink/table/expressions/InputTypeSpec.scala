@@ -19,8 +19,7 @@
 package org.apache.flink.table.expressions
 
 import scala.collection.mutable
-
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.validate._
 
 /**
@@ -33,10 +32,10 @@ trait InputTypeSpec extends Expression {
     *
     * For example, [[Power]] expecting both of the children be of Double Type should use:
     * {{{
-    *   def expectedTypes: Seq[TypeInformation[_]] = DOUBLE_TYPE_INFO :: DOUBLE_TYPE_INFO :: Nil
+    *   def expectedTypes: Seq[InternalType] = DataTypes.DOUBLE :: DataTypes.DOUBLE :: Nil
     * }}}
     */
-  private[flink] def expectedTypes: Seq[TypeInformation[_]]
+  private[flink] def expectedTypes: Seq[InternalType]
 
   override private[flink] def validateInput(): ValidationResult = {
     val typeMismatches = mutable.ArrayBuffer.empty[String]

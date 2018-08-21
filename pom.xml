@@ -90,6 +90,9 @@ under the License.
 	</modules>
 
 	<properties>
+		<!-- When updating the Calcite version, make sure to update the dependency exclusions -->
+		<calcite.version>1.17.0-SNAPSHOT</calcite.version>
+		<hive.version>2.3.3</hive.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<hadoop.version>2.4.1</hadoop.version>
@@ -137,6 +140,9 @@ under the License.
 			to revisit the impact at that time.
 		-->
 		<minikdc.version>2.7.2</minikdc.version>
+		<parquet.version>1.8.2</parquet.version>
+		<orc.version>1.4.3</orc.version>
+		<orc.classifier>nohive</orc.classifier>
 		<generated.docs.dir>./docs/_includes/generated</generated.docs.dir>
 	</properties>
 

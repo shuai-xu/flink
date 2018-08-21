@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.stats
 
 import java.lang.Long
-import java.util.{Map, HashMap}
+import java.util
 
 /**
   * Table statistics
@@ -27,4 +27,4 @@ import java.util.{Map, HashMap}
   * @param rowCount cardinality of table
   * @param colStats statistics of table columns
   */
-case class TableStats(rowCount: Long, colStats: Map[String, ColumnStats] = new HashMap())
+case class TableStats(rowCount: Long, colStats: util.Map[String, ColumnStats] = new util.HashMap())

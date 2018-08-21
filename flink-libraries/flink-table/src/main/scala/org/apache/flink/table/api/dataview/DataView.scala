@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.api.dataview
 
+
 /**
   * A [[DataView]] is a collection type that can be used in the accumulator of an
   * [[org.apache.flink.table.functions.AggregateFunction]].

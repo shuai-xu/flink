@@ -18,17 +18,16 @@
 
 package org.apache.flink.table.api.stream.table
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.TableTestUtil._
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
 class AggregateTest extends TableTestBase {
 
   @Test
-  def testGroupAggregate() = {
+  def testGroupAggregate(): Unit = {
     val util = streamTestUtil()
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
 
@@ -36,22 +35,7 @@ class AggregateTest extends TableTestBase {
       .groupBy('b)
       .select('a.count)
 
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamGroupAggregate",
-          unaryNode(
-            "DataStreamCalc",
-            streamTableNode(0),
-            term("select", "a", "b")
-          ),
-          term("groupBy", "b"),
-          term("select", "b", "COUNT(a) AS TMP_0")
-        ),
-        term("select", "TMP_0")
-      )
-    util.verifyTable(resultTable, expected)
+    util.verifyPlan(resultTable)
   }
 
   @Test
@@ -64,22 +48,7 @@ class AggregateTest extends TableTestBase {
       .groupBy('four, 'a)
       .select('four, 'b.sum)
 
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamGroupAggregate",
-          unaryNode(
-            "DataStreamCalc",
-            streamTableNode(0),
-            term("select", "4 AS four", "b", "a")
-          ),
-          term("groupBy", "four", "a"),
-          term("select", "four", "a", "SUM(b) AS TMP_0")
-        ),
-        term("select", "4 AS four", "TMP_0")
-      )
-    util.verifyTable(resultTable, expected)
+    util.verifyPlan(resultTable)
   }
 
   @Test
@@ -92,22 +61,7 @@ class AggregateTest extends TableTestBase {
       .groupBy('b, 'four)
       .select('four, 'a.sum)
 
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamGroupAggregate",
-          unaryNode(
-            "DataStreamCalc",
-            streamTableNode(0),
-            term("select", "4 AS four", "a", "b")
-          ),
-          term("groupBy", "four", "b"),
-          term("select", "four", "b", "SUM(a) AS TMP_0")
-        ),
-        term("select", "4 AS four", "TMP_0")
-      )
-    util.verifyTable(resultTable, expected)
+    util.verifyPlan(resultTable)
   }
 
   @Test
@@ -120,22 +74,7 @@ class AggregateTest extends TableTestBase {
       .groupBy('d)
       .select('c.min, 'a.avg)
 
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamGroupAggregate",
-          unaryNode(
-            "DataStreamCalc",
-            streamTableNode(0),
-            term("select", "a", "MOD(b, 3) AS d", "c")
-          ),
-          term("groupBy", "d"),
-          term("select", "d", "MIN(c) AS TMP_0", "AVG(a) AS TMP_1")
-        ),
-        term("select", "TMP_0", "TMP_1")
-      )
-    util.verifyTable(resultTable, expected)
+    util.verifyPlan(resultTable)
   }
 
   @Test
@@ -148,19 +87,7 @@ class AggregateTest extends TableTestBase {
       .select('b, 'a.sum)
       .where('b === 2)
 
-    val expected =
-      unaryNode(
-        "DataStreamGroupAggregate",
-        unaryNode(
-          "DataStreamCalc",
-          streamTableNode(0),
-          term("select", "b", "a"),
-          term("where", "=(b, 2)")
-        ),
-        term("groupBy", "b"),
-        term("select", "b", "SUM(a) AS TMP_0")
-      )
-    util.verifyTable(resultTable, expected)
+    util.verifyPlan(resultTable)
   }
 
   @Test
@@ -170,20 +97,8 @@ class AggregateTest extends TableTestBase {
 
     val resultTable = table
       .groupBy('b)
-      .select('b, 'a.cast(BasicTypeInfo.DOUBLE_TYPE_INFO).avg)
+      .select('b, 'a.cast(DataTypes.DOUBLE).avg)
 
-    val expected =
-      unaryNode(
-        "DataStreamGroupAggregate",
-        unaryNode(
-          "DataStreamCalc",
-          streamTableNode(0),
-          term("select", "b", "a", "CAST(a) AS a0")
-        ),
-        term("groupBy", "b"),
-        term("select", "b", "AVG(a0) AS TMP_0")
-      )
-
-    util.verifyTable(resultTable, expected)
+    util.verifyPlan(resultTable)
   }
 }

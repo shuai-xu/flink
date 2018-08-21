@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.plan
 
-import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.table.api.{OverWindow, TableEnvironment}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical.{LogicalNode, Project}
+import org.apache.flink.table.types.BaseRowType
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -167,6 +167,13 @@ object ProjectionTranslator {
             replaceAggregationsAndProperties(exp, tableEnv, aggNames, propNames, projectedNames))
         sfc.makeCopy(Array(clazz, newArgs))
 
+      // row constructor
+      case c @ RowConstructor(args) =>
+        val newArgs = c.elements
+          .map((exp: Expression) =>
+            replaceAggregationsAndProperties(exp, tableEnv, aggNames, propNames, projectedNames))
+        c.makeCopy(Array(newArgs))
+
       // array constructor
       case c @ ArrayConstructor(args) =>
         val newArgs = c.elements
@@ -215,7 +222,7 @@ object ProjectionTranslator {
           .getOrElse(throw new RuntimeException("Could not find resolved composite."))
         resolvedExpr.validateInput()
         val newProjects = resolvedExpr.resultType match {
-          case ct: CompositeType[_] =>
+          case ct: BaseRowType =>
             (0 until ct.getArity).map { idx =>
               projectList += GetCompositeField(unresolved, ct.getFieldNames()(idx))
             }
@@ -256,7 +263,8 @@ object ProjectionTranslator {
             overWindow.get.partitionBy,
             overWindow.get.orderBy,
             overWindow.get.preceding,
-            overWindow.get.following)
+            overWindow.get.following,
+            tableEnv)
         } else {
           u
         }

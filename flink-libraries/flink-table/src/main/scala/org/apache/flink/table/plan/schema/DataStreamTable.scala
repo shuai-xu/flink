@@ -19,11 +19,38 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.plan.stats.FlinkStatistic
+import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
+import org.apache.flink.table.types.DataTypes
 
 class DataStreamTable[T](
     val dataStream: DataStream[T],
-    override val fieldIndexes: Array[Int],
-    override val fieldNames: Array[String],
-    override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends InlineTable[T](dataStream.getType, fieldIndexes, fieldNames, statistic)
+    val producesUpdates: Boolean,
+    val isAccRetract: Boolean,
+    tableSchema: TableSchema,
+    statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
+  extends FlinkTable(DataTypes.of(dataStream.getType), tableSchema, statistic) {
+
+  def this(source: DataStream[T], producesUpdates: Boolean, isAccRetract: Boolean) {
+    this(source, producesUpdates, isAccRetract, TableSchema.fromTypeInfo(source.getType))
+  }
+
+  // This is only used for boundedStream now, we supply default statistic.
+  def this(boundedStream: DataStream[T]) {
+    this(boundedStream, false, false, TableSchema.fromTypeInfo(boundedStream.getType),
+      FlinkStatistic.of(TableStats(1000L)))
+  }
+
+  // This is only used for boundedStream now, we supply default statistic.
+  def this(boundedStream: DataStream[T], tableSchema: TableSchema) {
+    this(boundedStream, false, false, tableSchema, FlinkStatistic.of(TableStats(1000L)))
+  }
+
+  def this(source: DataStream[T], tableSchema: TableSchema, statistic: FlinkStatistic) {
+    this(source, false, false, tableSchema, statistic)
+  }
+
+  override def copy(statistic: FlinkStatistic): FlinkTable = {
+    new DataStreamTable[T](dataStream, producesUpdates, isAccRetract, tableSchema, statistic)
+  }
+}

@@ -24,6 +24,7 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.asScalaStream
+import org.apache.flink.table.types.DataTypes
 
 /**
   * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]].
@@ -215,8 +216,12 @@ class StreamTableEnvironment(
     table: Table,
     queryConfig: StreamQueryConfig): DataStream[T] = {
     val returnType = createTypeInformation[T]
-    asScalaStream(translate(
-      table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(returnType))
+    asScalaStream(translate[T](
+      table,
+      queryConfig,
+      updatesAsRetraction = false,
+      withChangeFlag = false,
+      DataTypes.of(returnType)))
   }
 
 /**
@@ -250,8 +255,12 @@ class StreamTableEnvironment(
       table: Table,
       queryConfig: StreamQueryConfig): DataStream[(Boolean, T)] = {
     val returnType = createTypeInformation[(Boolean, T)]
-    asScalaStream(
-      translate(table, queryConfig, updatesAsRetraction = true, withChangeFlag = true)(returnType))
+    asScalaStream(translate[(Boolean, T)](
+      table,
+      queryConfig,
+      updatesAsRetraction = true,
+      withChangeFlag = true,
+      DataTypes.of(returnType)))
   }
 
   /**
@@ -262,7 +271,7 @@ class StreamTableEnvironment(
     * @param tf The TableFunction to register
     */
   def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunctionInternal(name, tf)
+    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
   }
 
   /**
@@ -278,6 +287,10 @@ class StreamTableEnvironment(
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
-    registerAggregateFunctionInternal[T, ACC](name, f)
+    registerAggregateFunction[T, ACC](
+      name,
+      f,
+      DataTypes.of(implicitly[TypeInformation[T]]),
+      DataTypes.of(implicitly[TypeInformation[ACC]]))
   }
 }

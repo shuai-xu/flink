@@ -19,39 +19,52 @@
 package org.apache.flink.table.api
 
 import _root_.java.lang.{Boolean => JBool}
-import _root_.java.util.concurrent.atomic.AtomicInteger
+import _root_.java.util
 
-import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.plan.hep.HepMatchOrder
+import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
-import org.apache.calcite.sql2rel.RelDecorrelator
-import org.apache.calcite.tools.{RuleSet, RuleSets}
-import org.apache.flink.api.common.functions.MapFunction
-import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
-import org.apache.flink.api.common.typeutils.CompositeType
+import org.apache.calcite.rex.RexBuilder
+import org.apache.calcite.sql.SqlCall
+import org.apache.calcite.sql2rel.SqlToRelConverter
+import org.apache.flink.api.common.JobExecutionResult
+import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.{RowTypeInfo, TupleTypeInfo}
-import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
-import org.apache.flink.table.explain.PlanJsonParser
+import org.apache.flink.streaming.api.graph.StreamGraphGenerator
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
+import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.{DataStreamRel, UpdateAsRetractionTrait}
-import org.apache.flink.table.plan.rules.FlinkRuleSets
-import org.apache.flink.table.plan.schema.{DataStreamTable, RowSchema, StreamTableSourceTable, TableSinkTable}
+import org.apache.flink.table.plan.`trait`._
+import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory, FlinkRelMetadataQuery}
+import org.apache.flink.table.plan.logical.{LogicalNode, LogicalRelNode, SinkNode}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
+import org.apache.flink.table.plan.optimize.StreamOptimizeContext
+import org.apache.flink.table.plan.schema._
+import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
-import org.apache.flink.table.runtime.conversion._
-import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.table.runtime.{CRowMapRunner, OutputRowtimeProcessFunction}
+import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder, MiniBatchHelper}
+import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources.{StreamTableSource, TableSource, TableSourceUtil}
-import org.apache.flink.table.typeutils.{TimeIndicatorTypeInfo, TypeCheckUtils}
+import org.apache.flink.table.sources._
+import org.apache.flink.table.sqlgen.SqlGenVisitor
+import org.apache.flink.table.types.DataType
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, WatermarkUtils}
+import org.apache.flink.util.Preconditions
 
+import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
+import _root_.scala.collection.mutable.ArrayBuffer
+
 
 /**
   * The base class for stream TableEnvironments.
@@ -69,75 +82,165 @@ import _root_.scala.collection.JavaConverters._
   * @param config The [[TableConfig]] of this [[StreamTableEnvironment]].
   */
 abstract class StreamTableEnvironment(
-    private[flink] val execEnv: StreamExecutionEnvironment,
+    val execEnv: StreamExecutionEnvironment,
     config: TableConfig)
   extends TableEnvironment(config) {
 
-  // a counter for unique table names
-  private val nameCntr: AtomicInteger = new AtomicInteger(0)
+  // prefix  for unique table names.
+  override private[flink] val tableNamePrefix = "_DataStreamTable_"
 
-  // the naming pattern for internally registered tables.
-  private val internalNamePattern = "^_DataStreamTable_[0-9]+$".r
+  override def queryConfig: StreamQueryConfig = this.streamQueryConfig
 
-  override def queryConfig: StreamQueryConfig = new StreamQueryConfig
+  private val DEFAULT_JOB_NAME = "Flink Streaming Job"
+
+  private var streamQueryConfig: StreamQueryConfig = new StreamQueryConfig
+
+  private var isConfigMerged: Boolean = false
+
+  // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
+  override protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
+    frameworkConfig, config, Array(
+      ConventionTraitDef.INSTANCE,
+      FlinkRelDistributionTraitDef.INSTANCE,
+      UpdateAsRetractionTraitDef.INSTANCE,
+      AccModeTraitDef.INSTANCE))
 
   /**
-    * Checks if the chosen table name is valid.
-    *
-    * @param name The table name to check.
+    * `inSubQueryThreshold` is set to Integer.MAX_VALUE which forces usage of OR
+    * for `in` or `not in` clause.
     */
-  override protected def checkValidTableName(name: String): Unit = {
-    val m = internalNamePattern.findFirstIn(name)
-    m match {
-      case Some(_) =>
-        throw new TableException(s"Illegal Table name. " +
-          s"Please choose a name that does not contain the pattern $internalNamePattern")
-      case None =>
-    }
+  override protected def getSqlToRelConverterConfig: SqlToRelConverter.Config =
+    SqlToRelConverter.configBuilder()
+      .withTrimUnusedFields(false)
+      .withConvertTableAccess(false)
+      .withInSubQueryThreshold(Integer.MAX_VALUE)
+      .withExpand(false)
+      .build()
+
+  /**
+    * Triggers the program execution.
+    */
+  override def execute(): JobExecutionResult = {
+    execute(DEFAULT_JOB_NAME)
   }
 
-  /** Returns a unique table name according to the internal naming pattern. */
-  override protected def createUniqueTableName(): String =
-    "_DataStreamTable_" + nameCntr.getAndIncrement()
+  /**
+    * Triggers the program execution with jobName.
+    * @param jobName The job name.
+    */
+  override def execute(jobName: String): JobExecutionResult = {
+    mergeParameters()
+    if (config.getSubsectionOptimization) {
+      compile()
+    }
+    execEnv.execute(jobName)
+  }
+
+  def setQueryConfig(queryConfig: StreamQueryConfig): Unit = streamQueryConfig = queryConfig
 
   /**
-    * Registers an internal [[StreamTableSource]] in this [[TableEnvironment]]'s catalog without
-    * name checking. Registered tables can be referenced in SQL queries.
+    * compile the whole plan into a [[DataStream]].
+    */
+  def compile(): Seq[LogicalNodeBlock] = {
+
+    mergeParameters()
+
+    //TODO get query config from user
+    val streamQueryConfig = queryConfig
+
+    val result = if (config.getSubsectionOptimization) {
+      if (sinkNodes.isEmpty) {
+        throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+      }
+
+      // build LogicalNodeBlock plan
+      val blockPlan = LogicalNodeBlockPlanBuilder.buildLogicalNodeBlockPlan(sinkNodes, this)
+
+      // infer updateAsRetraction property for each block
+      blockPlan.foreach {
+        sinkBlock =>
+          val retractionFromSink = sinkBlock.outputNode match {
+            case n: SinkNode => n.sink.isInstanceOf[RetractStreamTableSink[_]]
+            case _ => false
+          }
+          sinkBlock.setUpdateAsRetraction(retractionFromSink)
+          inferUpdateAsRetraction(sinkBlock, streamQueryConfig, retractionFromSink)
+      }
+
+      // propagate updateAsRetraction property to all input blocks
+      blockPlan.foreach(propagateUpdateAsRetraction)
+      // clear the intermediate result
+      blockPlan.foreach(resetIntermediateResult)
+
+      // translates recursively LogicalNodeBlock into DataStream
+      blockPlan.foreach {
+        sinkBlock =>
+          val result: DataStream[_] = translateLogicalNodeBlock(sinkBlock, streamQueryConfig)
+          sinkBlock.outputNode match {
+            case sinkNode: SinkNode => emitDataStream(
+              sinkNode.sink.asInstanceOf[TableSink[Any]],
+              result.asInstanceOf[DataStream[Any]])
+            case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
+          }
+      }
+      blockPlan
+
+    } else {
+      Seq.empty
+    }
+    if (queryConfig.isMiniBatchEnabled) {
+      if (queryConfig.getMiniBatchTriggerTime <= 0L) {
+        throw new RuntimeException(TableErrors.INST.sqlCompileMiniBatchTriggerTimeError())
+      }
+      MiniBatchHelper.assignTriggerTimeEqually(execEnv, queryConfig.getMiniBatchTriggerTime)
+    }
+     result
+  }
+
+  /**
+    * Registers an external [[StreamTableSource]] in this [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
     * @param tableSource The [[TableSource]] to register.
     */
-  override protected def registerTableSourceInternal(
-      name: String,
-      tableSource: TableSource[_])
-    : Unit = {
+  override def registerTableSource(name: String, tableSource: TableSource): Unit = {
+    checkValidTableName(name)
+
+    // check if event-time is enabled
+    tableSource match {
+      case dra: DefinedRowtimeAttribute if dra.getRowtimeAttribute != null &&
+      dra.getRowtimeAttribute != null && !dra.getRowtimeAttribute.isEmpty &&
+          execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime =>
+
+        throw TableException(
+          s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+            s"But is: ${execEnv.getStreamTimeCharacteristic}")
+      case _ => // ok
+    }
+
+    val uniqueKeys = tableSource match {
+      case duk: DefinedUniqueKeys => duk.getUniqueKeys()
+      case _=> null
+    }
 
     tableSource match {
       case streamTableSource: StreamTableSource[_] =>
-        // check that event-time is enabled if table source includes rowtime attributes
-        if (TableSourceUtil.hasRowtimeAttribute(streamTableSource) &&
-          execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-            throw TableException(
-              s"A rowtime attribute requires an EventTime time characteristic in stream " +
-                s"environment. But is: ${execEnv.getStreamTimeCharacteristic}")
+        registerTableInternal(name,
+          new StreamTableSourceTable(streamTableSource, FlinkStatistic.of(uniqueKeys)))
+      case dimensionTableSource: DimensionTableSource[_] =>
+        if (dimensionTableSource.isTemporal) {
+          registerTableInternal(name,
+            new TemporalTableSourceTable(dimensionTableSource, FlinkStatistic.of(uniqueKeys)))
+        } else {
+          registerTableInternal(name,
+            new StreamTableSourceTable(dimensionTableSource, FlinkStatistic.of(uniqueKeys)))
         }
-        registerTableInternal(name, new StreamTableSourceTable(streamTableSource))
       case _ =>
         throw new TableException("Only StreamTableSource can be registered in " +
-          "StreamTableEnvironment")
+            "StreamTableEnvironment")
     }
   }
-
-// TODO expose this once we have enough table source factories that can deal with it
-//  /**
-//    * Creates a table from a descriptor that describes the source connector, source encoding,
-//    * the resulting table schema, and other properties.
-//    *
-//    * @param connectorDescriptor connector descriptor describing the source of the table
-//    */
-//  def from(connectorDescriptor: ConnectorDescriptor): StreamTableSourceDescriptor = {
-//    new StreamTableSourceDescriptor(this, connectorDescriptor)
-//  }
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
@@ -149,7 +252,7 @@ abstract class StreamTableEnvironment(
     * {{{
     *   // create a table sink and its field names and types
     *   val fieldNames: Array[String] = Array("a", "b", "c")
-    *   val fieldTypes: Array[TypeInformation[_]] = Array(Types.STRING, Types.INT, Types.LONG)
+    *   val fieldTypes: Array[InternalType] = Array(STRING, INT, LONG)
     *   val tableSink: StreamTableSink = new YourTableSinkImpl(...)
     *
     *   // register the table sink in the catalog
@@ -167,7 +270,7 @@ abstract class StreamTableEnvironment(
   def registerTableSink(
       name: String,
       fieldNames: Array[String],
-      fieldTypes: Array[TypeInformation[_]],
+      fieldTypes: Array[DataType],
       tableSink: TableSink[_]): Unit = {
 
     checkValidTableName(name)
@@ -194,6 +297,12 @@ abstract class StreamTableEnvironment(
   }
 
   /**
+    * Returns specific FlinkCostFactory of this Environment.
+    * Currently we use DataSetCostFactory, and will change this later.
+    */
+  override protected def getFlinkCostFactory: FlinkCostFactory = DataSetCost.FACTORY
+
+  /**
     * Writes a [[Table]] to a [[TableSink]].
     *
     * Internally, the [[Table]] is translated into a [[DataStream]] and handed over to the
@@ -207,7 +316,8 @@ abstract class StreamTableEnvironment(
   override private[flink] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
-      queryConfig: QueryConfig): Unit = {
+      queryConfig: QueryConfig,
+      sinkName: String): Unit = {
 
     // Check query configuration
     val streamQueryConfig = queryConfig match {
@@ -216,178 +326,56 @@ abstract class StreamTableEnvironment(
         throw new TableException("StreamQueryConfig required to configure stream query.")
     }
 
-    sink match {
-
-      case retractSink: RetractStreamTableSink[_] =>
-        // retraction sink can always be used
-        val outputType = sink.getOutputType
-        // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[T] =
-          translate(
-            table,
-            streamQueryConfig,
-            updatesAsRetraction = true,
-            withChangeFlag = true)(outputType)
-        // Give the DataStream to the TableSink to emit it.
-        retractSink.asInstanceOf[RetractStreamTableSink[Any]]
-          .emitDataStream(result.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
-
-      case upsertSink: UpsertStreamTableSink[_] =>
-        // optimize plan
-        val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
-        // check for append only table
-        val isAppendOnlyTable = UpdatingPlanChecker.isAppendOnly(optimizedPlan)
-        upsertSink.setIsAppendOnly(isAppendOnlyTable)
-        // extract unique key fields
-        val tableKeys: Option[Array[String]] = UpdatingPlanChecker.getUniqueKeyFields(optimizedPlan)
-        // check that we have keys if the table has changes (is not append-only)
-        tableKeys match {
-          case Some(keys) => upsertSink.setKeyFields(keys)
-          case None if isAppendOnlyTable => upsertSink.setKeyFields(null)
-          case None if !isAppendOnlyTable => throw new TableException(
-            "UpsertStreamTableSink requires that Table has a full primary keys if it is updated.")
-        }
-        val outputType = sink.getOutputType
-        val resultType = getResultType(table.getRelNode, optimizedPlan)
-        // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[T] =
-          translate(
-            optimizedPlan,
-            resultType,
-            streamQueryConfig,
-            withChangeFlag = true)(outputType)
-        // Give the DataStream to the TableSink to emit it.
-        upsertSink.asInstanceOf[UpsertStreamTableSink[Any]]
-          .emitDataStream(result.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
-
-      case appendSink: AppendStreamTableSink[_] =>
-        // optimize plan
-        val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
-        // verify table is an insert-only (append-only) table
-        if (!UpdatingPlanChecker.isAppendOnly(optimizedPlan)) {
-          throw new TableException(
-            "AppendStreamTableSink requires that Table has only insert changes.")
-        }
-        val outputType = sink.getOutputType
-        val resultType = getResultType(table.getRelNode, optimizedPlan)
-        // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[T] =
-          translate(
-            optimizedPlan,
-            resultType,
-            streamQueryConfig,
-            withChangeFlag = false)(outputType)
-        // Give the DataStream to the TableSink to emit it.
-        appendSink.asInstanceOf[AppendStreamTableSink[T]].emitDataStream(result)
-
-      case _ =>
-        throw new TableException("Stream Tables can only be emitted by AppendStreamTableSink, " +
-          "RetractStreamTableSink, or UpsertStreamTableSink.")
+    if (config.getSubsectionOptimization) {
+      sinkNodes += SinkNode(table.logicalPlan, sink)
+    } else {
+      val (result: DataStream[T], _) =
+        translate(table, sink, streamQueryConfig)
+      emitDataStream(sink, result)
     }
   }
 
-  /**
-    * Creates a final converter that maps the internal row type to external type.
-    *
-    * @param inputTypeInfo the input of the sink
-    * @param schema the input schema with correct field names (esp. for POJO field mapping)
-    * @param requestedTypeInfo the output type of the sink
-    * @param functionName name of the map function. Must not be unique but has to be a
-    *                     valid Java class identifier.
-    */
-  protected def getConversionMapper[OUT](
-      inputTypeInfo: TypeInformation[CRow],
-      schema: RowSchema,
-      requestedTypeInfo: TypeInformation[OUT],
-      functionName: String)
-    : MapFunction[CRow, OUT] = {
-
-    val converterFunction = generateRowConverterFunction[OUT](
-      inputTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-      schema,
-      requestedTypeInfo,
-      functionName
-    )
-
-    converterFunction match {
-
-      case Some(func) =>
-        new CRowMapRunner[OUT](func.name, func.code, func.returnType)
-
-      case _ =>
-        new CRowToRowMapFunction().asInstanceOf[MapFunction[CRow, OUT]]
+  override def getSqlText(): String = {
+    if (config.getSubsectionOptimization) {
+      getSqlText(sinkNodes, new SqlGenVisitor(this))
+    } else {
+      ""
     }
   }
 
-  /**
-    * Creates a converter that maps the internal CRow type to Scala or Java Tuple2 with change flag.
-    *
-    * @param physicalTypeInfo the input of the sink
-    * @param schema the input schema with correct field names (esp. for POJO field mapping)
-    * @param requestedTypeInfo the output type of the sink.
-    * @param functionName name of the map function. Must not be unique but has to be a
-    *                     valid Java class identifier.
-    */
-  private def getConversionMapperWithChanges[OUT](
-      physicalTypeInfo: TypeInformation[CRow],
-      schema: RowSchema,
-      requestedTypeInfo: TypeInformation[OUT],
-      functionName: String)
-    : MapFunction[CRow, OUT] = requestedTypeInfo match {
+  private def getSqlText(nodes: Seq[LogicalNode], visitor: SqlGenVisitor): String = {
+    val visited = new util.IdentityHashMap[LogicalNode, Boolean]()
+    val buffer = new StringBuffer()
 
-    // Scala tuple
-    case t: CaseClassTypeInfo[_]
-      if t.getTypeClass == classOf[(_, _)] && t.getTypeAt(0) == Types.BOOLEAN =>
-
-      val reqType = t.getTypeAt[Any](1)
-
-      // convert Row into requested type and wrap result in Tuple2
-      val converterFunction = generateRowConverterFunction(
-        physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-        schema,
-        reqType,
-        functionName
-      )
-
-      converterFunction match {
-
-        case Some(func) =>
-          new CRowToScalaTupleMapRunner(
-            func.name,
-            func.code,
-            requestedTypeInfo.asInstanceOf[TypeInformation[(Boolean, Any)]]
-          ).asInstanceOf[MapFunction[CRow, OUT]]
-
-        case _ =>
-          new CRowToScalaTupleMapFunction().asInstanceOf[MapFunction[CRow, OUT]]
+    def visitNode(node: LogicalNode): Unit = {
+      for(child <- node.children) {
+        if (!visited.containsKey(child)) {
+          visitNode(child)
+          visited.put(child, true)
+        }
       }
-
-    // Java tuple
-    case t: TupleTypeInfo[_]
-      if t.getTypeClass == classOf[JTuple2[_, _]] && t.getTypeAt(0) == Types.BOOLEAN =>
-
-      val reqType = t.getTypeAt[Any](1)
-
-      // convert Row into requested type and wrap result in Tuple2
-      val converterFunction = generateRowConverterFunction(
-        physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-        schema,
-        reqType,
-        functionName
-      )
-
-      converterFunction match {
-
-        case Some(func) =>
-          new CRowToJavaTupleMapRunner(
-            func.name,
-            func.code,
-            requestedTypeInfo.asInstanceOf[TypeInformation[JTuple2[JBool, Any]]]
-          ).asInstanceOf[MapFunction[CRow, OUT]]
-
-        case _ =>
-          new CRowToJavaTupleMapFunction().asInstanceOf[MapFunction[CRow, OUT]]
+      val currSql = visitor.visit(node)
+      if (currSql._3) {
+        buffer.append(currSql._2)
       }
+    }
+
+    for(sinkNode <- nodes) {
+      if (!visited.containsKey(sinkNode)) {
+        visited.put(sinkNode, true)
+        visitNode(sinkNode)
+      }
+    }
+
+    val functionSignatures = visitor.exprVisitor.functionMap.map {
+      case (name, (data, Some(comment))) =>
+        s"-- $comment\n" +
+        s"CREATE FUNCTION $name AS '$data';"
+      case (name, (data, _)) =>
+        s"CREATE FUNCTION $name AS '$data';"
+    }.mkString("\n")
+
+    functionSignatures + "\n" + buffer.toString
   }
 
   /**
@@ -401,13 +389,95 @@ abstract class StreamTableEnvironment(
   protected def registerDataStreamInternal[T](
     name: String,
     dataStream: DataStream[T]): Unit = {
+    val dataStreamTable = new DataStreamTable[T](dataStream, false, false)
+    registerTableInternal(name, dataStreamTable)
+  }
 
-    val (fieldNames, fieldIndexes) = getFieldInfo[T](dataStream.getType)
-    val dataStreamTable = new DataStreamTable[T](
+  /**
+    * Registers a [[DataStream]] with [[BaseRow]] type as a table under a given name with field
+    * names as specified by field expressions in the [[TableEnvironment]]'s catalog.
+    *
+    * @param name The name under which the table is registered in the catalog.
+    * @param isAccRetract True if input data contain retraction messages.
+    * @param dataStream The [[DataStream]] with [[BaseRow]] type to register as table
+    *                   in the catalog.
+    * @param fields The field expressions to define the field names of the table.
+    * @param monotonicity the monotonicity of each field.
+    */
+  private def registerBaseRowDataStreamInternal(
+      name: String,
+      producesUpdates: Boolean,
+      isAccRetract: Boolean,
+      dataStream: DataStream[BaseRow],
+      rowType: RelDataType,
+      fields: Array[Expression],
+      uniqueKeys: util.Set[_ <: util.Set[String]],
+      monotonicity: RelModifiedMonotonicity): Unit = {
+
+    val streamType = dataStream.getType
+
+    if (fields.exists(_.isInstanceOf[RowtimeAttribute])
+        && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+      throw TableException(
+        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+          s"But is: ${execEnv.getStreamTimeCharacteristic}")
+    }
+
+    val tableSchema = TableSchema.fromTypeInfo(streamType, fields)
+
+    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
+
+    val dataStreamTable = new IntermediateDataStreamTable(
+      rowType,
       dataStream,
-      fieldIndexes,
-      fieldNames
-    )
+      tableSchema,
+      producesUpdates,
+      isAccRetract,
+      statistic)
+    registerTableInternal(name, dataStreamTable)
+  }
+
+
+  /**
+    * Registers a dummy [[DataStream]] with row type as a table under a given name with field names
+    * as specified by field expressions in the [[TableEnvironment]]'s catalog.
+    *
+    * @param name The name under which the table is registered in the catalog.
+    * @param isAccRetract True if input data contain retraction messages.
+    * @param fields The field expressions to define the field names of the table.
+    */
+  private def registerDummyDataStreamTableInternal(
+      name: String,
+      produceUpdates: Boolean,
+      isAccRetract: Boolean,
+      rowType: RelDataType,
+      fields: Array[Expression],
+      uniqueKeys: util.Set[_ <: util.Set[String]],
+      monotonicity: RelModifiedMonotonicity): Unit = {
+
+    val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow])
+
+    if (fields.exists(_.isInstanceOf[RowtimeAttribute])
+        && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+      throw TableException(
+        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+          s"But is: ${execEnv.getStreamTimeCharacteristic}")
+    }
+
+    // a dummy source with baseRow type
+    val dummySource = new DataStreamSource[BaseRow](execEnv, inputType, null, false, "")
+
+    val tableSchema = TableSchema.fromTypeInfo(inputType, fields)
+
+    val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
+
+    val dataStreamTable = new IntermediateDataStreamTable(
+      rowType,
+      dummySource,
+      tableSchema,
+      produceUpdates,
+      isAccRetract,
+      statistic)
     registerTableInternal(name, dataStreamTable)
   }
 
@@ -426,333 +496,61 @@ abstract class StreamTableEnvironment(
       fields: Array[Expression])
     : Unit = {
 
-    val streamType = dataStream.getType
-
-    // get field names and types for all non-replaced fields
-    val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType, fields)
-
-    // validate and extract time attributes
-    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
-
-    // check if event-time is enabled
-    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+    if (fields.exists(_.isInstanceOf[RowtimeAttribute])
+        && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
 
-    // adjust field indexes and field names
-    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
-    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
+    val streamType = dataStream.getType
+
+    val tableSchema = TableSchema.fromTypeInfo(streamType, fields)
 
     val dataStreamTable = new DataStreamTable[T](
       dataStream,
-      indexesWithIndicatorFields,
-      namesWithIndicatorFields
-    )
+      false,
+      false,
+      tableSchema)
     registerTableInternal(name, dataStreamTable)
   }
 
-  /**
-    * Checks for at most one rowtime and proctime attribute.
-    * Returns the time attributes.
-    *
-    * @return rowtime attribute and proctime attribute
-    */
-  private def validateAndExtractTimeAttributes(
-    streamType: TypeInformation[_],
-    exprs: Array[Expression])
-  : (Option[(Int, String)], Option[(Int, String)]) = {
-
-    val (isRefByPos, fieldTypes) = streamType match {
-      case c: CompositeType[_] =>
-        // determine schema definition mode (by position or by name)
-        (isReferenceByPosition(c, exprs), (0 until c.getArity).map(i => c.getTypeAt(i)).toArray)
-      case t: TypeInformation[_] =>
-        (false, Array(t))
-    }
-
-    var fieldNames: List[String] = Nil
-    var rowtime: Option[(Int, String)] = None
-    var proctime: Option[(Int, String)] = None
-
-    def checkRowtimeType(t: TypeInformation[_]): Unit = {
-      if (!(TypeCheckUtils.isLong(t) || TypeCheckUtils.isTimePoint(t))) {
-        throw new TableException(
-          s"The rowtime attribute can only replace a field with a valid time type, " +
-          s"such as Timestamp or Long. But was: $t")
-      }
-    }
-
-    def extractRowtime(idx: Int, name: String, origName: Option[String]): Unit = {
-      if (rowtime.isDefined) {
-        throw new TableException(
-          "The rowtime attribute can only be defined once in a table schema.")
-      } else {
-        // if the fields are referenced by position,
-        // it is possible to replace an existing field or append the time attribute at the end
-        if (isRefByPos) {
-          // aliases are not permitted
-          if (origName.isDefined) {
-            throw new TableException(
-              s"Invalid alias '${origName.get}' because fields are referenced by position.")
-          }
-          // check type of field that is replaced
-          if (idx < fieldTypes.length) {
-            checkRowtimeType(fieldTypes(idx))
-          }
-        }
-        // check reference-by-name
-        else {
-          val aliasOrName = origName.getOrElse(name)
-          streamType match {
-            // both alias and reference must have a valid type if they replace a field
-            case ct: CompositeType[_] if ct.hasField(aliasOrName) =>
-              val t = ct.getTypeAt(ct.getFieldIndex(aliasOrName))
-              checkRowtimeType(t)
-            // alias could not be found
-            case _ if origName.isDefined =>
-              throw new TableException(s"Alias '${origName.get}' must reference an existing field.")
-            case _ => // ok
-          }
-        }
-
-        rowtime = Some(idx, name)
-      }
-    }
-
-    def extractProctime(idx: Int, name: String): Unit = {
-      if (proctime.isDefined) {
-          throw new TableException(
-            "The proctime attribute can only be defined once in a table schema.")
-      } else {
-        // if the fields are referenced by position,
-        // it is only possible to append the time attribute at the end
-        if (isRefByPos) {
-
-          // check that proctime is only appended
-          if (idx < fieldTypes.length) {
-            throw new TableException(
-              "The proctime attribute can only be appended to the table schema and not replace " +
-                s"an existing field. Please move '$name' to the end of the schema.")
-          }
-        }
-        // check reference-by-name
-        else {
-          streamType match {
-            // proctime attribute must not replace a field
-            case ct: CompositeType[_] if ct.hasField(name) =>
-              throw new TableException(
-                s"The proctime attribute '$name' must not replace an existing field.")
-            case _ => // ok
-          }
-        }
-        proctime = Some(idx, name)
-      }
-    }
-
-    exprs.zipWithIndex.foreach {
-      case (RowtimeAttribute(UnresolvedFieldReference(name)), idx) =>
-        extractRowtime(idx, name, None)
-
-      case (RowtimeAttribute(Alias(UnresolvedFieldReference(origName), name, _)), idx) =>
-        extractRowtime(idx, name, Some(origName))
-
-      case (ProctimeAttribute(UnresolvedFieldReference(name)), idx) =>
-        extractProctime(idx, name)
-
-      case (UnresolvedFieldReference(name), _) => fieldNames = name :: fieldNames
-
-      case (Alias(UnresolvedFieldReference(_), name, _), _) => fieldNames = name :: fieldNames
-
-      case (e, _) =>
-        throw new TableException(s"Time attributes can only be defined on field references or " +
-          s"aliases of valid field references. Rowtime attributes can replace existing fields, " +
-          s"proctime attributes can not. " +
-          s"But was: $e")
-    }
-
-    if (rowtime.isDefined && fieldNames.contains(rowtime.get._2)) {
-      throw new TableException(
-        "The rowtime attribute may not have the same name as an another field.")
-    }
-
-    if (proctime.isDefined && fieldNames.contains(proctime.get._2)) {
-      throw new TableException(
-        "The proctime attribute may not have the same name as an another field.")
-    }
-
-    (rowtime, proctime)
-  }
-
-  /**
-    * Injects markers for time indicator fields into the field indexes.
-    *
-    * @param fieldIndexes The field indexes into which the time indicators markers are injected.
-    * @param rowtime An optional rowtime indicator
-    * @param proctime An optional proctime indicator
-    * @return An adjusted array of field indexes.
-    */
-  private def adjustFieldIndexes(
-    fieldIndexes: Array[Int],
-    rowtime: Option[(Int, String)],
-    proctime: Option[(Int, String)]): Array[Int] = {
-
-    // inject rowtime field
-    val withRowtime = rowtime match {
-      case Some(rt) =>
-        fieldIndexes.patch(rt._1, Seq(TimeIndicatorTypeInfo.ROWTIME_STREAM_MARKER), 0)
-      case _ =>
-        fieldIndexes
-    }
-
-    // inject proctime field
-    val withProctime = proctime match {
-      case Some(pt) =>
-        withRowtime.patch(pt._1, Seq(TimeIndicatorTypeInfo.PROCTIME_STREAM_MARKER), 0)
-      case _ =>
-        withRowtime
-    }
-
-    withProctime
-  }
-
-  /**
-    * Injects names of time indicator fields into the list of field names.
-    *
-    * @param fieldNames The array of field names into which the time indicator field names are
-    *                   injected.
-    * @param rowtime An optional rowtime indicator
-    * @param proctime An optional proctime indicator
-    * @return An adjusted array of field names.
-    */
-  private def adjustFieldNames(
-    fieldNames: Array[String],
-    rowtime: Option[(Int, String)],
-    proctime: Option[(Int, String)]): Array[String] = {
-
-    // inject rowtime field
-    val withRowtime = rowtime match {
-      case Some(rt) => fieldNames.patch(rt._1, Seq(rowtime.get._2), 0)
-      case _ => fieldNames
-    }
-
-    // inject proctime field
-    val withProctime = proctime match {
-      case Some(pt) => withRowtime.patch(pt._1, Seq(proctime.get._2), 0)
-      case _ => withRowtime
-    }
-
-    withProctime
-  }
-
-  /**
-    * Returns the decoration rule set for this environment
-    * including a custom RuleSet configuration.
-    */
-  protected def getDecoRuleSet: RuleSet = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getDecoRuleSet match {
-
-      case None =>
-        getBuiltInDecoRuleSet
-
-      case Some(ruleSet) =>
-        if (calciteConfig.replacesDecoRuleSet) {
-          ruleSet
-        } else {
-          RuleSets.ofList((getBuiltInDecoRuleSet.asScala ++ ruleSet.asScala).asJava)
-        }
-    }
-  }
-
-  /**
-    * Returns the built-in normalization rules that are defined by the environment.
-    */
-  protected def getBuiltInNormRuleSet: RuleSet = FlinkRuleSets.DATASTREAM_NORM_RULES
-
-  /**
-    * Returns the built-in optimization rules that are defined by the environment.
-    */
-  protected def getBuiltInPhysicalOptRuleSet: RuleSet = FlinkRuleSets.DATASTREAM_OPT_RULES
-
-  /**
-    * Returns the built-in decoration rules that are defined by the environment.
-    */
-  protected def getBuiltInDecoRuleSet: RuleSet = FlinkRuleSets.DATASTREAM_DECO_RULES
 
   /**
     * Generates the optimized [[RelNode]] tree from the original relational node tree.
     *
     * @param relNode The root node of the relational expression tree.
     * @param updatesAsRetraction True if the sink requests updates as retraction messages.
+    * @param queryConfig The configuration for the query to generate.
     * @return The optimized [[RelNode]] tree
     */
-  private[flink] def optimize(relNode: RelNode, updatesAsRetraction: Boolean): RelNode = {
+  private[flink] def optimize(
+      relNode: RelNode,
+      updatesAsRetraction: Boolean,
+      queryConfig: QueryConfig = streamQueryConfig,
+      isSinkBlock: Boolean = true): RelNode = {
 
-    // 0. convert sub-queries before query decorrelation
-    val convSubQueryPlan = runHepPlanner(
-      HepMatchOrder.BOTTOM_UP, FlinkRuleSets.TABLE_SUBQUERY_RULES, relNode, relNode.getTraitSet)
+    val programs = config.getCalciteConfig.getStreamPrograms
+    Preconditions.checkNotNull(programs)
 
-    // 0. convert table references
-    val fullRelNode = runHepPlanner(
-      HepMatchOrder.BOTTOM_UP,
-      FlinkRuleSets.TABLE_REF_RULES,
-      convSubQueryPlan,
-      relNode.getTraitSet)
+    val flinkChainContext = getPlanner.getContext.asInstanceOf[FlinkChainContext]
 
-    // 1. decorrelate
-    val decorPlan = RelDecorrelator.decorrelateQuery(fullRelNode)
+    flinkChainContext.load(Contexts.of(queryConfig))
 
-    // 2. convert time indicators
-    val convPlan = RelTimeIndicatorConverter.convert(decorPlan, getRelBuilder.getRexBuilder)
+    val optimizeNode = programs.optimize(relNode, new StreamOptimizeContext() {
+      override def getContext: Context = flinkChainContext
 
-    // 3. normalize the logical plan
-    val normRuleSet = getNormRuleSet
-    val normalizedPlan = if (normRuleSet.iterator().hasNext) {
-      runHepPlanner(HepMatchOrder.BOTTOM_UP, normRuleSet, convPlan, convPlan.getTraitSet)
-    } else {
-      convPlan
-    }
+      override def getRelOptPlanner: RelOptPlanner = getPlanner
 
-    // 4. optimize the logical Flink plan
-    val logicalOptRuleSet = getLogicalOptRuleSet
-    val logicalOutputProps = relNode.getTraitSet.replace(FlinkConventions.LOGICAL).simplify()
-    val logicalPlan = if (logicalOptRuleSet.iterator().hasNext) {
-      runVolcanoPlanner(logicalOptRuleSet, normalizedPlan, logicalOutputProps)
-    } else {
-      normalizedPlan
-    }
+      override def getRexBuilder: RexBuilder = getRelBuilder.getRexBuilder
 
-    // 5. optimize the physical Flink plan
-    val physicalOptRuleSet = getPhysicalOptRuleSet
-    val physicalOutputProps = relNode.getTraitSet.replace(FlinkConventions.DATASTREAM).simplify()
-    val physicalPlan = if (physicalOptRuleSet.iterator().hasNext) {
-      runVolcanoPlanner(physicalOptRuleSet, logicalPlan, physicalOutputProps)
-    } else {
-      logicalPlan
-    }
+      override def updateAsRetraction(): Boolean = updatesAsRetraction
 
-    // 6. decorate the optimized plan
-    val decoRuleSet = getDecoRuleSet
-    val decoratedPlan = if (decoRuleSet.iterator().hasNext) {
-      val planToDecorate = if (updatesAsRetraction) {
-        physicalPlan.copy(
-          physicalPlan.getTraitSet.plus(new UpdateAsRetractionTrait(true)),
-          physicalPlan.getInputs)
-      } else {
-        physicalPlan
-      }
-      runHepPlanner(
-        HepMatchOrder.BOTTOM_UP,
-        decoRuleSet,
-        planToDecorate,
-        planToDecorate.getTraitSet)
-    } else {
-      physicalPlan
-    }
+      override def isSinkNode: Boolean = isSinkBlock
+    })
+    flinkChainContext.unload(classOf[QueryConfig])
 
-    decoratedPlan
+    optimizeNode
   }
 
   /**
@@ -765,7 +563,7 @@ abstract class StreamTableEnvironment(
     * @param queryConfig The configuration for the query to generate.
     * @param updatesAsRetraction Set to true to encode updates as retraction messages.
     * @param withChangeFlag Set to true to emit records with change flags.
-    * @param tpe The [[TypeInformation]] of the resulting [[DataStream]].
+    * @param resultType The [[DataType]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
     */
@@ -773,13 +571,17 @@ abstract class StreamTableEnvironment(
       table: Table,
       queryConfig: StreamQueryConfig,
       updatesAsRetraction: Boolean,
-      withChangeFlag: Boolean)(implicit tpe: TypeInformation[A]): DataStream[A] = {
+      withChangeFlag: Boolean,
+      resultType: DataType): DataStream[A] = {
+
+    mergeParameters()
+
     val relNode = table.getRelNode
-    val dataStreamPlan = optimize(relNode, updatesAsRetraction)
+    val dataStreamPlan = optimize(relNode, updatesAsRetraction, queryConfig)
 
     val rowType = getResultType(relNode, dataStreamPlan)
 
-    translate(dataStreamPlan, rowType, queryConfig, withChangeFlag)
+    translate(dataStreamPlan, rowType, queryConfig, withChangeFlag, null, resultType)
   }
 
   /**
@@ -790,7 +592,7 @@ abstract class StreamTableEnvironment(
     *                    field naming during optimization we pass the row type separately.
     * @param queryConfig     The configuration for the query to generate.
     * @param withChangeFlag Set to true to emit records with change flags.
-    * @param tpe         The [[TypeInformation]] of the resulting [[DataStream]].
+    * @param resultType         The [[DataType]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
     */
@@ -798,18 +600,25 @@ abstract class StreamTableEnvironment(
       logicalPlan: RelNode,
       logicalType: RelDataType,
       queryConfig: StreamQueryConfig,
-      withChangeFlag: Boolean)
-      (implicit tpe: TypeInformation[A]): DataStream[A] = {
+      withChangeFlag: Boolean,
+      sink: TableSink[_],
+      resultType: DataType): DataStream[A] = {
 
     // if no change flags are requested, verify table is an insert-only (append-only) table.
     if (!withChangeFlag && !UpdatingPlanChecker.isAppendOnly(logicalPlan)) {
       throw new TableException(
         "Table is not an append-only table. " +
-        "Use the toRetractStream() in order to handle add and retract messages.")
+          "Use the toRetractStream() in order to handle add and retract messages.")
     }
 
-    // get CRow plan
-    val plan: DataStream[CRow] = translateToCRow(logicalPlan, queryConfig)
+    // get BaseRow plan
+    val translateStream = translateToBaseRow(logicalPlan, queryConfig)
+
+    val parTransformation = if (sink != null) {
+      createPartitionTransformation(sink, translateStream)
+    } else {
+      translateStream
+    }
 
     val rowtimeFields = logicalType
       .getFieldList.asScala
@@ -824,7 +633,8 @@ abstract class StreamTableEnvironment(
           s"Please select the rowtime field that should be used as event-time timestamp for the " +
           s"DataStream by casting all other fields to TIMESTAMP.")
     } else if (rowtimeFields.size == 1) {
-      val origRowType = plan.getType.asInstanceOf[CRowTypeInfo].rowType
+
+      val origRowType = parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
       val convFieldTypes = origRowType.getFieldTypes.map { t =>
         if (FlinkTypeFactory.isRowtimeIndicatorType(t)) {
           SqlTimeTypeInfo.TIMESTAMP
@@ -832,66 +642,431 @@ abstract class StreamTableEnvironment(
           t
         }
       }
-      CRowTypeInfo(new RowTypeInfo(convFieldTypes, origRowType.getFieldNames))
+      new BaseRowTypeInfo(classOf[BaseRow], convFieldTypes, origRowType.getFieldNames)
     } else {
-      plan.getType
+      parTransformation.getOutputType
     }
 
-    // convert CRow to output type
-    val conversion: MapFunction[CRow, A] = if (withChangeFlag) {
-      getConversionMapperWithChanges(
-        convType,
-        new RowSchema(logicalType),
-        tpe,
-        "DataStreamSinkConversion")
-    } else {
-      getConversionMapper(
-        convType,
-        new RowSchema(logicalType),
-        tpe,
-        "DataStreamSinkConversion")
+    val optionRowTimeField = if (rowtimeFields.isEmpty) None else Some(rowtimeFields.head.getIndex)
+    val ctx = CodeGeneratorContext(config, true)
+        .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
+    val (converterOperator, outputType) = generateRowConverterOperator[A](
+      ctx,
+      convType.asInstanceOf[BaseRowTypeInfo[_]],
+      logicalType,
+      "DataStreamSinkConversion",
+      optionRowTimeField,
+      withChangeFlag,
+      resultType)
+
+    val convertTransformation = converterOperator match {
+      case None => parTransformation
+      case Some(operator) => new OneInputTransformation(
+        parTransformation,
+        s"SinkConversion to ${TypeUtils.getExternalClassForType(resultType).getSimpleName}",
+        operator,
+        outputType,
+        parTransformation.getParallelism
+      )
     }
-
-    val rootParallelism = plan.getParallelism
-
-    val withRowtime = if (rowtimeFields.isEmpty) {
-      // no rowtime field to set
-      plan.map(conversion)
-    } else {
-      // set the only rowtime field as event-time timestamp for DataStream
-      // and convert it to SQL timestamp
-      plan.process(new OutputRowtimeProcessFunction[A](conversion, rowtimeFields.head.getIndex))
-    }
-
-    withRowtime
-      .returns(tpe)
-      .name(s"to: ${tpe.getTypeClass.getSimpleName}")
-      .setParallelism(rootParallelism)
+    new DataStream(execEnv, convertTransformation).asInstanceOf[DataStream[A]]
   }
 
+    /**
+      * Translates a logical [[RelNode]] plan into a [[DataStream]] of type [[BaseRow]].
+      *
+      * @param logicalPlan The logical plan to translate.
+      * @param queryConfig  The configuration for the query to generate.
+      * @return The [[DataStream]] of type [[BaseRow]].
+      */
+    protected def translateToBaseRow(
+        logicalPlan: RelNode,
+        queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+
+      logicalPlan match {
+        case node: StreamExecRel =>
+          node.translateToPlan(this, queryConfig)
+        case _ =>
+          throw TableException("Cannot generate DataStream due to an invalid logical plan. " +
+            "This is a bug and should not happen. Please file an issue.")
+      }
+    }
+
   /**
-    * Translates a logical [[RelNode]] plan into a [[DataStream]] of type [[CRow]].
+    * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
+    * the result of the given [[Table]].
     *
-    * @param logicalPlan The logical plan to translate.
-    * @param queryConfig  The configuration for the query to generate.
-    * @return The [[DataStream]] of type [[CRow]].
+    * @param table The table for which the AST and execution plan will be returned.
     */
-  protected def translateToCRow(
-    logicalPlan: RelNode,
-    queryConfig: StreamQueryConfig): DataStream[CRow] = {
+  def explain(table: Table): String = {
+    val ast = table.getRelNode
+    val optimizedPlan = optimize(ast, updatesAsRetraction = false, queryConfig)
+    val transformStream = translateToBaseRow(optimizedPlan, queryConfig)
 
-    logicalPlan match {
-      case node: DataStreamRel =>
-        node.translateToPlan(this, queryConfig)
-      case _ =>
-        throw TableException("Cannot generate DataStream due to an invalid logical plan. " +
-          "This is a bug and should not happen. Please file an issue.")
+    val streamGraph = StreamGraphGenerator.generate(
+      execEnv, ArrayBuffer(transformStream))
+
+    val sqlPlan = PlanUtil.explainPlan(streamGraph)
+
+    s"== Abstract Syntax Tree ==" +
+        System.lineSeparator +
+        s"${RelOptUtil.toString(ast)}" +
+        System.lineSeparator +
+        s"== Optimized Logical Plan ==" +
+        System.lineSeparator +
+        s"${RelOptUtil.toString(optimizedPlan)}" +
+        System.lineSeparator +
+        s"== Physical Execution Plan ==" +
+        System.lineSeparator +
+        s"$sqlPlan"
+  }
+
+  /**
+    * Merge global job parameters and table config parameters,
+    * and set the merged result to GlobalJobParameters
+    */
+  private def mergeParameters(): Unit = {
+    if (!isConfigMerged && execEnv != null && execEnv.getConfig != null) {
+      val parameters = new Configuration()
+      if (config != null && config.getParameters != null) {
+        parameters.addAll(config.getParameters)
+      }
+
+      if (execEnv.getConfig.getGlobalJobParameters != null) {
+        execEnv.getConfig.getGlobalJobParameters.toMap.asScala.foreach {
+          kv => parameters.setString(kv._1, kv._2)
+        }
+      }
+
+      parameters.addAll(execEnv.getConfiguration)
+      execEnv.getConfig.setGlobalJobParameters(parameters)
+      isConfigMerged = true
+    }
+  }
+
+
+  /**
+    * Explain the whole plan only when subsection optimization is supported, and returns the AST
+    * of the specified Table API and SQL queries and the execution plan.
+    */
+  def explain(): String = {
+    if (!config.getSubsectionOptimization) {
+      throw new TableException("Can not explain due to subsection optimization is not supported, " +
+                                 "please check your TableConfig.")
+    }
+    val blockPlan = compile()
+
+    val sb = new StringBuilder
+    sb.append("== Abstract Syntax Tree ==")
+    sb.append(System.lineSeparator)
+    sinkNodes.foreach { sink =>
+      val table = new Table(this, sink.children.head)
+      val ast = table.getRelNode
+      sb.append(RelOptUtil.toString(ast))
+      sb.append(System.lineSeparator)
+    }
+
+    sb.append("== Optimized Logical Plan ==")
+    sb.append(System.lineSeparator)
+    val visitedBlocks = mutable.Set[LogicalNodeBlock]()
+    def visitBlock(block: LogicalNodeBlock, isSinkBlock: Boolean): Unit = {
+      if (!visitedBlocks.contains(block)) {
+        block.children.foreach(visitBlock(_, isSinkBlock = false))
+        if (isSinkBlock) {
+          sb.append("[[Sink]]")
+        } else {
+          sb.append(s"[[IntermediateTable=${block.getOutputTableName}]]")
+        }
+        sb.append(System.lineSeparator)
+        sb.append(RelOptUtil.toString(block.getOptimizedPlan))
+        sb.append(RelTraitUtil.toString(block.getOptimizedPlan))
+        sb.append(System.lineSeparator)
+        visitedBlocks += block
+      }
+    }
+    blockPlan.foreach(visitBlock(_, isSinkBlock = true))
+
+    val sqlPlan = PlanUtil.explainPlan(execEnv.getStreamGraph)
+    sb.append("== Physical Execution Plan ==")
+    sb.append(System.lineSeparator)
+    sb.append(sqlPlan)
+    sb.toString()
+  }
+
+  /**
+    * Mark Expression to RowtimeAttribute or ProctimeAttribute for time indicators
+    */
+  private def getExprsWithTimeAttribute(table: Table, rowType: RelDataType): Array[Expression] = {
+
+    for ((name, index) <- table.getSchema.getColumnNames.zipWithIndex) yield {
+      val relType = rowType.getFieldList.get(index).asInstanceOf[RelDataTypeFieldImpl].getValue
+      val expression = UnresolvedFieldReference(name)
+
+      relType match {
+        case _ if FlinkTypeFactory.isProctimeIndicatorType(relType) =>
+          new ProctimeAttribute(expression)
+        case _ if FlinkTypeFactory.isRowtimeIndicatorType(relType) =>
+          new RowtimeAttribute(expression)
+        case _ => expression
+      }
     }
   }
 
   /**
-    * Returns the record type of the optimized plan with field names of the logical plan.
+    * Infer UpdateAsRetraction property for each block.
+    *
+    * @param block The [[LogicalNodeBlock]] instance.
+    * @param queryConfig The configuration for the query to generate.
+    * @param retractionFromSink Whether the sink need update as retraction messages.
     */
+  private def inferUpdateAsRetraction(
+      block: LogicalNodeBlock,
+      queryConfig: QueryConfig,
+      retractionFromSink: Boolean): Unit = {
+
+    block.children.foreach {
+      child =>
+        if (child.getNewOutputNode.isEmpty) {
+          inferUpdateAsRetraction(child, queryConfig, false)
+        }
+    }
+
+    val optimizedPlan = block.getLogicalPlan match {
+      case n: SinkNode =>
+        val table = new Table(this, n.child) // ignore sink node
+        val optimizedPlan = optimize(table.getRelNode, retractionFromSink, queryConfig, true)
+        block.setOptimizedPlan(optimizedPlan)
+        optimizedPlan
+
+      case o =>
+        val table = new Table(this, o)
+        val optimizedPlan = optimize(table.getRelNode, retractionFromSink, queryConfig, false)
+        val produceUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
+
+        val name = createUniqueTableName()
+        val rowType = optimizedPlan.getRowType
+        val fieldExpressions = getExprsWithTimeAttribute(table, rowType)
+
+        val uniqueKeys = getUniqueKeys(optimizedPlan)
+        val monotonicity = FlinkRelMetadataQuery
+          .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
+          .getRelModifiedMonotonicity(optimizedPlan)
+
+        registerDummyDataStreamTableInternal(
+          name, produceUpdates, isAccRetract = false, rowType,
+          fieldExpressions, uniqueKeys, monotonicity)
+        val newTable = scan(name)
+        block.setNewOutputNode(newTable.logicalPlan)
+        block.setOutputTableName(name)
+        block.setOptimizedPlan(optimizedPlan)
+        optimizedPlan
+    }
+  }
+
+  /**
+    * Reset the intermediate result including newOutputNode and outputTableName
+    *
+    * @param block the [[LogicalNodeBlock]] instance.
+    */
+  private def resetIntermediateResult(block: LogicalNodeBlock): Unit = {
+    block.setNewOutputNode(null)
+    block.setOutputTableName(null)
+
+    block.children.foreach {
+      child => if (child.getNewOutputNode.nonEmpty) {
+        resetIntermediateResult(child)
+      }
+    }
+  }
+
+  /**
+    * Propagate updateAsRetraction property to all input blocks
+    *
+    * @param block The [[LogicalNodeBlock]] instance.
+    */
+  private def propagateUpdateAsRetraction(block: LogicalNodeBlock): Unit = {
+
+    // process current block
+    def shipUpdateAsRetraction(rel: RelNode, updateAsRetraction: Boolean): Unit = {
+      rel match {
+        case scan: StreamExecScan =>
+          val retractionTrait = scan.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)
+          if (retractionTrait.sendsUpdatesAsRetractions || updateAsRetraction) {
+            val tableName = scan.getTable.getQualifiedName.asScala.last
+            val retractionBlocks = block.children.filter(_.getOutputTableName eq tableName)
+            Preconditions.checkArgument(retractionBlocks.size <= 1)
+            if (retractionBlocks.size == 1) {
+              retractionBlocks.head.setUpdateAsRetraction(true)
+            }
+          }
+        case ser: StreamExecRel => ser.getInputs.asScala.foreach(e => {
+          if (ser.needsUpdatesAsRetraction(e) || (updateAsRetraction && !ser.consumesRetractions)) {
+            shipUpdateAsRetraction(e, true)
+          } else {
+            shipUpdateAsRetraction(e, false)
+          }
+        })
+      }
+    }
+
+    shipUpdateAsRetraction(block.getOptimizedPlan, block.isUpdateAsRetraction)
+    block.children.foreach(propagateUpdateAsRetraction)
+  }
+
+  /**
+    * Translates recursively a logical [[RelNode]] in a [[LogicalNodeBlock]] into a [[DataStream]].
+    * Converts to target type if the block contains sink node.
+    *
+    * @param block The [[LogicalNodeBlock]] instance.
+    * @return The [[DataStream]] that corresponds to logical plan of current block.
+    */
+  private def translateLogicalNodeBlock(
+      block: LogicalNodeBlock,
+      streamQueryConfig: StreamQueryConfig): DataStream[_] = {
+
+    block.children.foreach {
+      child => if (child.getNewOutputNode.isEmpty) {
+        translateLogicalNodeBlock(child, queryConfig)
+      }
+    }
+
+    block.getLogicalPlan match {
+      case n: SinkNode =>
+        val table = new Table(this, n.child) // ignore sink node
+        val (dataStream, optimizedPlan) = try {
+          translate(table, n.sink, streamQueryConfig)
+        } catch {
+          case t: TableException =>
+            throw TableException(s"Error happens when translating plan for sink '${n.sink}'", t)
+        }
+
+        block.setOptimizedPlan(optimizedPlan)
+        dataStream
+
+      case o =>
+        val table = new Table(this, o)
+        val optimizedPlan = optimize(
+          table.getRelNode,
+          updatesAsRetraction = block.isUpdateAsRetraction,
+          streamQueryConfig,
+          isSinkBlock = false)
+        val translateStream = translateToBaseRow(optimizedPlan, streamQueryConfig)
+
+        val dataStream = new DataStream(execEnv, translateStream)
+
+        val isAccRetract = optimizedPlan.getTraitSet
+          .getTrait(AccModeTraitDef.INSTANCE).getAccMode == AccMode.AccRetract
+        val producesUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
+        val name = createUniqueTableName()
+        val rowType = optimizedPlan.getRowType
+        val fieldExpressions = getExprsWithTimeAttribute(table, rowType)
+
+        val uniqueKeys = getUniqueKeys(optimizedPlan)
+        val monotonicity = FlinkRelMetadataQuery
+          .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
+          .getRelModifiedMonotonicity(optimizedPlan)
+
+        registerBaseRowDataStreamInternal(
+          name, producesUpdates, isAccRetract, dataStream, rowType,
+          fieldExpressions, uniqueKeys, monotonicity)
+        val newTable = scan(name)
+        block.setNewOutputNode(newTable.logicalPlan)
+        block.setOutputTableName(name)
+
+        block.setOptimizedPlan(optimizedPlan)
+        dataStream
+    }
+  }
+
+  /**
+    * Translates a [[Table]] into a [[DataStream]].
+    *
+    * The transformation involves optimizing the relational expression tree as defined by
+    * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
+    *
+    * @param table The root node of the relational expression tree.
+    * @tparam T The type of the resulting [[DataStream]].
+    * @return A Tuple2 include the [[DataStream]] and the optimized plan that corresponds to the
+    *         translated [[Table]].
+    */
+  private def translate[T](
+      table: Table,
+      sink: TableSink[T],
+      streamQueryConfig: StreamQueryConfig): (DataStream[T], RelNode) = {
+
+    sink match {
+
+      case retractSink: RetractStreamTableSink[_] =>
+        // retraction sink can always be used
+        val outputType = sink.getOutputType
+        // translate the Table into a DataStream and provide the type that the TableSink expects.
+
+        val relNode = table.getRelNode
+        val dataStreamPlan = optimize(relNode, updatesAsRetraction = true, streamQueryConfig)
+        val resultType = getResultType(relNode, dataStreamPlan)
+        val dataStream = translate[T](
+          dataStreamPlan,
+          resultType,
+          streamQueryConfig,
+          withChangeFlag = true,
+          sink,
+          outputType)
+
+        (dataStream, dataStreamPlan)
+
+      case upsertSink: UpsertStreamTableSink[_] =>
+        // optimize plan
+        val optimizedPlan = optimize(
+          table.getRelNode, updatesAsRetraction = false, streamQueryConfig)
+        // check for append only table
+        val isAppendOnlyTable = UpdatingPlanChecker.isAppendOnly(optimizedPlan)
+        upsertSink.setIsAppendOnly(isAppendOnlyTable)
+        val outputType = sink.getOutputType
+        val resultType = getResultType(table.getRelNode, optimizedPlan)
+        // translate the Table into a DataStream and provide the type that the TableSink expects.
+        val dataStream = translate[T](
+          optimizedPlan,
+          resultType,
+          streamQueryConfig,
+          withChangeFlag = true,
+          sink,
+          outputType)
+        (dataStream, optimizedPlan)
+
+      case _: AppendStreamTableSink[_] =>
+        // optimize plan
+        val optimizedPlan = optimize(
+          table.getRelNode, updatesAsRetraction = false, streamQueryConfig)
+        // verify table is an insert-only (append-only) table
+        if (!UpdatingPlanChecker.isAppendOnly(optimizedPlan)) {
+          throw new TableException(
+            "AppendStreamTableSink requires that Table has only insert changes.")
+        }
+
+        val accMode = optimizedPlan.getTraitSet.getTrait(AccModeTraitDef.INSTANCE).getAccMode
+        if (accMode == AccMode.AccRetract) {
+          throw new TableException(
+            "AppendStreamTableSink can not be used to output retraction messages.")
+        }
+
+        val outputType = sink.getOutputType
+        val resultType = getResultType(table.getRelNode, optimizedPlan)
+        // translate the Table into a DataStream and provide the type that the TableSink expects.
+        val dataStream = translate[T](
+          optimizedPlan,
+          resultType,
+          streamQueryConfig,
+          withChangeFlag = false,
+          sink,
+          outputType)
+        (dataStream, optimizedPlan)
+
+      case _ =>
+        throw new TableException("Stream Tables can only be emitted by AppendStreamTableSink, " +
+                                   "RetractStreamTableSink, or UpsertStreamTableSink.")
+    }
+  }
+
   private def getResultType(originRelNode: RelNode, optimizedPlan: RelNode): RelRecordType = {
     // zip original field names with optimized field types
     val fieldTypes = originRelNode.getRowType.getFieldList.asScala
@@ -909,33 +1084,91 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
-    * the result of the given [[Table]].
+    * emit [[DataStream]].
     *
-    * @param table The table for which the AST and execution plan will be returned.
+    * @param sink The [[TableSink]] to emit the [[DataStream]] to.
+    * @param dataStream The [[DataStream]] to emit.
+    * @tparam T The expected type of the [[DataStream]] which represents the [[TableSink]].
     */
-  def explain(table: Table): String = {
-    val ast = table.getRelNode
-    val optimizedPlan = optimize(ast, updatesAsRetraction = false)
-    val dataStream = translateToCRow(optimizedPlan, queryConfig)
+  private def emitDataStream[T](sink: TableSink[T], dataStream: DataStream[T]): Unit = {
+    sink match {
 
-    val env = dataStream.getExecutionEnvironment
-    val jsonSqlPlan = env.getExecutionPlan
+      case retractSink: RetractStreamTableSink[_] =>
+        // Give the DataStream to the TableSink to emit it.
+        retractSink.asInstanceOf[RetractStreamTableSink[Any]]
+          .emitDataStream(dataStream.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
 
-    val sqlPlan = PlanJsonParser.getSqlExecutionPlan(jsonSqlPlan, false)
+      case upsertSink: UpsertStreamTableSink[_] =>
+        // Give the DataStream to the TableSink to emit it.
+        upsertSink.asInstanceOf[UpsertStreamTableSink[Any]]
+          .emitDataStream(dataStream.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
 
-    s"== Abstract Syntax Tree ==" +
-        System.lineSeparator +
-        s"${RelOptUtil.toString(ast)}" +
-        System.lineSeparator +
-        s"== Optimized Logical Plan ==" +
-        System.lineSeparator +
-        s"${RelOptUtil.toString(optimizedPlan)}" +
-        System.lineSeparator +
-        s"== Physical Execution Plan ==" +
-        System.lineSeparator +
-        s"$sqlPlan"
+      case appendSink: AppendStreamTableSink[_] =>
+        // Give the DataStream to the TableSink to emit it.
+        appendSink.asInstanceOf[AppendStreamTableSink[T]].emitDataStream(dataStream)
+
+      case _ =>
+        throw new TableException("Stream Tables can only be emitted by AppendStreamTableSink, " +
+                                   "RetractStreamTableSink, or UpsertStreamTableSink.")
+    }
   }
 
+  def registerTableWithWatermark(
+      tableName: String,
+      sourceTable: Table,
+      rowtimeField: String,
+      watermarkCall: SqlCall): Unit = {
+    val offset = WatermarkUtils.getWithOffsetParameters(rowtimeField, watermarkCall)
+    val source = sourceTable.getRelNode
+    registerTable(
+      tableName,
+      new Table(
+        this,
+        new LogicalRelNode(
+          new LogicalWatermarkAssigner(
+            source.getCluster,
+            source.getTraitSet,
+            source,
+            rowtimeField,
+            offset
+          )
+        )
+      )
+    )
+  }
+
+  def registerTableWithPk(
+    tableName: String,
+    sourceTable: Table,
+    primaryKeys: util.List[String]): Unit = {
+
+    val source = sourceTable.getRelNode
+    registerTable(tableName, new Table(this,
+      new LogicalRelNode(
+      new LogicalLastRow(
+        source.getCluster,
+        source.getTraitSet,
+        source,
+        primaryKeys
+      ))))
+  }
+
+  private def getUniqueKeys(relNode: RelNode): util.Set[_ <: util.Set[String]] = {
+    val rowType = relNode.getRowType
+    val uniqueKeys = FlinkRelMetadataQuery
+      .reuseOrCreate(relBuilder.getCluster.getMetadataQuery)
+      .getUniqueKeys(relNode)
+    if (uniqueKeys != null) {
+      uniqueKeys.map { uniqueKey =>
+        val keys = new util.HashSet[String]()
+        uniqueKey.asList().asScala.foreach { idx =>
+          keys.add(rowType.getFieldNames.get(idx))
+        }
+        keys
+      }
+    } else {
+      null
+    }
+  }
 }
 

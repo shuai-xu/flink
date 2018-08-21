@@ -22,10 +22,11 @@ import com.google.common.collect.ImmutableList
 import org.apache.calcite.rex.{RexNode, RexSubQuery}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.TypeCheckUtils._
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 case class In(expression: Expression, elements: Seq[Expression]) extends Expression  {
@@ -54,10 +55,6 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
         if (elements.length != 1) {
           return ValidationFailure("IN operator supports only one table reference.")
         }
-        if (table.tableEnv.isInstanceOf[StreamTableEnvironment]) {
-          return ValidationFailure(
-            "Sub-query IN operator on stream tables is currently not supported.")
-        }
         val tableOutput = table.logicalPlan.output
         if (tableOutput.length > 1) {
           return ValidationFailure(
@@ -65,14 +62,25 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
         }
         (expression.resultType, tableOutput.head.resultType) match {
           case (lType, rType) if lType == rType => ValidationSuccess
-          case (lType, rType) if isNumeric(lType) && isNumeric(rType) => ValidationSuccess
-          case (lType, rType) if isArray(lType) && lType.getTypeClass == rType.getTypeClass =>
+          case (lType, rType)
+            if isNumeric(DataTypes.internal(lType)) && isNumeric(DataTypes.internal(rType)) =>
+            ValidationSuccess
+          case (lType, rType)
+            if isArray(DataTypes.internal(lType)) &&
+                TypeUtils.getExternalClassForType(lType) ==
+                    TypeUtils.getExternalClassForType(rType) =>
             ValidationSuccess
           case (lType, rType) =>
             ValidationFailure(s"IN operator on incompatible types: $lType and $rType.")
         }
 
       case _ =>
+
+        // n1 in (n2, n3, ...)  -- allowed by major databases
+        if (children.forall(c => isNumeric(DataTypes.internal(c.resultType)))) {
+          return ValidationSuccess
+        }
+
         val types = children.tail.map(_.resultType)
         if (types.distinct.length != 1) {
           return ValidationFailure(
@@ -80,9 +88,11 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
               s"got ${types.mkString(", ")}.")
         }
         (children.head.resultType, children.last.resultType) match {
-          case (lType, rType) if isNumeric(lType) && isNumeric(rType) => ValidationSuccess
           case (lType, rType) if lType == rType => ValidationSuccess
-          case (lType, rType) if isArray(lType) && lType.getTypeClass == rType.getTypeClass =>
+          case (lType, rType)
+            if isArray(DataTypes.internal(lType)) &&
+                TypeUtils.getExternalClassForType(lType) ==
+                    TypeUtils.getExternalClassForType(rType) =>
             ValidationSuccess
           case (lType, rType) =>
             ValidationFailure(s"IN operator on incompatible types: $lType and $rType.")
@@ -90,6 +100,9 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
     }
   }
 
-  override private[flink] def resultType: TypeInformation[_] = BOOLEAN_TYPE_INFO
+  override private[flink] def resultType: InternalType = DataTypes.BOOLEAN
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }
 

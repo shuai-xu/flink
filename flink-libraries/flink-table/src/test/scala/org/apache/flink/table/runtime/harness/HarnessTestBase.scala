@@ -17,303 +17,54 @@
  */
 package org.apache.flink.table.runtime.harness
 
+import java.util
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.{Comparator, Queue => JQueue}
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.functions.KeySelector
-import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
+import org.apache.flink.streaming.api.scala.DataStream
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, TestHarnessUtil}
-import org.apache.flink.table.codegen.GeneratedAggregationsFunction
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-import org.apache.flink.table.functions.aggfunctions.{IntSumWithRetractAggFunction, LongMaxWithRetractAggFunction, LongMinWithRetractAggFunction}
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
-import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.util.BaseRowUtil
 
-class HarnessTestBase {
+import scala.collection.JavaConverters._
 
-  val longMinWithRetractAggFunction: String =
-    UserDefinedFunctionUtils.serialize(new LongMinWithRetractAggFunction)
+class HarnessTestBase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode) {
 
-  val longMaxWithRetractAggFunction: String =
-    UserDefinedFunctionUtils.serialize(new LongMaxWithRetractAggFunction)
-
-  val intSumWithRetractAggFunction: String =
-    UserDefinedFunctionUtils.serialize(new IntSumWithRetractAggFunction)
-
-  protected val MinMaxRowType = new RowTypeInfo(Array[TypeInformation[_]](
-    LONG_TYPE_INFO,
-    STRING_TYPE_INFO,
-    LONG_TYPE_INFO),
-    Array("rowtime", "a", "b"))
-
-  protected val SumRowType = new RowTypeInfo(Array[TypeInformation[_]](
-    LONG_TYPE_INFO,
-    INT_TYPE_INFO,
-    STRING_TYPE_INFO),
-    Array("a", "b", "c"))
-
-  protected val minMaxCRowType = new CRowTypeInfo(MinMaxRowType)
-  protected val sumCRowType = new CRowTypeInfo(SumRowType)
-
-  protected val minMaxAggregates: Array[AggregateFunction[_, _]] =
-    Array(new LongMinWithRetractAggFunction,
-          new LongMaxWithRetractAggFunction).asInstanceOf[Array[AggregateFunction[_, _]]]
-
-  protected val sumAggregates: Array[AggregateFunction[_, _]] =
-    Array(new IntSumWithRetractAggFunction).asInstanceOf[Array[AggregateFunction[_, _]]]
-
-  protected val minMaxAggregationStateType: RowTypeInfo =
-    new RowTypeInfo(minMaxAggregates.map(getAccumulatorTypeOfAggregateFunction(_)): _*)
-
-  protected val sumAggregationStateType: RowTypeInfo =
-    new RowTypeInfo(sumAggregates.map(getAccumulatorTypeOfAggregateFunction(_)): _*)
-
-  val minMaxCode: String =
-    s"""
-      |public class MinMaxAggregateHelper
-      |  extends org.apache.flink.table.runtime.aggregate.GeneratedAggregations {
-      |
-      |  transient org.apache.flink.table.functions.aggfunctions.LongMinWithRetractAggFunction
-      |    fmin = null;
-      |
-      |  transient org.apache.flink.table.functions.aggfunctions.LongMaxWithRetractAggFunction
-      |    fmax = null;
-      |
-      |  public MinMaxAggregateHelper() throws Exception {
-      |
-      |    fmin = (org.apache.flink.table.functions.aggfunctions.LongMinWithRetractAggFunction)
-      |    org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-      |    .deserialize("$longMinWithRetractAggFunction");
-      |
-      |    fmax = (org.apache.flink.table.functions.aggfunctions.LongMaxWithRetractAggFunction)
-      |    org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-      |    .deserialize("$longMaxWithRetractAggFunction");
-      |  }
-      |
-      |  public void setAggregationResults(
-      |    org.apache.flink.types.Row accs,
-      |    org.apache.flink.types.Row output) {
-      |
-      |    org.apache.flink.table.functions.AggregateFunction baseClass0 =
-      |      (org.apache.flink.table.functions.AggregateFunction) fmin;
-      |    output.setField(3, baseClass0.getValue(
-      |      (org.apache.flink.table.functions.aggfunctions.MinWithRetractAccumulator)
-      |      accs.getField(0)));
-      |
-      |    org.apache.flink.table.functions.AggregateFunction baseClass1 =
-      |      (org.apache.flink.table.functions.AggregateFunction) fmax;
-      |    output.setField(4, baseClass1.getValue(
-      |      (org.apache.flink.table.functions.aggfunctions.MaxWithRetractAccumulator)
-      |      accs.getField(1)));
-      |  }
-      |
-      |  public void accumulate(
-      |    org.apache.flink.types.Row accs,
-      |    org.apache.flink.types.Row input) {
-      |
-      |    fmin.accumulate(
-      |      ((org.apache.flink.table.functions.aggfunctions.MinWithRetractAccumulator)
-      |      accs.getField(0)),
-      |      (java.lang.Long) input.getField(2));
-      |
-      |    fmax.accumulate(
-      |      ((org.apache.flink.table.functions.aggfunctions.MaxWithRetractAccumulator)
-      |      accs.getField(1)),
-      |      (java.lang.Long) input.getField(2));
-      |  }
-      |
-      |  public void retract(
-      |    org.apache.flink.types.Row accs,
-      |    org.apache.flink.types.Row input) {
-      |
-      |    fmin.retract(
-      |      ((org.apache.flink.table.functions.aggfunctions.MinWithRetractAccumulator)
-      |      accs.getField(0)),
-      |      (java.lang.Long) input.getField(2));
-      |
-      |    fmax.retract(
-      |      ((org.apache.flink.table.functions.aggfunctions.MaxWithRetractAccumulator)
-      |      accs.getField(1)),
-      |      (java.lang.Long) input.getField(2));
-      |  }
-      |
-      |  public org.apache.flink.types.Row createAccumulators() {
-      |
-      |    org.apache.flink.types.Row accs = new org.apache.flink.types.Row(2);
-      |
-      |    accs.setField(
-      |      0,
-      |      fmin.createAccumulator());
-      |
-      |    accs.setField(
-      |      1,
-      |      fmax.createAccumulator());
-      |
-      |      return accs;
-      |  }
-      |
-      |  public void setForwardedFields(
-      |    org.apache.flink.types.Row input,
-      |    org.apache.flink.types.Row output) {
-      |
-      |    output.setField(0, input.getField(0));
-      |    output.setField(1, input.getField(1));
-      |    output.setField(2, input.getField(2));
-      |  }
-      |
-      |  public org.apache.flink.types.Row createOutputRow() {
-      |    return new org.apache.flink.types.Row(5);
-      |  }
-      |
-      |  public void open(org.apache.flink.api.common.functions.RuntimeContext ctx) {
-      |  }
-      |
-      |  public void cleanup() {
-      |  }
-      |
-      |  public void close() {
-      |  }
-      |/*******  This test does not use the following methods  *******/
-      |  public org.apache.flink.types.Row mergeAccumulatorsPair(
-      |    org.apache.flink.types.Row a,
-      |    org.apache.flink.types.Row b) {
-      |    return null;
-      |  }
-      |
-      |  public void resetAccumulator(org.apache.flink.types.Row accs) {
-      |  }
-      |
-      |  public void setConstantFlags(org.apache.flink.types.Row output) {
-      |  }
-      |}
-    """.stripMargin
-
-  val sumAggCode: String =
-    s"""
-      |public final class SumAggregationHelper
-      |  extends org.apache.flink.table.runtime.aggregate.GeneratedAggregations {
-      |
-      |
-      |transient org.apache.flink.table.functions.aggfunctions.IntSumWithRetractAggFunction
-      |sum = null;
-      |private final org.apache.flink.table.runtime.aggregate.SingleElementIterable<org.apache
-      |    .flink.table.functions.aggfunctions.SumWithRetractAccumulator> accIt0 =
-      |      new org.apache.flink.table.runtime.aggregate.SingleElementIterable<org.apache.flink
-      |      .table
-      |      .functions.aggfunctions.SumWithRetractAccumulator>();
-      |
-      |  public SumAggregationHelper() throws Exception {
-      |
-      |sum = (org.apache.flink.table.functions.aggfunctions.IntSumWithRetractAggFunction)
-      |org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-      |.deserialize("$intSumWithRetractAggFunction");
-      |}
-      |
-      |  public final void setAggregationResults(
-      |    org.apache.flink.types.Row accs,
-      |    org.apache.flink.types.Row output) {
-      |
-      |    org.apache.flink.table.functions.AggregateFunction baseClass0 =
-      |      (org.apache.flink.table.functions.AggregateFunction)
-      |      sum;
-      |
-      |    output.setField(
-      |      1,
-      |      baseClass0.getValue((org.apache.flink.table.functions.aggfunctions
-      |      .SumWithRetractAccumulator) accs.getField(0)));
-      |  }
-      |
-      |  public final void accumulate(
-      |    org.apache.flink.types.Row accs,
-      |    org.apache.flink.types.Row input) {
-      |
-      |    sum.accumulate(
-      |      ((org.apache.flink.table.functions.aggfunctions.SumWithRetractAccumulator) accs
-      |      .getField
-      |      (0)),
-      |      (java.lang.Integer) input.getField(1));
-      |  }
-      |
-      |
-      |  public final void retract(
-      |    org.apache.flink.types.Row accs,
-      |    org.apache.flink.types.Row input) {
-      |  }
-      |
-      |  public final org.apache.flink.types.Row createAccumulators()
-      |     {
-      |
-      |      org.apache.flink.types.Row accs =
-      |          new org.apache.flink.types.Row(1);
-      |
-      |    accs.setField(
-      |      0,
-      |      sum.createAccumulator());
-      |
-      |      return accs;
-      |  }
-      |
-      |  public final void setForwardedFields(
-      |    org.apache.flink.types.Row input,
-      |    org.apache.flink.types.Row output)
-      |     {
-      |
-      |    output.setField(
-      |      0,
-      |      input.getField(0));
-      |  }
-      |
-      |  public final void setConstantFlags(org.apache.flink.types.Row output)
-      |     {
-      |
-      |  }
-      |
-      |  public final org.apache.flink.types.Row createOutputRow() {
-      |    return new org.apache.flink.types.Row(2);
-      |  }
-      |
-      |
-      |  public final org.apache.flink.types.Row mergeAccumulatorsPair(
-      |    org.apache.flink.types.Row a,
-      |    org.apache.flink.types.Row b)
-      |            {
-      |
-      |      return a;
-      |
-      |  }
-      |
-      |  public final void resetAccumulator(
-      |    org.apache.flink.types.Row accs) {
-      |  }
-      |
-      |  public void open(org.apache.flink.api.common.functions.RuntimeContext ctx) {
-      |  }
-      |
-      |  public void cleanup() {
-      |  }
-      |
-      |  public void close() {
-      |  }
-      |}
-      |""".stripMargin
-
-
-  protected val minMaxFuncName = "MinMaxAggregateHelper"
-  protected val sumFuncName = "SumAggregationHelper"
-
-  protected val genMinMaxAggFunction = GeneratedAggregationsFunction(minMaxFuncName, minMaxCode)
-  protected val genSumAggFunction = GeneratedAggregationsFunction(sumFuncName, sumAggCode)
+  override def after(): Unit = {
+    // ignore super call
+  }
 
   def createHarnessTester[IN, OUT, KEY](
     operator: OneInputStreamOperator[IN, OUT],
     keySelector: KeySelector[IN, KEY],
     keyType: TypeInformation[KEY]): KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT] = {
     new KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT](operator, keySelector, keyType)
+  }
+
+  def createHarnessTester(
+      ds: DataStream[_],
+      prefixOperatorName: String)
+  : KeyedOneInputStreamOperatorTestHarness[BaseRow, BaseRow, BaseRow] = {
+
+    val transformation = extractExpectedTransformation(
+      ds.javaStream.getTransformation,
+      prefixOperatorName)
+    val processOperator = transformation.getOperator
+      .asInstanceOf[OneInputStreamOperator[Any, Any]]
+    val keySelector = transformation.getStateKeySelector.asInstanceOf[KeySelector[Any, Any]]
+    val keyType = transformation.getStateKeyType.asInstanceOf[TypeInformation[Any]]
+
+    createHarnessTester(processOperator, keySelector, keyType)
+      .asInstanceOf[KeyedOneInputStreamOperatorTestHarness[BaseRow, BaseRow, BaseRow]]
   }
 
   def verify(
@@ -332,6 +83,56 @@ class HarnessTestBase {
     }
     TestHarnessUtil.assertOutputEqualsSorted("Verify Error...", expected, actual, comparator)
   }
+
+  def verify(
+    expected: JQueue[Object],
+    actual: JQueue[Object]): Unit = {
+
+    TestHarnessUtil.assertOutputEquals("Verify Error...", expected, actual)
+  }
+
+  private def extractExpectedTransformation(
+      t: StreamTransformation[_],
+      prefixOperatorName: String): OneInputTransformation[_, _] = {
+    t match {
+      case one: OneInputTransformation[_, _] =>
+        if (one.getName.startsWith(prefixOperatorName)) {
+          one
+        } else {
+          extractExpectedTransformation(one.getInput, prefixOperatorName)
+        }
+      case _ => throw new Exception("Can not find the expected transformation")
+    }
+  }
+
+  def dropWatermarks(elements: Array[AnyRef]): util.Collection[AnyRef] = {
+    elements.filter(e => !e.isInstanceOf[Watermark]).toList.asJava
+  }
+
+  def convertStreamRecordToGenericRow(
+    output: ConcurrentLinkedQueue[AnyRef], joinTypes: BaseRowTypeInfo[BaseRow])
+  : ConcurrentLinkedQueue[Object] = {
+    val outputList = new ConcurrentLinkedQueue[Object]
+    val iter = output.iterator()
+    val typeSerializers = joinTypes.getFieldTypes.map(TypeUtils.createSerializer)
+    while (iter.hasNext) {
+      val row = iter.next().asInstanceOf[StreamRecord[BaseRow]].getValue
+      outputList.add(BaseRowUtil.toGenericRow(row, joinTypes.getFieldTypes, typeSerializers))
+    }
+    outputList
+  }
+
+  def hOf(header: Byte, objects: Object*): GenericRow = {
+    val row = GenericRow.of(objects: _*)
+    row.setHeader(header)
+    row
+  }
+
+  def jhOf(header: Byte, baseRow1: BaseRow, baseRow2: BaseRow): JoinedRow = {
+    val joinedRow = new JoinedRow(baseRow1, baseRow2)
+    joinedRow.setHeader(header)
+    joinedRow
+  }
 }
 
 object HarnessTestBase {
@@ -339,7 +140,7 @@ object HarnessTestBase {
   /**
     * Return 0 for equal Rows and non zero for different rows
     */
-  class RowResultSortComparator() extends Comparator[Object] with Serializable {
+  class BaseRowResultSortComparator() extends Comparator[Object] with Serializable {
 
     override def compare(o1: Object, o2: Object): Int = {
 
@@ -347,41 +148,10 @@ object HarnessTestBase {
         // watermark is not expected
         -1
       } else {
-        val row1 = o1.asInstanceOf[StreamRecord[CRow]].getValue
-        val row2 = o2.asInstanceOf[StreamRecord[CRow]].getValue
+        val row1 = o1.asInstanceOf[StreamRecord[BaseRow]].getValue
+        val row2 = o2.asInstanceOf[StreamRecord[BaseRow]].getValue
         row1.toString.compareTo(row2.toString)
       }
-    }
-  }
-
-  /**
-    * Return 0 for equal Rows and non zero for different rows
-    */
-  class RowResultSortComparatorWithWatermarks()
-    extends Comparator[Object] with Serializable {
-
-    override def compare(o1: Object, o2: Object): Int = {
-
-      (o1, o2) match {
-        case (w1: Watermark, w2: Watermark) =>
-          w1.getTimestamp.compareTo(w2.getTimestamp)
-        case (r1: StreamRecord[CRow], r2: StreamRecord[CRow]) =>
-          r1.getValue.toString.compareTo(r2.getValue.toString)
-        case (_: Watermark, _: StreamRecord[CRow]) => -1
-        case (_: StreamRecord[CRow], _: Watermark) => 1
-        case _ => -1
-      }
-    }
-  }
-
-  /**
-    * Tuple row key selector that returns a specified field as the selector function
-    */
-  class TupleRowKeySelector[T](
-    private val selectorField: Int) extends KeySelector[CRow, T] {
-
-    override def getKey(value: CRow): T = {
-      value.row.getField(selectorField).asInstanceOf[T]
     }
   }
 }

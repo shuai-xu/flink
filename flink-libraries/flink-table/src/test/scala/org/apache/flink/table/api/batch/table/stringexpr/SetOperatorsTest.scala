@@ -22,11 +22,10 @@ import java.sql.Timestamp
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.TableTestBase
-import org.apache.flink.table.utils.TableTestUtil._
+import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Test
 
-class SetOperatorsTest extends TableTestBase {
+class SetOperatorsTest extends TableTestBatchExecBase {
 
   @Test
   def testInWithFilter(): Unit = {
@@ -36,29 +35,29 @@ class SetOperatorsTest extends TableTestBase {
     val elements = t.where("b === 'two'").select("a").as("a1")
     val in = t.select("*").where(s"c.in($elements)")
 
-    val expected = unaryNode(
-      "DataSetCalc",
-      binaryNode(
-        "DataSetJoin",
-        batchTableNode(0),
-        unaryNode(
-          "DataSetDistinct",
-          unaryNode(
-            "DataSetCalc",
-            batchTableNode(0),
-            term("select", "a AS a1"),
-            term("where", "=(b, 'two')")
-          ),
-          term("distinct", "a1")
-        ),
-        term("where", "=(c, a1)"),
-        term("join", "a", "b", "c", "a1"),
-        term("joinType", "InnerJoin")
-      ),
-      term("select", "a", "b", "c")
-    )
+//    val expected = unaryNode(
+//      "DataSetCalc",
+//      binaryNode(
+//        "DataSetJoin",
+//        batchTableNode(0),
+//        unaryNode(
+//          "DataSetDistinct",
+//          unaryNode(
+//            "DataSetCalc",
+//            batchTableNode(0),
+//            term("select", "a AS a1"),
+//            term("where", "=(b, 'two')")
+//          ),
+//          term("distinct", "a1")
+//        ),
+//        term("where", "=(c, a1)"),
+//        term("join", "a", "b", "c", "a1"),
+//        term("joinType", "InnerJoin")
+//      ),
+//      term("select", "a", "b", "c")
+//    )
 
-    util.verifyTable(in, expected)
+    util.verifyPlan(in)
   }
 
   @Test
@@ -68,12 +67,12 @@ class SetOperatorsTest extends TableTestBase {
 
     val in = t.select("b.in('1972-02-22 07:12:00.333'.toTimestamp)").as("b2")
 
-    val expected = unaryNode(
-      "DataSetCalc",
-      batchTableNode(0),
-      term("select", "IN(b, 1972-02-22 07:12:00.333) AS b2")
-    )
+//    val expected = unaryNode(
+//      "DataSetCalc",
+//      batchTableNode(0),
+//      term("select", "IN(b, 1972-02-22 07:12:00.333) AS b2")
+//    )
 
-    util.verifyTable(in, expected)
+    util.verifyPlan(in)
   }
 }

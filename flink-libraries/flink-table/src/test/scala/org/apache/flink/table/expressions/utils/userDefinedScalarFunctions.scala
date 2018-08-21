@@ -21,6 +21,7 @@ package org.apache.flink.table.expressions.utils
 import java.sql.{Date, Time, Timestamp}
 
 import org.apache.commons.lang3.StringUtils
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.functions.{FunctionContext, ScalarFunction}
@@ -112,8 +113,8 @@ object Func10 extends ScalarFunction {
     c
   }
 
-  override def getResultType(signature: Array[Class[_]]): TypeInformation[_] = {
-    Types.SQL_TIMESTAMP
+  override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]): DataType = {
+    DataTypes.TIMESTAMP
   }
 }
 
@@ -128,8 +129,8 @@ object Func12 extends ScalarFunction {
     a
   }
 
-  override def getResultType(signature: Array[Class[_]]): TypeInformation[_] = {
-    Types.INTERVAL_MILLIS
+  override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]): DataType = {
+    DataTypes.INTERVAL_MILLIS
   }
 }
 
@@ -278,16 +279,38 @@ object Func18 extends ScalarFunction {
 }
 
 object Func19 extends ScalarFunction {
+  def eval(obj: Object): Int = {
+    if (null != obj) {
+      obj.hashCode()
+    } else {
+      0
+    }
+  }
+
+  def eval(obj: Object, len: Int): Int = {
+    if (null != obj) {
+      obj.hashCode()
+    } else {
+      Math.max(len, 0)
+    }
+  }
+}
+
+object Func20 extends ScalarFunction {
   def eval(row: Row): Row = {
     row
   }
 
-  override def getParameterTypes(signature: Array[Class[_]]): Array[TypeInformation[_]] =
-    Array(Types.ROW(Types.INT, Types.BOOLEAN, Types.ROW(Types.INT, Types.INT, Types.INT)))
+  override def getParameterTypes(signature: Array[Class[_]]): Array[DataType] = {
+    Array(DataTypes.createRowType(DataTypes.INT, DataTypes.BOOLEAN,
+      DataTypes.createRowType(DataTypes.INT, DataTypes.INT, DataTypes.INT)))
+  }
 
-  override def getResultType(signature: Array[Class[_]]): TypeInformation[_] =
-    Types.ROW(Types.INT, Types.BOOLEAN, Types.ROW(Types.INT, Types.INT, Types.INT))
-
+  override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]): DataType = {
+    DataTypes.createRowType(
+      DataTypes.INT, DataTypes.BOOLEAN,
+      DataTypes.createRowType(DataTypes.INT, DataTypes.INT, DataTypes.INT))
+  }
 }
 
 class SplitUDF(deterministic: Boolean) extends ScalarFunction {
@@ -300,4 +323,5 @@ class SplitUDF(deterministic: Boolean) extends ScalarFunction {
     }
   }
   override def isDeterministic: Boolean = deterministic
+
 }

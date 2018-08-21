@@ -1,0 +1,352 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+	<TestCase name="testNestedTopN">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[a, b, count_c, w0$o0])
+  StreamExecRank(orderBy=[count_c DESC], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+    StreamExecExchange(distribution=[single])
+      StreamExecRank(orderBy=[count_c DESC], partitionBy=[a], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+        StreamExecExchange(distribution=[hash[a]])
+          StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
+            StreamExecExchange(distribution=[hash[a, b]])
+              StreamExecCalc(select=[a, b, 'cn' AS cn])
+                StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecRank(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecRank(retract=[false], accMode=[Acc])
+        StreamExecExchange(retract=[false], accMode=[Acc])
+          StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+            StreamExecExchange(retract=[true], accMode=[Acc])
+              StreamExecCalc(retract=[true], accMode=[Acc])
+                StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testOrderByFetch">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[a ASC, b DESC], fetch=[10], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*])
+  StreamExecExchange(distribution=[single])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecScan(retract=[false], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testOrderByLimit">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[a ASC, b DESC], fetch=[10], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*])
+  StreamExecExchange(distribution=[single])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecScan(retract=[false], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopN">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[b DESC], partitionBy=[a], fetch=[10], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecScan(retract=[false], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopN2">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[b DESC], partitionBy=[a], fetch=[10], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecScan(retract=[false], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNOrderByCountAndOtherField">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[count_c DESC, a ASC], partitionBy=[b], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecCalc(select=[a, b])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecCalc(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNWithGroupByTwoAgg">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[sum_c DESC, cnt ASC], partitionBy=[b], fetch=[10], strategy=[ApproxUpdateRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c, COUNT(c) AS cnt])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+
+	<TestCase name="testTopNAfterAgg">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[sum_c DESC], partitionBy=[b], fetch=[10], strategy=[UnaryUpdateRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNForVariableSize">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[a, b, $2 AS c, w0$o0 AS rank_num])
+  StreamExecRank(orderBy=[$2 DESC], partitionBy=[b], rownum=[a], strategy=[UpdateFastRank[0]], rank=[ROW_NUMBER], select=[*, rownum])
+    StreamExecExchange(distribution=[hash[b]])
+      StreamExecCalc(select=[b, a, add(max_c) AS $2])
+        StreamExecGroupAggregate(groupBy=[b], select=[b, MAX(a) AS a, MAX(c) AS max_c])
+          StreamExecExchange(distribution=[hash[b]])
+            StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecRank(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecCalc(retract=[false], accMode=[Acc])
+        StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+          StreamExecExchange(retract=[true], accMode=[Acc])
+            StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNOrderByCount">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(select=[MAX(a) AS EXPR$0])
+  StreamExecExchange(distribution=[single])
+    StreamExecCalc(select=[a])
+      StreamExecRank(orderBy=[count_c DESC], partitionBy=[b], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*])
+        StreamExecExchange(distribution=[hash[b]])
+          StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
+            StreamExecExchange(distribution=[hash[a, b]])
+              StreamExecCalc(select=[a, b])
+                StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[true], accMode=[AccRetract])
+    StreamExecCalc(retract=[true], accMode=[AccRetract])
+      StreamExecRank(retract=[true], accMode=[AccRetract])
+        StreamExecExchange(retract=[false], accMode=[Acc])
+          StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+            StreamExecExchange(retract=[true], accMode=[Acc])
+              StreamExecCalc(retract=[true], accMode=[Acc])
+                StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNOrderBySumWithCond">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[sum_c DESC], partitionBy=[b], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS sum_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecCalc(select=[a, b, c], where=[>=(c, 0)])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecCalc(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+
+
+	<TestCase name="testTopNOrderByUDAG">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[sum_c DESC], partitionBy=[b], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, increasing_sum(c) AS sum_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNth">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[a, b, c, 10 AS rank_num])
+  StreamExecRank(orderBy=[b DESC], partitionBy=[a], offset=[9], fetch=[1], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecRank(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecScan(retract=[false], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNWithFilter">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[w0$o0 AS rank_num, a, c], where=[IS NOT NULL(b)])
+  StreamExecRank(orderBy=[b DESC], partitionBy=[a], fetch=[10], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*, rownum])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecCalc(select=[a, b, c], where=[>(c, 1000)])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecRank(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecCalc(retract=[false], accMode=[Acc])
+        StreamExecScan(retract=[false], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNWithGroupByConstantKey">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(orderBy=[count_c DESC], partitionBy=[a], fetch=[10], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(*) AS count_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecCalc(select=[a, b, 'cn' AS cn])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecCalc(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNWithoutRowNumber2">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[CONCAT(seller_id, venture, stat_date, sku_id) AS rowkey, seller_id, sku_id, venture, stat_date, amt_dtr, byr_cnt_dtr, pv_dtr, uv_dtr])
+  StreamExecRank(orderBy=[amt_dtr DESC], partitionBy=[seller_id, venture, stat_date], fetch=[10], strategy=[UpdateFastRank[0,1,2,3]], rank=[ROW_NUMBER], select=[*])
+    StreamExecExchange(distribution=[hash[seller_id, venture, stat_date]])
+      StreamExecGroupAggregate(groupBy=[seller_id, sku_id, venture, stat_date], select=[seller_id, sku_id, venture, stat_date, increasing_sum(trd_amt) AS amt_dtr, COUNT(DISTINCT trd_buyer_id) AS byr_cnt_dtr, SUM(log_pv) AS pv_dtr, COUNT(DISTINCT log_visitor_id) AS uv_dtr])
+        StreamExecExchange(distribution=[hash[seller_id, sku_id, venture, stat_date]])
+          StreamExecScan(table=[[_DataStreamTable_1]])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecRank(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+        StreamExecExchange(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
+</Root>

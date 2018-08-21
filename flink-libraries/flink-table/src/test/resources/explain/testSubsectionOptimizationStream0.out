@@ -1,0 +1,47 @@
+== Abstract Syntax Tree ==
+LogicalProject(num=[$0], cnt=[AS($1, 'cnt')])
+  LogicalAggregate(group=[{0}], TMP_0=[COUNT($1)])
+    LogicalProject(num=[$1], id=[$0])
+      LogicalTableScan(table=[[_DataStreamTable_0]])
+
+== Optimized Logical Plan ==
+[[Sink]]
+StreamExecCalc(select=[num, TMP_0 AS cnt])
+  StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS TMP_0])
+    StreamExecExchange(distribution=[hash[num]])
+      StreamExecCalc(select=[num, id])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[true], accMode=[Acc])
+      StreamExecCalc(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[_DataStreamTable_0], fields:(id, num, text))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : Calc(select: (num, id))
+			ship_strategy : FORWARD
+
+			 : Operator
+				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS TMP_0))
+				ship_strategy : HASH
+
+				 : Operator
+					content : Calc(select: (num, TMP_0 AS cnt))
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : SinkConversion to Tuple2
+						ship_strategy : FORWARD
+
+						 : Data Sink
+							content : Sink: TestingUpsertTableSink(keys=(0))
+							ship_strategy : FORWARD
+

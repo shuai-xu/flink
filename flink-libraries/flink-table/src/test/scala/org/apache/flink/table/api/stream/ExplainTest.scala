@@ -20,15 +20,18 @@ package org.apache.flink.table.api.stream
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink, TestingRetractTableSink, TestingUpsertTableSink}
+import org.apache.flink.table.sinks.csv.CsvTableSink
+import org.apache.flink.table.util.TableFunc1
 import org.apache.flink.test.util.AbstractTestBase
 import org.junit.Assert.assertEquals
 import org.junit._
 
-class ExplainTest extends AbstractTestBase {
+import scala.io.Source
 
-  private val testFilePath = this.getClass.getResource("/").getFile
+class ExplainTest extends AbstractTestBase {
 
   @Test
   def testFilter(): Unit = {
@@ -41,8 +44,7 @@ class ExplainTest extends AbstractTestBase {
 
     val result = replaceString(tEnv.explain(table))
 
-    val source = scala.io.Source.fromFile(testFilePath +
-      "../../src/test/scala/resources/testFilterStream0.out").mkString
+    val source = readFromResource("testFilterStream0.out")
     val expect = replaceString(source)
     assertEquals(result, expect)
   }
@@ -58,13 +60,372 @@ class ExplainTest extends AbstractTestBase {
 
     val result = replaceString(tEnv.explain(table))
 
-    val source = scala.io.Source.fromFile(testFilePath +
-      "../../src/test/scala/resources/testUnionStream0.out").mkString
+    val source = readFromResource("testUnionStream0.out")
     val expect = replaceString(source)
-    assertEquals(result, expect)
+    assertEquals(expect, result)
   }
 
-  def replaceString(s: String): String = {
+  @Test
+  def testSubsectionOptimization0(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTable(tEnv, 'id, 'num, 'text)
+
+    t.groupBy('num)
+      .select('num, 'id.count as 'cnt)
+      .writeToSink(new TestingUpsertTableSink(Array(0)))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testSubsectionOptimizationStream0.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testSubsectionOptimizationForSQL(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val ds = StreamTestData.get3TupleDataStream(env)
+    tEnv.registerDataStream("T", ds, 'id, 'num, 'text)
+    tEnv.sqlQuery("SELECT num, count(id) as cnt FROM T GROUP BY num")
+      .writeToSink(new TestingUpsertTableSink(Array(0)))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testSubsectionOptimizationForSQL.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testSubsectionOptimization1(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val table = StreamTestData.get3TupleDataStream(env)
+      .toTable(tEnv, 'id, 'num, 'text)
+
+    val table1 = table.where('id <= 10).select('id as 'id1, 'num)
+    val table2 = table.where('id >= 0).select('id, 'num, 'text)
+    val table3 = table2.where('num >= 5).select('id as 'id2, 'text)
+    val table4 = table2.where('num < 5).select('id as 'id3, 'text as 'text1)
+    val table5 = table1.join(table3, 'id1 === 'id2).select('id1, 'num, 'text as 'text2)
+    val table6 = table4.join(table5, 'id1 === 'id3).select('id1, 'num, 'text1)
+
+    table6.writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testSubsectionOptimizationStream1.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testRetractAndUpsertSink(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTable(tEnv, 'id, 'num, 'text)
+      .groupBy('num)
+      .select('num, 'id.count as 'cnt)
+
+    t.where('num < 4).select('num, 'cnt)
+        .writeToSink(new TestingRetractTableSink)
+    t.where('num >= 4 && 'num < 6).select('num, 'cnt)
+      .writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testRetractAndUpsertSink.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testRetractAndUpsertSinkForSQL(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val ds = StreamTestData.get3TupleDataStream(env)
+    tEnv.registerDataStream("T", ds, 'id, 'num, 'text)
+    val t1 = tEnv.sqlQuery("SELECT num, count(id) as cnt FROM T GROUP BY num")
+    tEnv.registerTable("T1", t1)
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T1 WHERE num < 4")
+      .writeToSink(new TestingRetractTableSink)
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T1 WHERE num >=4 AND num < 6")
+      .writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testRetractAndUpsertSinkForSQL.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testUpdateAsRetractConsumedAtSinkBlock(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val mytable = StreamTestData.get3TupleDataStream(env)
+      .toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("MyTable", mytable)
+
+    val t = tEnv.sql("SELECT a, b, c FROM MyTable")
+    tEnv.registerTable("T", t)
+    val retractSink = new TestingRetractTableSink
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY c DESC) as rank_num
+         |  FROM T)
+         |WHERE rank_num <= 10
+      """.stripMargin
+    tEnv.sql(sql).writeToSink(retractSink)
+    val upsertSink = new TestingUpsertTableSink(Array())
+    tEnv.sql("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testUpdateAsRetractConsumedAtSinkBlock.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testUpdateAsRetractConsumedAtSourceBlock(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val mytable = StreamTestData.get3TupleDataStream(env)
+      .toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("MyTable", mytable)
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY c DESC) as rank_num
+         |  FROM MyTable)
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    val t = tEnv.sql(sql)
+    tEnv.registerTable("T", t)
+    val retractSink = new TestingRetractTableSink
+    tEnv.sql("SELECT a FROM T where a > 6").writeToSink(retractSink)
+    val upsertSink = new TestingUpsertTableSink(Array())
+    tEnv.sql("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testUpdateAsRetractConsumedAtSourceBlock.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testUpsertAndUpsertSink(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTable(tEnv, 'id, 'num, 'text)
+      .groupBy('num)
+      .select('num, 'id.count as 'cnt)
+
+    t.where('num < 4).groupBy('cnt).select('cnt, 'num.count as 'frequency)
+        .writeToSink(new TestingUpsertTableSink(Array(0)))
+    t.where('num >= 4 && 'num < 6).select('num, 'cnt)
+      .writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testUpsertAndUpsertSink.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testUpsertAndUpsertSinkForSQL(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val ds = StreamTestData.get3TupleDataStream(env)
+    tEnv.registerDataStream("T", ds, 'id, 'num, 'text)
+    val t1 = tEnv.sqlQuery("SELECT num, count(id) as cnt FROM T GROUP BY num")
+    tEnv.registerTable("T1", t1)
+
+    tEnv.sqlQuery(
+      """
+        |SELECT cnt, count(num) frequency
+        |FROM (
+        |  SELECT * FROM T1 WHERE num < 4
+        |)
+        |GROUP BY cnt
+      """.stripMargin)
+        .writeToSink(new TestingUpsertTableSink(Array(0)))
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T1 WHERE num >=4 AND num < 6")
+      .writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testUpsertAndUpsertSinkForSQL.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testMultiLevelViewForSQL(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val ds = StreamTestData.get3TupleDataStream(env)
+    tEnv.registerDataStream("T", ds, 'id, 'num, 'text)
+
+    val t1 = tEnv.sqlQuery("SELECT id, num, text FROM T WHERE text LIKE '%hello%'")
+    tEnv.registerTable("T1", t1)
+    t1.writeToSink(new TestingAppendTableSink)
+    val t2 = tEnv.sqlQuery("SELECT id, num, text FROM T WHERE text LIKE '%world%'")
+    tEnv.registerTable("T2", t2)
+
+    val t3 = tEnv.sqlQuery(
+      """
+        |SELECT num, count(id) as cnt
+        |FROM
+        |(
+        | (SELECT * FROM T1)
+        | UNION ALL
+        | (SELECT * FROM T2)
+        |)
+        |GROUP BY num
+      """.stripMargin)
+    tEnv.registerTable("T3", t3)
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T3 WHERE num < 4")
+        .writeToSink(new TestingRetractTableSink)
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T3 WHERE num >=4 AND num < 6")
+      .writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testMultiLevelViewForSQL.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  def testSharedUnionNode(): Unit = {
+    val conf = new TableConfig
+    conf.setSubsectionOptimization(true)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
+
+    val ds = StreamTestData.get3TupleDataStream(env)
+    tEnv.registerDataStream("T", ds, 'id, 'num, 'text)
+
+    val t1 = tEnv.sqlQuery("SELECT id, num, text FROM T WHERE text LIKE '%hello%'")
+    tEnv.registerTable("T1", t1)
+    t1.writeToSink(new TestingAppendTableSink)
+    val t2 = tEnv.sqlQuery("SELECT id, num, text FROM T WHERE text LIKE '%world%'")
+    tEnv.registerTable("T2", t2)
+
+    val t3 = tEnv.sqlQuery(
+      """
+        |SELECT * FROM T1
+        |UNION ALL
+        |SELECT * FROM T2
+      """.stripMargin)
+    tEnv.registerTable("T3", t3)
+    tEnv.sqlQuery("SELECT * FROM T3 WHERE num >= 5")
+      .writeToSink(new TestingRetractTableSink)
+
+    val t4 = tEnv.sqlQuery(
+      """
+        |SELECT num, count(id) as cnt
+        |FROM T3
+        |GROUP BY num
+      """.stripMargin)
+    tEnv.registerTable("T4", t4)
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T4 WHERE num < 4")
+      .writeToSink(new TestingRetractTableSink)
+
+    tEnv.sqlQuery("SELECT num, cnt FROM T4 WHERE num >=4 AND num < 6")
+      .writeToSink(new TestingUpsertTableSink(Array()))
+
+    val result = replaceString(tEnv.explain())
+
+    val source = readFromResource("testSharedUnionNode.out")
+    val expected = replaceString(source)
+    assertEquals(expected, result)
+  }
+
+
+  @Test
+  def testSubsectionOptimizationWithUdtf(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+    tEnv.registerDataStream("t3", StreamTestData.get5TupleDataStream(env), 'i, 'j, 'k, 'l, 'm)
+    tEnv.registerFunction("split", new TableFunc1)
+
+    val t1 = tEnv.scan("t1")
+    val t2 = tEnv.scan("t2")
+    val t3 = tEnv.scan("t3")
+    val result = t1.join(t2).where("b === e").join(t3).where("a === i")
+      .join(new Table(tEnv, "split(f) AS f1"))
+    result.writeToSink(new CsvTableSink("file"))
+
+    val actual = replaceString(tEnv.explain())
+
+    val source = readFromResource("testSubsectionOptimizationWithUdtf.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  private def readFromResource(name: String): String = {
+    val inputStream = getClass.getResource("/explain/" + name).getFile
+    Source.fromFile(inputStream).mkString
+  }
+
+  private def replaceString(s: String): String = {
     /* Stage {id} is ignored, because id keeps incrementing in test class
      * while StreamExecutionEnvironment is up
      */

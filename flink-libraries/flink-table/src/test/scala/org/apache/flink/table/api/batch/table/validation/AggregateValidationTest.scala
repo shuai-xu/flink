@@ -22,10 +22,10 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMergeAndReset
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit._
 
-class AggregateValidationTest extends TableTestBase {
+class AggregateValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testNonWorkingAggregationDataTypes(): Unit = {

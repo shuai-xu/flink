@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
   *
   * @tparam T Type of the [[DataStream]] created by this [[TableSource]].
   */
-trait StreamTableSource[T] extends TableSource[T] {
+trait StreamTableSource[T] extends TableSource {
 
   /**
     * Returns the data of the table as a [[DataStream]].

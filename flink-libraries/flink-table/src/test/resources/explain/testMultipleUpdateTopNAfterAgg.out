@@ -1,0 +1,92 @@
+== Abstract Syntax Tree ==
+LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[$3])
+  LogicalFilter(condition=[<=($3, 2)])
+    LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      LogicalTableScan(table=[[MyView]])
+
+LogicalProject(category=[$0], shopId=[$1], max_num=[$2], rank_num=[$3])
+  LogicalFilter(condition=[<=($3, 2)])
+    LogicalProject(category=[$0], shopId=[$1], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $3 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      LogicalTableScan(table=[[MyView]])
+
+== Optimized Logical Plan ==
+[[IntermediateTable=_DataStreamTable_2]]
+StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num])
+  StreamExecExchange(distribution=[hash[category, shopId]])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[true], accMode=[Acc])
+    StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecCalc(select=[category, shopId, cnt_num, w0$o0])
+  StreamExecRank(orderBy=[cnt_num DESC], partitionBy=[category], fetch=[2], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+    StreamExecExchange(distribution=[hash[category]])
+      StreamExecScan(table=[[_DataStreamTable_2]])
+StreamExecCalc(retract=[true], accMode=[AccRetract])
+  StreamExecRank(retract=[true], accMode=[AccRetract])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecScan(retract=[false], accMode=[Acc])
+
+[[Sink]]
+StreamExecCalc(select=[category, shopId, max_num, w0$o0])
+  StreamExecRank(orderBy=[max_num DESC], partitionBy=[category], fetch=[2], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rownum])
+    StreamExecExchange(distribution=[hash[category]])
+      StreamExecScan(table=[[_DataStreamTable_2]])
+StreamExecCalc(retract=[true], accMode=[AccRetract])
+  StreamExecRank(retract=[true], accMode=[AccRetract])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecScan(retract=[false], accMode=[Acc])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[_DataStreamTable_0], fields:(category, shopId, num))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : GroupAggregate(groupBy: (category, shopId), select: (category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num))
+			ship_strategy : HASH
+
+			 : Operator
+				content : UpdateFastRank[0,1](orderBy: (cnt_num DESC)partitionBy: (category), *, rownum, , fetch: 2)
+				ship_strategy : HASH
+
+				 : Operator
+					content : Calc(select: (category, shopId, cnt_num, w0$o0))
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : SinkConversion to Tuple2
+						ship_strategy : FORWARD
+
+						 : Operator
+							content : Map
+							ship_strategy : FORWARD
+
+							 : Operator
+								content : UpdateFastRank[0,1](orderBy: (max_num DESC)partitionBy: (category), *, rownum, , fetch: 2)
+								ship_strategy : HASH
+
+								 : Operator
+									content : Calc(select: (category, shopId, max_num, w0$o0))
+									ship_strategy : FORWARD
+
+									 : Operator
+										content : SinkConversion to Tuple2
+										ship_strategy : FORWARD
+
+										 : Operator
+											content : Map
+											ship_strategy : FORWARD
+
+											 : Data Sink
+												content : Sink: TestingRetractTableSink
+												ship_strategy : FORWARD
+
+												 : Data Sink
+													content : Sink: TestingRetractTableSink
+													ship_strategy : FORWARD
+

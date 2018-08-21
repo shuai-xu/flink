@@ -30,7 +30,7 @@ import org.apache.flink.table.plan.cost.FlinkDefaultRelMetadataProvider
 object FlinkRelOptClusterFactory {
 
   def create(planner: RelOptPlanner, rexBuilder: RexBuilder): RelOptCluster = {
-    val cluster = RelOptCluster.create(planner, rexBuilder)
+    val cluster = FlinkRelOptCluster.create(planner, rexBuilder)
     cluster.setMetadataProvider(FlinkDefaultRelMetadataProvider.INSTANCE)
     // just set metadataProvider is not enough, see
     // https://www.mail-archive.com/dev@calcite.apache.org/msg00930.html

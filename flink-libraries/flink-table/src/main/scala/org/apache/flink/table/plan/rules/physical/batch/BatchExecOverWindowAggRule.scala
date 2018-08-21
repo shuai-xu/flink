@@ -1,0 +1,227 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.flink.table.plan.rules.physical.batch
+
+import java.util.{ArrayList => JArrayList}
+
+import org.apache.calcite.plan.RelOptRule._
+import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.RelFieldCollation.{Direction, NullDirection}
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Window.Group
+import org.apache.calcite.rel.core.{AggregateCall, Window}
+import org.apache.calcite.tools.ValidationException
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalOverWindow
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate
+import org.apache.flink.table.plan.util.AggregateUtil
+import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
+
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
+
+class BatchExecOverWindowAggRule extends RelOptRule(
+      operand(classOf[FlinkLogicalOverWindow], operand(classOf[RelNode], any)),
+      "BatchExecOverWindowAggRule") with CommonOverAggregate {
+
+  override def onMatch(call: RelOptRuleCall): Unit = {
+    val logicWindow = call.rels(0).asInstanceOf[FlinkLogicalOverWindow]
+
+    var input = call.rels(1)
+    var inputRowType: RelDataType = logicWindow.getInput.getRowType
+
+    val constants = logicWindow.constants.asScala
+    val constantTypes = constants.map(c => FlinkTypeFactory.toTypeInfo(c.getType))
+    val inputTypeNamesWithConstants = inputRowType.getFieldNames ++ constants.indices.map(
+      i => "TMP" + i)
+    val inputTypesWithConstants = inputRowType.getFieldList.map(_.getType).map(
+      FlinkTypeFactory.toTypeInfo) ++ constantTypes
+    val inputTypeWithConstants = logicWindow.getCluster.getTypeFactory
+        .asInstanceOf[FlinkTypeFactory]
+        .buildLogicalRowType(inputTypeNamesWithConstants, inputTypesWithConstants)
+
+    var overWindowAgg: BatchExecOverAggregate = null
+
+    //Returns whether o1 group satisfies o2 on keys and orderKeys.
+    def satisfies(o1: Group, o2: Group): Boolean = {
+      var satisfy = false
+      val keyComp = o1.keys.compareTo(o2.keys)
+      if (keyComp == 0) {
+        val needCollation1 = needCollationTrait(input, logicWindow, o1)
+        val needCollation2 = needCollationTrait(input, logicWindow, o2)
+        if (needCollation1 || needCollation2) {
+          val collation1 = createFlinkRelCollation(o1)
+          val collation2 = createFlinkRelCollation(o2)
+          satisfy = collation1.satisfies(collation2)
+        } else {
+          satisfy = true
+        }
+      }
+      satisfy
+    }
+
+    var lastGroup: Window.Group = null
+    val groupBuffer = ArrayBuffer[Window.Group]()
+
+    def generatorOverAggregate(): Unit = {
+      val groupSet: Array[Int] = lastGroup.keys.toArray
+      val (orderKeyIdxs, orders, nullIsLasts) = SortUtil.getKeysAndOrders(
+        lastGroup.orderKeys.getFieldCollations)
+
+      val requiredDistribution = if (groupSet.nonEmpty) {
+        FlinkRelDistribution.hash(groupSet.map(Integer.valueOf).toList)
+      } else {
+        FlinkRelDistribution.SINGLETON
+      }
+      var requiredTrait = logicWindow.getTraitSet
+        .replace(FlinkConventions.BATCHEXEC)
+        .replace(requiredDistribution)
+        .replace(RelCollations.EMPTY)
+      if (needCollationTrait(input, logicWindow, lastGroup)) {
+        val collation = createFlinkRelCollation(lastGroup)
+        if (!collation.equals(RelCollations.EMPTY)) {
+          requiredTrait = requiredTrait.replace(collation)
+        }
+      }
+
+      val newInput = RelOptRule.convert(input, requiredTrait)
+
+      val groupToAggCallToAggFunction = groupBuffer.map { group =>
+        val aggregateCalls = group.getAggregateCalls(logicWindow)
+        val (_, _, aggregates) = AggregateUtil.transformToBatchAggregateFunctions(
+          aggregateCalls, inputTypeWithConstants, orderKeyIdxs)
+        val aggCallToAggFunction = aggregateCalls.zip(aggregates)
+        (group, aggCallToAggFunction)
+      }
+
+      val outputRowType = inferOutputRowType(logicWindow.getCluster, inputRowType,
+        groupToAggCallToAggFunction.flatMap(_._2).map(_._1))
+
+      val providedTraitSet = call.getPlanner.emptyTraitSet.replace(FlinkConventions.BATCHEXEC)
+      overWindowAgg = new BatchExecOverAggregate(logicWindow.getCluster, call.builder(),
+        providedTraitSet ,
+        newInput,
+        groupToAggCallToAggFunction, outputRowType, newInput.getRowType, groupSet,
+        orderKeyIdxs,
+        orders,
+        nullIsLasts,
+        logicWindow)
+
+      input = overWindowAgg
+      inputRowType = outputRowType
+    }
+
+    logicWindow.groups.foreach { group =>
+      validate(group)
+      if (lastGroup != null && !satisfies(lastGroup, group)) {
+        generatorOverAggregate()
+        groupBuffer.clear()
+      }
+      groupBuffer.add(group)
+      lastGroup = group
+    }
+    if (groupBuffer.nonEmpty) {
+      generatorOverAggregate()
+    }
+    call.transformTo(overWindowAgg)
+  }
+
+  private def needCollationTrait(
+      input: RelNode,
+      overWindow: FlinkLogicalOverWindow,
+      group: Group): Boolean = {
+    if (group.lowerBound.isPreceding || group.upperBound.isFollowing || !group.isRows) {
+      true
+    } else {
+      //rows over window
+      val offsetLower = getBoundary(overWindow, group.lowerBound).asInstanceOf[Long]
+      val offsetUpper = getBoundary(overWindow, group.upperBound).asInstanceOf[Long]
+      if (offsetLower == 0L && offsetUpper == 0L && group.orderKeys.getFieldCollations.isEmpty) {
+        false
+      } else {
+        true
+      }
+    }
+  }
+
+  private def createFlinkRelCollation(group: Group) = {
+    val groupSet: Array[Int] = group.keys.toArray
+    val collections = group.orderKeys.getFieldCollations
+    val (orderKeyIdxs, _, _) = SortUtil.getKeysAndOrders(collections)
+    if (groupSet.nonEmpty || orderKeyIdxs.nonEmpty) {
+      val collectionIndexes = collections.map(_.getFieldIndex)
+      val intersectIds = orderKeyIdxs.intersect(groupSet)
+      val groupCollation = groupSet.map { idx =>
+        if (intersectIds.contains(idx)) {
+          val index = collectionIndexes.indexOf(idx)
+          (collections.get(index).getFieldIndex, collections.get(index).getDirection,
+              collections.get(index).nullDirection)
+        } else {
+          (idx, Direction.ASCENDING, NullDirection.FIRST)
+        }
+      }
+      //orderCollation should filter those order keys which are contained by groupSet.
+      val orderCollation = collections.filter(collection =>
+        !intersectIds.contains(collection.getFieldIndex)).map { collo =>
+        (collo.getFieldIndex, collo.getDirection, collo.nullDirection)
+      }
+      val fields = new JArrayList[RelFieldCollation]()
+      for (field <- groupCollation ++ orderCollation) {
+        fields.add(RelFieldCollations.of(field._1, field._2, field._3))
+      }
+      RelCollations.of(fields)
+    } else {
+      RelCollations.EMPTY
+    }
+  }
+
+  private def inferOutputRowType(
+      cluster: RelOptCluster,
+      inputType: RelDataType,
+      aggCalls: Seq[AggregateCall]): RelDataType = {
+
+    val inputNameList = inputType.getFieldNames
+    val inputTypeList = inputType.getFieldList.asScala.map(field => field.getType)
+
+    val aggNames = aggCalls.map(_.getName)
+    val aggTypes = aggCalls.map(_.getType)
+
+    val typeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    typeFactory.createStructType(inputTypeList ++ aggTypes, inputNameList ++ aggNames)
+  }
+
+  //SPARK/PostgreSQL don't support distinct on over(), and Hive only support distinct without
+  //window frame. Because it is complicated for Distinct on over().
+  private def validate(group: Group): Unit = {
+    if (group.aggCalls.exists(_.distinct)) {
+      throw new ValidationException("Distinct not supported in Windowing function!")
+    }
+  }
+}
+
+object BatchExecOverWindowAggRule {
+  val INSTANCE: RelOptRule = new BatchExecOverWindowAggRule
+}
+
+
+

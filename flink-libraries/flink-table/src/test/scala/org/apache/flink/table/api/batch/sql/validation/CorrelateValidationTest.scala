@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.api.batch.sql.validation
 
+import org.apache.calcite.tools.ValidationException
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.{TableFunc1, TableTestBase}
+import org.apache.flink.table.util.{TableFunc1, TableTestBatchExecBase}
 import org.junit.Test
 
-class CorrelateValidationTest extends TableTestBase{
+class CorrelateValidationTest extends TableTestBatchExecBase{
 
   /**
     * Due to the improper translation of TableFunction left outer join (see CALCITE-2004), the
@@ -40,6 +40,6 @@ class CorrelateValidationTest extends TableTestBase{
 
     val sqlQuery = "SELECT c, s FROM MyTable LEFT JOIN LATERAL TABLE(func1(c)) AS T(s) ON c = s"
 
-    util.verifySql(sqlQuery, "n/a")
+    util.verifyPlan(sqlQuery)
   }
 }

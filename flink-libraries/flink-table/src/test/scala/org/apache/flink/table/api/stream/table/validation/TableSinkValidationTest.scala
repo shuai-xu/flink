@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.api.stream.table.validation
 
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableEnvironment, TableException}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.stream.table.{TestAppendSink, TestUpsertSink}
-import org.apache.flink.table.runtime.utils.StreamTestData
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendSink}
+import org.apache.flink.table.util.TableTestBase
+import org.apache.flink.api.scala._
+import org.apache.flink.types.Row
 import org.junit.Test
 
 class TableSinkValidationTest extends TableTestBase {
@@ -38,28 +38,9 @@ class TableSinkValidationTest extends TableTestBase {
 
     t.groupBy('text)
     .select('text, 'id.count, 'num.sum)
-    .writeToSink(new TestAppendSink)
+    .toAppendStream[Row].addSink(new TestingAppendSink)
 
     // must fail because table is not append-only
-    env.execute()
-  }
-
-  @Test(expected = classOf[TableException])
-  def testUpsertSinkOnUpdatingTableWithoutFullKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val t = StreamTestData.get3TupleDataStream(env)
-      .assignAscendingTimestamps(_._1.toLong)
-      .toTable(tEnv, 'id, 'num, 'text)
-
-    t.select('id, 'num, 'text.charLength() as 'len, ('id > 0) as 'cTrue)
-    .groupBy('len, 'cTrue)
-    .select('len, 'id.count, 'num.sum)
-    .writeToSink(new TestUpsertSink(Array("len", "cTrue"), false))
-
-    // must fail because table is updating table without full key
     env.execute()
   }
 }

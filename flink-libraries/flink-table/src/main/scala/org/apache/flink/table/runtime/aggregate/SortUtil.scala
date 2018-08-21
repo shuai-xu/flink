@@ -17,142 +17,107 @@
  */
 package org.apache.flink.table.runtime.aggregate
 
-import org.apache.calcite.rel.`type`._
-import org.apache.calcite.rel.RelCollation
-import org.apache.calcite.rel.RelFieldCollation
-import org.apache.calcite.rel.RelFieldCollation.Direction
-
-import org.apache.flink.types.Row
-import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.api.common.typeutils.TypeComparator
-import org.apache.flink.api.java.typeutils.runtime.RowComparator
-import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.api.common.typeinfo.AtomicType
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.api.common.functions.MapFunction
-import org.apache.flink.table.plan.schema.RowSchema
-import org.apache.flink.util.Preconditions
-
 import java.util.Comparator
 
-import scala.collection.JavaConverters._
+import org.apache.calcite.rel.`type`._
+import org.apache.calcite.rel.{RelCollation, RelFieldCollation}
+import org.apache.calcite.rel.RelFieldCollation.Direction
+import org.apache.flink.api.common.functions.{Comparator => FlinkComparator}
+import org.apache.flink.api.common.operators.Order
+import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.calcite.FlinkPlannerImpl
+import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter, SortCodeGenerator}
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.sort.RecordComparator
+import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.typeutils.TypeUtils
 
+import scala.collection.JavaConversions._
+import scala.collection.mutable
 /**
  * Class represents a collection of helper methods to build the sort logic.
  * It encapsulates as well the implementation for ordering and generic interfaces
  */
 object SortUtil {
 
-  /**
-   * Creates a ProcessFunction to sort rows based on event time and possibly other secondary fields.
-   *
-   * @param collationSort The list of sort collations.
-   * @param inputType The row type of the input.
-   * @param execCfg Execution configuration to configure comparators.
-   * @return A function to sort stream values based on event-time and secondary sort fields.
-   */
-  private[flink] def createRowTimeSortFunction(
-    collationSort: RelCollation,
-    inputType: RelDataType,
-    inputTypeInfo: TypeInformation[Row],
-    execCfg: ExecutionConfig): ProcessFunction[CRow, CRow] = {
-
-    Preconditions.checkArgument(collationSort.getFieldCollations.size() > 0)
-    val rowtimeIdx = collationSort.getFieldCollations.get(0).getFieldIndex
-
-    val collectionRowComparator = if (collationSort.getFieldCollations.size() > 1) {
-
-      val rowComp = createRowComparator(
-        inputType,
-        collationSort.getFieldCollations.asScala.tail, // strip off time collation
-        execCfg)
-
-      Some(new CollectionRowComparator(rowComp))
-    } else {
-      None
+  def directionToOrder(direction: Direction): Order = {
+    direction match {
+      case Direction.ASCENDING | Direction.STRICTLY_ASCENDING => Order.ASCENDING
+      case Direction.DESCENDING | Direction.STRICTLY_DESCENDING => Order.DESCENDING
+      case _ => throw new IllegalArgumentException("Unsupported direction.")
     }
-
-    val inputCRowType = CRowTypeInfo(inputTypeInfo)
- 
-    new RowTimeSortProcessFunction(
-      inputCRowType,
-      rowtimeIdx,
-      collectionRowComparator)
-
   }
-  
-  /**
-   * Creates a ProcessFunction to sort rows based on processing time and additional fields.
-   *
-   * @param collationSort The list of sort collations.
-   * @param inputType The row type of the input.
-   * @param execCfg Execution configuration to configure comparators.
-   * @return A function to sort stream values based on proctime and other secondary sort fields.
-   */
-  private[flink] def createProcTimeSortFunction(
-    collationSort: RelCollation,
-    inputType: RelDataType,
-    inputTypeInfo: TypeInformation[Row],
-    execCfg: ExecutionConfig): ProcessFunction[CRow, CRow] = {
 
-    val rowComp = createRowComparator(
-      inputType,
-      collationSort.getFieldCollations.asScala.tail, // strip off time collation
-      execCfg)
+  def getKeysAndOrders(fieldCollations: Seq[RelFieldCollation])
+  : (Array[Int], Array[Boolean], Array[Boolean]) = {
 
-    val collectionRowComparator = new CollectionRowComparator(rowComp)
-    
-    val inputCRowType = CRowTypeInfo(inputTypeInfo)
-    
-    new ProcTimeSortProcessFunction(
-      inputCRowType,
-      collectionRowComparator)
+    val fieldMappingDirections = fieldCollations
+        .map(c => (c.getFieldIndex, directionToOrder(c.getDirection)))
+    val keys = fieldMappingDirections.map(_._1)
+    val orders = fieldMappingDirections.map(_._2 == Order.ASCENDING)
 
+    val nullsIsLast = fieldCollations.map(_.nullDirection).map {
+      case RelFieldCollation.NullDirection.LAST => true
+      case RelFieldCollation.NullDirection.FIRST => false
+      case RelFieldCollation.NullDirection.UNSPECIFIED =>
+        throw new TableException(s"Do not support UNSPECIFIED for null order.")
+    }.toArray
+
+    deduplicationSortKeys(keys.toArray, orders.toArray, nullsIsLast)
   }
-  
-  /**
-   * Creates a RowComparator for the provided field collations and input type.
-   *
-   * @param inputType the row type of the input.
-   * @param fieldCollations the field collations
-   * @param execConfig the execution configuration.
-    *
-   * @return A RowComparator for the provided sort collations and input type.
-   */
-  private def createRowComparator(
-      inputType: RelDataType,
-      fieldCollations: Seq[RelFieldCollation],
-      execConfig: ExecutionConfig): RowComparator = {
 
-    val sortFields = fieldCollations.map(_.getFieldIndex)
-    val sortDirections = fieldCollations.map(_.direction).map {
-      case Direction.ASCENDING => true
-      case Direction.DESCENDING => false
-      case _ =>  throw new TableException("SQL/Table does not support such sorting")
-    }
-
-    val fieldComps = for ((k, o) <- sortFields.zip(sortDirections)) yield {
-      FlinkTypeFactory.toTypeInfo(inputType.getFieldList.get(k).getType) match {
-        case a: AtomicType[_] =>
-          a.createComparator(o, execConfig).asInstanceOf[TypeComparator[AnyRef]]
-        case x: TypeInformation[_] =>  
-          throw new TableException(s"Unsupported field type $x to sort on.")
+  def deduplicationSortKeys(
+      keys: Array[Int],
+      orders: Array[Boolean],
+      nullsIsLast: Array[Boolean]): (Array[Int], Array[Boolean], Array[Boolean]) = {
+    val keySet = new mutable.HashSet[Int]
+    val keyBuffer = new mutable.ArrayBuffer[Int]
+    val orderBuffer = new mutable.ArrayBuffer[Boolean]
+    val nullsIsLastBuffer = new mutable.ArrayBuffer[Boolean]
+    for (i <- keys.indices) {
+      if (keySet.add(keys(i))) {
+        keyBuffer += keys(i)
+        orderBuffer += orders(i)
+        nullsIsLastBuffer += nullsIsLast(i)
       }
     }
-
-    new RowComparator(
-      new RowSchema(inputType).arity,
-      sortFields.toArray,
-      fieldComps.toArray,
-      new Array[TypeSerializer[AnyRef]](0), // not required because we only compare objects.
-      sortDirections.toArray)
-    
+    (keyBuffer.toArray, orderBuffer.toArray, nullsIsLastBuffer.toArray)
   }
- 
+
+  /**
+    * Creates a GeneratedSorter for the provided field collations and input type.
+    *
+    * @param inputType the row type of the input.
+    * @param fieldCollations the field collations
+    *
+    * @return A GeneratedSorter for the provided sort collations and input type.
+    */
+  def createSorter(
+      inputType: BaseRowType,
+      fieldCollations: Seq[RelFieldCollation]): GeneratedSorter = {
+
+    val (sortFields, sortDirections, nullsIsLast) = getKeysAndOrders(fieldCollations)
+    createSorter(inputType.getFieldTypes, sortFields, sortDirections, nullsIsLast)
+  }
+
+  def createSorter(
+      fieldTypes: Array[InternalType],
+      sortFields: Array[Int],
+      sortDirections: Array[Boolean],
+      nullsIsLast: Array[Boolean]): GeneratedSorter = {
+    // sort code gen
+    val (comparators, serializers) = TypeUtils.flattenComparatorAndSerializer(
+      fieldTypes.length, sortFields, sortDirections, fieldTypes)
+    val codeGen = new SortCodeGenerator(sortFields, sortFields.map((key) =>
+      fieldTypes(key)).map(DataTypes.internal), comparators, sortDirections, nullsIsLast)
+
+    val comparator = codeGen.generateRecordComparator("StreamExecSortComparator")
+    val computor = codeGen.generateNormalizedKeyComputer("StreamExecSortComputor")
+
+    GeneratedSorter(computor, comparator, serializers, comparators)
+  }
+
   /**
    * Returns the direction of the first sort field.
    *
@@ -160,10 +125,9 @@ object SortUtil {
    * @return The direction of the first sort field.
    */
   def getFirstSortDirection(collationSort: RelCollation): Direction = {
-    Preconditions.checkArgument(collationSort.getFieldCollations.size() > 0)
     collationSort.getFieldCollations.get(0).direction
   }
-  
+
   /**
    * Returns the first sort field.
    *
@@ -172,30 +136,78 @@ object SortUtil {
    * @return The first sort field.
    */
   def getFirstSortField(collationSort: RelCollation, rowType: RelDataType): RelDataTypeField = {
-    Preconditions.checkArgument(collationSort.getFieldCollations.size() > 0)
     val idx = collationSort.getFieldCollations.get(0).getFieldIndex
     rowType.getFieldList.get(idx)
   }
-  
+
+  /** Returns the default null direction if not specified. */
+  def getNullDefaultOrders(ascendings: Array[Boolean]): Array[Boolean] = {
+    ascendings.map { asc =>
+      FlinkPlannerImpl.defaultNullCollation.last(!asc)
+    }
+  }
+
+  def compareTo(o1: RelCollation, o2: RelCollation): Int = {
+    val comp= o1.compareTo(o2)
+    if (comp == 0) {
+      val collations1 = o1.getFieldCollations
+      val collations2 = o2.getFieldCollations
+      for (index <- 0 until collations1.length) {
+        val collation1 = collations1(index)
+        val collation2 = collations2(index)
+        val direction = collation1.direction.shortString.compareTo(
+          collation2.direction.shortString)
+        if (direction == 0) {
+          val nullDirec = collation1.nullDirection.nullComparison.compare(
+            collation2.nullDirection.nullComparison)
+          if (nullDirec != 0) {
+            return nullDirec
+          }
+        } else {
+          return direction
+        }
+      }
+    }
+    comp
+  }
 }
 
 /**
- * Wrapper for Row TypeComparator to a Java Comparator object
+ * Wrapper for RecordComparator to a Java Comparator object
  */
-class CollectionRowComparator(
-    private val rowComp: TypeComparator[Row]) extends Comparator[Row] with Serializable {
-  
-  override def compare(arg0:Row, arg1:Row):Int = {
+class CollectionBaseRowComparator(
+    private val rowComp: RecordComparator) extends Comparator[BaseRow] with Serializable {
+
+  override def compare(arg0: BaseRow, arg1: BaseRow):Int = {
     rowComp.compare(arg0, arg1)
   }
 }
 
+class LazyBaseRowComparator(
+    private val name: String,
+    private val code: String,
+    private val serializers: Array[TypeSerializer[_]],
+    private val comparators: Array[TypeComparator[_]])
+  extends FlinkComparator[BaseRow]
+  with Serializable {
 
-/**
- * Identity map for forwarding the fields based on their arriving times
- */
-private[flink] class IdentityCRowMap extends MapFunction[CRow,CRow] {
-   override def map(value:CRow):CRow ={
-     value
-   }
- }
+  @transient
+  private var comparator: RecordComparator = _
+
+  override def compare(o1: BaseRow, o2: BaseRow): Int = {
+    if (comparator == null) {
+      val clazz = CodeGenUtils.compile(Thread.currentThread().getContextClassLoader, name, code)
+      comparator = clazz.newInstance()
+      comparator.init(serializers, comparators)
+    }
+    comparator.compare(o1, o2)
+  }
+
+  override def equals(other: Any): Boolean = other match {
+    case that: LazyBaseRowComparator =>
+      this.name == that.name && this.code == that.code &&
+        this.serializers.sameElements(that.serializers) &&
+        this.comparators.sameElements(that.comparators)
+    case _ => false
+  }
+}

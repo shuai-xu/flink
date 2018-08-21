@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.api.validation
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{TableException, Types}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.stream.table.TestAppendSink
-import org.apache.flink.table.utils.MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
-import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.table.runtime.utils.TestingAppendSink
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.util.MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+import org.apache.flink.table.util.TableTestBase
+import org.apache.flink.types.Row
 import org.junit.Test
 
 class TableSinksValidationTest extends TableTestBase {
@@ -37,8 +38,8 @@ class TableSinksValidationTest extends TableTestBase {
 
     t.groupBy('text)
     .select('text, 'id.count, 'num.sum)
+    .toAppendStream[Row].addSink(new TestingAppendSink)
     // must fail because table is not append-only
-    .writeToSink(new TestAppendSink)
   }
 
   @Test(expected = classOf[TableException])
@@ -47,7 +48,7 @@ class TableSinksValidationTest extends TableTestBase {
     util.addTable[(Int, String)]("TargetTable", 'id, 'text)
 
     val fieldNames = Array("a", "b", "c")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.STRING, Types.INT, Types.LONG)
+    val fieldTypes: Array[DataType] = Array(DataTypes.STRING, DataTypes.INT, DataTypes.LONG)
     // table name already registered
     util.tableEnv
       .registerTableSink("TargetTable", fieldNames, fieldTypes, new UnsafeMemoryAppendTableSink)
@@ -59,7 +60,7 @@ class TableSinksValidationTest extends TableTestBase {
 
     // inconsistent length of field names and types
     val fieldNames = Array("a", "b", "c")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.STRING, Types.LONG)
+    val fieldTypes: Array[DataType] = Array(DataTypes.STRING, DataTypes.LONG)
 
     util.tableEnv
       .registerTableSink("TargetTable", fieldNames, fieldTypes, new UnsafeMemoryAppendTableSink)

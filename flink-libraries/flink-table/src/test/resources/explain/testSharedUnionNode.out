@@ -1,0 +1,146 @@
+== Abstract Syntax Tree ==
+LogicalProject(id=[$0], num=[$1], text=[$2])
+  LogicalFilter(condition=[LIKE($2, '%hello%')])
+    LogicalTableScan(table=[[T]])
+
+LogicalProject(id=[$0], num=[$1], text=[$2])
+  LogicalFilter(condition=[>=($1, 5)])
+    LogicalTableScan(table=[[T3]])
+
+LogicalProject(num=[$0], cnt=[$1])
+  LogicalFilter(condition=[<($0, 4)])
+    LogicalTableScan(table=[[T4]])
+
+LogicalProject(num=[$0], cnt=[$1])
+  LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
+    LogicalTableScan(table=[[T4]])
+
+== Optimized Logical Plan ==
+[[IntermediateTable=_DataStreamTable_3]]
+StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')])
+  StreamExecScan(table=[[T]])
+StreamExecCalc(retract=[true], accMode=[Acc])
+  StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecScan(table=[[_DataStreamTable_3]])
+StreamExecScan(retract=[false], accMode=[Acc])
+
+[[IntermediateTable=_DataStreamTable_4]]
+StreamExecUnion(union all=[id, num, text])
+  StreamExecScan(table=[[_DataStreamTable_3]])
+  StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
+    StreamExecScan(table=[[T]])
+StreamExecUnion(retract=[true], accMode=[Acc])
+  StreamExecScan(retract=[true], accMode=[Acc])
+  StreamExecCalc(retract=[true], accMode=[Acc])
+    StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
+  StreamExecScan(table=[[_DataStreamTable_4]])
+StreamExecCalc(retract=[true], accMode=[Acc])
+  StreamExecScan(retract=[true], accMode=[Acc])
+
+[[IntermediateTable=_DataStreamTable_5]]
+StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
+  StreamExecExchange(distribution=[hash[num]])
+    StreamExecCalc(select=[num, id])
+      StreamExecScan(table=[[_DataStreamTable_4]])
+StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
+  StreamExecExchange(retract=[true], accMode=[Acc])
+    StreamExecCalc(retract=[true], accMode=[Acc])
+      StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
+  StreamExecScan(table=[[_DataStreamTable_5]])
+StreamExecCalc(retract=[true], accMode=[AccRetract])
+  StreamExecScan(retract=[true], accMode=[AccRetract])
+
+[[Sink]]
+StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
+  StreamExecScan(table=[[_DataStreamTable_5]])
+StreamExecCalc(retract=[false], accMode=[AccRetract])
+  StreamExecScan(retract=[false], accMode=[AccRetract])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[T], fields:(id, num, text))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : Calc(where: (text LIKE '%hello%'), select: (id, num, text))
+			ship_strategy : FORWARD
+
+			 : Operator
+				content : SinkConversion to Row
+				ship_strategy : FORWARD
+
+				 : Operator
+					content : SourceConversion(table:[T], fields:(id, num, text))
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : Calc(where: (text LIKE '%world%'), select: (id, num, text))
+						ship_strategy : FORWARD
+
+						 : Operator
+							content : Calc(where: (num >= 5), select: (id, num, text))
+							ship_strategy : FORWARD
+
+							 : Operator
+								content : SinkConversion to Tuple2
+								ship_strategy : FORWARD
+
+								 : Operator
+									content : Map
+									ship_strategy : FORWARD
+
+									 : Operator
+										content : Calc(select: (num, id))
+										ship_strategy : FORWARD
+
+										 : Operator
+											content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
+											ship_strategy : HASH
+
+											 : Operator
+												content : Calc(where: (num < 4), select: (num, cnt))
+												ship_strategy : FORWARD
+
+												 : Operator
+													content : SinkConversion to Tuple2
+													ship_strategy : FORWARD
+
+													 : Operator
+														content : Map
+														ship_strategy : FORWARD
+
+														 : Operator
+															content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
+															ship_strategy : FORWARD
+
+															 : Operator
+																content : SinkConversion to Tuple2
+																ship_strategy : FORWARD
+
+																 : Data Sink
+																	content : Sink: TestingAppendTableSink
+																	ship_strategy : FORWARD
+
+																	 : Data Sink
+																		content : Sink: TestingRetractTableSink
+																		ship_strategy : FORWARD
+
+																		 : Data Sink
+																			content : Sink: TestingRetractTableSink
+																			ship_strategy : FORWARD
+
+																			 : Data Sink
+																				content : Sink: TestingUpsertTableSink(keys=())
+																				ship_strategy : FORWARD
+

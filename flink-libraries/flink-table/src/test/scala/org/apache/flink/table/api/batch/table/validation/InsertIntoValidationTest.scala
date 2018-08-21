@@ -18,14 +18,14 @@
 
 package org.apache.flink.table.api.batch.table.validation
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{Types, ValidationException}
+import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.utils.{MemoryTableSinkUtil, TableTestBase}
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.util.{MemoryTableSinkUtil, TableTestBatchExecBase}
 import org.junit._
 
-class InsertIntoValidationTest extends TableTestBase {
+class InsertIntoValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testInconsistentLengthInsert(): Unit = {
@@ -33,7 +33,7 @@ class InsertIntoValidationTest extends TableTestBase {
     util.addTable[(Int, Long, String)]("sourceTable", 'a, 'b, 'c)
 
     val fieldNames = Array("d", "e")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.INT, Types.LONG)
+    val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.LONG)
     val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
     util.tableEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
@@ -49,7 +49,8 @@ class InsertIntoValidationTest extends TableTestBase {
     util.addTable[(Int, Long, String)]("sourceTable", 'a, 'b, 'c)
 
     val fieldNames = Array("d", "e", "f")
-    val fieldTypes: Array[TypeInformation[_]] = Array(Types.STRING, Types.INT, Types.LONG)
+    val fieldTypes: Array[DataType] =
+      Array(DataTypes.STRING, DataTypes.INT, DataTypes.LONG)
     val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
     util.tableEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 

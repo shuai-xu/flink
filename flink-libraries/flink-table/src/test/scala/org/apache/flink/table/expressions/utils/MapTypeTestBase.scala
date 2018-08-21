@@ -21,14 +21,14 @@ package org.apache.flink.table.expressions.utils
 import java.util.{HashMap => JHashMap}
 
 import com.google.common.collect.ImmutableMap
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.{MapTypeInfo, RowTypeInfo}
 import org.apache.flink.table.api.Types
 import org.apache.flink.types.Row
 
 class MapTypeTestBase extends ExpressionTestBase {
 
-  override def testData: Any = {
+  override def rowTestData: Row = {
     val map1 = new JHashMap[String, Int]()
     map1.put("a", 12)
     map1.put("b", 13)
@@ -47,7 +47,7 @@ class MapTypeTestBase extends ExpressionTestBase {
     testData
   }
 
-  override def typeInfo: TypeInformation[Any] = {
+  override def rowType: RowTypeInfo = {
     new RowTypeInfo(
       new MapTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO),
       new MapTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO),
@@ -57,6 +57,6 @@ class MapTypeTestBase extends ExpressionTestBase {
       Types.INT,
       Types.OBJECT_ARRAY(Types.DOUBLE),
       new MapTypeInfo(BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO)
-    ).asInstanceOf[TypeInformation[Any]]
+    )
   }
 }

@@ -18,156 +18,273 @@
 package org.apache.flink.table.api.scala
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.scala._
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
-
-import _root_.scala.reflect.ClassTag
+import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.functions.TableFunction
+import org.apache.flink.table.types.DataTypes
 
 /**
-  * The [[TableEnvironment]] for a Scala batch [[DataSet]]
-  * [[ExecutionEnvironment]].
+  * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]].
   *
   * A TableEnvironment can be used to:
-  * - convert a [[DataSet]] to a [[Table]]
-  * - register a [[DataSet]] in the [[TableEnvironment]]'s catalog
+  * - convert a [[DataStream]] to a [[Table]]
+  * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
   * - register a [[Table]] in the [[TableEnvironment]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
-  * - convert a [[Table]] into a [[DataSet]]
+  * - convert a [[Table]] into a [[DataStream]]
   * - explain the AST and execution plan of a [[Table]]
   *
-  * @param execEnv The Scala batch [[ExecutionEnvironment]] of the TableEnvironment.
-  * @param config The configuration of the TableEnvironment.
+  * @param execEnv The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
+  * @param config  The configuration of the TableEnvironment.
   */
 class BatchTableEnvironment(
-    execEnv: ExecutionEnvironment,
+    execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends org.apache.flink.table.api.BatchTableEnvironment(execEnv.getJavaEnv, config) {
+  extends org.apache.flink.table.api.BatchTableEnvironment(
+    execEnv.getWrappedStreamExecutionEnvironment,
+    config) {
 
   /**
-    * Converts the given [[DataSet]] into a [[Table]].
+    * Converts the given [[DataStream]] into a [[Table]].
     *
-    * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]].
     *
-    * @param dataSet The [[DataSet]] to be converted.
-    * @tparam T The type of the [[DataSet]].
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromDataSet[T](dataSet: DataSet[T]): Table = {
+  def fromBoundedStream[T](boundedStream: DataStream[T]): Table = {
 
     val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet.javaSet)
+    registerBoundedStreamInternal(name, boundedStream)
     scan(name)
   }
 
   /**
-    * Converts the given [[DataSet]] into a [[Table]] with specified field names.
+    * Converts the given [[DataStream]] into a [[Table]].
     *
-    * Example:
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]].
     *
-    * {{{
-    *   val set: DataSet[(String, Long)] = ...
-    *   val tab: Table = tableEnv.fromDataSet(set, 'a, 'b)
-    * }}}
-    *
-    * @param dataSet The [[DataSet]] to be converted.
-    * @param fields The field names of the resulting [[Table]].
-    * @tparam T The type of the [[DataSet]].
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromDataSet[T](dataSet: DataSet[T], fields: Expression*): Table = {
+  def fromBoundedStream[T](
+      boundedStream: DataStream[T],
+      fieldNullables: Array[Boolean]): Table = {
 
     val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables)
     scan(name)
   }
 
   /**
-    * Registers the given [[DataSet]] as table in the
-    * [[TableEnvironment]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
+    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
     *
-    * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
+    * Example:
     *
-    * @param name The name under which the [[DataSet]] is registered in the catalog.
-    * @param dataSet The [[DataSet]] to register.
-    * @tparam T The type of the [[DataSet]] to register.
+    * {{{
+    *   val stream: BoundedStream[(String, Long)] = ...
+    *   val tab: Table = tableEnv.fromBoundedStream(stream, 'a, 'b)
+    * }}}
+    *
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fields         The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
     */
-  def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
+  def fromBoundedStream[T](boundedStream: DataStream[T], fields: Expression*): Table = {
 
-    checkValidTableName(name)
-    registerDataSetInternal(name, dataSet.javaSet)
+    val name = createUniqueTableName()
+    registerBoundedStreamInternal(name, boundedStream, fields.toArray)
+    scan(name)
   }
 
   /**
-    * Registers the given [[DataSet]] as table with specified field names in the
+    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
+    *
+    * Example:
+    *
+    * {{{
+    *   val stream: DataStream[(String, Long)] = ...
+    *   val fieldNullables: Array[Boolean] = ...
+    *   val tab: Table = tableEnv.fromBoundedStream(stream, fieldNullables, 'a, 'b)
+    * }}}
+    *
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromBoundedStream[T](
+      boundedStream: DataStream[T],
+      fieldNullables: Array[Boolean],
+      fields: Expression*): Table = {
+
+    val name = createUniqueTableName()
+    registerBoundedStreamInternal(name, boundedStream, fields.toArray, fieldNullables)
+    scan(name)
+  }
+
+  /**
+    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
+    *
+    * Example:
+    *
+    * {{{
+    *   val stream: DataStream[(String, Long)] = ...
+    *   val tab: Table = tableEnv.fromBoundedStream(stream, 'a, 'b)
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fields         The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromBoundedStream[T](name: String, boundedStream: DataStream[T], fields: Expression*):
+  Table = {
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, fields.toArray)
+    scan(name)
+  }
+
+  /**
+    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
+    *
+    * Example:
+    *
+    * {{{
+    *   val stream: DataStream[(String, Long)] = ...
+    *   val fieldNullables: Array[Boolean] = ...
+    *   val tab: Table = tableEnv.fromBoundedStream(stream, fieldNullables, 'a, 'b)
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to be converted.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fieldNullables: Array[Boolean],
+      fields: Expression*):
+  Table = {
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, fields.toArray, fieldNullables)
+    scan(name)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fieldNullables: Array[Boolean]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table with specified field names in the
     * [[TableEnvironment]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
     *
     * {{{
-    *   val set: DataSet[(String, Long)] = ...
-    *   tableEnv.registerDataSet("myTable", set, 'a, 'b)
+    *   val set: DataStream[(String, Long)] = ...
+    *   tableEnv.registerBoundedStream("myTable", set, 'a, 'b)
     * }}}
     *
-    * @param name The name under which the [[DataSet]] is registered in the catalog.
-    * @param dataSet The [[DataSet]] to register.
-    * @param fields The field names of the registered table.
-    * @tparam T The type of the [[DataSet]] to register.
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
     */
-  def registerDataSet[T](name: String, dataSet: DataSet[T], fields: Expression*): Unit = {
+  def registerBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fields: Expression*): Unit = {
 
     checkValidTableName(name)
-    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
+    registerBoundedStreamInternal(name, boundedStream, fields.toArray)
   }
 
   /**
-    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
+    * Registers the given [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
     *
-    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
+    * Example:
     *
-    * @param table The [[Table]] to convert.
-    * @tparam T The type of the resulting [[DataSet]].
-    * @return The converted [[DataSet]].
+    * {{{
+    *   val set: BoundedStream[(String, Long)] = ...
+    *   val fieldNullables: Array[Boolean] = ...
+    *   tableEnv.registerBoundedStream("myTable", set, fieldNullables, 'a, 'b)
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
     */
-  def toDataSet[T: TypeInformation](table: Table): DataSet[T] = {
-    // Use the default batch query config.
-    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
-  }
+  def registerBoundedStream[T](
+      name: String,
+      boundedStream: DataStream[T],
+      fieldNullables: Array[Boolean],
+      fields: Expression*): Unit = {
 
-  /**
-    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
-    *
-    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param queryConfig The configuration of the query to generate.
-    * @tparam T The type of the resulting [[DataSet]].
-    * @return The converted [[DataSet]].
-    */
-  def toDataSet[T: TypeInformation](table: Table, queryConfig: BatchQueryConfig): DataSet[T] = {
-    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
-  }
-
-  /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register.
-    * @tparam T The type of the output row.
-    */
-  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunctionInternal(name, tf)
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, fields.toArray, fieldNullables)
   }
 
   /**
@@ -183,6 +300,22 @@ class BatchTableEnvironment(
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
-    registerAggregateFunctionInternal[T, ACC](name, f)
+    registerAggregateFunction[T, ACC](
+      name,
+      f,
+      DataTypes.of(implicitly[TypeInformation[T]]),
+      DataTypes.of(implicitly[TypeInformation[ACC]]))
+  }
+
+  /**
+    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
+    * Registered functions can be referenced in Table API and SQL queries.
+    *
+    * @param name The name under which the function is registered.
+    * @param tf The TableFunction to register.
+    * @tparam T The type of the output row.
+    */
+  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
+    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
   }
 }

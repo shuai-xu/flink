@@ -17,103 +17,103 @@
  */
 package org.apache.flink.table.typeutils
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
-import org.apache.flink.api.common.typeinfo._
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.typeutils.{MapTypeInfo, ObjectArrayTypeInfo, PojoTypeInfo}
+import org.apache.flink.api.java.typeutils.{ListTypeInfo, PojoTypeInfo}
 import org.apache.flink.table.api.ValidationException
-import org.apache.flink.table.typeutils.TimeIntervalTypeInfo.{INTERVAL_MILLIS, INTERVAL_MONTHS}
+import org.apache.flink.table.types._
 import org.apache.flink.table.validate._
 
 object TypeCheckUtils {
 
-  /**
-    * Checks if type information is an advanced type that can be converted to a
-    * SQL type but NOT vice versa.
-    */
-  def isAdvanced(dataType: TypeInformation[_]): Boolean = dataType match {
-    case _: TimeIndicatorTypeInfo => false
-    case _: BasicTypeInfo[_] => false
-    case _: SqlTimeTypeInfo[_] => false
-    case _: TimeIntervalTypeInfo[_] => false
-    case _ => true
-  }
-
-  /**
-    * Checks if type information is a simple type that can be converted to a
-    * SQL type and vice versa.
-    */
-  def isSimple(dataType: TypeInformation[_]): Boolean = !isAdvanced(dataType)
-
-  def isNumeric(dataType: TypeInformation[_]): Boolean = dataType match {
-    case _: NumericTypeInfo[_] => true
-    case BIG_DEC_TYPE_INFO => true
+  def isNumeric(dataType: InternalType): Boolean = dataType match {
+    case DataTypes.INT | DataTypes.BYTE | DataTypes.SHORT
+         | DataTypes.LONG | DataTypes.FLOAT | DataTypes.DOUBLE => true
+    case _: DecimalType => true
     case _ => false
   }
 
-  def isTemporal(dataType: TypeInformation[_]): Boolean =
+  def isTemporal(dataType: InternalType): Boolean =
     isTimePoint(dataType) || isTimeInterval(dataType)
 
-  def isTimePoint(dataType: TypeInformation[_]): Boolean =
-    dataType.isInstanceOf[SqlTimeTypeInfo[_]]
-
-  def isTimeInterval(dataType: TypeInformation[_]): Boolean =
-    dataType.isInstanceOf[TimeIntervalTypeInfo[_]]
-
-  def isString(dataType: TypeInformation[_]): Boolean = dataType == STRING_TYPE_INFO
-
-  def isBoolean(dataType: TypeInformation[_]): Boolean = dataType == BOOLEAN_TYPE_INFO
-
-  def isDecimal(dataType: TypeInformation[_]): Boolean = dataType == BIG_DEC_TYPE_INFO
-
-  def isInteger(dataType: TypeInformation[_]): Boolean = dataType == INT_TYPE_INFO
-
-  def isIntegerFamily(dataType: TypeInformation[_]): Boolean =
-    dataType.isInstanceOf[IntegerTypeInfo[_]]
-
-  def isLong(dataType: TypeInformation[_]): Boolean = dataType == LONG_TYPE_INFO
-
-  def isIntervalMonths(dataType: TypeInformation[_]): Boolean = dataType == INTERVAL_MONTHS
-
-  def isIntervalMillis(dataType: TypeInformation[_]): Boolean = dataType == INTERVAL_MILLIS
-
-  def isArray(dataType: TypeInformation[_]): Boolean = dataType match {
-    case _: ObjectArrayTypeInfo[_, _] |
-         _: BasicArrayTypeInfo[_, _] |
-         _: PrimitiveArrayTypeInfo[_]  => true
+  def isTimePoint(dataType: InternalType): Boolean = dataType match {
+    case DataTypes.INTERVAL_MILLIS | DataTypes.INTERVAL_MONTHS => false
+    case _: TimeType | _: DateType | _: TimestampType => true
     case _ => false
   }
 
-  def isMap(dataType: TypeInformation[_]): Boolean =
-    dataType.isInstanceOf[MapTypeInfo[_, _]]
+  def isRowTime(dataType: InternalType): Boolean =
+    dataType == DataTypes.ROWTIME_INDICATOR
 
-  def isComparable(dataType: TypeInformation[_]): Boolean =
-    classOf[Comparable[_]].isAssignableFrom(dataType.getTypeClass) && !isArray(dataType)
+  def isProcTime(dataType: InternalType): Boolean =
+    dataType == DataTypes.PROCTIME_INDICATOR
+
+  def isTimeInterval(dataType: InternalType): Boolean = dataType match {
+    case DataTypes.INTERVAL_MILLIS | DataTypes.INTERVAL_MONTHS => true
+    case _ => false
+  }
+
+  def isString(dataType: InternalType): Boolean = dataType == DataTypes.STRING
+
+  def isBinary(dataType: InternalType): Boolean = dataType == DataTypes.BYTE_ARRAY
+
+  def isBoolean(dataType: InternalType): Boolean = dataType == DataTypes.BOOLEAN
+
+  def isDecimal(dataType: InternalType): Boolean = dataType.isInstanceOf[DecimalType]
+
+  def isInteger(dataType: InternalType): Boolean = dataType == DataTypes.INT
+
+  def isLong(dataType: InternalType): Boolean = dataType == DataTypes.LONG
+
+  def isIntervalMonths(dataType: InternalType): Boolean = dataType == DataTypes.INTERVAL_MONTHS
+
+  def isIntervalMillis(dataType: InternalType): Boolean = dataType == DataTypes.INTERVAL_MILLIS
+
+  def isArray(dataType: InternalType): Boolean = dataType.isInstanceOf[ArrayType]
+
+  def isMap(dataType: InternalType): Boolean = dataType.isInstanceOf[MapType]
+
+  def isList(dataType: InternalType): Boolean = dataType match {
+    case gt: GenericType[_] => gt.getTypeInfo.isInstanceOf[ListTypeInfo[_]]
+    case _ => false
+  }
+
+  def isIntegral(dataType: InternalType): Boolean = {
+    dataType match {
+      case DataTypes.BYTE
+           | DataTypes.SHORT
+           | DataTypes.INT
+           | DataTypes.LONG => true
+      case _ => false
+    }
+  }
+
+  def isComparable(dataType: InternalType): Boolean =
+    !dataType.isInstanceOf[GenericType[_]] &&
+        !dataType.isInstanceOf[MapType] &&
+        !dataType.isInstanceOf[BaseRowType] &&
+        !isArray(dataType)
 
   def assertNumericExpr(
-      dataType: TypeInformation[_],
+      dataType: InternalType,
       caller: String)
     : ValidationResult = dataType match {
-    case _: NumericTypeInfo[_] =>
-      ValidationSuccess
-    case BIG_DEC_TYPE_INFO =>
-      ValidationSuccess
+    case t if TypeCheckUtils.isNumeric(t) => ValidationSuccess
     case _ =>
       ValidationFailure(s"$caller requires numeric types, get $dataType here")
   }
 
   def assertIntegerFamilyExpr(
-      dataType: TypeInformation[_],
+      dataType: InternalType,
       caller: String)
     : ValidationResult = dataType match {
-    case _: IntegerTypeInfo[_] =>
-      ValidationSuccess
+    case t if TypeCheckUtils.isIntegral(t) => ValidationSuccess
     case _ =>
       ValidationFailure(s"$caller requires integer types but was '$dataType'.")
   }
 
-  def assertOrderableExpr(dataType: TypeInformation[_], caller: String): ValidationResult = {
-    if (dataType.isSortKeyType) {
+  def assertOrderableExpr(dataType: InternalType, caller: String): ValidationResult = {
+    if (DataTypes.toTypeInfo(dataType).isSortKeyType) {
       ValidationSuccess
     } else {
       ValidationFailure(s"$caller requires orderable types, get $dataType here")
@@ -124,7 +124,7 @@ object TypeCheckUtils {
     * Checks whether a type implements own hashCode() and equals() methods for storing an instance
     * in Flink's state or performing a keyBy operation.
     *
-    * @param name name of the operation
+    * @param name name of the operation.
     * @param t type information to be validated
     */
   def validateEqualsHashCode(name: String, t: TypeInformation[_]): Unit = t match {
@@ -167,12 +167,12 @@ object TypeCheckUtils {
         if (c.getMethod("hashCode").getDeclaringClass eq classOf[Object]) {
           throw new ValidationException(
             s"Type '${c.getCanonicalName}' cannot be used in a $name operation because it " +
-            s"does not implement a proper hashCode() method.")
+              s"does not implement a proper hashCode() method.")
         }
         if (c.getMethod("equals", classOf[Object]).getDeclaringClass eq classOf[Object]) {
           throw new ValidationException(
             s"Type '${c.getCanonicalName}' cannot be used in a $name operation because it " +
-            s"does not implement a proper equals() method.")
+              s"does not implement a proper equals() method.")
         }
       }
     }

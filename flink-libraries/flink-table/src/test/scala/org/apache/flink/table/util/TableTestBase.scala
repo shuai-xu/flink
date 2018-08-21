@@ -1,0 +1,255 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.flink.table.util
+
+import java.util
+import java.util.{ArrayList => JArrayList}
+
+import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.tools.RuleSet
+import org.apache.calcite.util.ImmutableBitSet
+import org.apache.commons.lang3.SystemUtils
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.streaming.api.TimeCharacteristic
+import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
+import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JStreamExecutionEnvironment}
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnvironment}
+import org.apache.flink.table.api.{Table, TableEnvironment}
+import org.apache.flink.table.calcite.CalciteConfigBuilder
+import org.apache.flink.table.expressions.Expression
+import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.util.{DiffRepository, RelTraitUtil}
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.rules.{ExpectedException, TestName}
+import org.mockito.Mockito.{mock, when}
+
+/**
+  * Test base for testing Table API / SQL plans.
+  */
+abstract class TableTestBase {
+
+  // used for accurate exception information checking.
+  val expectedException: ExpectedException = ExpectedException.none()
+
+  // used for get test case method name
+  val testName: TestName = new TestName
+
+  def streamTestUtil(): StreamTableTestUtil = StreamTableTestUtil(this)
+
+  @Rule
+  def thrown: ExpectedException = expectedException
+
+  @Rule
+  def name: TestName = testName
+
+  def verifyTableEquals(expected: Table, actual: Table): Unit = {
+    assertEquals(
+      "Logical plans do not match",
+      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(expected.getRelNode)),
+      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(actual.getRelNode)))
+  }
+
+  def injectRules(tEnv: TableEnvironment, phrase: String, injectRuleSet: RuleSet): Unit = {
+    val builder = new CalciteConfigBuilder()
+    val programs = builder.getStreamPrograms
+    programs.getFlinkRuleSetProgram(phrase)
+      .getOrElse(
+        throw new RuntimeException(s"${phrase} does not exist"))
+      .add(injectRuleSet)
+    tEnv.getConfig.setCalciteConfig(builder.build())
+  }
+}
+
+abstract class TableTestUtil {
+
+  private var counter = 0
+
+  def addTable[T: TypeInformation](fields: Expression*): Table = {
+    counter += 1
+    addTable[T](s"Table$counter", fields: _*)
+  }
+
+  def addTable[T: TypeInformation](name: String, fields: Expression*): Table
+
+  def addFunction[T: TypeInformation](name: String, function: TableFunction[T]): Unit
+
+  def addFunction(name: String, function: ScalarFunction): Unit
+
+  def addFunction[T: TypeInformation, ACC: TypeInformation](
+      name: String,
+      function: AggregateFunction[T, ACC]): Unit
+
+  def verifyPlan(sql: String): Unit
+
+  def verifyPlan(table: Table): Unit
+
+  def verifyTrait(sql: String): Unit
+
+  def verifyTrait(table: Table): Unit
+
+  def verifyPlanAndTrait(sql: String): Unit
+
+  def verifyPlanAndTrait(table: Table): Unit
+
+  def explainSql(query: String): String
+}
+
+case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
+
+  private lazy val diffRepository = DiffRepository.lookup(test.getClass)
+  val javaEnv: JStreamExecutionEnvironment = mock(classOf[JStreamExecutionEnvironment])
+  when(javaEnv.getStreamTimeCharacteristic).thenReturn(TimeCharacteristic.EventTime)
+  val javaTableEnv: JStreamTableEnvironment = TableEnvironment.getTableEnvironment(javaEnv)
+  val env: StreamExecutionEnvironment = mock(classOf[StreamExecutionEnvironment])
+  when(env.getWrappedStreamExecutionEnvironment).thenReturn(javaEnv)
+  val tableEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
+
+  def addTable[T: TypeInformation](
+      name: String,
+      fields: Expression*)
+    : Table = {
+
+    val ds = mock(classOf[DataStream[T]])
+    val jDs = mock(classOf[JDataStream[T]])
+    when(ds.javaStream).thenReturn(jDs)
+    val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
+    when(jDs.getType).thenReturn(typeInfo)
+
+    val t = ds.toTable(tableEnv, fields: _*)
+    tableEnv.registerTable(name, t)
+    t
+  }
+
+  def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
+
+    val jDs = mock(classOf[JDataStream[T]])
+    when(jDs.getType).thenReturn(typeInfo)
+
+    val t = javaTableEnv.fromDataStream(jDs, fields)
+    javaTableEnv.registerTable(name, t)
+    t
+  }
+
+  def addFunction[T: TypeInformation](
+      name: String,
+      function: TableFunction[T]): Unit = {
+    tableEnv.registerFunction(name, function)
+  }
+
+  def addFunction(name: String, function: ScalarFunction): Unit = {
+    tableEnv.registerFunction(name, function)
+  }
+
+  def addFunction[T: TypeInformation, ACC: TypeInformation](
+      name: String,
+      function: AggregateFunction[T, ACC]): Unit = {
+    tableEnv.registerFunction(name, function)
+  }
+
+  def verifyPlan(sql: String): Unit = {
+    val resultTable = tableEnv.sqlQuery(sql)
+    verifyPlan(resultTable)
+  }
+
+  def verifySqlPlansIdentical(query1: String, queries: String*): Unit = {
+    val resultTable1 = tableEnv.sqlQuery(query1)
+    queries.foreach(s => verify2Tables(resultTable1, tableEnv.sqlQuery(s)))
+  }
+
+  def verify2Tables(resultTable1: Table, resultTable2: Table): Unit = {
+    val relNode1 = resultTable1.getRelNode
+    val optimized1 = tableEnv.optimize(relNode1, updatesAsRetraction = false)
+    val relNode2 = resultTable2.getRelNode
+    val optimized2 = tableEnv.optimize(relNode2, updatesAsRetraction = false)
+    assertEquals(RelOptUtil.toString(optimized1), RelOptUtil.toString(optimized2))
+  }
+
+  def verifyPlan(table: Table): Unit = {
+    val relNode = table.getRelNode
+    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val actual = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
+    verifyPlan(test.name.getMethodName, actual)
+  }
+
+  def verifyPlan(name: String, plan: String): Unit = {
+    diffRepository.assertEquals(name, "plan", "${plan}", plan)
+  }
+
+  def verifyUniqueKeys(sql: String, expect: Set[Int]*): Unit = {
+    val table = tableEnv.sqlQuery(sql)
+    verifyUniqueKeys(table, expect: _*)
+  }
+
+  def verifyUniqueKeys(table: Table, expect: Set[Int]*): Unit = {
+    val node = tableEnv.optimize(table.getRelNode,  updatesAsRetraction = false)
+    val mq: FlinkRelMetadataQuery = FlinkRelMetadataQuery.instance()
+    val actual = mq.getUniqueKeys(node)
+    val expectSet = new util.HashSet[ImmutableBitSet]
+    expect.filter(_.nonEmpty).foreach { array =>
+      val keys = new JArrayList[Integer]()
+      array.foreach(keys.add(_))
+      expectSet.add(ImmutableBitSet.of(keys))
+    }
+    if (actual == null) {
+      assert(expectSet == null || expectSet.isEmpty)
+    } else {
+      assertEquals(expectSet, actual)
+    }
+  }
+
+  def verifyTrait(sql: String): Unit = {
+    val resultTable = tableEnv.sqlQuery(sql)
+    verifyTrait(resultTable)
+  }
+
+  def verifyTrait(table: Table): Unit = {
+    val relNode = table.getRelNode
+    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val actual = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
+    verifyTrait(test.name.getMethodName, actual)
+  }
+
+  def verifyTrait(name: String, ret: String): Unit = {
+    diffRepository.assertEquals(name, "trait", "${trait}", ret)
+  }
+
+  def verifyPlanAndTrait(sql: String): Unit = {
+    val resultTable = tableEnv.sqlQuery(sql)
+    verifyPlanAndTrait(resultTable)
+  }
+
+  def verifyPlanAndTrait(table: Table): Unit = {
+    val relNode = table.getRelNode
+    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val actualPlan = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
+    val actualTrait = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
+    verifyPlan(test.name.getMethodName, actualPlan)
+    verifyTrait(test.name.getMethodName, actualTrait)
+  }
+
+  def explainSql(query: String): String = {
+    val relNode = tableEnv.sqlQuery(query).getRelNode
+    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    RelOptUtil.toString(optimized)
+  }
+}

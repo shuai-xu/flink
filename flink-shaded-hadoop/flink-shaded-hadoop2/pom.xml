@@ -161,8 +161,13 @@ under the License.
 				</exclusion>
 				<!--We have to exclude beanutils because it is overlapping with commons-collections-->
 				<exclusion>
-					<groupId>commons-beanutils</groupId>
 					<artifactId>commons-beanutils</artifactId>
+					<groupId>commons-beanutils</groupId>
+				</exclusion>
+				<!--We exclude digester because it has dependency of beanutils-->
+				<exclusion>
+					<artifactId>commons-digester</artifactId>
+					<groupId>commons-digester</groupId>
 				</exclusion>
 			</exclusions>
 		</dependency>

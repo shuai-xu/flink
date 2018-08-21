@@ -1,0 +1,100 @@
+== Abstract Syntax Tree ==
+LogicalProject(cnt=[$0], frequency=[AS($1, 'frequency')])
+  LogicalAggregate(group=[{0}], TMP_1=[COUNT($1)])
+    LogicalProject(cnt=[$1], num=[$0])
+      LogicalFilter(condition=[<($0, 4)])
+        LogicalProject(num=[$0], cnt=[AS($1, 'cnt')])
+          LogicalAggregate(group=[{0}], TMP_0=[COUNT($1)])
+            LogicalProject(num=[$1], id=[$0])
+              LogicalTableScan(table=[[_DataStreamTable_0]])
+
+LogicalProject(num=[$0], cnt=[$1])
+  LogicalFilter(condition=[AND(>=($0, 4), <($0, 6))])
+    LogicalProject(num=[$0], cnt=[AS($1, 'cnt')])
+      LogicalAggregate(group=[{0}], TMP_0=[COUNT($1)])
+        LogicalProject(num=[$1], id=[$0])
+          LogicalTableScan(table=[[_DataStreamTable_0]])
+
+== Optimized Logical Plan ==
+[[IntermediateTable=_DataStreamTable_2]]
+StreamExecCalc(select=[num, TMP_0 AS cnt])
+  StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS TMP_0])
+    StreamExecExchange(distribution=[hash[num]])
+      StreamExecCalc(select=[num, id])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+StreamExecCalc(retract=[true], accMode=[AccRetract])
+  StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
+    StreamExecExchange(retract=[true], accMode=[Acc])
+      StreamExecCalc(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecCalc(select=[cnt, TMP_1 AS frequency])
+  StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT(num) AS TMP_1])
+    StreamExecExchange(distribution=[hash[cnt]])
+      StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
+        StreamExecScan(table=[[_DataStreamTable_2]])
+StreamExecCalc(retract=[false], accMode=[Acc])
+  StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[true], accMode=[AccRetract])
+      StreamExecCalc(retract=[true], accMode=[AccRetract])
+        StreamExecScan(retract=[true], accMode=[AccRetract])
+
+[[Sink]]
+StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
+  StreamExecScan(table=[[_DataStreamTable_2]])
+StreamExecCalc(retract=[false], accMode=[AccRetract])
+  StreamExecScan(retract=[false], accMode=[AccRetract])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[_DataStreamTable_0], fields:(id, num, text))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : Calc(select: (num, id))
+			ship_strategy : FORWARD
+
+			 : Operator
+				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS TMP_0))
+				ship_strategy : HASH
+
+				 : Operator
+					content : Calc(select: (num, TMP_0 AS cnt))
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : Calc(where: (num < 4), select: (num, cnt))
+						ship_strategy : FORWARD
+
+						 : Operator
+							content : GroupAggregate(groupBy: (cnt), select: (cnt, COUNT(num) AS TMP_1))
+							ship_strategy : HASH
+
+							 : Operator
+								content : Calc(select: (cnt, TMP_1 AS frequency))
+								ship_strategy : FORWARD
+
+								 : Operator
+									content : SinkConversion to Tuple2
+									ship_strategy : FORWARD
+
+									 : Operator
+										content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
+										ship_strategy : FORWARD
+
+										 : Operator
+											content : SinkConversion to Tuple2
+											ship_strategy : FORWARD
+
+											 : Data Sink
+												content : Sink: TestingUpsertTableSink(keys=(0))
+												ship_strategy : FORWARD
+
+												 : Data Sink
+													content : Sink: TestingUpsertTableSink(keys=())
+													ship_strategy : FORWARD
+

@@ -18,8 +18,7 @@
 
 package org.apache.flink.table.typeutils
 
-import org.apache.flink.api.scala._
-import org.apache.flink.api.scala.typeutils.{Types => ScalaTypes}
+import org.apache.flink.api.scala.typeutils.{ScalaNothingTypeInfo, Types => ScalaTypes}
 import org.apache.flink.table.api.{Types, ValidationException}
 import org.apache.flink.table.typeutils.TypeCheckUtils.validateEqualsHashCode
 import org.junit.Test
@@ -31,20 +30,19 @@ class TypeCheckUtilsTest {
     validateEqualsHashCode("", Types.STRING)
     validateEqualsHashCode("", Types.LONG)
     validateEqualsHashCode("", Types.SQL_TIMESTAMP)
-    validateEqualsHashCode("", Types.ROW(Types.LONG, Types.DECIMAL))
-    validateEqualsHashCode("", ScalaTypes.CASE_CLASS[(Long, Int)])
+    validateEqualsHashCode("", Types.ROW(Types.LONG, Types.DOUBLE))
     validateEqualsHashCode("", Types.OBJECT_ARRAY(Types.LONG))
     validateEqualsHashCode("", Types.PRIMITIVE_ARRAY(Types.LONG))
   }
 
   @Test(expected = classOf[ValidationException])
   def testInvalidType(): Unit = {
-    validateEqualsHashCode("", ScalaTypes.NOTHING)
+    validateEqualsHashCode("", new ScalaNothingTypeInfo)
   }
 
   @Test(expected = classOf[ValidationException])
   def testInvalidType2(): Unit = {
-    validateEqualsHashCode("", Types.ROW(ScalaTypes.NOTHING))
+    validateEqualsHashCode("", Types.ROW(new ScalaNothingTypeInfo))
   }
 
   @Test(expected = classOf[ValidationException])

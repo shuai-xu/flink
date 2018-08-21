@@ -19,11 +19,10 @@
 package org.apache.flink.table.plan.nodes
 
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlAsOperator
-import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.flink.table.api.TableException
+import org.apache.calcite.sql.SqlKind._
+import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
 
 import scala.collection.JavaConversions._
 
@@ -33,6 +32,14 @@ trait FlinkRelNode extends RelNode {
       expr: RexNode,
       inFields: List[String],
       localExprsTable: Option[List[RexNode]]): String = {
+    getExpressionString(expr, inFields, localExprsTable, ExpressionFormat.Prefix)
+  }
+
+  private[flink] def getExpressionString(
+      expr: RexNode,
+      inFields: List[String],
+      localExprsTable: Option[List[RexNode]],
+      expressionFormat: ExpressionFormat): String = {
 
     expr match {
       case i: RexInputRef =>
@@ -47,18 +54,35 @@ trait FlinkRelNode extends RelNode {
 
       case l: RexLocalRef =>
         val lExpr = localExprsTable.get(l.getIndex)
-        getExpressionString(lExpr, inFields, localExprsTable)
+        getExpressionString(lExpr, inFields, localExprsTable, expressionFormat)
 
       case c: RexCall =>
         val op = c.getOperator.toString
-        val ops = c.getOperands.map(getExpressionString(_, inFields, localExprsTable))
+        val ops = c.getOperands.map(
+          getExpressionString(_, inFields, localExprsTable, expressionFormat))
         c.getOperator match {
           case _ : SqlAsOperator => ops.head
-          case _ => s"$op(${ops.mkString(", ")})"
+          case _ =>
+            expressionFormat match {
+              case ExpressionFormat.Infix if ops.length == 1 =>
+                val operand = ops.head
+                c.getKind match {
+                  case IS_FALSE | IS_NOT_FALSE | IS_TRUE | IS_NOT_TRUE | IS_UNKNOWN | IS_NULL |
+                       IS_NOT_NULL => s"$operand $op"
+                  case _ => s"$op($operand)"
+                }
+              case ExpressionFormat.Infix => s"(${ops.mkString(s" $op ")})"
+              case ExpressionFormat.PostFix => s"(${ops.mkString(", ")})$op"
+              case ExpressionFormat.Prefix => s"$op(${ops.mkString(", ")})"
+            }
         }
 
       case fa: RexFieldAccess =>
-        val referenceExpr = getExpressionString(fa.getReferenceExpr, inFields, localExprsTable)
+        val referenceExpr = getExpressionString(
+          fa.getReferenceExpr,
+          inFields,
+          localExprsTable,
+          expressionFormat)
         val field = fa.getField.getName
         s"$referenceExpr.$field"
       case cv: RexCorrelVariable =>
@@ -68,36 +92,17 @@ trait FlinkRelNode extends RelNode {
     }
   }
 
-  private[flink] def estimateRowSize(rowType: RelDataType): Double = {
-    val fieldList = rowType.getFieldList
+}
 
-    fieldList.map(_.getType).foldLeft(0.0) { (s, t) =>
-      s + estimateDataTypeSize(t)
-    }
-  }
-
-  private[flink] def estimateDataTypeSize(t: RelDataType): Double = t.getSqlTypeName match {
-    case SqlTypeName.TINYINT => 1
-    case SqlTypeName.SMALLINT => 2
-    case SqlTypeName.INTEGER => 4
-    case SqlTypeName.BIGINT => 8
-    case SqlTypeName.BOOLEAN => 1
-    case SqlTypeName.FLOAT => 4
-    case SqlTypeName.DOUBLE => 8
-    case SqlTypeName.VARCHAR => 12
-    case SqlTypeName.CHAR => 1
-    case SqlTypeName.DECIMAL => 12
-    case typeName if SqlTypeName.YEAR_INTERVAL_TYPES.contains(typeName) => 8
-    case typeName if SqlTypeName.DAY_INTERVAL_TYPES.contains(typeName) => 4
-    case SqlTypeName.TIME | SqlTypeName.TIMESTAMP | SqlTypeName.DATE => 12
-    case SqlTypeName.ROW => estimateRowSize(t)
-    case SqlTypeName.ARRAY =>
-      // 16 is an arbitrary estimate
-      estimateDataTypeSize(t.getComponentType) * 16
-    case SqlTypeName.MAP | SqlTypeName.MULTISET =>
-      // 16 is an arbitrary estimate
-      (estimateDataTypeSize(t.getKeyType) + estimateDataTypeSize(t.getValueType)) * 16
-    case SqlTypeName.ANY => 128 // 128 is an arbitrary estimate
-    case _ => throw TableException(s"Unsupported data type encountered: $t")
-  }
+/**
+  * Infix, Postfix and Prefix notations are three different but equivalent ways of writing
+  * expressions. It is easiest to demonstrate the differences by looking at examples of operators
+  * that take two operands.
+  * Infix notation: (X + Y)
+  * Postfix notation: (X Y) +
+  * Prefix notation: + (X Y)
+  */
+object ExpressionFormat extends Enumeration {
+  type ExpressionFormat = Value
+  val Infix, PostFix, Prefix = Value
 }

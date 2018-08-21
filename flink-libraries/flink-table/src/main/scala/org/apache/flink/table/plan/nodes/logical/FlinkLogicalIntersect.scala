@@ -26,6 +26,7 @@ import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.{Intersect, SetOp}
 import org.apache.calcite.rel.logical.LogicalIntersect
 import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 
 import scala.collection.JavaConverters._
@@ -42,11 +43,11 @@ class FlinkLogicalIntersect(
     new FlinkLogicalIntersect(cluster, traitSet, inputs, all)
   }
 
-  override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
+  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val children = this.getInputs.asScala
     children.foldLeft(planner.getCostFactory.makeCost(0, 0, 0)) { (cost, child) =>
-      val rowCnt = metadata.getRowCount(child)
-      val rowSize = this.estimateRowSize(child.getRowType)
+      val rowCnt = mq.getRowCount(child)
+      val rowSize = mq.getAverageRowSize(child)
       cost.plus(planner.getCostFactory.makeCost(rowCnt, rowCnt, rowCnt * rowSize))
     }
   }
@@ -61,14 +62,26 @@ private class FlinkLogicalIntersectConverter
 
   override def convert(rel: RelNode): RelNode = {
     val intersect = rel.asInstanceOf[LogicalIntersect]
-    val traitSet = rel.getTraitSet.replace(FlinkConventions.LOGICAL)
     val newInputs = intersect.getInputs.asScala
         .map(input => RelOptRule.convert(input, FlinkConventions.LOGICAL)).asJava
-
-    new FlinkLogicalIntersect(rel.getCluster, traitSet, newInputs, intersect.all)
+    FlinkLogicalIntersect.create(newInputs, intersect.all)
   }
 }
 
 object FlinkLogicalIntersect {
   val CONVERTER: ConverterRule = new FlinkLogicalIntersectConverter()
+
+  def create(
+      inputs: JList[RelNode],
+      all: Boolean): FlinkLogicalIntersect = {
+    val cluster = inputs.get(0).getCluster
+    val traitSet = cluster.traitSetOf(Convention.NONE)
+    // FIXME: FlinkRelMdDistribution requires the current RelNode to compute
+    // the distribution trait, so we have to create FlinkLogicalIntersect to
+    // calculate the distribution trait
+    val intersect = new FlinkLogicalIntersect(cluster, traitSet, inputs, all)
+    val newTraitSet = FlinkRelMetadataQuery.traitSet(intersect)
+      .replace(FlinkConventions.LOGICAL).simplify()
+    intersect.copy(newTraitSet, intersect.getInputs).asInstanceOf[FlinkLogicalIntersect]
+  }
 }

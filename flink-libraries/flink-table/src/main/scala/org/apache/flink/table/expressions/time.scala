@@ -22,13 +22,13 @@ import org.apache.calcite.avatica.util.TimeUnit
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
-import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.table.calcite.FlinkRelBuilder
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{DataTypes, InternalType, TimestampType}
+import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.typeutils.TypeCheckUtils.isTimeInterval
-import org.apache.flink.table.typeutils.{TimeIntervalTypeInfo, TypeCheckUtils}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 import scala.collection.JavaConversions._
@@ -37,10 +37,10 @@ case class Extract(timeIntervalUnit: Expression, temporal: Expression) extends E
 
   override private[flink] def children: Seq[Expression] = timeIntervalUnit :: temporal :: Nil
 
-  override private[flink] def resultType: TypeInformation[_] = LONG_TYPE_INFO
+  override private[flink] def resultType: InternalType = DataTypes.LONG
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTemporal(temporal.resultType)) {
+    if (!TypeCheckUtils.isTemporal(DataTypes.internal(temporal.resultType))) {
       return ValidationFailure(s"Extract operator requires Temporal input, " +
         s"but $temporal is of type ${temporal.resultType}")
     }
@@ -49,18 +49,18 @@ case class Extract(timeIntervalUnit: Expression, temporal: Expression) extends E
       case SymbolExpression(TimeIntervalUnit.YEAR)
            | SymbolExpression(TimeIntervalUnit.MONTH)
            | SymbolExpression(TimeIntervalUnit.DAY)
-        if temporal.resultType == SqlTimeTypeInfo.DATE
-          || temporal.resultType == SqlTimeTypeInfo.TIMESTAMP
-          || temporal.resultType == TimeIntervalTypeInfo.INTERVAL_MILLIS
-          || temporal.resultType == TimeIntervalTypeInfo.INTERVAL_MONTHS =>
+        if temporal.resultType == DataTypes.DATE
+          || temporal.resultType == DataTypes.TIMESTAMP
+          || temporal.resultType == DataTypes.INTERVAL_MILLIS
+          || temporal.resultType == DataTypes.INTERVAL_MONTHS =>
         ValidationSuccess
 
       case SymbolExpression(TimeIntervalUnit.HOUR)
            | SymbolExpression(TimeIntervalUnit.MINUTE)
            | SymbolExpression(TimeIntervalUnit.SECOND)
-        if temporal.resultType == SqlTimeTypeInfo.TIME
-          || temporal.resultType == SqlTimeTypeInfo.TIMESTAMP
-          || temporal.resultType == TimeIntervalTypeInfo.INTERVAL_MILLIS =>
+        if temporal.resultType == DataTypes.TIME
+          || temporal.resultType == DataTypes.TIMESTAMP
+          || temporal.resultType == DataTypes.INTERVAL_MILLIS =>
         ValidationSuccess
 
       case _ =>
@@ -71,13 +71,15 @@ case class Extract(timeIntervalUnit: Expression, temporal: Expression) extends E
 
   override def toString: String = s"($temporal).extract($timeIntervalUnit)"
 
-  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode =
     relBuilder
       .getRexBuilder
       .makeCall(
         SqlStdOperatorTable.EXTRACT,
         Seq(timeIntervalUnit.toRexNode, temporal.toRexNode))
-  }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }
 
 abstract class TemporalCeilFloor(
@@ -87,10 +89,10 @@ abstract class TemporalCeilFloor(
 
   override private[flink] def children: Seq[Expression] = timeIntervalUnit :: temporal :: Nil
 
-  override private[flink] def resultType: TypeInformation[_] = temporal.resultType
+  override private[flink] def resultType: InternalType = temporal.resultType
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTimePoint(temporal.resultType)) {
+    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(temporal.resultType))) {
       return ValidationFailure(s"Temporal ceil/floor operator requires Time Point input, " +
         s"but $temporal is of type ${temporal.resultType}")
     }
@@ -105,12 +107,12 @@ abstract class TemporalCeilFloor(
 
     (unit.get, temporal.resultType) match {
       case (TimeIntervalUnit.YEAR | TimeIntervalUnit.MONTH,
-          SqlTimeTypeInfo.DATE | SqlTimeTypeInfo.TIMESTAMP) =>
+          DataTypes.DATE | _: TimestampType) =>
         ValidationSuccess
-      case (TimeIntervalUnit.DAY, SqlTimeTypeInfo.TIMESTAMP) =>
+      case (TimeIntervalUnit.DAY, _: TimestampType) =>
         ValidationSuccess
       case (TimeIntervalUnit.HOUR | TimeIntervalUnit.MINUTE | TimeIntervalUnit.SECOND,
-          SqlTimeTypeInfo.TIME | SqlTimeTypeInfo.TIMESTAMP) =>
+          DataTypes.TIME | _: TimestampType) =>
         ValidationSuccess
       case _ =>
         ValidationFailure(s"Temporal ceil/floor operator does not support " +
@@ -131,6 +133,9 @@ case class TemporalFloor(
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder.call(SqlStdOperatorTable.FLOOR, temporal.toRexNode, timeIntervalUnit.toRexNode)
   }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }
 
 case class TemporalCeil(
@@ -145,20 +150,23 @@ case class TemporalCeil(
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder.call(SqlStdOperatorTable.CEIL, temporal.toRexNode, timeIntervalUnit.toRexNode)
   }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }
 
 abstract class CurrentTimePoint(
-    targetType: TypeInformation[_],
+    targetType: InternalType,
     local: Boolean)
   extends LeafExpression {
 
-  override private[flink] def resultType: TypeInformation[_] = targetType
+  override private[flink] def resultType: InternalType = targetType
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTimePoint(targetType)) {
+    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(targetType))) {
       ValidationFailure(s"CurrentTimePoint operator requires Time Point target type, " +
         s"but get $targetType.")
-    } else if (local && targetType == SqlTimeTypeInfo.DATE) {
+    } else if (local && targetType == DataTypes.DATE) {
       ValidationFailure(s"Localized CurrentTimePoint operator requires Time or Timestamp target " +
         s"type, but get $targetType.")
     } else {
@@ -174,34 +182,49 @@ abstract class CurrentTimePoint(
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     val operator = targetType match {
-      case SqlTimeTypeInfo.TIME if local => SqlStdOperatorTable.LOCALTIME
-      case SqlTimeTypeInfo.TIMESTAMP if local => SqlStdOperatorTable.LOCALTIMESTAMP
-      case SqlTimeTypeInfo.DATE => SqlStdOperatorTable.CURRENT_DATE
-      case SqlTimeTypeInfo.TIME => SqlStdOperatorTable.CURRENT_TIME
-      case SqlTimeTypeInfo.TIMESTAMP => SqlStdOperatorTable.CURRENT_TIMESTAMP
+      case DataTypes.TIME if local => SqlStdOperatorTable.LOCALTIME
+      case DataTypes.TIMESTAMP if local => SqlStdOperatorTable.LOCALTIMESTAMP
+      case DataTypes.DATE => SqlStdOperatorTable.CURRENT_DATE
+      case DataTypes.TIME => SqlStdOperatorTable.CURRENT_TIME
+      case DataTypes.TIMESTAMP => SqlStdOperatorTable.CURRENT_TIMESTAMP
     }
     relBuilder.call(operator)
   }
 }
 
-case class CurrentDate() extends CurrentTimePoint(SqlTimeTypeInfo.DATE, local = false)
+case class CurrentDate() extends CurrentTimePoint(DataTypes.DATE, local = false) {
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
 
-case class CurrentTime() extends CurrentTimePoint(SqlTimeTypeInfo.TIME, local = false)
+case class CurrentTime() extends CurrentTimePoint(DataTypes.TIME, local = false) {
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
 
-case class CurrentTimestamp() extends CurrentTimePoint(SqlTimeTypeInfo.TIMESTAMP, local = false)
+case class CurrentTimestamp() extends CurrentTimePoint(DataTypes.TIMESTAMP, local = false) {
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
 
-case class LocalTime() extends CurrentTimePoint(SqlTimeTypeInfo.TIME, local = true)
+case class LocalTime() extends CurrentTimePoint(DataTypes.TIME, local = true) {
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
 
-case class LocalTimestamp() extends CurrentTimePoint(SqlTimeTypeInfo.TIMESTAMP, local = true)
+case class LocalTimestamp() extends CurrentTimePoint(DataTypes.TIMESTAMP, local = true) {
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
 
 /**
-  * Extracts the quarter of a year from a SQL date.
+ * * Extracts the quarter of a year from a SQL date.
   */
 case class Quarter(child: Expression) extends UnaryExpression with InputTypeSpec {
 
-  override private[flink] def expectedTypes: Seq[TypeInformation[_]] = Seq(SqlTimeTypeInfo.DATE)
+  override private[flink] def expectedTypes: Seq[InternalType] = Seq(DataTypes.DATE)
 
-  override private[flink] def resultType: TypeInformation[_] = LONG_TYPE_INFO
+  override private[flink] def resultType: InternalType = DataTypes.LONG
 
   override def toString: String = s"($child).quarter()"
 
@@ -211,14 +234,20 @@ case class Quarter(child: Expression) extends UnaryExpression with InputTypeSpec
       * Source: [[org.apache.calcite.sql2rel.StandardConvertletTable#convertQuarter()]]
       */
     Plus(
-      Div(
-        Minus(
-          Extract(TimeIntervalUnit.MONTH, child),
-          Literal(1L)),
-        Literal(TimeUnit.QUARTER.multiplier.longValue())),
+      Cast(
+        Div(
+          Minus(
+            Extract(TimeIntervalUnit.MONTH, child),
+            Literal(1L)),
+          Literal(TimeUnit.QUARTER.multiplier.longValue())),
+        DataTypes.INT
+      ),
       Literal(1L)
     ).toRexNode
   }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }
 
 /**
@@ -234,14 +263,14 @@ case class TemporalOverlaps(
   override private[flink] def children: Seq[Expression] =
     Seq(leftTimePoint, leftTemporal, rightTimePoint, rightTemporal)
 
-  override private[flink] def resultType: TypeInformation[_] = BOOLEAN_TYPE_INFO
+  override private[flink] def resultType: InternalType = DataTypes.BOOLEAN
 
   override private[flink] def validateInput(): ValidationResult = {
-    if (!TypeCheckUtils.isTimePoint(leftTimePoint.resultType)) {
+    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(leftTimePoint.resultType))) {
       return ValidationFailure(s"TemporalOverlaps operator requires leftTimePoint to be of type " +
         s"Time Point, but get ${leftTimePoint.resultType}.")
     }
-    if (!TypeCheckUtils.isTimePoint(rightTimePoint.resultType)) {
+    if (!TypeCheckUtils.isTimePoint(DataTypes.internal(rightTimePoint.resultType))) {
       return ValidationFailure(s"TemporalOverlaps operator requires rightTimePoint to be of " +
         s"type Time Point, but get ${rightTimePoint.resultType}.")
     }
@@ -251,23 +280,23 @@ case class TemporalOverlaps(
     }
 
     // leftTemporal is point, then it must be comparable with leftTimePoint
-    if (TypeCheckUtils.isTimePoint(leftTemporal.resultType)) {
+    if (TypeCheckUtils.isTimePoint(DataTypes.internal(leftTemporal.resultType))) {
       if (leftTemporal.resultType != leftTimePoint.resultType) {
         return ValidationFailure(s"TemporalOverlaps operator requires leftTemporal and " +
           s"leftTimePoint to be of same type if leftTemporal is of type Time Point.")
       }
-    } else if (!isTimeInterval(leftTemporal.resultType)) {
+    } else if (!isTimeInterval(DataTypes.internal(leftTemporal.resultType))) {
       return ValidationFailure(s"TemporalOverlaps operator requires leftTemporal to be of " +
         s"type Time Point or Time Interval.")
     }
 
     // rightTemporal is point, then it must be comparable with rightTimePoint
-    if (TypeCheckUtils.isTimePoint(rightTemporal.resultType)) {
+    if (TypeCheckUtils.isTimePoint(DataTypes.internal(rightTemporal.resultType))) {
       if (rightTemporal.resultType != rightTimePoint.resultType) {
         return ValidationFailure(s"TemporalOverlaps operator requires rightTemporal and " +
           s"rightTimePoint to be of same type if rightTemporal is of type Time Point.")
       }
-    } else if (!isTimeInterval(rightTemporal.resultType)) {
+    } else if (!isTimeInterval(DataTypes.internal(rightTemporal.resultType))) {
       return ValidationFailure(s"TemporalOverlaps operator requires rightTemporal to be of " +
         s"type Time Point or Time Interval.")
     }
@@ -312,8 +341,8 @@ case class TemporalOverlaps(
   private def convertOverlapsEnd(
       relBuilder: FlinkRelBuilder,
       start: RexNode, end: RexNode,
-      endType: TypeInformation[_]) = {
-    if (isTimeInterval(endType)) {
+      endType: InternalType) = {
+    if (isTimeInterval(DataTypes.internal(endType))) {
       relBuilder.call(SqlStdOperatorTable.DATETIME_PLUS, start, end)
     } else {
       end
@@ -326,6 +355,9 @@ case class TemporalOverlaps(
     val r = relBuilder.call(SqlStdOperatorTable.CASE, le, end, start)
     (l, r)
   }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }
 
 case class DateFormat(timestamp: Expression, format: Expression) extends Expression {
@@ -336,5 +368,8 @@ case class DateFormat(timestamp: Expression, format: Expression) extends Express
 
   override def toString: String = s"$timestamp.dateFormat($format)"
 
-  override private[flink] def resultType = STRING_TYPE_INFO
+  override private[flink] def resultType = DataTypes.STRING
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
 }

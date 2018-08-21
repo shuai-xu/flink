@@ -1,0 +1,318 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+  <TestCase name="testBroadcastJoin">
+    <Resource name="sql">
+      <![CDATA[SELECT sum(b)  FROM x, y WHERE a = d]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=0, dependStageIDList=[])])
+		relStage（batchExecRel=Calc(select: (b)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=1, dependStageIDList=[relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=GlobalSortAggregate, stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])])
+	]
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
++- Exchange(distribution=[single])
+   +- LocalSortAggregate(select=[Partial_SUM(b) AS sum$0])
+      +- Calc(select=[b])
+         +- HashJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+            :- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
+            +- Exchange(distribution=[broadcast])
+               +- TableSourceScan(table=[[y, source: [selectedFields=[d]]]], fields=[d])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReusedNodeIsBarrierNode">
+    <Resource name="sql">
+      <![CDATA[
+WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
+    SELECT * FROM r r1, r r2 WHERE r1.a = r2.b AND r2.a > 1
+      ]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1),), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0, dependStageIDList=[])])
+		relStage（batchExecRel=Calc(where: (a > 1), select: (c, a, b)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=Calc(select: (c, a, b, CAST(a) AS a0)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=1, dependStageIDList=[relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0, dependStageIDList=[])])
+		relStage（batchExecRel=Calc(select: (c, a, b, c0, a1, b0)), stageID=0, dependStageIDList=[])
+	]
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[c, a, b, c0, a1, b0])
++- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
+   :- Exchange(distribution=[any], exchange_mode=[BATCH])
+   :  +- Calc(select=[c, a, b, CAST(a) AS a0])
+   :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
+   :        +- Exchange(distribution=[hash[c]])
+   :           +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1])
+   :              +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+   +- Exchange(distribution=[broadcast])
+      +- Calc(select=[c, a, b], where=[>(a, 1)])
+         +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testLeftSemi">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM x WHERE a IN (SELECT d FROM y)]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=2, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])])
+	]
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+HashSemiJoin(where=[=(a, d)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left])
+:- Exchange(distribution=[hash[a]])
+:  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
++- Exchange(distribution=[hash[d]])
+   +- TableSourceScan(table=[[y, source: [selectedFields=[d]]]], fields=[d])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReuseSubPlan_SetExchangeAsBatch">
+    <Resource name="sql">
+      <![CDATA[
+WITH t AS (SELECT x.a AS a, x.b AS b, y.d AS d, y.e AS e FROM x, y WHERE x.a = y.d)
+SELECT t1.*, t2.* FROM t t1, t t2 WHERE t1.b = t2.e AND t1.a < 10 AND t2.a > 5
+      ]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=Calc(where: (a < 10), select: (a, b)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=Calc(where: (a > 5), select: (a, b)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d, e]]], fields:(d, e)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=0, dependStageIDList=[])])
+	]
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoin], build=[left])
+:- Exchange(distribution=[hash[b]])
+:  +- HashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
+:     :- Exchange(distribution=[hash[a]])
+:     :  +- Calc(select=[a, b], where=[<(a, 10)])
+:     :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
+:     +- Exchange(distribution=[hash[d]], reuse_id=[2])
+:        +- TableSourceScan(table=[[y, source: [selectedFields=[d, e]]]], fields=[d, e])
++- Exchange(distribution=[hash[e]], exchange_mode=[BATCH])
+   +- HashJoin(where=[=(a, d)], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
+      :- Exchange(distribution=[hash[a]])
+      :  +- Calc(select=[a, b], where=[>(a, 5)])
+      :     +- Reused(reference_id=[1])
+      +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortMergeJoin">
+    <Resource name="sql">
+      <![CDATA[SELECT sum(b)  FROM x, y WHERE a = d]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=1, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=2, dependStageIDList=[relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=0, dependStageIDList=[]), relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=1, dependStageIDList=[])])
+		relStage（batchExecRel=Calc(select: (b)), stageID=0, dependStageIDList=[])
+		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=1, dependStageIDList=[relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=GlobalSortAggregate, stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])])
+	]
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
++- Exchange(distribution=[single])
+   +- LocalSortAggregate(select=[Partial_SUM(b) AS sum$0])
+      +- Calc(select=[b])
+         +- SortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], joinType=[INNER])
+            :- Exchange(distribution=[hash[a]])
+            :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
+            +- Exchange(distribution=[hash[d]])
+               +- TableSourceScan(table=[[y, source: [selectedFields=[d]]]], fields=[d])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testUnionAll">
+    <Resource name="sql">
+      <![CDATA[SELECT sum(a) FROM (SELECT a, c FROM x UNION ALL (SELECT a, c FROM z))GROUP BY c]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=Scan(table:[z, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0, dependStageIDList=[])
+	]
+	shuffleStage:[
+		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0, dependStageIDList=[])
+	]
+}
+RelRunningUnit{
+	shuffleStage:[
+		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0, dependStageIDList=[])])
+		relStage（batchExecRel=Calc(select: (EXPR$0)), stageID=0, dependStageIDList=[])
+	]
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[EXPR$0])
++- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0])
+   +- Exchange(distribution=[hash[c]])
+      +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
+         +- Union(all=[true], union=[a, c])
+            :- TableSourceScan(table=[[x, source: [selectedFields=[a, c]]]], fields=[a, c])
+            +- TableSourceScan(table=[[z, source: [selectedFields=[a, c]]]], fields=[a, c])
+]]>
+    </Resource>
+  </TestCase>
+</Root>

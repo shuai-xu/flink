@@ -20,28 +20,66 @@ package org.apache.flink.table.dataview
 import java.util
 import java.lang.{Iterable => JIterable}
 
-import org.apache.flink.api.common.state._
+import org.apache.flink.runtime.state2.subkeyed.SubKeyedListState
+import org.apache.flink.runtime.state2.keyed.KeyedListState
 import org.apache.flink.table.api.dataview.ListView
 
+class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T]) extends ListView[T] {
+  private var key: K = _
+  private var namespace: N = _
+
+  def setKeyNamespace(key: K, namespace: N): Unit = {
+    this.key = key
+    this.namespace = namespace
+  }
+
+  override def get: JIterable[T] = state.get(key, namespace)
+
+  override def add(value: T): Unit = state.add(key, namespace, value)
+
+  override def addAll(list: util.List[T]): Unit = state.addAll(key, namespace, list)
+
+  override def clear(): Unit = state.remove(key, namespace)
+}
+
 /**
-  * [[ListView]] use state backend.
-  *
-  * @param state list state
-  * @tparam T element type
+  * used for minibatch
+  * @param state
+  * @tparam K
+  * @tparam E
   */
-class StateListView[T](state: ListState[T]) extends ListView[T] {
+class KeyedStateListView[K, E](state: KeyedListState[K, E])
+  extends ListView[E] {
 
-  override def get: JIterable[T] = state.get()
+  protected var stateKey: K = null.asInstanceOf[K]
 
-  override def add(value: T): Unit = state.add(value)
+  def setKey(key: K) = this.stateKey = key
 
-  override def addAll(list: util.List[T]): Unit = {
-    val iterator = list.iterator()
-    while (iterator.hasNext) {
-      state.add(iterator.next())
+  override def get: JIterable[E] = {
+    state.get(stateKey)
+  }
+
+  override def add(value: E): Unit = {
+    state.add(stateKey, value)
+  }
+
+  override def addAll(list: util.List[E]): Unit = {
+    state.addAll(stateKey, list)
+  }
+
+  override def remove(value: E): Boolean = {
+    val list = this.get.asInstanceOf[util.List[E]]
+    if (list != null && list.remove(value)) {
+      this.clear()
+      this.addAll(list)
+      true
+    } else {
+      false
     }
   }
 
-  override def clear(): Unit = state.clear()
-}
+  override def clear(): Unit = {
+    state.remove(stateKey)
+  }
 
+}
