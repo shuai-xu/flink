@@ -19,38 +19,37 @@
 package org.apache.flink.table.runtime.`match`
 
 import org.apache.flink.api.common.functions.util.FunctionUtils
-import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
+import org.apache.flink.cep.pattern.interval.{PatternWindowTimeFunction, RichPatternWindowTimeFunction}
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.codegen.GeneratedIterativeCondition
+import org.apache.flink.table.codegen.GeneratedPatternWindowTimeFunction
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.util.Logging
 
 /**
-  * IterativeConditionRunner with [[BaseRow]] value.
+  * PatternWindowTimeFunctionRunner with [[BaseRow]] input.
   */
-class IterativeConditionRunner(
-    genCondition: GeneratedIterativeCondition)
-  extends RichIterativeCondition[BaseRow]
+class PatternWindowTimeFunctionRunner(
+    genFunction: GeneratedPatternWindowTimeFunction)
+  extends RichPatternWindowTimeFunction[BaseRow]
   with Logging {
 
-  // IterativeCondition will be serialized as part of state,
-  // so make function as transient to avoid ClassNotFoundException when restore state,
-  // see FLINK-6939 for details
-  @transient private var function: IterativeCondition[BaseRow] = _
+  @transient private var function: PatternWindowTimeFunction[BaseRow] = _
 
   override def open(parameters: Configuration): Unit = {
-    LOG.debug(s"Compiling RichIterativeCondition: ${genCondition.name} \n\n" +
-                s"Code:\n${genCondition.code}")
-    function = genCondition.newInstance(getRuntimeContext.getUserCodeClassLoader)
+    LOG.debug(s"Compiling PatternWindowTimeFunction: ${genFunction.name} \n\n " +
+                s"Code:\n${genFunction.code}")
+    function = genFunction.newInstance(Thread.currentThread().getContextClassLoader)
     FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
     FunctionUtils.openFunction(function, parameters)
   }
 
-  override def filter(value: BaseRow, ctx: IterativeCondition.Context[BaseRow]): Boolean = {
-    function.filter(value, ctx)
+  override def getWindowTime(value: BaseRow): Long = {
+    function.getWindowTime(value)
   }
 
   override def close(): Unit = {
-    FunctionUtils.closeFunction(function)
+    if (function != null) {
+      FunctionUtils.closeFunction(function)
+    }
   }
 }
