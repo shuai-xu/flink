@@ -18,9 +18,7 @@
 
 package org.apache.flink.table.runtime.`match`
 
-import org.apache.flink.api.common.functions.util.FunctionUtils
-import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
-import org.apache.flink.configuration.Configuration
+import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.table.codegen.GeneratedIterativeCondition
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.util.Logging
@@ -30,7 +28,7 @@ import org.apache.flink.table.util.Logging
   */
 class IterativeConditionRunner(
     genCondition: GeneratedIterativeCondition)
-  extends RichIterativeCondition[BaseRow]
+  extends IterativeCondition[BaseRow]
   with Logging {
 
   // IterativeCondition will be serialized as part of state,
@@ -38,19 +36,17 @@ class IterativeConditionRunner(
   // see FLINK-6939 for details
   @transient private var function: IterativeCondition[BaseRow] = _
 
-  override def open(parameters: Configuration): Unit = {
-    LOG.debug(s"Compiling RichIterativeCondition: ${genCondition.name} \n\n" +
+  def init(): Unit = {
+    LOG.debug(s"Compiling IterativeCondition: ${genCondition.name} \n\n" +
                 s"Code:\n${genCondition.code}")
-    function = genCondition.newInstance(getRuntimeContext.getUserCodeClassLoader)
-    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
-    FunctionUtils.openFunction(function, parameters)
+    function = genCondition.newInstance(Thread.currentThread().getContextClassLoader)
   }
 
   override def filter(value: BaseRow, ctx: IterativeCondition.Context[BaseRow]): Boolean = {
-    function.filter(value, ctx)
-  }
+    if (function == null) {
+      init()
+    }
 
-  override def close(): Unit = {
-    FunctionUtils.closeFunction(function)
+    function.filter(value, ctx)
   }
 }
