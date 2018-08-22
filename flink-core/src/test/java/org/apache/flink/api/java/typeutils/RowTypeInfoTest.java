@@ -119,7 +119,8 @@ public class RowTypeInfoTest extends TypeInformationTestBase<RowTypeInfo> {
 	public void testNestedRowTypeInfo() {
 		RowTypeInfo typeInfo = new RowTypeInfo(typeList);
 
-		assertEquals("Row(f0: Short, f1: BigDecimal)", typeInfo.getTypeAt("f1").toString());
+		String decTypeString = BasicTypeInfo.BIG_DEC_TYPE_INFO.toString();
+		assertEquals("Row(f0: Short, f1: " + decTypeString + ")", typeInfo.getTypeAt("f1").toString());
 		assertEquals("Short", typeInfo.getTypeAt("f1.f0").toString());
 	}
 

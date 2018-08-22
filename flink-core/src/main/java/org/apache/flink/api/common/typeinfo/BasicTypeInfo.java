@@ -24,8 +24,6 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.BigDecComparator;
-import org.apache.flink.api.common.typeutils.base.BigDecSerializer;
 import org.apache.flink.api.common.typeutils.base.BigIntComparator;
 import org.apache.flink.api.common.typeutils.base.BigIntSerializer;
 import org.apache.flink.api.common.typeutils.base.BooleanComparator;
@@ -82,7 +80,7 @@ public class BasicTypeInfo<T> extends TypeInformation<T> implements AtomicType<T
 	public static final BasicTypeInfo<Date> DATE_TYPE_INFO = new BasicTypeInfo<>(Date.class, new Class<?>[]{}, DateSerializer.INSTANCE, DateComparator.class);
 	public static final BasicTypeInfo<Void> VOID_TYPE_INFO = new BasicTypeInfo<>(Void.class, new Class<?>[]{}, VoidSerializer.INSTANCE, null);
 	public static final BasicTypeInfo<BigInteger> BIG_INT_TYPE_INFO = new BasicTypeInfo<>(BigInteger.class, new Class<?>[]{}, BigIntSerializer.INSTANCE, BigIntComparator.class);
-	public static final BasicTypeInfo<BigDecimal> BIG_DEC_TYPE_INFO = new BasicTypeInfo<>(BigDecimal.class, new Class<?>[]{}, BigDecSerializer.INSTANCE, BigDecComparator.class);
+	public static final BasicTypeInfo<BigDecimal> BIG_DEC_TYPE_INFO = new BigDecimalTypeInfo(38, 18);
 
 	// --------------------------------------------------------------------------------------------
 
