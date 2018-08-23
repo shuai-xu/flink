@@ -22,11 +22,11 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.state.StateSnapshotContext;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
-import org.apache.flink.runtime.state2.keyed.KeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.bundle.BundleTrigger;
 import org.apache.flink.streaming.api.bundle.BundleTriggerCallback;
-import org.apache.flink.streaming.api.graph.OperatorContext;
+import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
@@ -39,7 +39,6 @@ import org.apache.flink.table.runtime.functions.ExecutionContextImpl;
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.util.Collector;
-import org.apache.flink.util.LockAndCondition;
 import org.apache.flink.util.Preconditions;
 
 import java.util.HashMap;
@@ -71,7 +70,7 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 
 	private final TypeInformation<V> valueType;
 
-	private transient LockAndCondition checkpointingLock;
+	private transient Object checkpointingLock;
 
 	private transient Map<K, V> buffer;
 
@@ -95,8 +94,8 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	}
 
 	@Override
-	public void setup(StreamTask<?, ?> containingTask, OperatorContext context, Output<StreamRecord<OUT>> output) {
-		super.setup(containingTask, context, output);
+	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
+		super.setup(containingTask, config, output);
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 	}
 
@@ -155,7 +154,7 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	/** finish bundle and invoke BundleFunction. */
 	@Override
 	public void finishBundle() throws Exception {
-		assert checkpointingLock.getLock().isHeldByCurrentThread();
+		assert(Thread.holdsLock(checkpointingLock));
 		if (!buffer.isEmpty()) {
 			numOfElements = 0;
 			function.finishBundle(buffer, collector);
@@ -191,7 +190,7 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 
 	@Override
 	public void close() throws Exception {
-		assert checkpointingLock.getLock().isHeldByCurrentThread();
+		assert(Thread.holdsLock(checkpointingLock));
 		try {
 			finishBundle();
 
@@ -215,10 +214,5 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 				LOG.warn("Errors occurred while closing the BundleOperator.", exception);
 			}
 		}
-	}
-
-	@Override
-	public boolean requireState() {
-		return true;
 	}
 }

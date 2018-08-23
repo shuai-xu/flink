@@ -20,9 +20,9 @@ package org.apache.flink.table.runtime.aggregate
 import java.util.{ArrayList => JArrayList, List => JList}
 import java.lang.{Long => JLong}
 
-import org.apache.flink.api.common.state2.{MapStateDescriptor, ValueStateDescriptor}
+import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
-import org.apache.flink.runtime.state2.keyed.{KeyedMapState, KeyedValueState}
+import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.aggregate
 
-import org.apache.flink.runtime.state2.keyed.KeyedValueState
+import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.util.Collector

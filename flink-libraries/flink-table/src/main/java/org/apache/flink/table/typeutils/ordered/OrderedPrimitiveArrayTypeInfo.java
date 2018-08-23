@@ -24,7 +24,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.configuration.CoreOptions;
-import org.apache.flink.runtime.state2.heap.HeapStateBackend;
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend;
 
 import java.util.Map;
 import java.util.Objects;
@@ -115,7 +115,7 @@ public class OrderedPrimitiveArrayTypeInfo<T> extends TypeInformation<T> {
 		if (config.getGlobalJobParameters() != null) {
 			Map<String, String> parameters = config.getGlobalJobParameters().toMap();
 			String clazz = parameters.get(CoreOptions.STATE_BACKEND_CLASSNAME.key());
-			if (clazz == null || clazz.equals(HeapStateBackend.class.getCanonicalName())) {
+			if (clazz == null || clazz.equals(HeapInternalStateBackend.class.getCanonicalName())) {
 				// using heap statebackend
 				// use non-ordered serialization here when String/BinaryString/byte[]
 				if (heapSerializer != null) {

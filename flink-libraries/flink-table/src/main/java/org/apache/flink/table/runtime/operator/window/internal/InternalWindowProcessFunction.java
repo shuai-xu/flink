@@ -20,10 +20,10 @@ package org.apache.flink.table.runtime.operator.window.internal;
 
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedState;
-import org.apache.flink.runtime.state2.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.table.api.window.Window;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.runtime.functions.SubKeyedAggsHandleFunction;

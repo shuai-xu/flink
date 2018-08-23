@@ -19,31 +19,23 @@
 package org.apache.flink.table.runtime.functions;
 
 import org.apache.flink.api.common.functions.RuntimeContext;
-import org.apache.flink.api.common.state2.ListState;
-import org.apache.flink.api.common.state2.ListStateDescriptor;
-import org.apache.flink.api.common.state2.MapState;
-import org.apache.flink.api.common.state2.MapStateDescriptor;
-import org.apache.flink.api.common.state2.SortedMapState;
-import org.apache.flink.api.common.state2.SortedMapStateDescriptor;
-import org.apache.flink.api.common.state2.ValueState;
-import org.apache.flink.api.common.state2.ValueStateDescriptor;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.runtime.state2.keyed.KeyedListState;
-import org.apache.flink.runtime.state2.keyed.KeyedMapState;
-import org.apache.flink.runtime.state2.keyed.KeyedSortedMapState;
-import org.apache.flink.runtime.state2.keyed.KeyedState;
-import org.apache.flink.runtime.state2.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
-import org.apache.flink.runtime.state2.partitioned.PartitionedListStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedMapStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedSortedMapStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedValueStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedListState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedMapState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedSortedMapState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedListState;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedSortedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedListState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedMapState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedSortedMapState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.table.dataformat.BaseRow;
 
 /**
@@ -164,44 +156,6 @@ public interface ExecutionContext {
 	 */
 	<K, N, UK, UV> SubKeyedSortedMapState<K, N, UK, UV> getSubKeyedSortedMapState(
 		final SortedMapStateDescriptor<UK, UV> descriptor);
-
-	/**
-	 * Creates a partitioned value state.
-	 * @param descriptor The descriptor defining the properties of the state.
-	 * @param <V> Type of the element in the value state
-	 * @return a partitioned value state
-	 */
-	<V> ValueState<V> getPartitionedValueState(
-		final PartitionedValueStateDescriptor<V> descriptor);
-
-	/**
-	 * Creates a partitioned list state.
-	 * @param descriptor The descriptor defining the properties of the state.
-	 * @param <V> Type of the elements in the list state
-	 * @return a partitioned list state
-	 */
-	<V> ListState<V> getPartitionedListState(
-		final PartitionedListStateDescriptor<V> descriptor);
-
-	/**
-	 * Creates a partitioned map state.
-	 * @param descriptor The descriptor defining the properties of the state.
-	 * @param <UK> Type of the keys in the map state
-	 * @param <UV> Type of the values in the map state
-	 * @return a partitioned map state
-	 */
-	<UK, UV> MapState<UK, UV> getPartitionedMapState(
-		final PartitionedMapStateDescriptor<UK, UV> descriptor);
-
-	/**
-	 * Creates a partitioned sorted map state.
-	 * @param descriptor The descriptor defining the properties of the state.
-	 * @param <UK> Type of the keys in the sorted map state
-	 * @param <UV> Type of the values in the sorted map state
-	 * @return a partitioned sorted map state
-	 */
-	<UK, UV> SortedMapState<UK, UV> getPartitionedSortedMapState(
-		final PartitionedSortedMapStateDescriptor<UK, UV> descriptor);
 
 	/**
 	 * @return the key serializer of state key

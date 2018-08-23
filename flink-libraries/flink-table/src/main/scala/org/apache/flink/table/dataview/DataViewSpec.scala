@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.dataview
 
-import org.apache.flink.api.common.state2._
+import org.apache.flink.api.common.state._
 import org.apache.flink.table.typeutils.{ListViewTypeInfo, MapViewTypeInfo, SortedMapViewTypeInfo}
 
 /**
@@ -28,7 +28,7 @@ trait DataViewSpec {
   def stateId: String
   def fieldIndex: Int
   def fieldName: String
-  def toStateDescriptor: StateDescriptor[_, _ <: State[_]]
+  def toStateDescriptor: StateDescriptor[_ <: State, _]
   def getStateDataViewClass(hasNamespace: Boolean): Class[_]
   def getCreateStateCall(hasNamespace: Boolean): String
 }
@@ -40,7 +40,7 @@ case class ListViewSpec[T](
     listViewTypeInfo: ListViewTypeInfo[T])
   extends DataViewSpec {
 
-  override def toStateDescriptor: StateDescriptor[_, _ <: State[_]] =
+  override def toStateDescriptor: StateDescriptor[_ <: State, _] =
     new ListStateDescriptor[T](stateId, listViewTypeInfo.elementType)
 
   override def getStateDataViewClass(hasNamespace: Boolean): Class[_] = {
@@ -67,7 +67,7 @@ case class MapViewSpec[K, V](
     mapViewTypeInfo: MapViewTypeInfo[K, V])
   extends DataViewSpec {
 
-  override def toStateDescriptor: StateDescriptor[_, _ <: State[_]] =
+  override def toStateDescriptor: StateDescriptor[_ <: State, _] =
     new MapStateDescriptor[K, V](stateId, mapViewTypeInfo.keyType, mapViewTypeInfo.valueType)
 
   override def getStateDataViewClass(hasNamespace: Boolean): Class[_] = {
@@ -94,7 +94,7 @@ case class SortedMapViewSpec[K, V](
     sortedMapViewTypeInfo: SortedMapViewTypeInfo[K, V])
   extends DataViewSpec {
 
-  override def toStateDescriptor: StateDescriptor[_, _ <: State[_]] =
+  override def toStateDescriptor: StateDescriptor[_ <: State, _] =
     new SortedMapStateDescriptor[K, V](
       stateId,
       sortedMapViewTypeInfo.comparator,

@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.operator.sort
 
 import org.apache.flink.runtime.state.{VoidNamespace, VoidNamespaceSerializer}
 import org.apache.flink.streaming.api.operators._
-import org.apache.flink.streaming.api.{ContextTimerService, TimerService}
+import org.apache.flink.streaming.api.{SimpleTimerService, TimerService}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.sort.{NormalizedKeyComputer, RecordComparator}
@@ -37,10 +37,10 @@ abstract class SortBaseOperator
   override def open() {
     val internalTimerService = getInternalTimerService(
       "user-timers", VoidNamespaceSerializer.INSTANCE,
-      this).asInstanceOf[InternalTimerService[AnyRef, VoidNamespace]]
+      this)
 
     collector = new TimestampedCollector[BaseRow](output)
-    timerService = new ContextTimerService(this, internalTimerService)
+    timerService = new SimpleTimerService(internalTimerService)
   }
 
   protected def getComparator(gSorter: GeneratedSorter): RecordComparator = {

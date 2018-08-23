@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.operator.join.stream.bundle;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
 import org.apache.flink.streaming.api.operators.InternalTimer;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;

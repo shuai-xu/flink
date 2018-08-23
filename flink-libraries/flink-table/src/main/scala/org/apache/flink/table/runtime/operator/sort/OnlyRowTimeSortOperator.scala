@@ -21,8 +21,8 @@ import java.lang.{Long => JLong}
 
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.common.typeutils.base.LongSerializer
+import org.apache.flink.runtime.state.keyed.{KeyedListState, KeyedListStateDescriptor, KeyedValueState, KeyedValueStateDescriptor}
 import org.apache.flink.runtime.state.{VoidNamespace, VoidNamespaceSerializer}
-import org.apache.flink.runtime.state2.keyed._
 import org.apache.flink.streaming.api.operators._
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.dataformat.BaseRow
@@ -80,13 +80,11 @@ class OnlyRowTimeSortOperator(
   override def onEventTime(timer: InternalTimer[BaseRow, VoidNamespace]): Unit = {
     val timestamp = timer.getTimestamp
     // gets all rows for the triggering timestamps
-    val iterator = timeListState.iterator(timestamp)
-    val emitted = iterator.hasNext
-
-    if (emitted) {
-      do {
-        collector.collect(iterator.next())
-      } while (iterator.hasNext)
+    val timeList = timeListState.get(timestamp)
+    if (timeList != null) {
+      for (time <- timeList) {
+        collector.collect(time)
+      }
       // remove emitted rows from state
       timeListState.remove(timestamp)
       lastTriggeringTsState.put(VoidNamespace.INSTANCE, timestamp)

@@ -21,8 +21,8 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.runtime.state2.keyed.KeyedMapState;
-import org.apache.flink.runtime.state2.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedState;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.util.Preconditions;
 

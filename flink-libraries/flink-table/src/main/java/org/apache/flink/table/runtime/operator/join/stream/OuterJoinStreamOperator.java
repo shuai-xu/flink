@@ -20,9 +20,9 @@ package org.apache.flink.table.runtime.operator.join.stream;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.streaming.api.operators.InternalTimer;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -103,7 +103,7 @@ abstract class OuterJoinStreamOperator extends JoinStreamOperator {
 		}
 	}
 
-	protected InputElementSelection processElement(BaseRow input, JoinStateHandler inputSideStateHandler,
+	protected TwoInputSelection processElement(BaseRow input, JoinStateHandler inputSideStateHandler,
 			JoinStateHandler otherSideStateHandler, JoinMatchStateHandler inputSideMatchStateHandler,
 			JoinMatchStateHandler otherSideMatchStateHandler,
 			boolean inputIsLeft, boolean inputIsOuter, boolean otherSideIsOuter,
@@ -183,7 +183,7 @@ abstract class OuterJoinStreamOperator extends JoinStreamOperator {
 			inputSideMatchStateHandler.updateRowMatchJoinCnt(
 					inputSideStateHandler.getCurrentJoinKey(), input, inputJoinOtherSideRowNum);
 		}
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	private void collectJoinResult(

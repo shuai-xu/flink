@@ -19,8 +19,8 @@ package org.apache.flink.table.runtime.aggregate
 
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
 
-import org.apache.flink.api.common.state2.ValueStateDescriptor
-import org.apache.flink.runtime.state2.keyed.KeyedValueState
+import org.apache.flink.api.common.state.ValueStateDescriptor
+import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}

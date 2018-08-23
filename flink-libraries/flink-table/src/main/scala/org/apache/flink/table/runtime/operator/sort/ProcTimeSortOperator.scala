@@ -19,8 +19,8 @@ package org.apache.flink.table.runtime.operator.sort
 
 import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.runtime.operators.sort.{IndexedSorter, QuickSort}
+import org.apache.flink.runtime.state.keyed.{KeyedListState, KeyedListStateDescriptor}
 import org.apache.flink.runtime.state.{VoidNamespace, VoidNamespaceSerializer}
-import org.apache.flink.runtime.state2.keyed.{KeyedListState, KeyedListStateDescriptor}
 import org.apache.flink.streaming.api.operators._
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.GeneratedSorter
@@ -96,11 +96,10 @@ class ProcTimeSortOperator(
     */
   override def onProcessingTime(timer: InternalTimer[BaseRow, VoidNamespace]): Unit = {
     // gets all rows for the triggering timestamps
-    val inputItor = dataState.iterator(VoidNamespace.INSTANCE)
-    if (inputItor.hasNext) {
-      // sort the inputs
-      while (inputItor.hasNext) {
-        buffer.write(inputItor.next())
+    val dataList = dataState.get(VoidNamespace.INSTANCE)
+    if (dataList != null) {
+      for (data <- dataList) {
+        buffer.write(data)
       }
       sorter.sort(buffer)
 

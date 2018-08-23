@@ -17,7 +17,7 @@
 
 package org.apache.flink.table.runtime.operator.join.stream.state.match;
 
-import org.apache.flink.runtime.state2.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.table.dataformat.BaseRow;
 
 import java.util.Map;

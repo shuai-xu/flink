@@ -22,13 +22,13 @@ import java.util
 import java.util.function.Supplier
 import java.util.{Comparator, Collection => JCollection, HashMap => JHashMap, Map => JMap}
 
-import org.apache.flink.api.common.state2.MapStateDescriptor
+import org.apache.flink.api.common.state.MapStateDescriptor
 import org.apache.flink.api.java.tuple.Tuple2
 import org.apache.flink.api.common.typeinfo.Types
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
+import org.apache.flink.runtime.state.keyed.KeyedMapState
 import org.apache.flink.runtime.state.{FunctionInitializationContext, FunctionSnapshotContext}
-import org.apache.flink.runtime.state2.keyed.KeyedMapState
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}

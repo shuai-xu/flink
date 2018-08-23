@@ -31,12 +31,12 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.metrics.Meter;
 import org.apache.flink.metrics.MetricGroup;
-import org.apache.flink.runtime.state2.keyed.KeyedState;
-import org.apache.flink.runtime.state2.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedValueState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.InternalTimer;
@@ -177,7 +177,7 @@ public class WindowOperator<K, W extends Window>
 
 	private transient Gauge<Long> watermarkLatency;
 
-	private transient InternalTimerService<K, W> internalTimerService;
+	private transient InternalTimerService<W> internalTimerService;
 
 	private transient SubKeyedValueState<K, W, BaseRow> windowState;
 
@@ -694,22 +694,22 @@ public class WindowOperator<K, W extends Window>
 
 		@Override
 		public void registerProcessingTimeTimer(long time) {
-			internalTimerService.registerProcessingTimeTimer((K) getCurrentKey(), window, time);
+			internalTimerService.registerProcessingTimeTimer(window, time);
 		}
 
 		@Override
 		public void registerEventTimeTimer(long time) {
-			internalTimerService.registerEventTimeTimer((K) getCurrentKey(), window, time);
+			internalTimerService.registerEventTimeTimer(window, time);
 		}
 
 		@Override
 		public void deleteProcessingTimeTimer(long time) {
-			internalTimerService.deleteProcessingTimeTimer((K) getCurrentKey(), window, time);
+			internalTimerService.deleteProcessingTimeTimer(window, time);
 		}
 
 		@Override
 		public void deleteEventTimeTimer(long time) {
-			internalTimerService.deleteEventTimeTimer((K) getCurrentKey(), window, time);
+			internalTimerService.deleteEventTimeTimer(window, time);
 		}
 
 		public void clear() throws Exception {
@@ -757,8 +757,4 @@ public class WindowOperator<K, W extends Window>
 		return watermarkLatency;
 	}
 
-	@Override
-	public boolean requireState() {
-		return true;
-	}
 }

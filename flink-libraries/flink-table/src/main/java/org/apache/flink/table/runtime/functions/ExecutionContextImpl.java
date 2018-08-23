@@ -19,41 +19,34 @@
 package org.apache.flink.table.runtime.functions;
 
 import org.apache.flink.api.common.functions.RuntimeContext;
-import org.apache.flink.api.common.state2.ListState;
-import org.apache.flink.api.common.state2.ListStateDescriptor;
-import org.apache.flink.api.common.state2.MapState;
-import org.apache.flink.api.common.state2.MapStateDescriptor;
-import org.apache.flink.api.common.state2.SortedMapState;
-import org.apache.flink.api.common.state2.SortedMapStateDescriptor;
-import org.apache.flink.api.common.state2.ValueState;
-import org.apache.flink.api.common.state2.ValueStateDescriptor;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.api.common.typeutils.base.SortedMapSerializer;
-import org.apache.flink.runtime.state2.keyed.KeyedListState;
-import org.apache.flink.runtime.state2.keyed.KeyedListStateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedMapState;
-import org.apache.flink.runtime.state2.keyed.KeyedMapStateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedSortedMapState;
-import org.apache.flink.runtime.state2.keyed.KeyedSortedMapStateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedState;
-import org.apache.flink.runtime.state2.keyed.KeyedStateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
-import org.apache.flink.runtime.state2.keyed.KeyedValueStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedListStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedMapStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedSortedMapStateDescriptor;
-import org.apache.flink.runtime.state2.partitioned.PartitionedValueStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedListState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedListStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedMapState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedMapStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedSortedMapState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedSortedMapStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedStateDescriptor;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedValueState;
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedListState;
+import org.apache.flink.runtime.state.keyed.KeyedListStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedSortedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedSortedMapStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedState;
+import org.apache.flink.runtime.state.keyed.KeyedStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedListState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedListStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedMapState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedSortedMapState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedSortedMapStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
+import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.util.Preconditions;
@@ -96,13 +89,13 @@ public final class ExecutionContextImpl implements ExecutionContext {
 
 	@Override
 	public <K, V> KeyedValueState<K, V> getKeyedValueState(
-		ValueStateDescriptor<V> descriptor
-	) {
+		ValueStateDescriptor<V> descriptor)
+	{
 		return operator.getKeyedState(
 			new KeyedValueStateDescriptor<>(
 				descriptor.getName(),
 				(TypeSerializer<K>) operator.getKeySerializer(),
-				descriptor.getSerializer(operator.getExecutionConfig())
+				descriptor.getSerializer()
 			)
 		);
 	}
@@ -115,7 +108,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			new KeyedListStateDescriptor<>(
 				descriptor.getName(),
 				(TypeSerializer<K>) operator.getKeySerializer(),
-				descriptor.getSerializer(operator.getExecutionConfig())
+				(ListSerializer<V>) descriptor.getSerializer()
 			)
 		);
 	}
@@ -128,7 +121,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			new KeyedMapStateDescriptor<>(
 				descriptor.getName(),
 				(TypeSerializer<K>) operator.getKeySerializer(),
-				descriptor.getSerializer(operator.getExecutionConfig())
+				(MapSerializer<UK, UV>) descriptor.getSerializer()
 			)
 		);
 	}
@@ -141,7 +134,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			new KeyedSortedMapStateDescriptor<>(
 				descriptor.getName(),
 				(TypeSerializer<K>) operator.getKeySerializer(),
-				descriptor.getSerializer(operator.getExecutionConfig())
+				(SortedMapSerializer<UK, UV>) descriptor.getSerializer()
 			)
 		);
 	}
@@ -159,7 +152,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 				descriptor.getName(),
 				(TypeSerializer<K>) operator.getKeySerializer(),
 				(TypeSerializer<N>) namespaceSerializer,
-				descriptor.getSerializer(operator.getExecutionConfig())
+				descriptor.getSerializer()
 			)
 		);
 	}
@@ -176,7 +169,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			descriptor.getName(),
 			(TypeSerializer<K>) operator.getKeySerializer(),
 			(TypeSerializer<N>) namespaceSerializer,
-			descriptor.getSerializer(operator.getExecutionConfig()).getElementSerializer()));
+			((ListSerializer<V>) descriptor.getSerializer()).getElementSerializer()));
 	}
 
 	@Override
@@ -187,7 +180,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
-		MapSerializer<UK, UV> mapSerializer = descriptor.getSerializer(operator.getExecutionConfig());
+		MapSerializer<UK, UV> mapSerializer = (MapSerializer<UK, UV>) descriptor.getSerializer();
 		return operator.getSubKeyedState(new SubKeyedMapStateDescriptor<>(
 			descriptor.getName(),
 			(TypeSerializer<K>) operator.getKeySerializer(),
@@ -204,7 +197,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
-		SortedMapSerializer<UK, UV> sortedMapSerializer = descriptor.getSerializer(operator.getExecutionConfig());
+		SortedMapSerializer<UK, UV> sortedMapSerializer = (SortedMapSerializer<UK, UV>) descriptor.getSerializer();
 		return operator.getSubKeyedState(new SubKeyedSortedMapStateDescriptor<>(
 			descriptor.getName(),
 			(TypeSerializer<K>) operator.getKeySerializer(),
@@ -212,27 +205,6 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			sortedMapSerializer.getComparator(),
 			sortedMapSerializer.getKeySerializer(),
 			sortedMapSerializer.getValueSerializer()));
-	}
-
-	@Override
-	public <V> ValueState<V> getPartitionedValueState(PartitionedValueStateDescriptor<V> descriptor) {
-		return operator.getPartitionedState(descriptor);
-	}
-
-	@Override
-	public <V> ListState<V> getPartitionedListState(PartitionedListStateDescriptor<V> descriptor) {
-		return operator.getPartitionedState(descriptor);
-	}
-
-	@Override
-	public <UK, UV> MapState<UK, UV> getPartitionedMapState(PartitionedMapStateDescriptor<UK, UV> descriptor) {
-		return operator.getPartitionedState(descriptor);
-	}
-
-	@Override
-	public <UK, UV> SortedMapState<UK, UV> getPartitionedSortedMapState(
-		PartitionedSortedMapStateDescriptor<UK, UV> descriptor) {
-		return operator.getPartitionedState(descriptor);
 	}
 
 	@Override

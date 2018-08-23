@@ -20,8 +20,8 @@ package org.apache.flink.table.runtime.aggregate
 
 import java.util.{Map => JMap}
 
-import org.apache.flink.api.common.state2.ValueStateDescriptor
-import org.apache.flink.runtime.state2.keyed.KeyedValueState
+import org.apache.flink.api.common.state.ValueStateDescriptor
+import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.ExecutionContext

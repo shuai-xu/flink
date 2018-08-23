@@ -22,7 +22,7 @@ import java.util
 import java.util.{List => JList}
 
 import org.apache.flink.api.common.functions.FlatJoinFunction
-import org.apache.flink.api.common.state2._
+import org.apache.flink.api.common.state.{MapState, MapStateDescriptor, ValueState, ValueStateDescriptor}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.configuration.Configuration
@@ -105,22 +105,22 @@ class ProcTimeWindowInnerJoin(
     val mapStateDescriptor1: MapStateDescriptor[Long, JList[BaseRow]] =
       new MapStateDescriptor[Long, JList[BaseRow]]("row1mapstate",
         BasicTypeInfo.LONG_TYPE_INFO.asInstanceOf[TypeInformation[Long]], rowListTypeInfo1)
-    row1MapState = getRuntimeContext.getKeyedState(mapStateDescriptor1)
+    row1MapState = getRuntimeContext.getMapState(mapStateDescriptor1)
 
     val rowListTypeInfo2: ListTypeInfo[BaseRow] = new ListTypeInfo[BaseRow](element2Type)
     val mapStateDescriptor2: MapStateDescriptor[Long, JList[BaseRow]] =
       new MapStateDescriptor[Long, JList[BaseRow]]("row2mapstate",
         BasicTypeInfo.LONG_TYPE_INFO.asInstanceOf[TypeInformation[Long]], rowListTypeInfo2)
-    row2MapState = getRuntimeContext.getKeyedState(mapStateDescriptor2)
+    row2MapState = getRuntimeContext.getMapState(mapStateDescriptor2)
 
     // initialize timer state
     val valueStateDescriptor1: ValueStateDescriptor[Long] =
       new ValueStateDescriptor[Long]("timervaluestate1", classOf[Long])
-    timerState1 = getRuntimeContext.getKeyedState(valueStateDescriptor1)
+    timerState1 = getRuntimeContext.getState(valueStateDescriptor1)
 
     val valueStateDescriptor2: ValueStateDescriptor[Long] =
       new ValueStateDescriptor[Long]("timervaluestate2", classOf[Long])
-    timerState2 = getRuntimeContext.getKeyedState(valueStateDescriptor2)
+    timerState2 = getRuntimeContext.getState(valueStateDescriptor2)
   }
 
   /**

@@ -28,9 +28,9 @@ import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
-import org.apache.flink.runtime.state2.keyed.KeyedMapStateDescriptor;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
-import org.apache.flink.runtime.state2.keyed.KeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.InternalTimer;
 import org.apache.flink.streaming.api.operators.InternalTimerService;
@@ -105,7 +105,7 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 	protected transient TimestampedCollector<BaseRow> collector;
 
 	//the type of timer's namespace is byte, and it can make a distinction between left-side and right-side.
-	protected transient InternalTimerService<BaseRow, Byte> internalTimerService;
+	protected transient InternalTimerService<Byte> internalTimerService;
 
 	//Should filter null keys.
 	protected boolean[] filterNullKeys;
@@ -329,7 +329,7 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 				long cleanupTime = currentTime + maxRetentionTime;
 				// register timer and remember clean-up time
 				byte namespace = (byte) (isLeft ? 1 : 2);
-				internalTimerService.registerProcessingTimeTimer(key, namespace, cleanupTime);
+				internalTimerService.registerProcessingTimeTimer(namespace, cleanupTime);
 				timerState.put(key, cleanupTime);
 			}
 		}
@@ -349,10 +349,5 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 			}
 		}
 		return condFunc.apply(leftRow, rightRow);
-	}
-
-	@Override
-	public boolean requireState() {
-		return true;
 	}
 }

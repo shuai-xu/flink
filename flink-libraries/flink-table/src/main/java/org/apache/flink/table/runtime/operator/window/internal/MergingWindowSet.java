@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.operator.window.internal;
 
-import org.apache.flink.runtime.state2.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.table.api.window.Window;
 import org.apache.flink.table.runtime.operator.window.assigners.MergingWindowAssigner;
 import org.apache.flink.table.util.LRUMap;

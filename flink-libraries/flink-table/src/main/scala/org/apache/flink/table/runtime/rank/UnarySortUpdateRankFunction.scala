@@ -24,11 +24,11 @@ import java.util.{ArrayList => JArrayList, Collection => JCollection, HashMap =>
 import scala.collection.JavaConversions._
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Comparator
-import org.apache.flink.api.common.state2.{MapStateDescriptor, SortedMapStateDescriptor}
+import org.apache.flink.api.common.state.{MapStateDescriptor, SortedMapStateDescriptor}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ListTypeInfo
-import org.apache.flink.runtime.state2.keyed.{KeyedMapState, KeyedSortedMapState}
+import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedSortedMapState}
 import org.apache.flink.table.api.dataview.Order
 import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.codegen.{CodeGenUtils, Compiler, FieldAccess, GeneratedFieldExtractor}

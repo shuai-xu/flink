@@ -21,22 +21,20 @@ package org.apache.flink.table.runtime.operator.bundle;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.runtime.state.StateSnapshotContext;
-import org.apache.flink.runtime.state2.keyed.KeyedValueState;
-import org.apache.flink.runtime.state2.keyed.KeyedValueStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.bundle.BundleTriggerCallback;
 import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
-import org.apache.flink.streaming.api.graph.OperatorContext;
+import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
 import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.util.Collector;
-import org.apache.flink.util.LockAndCondition;
-import org.apache.flink.util.LockGetReleaseWrapper;
 import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;
@@ -57,7 +55,7 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	private final CoBundleTrigger<L, R> coBundleTrigger;
 
-	private transient LockAndCondition checkpointingLock;
+	private transient Object checkpointingLock;
 
 	private transient StreamRecordCollector<OUT> collector;
 
@@ -80,24 +78,24 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public InputElementSelection processElement1(StreamRecord<L> element) throws Exception {
+	public TwoInputSelection processRecord1(StreamRecord<L> element) throws Exception {
 		K key = (K) getCurrentKey();
 		L row = element.getValue();
 		List<L> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		records.add(row);
 		coBundleTrigger.onLeftElement(row);
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public InputElementSelection processElement2(StreamRecord<R> element) throws Exception {
+	public TwoInputSelection processRecord2(StreamRecord<R> element) throws Exception {
 		K key = (K) getCurrentKey();
 		R row = element.getValue();
 		List<R> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		records.add(row);
 		coBundleTrigger.onRightElement(row);
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	@Override
@@ -123,27 +121,24 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 	}
 
 	@Override
-	public InputElementSelection endInput1() throws Exception {
+	public void endInput1() throws Exception {
 		finishBundle();
-		return InputElementSelection.ANY;
 	}
 
 	@Override
-	public InputElementSelection endInput2() throws Exception {
+	public void endInput2() throws Exception {
 		finishBundle();
-		return InputElementSelection.ANY;
 	}
 
 	@Override
 	public void finishBundle() throws Exception {
-		try (LockGetReleaseWrapper wrapper = new LockGetReleaseWrapper(checkpointingLock.getLock())) {
-			if (!leftBuffer.isEmpty() || !rightBuffer.isEmpty()) {
-				this.processBundles(leftBuffer, rightBuffer, collector);
-				leftBuffer.clear();
-				rightBuffer.clear();
-			}
-			coBundleTrigger.reset();
+		assert(Thread.holdsLock(checkpointingLock));
+		if (!leftBuffer.isEmpty() || !rightBuffer.isEmpty()) {
+			this.processBundles(leftBuffer, rightBuffer, collector);
+			leftBuffer.clear();
+			rightBuffer.clear();
 		}
+		coBundleTrigger.reset();
 	}
 
 	protected abstract void processBundles(
@@ -152,8 +147,8 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 		Collector<OUT> out) throws Exception;
 
 	@Override
-	public void setup(StreamTask<?, ?> containingTask, OperatorContext context, Output<StreamRecord<OUT>> output) {
-		super.setup(containingTask, context, output);
+	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
+		super.setup(containingTask, config, output);
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 	}
 
@@ -162,13 +157,15 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 		super.open();
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 		this.collector = new StreamRecordCollector<>(output);
+		TypeSerializer<L> leftSerializer = config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader());
+		TypeSerializer<R> rightSerializer = config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader());
 
 		// create & restore state
 		//noinspection unchecked
 		KeyedValueStateDescriptor<K, List<L>> leftBufferStateDesc = new KeyedValueStateDescriptor<>(
 			LEFT_STATE_NAME,
 			(TypeSerializer<K>) getKeySerializer(),
-			new ListSerializer<>(config.getTypeSerializerIn1()));
+			new ListSerializer<>(leftSerializer));
 		this.leftBufferState = getKeyedState(leftBufferStateDesc);
 		this.leftBuffer = new HashMap<>();
 		this.leftBuffer.putAll(leftBufferState.getAll());
@@ -177,7 +174,7 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 		KeyedValueStateDescriptor<K, List<R>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
 			RIGHT_STATE_NAME,
 			(TypeSerializer<K>) getKeySerializer(),
-			new ListSerializer<>(config.getTypeSerializerIn2()));
+			new ListSerializer<>(rightSerializer));
 		this.rightBufferState = getKeyedState(rightBufferStateDesc);
 		this.rightBuffer = new HashMap<>();
 		this.rightBuffer.putAll(rightBufferState.getAll());
@@ -225,10 +222,5 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 		// update state
 		leftBufferState.putAll(leftBuffer);
 		rightBufferState.putAll(rightBuffer);
-	}
-
-	@Override
-	public boolean requireState() {
-		return true;
 	}
 }

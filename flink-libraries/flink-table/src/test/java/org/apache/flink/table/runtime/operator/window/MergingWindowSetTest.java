@@ -22,12 +22,14 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
-import org.apache.flink.runtime.operators.OperatorRuntimeContext;
-import org.apache.flink.runtime.state2.AbstractStateBackend;
-import org.apache.flink.runtime.state2.TestOperatorRuntimeContext;
-import org.apache.flink.runtime.state2.heap.HeapStateBackend;
-import org.apache.flink.runtime.state2.keyed.KeyedMapState;
-import org.apache.flink.runtime.state2.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
+import org.apache.flink.runtime.state.AbstractStateBackend;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.InternalStateBackend;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.memory.MemoryStateBackend;
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment;
 import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.runtime.operator.window.assigners.MergingWindowAssigner;
@@ -67,20 +69,23 @@ import static org.junit.Assert.fail;
  */
 public class MergingWindowSetTest {
 
-	private AbstractStateBackend backend;
+	private InternalStateBackend backend;
 
 	@Before
-	public void openStateBackend() {
-		backend = new HeapStateBackend();
-
-		OperatorRuntimeContext context = new TestOperatorRuntimeContext(10, 1, 0);
-		backend.open(context);
+	public void openStateBackend() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		AbstractStateBackend b = new MemoryStateBackend();
+		backend = b.createInternalStateBackend(
+			new DummyEnvironment(),
+			"WINDOW_TEST",
+			10,
+			GroupRange.of(0, 10));
 	}
 
 	@After
 	public void closeStateBackend() {
 		if (backend != null) {
-			backend.close();
+			backend.dispose();
 		}
 	}
 

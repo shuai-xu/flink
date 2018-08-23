@@ -23,8 +23,8 @@ import java.lang.{Long => JLong}
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.common.typeutils.base.LongSerializer
 import org.apache.flink.runtime.operators.sort.{IndexedSorter, QuickSort}
+import org.apache.flink.runtime.state.keyed.{KeyedListState, KeyedListStateDescriptor, KeyedValueState, KeyedValueStateDescriptor}
 import org.apache.flink.runtime.state.{VoidNamespace, VoidNamespaceSerializer}
-import org.apache.flink.runtime.state2.keyed._
 import org.apache.flink.streaming.api.operators._
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.GeneratedSorter
@@ -115,11 +115,11 @@ class RowTimeSortOperator(
   override def onEventTime(timer: InternalTimer[BaseRow, VoidNamespace]): Unit = {
     val timestamp = timer.getTimestamp
     // gets all rows for the triggering timestamps
-    val inputItor = timeListState.iterator(timestamp)
-    if (inputItor.hasNext) {
+    val timeList = timeListState.get(timestamp)
+    if (timeList != null) {
       // sort the inputs
-      while (inputItor.hasNext) {
-        buffer.write(inputItor.next())
+      for (time <- timeList) {
+        buffer.write(time)
       }
       sorter.sort(buffer)
 

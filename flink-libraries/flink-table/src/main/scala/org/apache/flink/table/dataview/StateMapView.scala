@@ -21,8 +21,8 @@ import java.util
 import java.lang.{Iterable => JIterable}
 import java.util.Map
 
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedMapState
-import org.apache.flink.runtime.state2.keyed.KeyedMapState
+import org.apache.flink.runtime.state.keyed.KeyedMapState
+import org.apache.flink.runtime.state.subkeyed.SubKeyedMapState
 import org.apache.flink.table.api.dataview.MapView
 
 class SubKeyedStateMapView[K, N, MK, MV](state: SubKeyedMapState[K, N, MK, MV])

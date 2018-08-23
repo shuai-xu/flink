@@ -20,8 +20,8 @@ package org.apache.flink.table.dataview
 import java.util
 import java.lang.{Iterable => JIterable}
 
-import org.apache.flink.runtime.state2.subkeyed.SubKeyedListState
-import org.apache.flink.runtime.state2.keyed.KeyedListState
+import org.apache.flink.runtime.state.keyed.KeyedListState
+import org.apache.flink.runtime.state.subkeyed.SubKeyedListState
 import org.apache.flink.table.api.dataview.ListView
 
 class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T]) extends ListView[T] {

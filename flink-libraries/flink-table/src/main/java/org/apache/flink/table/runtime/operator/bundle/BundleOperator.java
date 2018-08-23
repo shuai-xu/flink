@@ -19,17 +19,18 @@
 package org.apache.flink.table.runtime.operator.bundle;
 
 import org.apache.flink.api.common.functions.util.FunctionUtils;
-import org.apache.flink.api.common.state2.ListState;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.metrics.Gauge;
+import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContext;
-import org.apache.flink.runtime.state2.partitioned.PartitionedListStateDescriptor;
 import org.apache.flink.streaming.api.bundle.BundleTrigger;
 import org.apache.flink.streaming.api.bundle.BundleTriggerCallback;
-import org.apache.flink.streaming.api.graph.OperatorContext;
+import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
@@ -42,7 +43,6 @@ import org.apache.flink.table.runtime.functions.ExecutionContextImpl;
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.util.Collector;
-import org.apache.flink.util.LockAndCondition;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,6 +71,8 @@ public class BundleOperator<K, V, IN, OUT>
 	implements OneInputStreamOperator<IN, OUT>, BundleTriggerCallback {
 	private static final long serialVersionUID = 5081841938324118594L;
 
+	private static final String STATE_NAME = "_async_wait_operator_state_";
+
 	/** The trigger that determines how many elements should be put into a bundle. */
 	private final BundleTrigger<IN> bundleTrigger;
 
@@ -88,7 +90,7 @@ public class BundleOperator<K, V, IN, OUT>
 	/** The state to store buffer to make it exactly once. */
 	private transient ListState<Tuple2<K, V>> bufferState;
 
-	private transient LockAndCondition checkpointingLock;
+	private transient Object checkpointingLock;
 
 	/** Output for stream records. */
 	private transient Collector<OUT> collector;
@@ -112,8 +114,8 @@ public class BundleOperator<K, V, IN, OUT>
 	}
 
 	@Override
-	public void setup(StreamTask<?, ?> containingTask, OperatorContext context, Output<StreamRecord<OUT>> output) {
-		super.setup(containingTask, context, output);
+	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
+		super.setup(containingTask, config, output);
 
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 	}
@@ -130,13 +132,19 @@ public class BundleOperator<K, V, IN, OUT>
 		this.buffer = new HashMap<>();
 
 		// create & restore state
-		TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);
-		PartitionedListStateDescriptor<Tuple2<K, V>> stateDesc = new PartitionedListStateDescriptor<>(
-			"localBufferState",
-			tupleType.createSerializer(getExecutionConfig()));
-		this.bufferState = getPartitionedState(stateDesc);
 		// recover buffer from partition state
-		recoverBundleBuffer();
+		if (bufferState != null) {
+			for (Tuple2<K, V> tuple : bufferState.get()) {
+				K key = tuple.f0;
+				V value = tuple.f1;
+				V prevValue = buffer.get(key);
+				V newValue = function.mergeValue(prevValue, value);
+				buffer.put(key, newValue);
+				// recovering number
+				numOfElements++;
+			}
+			bufferState = null;
+		}
 
 		bundleTrigger.registerBundleTriggerCallback(this,
 			() -> BundleOperator.super.getProcessingTimeService());
@@ -170,7 +178,7 @@ public class BundleOperator<K, V, IN, OUT>
 	/** build bundle and invoke BundleFunction. */
 	@Override
 	public void finishBundle() throws Exception {
-		assert checkpointingLock.getLock().isHeldByCurrentThread();
+		assert(Thread.holdsLock(checkpointingLock));
 		if (!buffer.isEmpty()) {
 			numOfElements = 0;
 			function.finishBundle(buffer, collector);
@@ -193,8 +201,21 @@ public class BundleOperator<K, V, IN, OUT>
 	}
 
 	@Override
+	public void initializeState(StateInitializationContext context) throws Exception {
+		super.initializeState(context);
+		TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);
+		this.bufferState = context
+			.getOperatorStateStore()
+			.getListState(new ListStateDescriptor<>(STATE_NAME, tupleType));
+	}
+
+	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
 		super.snapshotState(context);
+		TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);
+		ListState<Tuple2<K, V>> bufferState = getOperatorStateBackend()
+			.getListState(new ListStateDescriptor<>(STATE_NAME, tupleType));
+
 		// clear state first
 		bufferState.clear();
 
@@ -211,23 +232,9 @@ public class BundleOperator<K, V, IN, OUT>
 		bufferState.addAll(stateToPut);
 	}
 
-	private void recoverBundleBuffer() throws Exception {
-		Iterator<Tuple2<K, V>> iter = bufferState.iterator();
-		while (iter.hasNext()) {
-			Tuple2<K, V> tuple = iter.next();
-			K key = tuple.f0;
-			V value = tuple.f1;
-			V prevValue = buffer.get(key);
-			V newValue = function.mergeValue(prevValue, value);
-			buffer.put(key, newValue);
-			// recovering number
-			numOfElements++;
-		}
-	}
-
 	@Override
 	public void close() throws Exception {
-		assert checkpointingLock.getLock().isHeldByCurrentThread();
+		assert(Thread.holdsLock(checkpointingLock));
 		try {
 			finishBundle();
 
@@ -251,10 +258,5 @@ public class BundleOperator<K, V, IN, OUT>
 				LOG.warn("Errors occurred while closing the BundleOperator.", exception);
 			}
 		}
-	}
-
-	@Override
-	public boolean requireState() {
-		return true;
 	}
 }

@@ -22,7 +22,7 @@ import java.util
 import java.lang.{Iterable => JIterable}
 import java.util.Map
 
-import org.apache.flink.runtime.state2.keyed.KeyedSortedMapState
+import org.apache.flink.runtime.state.keyed.KeyedSortedMapState
 import org.apache.flink.table.api.dataview.SortedMapView
 
 /**

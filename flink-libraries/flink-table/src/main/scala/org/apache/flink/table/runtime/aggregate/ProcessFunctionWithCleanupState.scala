@@ -19,8 +19,8 @@ package org.apache.flink.table.runtime.aggregate
 
 import java.lang.{Long => JLong}
 
-import org.apache.flink.api.common.state2.ValueStateDescriptor
-import org.apache.flink.runtime.state2.keyed.{KeyedState, KeyedValueState}
+import org.apache.flink.api.common.state.ValueStateDescriptor
+import org.apache.flink.runtime.state.keyed.{KeyedState, KeyedValueState}
 import org.apache.flink.streaming.api.TimeDomain
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
 import org.apache.flink.table.dataformat.BaseRow

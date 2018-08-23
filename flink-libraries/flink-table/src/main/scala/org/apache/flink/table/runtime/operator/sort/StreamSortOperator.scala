@@ -18,16 +18,18 @@
 
 package org.apache.flink.table.runtime.operator.sort
 
+import java.lang.{Integer => JInt}
 import java.util
 
-import org.apache.flink.api.common.state2.ListState
+import org.apache.flink.api.common.state.{ListState, ListStateDescriptor}
 import org.apache.flink.api.common.typeutils.TypeSerializer
+import org.apache.flink.api.java.tuple.Tuple2
+import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.runtime.operators.sort.{IndexedSorter, QuickSort}
-import org.apache.flink.runtime.state.StateSnapshotContext
-import org.apache.flink.runtime.state2.partitioned.PartitionedListStateDescriptor
+import org.apache.flink.runtime.state.{StateInitializationContext, StateSnapshotContext}
 import org.apache.flink.streaming.api.operators.{AbstractStreamOperator, OneInputStreamOperator}
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.{TableException, Types}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.StreamRecordCollector
@@ -60,7 +62,7 @@ class StreamSortOperator(
   @transient private var collector: StreamRecordCollector[BaseRow] = _
 
   /** The state to store buffer to make it exactly once. **/
-  @transient private var bufferState: ListState[BaseRow] = _
+  @transient private var bufferState: ListState[Tuple2[BaseRow, JInt]] = _
 
   protected def getComparator(gSorter: GeneratedSorter): RecordComparator = {
     val name = gSorter.comparator.name
@@ -113,12 +115,14 @@ class StreamSortOperator(
       0)
     sorter = new QuickSort()
     inputBuffer = mutable.HashMap()
-    // create & restore state
-    val stateDesc = new PartitionedListStateDescriptor[BaseRow]("localBufferState",
-      inputRowType.createSerializer(getExecutionConfig))
-    this.bufferState = getPartitionedState(stateDesc)
-    // recover buffer from partition state
-    recoverSortBuffer()
+
+    // restore state
+    if (bufferState != null) {
+      for (input: Tuple2[BaseRow, JInt] <- bufferState.get()) {
+        inputBuffer += (input.f0 -> input.f1)
+      }
+      bufferState = null
+    }
   }
 
   override def processElement(in: StreamRecord[BaseRow]): Unit = {
@@ -157,34 +161,31 @@ class StreamSortOperator(
     }
   }
 
+  override def initializeState(context: StateInitializationContext): Unit = {
+    super.initializeState(context)
+    val tupleType = new TupleTypeInfo[Tuple2[BaseRow, JInt]](inputRowType, Types.LONG)
+    this.bufferState = context
+      .getOperatorStateStore
+      .getListState(
+        new ListStateDescriptor[Tuple2[BaseRow, JInt]]("localBufferState", tupleType))
+  }
+
   override def snapshotState(context: StateSnapshotContext): Unit = {
     super.snapshotState(context)
     // clear state first
     bufferState.clear()
 
-    val stateToPut: util.List[BaseRow] = new util.ArrayList[BaseRow](inputBuffer.size)
-    inputBuffer.keys.foreach{ i =>
-      val nowCount: Option[Int] = inputBuffer.get(i)
-      (1 to nowCount.getOrElse(0)).foreach(_ => stateToPut.add(i))
+    val stateToPut = new util.ArrayList[Tuple2[BaseRow, JInt]](inputBuffer.size)
+    inputBuffer.foreach { case (key, count) =>
+      stateToPut.add(Tuple2.of(key, count))
     }
 
     // batch put
     bufferState.addAll(stateToPut)
   }
 
-  private def recoverSortBuffer(): Unit = {
-    val iter = bufferState.iterator
-    while (iter.hasNext) {
-      val key = iter.next
-      val nowCount : Int = inputBuffer.getOrElse(key, 0)
-      inputBuffer += ((key, nowCount + 1))
-    }
-  }
-
   override def close(): Unit = {
     LOG.info("Closing StreamSortOperator")
     super.close()
   }
-
-  override def requireState = true
 }

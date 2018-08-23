@@ -23,11 +23,11 @@ import java.util.{List => JList}
 
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Comparator
-import org.apache.flink.api.common.state2.{MapStateDescriptor, ValueStateDescriptor}
+import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, SortedMapTypeInfo}
-import org.apache.flink.runtime.state2.keyed.{KeyedMapState, KeyedValueState}
+import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
 import org.apache.flink.table.plan.util.RankLimit

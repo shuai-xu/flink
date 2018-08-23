@@ -19,13 +19,11 @@ package org.apache.flink.table.runtime.utils
 
 import java.util
 
-import com.alibaba.blink.state.niagara.NiagaraStateBackend
-import org.apache.flink.api.common.CheckpointMode
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.CoreOptions
-import org.apache.flink.runtime.state2.heap.HeapStateBackend
-import org.apache.flink.streaming.api.TimeCharacteristic
+import org.apache.flink.runtime.state.heap.HeapInternalStateBackend
+import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
 import org.apache.flink.streaming.api.functions.source.FromElementsFunction
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.TableEnvironment
@@ -57,7 +55,7 @@ class StreamingWithStateTestBase(state: StateBackendMode)
     state match {
       case HEAP_BACKEND =>
         env.setConfiguration(CoreOptions.STATE_BACKEND_CLASSNAME,
-          classOf[HeapStateBackend].getCanonicalName)
+          classOf[HeapInternalStateBackend].getCanonicalName)
 
       case NIAGARA_BACKEND =>
         env.getConfiguration.setString(
@@ -83,7 +81,7 @@ class StreamingWithStateTestBase(state: StateBackendMode)
         FailingCollectionSource.failedBefore = true
         env.fromCollection(data)
       case _ =>
-        env.enableCheckpointing(CheckpointMode.EXACTLY_ONCE, 100)
+        env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE)
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0))
         // reset failedBefore flag to false
         FailingCollectionSource.reset()
