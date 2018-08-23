@@ -119,6 +119,12 @@ public abstract class StreamTransformation<T> {
 
 	private int parallelism;
 
+	/** Flag to indicate whether the parallelism is locked, to say `locked` we mean we will not
+	 * infer the parallelism for this transformation later on for auto conf. Default to false
+	 * to let auto conf inferring work.
+	 */
+	private boolean parallelismLocked;
+
 	/**
 	 * The maximum parallelism for this stream transformation. It defines the upper limit for
 	 * dynamic scaling and the number of key groups used for partitioned state.
@@ -164,6 +170,7 @@ public abstract class StreamTransformation<T> {
 		this.outputType = outputType;
 		this.parallelism = parallelism;
 		this.slotSharingGroup = null;
+		this.parallelismLocked = false;
 	}
 
 	/**
@@ -204,6 +211,21 @@ public abstract class StreamTransformation<T> {
 				parallelism > 0 || parallelism == ExecutionConfig.PARALLELISM_DEFAULT,
 				"The parallelism must be at least one, or ExecutionConfig.PARALLELISM_DEFAULT (use system default).");
 		this.parallelism = parallelism;
+	}
+
+	/**
+	 * Returns if the parallelism is locked and will never be tweaked by auto conf any more.
+	 */
+	public boolean isParallelismLocked() {
+		return this.parallelismLocked;
+	}
+
+	/**
+	 * Set if the parallelism to be locked, if set to true, the auto conf will not tweak it anymore,
+	 * if false, auto conf will infer the parallelism and ignore the current set parallelism.
+	 */
+	public void setParallelismLocked(boolean locked) {
+		this.parallelismLocked = locked;
 	}
 
 	/**
