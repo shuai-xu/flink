@@ -89,8 +89,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 
 	@Override
 	public <K, V> KeyedValueState<K, V> getKeyedValueState(
-		ValueStateDescriptor<V> descriptor)
-	{
+		ValueStateDescriptor<V> descriptor) {
 		return operator.getKeyedState(
 			new KeyedValueStateDescriptor<>(
 				descriptor.getName(),

@@ -1476,9 +1476,34 @@ public abstract class StreamExecutionEnvironment {
 		return createInputV2(inputFormat, typeInfo, "Custom Source");
 	}
 
+	/**
+	 * Generic method to create an input data stream with {@link org.apache.flink.api.common.io.InputFormat}.
+	 *
+	 * <p>The data stream is typed to the given TypeInformation. This method is intended for input formats
+	 * where the return type cannot be determined by reflection analysis, and that do not implement the
+	 * {@link org.apache.flink.api.java.typeutils.ResultTypeQueryable} interface.
+	 *
+	 * <p><b>NOTES ON CHECKPOINTING: </b> In the case of a {@link FileInputFormat}, the source
+	 * (which executes the {@link ContinuousFileMonitoringFunction}) monitors the path, creates the
+	 * {@link org.apache.flink.core.fs.FileInputSplit FileInputSplits} to be processed, forwards
+	 * them to the downstream {@link ContinuousFileReaderOperator} to read the actual data, and exits,
+	 * without waiting for the readers to finish reading. This implies that no more checkpoint
+	 * barriers are going to be forwarded after the source exits, thus having no checkpoints.
+	 *
+	 * @param inputFormat
+	 * 		The input format used to create the data stream
+	 * @param typeInfo
+	 * 		The information about the type of the output type
+	 * @param <OUT>
+	 * 		The type of the returned data stream
+	 * @param sourceName
+	 * 		The name of the data stream source
+	 * @return The data stream that represents the data created by the input format
+	 */
+	@Internal
 	public <OUT> DataStreamSource<OUT> createInput(InputFormat<OUT, ?> inputFormat,
-													TypeInformation<OUT> typeInfo,
-													String sourceName) {
+												   TypeInformation<OUT> typeInfo,
+												   String sourceName) {
 
 		InputFormatSourceFunction<OUT> function = new InputFormatSourceFunction<>(inputFormat, typeInfo);
 		return addSource(function, sourceName, typeInfo);
