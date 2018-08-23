@@ -46,8 +46,15 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
     val join = call.rels(0).asInstanceOf[Join]
     val joinInfo = join.analyzeCondition
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val isEnable = tableConfig.enabledGivenOpType(OperatorType.HashJoin)
-    !joinInfo.pairs().isEmpty && isEnable
+    val enableShuffleHash = tableConfig.enabledGivenOpType(OperatorType.ShuffleHashJoin)
+    val enableBroadcastHash = tableConfig.enabledGivenOpType(OperatorType.BroadcastHashJoin)
+
+    val (isBroadcast, _) = canBroadcast(
+      join,
+      getRelNodeSize(join.getLeft),
+      getRelNodeSize(join.getRight))
+
+    !joinInfo.pairs().isEmpty && (if (isBroadcast) enableBroadcastHash else enableShuffleHash)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {

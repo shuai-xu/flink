@@ -271,7 +271,15 @@ class TableConfig {
   def enabledGivenOpType(operator: OperatorType): Boolean = {
     val disableOperators = parameters.getString(
       SQL_PHYSICAL_OPERATORS_DISABLED, SQL_PHYSICAL_OPERATORS_DISABLED_DEFAULT)
-    !disableOperators.split(",").map(_.trim).contains(operator.toString)
+        .split(",")
+        .map(_.trim)
+    if (disableOperators.contains("HashJoin") &&
+        (operator == OperatorType.BroadcastHashJoin ||
+            operator == OperatorType.ShuffleHashJoin)) {
+      false
+    } else {
+      !disableOperators.contains(operator.toString)
+    }
   }
 
   /**
@@ -388,7 +396,7 @@ class TableConfig {
 
 object OperatorType extends Enumeration {
   type OperatorType = Value
-  val NestedLoopJoin, HashJoin, SortMergeJoin, HashAgg, SortAgg = Value
+  val NestedLoopJoin, ShuffleHashJoin, BroadcastHashJoin, SortMergeJoin, HashAgg, SortAgg = Value
 }
 
 object TableConfig {
@@ -586,7 +594,8 @@ object TableConfig {
     * Mainly for testing.
     * A comma-separated list of name of the [[OperatorType]], each name means a kind of disabled
     * operator. Its default value is empty that means no operators are disabled. If the configure's
-    * value is "NestedLoopJoin, HashJoin", NestedLoopJoin and HashJoin are disabled.
+    * value is "NestedLoopJoin, ShuffleHashJoin", NestedLoopJoin and ShuffleHashJoin are disabled.
+    * If the configure's value is "HashJoin", ShuffleHashJoin and BroadcastHashJoin are disabled.
     */
   val SQL_PHYSICAL_OPERATORS_DISABLED = "sql.exec.operators.disabled"
   val SQL_PHYSICAL_OPERATORS_DISABLED_DEFAULT: String = ""
