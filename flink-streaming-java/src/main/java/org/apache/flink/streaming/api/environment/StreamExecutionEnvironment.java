@@ -57,6 +57,7 @@ import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.DataStreamSourceV2;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.source.ContinuousFileMonitoringFunction;
 import org.apache.flink.streaming.api.functions.source.ContinuousFileReaderOperator;
@@ -64,17 +65,22 @@ import org.apache.flink.streaming.api.functions.source.FileMonitoringFunction;
 import org.apache.flink.streaming.api.functions.source.FileProcessingMode;
 import org.apache.flink.streaming.api.functions.source.FileReadFunction;
 import org.apache.flink.streaming.api.functions.source.FromElementsFunction;
+import org.apache.flink.streaming.api.functions.source.FromElementsFunctionV2;
 import org.apache.flink.streaming.api.functions.source.FromIteratorFunction;
 import org.apache.flink.streaming.api.functions.source.FromSplittableIteratorFunction;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
+import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunctionV2;
 import org.apache.flink.streaming.api.functions.source.ParallelSourceFunction;
+import org.apache.flink.streaming.api.functions.source.ParallelSourceFunctionV2;
 import org.apache.flink.streaming.api.functions.source.SocketTextStreamFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunctionV2;
 import org.apache.flink.streaming.api.functions.source.StatefulSequenceSource;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.operators.StoppableStreamSource;
 import org.apache.flink.streaming.api.operators.StreamSource;
+import org.apache.flink.streaming.api.operators.StreamSourceV2;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.SplittableIterator;
@@ -737,6 +743,42 @@ public abstract class StreamExecutionEnvironment {
 	}
 
 	/**
+	 * Creates a new data stream with source function V2 that contains the given elements.
+	 * The elements must all be of the same type, for example,
+	 * all of the {@link String} or {@link Integer}.
+	 *
+	 * <p>The framework will try and determine the exact type from the elements. In case of generic
+	 * elements, it may be necessary to manually supply the type information via
+	 * {@link #fromCollection(java.util.Collection, org.apache.flink.api.common.typeinfo.TypeInformation)}.
+	 *
+	 * <p>Note that this operation will result in a non-parallel data stream source, i.e. a data
+	 * stream source with a degree of parallelism one.
+	 *
+	 * @param data
+	 * 		The array of elements to create the data stream from.
+	 * @param <OUT>
+	 * 		The type of the returned data stream
+	 * @return The data stream representing the given array of elements
+	 */
+	@SafeVarargs
+	public final <OUT> DataStreamSourceV2<OUT> fromElementsV2(OUT... data) {
+		if (data.length == 0) {
+			throw new IllegalArgumentException("fromElements needs at least one element as argument");
+		}
+
+		TypeInformation<OUT> typeInfo;
+		try {
+			typeInfo = TypeExtractor.getForObject(data[0]);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not create TypeInformation for type " + data[0].getClass().getName()
+				+ "; please specify the TypeInformation manually via "
+				+ "StreamExecutionEnvironment#fromElements(Collection, TypeInformation)");
+		}
+		return fromCollectionV2(Arrays.asList(data), typeInfo);
+	}
+
+	/**
 	 * Creates a new data set that contains the given elements. The framework will determine the type according to the
 	 * based type user supplied. The elements should be the same or be the subclass to the based type.
 	 * The sequence of elements must not be empty.
@@ -838,6 +880,36 @@ public abstract class StreamExecutionEnvironment {
 			throw new RuntimeException(e.getMessage(), e);
 		}
 		return addSource(function, "Collection Source", typeInfo).setParallelism(1);
+	}
+
+	/**
+	 * Creates a data stream with source function V2 from the given non-empty collection.
+	 *
+	 * <p>Note that this operation will result in a non-parallel data stream source,
+	 * i.e., a data stream source with parallelism one.
+	 *
+	 * @param data
+	 * 		The collection of elements to create the data stream from
+	 * @param typeInfo
+	 * 		The TypeInformation for the produced data stream
+	 * @param <OUT>
+	 * 		The type of the returned data stream
+	 * @return The data stream representing the given collection
+	 */
+	public <OUT> DataStreamSourceV2<OUT> fromCollectionV2(Collection<OUT> data, TypeInformation<OUT> typeInfo) {
+		Preconditions.checkNotNull(data, "Collection must not be null");
+
+		// must not have null elements and mixed elements
+		FromElementsFunction.checkCollection(data, typeInfo.getTypeClass());
+
+		SourceFunctionV2<OUT> function;
+		try {
+			function = new FromElementsFunctionV2<>(typeInfo.createSerializer(getConfig()), data);
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
+		return addSourceV2(function, "Collection Source", typeInfo).setParallelism(1);
 	}
 
 	/**
@@ -1328,6 +1400,20 @@ public abstract class StreamExecutionEnvironment {
 	/**
 	 * Generic method to create an input data stream with {@link org.apache.flink.api.common.io.InputFormat}.
 	 *
+	 * @param inputFormat
+	 * 		The input format used to create the data stream
+	 * @param <OUT>
+	 * 		The type of the returned data stream
+	 * @return The data stream that represents the data created by the input format
+	 */
+	@PublicEvolving
+	public <OUT> DataStreamSourceV2<OUT> createInputV2(InputFormat<OUT, ?> inputFormat) {
+		return createInputV2(inputFormat, TypeExtractor.getInputFormatTypes(inputFormat));
+	}
+
+	/**
+	 * Generic method to create an input data stream with {@link org.apache.flink.api.common.io.InputFormat}.
+	 *
 	 * <p>The data stream is typed to the given TypeInformation. This method is intended for input formats
 	 * where the return type cannot be determined by reflection analysis, and that do not implement the
 	 * {@link org.apache.flink.api.java.typeutils.ResultTypeQueryable} interface.
@@ -1363,12 +1449,37 @@ public abstract class StreamExecutionEnvironment {
 		return source;
 	}
 
+	/**
+	 * Generic method to create an input data stream with {@link org.apache.flink.api.common.io.InputFormat}.
+	 * DO NOT support {@link ContinuousFileMonitoringFunction}.
+	 *
+	 * @param inputFormat
+	 * 		The input format used to create the data stream
+	 * @param typeInfo
+	 * 		The information about the type of the output type
+	 * @param <OUT>
+	 * 		The type of the returned data stream
+	 * @return The data stream that represents the data created by the input format
+	 */
+	@PublicEvolving
+	public <OUT> DataStreamSourceV2<OUT> createInputV2(InputFormat<OUT, ?> inputFormat, TypeInformation<OUT> typeInfo) {
+		return createInputV2(inputFormat, typeInfo, "Custom Source");
+	}
+
 	private <OUT> DataStreamSource<OUT> createInput(InputFormat<OUT, ?> inputFormat,
 													TypeInformation<OUT> typeInfo,
 													String sourceName) {
 
 		InputFormatSourceFunction<OUT> function = new InputFormatSourceFunction<>(inputFormat, typeInfo);
 		return addSource(function, sourceName, typeInfo);
+	}
+
+	private <OUT> DataStreamSourceV2<OUT> createInputV2(InputFormat<OUT, ?> inputFormat,
+													TypeInformation<OUT> typeInfo,
+													String sourceName) {
+
+		InputFormatSourceFunctionV2<OUT> function = new InputFormatSourceFunctionV2<>(inputFormat, typeInfo);
+		return addSourceV2(function, sourceName, typeInfo);
 	}
 
 	private <OUT> DataStreamSource<OUT> createFileInput(FileInputFormat<OUT> inputFormat,
@@ -1419,6 +1530,19 @@ public abstract class StreamExecutionEnvironment {
 	}
 
 	/**
+	 * Adds a Data Source V2 to the streaming topology.
+	 *
+	 * @param function
+	 * 		the user defined function
+	 * @param <OUT>
+	 * 		type of the returned stream
+	 * @return the data stream constructed
+	 */
+	public <OUT> DataStreamSourceV2<OUT> addSourceV2(SourceFunctionV2<OUT> function) {
+		return addSourceV2(function, "Custom Source");
+	}
+
+	/**
 	 * Ads a data source with a custom type information thus opening a
 	 * {@link DataStream}. Only in very special cases does the user need to
 	 * support type information. Otherwise use
@@ -1437,6 +1561,24 @@ public abstract class StreamExecutionEnvironment {
 	}
 
 	/**
+	 * Ads a data source V2 with a custom type information thus opening a
+	 * {@link DataStream}. Only in very special cases does the user need to
+	 * support type information. Otherwise use
+	 * {@link #addSourceV2(org.apache.flink.streaming.api.functions.source.SourceFunctionV2)}
+	 *
+	 * @param function
+	 * 		the user defined function
+	 * @param sourceName
+	 * 		Name of the data source
+	 * @param <OUT>
+	 * 		type of the returned stream
+	 * @return the data stream constructed
+	 */
+	public <OUT> DataStreamSourceV2<OUT> addSourceV2(SourceFunctionV2<OUT> function, String sourceName) {
+		return addSourceV2(function, sourceName, null);
+	}
+
+	/**
 	 * Ads a data source with a custom type information thus opening a
 	 * {@link DataStream}. Only in very special cases does the user need to
 	 * support type information. Otherwise use
@@ -1452,6 +1594,24 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	public <OUT> DataStreamSource<OUT> addSource(SourceFunction<OUT> function, TypeInformation<OUT> typeInfo) {
 		return addSource(function, "Custom Source", typeInfo);
+	}
+
+	/**
+	 * Ads a data source V2 with a custom type information thus opening a
+	 * {@link DataStream}. Only in very special cases does the user need to
+	 * support type information. Otherwise use
+	 * {@link #addSourceV2(org.apache.flink.streaming.api.functions.source.SourceFunctionV2)}
+	 *
+	 * @param function
+	 * 		the user defined function
+	 * @param <OUT>
+	 * 		type of the returned stream
+	 * @param typeInfo
+	 * 		the user defined type information for the stream
+	 * @return the data stream constructed
+	 */
+	public <OUT> DataStreamSourceV2<OUT> addSourceV2(SourceFunctionV2<OUT> function, TypeInformation<OUT> typeInfo) {
+		return addSourceV2(function, "Custom Source", typeInfo);
 	}
 
 	/**
@@ -1498,6 +1658,47 @@ public abstract class StreamExecutionEnvironment {
 		}
 
 		return new DataStreamSource<>(this, typeInfo, sourceOperator, isParallel, sourceName);
+	}
+
+	/**
+	 * Ads a data source V2 with a custom type information thus opening a
+	 * {@link DataStream}. Only in very special cases does the user need to
+	 * support type information. Otherwise use
+	 * {@link #addSourceV2(org.apache.flink.streaming.api.functions.source.SourceFunctionV2)}
+	 *
+	 * @param function
+	 * 		the user defined function
+	 * @param sourceName
+	 * 		Name of the data source
+	 * @param <OUT>
+	 * 		type of the returned stream
+	 * @param typeInfo
+	 * 		the user defined type information for the stream
+	 * @return the data stream constructed
+	 */
+	@SuppressWarnings("unchecked")
+	public <OUT> DataStreamSourceV2<OUT> addSourceV2(SourceFunctionV2<OUT> function, String sourceName, TypeInformation<OUT> typeInfo) {
+
+		if (typeInfo == null) {
+			if (function instanceof ResultTypeQueryable) {
+				typeInfo = ((ResultTypeQueryable<OUT>) function).getProducedType();
+			} else {
+				try {
+					typeInfo = TypeExtractor.createTypeInfo(
+						SourceFunctionV2.class,
+						function.getClass(), 0, null, null);
+				} catch (final InvalidTypesException e) {
+					typeInfo = (TypeInformation<OUT>) new MissingTypeInfo(sourceName, e);
+				}
+			}
+		}
+
+		boolean isParallel = function instanceof ParallelSourceFunctionV2;
+
+		clean(function);
+		StreamSourceV2<OUT, ?> sourceOperator = new StreamSourceV2<>(function);
+
+		return new DataStreamSourceV2<>(this, typeInfo, sourceOperator, isParallel, sourceName);
 	}
 
 	/**

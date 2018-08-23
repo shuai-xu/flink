@@ -436,6 +436,17 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
   }
 
   /**
+    * Creates a DataStream that contains the given elements. The elements must all be of the
+    * same type.
+    *
+    * Note that this operation will result in a non-parallel data source v2, i.e. a data source with
+    * a parallelism of one.
+    */
+  def fromElementsV2[T: TypeInformation](data: T*): DataStream[T] = {
+    fromCollectionV2(data)
+  }
+
+  /**
    * Creates a DataStream from the given non-empty [[Seq]]. The elements need to be serializable
    * because the framework may move the elements into the cluster if needed.
    *
@@ -448,6 +459,21 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
 
     val collection = scala.collection.JavaConversions.asJavaCollection(data)
     asScalaStream(javaEnv.fromCollection(collection, typeInfo))
+  }
+
+  /**
+    * Creates a DataStream from the given non-empty [[Seq]]. The elements need to be serializable
+    * because the framework may move the elements into the cluster if needed.
+    *
+    * Note that this operation will result in a non-parallel data source v2, i.e. a data source with
+    * a parallelism of one.
+    */
+  def fromCollectionV2[T: TypeInformation](data: Seq[T]): DataStream[T] = {
+    require(data != null, "Data must not be null.")
+    val typeInfo = implicitly[TypeInformation[T]]
+
+    val collection = scala.collection.JavaConversions.asJavaCollection(data)
+    asScalaStream(javaEnv.fromCollectionV2(collection, typeInfo))
   }
 
   /**
@@ -609,6 +635,20 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
     }
 
   /**
+    * Generic method to create an input data stream with a specific input format.
+    * Since all data streams need specific information about their types, this method needs to
+    * determine the type of the data produced by the input format. It will attempt to determine the
+    * data type by reflection, unless the input format implements the ResultTypeQueryable interface.
+    */
+  @PublicEvolving
+  def createInputV2[T: TypeInformation](inputFormat: InputFormat[T, _]): DataStream[T] =
+  if (inputFormat.isInstanceOf[ResultTypeQueryable[_]]) {
+    asScalaStream(javaEnv.createInputV2(inputFormat))
+  } else {
+    asScalaStream(javaEnv.createInputV2(inputFormat, implicitly[TypeInformation[T]]))
+  }
+
+  /**
    * Create a DataStream using a user defined source function for arbitrary
    * source functionality. By default sources have a parallelism of 1. 
    * To enable parallel execution, the user defined source should implement 
@@ -623,6 +663,23 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
     val cleanFun = scalaClean(function)
     val typeInfo = implicitly[TypeInformation[T]]
     asScalaStream(javaEnv.addSource(cleanFun).returns(typeInfo))
+  }
+
+  /**
+    * Create a DataStream using a user defined source function v2 for arbitrary
+    * source functionality. By default sources have a parallelism of 1.
+    * To enable parallel execution, the user defined source should implement
+    * ParallelSourceFunction or extend RichParallelSourceFunction.
+    * In these cases the resulting source will have the parallelism of the environment.
+    * To change this afterwards call DataStreamSource.setParallelism(int)
+    *
+    */
+  def addSourceV2[T: TypeInformation](function: SourceFunctionV2[T]): DataStream[T] = {
+    require(function != null, "Function must not be null.")
+
+    val cleanFun = scalaClean(function)
+    val typeInfo = implicitly[TypeInformation[T]]
+    asScalaStream(javaEnv.addSourceV2(cleanFun).returns(typeInfo))
   }
 
   /**

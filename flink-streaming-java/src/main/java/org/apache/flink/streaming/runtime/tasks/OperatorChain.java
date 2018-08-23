@@ -45,6 +45,7 @@ import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.operators.StreamSource;
+import org.apache.flink.streaming.api.operators.StreamSourceV2;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -792,6 +793,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 				return new TwoInputStreamOperatorProxy((TwoInputStreamOperator) operator, successors);
 			} else if (operator instanceof StreamSource) {
 				return new SourceStreamOperatorProxy((StreamSource) operator, successors);
+			} else if (operator instanceof StreamSourceV2) {
+				return new SourceV2StreamOperatorProxy(operator, successors);
 			} else {
 				throw new RuntimeException("Unknown input stream operator " + operator);
 			}
@@ -1120,6 +1123,24 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		@Override
 		public void endInput() throws Exception {
+			endSuccessorsInput();
+		}
+	}
+
+	private static class SourceV2StreamOperatorProxy<OUT> extends AbstractStreamOperatorProxy<OUT> {
+
+		SourceV2StreamOperatorProxy(StreamOperator<OUT> operator,
+									List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+			super(operator, successors);
+		}
+
+		@Override
+		public void addInputEdge(StreamEdge inputEdge) {
+			throw new UnsupportedOperationException("There should not be a input edge in source operator");
+		}
+
+		@Override
+		public void endInput(StreamEdge inputEdge) throws Exception {
 			endSuccessorsInput();
 		}
 	}

@@ -25,6 +25,7 @@ import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
+import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunctionV2;
 import org.apache.flink.streaming.api.transformations.CoFeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.FeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
@@ -33,6 +34,7 @@ import org.apache.flink.streaming.api.transformations.SelectTransformation;
 import org.apache.flink.streaming.api.transformations.SideOutputTransformation;
 import org.apache.flink.streaming.api.transformations.SinkTransformation;
 import org.apache.flink.streaming.api.transformations.SourceTransformation;
+import org.apache.flink.streaming.api.transformations.SourceV2Transformation;
 import org.apache.flink.streaming.api.transformations.SplitTransformation;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation;
@@ -170,6 +172,8 @@ public class StreamGraphGenerator {
 			transformedIds = transformTwoInputTransform((TwoInputTransformation<?, ?, ?>) transform);
 		} else if (transform instanceof SourceTransformation<?>) {
 			transformedIds = transformSource((SourceTransformation<?>) transform);
+		} else if (transform instanceof SourceV2Transformation<?>) {
+			transformedIds = transformSourceV2((SourceV2Transformation<?>) transform);
 		} else if (transform instanceof SinkTransformation<?>) {
 			transformedIds = transformSink((SinkTransformation<?>) transform);
 		} else if (transform instanceof UnionTransformation<?>) {
@@ -477,6 +481,26 @@ public class StreamGraphGenerator {
 				"Source: " + source.getName());
 		if (source.getOperator().getUserFunction() instanceof InputFormatSourceFunction) {
 			InputFormatSourceFunction<T> fs = (InputFormatSourceFunction<T>) source.getOperator().getUserFunction();
+			streamGraph.setInputFormat(source.getId(), fs.getFormat());
+		}
+		streamGraph.setParallelism(source.getId(), source.getParallelism());
+		streamGraph.setMaxParallelism(source.getId(), source.getMaxParallelism());
+		return Collections.singleton(source.getId());
+	}
+
+	/**
+	 * Transforms a {@code SourceTransformation}.
+	 */
+	private <T> Collection<Integer> transformSourceV2(SourceV2Transformation<T> source) {
+		String slotSharingGroup = determineSlotSharingGroup(source.getSlotSharingGroup(), new ArrayList<Integer>());
+		streamGraph.addSource(source.getId(),
+			slotSharingGroup,
+			source.getOperator(),
+			null,
+			source.getOutputType(),
+			"Source: " + source.getName());
+		if (source.getOperator().getUserFunction() instanceof InputFormatSourceFunctionV2) {
+			InputFormatSourceFunctionV2<T> fs = (InputFormatSourceFunctionV2<T>) source.getOperator().getUserFunction();
 			streamGraph.setInputFormat(source.getId(), fs.getFormat());
 		}
 		streamGraph.setParallelism(source.getId(), source.getParallelism());

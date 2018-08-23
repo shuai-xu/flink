@@ -96,20 +96,20 @@ public class InputFormatSourceFunctionTest {
 		}
 	}
 
-	private static class LifeCycleTestInputFormat extends RichInputFormat<Integer, InputSplit> {
+	static class LifeCycleTestInputFormat extends RichInputFormat<Integer, InputSplit> {
 
 		private static final long serialVersionUID = 7408902249499583273L;
-		private boolean isConfigured = false;
-		private boolean isInputFormatOpen = false;
-		private boolean isSplitOpen = false;
+		boolean isConfigured = false;
+		boolean isInputFormatOpen = false;
+		boolean isSplitOpen = false;
 
 		// end of split
-		private boolean eos = false;
+		boolean eos = false;
 
-		private int splitCounter = 0;
+		int splitCounter = 0;
 
-		private int reachedEndCalls = 0;
-		private int nextRecordCalls = 0;
+		int reachedEndCalls = 0;
+		int nextRecordCalls = 0;
 
 		@Override
 		public void openInputFormat() {
@@ -210,7 +210,7 @@ public class InputFormatSourceFunctionTest {
 
 		int splitIdx = 0;
 
-		private TestSourceContext(InputFormatSourceFunction<Integer> reader, LifeCycleTestInputFormat format, boolean shouldCancel, int cancelAt) {
+		TestSourceContext(InputFormatSourceFunction<Integer> reader, LifeCycleTestInputFormat format, boolean shouldCancel, int cancelAt) {
 			this.reader = reader;
 			this.format = format;
 			this.shouldCancel = shouldCancel;
@@ -259,14 +259,14 @@ public class InputFormatSourceFunctionTest {
 	}
 
 	@SuppressWarnings("deprecation")
-	private static class MockRuntimeContext extends StreamingRuntimeContext {
+	static class MockRuntimeContext extends StreamingRuntimeContext {
 
 		private final int noOfSplits;
 		private int nextSplit = 0;
 		private final LifeCycleTestInputFormat format;
 		private InputSplit[] inputSplits;
 
-		private MockRuntimeContext(LifeCycleTestInputFormat format, int noOfSplits, Environment environment) {
+		MockRuntimeContext(LifeCycleTestInputFormat format, int noOfSplits, Environment environment) {
 			super(new MockStreamOperator(),
 				environment);
 
