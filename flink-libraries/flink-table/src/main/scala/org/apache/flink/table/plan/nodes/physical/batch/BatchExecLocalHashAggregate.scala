@@ -137,10 +137,10 @@ class BatchExecLocalHashAggregate(
       codegenWithoutKeys(isMerge = false, isFinal = false, ctx, tableEnv,
         inputType, outputRowType, "NoGrouping")
     } else {
-      val managedMem = reservedResSpec.getManagedMemoryInMB *
+      val managedMem = BatchExecResourceUtil.getManagedMemory(reservedResSpec) *
           BatchExecResourceUtil.SIZE_IN_MB
       val preferredManagedMem =
-        preferResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB
+        BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB
       codegenWithKeys(ctx, tableEnv, inputType, outputRowType, managedMem,
         preferredManagedMem)
     }

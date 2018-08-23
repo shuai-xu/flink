@@ -378,4 +378,16 @@ public class BatchExecResourceUtil {
 			throw new IllegalArgumentException("Infer granularity can only be set: NONE, SOURCE or ALL.");
 		}
 	}
+
+	public static int getManagedMemory(ResourceSpec resourceSpec) {
+		Object managedMemory = resourceSpec.getExtendedResources().get(ResourceSpec.MANAGED_MEMORY_NAME);
+		if (managedMemory == null) {
+			return 0;
+		}
+		try {
+			return  (int) managedMemory;
+		} catch (ClassCastException ex) {
+			return 0;
+		}
+	}
 }

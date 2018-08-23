@@ -342,7 +342,6 @@ class BatchExecExchange(
             TOTAL_RANGES_NUM),
           boundariesType,
           1)
-        sampleAndHistogram.setStopAndGo(true)
         sampleAndHistogram.setResources(reservedResSpec, preferResSpec)
         if (isReused) {
           reusedSampleAndHistogram = Some(sampleAndHistogram)
@@ -378,7 +377,6 @@ class BatchExecExchange(
         new TupleTypeInfo(BasicTypeInfo.INT_TYPE_INFO, binaryType),
         input.getParallelism)
     }
-    preparePartition.setFirstReadAllInput(InputOrder.FIRST)
     preparePartition.setResources(reservedResSpec, preferResSpec)
 
     // 5. Add shuffle according range partition.

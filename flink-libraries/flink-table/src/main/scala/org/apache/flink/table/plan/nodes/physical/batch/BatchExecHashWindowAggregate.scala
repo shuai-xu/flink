@@ -123,8 +123,8 @@ class BatchExecHashWindowAggregate(
     val generatedOperator = codegen(ctx, tableEnv,
       inputType, outputRowType,
       groupBufferLimitSize,
-      reservedResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB,
-      preferResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB,
+      BatchExecResourceUtil.getManagedMemory(reservedResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
+      BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
       windowStart,
       windowSize,
       slideSize)

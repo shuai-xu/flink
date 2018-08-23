@@ -100,10 +100,10 @@ class BatchExecSort(
     val (comparators, serializers, codeGen) = getSortInfo(tableEnv.getConfig)
 
     val reservedMangedMemorySize =
-      reservedResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB
+      BatchExecResourceUtil.getManagedMemory(reservedResSpec) * BatchExecResourceUtil.SIZE_IN_MB
 
     val preferMangedMemorySize =
-      preferResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB
+      BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB
     val perRequestSize =
       BatchExecResourceUtil.getPerRequestManagedMemory(
         tableEnv.getConfig)* BatchExecResourceUtil.SIZE_IN_MB
@@ -131,7 +131,6 @@ class BatchExecSort(
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)
 
-    transformation.setStopAndGo(true)
     transformation.setResources(reservedResSpec, preferResSpec)
     transformation
   }

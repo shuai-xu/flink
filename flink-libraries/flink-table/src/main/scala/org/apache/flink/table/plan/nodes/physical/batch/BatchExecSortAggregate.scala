@@ -179,7 +179,6 @@ class BatchExecSortAggregate(
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)
 
-    transformation.setStopAndGo(true)
     transformation.setResources(reservedResSpec, preferResSpec)
     transformation
   }

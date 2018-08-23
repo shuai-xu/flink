@@ -153,9 +153,9 @@ class BatchExecHashAggregate(
       codegenWithoutKeys(isMerge, isFinal, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
     } else {
       val reservedManagedMem =
-        reservedResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB
+        BatchExecResourceUtil.getManagedMemory(reservedManagedMem) * BatchExecResourceUtil.SIZE_IN_MB
       val preferredManagedMem =
-        preferResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB
+        BatchExecResourceUtil.getManagedMemory(preferredManagedMem) * BatchExecResourceUtil.SIZE_IN_MB
       codegenWithKeys(
         ctx,
         tableEnv,
@@ -179,7 +179,6 @@ class BatchExecHashAggregate(
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)
 
-    transformation.setStopAndGo(true)
     transformation.setResources(reservedResSpec, preferResSpec)
 
     transformation

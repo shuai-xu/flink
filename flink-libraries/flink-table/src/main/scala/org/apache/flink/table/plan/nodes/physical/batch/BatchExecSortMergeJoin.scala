@@ -182,11 +182,11 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       0.5d
     }
 
-    val totalReservedSortMemory = (reservedResSpec.getManagedMemoryInMB - externalBufferMemory *
-        getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
+    val totalReservedSortMemory = (BatchExecResourceUtil.getManagedMemory(reservedResSpec) -
+        externalBufferMemory * getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
 
-    val totalPreferSortMemory = (preferResSpec.getManagedMemoryInMB - externalBufferMemory *
-        getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
+    val totalPreferSortMemory = (BatchExecResourceUtil.getManagedMemory(preferResSpec) -
+        externalBufferMemory * getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
 
     val sortReservedMemorySize1 = calcSortMemory(leftRatio, totalReservedSortMemory)
 
@@ -222,7 +222,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)
-    transformation.setStopAndGo(true)
     transformation.setResources(reservedResSpec, preferResSpec)
     transformation
   }

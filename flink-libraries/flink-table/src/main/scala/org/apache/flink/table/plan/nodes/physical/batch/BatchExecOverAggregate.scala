@@ -305,7 +305,8 @@ class BatchExecOverAggregate(
     } else {
       val windowFrames = createOverWindowFrames(tableEnv, inputRowType)
       val operator = new BufferDataOverWindowOperator(
-        (reservedResSpec.getManagedMemoryInMB * BatchExecResourceUtil.SIZE_IN_MB).toInt,
+        (BatchExecResourceUtil.getManagedMemory(reservedResSpec) *
+            BatchExecResourceUtil.SIZE_IN_MB).toInt,
         windowFrames,
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
