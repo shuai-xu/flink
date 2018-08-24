@@ -21,11 +21,11 @@ import java.util
 
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.flink.core.fs.Path
-import org.apache.flink.runtime.broadcast.BroadcastVariableManager
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.ColumnarRow
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.sources.parquet._
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -119,7 +119,7 @@ class TpcDsBatchExecPlanTest(
   def test(): Unit = {
     val sqlQuery = TpcUtils.getTpcDsQuery(caseName, factor)
     BatchExecRel.resetReuseIdCounter()
-    BroadcastVariableManager.resetBroadcastIdCounter()
+    InsertRuntimeFilterRule.resetBroadcastIdCounter()
     if (printOptimizedResult) {
       val table = tEnv.sqlQuery(sqlQuery)
       val optimized = tEnv.optimize(table.getRelNode)

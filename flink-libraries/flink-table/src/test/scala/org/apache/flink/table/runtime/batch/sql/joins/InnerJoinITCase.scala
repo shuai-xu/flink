@@ -29,7 +29,7 @@ import JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMerg
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.runtime.broadcast.BroadcastVariableManager
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -238,7 +238,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
       tEnv.getConfig.getParameters.setBoolean(
         TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
-      BroadcastVariableManager.resetBroadcastIdCounter()
+      InsertRuntimeFilterRule.resetBroadcastIdCounter()
       tEnv.getConfig.getParameters.setInteger(
         TableConfig.SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN, 5)
       tEnv.getConfig.getParameters.setInteger(

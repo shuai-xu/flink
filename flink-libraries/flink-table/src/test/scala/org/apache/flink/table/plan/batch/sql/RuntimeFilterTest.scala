@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.plan.batch.sql
 
-import org.apache.flink.runtime.broadcast.BroadcastVariableManager
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -43,7 +43,7 @@ class RuntimeFilterTest extends TableTestBatchExecBase {
     util.tableEnv.alterTableStats("y", Some(TableStats(1000000000L, Map[String, ColumnStats](
       "a" -> columnStats(100L), "b" -> columnStats(1000000000L), "c" -> columnStats(10L)))))
     util.disableBroadcastHashJoin()
-    BroadcastVariableManager.resetBroadcastIdCounter()
+    InsertRuntimeFilterRule.resetBroadcastIdCounter()
   }
 
   private def columnStats(ndv: Long): ColumnStats = ColumnStats(ndv, 0L, 1D, 1, 100000000, 1)

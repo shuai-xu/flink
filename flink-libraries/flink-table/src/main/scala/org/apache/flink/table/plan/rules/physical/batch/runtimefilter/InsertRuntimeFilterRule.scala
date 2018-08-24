@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.rules.physical.batch.runtimefilter
 
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.hep.HepRelVertex
@@ -26,7 +27,6 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexProgramBuilder
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.runtime.broadcast.BroadcastVariableManager
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
 import org.apache.flink.table.plan.FlinkJoinRelType._
@@ -99,7 +99,7 @@ class InsertRuntimeFilterRule
           buildRowCount != null &&
           probeRowCount != null) {
         val broadcastId = String.valueOf(
-          BroadcastVariableManager.BROADCAST_ID_COUNTER.getAndIncrement)
+          InsertRuntimeFilterRule.BROADCAST_ID_COUNTER.getAndIncrement)
         val buildSqlFunc = new SqlRuntimeFilterBuilderFunction(
           broadcastId,
           buildKeyNdv,
@@ -154,6 +154,12 @@ class InsertRuntimeFilterRule
 object InsertRuntimeFilterRule {
 
   val INSTANCE = new InsertRuntimeFilterRule
+
+  val BROADCAST_ID_COUNTER = new AtomicInteger(0)
+
+  def resetBroadcastIdCounter(): Unit = {
+    BROADCAST_ID_COUNTER.set(0)
+  }
 
   def getHepRel(rel: RelNode): RelNode = rel match {
     case hepRel: HepRelVertex => hepRel.getCurrentRel
