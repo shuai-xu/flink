@@ -49,8 +49,8 @@ class CsvTableSink(
     outputFieldNames: Option[Boolean],
     timezone: Option[TimeZone])
   extends TableSinkBase[BaseRow]
-  with BatchExecTableSink[BaseRow]
-  with AppendStreamTableSink[BaseRow] {
+    with BatchExecTableSink[BaseRow]
+    with AppendStreamTableSink[BaseRow] {
 
   private val name = "csv sink: " + path
 
@@ -73,7 +73,7 @@ class CsvTableSink(
     * @param quoteCharacter The quote character.
     */
   def this(
-    path: String, fieldDelim: String, recordDelim: String, quoteCharacter: String) {
+      path: String, fieldDelim: String, recordDelim: String, quoteCharacter: String) {
     this(path, Some(fieldDelim), Some(recordDelim), Option(quoteCharacter), None, None, None, None)
   }
 
@@ -100,22 +100,22 @@ class CsvTableSink(
     * @param writeMode The write mode to specify whether existing files are overwritten or not.
     */
   def this(
-    path: String,
-    fieldDelim: String, recordDelim: String, quoteCharacter: String,
-    numFiles: Int, writeMode: WriteMode) {
+      path: String,
+      fieldDelim: String, recordDelim: String, quoteCharacter: String,
+      numFiles: Int, writeMode: WriteMode) {
     this(path, Some(fieldDelim), Some(recordDelim), Option(quoteCharacter),
       Some(numFiles), Some(writeMode), None, None)
   }
 
   /**
-   * A simple [[TableSink]] to emit data as CSV files.
-   *
-   * @param path The output path to write the Table to.
-   * @param fieldDelim The field delimiter.
-   * @param numFiles The number of files to write to.
-   * @param writeMode The write mode to specify whether existing files are overwritten or not.
-   * @param outputFieldNames Whether to output field names.
-   */
+    * A simple [[TableSink]] to emit data as CSV files.
+    *
+    * @param path The output path to write the Table to.
+    * @param fieldDelim The field delimiter.
+    * @param numFiles The number of files to write to.
+    * @param writeMode The write mode to specify whether existing files are overwritten or not.
+    * @param outputFieldNames Whether to output field names.
+    */
   def this(
       path: String,
       fieldDelim: String,
@@ -139,9 +139,9 @@ class CsvTableSink(
     * @param outputFieldNames Whether to output field names.
     */
   def this(
-    path: String,
-    fieldDelim: String, recordDelim: String, quoteCharacter: String,
-    numFiles: Int, writeMode: WriteMode, outputFieldNames: Boolean, timezone: TimeZone) {
+      path: String,
+      fieldDelim: String, recordDelim: String, quoteCharacter: String,
+      numFiles: Int, writeMode: WriteMode, outputFieldNames: Boolean, timezone: TimeZone) {
     this(path, Some(fieldDelim), Some(recordDelim), Option(quoteCharacter),
       Some(numFiles), Some(writeMode), Some(outputFieldNames), Option(timezone))
   }
