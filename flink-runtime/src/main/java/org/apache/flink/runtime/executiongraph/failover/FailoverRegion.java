@@ -122,7 +122,7 @@ public class FailoverRegion {
 
 	// Notice the region to failover, 
 	private void failover(long globalModVersionOfFailover, Throwable cause) {
-		LOG.info("Try to fail and restart region due to error: {}", cause);
+		LOG.info("Try to fail and restart region due to error: ", cause);
 
 		regionFailCount++;
 

@@ -45,6 +45,7 @@ import org.apache.flink.runtime.instance.AkkaActorGateway;
 import org.apache.flink.runtime.instance.InstanceID;
 import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
 import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
@@ -72,6 +73,7 @@ import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.testtasks.BlockingNoOpInvokable;
 import org.apache.flink.runtime.testutils.StoppableInvokable;
 import org.apache.flink.types.IntValue;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.NetUtils;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.TestLogger;
@@ -1016,9 +1018,17 @@ public class TaskManagerTest extends TestLogger {
 
 						// The task should fail after repeated requests
 						assertEquals(ExecutionState.FAILED, msg.getExecutionState());
-						Throwable t = msg.getError(ClassLoader.getSystemClassLoader());
-						assertEquals("Thrown exception was not a PartitionNotFoundException: " + t.getMessage(), 
-							PartitionNotFoundException.class, t.getClass());
+
+						Throwable error = msg.getError(getClass().getClassLoader());
+						if (error.getClass() != DataConsumptionException.class) {
+							error.printStackTrace();
+							fail("Wrong exception: " + error.getMessage());
+						}
+						Class cause = error.getCause().getClass();
+						if (cause != PartitionNotFoundException.class) {
+							error.printStackTrace();
+							fail("Thrown exception is not caused by a PartitionNotFoundException.");
+						}
 					}
 				};
 			}
@@ -1136,9 +1146,14 @@ public class TaskManagerTest extends TestLogger {
 						assertEquals(msg.getExecutionState(), ExecutionState.FAILED);
 
 						Throwable error = msg.getError(getClass().getClassLoader());
-						if (error.getClass() != PartitionNotFoundException.class) {
+						if (error.getClass() != DataConsumptionException.class) {
 							error.printStackTrace();
 							fail("Wrong exception: " + error.getMessage());
+						}
+						Class cause = error.getCause().getClass();
+						if (cause != PartitionNotFoundException.class) {
+							error.printStackTrace();
+							fail("Thrown exception is not caused by a PartitionNotFoundException.");
 						}
 					}
 				};

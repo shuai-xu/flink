@@ -627,6 +627,7 @@ public class ExecutionGraphTestUtils {
 			jobGraph.getJobConfiguration(),
 			jobGraph.getUserJarBlobKeys(),
 			jobGraph.getClasspaths());
+		jobInformation.getJobConfiguration().addAll(jobGraph.getSchedulingConfiguration());
 
 		return createExecutionGraphDirectly(
 			jobInformation,
@@ -716,17 +717,21 @@ public class ExecutionGraphTestUtils {
 	@SuppressWarnings("serial")
 	public static class SimpleActorGateway extends BaseTestingActorGateway {
 
-
 		public SimpleActorGateway(ExecutionContext executionContext){
 			super(executionContext);
 		}
 
+		public void handleSubmittedTask(Object message) {}
+
+		public void handleCanceledTask(Object message) {}
+
 		@Override
 		public Object handleMessage(Object message) {
 			if (message instanceof SubmitTask) {
-				SubmitTask submitTask = (SubmitTask) message;
+				handleSubmittedTask(message);
 				return Acknowledge.get();
 			} else if(message instanceof CancelTask) {
+				handleCanceledTask(message);
 				return Acknowledge.get();
 			} else if(message instanceof FailIntermediateResultPartitions) {
 				return new Object();

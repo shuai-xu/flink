@@ -27,6 +27,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
+import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
 import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
@@ -45,6 +46,7 @@ import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -64,6 +66,7 @@ import scala.Tuple2;
 
 import static org.apache.flink.util.FutureUtil.waitForAll;
 import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -72,6 +75,8 @@ import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -395,6 +400,78 @@ public class LocalInputChannelTest {
 
 		channel.releaseAllResources();
 		assertFalse(channel.getNextBuffer().isPresent());
+	}
+
+	@Test
+	public void testDataConsumptionExceptionOnPartitionRequest() throws Exception {
+		SingleInputGate gate = mock(SingleInputGate.class);
+		ResultPartitionManager partitionManager = mock(ResultPartitionManager.class);
+
+		final ResultPartitionID partitionId = new ResultPartitionID();
+
+		when(partitionManager.createSubpartitionView(
+			any(ResultPartitionID.class),
+			anyInt(),
+			any(BufferAvailabilityListener.class))).thenThrow(new PartitionNotFoundException(partitionId));
+
+		LocalInputChannel channel = new LocalInputChannel(
+			gate,
+			0,
+			partitionId,
+			partitionManager,
+			new TaskEventDispatcher(),
+			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+
+		try{
+			channel.requestSubpartition(0);
+		} catch (Throwable t) {
+			assertEquals(DataConsumptionException.class, t.getClass());
+			assertEquals(partitionId, ((DataConsumptionException)t).getResultPartitionId());
+			return;
+		}
+
+		fail("Expected error did not happen.");
+	}
+
+	@Test
+	public void testDataConsumptionExceptionOnRetriggerPartitionRequest() throws Exception {
+		SingleInputGate gate = mock(SingleInputGate.class);
+		ResultPartitionManager partitionManager = mock(ResultPartitionManager.class);
+
+		final ResultPartitionID partitionId = new ResultPartitionID();
+
+		when(partitionManager.createSubpartitionView(
+			any(ResultPartitionID.class),
+			anyInt(),
+			any(BufferAvailabilityListener.class))).thenThrow(new PartitionNotFoundException(partitionId));
+
+		Timer timer = new Timer(true);
+
+		LocalInputChannel channel = new LocalInputChannel(
+			gate,
+			0,
+			partitionId,
+			partitionManager,
+			new TaskEventDispatcher(),
+			1,
+			1,
+			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+		channel = spy(channel);
+
+		channel.requestSubpartition(0);
+		verify(gate, times(1)).retriggerPartitionRequest(partitionId.getPartitionId());
+		channel.retriggerSubpartitionRequest(timer, 0);
+		verify(channel, Mockito.timeout(2000L).times(1)).setError(any(Throwable.class));
+
+		try{
+			channel.checkError();
+		} catch (Throwable t) {
+			assertEquals(DataConsumptionException.class, t.getClass());
+			assertEquals(partitionId, ((DataConsumptionException)t).getResultPartitionId());
+			return;
+		}
+
+		fail("Expected error did not happen.");
 	}
 
 	// ---------------------------------------------------------------------------------------------

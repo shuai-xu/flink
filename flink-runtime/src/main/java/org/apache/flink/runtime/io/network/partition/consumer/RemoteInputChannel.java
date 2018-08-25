@@ -29,6 +29,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferProvider;
 import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.netty.PartitionRequestClient;
+import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
 import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
@@ -162,8 +163,11 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	public void requestSubpartition(int subpartitionIndex) throws IOException, InterruptedException {
 		if (partitionRequestClient == null) {
 			// Create a client and request the partition
-			partitionRequestClient = connectionManager
-				.createPartitionRequestClient(connectionId);
+			try {
+				partitionRequestClient = connectionManager.createPartitionRequestClient(connectionId);
+			} catch (Throwable t) {
+				throw new DataConsumptionException(partitionId, t);
+			}
 
 			partitionRequestClient.requestSubpartition(partitionId, subpartitionIndex, this, 0);
 		}
@@ -270,7 +274,7 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	}
 
 	private void failPartitionRequest() {
-		setError(new PartitionNotFoundException(partitionId));
+		setError(new DataConsumptionException(partitionId, new PartitionNotFoundException(partitionId)));
 	}
 
 	@Override

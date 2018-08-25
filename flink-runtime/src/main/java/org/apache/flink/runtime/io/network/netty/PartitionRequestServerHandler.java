@@ -23,6 +23,7 @@ import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.netty.NettyMessage.AddCredit;
 import org.apache.flink.runtime.io.network.netty.NettyMessage.CancelPartitionRequest;
 import org.apache.flink.runtime.io.network.netty.NettyMessage.CloseRequest;
+import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
 import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionProvider;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannelID;
@@ -107,6 +108,9 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
 					outboundQueue.notifyReaderCreated(reader);
 				} catch (PartitionNotFoundException notFound) {
 					respondWithError(ctx, notFound, request.receiverId);
+				} catch (Throwable t) {
+					// Mark all unexpected request partition errors as DataConsumptionException.
+					respondWithError(ctx, new DataConsumptionException(request.partitionId, t), request.receiverId);
 				}
 			}
 			// ----------------------------------------------------------------

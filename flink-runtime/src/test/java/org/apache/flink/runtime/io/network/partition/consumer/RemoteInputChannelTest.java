@@ -26,6 +26,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.netty.PartitionRequestClient;
+import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
 import org.apache.flink.runtime.io.network.partition.ProducerFailedException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,7 +55,6 @@ import scala.Tuple2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -970,6 +971,67 @@ public class RemoteInputChannelTest {
 			executor.shutdown();
 			ExceptionUtils.rethrowException(t);
 		}
+	}
+
+	@Test
+	public void testDataConsumptionExceptionOnPartitionRequest() throws Exception {
+		final ConnectionManager connectionManager = mock(ConnectionManager.class);
+		when(connectionManager.createPartitionRequestClient(any(ConnectionID.class)))
+			.thenThrow(new IOException(""));
+
+		final ResultPartitionID partitionId = new ResultPartitionID();
+		final SingleInputGate inputGate = mock(SingleInputGate.class);
+		final RemoteInputChannel channel = new RemoteInputChannel(
+			inputGate,
+			0,
+			partitionId,
+			mock(ConnectionID.class),
+			connectionManager,
+			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+
+		try{
+			channel.requestSubpartition(0);
+		} catch (Throwable t) {
+			assertEquals(DataConsumptionException.class, t.getClass());
+			assertEquals(partitionId, ((DataConsumptionException)t).getResultPartitionId());
+			return;
+		}
+
+		fail("Expected error did not happen.");
+	}
+
+	@Test
+	public void testDataConsumptionExceptionOnRetriggerPartitionRequest() throws Exception {
+		final ConnectionManager connectionManager = mock(ConnectionManager.class);
+		when(connectionManager.createPartitionRequestClient(any(ConnectionID.class)))
+			.thenReturn(mock(PartitionRequestClient.class));
+
+		final ResultPartitionID partitionId = new ResultPartitionID();
+		final SingleInputGate inputGate = mock(SingleInputGate.class);
+		final RemoteInputChannel channel = new RemoteInputChannel(
+			inputGate,
+			0,
+			partitionId,
+			mock(ConnectionID.class),
+			connectionManager,
+			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+
+		// request partition to set client
+		channel.requestSubpartition(0);
+		// retrigger request to set error
+		channel.retriggerSubpartitionRequest(0);
+
+		try {
+			channel.checkError();
+		} catch (Throwable t) {
+			Optional<DataConsumptionException> dataConsumptionException =
+				ExceptionUtils.findThrowable(t, DataConsumptionException.class);
+			assertTrue(dataConsumptionException.isPresent());
+			assertEquals(partitionId, dataConsumptionException.get().getResultPartitionId());
+			return;
+		}
+
+		fail("Expected error did not happen.");
 	}
 
 	// ---------------------------------------------------------------------------------------------

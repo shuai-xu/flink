@@ -131,24 +131,29 @@ class SpilledSubpartitionView implements ResultSubpartitionView, NotificationLis
 			return null;
 		}
 
-		Buffer current;
-		boolean nextBufferIsEvent;
-		synchronized (this) {
-			if (nextBuffer == null) {
-				current = requestAndFillBuffer();
-			} else {
-				current = nextBuffer;
+		try {
+			Buffer current;
+			boolean nextBufferIsEvent;
+			synchronized (this) {
+				if (nextBuffer == null) {
+					current = requestAndFillBuffer();
+				} else {
+					current = nextBuffer;
+				}
+				nextBuffer = requestAndFillBuffer();
+				nextBufferIsEvent = nextBuffer != null && !nextBuffer.isBuffer();
 			}
-			nextBuffer = requestAndFillBuffer();
-			nextBufferIsEvent = nextBuffer != null && !nextBuffer.isBuffer();
-		}
 
-		if (current == null) {
-			return null;
-		}
+			if (current == null) {
+				return null;
+			}
 
-		int newBacklog = parent.decreaseBuffersInBacklog(current);
-		return new BufferAndBacklog(current, newBacklog > 0 || nextBufferIsEvent, newBacklog, nextBufferIsEvent);
+			int newBacklog = parent.decreaseBuffersInBacklog(current);
+			return new BufferAndBacklog(current, newBacklog > 0 || nextBufferIsEvent, newBacklog, nextBufferIsEvent);
+		} catch (Throwable t) {
+			// Mark all data retrieval errors as DataConsumptionException.
+			throw new DataConsumptionException(parent.parent.getPartitionId(), t);
+		}
 	}
 
 	@Nullable

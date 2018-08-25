@@ -112,11 +112,9 @@ public class IntermediateResult {
 	 * Returns the partition with the given ID.
 	 *
 	 * @param resultPartitionId ID of the partition to look up
-	 * @throws NullPointerException If partition ID <code>null</code>
-	 * @throws IllegalArgumentException Thrown if unknown partition ID
-	 * @return Intermediate result partition with the given ID
+	 * @return Intermediate result partition with the given ID. If not found, return null.
 	 */
-	public IntermediateResultPartition getPartitionById(IntermediateResultPartitionID resultPartitionId) {
+	public IntermediateResultPartition getPartitionOrNullById(IntermediateResultPartitionID resultPartitionId) {
 		// Looks ups the partition number via the helper map and returns the
 		// partition. Currently, this happens infrequently enough that we could
 		// consider removing the map and scanning the partitions on every lookup.
@@ -126,8 +124,24 @@ public class IntermediateResult {
 		if (partitionNumber != null) {
 			return partitions[partitionNumber];
 		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Returns the partition with the given ID.
+	 *
+	 * @param resultPartitionId ID of the partition to look up
+	 * @throws NullPointerException If partition ID <code>null</code>
+	 * @throws IllegalArgumentException Thrown if unknown partition ID
+	 * @return Intermediate result partition with the given ID
+	 */
+	public IntermediateResultPartition getPartitionById(IntermediateResultPartitionID resultPartitionId) {
+		IntermediateResultPartition partition = getPartitionOrNullById(resultPartitionId);
+		if (partition == null) {
 			throw new IllegalArgumentException("Unknown intermediate result partition ID " + resultPartitionId);
 		}
+		return partition;
 	}
 
 	public int getNumberOfAssignedPartitions() {

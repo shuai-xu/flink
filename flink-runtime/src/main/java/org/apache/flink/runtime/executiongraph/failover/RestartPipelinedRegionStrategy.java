@@ -25,6 +25,10 @@ import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.IntermediateResult;
+import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
+import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.FlinkRuntimeException;
 
@@ -35,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -88,21 +93,66 @@ public class RestartPipelinedRegionStrategy extends FailoverStrategy {
 
 	@Override
 	public void onTaskFailure(Execution taskExecution, Throwable cause) {
+
 		final ExecutionVertex ev = taskExecution.getVertex();
 		final FailoverRegion failoverRegion = vertexToRegion.get(ev);
-
 		if (failoverRegion == null) {
 			executionGraph.failGlobal(new FlinkException(
-					"Can not find a failover region for the execution " + ev.getTaskNameWithSubtaskIndex(), cause));
+				"Can not find a failover region for the execution " + ev.getTaskNameWithSubtaskIndex(), cause));
+			return;
 		}
-		else {
-			LOG.info("Recovering task failure for {} #{} ({}) via restart of failover region",
-					taskExecution.getVertex().getTaskNameWithSubtaskIndex(),
-					taskExecution.getAttemptNumber(),
-					taskExecution.getAttemptId());
 
-			failoverRegion.onExecutionFail(taskExecution, cause);
+		// if it's DataConsumptionException, the producer need to rerun.
+		Optional<DataConsumptionException> dataConsumptionException =
+			ExceptionUtils.findThrowable(cause, DataConsumptionException.class);
+		if (dataConsumptionException.isPresent()) {
+			ResultPartitionID predecessorResultPartition = dataConsumptionException.get().getResultPartitionId();
+
+			Execution producer = executionGraph.getRegisteredExecutions().get(predecessorResultPartition.getProducerId());
+			if (producer == null) {
+				// If the producer has finished, it is removed from registeredExecutions and we need to locate it via the
+				// ResultPartitionID and the down-stream task.
+				for (IntermediateResult intermediateResult : ev.getJobVertex().getInputs()) {
+					IntermediateResultPartition resultPartition = intermediateResult.getPartitionOrNullById(
+						predecessorResultPartition.getPartitionId());
+					if (resultPartition != null) {
+						Execution producerVertexCurrentAttempt = resultPartition.getProducer().getCurrentExecutionAttempt();
+						if (producerVertexCurrentAttempt.getAttemptId().equals(predecessorResultPartition.getProducerId())) {
+							producer = producerVertexCurrentAttempt;
+						} else {
+							LOG.warn("partition {} has already been disposed, skip restarting the producer.",
+								predecessorResultPartition);
+						}
+						break;
+					}
+				}
+			}
+
+			if (producer != null) {
+				FailoverRegion producerRegion = vertexToRegion.get(producer.getVertex());
+				if (producerRegion == null) {
+					executionGraph.failGlobal(new Exception(
+						"Can not find a failover region for the execution "
+							+ producer.getVertex().getTaskNameWithSubtaskIndex(), cause));
+					return;
+				}
+
+				if (producerRegion != failoverRegion) {
+					LOG.info("Try restarting producer of {} due to DataConsumptionException", taskExecution);
+
+					this.onTaskFailure(producer, new FlinkException(predecessorResultPartition.toString()
+						+ " was report error by consumer."));
+				}
+			}
 		}
+
+		// Cancel and restart the region of the target vertex
+		LOG.info("Recovering task failure for {} #{} ({}) via restart of failover region",
+				ev.getTaskNameWithSubtaskIndex(),
+				taskExecution.getAttemptNumber(),
+				taskExecution.getAttemptId());
+
+		failoverRegion.onExecutionFail(taskExecution, cause);
 	}
 
 	@Override
