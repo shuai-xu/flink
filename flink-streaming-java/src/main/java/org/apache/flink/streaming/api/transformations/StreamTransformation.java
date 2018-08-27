@@ -131,6 +131,9 @@ public abstract class StreamTransformation<T> {
 	 */
 	private int maxParallelism = -1;
 
+	/** Indicate this is a non-parallel operator and cannot set a non-1 degree of parallelism. **/
+	protected boolean nonParallel = false;
+
 	/**
 	 *  The minimum resources for this stream transformation. It defines the lower limit for
 	 *  dynamic resources resize in future plan.
@@ -210,7 +213,23 @@ public abstract class StreamTransformation<T> {
 		Preconditions.checkArgument(
 				parallelism > 0 || parallelism == ExecutionConfig.PARALLELISM_DEFAULT,
 				"The parallelism must be at least one, or ExecutionConfig.PARALLELISM_DEFAULT (use system default).");
+		Preconditions.checkArgument(canBeParallel() || parallelism == 1,
+			"The parallelism of non parallel operator must be 1.");
 		this.parallelism = parallelism;
+	}
+
+	/**
+	 * Sets the parallelism and maximum parallelism of this operator to one.
+	 * And mark this operator cannot set a non-1 degree of parallelism.
+	 */
+	public void forceNonParallel() {
+		setParallelism(1);
+		setMaxParallelism(1);
+		nonParallel = true;
+	}
+
+	private boolean canBeParallel() {
+		return !nonParallel;
 	}
 
 	/**

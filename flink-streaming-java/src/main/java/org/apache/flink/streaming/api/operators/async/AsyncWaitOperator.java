@@ -410,4 +410,9 @@ public class AsyncWaitOperator<IN, OUT>
 	public void failOperator(Throwable throwable) {
 		getContainingTask().getEnvironment().failExternally(throwable);
 	}
+
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }

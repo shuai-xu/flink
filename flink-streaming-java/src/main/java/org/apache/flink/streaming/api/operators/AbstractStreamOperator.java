@@ -180,6 +180,8 @@ public abstract class AbstractStreamOperator<OUT>
 	private long input1Watermark = Long.MIN_VALUE;
 	private long input2Watermark = Long.MIN_VALUE;
 
+	private boolean requireState;
+
 	// ------------------------------------------------------------------------
 	//  Life Cycle
 	// ------------------------------------------------------------------------
@@ -883,5 +885,14 @@ public abstract class AbstractStreamOperator<OUT>
 	public int numEventTimeTimers() {
 		return timeServiceManager == null ? 0 :
 			timeServiceManager.numEventTimeTimers();
+	}
+
+	@Override
+	public boolean requireState() {
+		return this.requireState;
+	}
+
+	public void setRequireState(boolean requireState) {
+		this.requireState = requireState;
 	}
 }

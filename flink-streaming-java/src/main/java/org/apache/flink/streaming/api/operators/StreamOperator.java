@@ -127,4 +127,12 @@ public interface StreamOperator<OUT> extends CheckpointListener, KeyContext, Dis
 	MetricGroup getMetricGroup();
 
 	OperatorID getOperatorID();
+
+	/**
+	 * indicates if this operator has state.
+	 * @return
+	 */
+	default boolean requireState() {
+		return false;
+	}
 }
