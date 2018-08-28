@@ -30,7 +30,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.FormatUtil;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
@@ -738,13 +737,13 @@ public class StreamingJobGraphGenerator {
 					upstreamVertex,
 					dataSetID,
 					DistributionPattern.POINTWISE,
-					ResultPartitionType.PIPELINED_BOUNDED);
+					edge.getResultPartitionType());
 			} else {
 				jobEdge = downstreamVertex.connectDataSetAsInput(
 					upstreamVertex,
 					dataSetID,
 					DistributionPattern.ALL_TO_ALL,
-					ResultPartitionType.PIPELINED_BOUNDED);
+					edge.getResultPartitionType());
 			}
 			// set strategy name so that web interface can show it.
 			jobEdge.setShipStrategyName(partitioner.toString());
@@ -1174,7 +1173,8 @@ public class StreamingJobGraphGenerator {
 				&& (upstreamOperator.getChainingStrategy() == ChainingStrategy.HEAD ||
 				upstreamOperator.getChainingStrategy() == ChainingStrategy.ALWAYS)
 				&& (edge.getPartitioner() instanceof ForwardPartitioner)
-				&& downStreamNode.getParallelism() == upstreamNode.getParallelism();
+				&& downStreamNode.getParallelism() == upstreamNode.getParallelism()
+				&& !edge.getResultPartitionType().isBlocking();
 		}
 	}
 

@@ -309,6 +309,65 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	}
 
 	@Test
+	public void testBlockingEdgeNotChained() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(5);
+
+		// fromElements -> Map -> Print
+		env.fromElements(1, 2, 3).name("source1")
+			.map((MapFunction<Integer, Integer>) value -> value).name("map1")
+			.print().name("print1");
+
+		// chaining
+		{
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(env.getStreamGraph());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(2, verticesSorted.size());
+
+			JobVertex sourceVertex = verticesSorted.get(0);
+			assertEquals("Source: source1", sourceVertex.getName());
+			assertEquals(1, sourceVertex.getParallelism());
+
+			JobVertex mapPrintVertex = verticesSorted.get(1);
+			assertEquals("map1 -> Sink: print1", mapPrintVertex.getName());
+			assertEquals(5, mapPrintVertex.getParallelism());
+		}
+
+		// set blocking edge
+		{
+			StreamGraph streamGraph = env.getStreamGraph();
+			Map<String, StreamNode> streamNodeMap = new HashMap<>();
+			for (StreamNode node : streamGraph.getStreamNodes()) {
+				streamNodeMap.put(node.getOperatorName(), node);
+			}
+			List<StreamEdge> streamEdges = streamNodeMap.get("map1").getOutEdges();
+			assertEquals(1, streamEdges.size());
+			streamEdges.get(0).setResultPartitionType(ResultPartitionType.BLOCKING);
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(3, verticesSorted.size());
+
+			JobVertex sourceVertex = verticesSorted.get(0);
+			JobVertex mapVertex = verticesSorted.get(1);
+			JobVertex printVertex = verticesSorted.get(2);
+
+			assertEquals("Source: source1", sourceVertex.getName());
+			assertEquals("map1", mapVertex.getName());
+			assertEquals("Sink: print1", printVertex.getName());
+
+			assertEquals(1, sourceVertex.getParallelism());
+			assertEquals(5, mapVertex.getParallelism());
+			assertEquals(5, printVertex.getParallelism());
+
+			assertEquals(1, mapVertex.getProducedDataSets().size());
+			assertEquals(ResultPartitionType.BLOCKING, mapVertex.getProducedDataSets().get(0).getResultType());
+		}
+	}
+
+	@Test
 	public void testParallelismOneNotChained() {
 
 		// --------- the program ---------

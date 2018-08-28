@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.EdgeID;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.util.OutputTag;
@@ -63,14 +64,27 @@ public class StreamEdge implements Serializable {
 	 */
 	private StreamPartitioner<?> outputPartitioner;
 
+	/**
+	 * The {@link ResultPartitionType} on this {@link StreamEdge}.
+	 */
+	private ResultPartitionType resultPartitionType;
+
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag) {
+		this(sourceVertex, targetVertex, typeNumber, selectedNames, outputPartitioner, outputTag,
+			ResultPartitionType.PIPELINED_BOUNDED);
+	}
+
+	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
+			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag,
+			ResultPartitionType resultPartitionType) {
 		this.sourceVertex = sourceVertex;
 		this.targetVertex = targetVertex;
 		this.typeNumber = typeNumber;
 		this.selectedNames = selectedNames;
 		this.outputPartitioner = outputPartitioner;
 		this.outputTag = outputTag;
+		this.resultPartitionType = resultPartitionType;
 
 		this.edgeID = new EdgeID();
 
@@ -114,8 +128,16 @@ public class StreamEdge implements Serializable {
 		return outputPartitioner;
 	}
 
+	public ResultPartitionType getResultPartitionType() {
+		return resultPartitionType;
+	}
+
 	public void setPartitioner(StreamPartitioner<?> partitioner) {
 		this.outputPartitioner = partitioner;
+	}
+
+	public void setResultPartitionType(ResultPartitionType resultPartitionType) {
+		this.resultPartitionType = resultPartitionType;
 	}
 
 	@Override
@@ -141,6 +163,6 @@ public class StreamEdge implements Serializable {
 	public String toString() {
 		return "(" + sourceVertex + " -> " + targetVertex + ", typeNumber=" + typeNumber
 				+ ", selectedNames=" + selectedNames + ", outputPartitioner=" + outputPartitioner
-				+ ", outputTag=" + outputTag + ')';
+				+ ", outputTag=" + outputTag + ", resultPartitionType" + resultPartitionType + ')';
 	}
 }
