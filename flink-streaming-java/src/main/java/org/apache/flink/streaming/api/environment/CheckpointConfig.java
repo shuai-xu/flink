@@ -129,6 +129,13 @@ public class CheckpointConfig implements java.io.Serializable {
 	}
 
 	/**
+	 * Sets the interval -1 to disable checkpointing.
+	 */
+	public void disableCheckpointing() {
+		this.checkpointInterval = -1;
+	}
+
+	/**
 	 * Gets the maximum time that a checkpoint may take before being discarded.
 	 *
 	 * @return The checkpoint timeout, in milliseconds.

@@ -425,6 +425,16 @@ public abstract class StreamExecutionEnvironment {
 	}
 
 	/**
+	 * Disables checkpointing for the streaming job.
+	 *
+	 * @return StreamExecutionEnvironment with checkpointing disabled.
+	 */
+	public StreamExecutionEnvironment disableCheckpointing() {
+		checkpointCfg.disableCheckpointing();
+		return this;
+	}
+
+	/**
 	 * Returns the checkpointing interval or -1 if checkpointing is disabled.
 	 *
 	 * <p>Shorthand for {@code getCheckpointConfig().getCheckpointInterval()}.

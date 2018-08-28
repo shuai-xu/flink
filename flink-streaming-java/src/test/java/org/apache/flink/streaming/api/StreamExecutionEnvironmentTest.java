@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -224,6 +225,21 @@ public class StreamExecutionEnvironmentTest {
 		// override config
 		env.getStreamGraph().getJobGraph();
 		Assert.assertEquals(1 << 15 , operator.getTransformation().getMaxParallelism());
+	}
+
+	@Test
+	public void testCheckpointingOnOff() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		assertFalse(env.getCheckpointConfig().isCheckpointingEnabled());
+		assertEquals(-1, env.getCheckpointInterval());
+
+		env.enableCheckpointing(5000);
+		assertTrue(env.getCheckpointConfig().isCheckpointingEnabled());
+		assertEquals(5000, env.getCheckpointInterval());
+
+		env.disableCheckpointing();
+		assertFalse(env.getCheckpointConfig().isCheckpointingEnabled());
+		assertEquals(-1, env.getCheckpointInterval());
 	}
 
 	/////////////////////////////////////////////////////////////

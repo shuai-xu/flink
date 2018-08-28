@@ -131,6 +131,11 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
 
   def isMultiHeadChainMode = javaEnv.isMultiHeadChainMode;
 
+  def disableCheckpointing(): StreamExecutionEnvironment = {
+    javaEnv.disableCheckpointing()
+    this
+  }
+
   // ------------------------------------------------------------------------
   //  Checkpointing Settings
   // ------------------------------------------------------------------------
