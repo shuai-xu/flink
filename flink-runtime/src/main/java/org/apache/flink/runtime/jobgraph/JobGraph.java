@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobgraph;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.JobID;
@@ -254,6 +255,7 @@ public class JobGraph implements Serializable {
 		return allowQueuedScheduling;
 	}
 
+	@VisibleForTesting
 	public void setScheduleMode(ScheduleMode scheduleMode) {
 		this.schedulingConfiguration.setString(ScheduleMode.class.getName(), scheduleMode.toString());
 	}

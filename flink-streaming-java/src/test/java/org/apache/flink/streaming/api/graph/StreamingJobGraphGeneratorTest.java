@@ -34,6 +34,7 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.MultiInputOutputFormatVertex;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.runtime.state.StateBackend;
@@ -127,6 +128,9 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		streamNodeMap.get("filter2").setOutputFormat(new SerializedOutputFormat());
 
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+		assertEquals(ScheduleMode.EAGER,
+			ScheduleMode.valueOf(jobGraph.getSchedulingConfiguration().getString(ScheduleMode.class.getName(), null)));
+
 		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
 		assertEquals(4, verticesSorted.size());
 

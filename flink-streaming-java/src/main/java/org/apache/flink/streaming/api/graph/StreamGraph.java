@@ -31,6 +31,7 @@ import org.apache.flink.api.java.typeutils.MissingTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.optimizer.plan.StreamingPlan;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
@@ -107,6 +108,9 @@ public class StreamGraph extends StreamingPlan {
 		this.environment = environment;
 		this.executionConfig = environment.getConfig();
 		this.checkpointConfig = environment.getCheckpointConfig();
+
+		// set default schedule mode
+		this.customConfiguration.setString(ScheduleMode.class.getName(), ScheduleMode.EAGER.toString());
 
 		// create an empty new stream graph.
 		clear();
