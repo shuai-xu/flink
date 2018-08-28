@@ -58,7 +58,7 @@ class BufferDataOverWindowOperator(
   override def open(): Unit = {
     super.open()
 
-    val types = getOperatorContext.getTypeSerializerIn1
+    val types = getOperatorConfig.getTypeSerializerIn1(getUserCodeClassloader)
         .asInstanceOf[AbstractRowSerializer[_]].getTypes
 
     baseRowSerializer = new BaseRowSerializer(types: _*)

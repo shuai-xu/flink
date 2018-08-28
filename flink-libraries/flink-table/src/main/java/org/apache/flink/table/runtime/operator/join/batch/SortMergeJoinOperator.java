@@ -23,7 +23,7 @@ import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
@@ -151,11 +151,11 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 
 		collector = new StreamRecordCollector<>(output);
 
-		this.inputSerializer1 = getOperatorContext().getTypeSerializerIn1();
+		this.inputSerializer1 = getOperatorConfig().getTypeSerializerIn1(getUserCodeClassloader());
 		this.serializer1 =
 				new BinaryRowSerializer(((AbstractRowSerializer) inputSerializer1).getTypes());
 
-		this.inputSerializer2 = getOperatorContext().getTypeSerializerIn2();
+		this.inputSerializer2 = getOperatorConfig().getTypeSerializerIn2(getUserCodeClassloader());
 		this.serializer2 =
 				new BinaryRowSerializer(((AbstractRowSerializer) inputSerializer2).getTypes());
 
@@ -228,43 +228,37 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 	}
 
 	@Override
-	public InputElementSelection firstInputSelection() {
-		return InputElementSelection.ANY;
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.ANY;
 	}
 
 	@Override
-	public InputElementSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
 		this.sorter1.write(element.getValue());
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	@Override
-	public InputElementSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
 		this.sorter2.write(element.getValue());
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	@Override
-	public InputElementSelection endInput1() throws Exception {
+	public void endInput1() throws Exception {
 		sendStageDoneEvent(0);
 		isFinished[0] = true;
 		if (isAllFinished()) {
 			doSortMergeJoin();
-			return InputElementSelection.NONE;
-		} else {
-			return InputElementSelection.ANY;
 		}
 	}
 
 	@Override
-	public InputElementSelection endInput2() throws Exception {
+	public void endInput2() throws Exception {
 		sendStageDoneEvent(1);
 		isFinished[1] = true;
 		if (isAllFinished()) {
 			doSortMergeJoin();
-			return InputElementSelection.NONE;
-		} else {
-			return InputElementSelection.ANY;
 		}
 	}
 

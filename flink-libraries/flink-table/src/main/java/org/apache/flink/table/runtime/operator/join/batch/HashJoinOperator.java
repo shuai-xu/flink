@@ -22,7 +22,7 @@ import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.CodeGenUtils;
@@ -44,9 +44,6 @@ import org.codehaus.commons.compiler.CompileException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.flink.streaming.api.operators.InputElementSelection.FIRST;
-import static org.apache.flink.streaming.api.operators.InputElementSelection.NONE;
-import static org.apache.flink.streaming.api.operators.InputElementSelection.SECOND;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -55,7 +52,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * hybrid-hash-join internally to match the records with equal key. The build side
  * of the hash is the first input of the match.
  */
-public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics<BaseRow>
+public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetrics<BaseRow>
 		implements TwoInputStreamOperator<BaseRow, BaseRow, BaseRow> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(HashJoinOperator.class);
@@ -115,9 +112,11 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 
 		// types
 		// Runtime will shuffle the rows, so let's use binaryRow.
-		final AbstractRowSerializer buildSerializer = (AbstractRowSerializer) getOperatorContext().getTypeSerializerIn1();
+		final AbstractRowSerializer buildSerializer = (AbstractRowSerializer) getOperatorConfig()
+			.getTypeSerializerIn1(getUserCodeClassloader());
 
-		final AbstractRowSerializer probeSerializer = (AbstractRowSerializer) getOperatorContext().getTypeSerializerIn2();
+		final AbstractRowSerializer probeSerializer = (AbstractRowSerializer) getOperatorConfig()
+			.getTypeSerializerIn2(getUserCodeClassloader());
 
 		boolean hashJoinUseBitMaps =
 				getContainingTask().getEnvironment().getTaskConfiguration().getBoolean(
@@ -180,34 +179,33 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 	}
 
 	@Override
-	public InputElementSelection firstInputSelection() {
-		return FIRST;
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public InputElementSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
 		this.table.putBuildRow(element.getValue());
-		return FIRST;
+		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public InputElementSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
 		if (this.table.tryProbe(element.getValue())) {
 			joinWithNextKey();
 		}
-		return SECOND;
+		return TwoInputSelection.SECOND;
 	}
 
 	@Override
-	public InputElementSelection endInput1() throws Exception {
+	public void endInput1() throws Exception {
 		sendStageDoneEvent(0);
 		LOG.info("Finish build phase.");
 		this.table.endBuild();
-		return SECOND;
 	}
 
 	@Override
-	public InputElementSelection endInput2() throws Exception {
+	public void endInput2() throws Exception {
 		if (type.buildLeftSemiOrAnti()) {
 			sendStageDoneEvent(1);
 		}
@@ -216,7 +214,6 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 			joinWithNextKey();
 		}
 		LOG.info("Finish rebuild phase.");
-		return NONE;
 	}
 
 	private void joinWithNextKey() throws Exception {

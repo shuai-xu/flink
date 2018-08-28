@@ -77,7 +77,7 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 
 		cookGeneratedClasses(getContainingTask().getUserCodeClassLoader());
 
-		TypeSerializer<BaseRow> inputSerializer = getOperatorContext().getTypeSerializerIn1();
+		TypeSerializer<BaseRow> inputSerializer = getOperatorConfig().getTypeSerializerIn1(getUserCodeClassloader());
 		this.binarySerializer =
 				new BinaryRowSerializer(((AbstractRowSerializer) inputSerializer).getTypes());
 

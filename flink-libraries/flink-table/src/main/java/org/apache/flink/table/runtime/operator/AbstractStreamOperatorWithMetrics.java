@@ -104,7 +104,7 @@ public class AbstractStreamOperatorWithMetrics<OUT> extends AbstractStreamOperat
 	public void close() throws Exception {
 		if (isCollectMetricEnabled()) {
 			LongCounter rowCountAcc = new LongCounter(counter.getCount());
-			String rowCountAccName = ACCUMULATOR_PREFIX + getOperatorContext().getNodeID();
+			String rowCountAccName = ACCUMULATOR_PREFIX + getOperatorConfig().getVertexID();
 			getRuntimeContext().addAccumulator(rowCountAccName, rowCountAcc);
 		}
 		super.close();
