@@ -33,6 +33,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointRecoveryFactory;
 import org.apache.flink.runtime.checkpoint.StandaloneCheckpointRecoveryFactory;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
+import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.failover.FailoverRegion;
@@ -318,11 +319,11 @@ public class ExecutionGraphTestUtils {
 	// ------------------------------------------------------------------------
 	//  state modifications
 	// ------------------------------------------------------------------------
-	
+
 	public static void setVertexState(ExecutionVertex vertex, ExecutionState state) {
 		try {
 			Execution exec = vertex.getCurrentExecutionAttempt();
-			
+
 			Field f = Execution.class.getDeclaredField("state");
 			f.setAccessible(true);
 			f.set(exec, state);
@@ -331,7 +332,7 @@ public class ExecutionGraphTestUtils {
 			throw new RuntimeException("Modifying the state failed", e);
 		}
 	}
-	
+
 	public static void setVertexResource(ExecutionVertex vertex, SimpleSlot slot) {
 		Execution exec = vertex.getCurrentExecutionAttempt();
 
@@ -537,6 +538,7 @@ public class ExecutionGraphTestUtils {
 			metrics,
 			parallelismForAutoMax,
 			blobWriter,
+			new ResultPartitionLocationTrackerProxy(jobGraph.getJobConfiguration()),
 			allocationTimeout,
 			log);
 
@@ -669,6 +671,7 @@ public class ExecutionGraphTestUtils {
 			slotProvider,
 			ExecutionGraph.class.getClassLoader(),
 			blobWriter,
+			new ResultPartitionLocationTrackerProxy(jobInformation.getJobConfiguration()),
 			timeout);
 
 		eg.attachJobGraph(vertices);
@@ -794,7 +797,7 @@ public class ExecutionGraphTestUtils {
 	public static final String ERROR_MESSAGE = "test_failure_error_message";
 
 	public static ExecutionJobVertex getExecutionVertex(
-			JobVertexID id, ScheduledExecutorService executor) 
+			JobVertexID id, ScheduledExecutorService executor)
 		throws Exception {
 
 		JobVertex ajv = new JobVertex("TestVertex", id);
@@ -816,11 +819,12 @@ public class ExecutionGraphTestUtils {
 			new Scheduler(ExecutionContext$.MODULE$.fromExecutor(executor)),
 			ExecutionGraph.class.getClassLoader(),
 			VoidBlobWriter.getInstance(),
+			new ResultPartitionLocationTrackerProxy(new Configuration()),
 			AkkaUtils.getDefaultTimeout());
 
 		return spy(new ExecutionJobVertex(graph, ajv, 1, AkkaUtils.getDefaultTimeout()));
 	}
-	
+
 	public static ExecutionJobVertex getExecutionVertex(JobVertexID id) throws Exception {
 		return getExecutionVertex(id, TestingUtils.defaultExecutor());
 	}

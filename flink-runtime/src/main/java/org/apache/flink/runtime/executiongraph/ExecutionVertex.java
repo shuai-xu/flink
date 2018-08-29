@@ -32,6 +32,7 @@ import org.apache.flink.runtime.deployment.InputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.ResultPartitionDeploymentDescriptor;
+import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SimpleSlot;
@@ -517,9 +518,9 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	 * @param timestamp
 	 *             The creation timestamp for the new Execution
 	 * @param originatingGlobalModVersion
-	 *             The 
+	 *             The
 	 *
-	 * @return Returns the new created Execution. 
+	 * @return Returns the new created Execution.
 	 *
 	 * @throws GlobalModVersionMismatch Thrown, if the execution graph has a new global mod
 	 *                                  version than the one passed to this message.
@@ -619,7 +620,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	 */
 	public CompletableFuture<?> cancel() {
 		// to avoid any case of mixup in the presence of concurrent calls,
-		// we copy a reference to the stack to make sure both calls go to the same Execution 
+		// we copy a reference to the stack to make sure both calls go to the same Execution
 		final Execution exec = this.currentExecution;
 		exec.cancel();
 		return exec.getReleaseFuture();
@@ -794,11 +795,14 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 			}
 		}
 
+		ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy =
+			currentExecution.getVertex().getExecutionGraph().getResultPartitionLocationTrackerProxy();
 
 		for (ExecutionEdge[] edges : inputEdges) {
 			InputChannelDeploymentDescriptor[] partitions = InputChannelDeploymentDescriptor.fromEdges(
+				resultPartitionLocationTrackerProxy,
 				edges,
-				targetSlot.getTaskManagerLocation().getResourceID(),
+				targetSlot.getTaskManagerLocation(),
 				lazyScheduling);
 
 			// If the produced partition has multiple consumers registered, we

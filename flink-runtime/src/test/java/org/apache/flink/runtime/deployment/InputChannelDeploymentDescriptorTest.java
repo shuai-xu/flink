@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.deployment;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.Execution;
@@ -85,8 +86,9 @@ public class InputChannelDeploymentDescriptorTest {
 			ExecutionEdge unknownEdge = new ExecutionEdge(unknownPartition, consumer, 2);
 
 			InputChannelDeploymentDescriptor[] desc = InputChannelDeploymentDescriptor.fromEdges(
+				new ResultPartitionLocationTrackerProxy(new Configuration()),
 				new ExecutionEdge[]{localEdge, remoteEdge, unknownEdge},
-				consumerSlot.getTaskManagerLocation().getResourceID(),
+				consumerSlot.getTaskManagerLocation(),
 				allowLazyDeployment);
 
 			assertEquals(3, desc.length);
@@ -136,8 +138,9 @@ public class InputChannelDeploymentDescriptorTest {
 		boolean allowLazyDeployment = true;
 
 		InputChannelDeploymentDescriptor[] desc = InputChannelDeploymentDescriptor.fromEdges(
+			new ResultPartitionLocationTrackerProxy(new Configuration()),
 			new ExecutionEdge[]{unknownEdge},
-			consumerSlot.getTaskManagerLocation().getResourceID(),
+			consumerSlot.getTaskManagerLocation(),
 			allowLazyDeployment);
 
 		assertEquals(1, desc.length);
@@ -151,8 +154,9 @@ public class InputChannelDeploymentDescriptorTest {
 			allowLazyDeployment = false;
 
 			InputChannelDeploymentDescriptor.fromEdges(
+				new ResultPartitionLocationTrackerProxy(new Configuration()),
 				new ExecutionEdge[]{unknownEdge},
-				consumerSlot.getTaskManagerLocation().getResourceID(),
+				consumerSlot.getTaskManagerLocation(),
 				allowLazyDeployment);
 
 			fail("Did not throw expected ExecutionGraphException");

@@ -1040,7 +1040,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 				partitionInfos.add(
 					new PartitionInfo(
 						partialInputChannelDeploymentDescriptor.getResultId(),
-						partialInputChannelDeploymentDescriptor.createInputChannelDeploymentDescriptor(this)));
+						partialInputChannelDeploymentDescriptor.createInputChannelDeploymentDescriptor(
+							this, getVertex().getExecutionGraph().getResultPartitionLocationTrackerProxy())));
 			}
 
 			sendUpdatePartitionInfoRpcCall(partitionInfos);
@@ -1248,7 +1249,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * Releases the assigned resource and completes the release future
 	 * once the assigned resource has been successfully released
 	 *
-	 * @param cause for the resource release, null if none 	 
+	 * @param cause for the resource release, null if none
 	 */
 	private void releaseAssignedResource(@Nullable Throwable cause) {
 		final LogicalSlot slot = assignedResource;

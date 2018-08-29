@@ -38,6 +38,7 @@ import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
 import org.apache.flink.runtime.checkpoint.hooks.MasterHooks;
 import org.apache.flink.runtime.client.JobExecutionException;
 import org.apache.flink.runtime.client.JobSubmissionException;
+import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategyLoader;
 import org.apache.flink.runtime.executiongraph.metrics.DownTimeGauge;
@@ -95,6 +96,7 @@ public class ExecutionGraphBuilder {
 		RestartStrategy restartStrategy,
 		MetricGroup metrics,
 		BlobWriter blobWriter,
+		ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
 		Time allocationTimeout,
 		Logger log)
 		throws JobExecutionException, JobException {
@@ -113,6 +115,7 @@ public class ExecutionGraphBuilder {
 			metrics,
 			-1,
 			blobWriter,
+			resultPartitionLocationTrackerProxy,
 			allocationTimeout,
 			log);
 	}
@@ -137,6 +140,7 @@ public class ExecutionGraphBuilder {
 		MetricGroup metrics,
 		int parallelismForAutoMax,
 		BlobWriter blobWriter,
+		ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
 		Time allocationTimeout,
 		Logger log)
 		throws JobExecutionException, JobException {
@@ -171,6 +175,7 @@ public class ExecutionGraphBuilder {
 					slotProvider,
 					classLoader,
 					blobWriter,
+					resultPartitionLocationTrackerProxy,
 					allocationTimeout);
 		} catch (IOException e) {
 			throw new JobException("Could not create the ExecutionGraph.", e);

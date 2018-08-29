@@ -28,6 +28,7 @@ import org.apache.flink.configuration.SecurityOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
+import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
 import org.apache.flink.runtime.security.SecurityConfiguration;
 import org.apache.flink.runtime.security.SecurityUtils;
 import org.apache.flink.runtime.taskexecutor.TaskManagerRunner;
@@ -38,6 +39,7 @@ import org.apache.flink.util.Preconditions;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,6 +132,9 @@ public class YarnTaskExecutorRunner {
 				configuration.setString(CoreOptions.TMP_DIRS, localDirs);
 			}
 
+			//configure shuffle port
+			configureShufflePort(configuration);
+
 			// tell akka to die in case of an error
 			configuration.setBoolean(AkkaOptions.JVM_EXIT_ON_FATAL_ERROR, true);
 
@@ -177,5 +182,13 @@ public class YarnTaskExecutorRunner {
 			LOG.error("YARN TaskManager initialization failed.", t);
 			System.exit(INIT_ERROR_EXIT_CODE);
 		}
+	}
+
+	private static void configureShufflePort(Configuration configuration) {
+		int shufflePort = new YarnConfiguration(new org.apache.hadoop.conf.Configuration()).getInt(
+			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(),
+			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.defaultValue());
+		LOG.info("update shuffle service port {} by yarn configuration.", shufflePort);
+		configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), shufflePort);
 	}
 }

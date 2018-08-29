@@ -18,13 +18,11 @@
 
 package org.apache.flink.runtime.deployment;
 
-import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionEdge;
 import org.apache.flink.runtime.executiongraph.ExecutionGraphException;
 import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
-import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
@@ -84,8 +82,9 @@ public class InputChannelDeploymentDescriptor implements Serializable {
 	 * Creates an input channel deployment descriptor for each partition.
 	 */
 	public static InputChannelDeploymentDescriptor[] fromEdges(
+			ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
 			ExecutionEdge[] edges,
-			ResourceID consumerResourceId,
+			TaskManagerLocation consumerLocation,
 			boolean allowLazyDeployment) throws ExecutionGraphException {
 
 		final InputChannelDeploymentDescriptor[] icdd = new InputChannelDeploymentDescriptor[edges.length];
@@ -108,20 +107,9 @@ public class InputChannelDeploymentDescriptor implements Serializable {
 						producerState == ExecutionState.DEPLOYING)) {
 
 				final TaskManagerLocation partitionTaskManagerLocation = producerSlot.getTaskManagerLocation();
-				final ResourceID partitionTaskManager = partitionTaskManagerLocation.getResourceID();
 
-				if (partitionTaskManager.equals(consumerResourceId)) {
-					// Consuming task is deployed to the same TaskManager as the partition => local
-					partitionLocation = ResultPartitionLocation.createLocal();
-				}
-				else {
-					// Different instances => remote
-					final ConnectionID connectionId = new ConnectionID(
-							partitionTaskManagerLocation,
-							consumedPartition.getIntermediateResult().getConnectionIndex());
-
-					partitionLocation = ResultPartitionLocation.createRemote(connectionId);
-				}
+				partitionLocation = resultPartitionLocationTrackerProxy.getResultPartitionLocation(
+					partitionTaskManagerLocation, consumerLocation, consumedPartition.getIntermediateResult());
 			}
 			else if (allowLazyDeployment) {
 				// The producing task might not have registered the partition yet

@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.jobmaster;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -43,6 +44,7 @@ import org.apache.flink.runtime.client.JobExecutionException;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.concurrent.FutureUtils;
+import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.execution.SuppressRestartsException;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
@@ -199,6 +201,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private final RestartStrategy restartStrategy;
 
+	private final ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy;
+
 	// --------- BackPressure --------
 
 	private final BackPressureStatsTracker backPressureStatsTracker;
@@ -288,14 +292,18 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		log.info("Initializing job {} ({}).", jobName, jid);
 
+		final ExecutionConfig executionConfig = jobGraph.
+			getSerializedExecutionConfig().deserializeValue(userCodeLoader);
+
 		final RestartStrategies.RestartStrategyConfiguration restartStrategyConfiguration =
-				jobGraph.getSerializedExecutionConfig()
-						.deserializeValue(userCodeLoader)
-						.getRestartStrategy();
+				executionConfig.getRestartStrategy();
 
 		this.restartStrategy = (restartStrategyConfiguration != null) ?
 				RestartStrategyFactory.createRestartStrategy(restartStrategyConfiguration) :
 				jobManagerSharedServices.getRestartStrategyFactory().createRestartStrategy();
+
+		this.resultPartitionLocationTrackerProxy = new ResultPartitionLocationTrackerProxy(
+			jobMasterConfiguration.getConfiguration());
 
 		log.info("Using restart strategy {} for {} ({}).", restartStrategy, jobName, jid);
 
@@ -1214,6 +1222,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			restartStrategy,
 			currentJobManagerJobMetricGroup,
 			blobServer,
+			resultPartitionLocationTrackerProxy,
 			jobMasterConfiguration.getSlotRequestTimeout(),
 			log);
 	}

@@ -43,6 +43,7 @@ import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.FutureUtils.ConjunctFuture;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
+import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.execution.SuppressRestartsException;
@@ -242,6 +243,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	/** Blob writer used to offload RPC messages. */
 	private final BlobWriter blobWriter;
 
+	/** The result partition location tracker proxy to get result partition location from. */
+	private final ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy;
+
 	/** The total number of vertices currently in the execution graph. */
 	private int numVerticesTotal;
 
@@ -318,6 +322,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			SlotProvider slotProvider,
 			ClassLoader userClassLoader,
 			BlobWriter blobWriter,
+			ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
 			Time allocationTimeout) throws IOException {
 
 		checkNotNull(futureExecutor);
@@ -333,6 +338,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 		this.slotProvider = Preconditions.checkNotNull(slotProvider, "scheduler");
 		this.userClassLoader = Preconditions.checkNotNull(userClassLoader, "userClassLoader");
+
+		this.resultPartitionLocationTrackerProxy = Preconditions.checkNotNull(resultPartitionLocationTrackerProxy);
 
 		this.tasks = new ConcurrentHashMap<>(16);
 		this.intermediateResults = new ConcurrentHashMap<>(16);
@@ -400,6 +407,10 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	public void setGraphManagerPlugin(GraphManagerPlugin graphManagerPlugin) {
 		this.graphManagerPlugin = graphManagerPlugin;
 		this.allowLazyDeployment  = graphManagerPlugin.allowLazyDeployment();
+	}
+
+	public ResultPartitionLocationTrackerProxy getResultPartitionLocationTrackerProxy() {
+		return resultPartitionLocationTrackerProxy;
 	}
 
 	public Time getAllocationTimeout() {

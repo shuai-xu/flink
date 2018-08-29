@@ -29,7 +29,7 @@ import akka.actor.Status.{Failure, Success}
 import akka.actor._
 import akka.pattern.ask
 import grizzled.slf4j.Logger
-import org.apache.flink.api.common.JobID
+import org.apache.flink.api.common.{ExecutionConfig, JobID}
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.configuration._
 import org.apache.flink.core.fs.{FileSystem, Path}
@@ -45,6 +45,7 @@ import org.apache.flink.runtime.clusterframework.standalone.StandaloneResourceMa
 import org.apache.flink.runtime.clusterframework.types.ResourceID
 import org.apache.flink.runtime.clusterframework.{BootstrapTools, FlinkResourceManager}
 import org.apache.flink.runtime.concurrent.{FutureUtils, ScheduledExecutorServiceAdapter}
+import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy
 import org.apache.flink.runtime.execution.SuppressRestartsException
 import org.apache.flink.runtime.execution.librarycache.FlinkUserCodeClassLoaders.ResolveOrder
 import org.apache.flink.runtime.execution.librarycache.{BlobLibraryCacheManager, LibraryCacheManager}
@@ -156,7 +157,7 @@ class JobManager(
   var futuresToComplete: Option[Seq[Future[Unit]]] = None
 
   /** The default directory for savepoints. */
-  val defaultSavepointDir: String = 
+  val defaultSavepointDir: String =
     flinkConfiguration.getString(CheckpointingOptions.SAVEPOINT_DIRECTORY)
 
   /** The resource manager actor responsible for allocating and managing task manager resources. */
@@ -1280,6 +1281,9 @@ class JobManager(
         val allocationTimeout: Long = flinkConfiguration.getLong(
           JobManagerOptions.SLOT_REQUEST_TIMEOUT)
 
+        val resultPartitionLocationTrackerProxy: ResultPartitionLocationTrackerProxy =
+          new ResultPartitionLocationTrackerProxy(flinkConfiguration)
+
         executionGraph = ExecutionGraphBuilder.buildGraph(
           executionGraph,
           jobGraph,
@@ -1294,6 +1298,7 @@ class JobManager(
           jobMetrics,
           numSlots,
           blobServer,
+          resultPartitionLocationTrackerProxy,
           Time.milliseconds(allocationTimeout),
           log.logger)
 
@@ -1304,7 +1309,7 @@ class JobManager(
         graphManagerPlugin.open(graphScheduler, jobGraph,
           new SchedulingConfig(configuration, userCodeLoader))
         executionGraph.setGraphManagerPlugin(graphManagerPlugin)
-        
+
         if (registerNewGraph) {
           currentJobs.put(jobGraph.getJobID, (executionGraph, jobInfo))
         }
@@ -1363,7 +1368,7 @@ class JobManager(
                 val allowNonRestored = savepointSettings.allowNonRestoredState()
 
                 executionGraph.getCheckpointCoordinator.restoreSavepoint(
-                  savepointPath, 
+                  savepointPath,
                   allowNonRestored,
                   executionGraph.getAllVertices,
                   executionGraph.getUserClassLoader
@@ -1613,7 +1618,7 @@ class JobManager(
 
   /**
    * Dedicated handler for monitor info request messages.
-   * 
+   *
    * Note that this handler does not fail. Errors while responding to info messages are logged,
    * but will not cause the actor to crash.
    *
@@ -1663,8 +1668,8 @@ class JobManager(
                 ourJobs, archiveOverview)
           }(context.dispatcher)
 
-        case msg : RequestJobDetails => 
-          
+        case msg : RequestJobDetails =>
+
           val ourDetails: List[JobDetails] = if (msg.shouldIncludeRunning()) {
             currentJobs.values.map {
               v => WebMonitorUtils.createDetailsForJob(v._1)
@@ -1672,7 +1677,7 @@ class JobManager(
           } else {
             null
           }
-          
+
           if (msg.shouldIncludeFinished()) {
             val future = (archive ? msg)(timeout)
             future.onSuccess {
@@ -1683,7 +1688,7 @@ class JobManager(
           } else {
             theSender ! new MultipleJobsDetails(util.Arrays.asList(ourDetails: _*))
           }
-          
+
         case _ => log.error("Unrecognized info message " + actorMessage)
       }
     }
@@ -1842,7 +1847,7 @@ class JobManager(
     // terminate JobManager in case of an error
     self ! decorateMessage(PoisonPill)
   }
-  
+
   /**
    * Updates the accumulators reported from a task manager via the Heartbeat message.
    *
@@ -2317,7 +2322,7 @@ object JobManager {
     val parser = new scopt.OptionParser[JobManagerCliOptions]("JobManager") {
       head("Flink JobManager")
 
-      opt[String]("configDir") action { (arg, conf) => 
+      opt[String]("configDir") action { (arg, conf) =>
         conf.setConfigDir(arg)
         conf
       } text {
@@ -2350,9 +2355,9 @@ object JobManager {
       throw new Exception(
         s"Invalid command line arguments: ${args.mkString(" ")}. Usage: ${parser.usage}")
     }
-    
+
     val configDir = cliOptions.getConfigDir()
-    
+
     if (configDir == null) {
       throw new Exception("Missing parameter '--configDir'")
     }
@@ -2506,7 +2511,7 @@ object JobManager {
         if (blobServer != null) {
           blobServer.close()
         }
-        
+
         throw t
     }
 
