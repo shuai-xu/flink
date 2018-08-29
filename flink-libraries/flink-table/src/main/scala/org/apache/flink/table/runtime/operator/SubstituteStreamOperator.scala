@@ -49,11 +49,6 @@ class SubstituteStreamOperator[OUT <: Any](
           clazz.getConstructor(classOf[Array[AnyRef]]).newInstance(references.toArray)
       case _ => clazz.newInstance()
     }
-    streamOperator match {
-      case operator: AbstractStreamOperatorWithMetrics[_] =>
-        operator.setRelID(relID)
-      case _ => Unit
-    }
     streamOperator.setChainingStrategy(chainingStrategy)
     streamOperator
   }
@@ -64,10 +59,6 @@ class SubstituteStreamOperator[OUT <: Any](
 
   override def setChainingStrategy(chainingStrategy: ChainingStrategy): Unit = {
     this.chainingStrategy = chainingStrategy
-  }
-
-  def setRelID(id: Int): Unit = {
-    relID = id
   }
 
   def getRelID: Int = relID

@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.resource;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
@@ -31,23 +30,17 @@ import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.plan.resource.autoconf.RelManagedCalculatorOnStatistics;
 import org.apache.flink.table.plan.resource.autoconf.RelParallelismAdjuster;
 import org.apache.flink.table.plan.resource.autoconf.RelReservedManagedMemAdjuster;
-import org.apache.flink.table.plan.resource.schedule.RunningUnitSchedulerEventHandler;
 import org.apache.flink.table.util.BatchExecResourceUtil;
 import org.apache.flink.table.util.BatchExecResourceUtil.InferGranularity;
-import org.apache.flink.util.FlinkRuntimeException;
-import org.apache.flink.util.InstantiationUtil;
 
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.apache.flink.table.plan.resource.schedule.RunningUnitSchedulerEventHandler.RUNNING_UNIT_CONF_KEY;
 
 /**
  * Assign relNodes to runningUnits.
@@ -96,14 +89,14 @@ public class RunningUnitKeeper {
 	}
 
 	public void setScheduleConfig(StreamExecutionEnvironment streamEnv, StreamGraph streamGraph) {
-		if (useRunningUnit && BatchExecResourceUtil.enableRunningUnitSchedule(tableConfig)) {
-			streamEnv.setConfiguration(JobManagerOptions.SCHEDULER_EVENT_HANDLER, RunningUnitSchedulerEventHandler.class.getName());
-			try {
-				InstantiationUtil.writeObjectToConfig(runningUnits, streamGraph.getProperties().getConfiguration(), RUNNING_UNIT_CONF_KEY);
-			} catch (IOException e) {
-				throw new FlinkRuntimeException("Could not serialize runningUnits to streamGraph config.", e);
-			}
-		}
+//		if (useRunningUnit && BatchExecResourceUtil.enableRunningUnitSchedule(tableConfig)) {
+//			streamEnv.setConfiguration(JobManagerOptions.SCHEDULER_EVENT_HANDLER, RunningUnitSchedulerEventHandler.class.getName());
+//			try {
+//				InstantiationUtil.writeObjectToConfig(runningUnits, streamGraph.getProperties().getConfiguration(), RUNNING_UNIT_CONF_KEY);
+//			} catch (IOException e) {
+//				throw new FlinkRuntimeException("Could not serialize runningUnits to streamGraph config.", e);
+//			}
+//		}
 	}
 
 	public void calculateRelResource(RowBatchExecRel rootNode) {

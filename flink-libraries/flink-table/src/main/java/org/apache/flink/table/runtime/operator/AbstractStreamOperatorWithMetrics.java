@@ -27,8 +27,6 @@ import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.table.plan.resource.schedule.RelStageDoneEvent;
-import org.apache.flink.table.plan.resource.schedule.RelStageID;
 import org.apache.flink.util.OutputTag;
 
 /**
@@ -129,13 +127,5 @@ public class AbstractStreamOperatorWithMetrics<OUT> extends AbstractStreamOperat
 		} else {
 			return false;
 		}
-	}
-
-	public void setRelID(Integer relID) {
-		this.relID = relID;
-	}
-
-	protected void sendStageDoneEvent(int stageID) {
-		sendOperatorEvent(new RelStageDoneEvent(getOperatorID(), new RelStageID(relID, stageID)));
 	}
 }

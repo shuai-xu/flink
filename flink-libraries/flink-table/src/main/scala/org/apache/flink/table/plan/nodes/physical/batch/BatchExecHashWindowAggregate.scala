@@ -141,7 +141,6 @@ class BatchExecHashWindowAggregate(
       resultPartitionCount)
     LOG.info(
       this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
-    operator.setRelID(transformation.getId)
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)

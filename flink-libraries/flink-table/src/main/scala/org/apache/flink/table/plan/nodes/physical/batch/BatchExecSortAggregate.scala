@@ -174,7 +174,6 @@ class BatchExecSortAggregate(
       operator,
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    operator.setRelID(transformation.getId)
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)
