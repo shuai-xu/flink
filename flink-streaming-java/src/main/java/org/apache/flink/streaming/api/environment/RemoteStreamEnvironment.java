@@ -171,9 +171,7 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 	}
 
 	@Override
-	public JobExecutionResult execute(String jobName) throws ProgramInvocationException {
-		StreamGraph streamGraph = getStreamGraph();
-		streamGraph.setJobName(jobName);
+	public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
 		transformations.clear();
 		return executeRemotely(streamGraph, jarFiles);
 	}

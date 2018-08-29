@@ -63,16 +63,12 @@ public class LegacyLocalStreamEnvironment extends LocalStreamEnvironment {
 	 * Executes the JobGraph of the on a mini cluster of CLusterUtil with a user
 	 * specified name.
 	 *
-	 * @param jobName
-	 *            name of the job
+	 * @param streamGraph Stream Graph to execute
 	 * @return The result of the job execution, containing elapsed time and accumulators.
 	 */
 	@Override
-	public JobExecutionResult execute(String jobName) throws Exception {
+	public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
 		// transform the streaming program into a JobGraph
-		StreamGraph streamGraph = getStreamGraph();
-		streamGraph.setJobName(jobName);
-
 		JobGraph jobGraph = streamGraph.getJobGraph();
 
 		Configuration configuration = new Configuration();

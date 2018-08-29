@@ -48,6 +48,7 @@ import org.apache.flink.runtime.testingUtils.TestingTaskManagerMessages;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OptionalFailure;
 import org.apache.flink.util.TestLogger;
@@ -381,6 +382,11 @@ public class LegacyAccumulatorLiveITCase extends TestLogger {
 
 		@Override
 		public JobExecutionResult execute(String jobName) throws Exception {
+			throw new RuntimeException("This should not be called.");
+		}
+
+		@Override
+		public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
 			throw new RuntimeException("This should not be called.");
 		}
 	}

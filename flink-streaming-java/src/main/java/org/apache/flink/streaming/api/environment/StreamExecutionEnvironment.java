@@ -1754,7 +1754,24 @@ public abstract class StreamExecutionEnvironment {
 	 * @return The result of the job execution, containing elapsed time and accumulators.
 	 * @throws Exception which occurs during job execution.
 	 */
-	public abstract JobExecutionResult execute(String jobName) throws Exception;
+	public JobExecutionResult execute(String jobName) throws Exception {
+		Preconditions.checkNotNull("Streaming Job name should not be null.");
+
+		StreamGraph streamGraph = this.getStreamGraph();
+		streamGraph.setJobName(jobName);
+
+		return execute(streamGraph);
+	}
+
+	/**
+	 * Triggers the program execution with stream graph.
+	 *
+	 * @param streamGraph The stream graph
+	 * @return The result of the job execution, containing elapsed time and accumulators.
+	 * @throws Exception which occurs during job execution.
+	 */
+	@Internal
+	public abstract JobExecutionResult execute(StreamGraph streamGraph) throws Exception;
 
 	/**
 	 * Getter of the {@link org.apache.flink.streaming.api.graph.StreamGraph} of the streaming job.
