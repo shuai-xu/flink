@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.calcite;
+package org.apache.flink.table.calcite.sql.type;
 
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.types.DecimalType;
@@ -30,12 +30,17 @@ import org.apache.calcite.sql.type.SqlTypeTransforms;
 
 import java.math.BigDecimal;
 
-/** Type inference in Flink. */
+/**
+ * Type inference in Flink.
+ */
 public class FlinkReturnTypes {
 
-	/** ROUND(num [,len]) type inference. */
+	/**
+	 * ROUND(num [,len]) type inference.
+	 */
 	public static final SqlReturnTypeInference ROUND_FUNCTION = new SqlReturnTypeInference() {
-		@Override public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
+		@Override
+		public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
 			final RelDataType numType = opBinding.getOperandType(0);
 			if (numType.getSqlTypeName() != SqlTypeName.DECIMAL) {
 				return numType;
@@ -57,7 +62,7 @@ public class FlinkReturnTypes {
 			final int r = lenVal.intValueExact();
 			DecimalType dt = Decimal.inferRoundType(p, s, r);
 			return opBinding.getTypeFactory().createSqlType(
-					SqlTypeName.DECIMAL, dt.precision(), dt.scale());
+				SqlTypeName.DECIMAL, dt.precision(), dt.scale());
 		}
 
 		private BigDecimal getArg1Literal(SqlOperatorBinding opBinding) {
@@ -70,6 +75,11 @@ public class FlinkReturnTypes {
 	};
 
 	public static final SqlReturnTypeInference ROUND_FUNCTION_NULLABLE =
-			ReturnTypes.cascade(ROUND_FUNCTION, SqlTypeTransforms.TO_NULLABLE);
+		ReturnTypes.cascade(ROUND_FUNCTION, SqlTypeTransforms.TO_NULLABLE);
 
+	public static final SqlReturnTypeInference NUMERIC_FROM_ARG1_DEFAULT1 =
+		new NumericOrDefaultReturnTypeInference(1, 1);
+
+	public static final SqlReturnTypeInference NUMERIC_FROM_ARG1_DEFAULT1_NULLABLE =
+		ReturnTypes.cascade(NUMERIC_FROM_ARG1_DEFAULT1, SqlTypeTransforms.TO_NULLABLE);
 }

@@ -195,7 +195,7 @@ class TypeCoercionITCase extends QueryTest {
     checkResult(
       """
         |select if(1>0, cast(1 as decimal(2, 1)), cast(0 as decimal(3, 2))) from t4
-      """.stripMargin, Seq(row("1.0")))
+      """.stripMargin, Seq(row("1.00")))
     checkResult(
       """
         |select if(1>0, '2', cast(0 as decimal(3, 2))) from t4
@@ -209,6 +209,46 @@ class TypeCoercionITCase extends QueryTest {
   /**
     * Test cases for [BLINK-15418401].
     */
+  @Test
+  def testIfFuncNumericArgs(): Unit = {
+    val numericTypes = Seq(
+      "tinyint",
+      "smallint",
+      "integer",
+      "bigint",
+      "decimal(5, 3)",
+      "float",
+      "double"
+    )
+
+    for (t1 <- numericTypes) {
+      for (t2 <- numericTypes) {
+        val result =
+          if (t1 == "float" || t1 == "double" || t2 == "float" || t2 == "double") "1.0"
+          else if (t1 == "decimal(5, 3)" || t2 == "decimal(5, 3)") "1.000"
+          else "1"
+        checkResult(s"select if(1 > 0, cast(1 as $t1), cast(0 as $t2)) from t4",
+          Seq(row(result)))
+      }
+    }
+  }
+
+  @Test
+  def testIfFuncDecimalArgs(): Unit = {
+    checkResult(
+      "select if(1 > 0, cast(111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
+      Seq(row("111.000")))
+    checkResult(
+      "select if(1 < 0, cast(111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
+      Seq(row("0.222")))
+    checkResult(
+      "select if(1 > 0, cast(-111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
+      Seq(row("-111.000")))
+    checkResult(
+      "select if(1 < 0, cast(111 as decimal(5, 2)), cast(-0.222 as decimal(3, 3))) from t4",
+      Seq(row("-0.222")))
+  }
+
   @Test
   def testBinaryTypeCast(): Unit = {
     checkResult(
@@ -1462,7 +1502,7 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row(null))
     )
     val list = List("tinyint", "smallint", "int", "bigint", "double", "float", "boolean")
-    list foreach(i=> {
+    list foreach(i => {
       checkResult(
         s"""
            |SELECT CAST(CAST(x AS DECIMAL(1,1)) AS $i) from t4

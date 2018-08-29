@@ -423,13 +423,11 @@ class DecimalITCase extends QueryTest {
 
   @Test // functions that treat Decimal as exact value
   def testExactFunctions(): Unit = {
-    // We do not have a decimal family now,
-    // the implicit type coercion will coerce operands to varchar.
     checkQuery1(
       Seq(DECIMAL(10, 2), DECIMAL(10, 2)),
       s1r(d"3.14", d"2.17"),
       "select if(f0>f1, f0, f1) from Table1",
-      Seq(STRING),
+      Seq(DECIMAL(10, 2)),
       s1r(d"3.14"))
 
     checkQuery1(

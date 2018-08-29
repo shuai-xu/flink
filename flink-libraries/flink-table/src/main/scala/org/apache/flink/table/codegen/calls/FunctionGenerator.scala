@@ -720,36 +720,24 @@ object FunctionGenerator {
     Seq(DataTypes.BOOLEAN, DataTypes.BOOLEAN, DataTypes.BOOLEAN),
     new IfCallGen())
 
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, DataTypes.BYTE, DataTypes.BYTE),
-    new IfCallGen())
+  // This sequence must be in sync with [[NumericOrDefaultReturnTypeInference]]
+  val numericTypes = Seq(
+    DataTypes.BYTE,
+    DataTypes.SHORT,
+    DataTypes.INT,
+    DataTypes.LONG,
+    DecimalType.DEFAULT,
+    DataTypes.FLOAT,
+    DataTypes.DOUBLE)
 
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, DataTypes.SHORT, DataTypes.SHORT),
-    new IfCallGen())
-
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, DataTypes.INT, DataTypes.INT),
-    new IfCallGen())
-
-
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, DataTypes.LONG, DataTypes.LONG),
-    new IfCallGen())
-
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, DataTypes.FLOAT, DataTypes.FLOAT),
-    new IfCallGen())
-
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, DataTypes.DOUBLE, DataTypes.DOUBLE),
-    new IfCallGen())
+  for (t1 <- numericTypes) {
+    for (t2 <- numericTypes) {
+      addSqlFunction(
+        ScalarSqlFunctions.IF,
+        Seq(DataTypes.BOOLEAN, t1, t2),
+        new IfCallGen())
+    }
+  }
 
   addSqlFunction(
     ScalarSqlFunctions.IF,
@@ -769,11 +757,6 @@ object FunctionGenerator {
   addSqlFunction(
     ScalarSqlFunctions.IF,
     Seq(DataTypes.BOOLEAN, DataTypes.TIME, DataTypes.TIME),
-    new IfCallGen())
-
-  addSqlFunction(
-    ScalarSqlFunctions.IF,
-    Seq(DataTypes.BOOLEAN, ANY_DEC_TYPE, ANY_DEC_TYPE),
     new IfCallGen())
 
   addSqlFunction(

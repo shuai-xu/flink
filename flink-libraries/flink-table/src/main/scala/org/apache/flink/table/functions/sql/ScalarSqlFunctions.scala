@@ -18,11 +18,12 @@
 package org.apache.flink.table.functions.sql
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelProtoDataType}
+import org.apache.calcite.sql._
 import org.apache.calcite.sql.`type`.{OperandTypes, ReturnTypes, SqlTypeFamily, _}
 import org.apache.calcite.sql.validate.SqlMonotonicity
-import org.apache.calcite.sql._
 import org.apache.flink.table.api.Types
-import org.apache.flink.table.calcite.{FlinkReturnTypes, FlinkTypeFactory, SameOperandTypeExceptFirstOperandChecker}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.calcite.sql.`type`.{FlinkReturnTypes, NumericExceptFirstOperandChecker}
 import org.apache.flink.table.dataformat.Decimal
 
 /**
@@ -73,7 +74,7 @@ object ScalarSqlFunctions {
           val dt = Decimal.inferIntDivType(
             type1.getPrecision, type1.getScale, type2.getPrecision, type2.getScale)
           opBinding.getTypeFactory.createSqlType(SqlTypeName.DECIMAL, dt.precision, dt.scale)
-        } else {  // both are primitive
+        } else { // both are primitive
           type1
         }
       opBinding.getTypeFactory.createTypeWithNullability(returnType,
@@ -139,7 +140,7 @@ object ScalarSqlFunctions {
     SqlKind.OTHER_FUNCTION,
     FlinkReturnTypes.ROUND_FUNCTION_NULLABLE,
     null.asInstanceOf[SqlOperandTypeInference],
-    OperandTypes.or(OperandTypes.NUMERIC_INTEGER,OperandTypes.NUMERIC),
+    OperandTypes.or(OperandTypes.NUMERIC_INTEGER, OperandTypes.NUMERIC),
     SqlFunctionCategory.NUMERIC)
 
   val BIN = new SqlFunction(
@@ -416,7 +417,7 @@ object ScalarSqlFunctions {
     InferTypes.RETURN_TYPE,
     OperandTypes.or(
       OperandTypes.sequence("'(TIMESTAMP, FORMAT)'",
-                            OperandTypes.DATETIME, OperandTypes.STRING),
+        OperandTypes.DATETIME, OperandTypes.STRING),
       OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.STRING),
       OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.STRING)),
     SqlFunctionCategory.TIMEDATE
@@ -525,17 +526,17 @@ object ScalarSqlFunctions {
   val IF = new SqlFunction(
     "IF",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.ARG1_NULLABLE,
+    FlinkReturnTypes.NUMERIC_FROM_ARG1_DEFAULT1_NULLABLE,
     null,
     OperandTypes.or(
+      new NumericExceptFirstOperandChecker(3),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.STRING, SqlTypeFamily.STRING),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.BOOLEAN, SqlTypeFamily.BOOLEAN),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.BINARY, SqlTypeFamily.BINARY),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.DATE, SqlTypeFamily.DATE),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.TIMESTAMP),
-      OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.TIME, SqlTypeFamily.TIME),
-      new SameOperandTypeExceptFirstOperandChecker(3, "BOOLEAN") // BOOLEAN_SAME_SAME
+      OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.TIME, SqlTypeFamily.TIME)
     ),
     SqlFunctionCategory.NUMERIC)
 

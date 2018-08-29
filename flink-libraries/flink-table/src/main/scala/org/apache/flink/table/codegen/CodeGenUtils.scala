@@ -1077,4 +1077,61 @@ object CodeGenUtils {
     }
   }
 
+  // ----------------------------------------------------------------------------------------------
+
+  // Cast numeric type to another numeric type with larger range.
+  // This function must be in sync with [[NumericOrDefaultReturnTypeInference]].
+  def getNumericCastedResultTerm(expr: GeneratedExpression, targetType: InternalType): String = {
+    (expr.resultType, targetType) match {
+      case _ if expr.resultType == targetType => expr.resultTerm
+
+      // byte -> other numeric types
+      case (_: ByteType, _: ShortType) => s"(short) ${expr.resultTerm}"
+      case (_: ByteType, _: IntType) => s"(int) ${expr.resultTerm}"
+      case (_: ByteType, _: LongType) => s"(long) ${expr.resultTerm}"
+      case (_: ByteType, dt: DecimalType) =>
+        s"${classOf[Decimal].getCanonicalName}.castFrom(" +
+          s"${expr.resultTerm}, ${dt.precision}, ${dt.scale})"
+      case (_: ByteType, _: FloatType) => s"(float) ${expr.resultTerm}"
+      case (_: ByteType, _: DoubleType) => s"(double) ${expr.resultTerm}"
+
+      // short -> other numeric types
+      case (_: ShortType, _: IntType) => s"(int) ${expr.resultTerm}"
+      case (_: ShortType, _: LongType) => s"(long) ${expr.resultTerm}"
+      case (_: ShortType, dt: DecimalType) =>
+        s"${classOf[Decimal].getCanonicalName}.castFrom(" +
+          s"${expr.resultTerm}, ${dt.precision}, ${dt.scale})"
+      case (_: ShortType, _: FloatType) => s"(float) ${expr.resultTerm}"
+      case (_: ShortType, _: DoubleType) => s"(double) ${expr.resultTerm}"
+
+      // int -> other numeric types
+      case (_: IntType, _: LongType) => s"(long) ${expr.resultTerm}"
+      case (_: IntType, dt: DecimalType) =>
+        s"${classOf[Decimal].getCanonicalName}.castFrom(" +
+          s"${expr.resultTerm}, ${dt.precision}, ${dt.scale})"
+      case (_: IntType, _: FloatType) => s"(float) ${expr.resultTerm}"
+      case (_: IntType, _: DoubleType) => s"(double) ${expr.resultTerm}"
+
+      // long -> other numeric types
+      case (_: LongType, dt: DecimalType) =>
+        s"${classOf[Decimal].getCanonicalName}.castFrom(" +
+          s"${expr.resultTerm}, ${dt.precision}, ${dt.scale})"
+      case (_: LongType, _: FloatType) => s"(float) ${expr.resultTerm}"
+      case (_: LongType, _: DoubleType) => s"(double) ${expr.resultTerm}"
+
+      // decimal -> other numeric types
+      case (_: DecimalType, dt: DecimalType) =>
+        s"${classOf[Decimal].getCanonicalName}.castToDecimal(" +
+          s"${expr.resultTerm}, ${dt.precision}, ${dt.scale})"
+      case (_: DecimalType, _: FloatType) =>
+        s"${classOf[Decimal].getCanonicalName}.castToFloat(${expr.resultTerm})"
+      case (_: DecimalType, _: DoubleType) =>
+        s"${classOf[Decimal].getCanonicalName}.castToDouble(${expr.resultTerm})"
+
+      // float -> other numeric types
+      case (_: FloatType, _: DoubleType) => s"(double) ${expr.resultTerm}"
+
+      case _ => null
+    }
+  }
 }
