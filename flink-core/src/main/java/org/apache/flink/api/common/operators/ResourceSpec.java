@@ -261,6 +261,7 @@ public class ResourceSpec implements Serializable {
 		private int nativeMemoryInMB;
 		private int stateSizeInMB;
 		private GPUResource gpuResource;
+		private final Map<String, Resource> extendedResources = new HashMap<>();
 
 		public Builder setCpuCores(double cpuCores) {
 			this.cpuCores = cpuCores;
@@ -292,14 +293,24 @@ public class ResourceSpec implements Serializable {
 			return this;
 		}
 
+		public Builder addExtendedResource(Resource... resources) {
+			for (Resource resource : resources) {
+				this.extendedResources.put(resource.getName(), resource);
+			}
+			return this;
+		}
+
 		public ResourceSpec build() {
+			if (gpuResource != null) {
+				extendedResources.put(gpuResource.getName(), gpuResource);
+			}
 			return new ResourceSpec(
 				cpuCores,
 				heapMemoryInMB,
 				directMemoryInMB,
 				nativeMemoryInMB,
 				stateSizeInMB,
-				gpuResource);
+				extendedResources.values().toArray(new Resource[0]));
 		}
 	}
 
