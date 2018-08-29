@@ -33,6 +33,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
+import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannel.BufferAndAvailability;
@@ -183,6 +184,12 @@ public class SingleInputGate implements InputGate {
 	/** A timer to retrigger local partition requests. Only initialized if actually needed. */
 	private Timer retriggerLocalRequestTimer;
 
+	/** The partition request manager which manages all partition request of this input gate. */
+	private final PartitionRequestManager partitionRequestManager;
+
+	/** Whether the partition request is restricted by quota. */
+	private final boolean isPartitionRequestRestricted;
+
 	public SingleInputGate(
 		String owningTaskName,
 		JobID jobId,
@@ -192,7 +199,9 @@ public class SingleInputGate implements InputGate {
 		int numberOfInputChannels,
 		TaskActions taskActions,
 		TaskIOMetricGroup metrics,
-		boolean isCreditBased) {
+		PartitionRequestManager partitionRequestManager,
+		boolean isCreditBased,
+		boolean isPartitionRequestRestricted) {
 
 		this.owningTaskName = checkNotNull(owningTaskName);
 		this.jobId = checkNotNull(jobId);
@@ -211,7 +220,13 @@ public class SingleInputGate implements InputGate {
 		this.enqueuedInputChannelsWithData = new BitSet(numberOfInputChannels);
 
 		this.taskActions = checkNotNull(taskActions);
+
+		this.partitionRequestManager = checkNotNull(partitionRequestManager);
+		this.isPartitionRequestRestricted = isPartitionRequestRestricted;
+
 		this.isCreditBased = isCreditBased;
+
+		partitionRequestManager.registerSingleInputGate(this);
 	}
 
 	// ------------------------------------------------------------------------
@@ -234,6 +249,14 @@ public class SingleInputGate implements InputGate {
 	 */
 	public ResultPartitionType getConsumedPartitionType() {
 		return consumedPartitionType;
+	}
+
+	int getConsumedSubpartitionIndex() {
+		return consumedSubpartitionIndex;
+	}
+
+	public boolean isPartitionRequestRestricted() {
+		return isPartitionRequestRestricted;
 	}
 
 	BufferProvider getBufferProvider() {
@@ -331,7 +354,7 @@ public class SingleInputGate implements InputGate {
 	public void setInputChannel(IntermediateResultPartitionID partitionId, InputChannel inputChannel) {
 		synchronized (requestLock) {
 			if (inputChannels.put(checkNotNull(partitionId), checkNotNull(inputChannel)) == null
-					&& inputChannel instanceof UnknownInputChannel) {
+				&& inputChannel instanceof UnknownInputChannel) {
 
 				numberOfUninitializedChannels++;
 			}
@@ -379,7 +402,7 @@ public class SingleInputGate implements InputGate {
 				inputChannels.put(partitionId, newChannel);
 
 				if (requestedPartitionsFlag) {
-					newChannel.requestSubpartition(consumedSubpartitionIndex);
+					partitionRequestManager.updateInputChannel(this, newChannel);
 				}
 
 				for (TaskEvent event : pendingEvents) {
@@ -494,9 +517,7 @@ public class SingleInputGate implements InputGate {
 							"channels.");
 				}
 
-				for (InputChannel inputChannel : inputChannels.values()) {
-					inputChannel.requestSubpartition(consumedSubpartitionIndex);
-				}
+				partitionRequestManager.requestPartitions(this);
 			}
 
 			requestedPartitionsFlag = true;
@@ -591,6 +612,9 @@ public class SingleInputGate implements InputGate {
 				currentChannel.notifySubpartitionConsumed();
 
 				currentChannel.releaseAllResources();
+
+				partitionRequestManager.onInputChannelFinish(
+					this, currentChannel, hasReceivedAllEndOfPartitionEvents);
 			}
 
 			return Optional.of(new BufferOrEvent(event, currentChannel.getChannelIndex(), moreAvailable));
@@ -674,7 +698,9 @@ public class SingleInputGate implements InputGate {
 		InputGateDeploymentDescriptor igdd,
 		NetworkEnvironment networkEnvironment,
 		TaskActions taskActions,
-		TaskIOMetricGroup metrics) {
+		TaskIOMetricGroup metrics,
+		PartitionRequestManager partitionRequestManager,
+		BlockingShuffleType shuffleType) {
 
 		final IntermediateDataSetID consumedResultId = checkNotNull(igdd.getConsumedResultId());
 		final ResultPartitionType consumedPartitionType = checkNotNull(igdd.getConsumedPartitionType());
@@ -684,9 +710,12 @@ public class SingleInputGate implements InputGate {
 
 		final InputChannelDeploymentDescriptor[] icdd = checkNotNull(igdd.getInputChannelDeploymentDescriptors());
 
+		final boolean isPartitionRequestRestricted =
+			shuffleType == BlockingShuffleType.YARN && consumedPartitionType.isBlocking();
 		final SingleInputGate inputGate = new SingleInputGate(
-			owningTaskName, jobId, consumedResultId, consumedPartitionType, consumedSubpartitionIndex,
-			icdd.length, taskActions, metrics, networkEnvironment.isCreditBased());
+			owningTaskName, jobId, consumedResultId, consumedPartitionType,
+			consumedSubpartitionIndex, icdd.length, taskActions, metrics,
+			partitionRequestManager, networkEnvironment.isCreditBased(), isPartitionRequestRestricted);
 
 		// Create the input channels. There is one input channel for each consumed partition.
 		final InputChannel[] inputChannels = new InputChannel[icdd.length];

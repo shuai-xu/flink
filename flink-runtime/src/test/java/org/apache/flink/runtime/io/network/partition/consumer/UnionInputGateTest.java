@@ -356,6 +356,8 @@ public class UnionInputGateTest {
 		this.allMemeberInputGates = new SingleInputGate[numAllMemberInputGates];
 		this.allInputChannels = new TestInputChannel[numAllMemberInputGates][];
 
+		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, numAllMemberInputGates);
+
 		int numInputGatesL1 = numChannelsOfMemberGates.length;
 		this.unionSubInputGates = new InputGate[numInputGatesL1];
 
@@ -375,11 +377,12 @@ public class UnionInputGateTest {
 					0, numChannels,
 					mock(TaskActions.class),
 					UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-					true);
+					partitionRequestManager,
+					true,
+					false);
 
 				allInputChannels[currentMemberGateIndex] = TestInputChannel.createInputChannels(
 					(SingleInputGate) allMemeberInputGates[currentMemberGateIndex], numChannels);
-
 				inputGatesL2[j] = allMemeberInputGates[currentMemberGateIndex];
 
 				currentMemberGateIndex++;

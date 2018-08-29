@@ -1037,6 +1037,10 @@ public class RemoteInputChannelTest {
 	// ---------------------------------------------------------------------------------------------
 
 	private SingleInputGate createSingleInputGate() {
+		return createSingleInputGate(new PartitionRequestManager(Integer.MAX_VALUE, 1));
+	}
+
+	private SingleInputGate createSingleInputGate(PartitionRequestManager partitionRequestManager) {
 		return new SingleInputGate(
 			"InputGate",
 			new JobID(),
@@ -1046,7 +1050,9 @@ public class RemoteInputChannelTest {
 			1,
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-			true);
+			partitionRequestManager,
+			true,
+			false);
 	}
 
 	private RemoteInputChannel createRemoteInputChannel(SingleInputGate inputGate)

@@ -299,7 +299,9 @@ public class LocalInputChannelTest {
 			1,
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-			true
+			new PartitionRequestManager(Integer.MAX_VALUE, 1),
+			true,
+			false
 		);
 
 		ResultPartitionManager partitionManager = mock(ResultPartitionManager.class);
@@ -548,6 +550,8 @@ public class LocalInputChannelTest {
 
 		private final int numberOfExpectedBuffersPerChannel;
 
+		private final PartitionRequestManager partitionRequestManager;
+
 		public TestLocalInputChannelConsumer(
 				int subpartitionIndex,
 				int numberOfInputChannels,
@@ -560,6 +564,8 @@ public class LocalInputChannelTest {
 			checkArgument(numberOfInputChannels >= 1);
 			checkArgument(numberOfExpectedBuffersPerChannel >= 1);
 
+			this.partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, 1);
+
 			this.inputGate = new SingleInputGate(
 					"Test Name",
 					new JobID(),
@@ -569,22 +575,23 @@ public class LocalInputChannelTest {
 					numberOfInputChannels,
 					mock(TaskActions.class),
 					UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-					true);
+					partitionRequestManager,
+					true,
+					false);
 
 			// Set buffer pool
 			inputGate.setBufferPool(bufferPool);
 
 			// Setup input channels
 			for (int i = 0; i < numberOfInputChannels; i++) {
-				inputGate.setInputChannel(
-						new IntermediateResultPartitionID(),
-						new LocalInputChannel(
-								inputGate,
-								i,
-								consumedPartitionIds[i],
-								partitionManager,
-								taskEventDispatcher,
-								UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup()));
+				InputChannel channel = new LocalInputChannel(
+					inputGate,
+					i,
+					consumedPartitionIds[i],
+					partitionManager,
+					taskEventDispatcher,
+					UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+				inputGate.setInputChannel(new IntermediateResultPartitionID(),channel);
 			}
 
 			this.numberOfInputChannels = numberOfInputChannels;

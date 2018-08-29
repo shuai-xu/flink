@@ -27,6 +27,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNo
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
 import org.apache.flink.runtime.io.network.partition.consumer.RemoteInputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
@@ -340,7 +341,9 @@ public class NetworkEnvironmentTest {
 			channels,
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-			enableCreditBasedFlowControl));
+			new PartitionRequestManager(Integer.MAX_VALUE, 1),
+			enableCreditBasedFlowControl,
+			false));
 	}
 
 	private static void createRemoteInputChannel(

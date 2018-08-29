@@ -45,12 +45,15 @@ public class TestSingleInputGate {
 
 	protected final TestInputChannel[] inputChannels;
 
+	protected PartitionRequestManager partitionRequestManager;
+
 	public TestSingleInputGate(int numberOfInputChannels) {
 		this(numberOfInputChannels, true);
 	}
 
 	public TestSingleInputGate(int numberOfInputChannels, boolean initialize) {
 		checkArgument(numberOfInputChannels >= 1);
+		this.partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, 1);
 
 		SingleInputGate realGate = new SingleInputGate(
 			"Test Task Name",
@@ -61,7 +64,9 @@ public class TestSingleInputGate {
 			numberOfInputChannels,
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-			true);
+			partitionRequestManager,
+			true,
+			false);
 
 		this.inputGate = spy(realGate);
 

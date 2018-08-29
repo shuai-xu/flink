@@ -38,12 +38,14 @@ import org.apache.flink.runtime.io.network.api.writer.RoundRobinChannelSelector;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.apache.flink.runtime.io.network.netty.NettyConnectionManager;
+import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.UnionInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
@@ -231,6 +233,7 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 			NetworkEnvironment environment,
 			final int channels) throws IOException {
 
+		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, channels);
 		InputGate[] gates = new InputGate[channels];
 		for (int channel = 0; channel < channels; ++channel) {
 			int finalChannel = channel;
@@ -253,7 +256,9 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 				gateDescriptor,
 				environment,
 				new NoOpTaskActions(),
-				UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+				UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
+				partitionRequestManager,
+				BlockingShuffleType.TM);
 
 			environment.setupInputGate(gate);
 			gates[channel] = gate;

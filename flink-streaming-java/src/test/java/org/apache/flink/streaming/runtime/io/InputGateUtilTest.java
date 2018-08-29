@@ -21,6 +21,7 @@ package org.apache.flink.streaming.runtime.io;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.UnionInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
@@ -110,6 +111,10 @@ public class InputGateUtilTest {
 	// ------------------------------------------------------------------------
 
 	private SingleInputGate createSingleInputGate(int numChannels) {
+		return createSingleInputGate(numChannels, new PartitionRequestManager(Integer.MAX_VALUE, 1));
+	}
+
+	private SingleInputGate createSingleInputGate(int numChannels, PartitionRequestManager partitionRequestManager) {
 		final String testTaskName = "Test Task ";
 		return new SingleInputGate(
 			testTaskName, new JobID(),
@@ -117,6 +122,8 @@ public class InputGateUtilTest {
 			0, numChannels,
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-			true);
+			partitionRequestManager,
+			true,
+			false);
 	}
 }

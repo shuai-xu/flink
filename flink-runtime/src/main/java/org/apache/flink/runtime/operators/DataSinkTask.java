@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * DataSinkTask which is executed by a task manager. The task hands the data to an output format.
- * 
+ *
  * @see OutputFormat
  */
 public class DataSinkTask<IT> extends AbstractInvokable {
@@ -72,16 +72,16 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 
 	// The serializer for the input type
 	private TypeSerializerFactory<IT> inputTypeSerializerFactory;
-	
+
 	// local strategy
 	private CloseableInputProvider<IT> localStrategy;
 
 	// task configuration
 	private TaskConfig config;
-	
+
 	// cancel flag
 	private volatile boolean taskCanceled;
-	
+
 	private volatile boolean cleanupCalled;
 
 	/**
@@ -143,7 +143,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 		ExecutionConfig executionConfig = getExecutionConfig();
 
 		boolean objectReuseEnabled = executionConfig.isObjectReuseEnabled();
-		
+
 		try {
 			// initialize local strategies
 			MutableObjectIterator<IT> input1;
@@ -162,17 +162,17 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 					if (compFact == null) {
 						throw new Exception("Missing comparator factory for local strategy on input " + 0);
 					}
-					
+
 					// initialize sorter
 					UnilateralSortMerger<IT> sorter = new UnilateralSortMerger<IT>(
-							getEnvironment().getMemoryManager(), 
+							getEnvironment().getMemoryManager(),
 							getEnvironment().getIOManager(),
 							this.reader, this, this.inputTypeSerializerFactory, compFact.createComparator(),
 							this.config.getRelativeMemoryInput(0), this.config.getFilehandlesInput(0),
 							this.config.getSpillingThresholdInput(0),
 							this.config.getUseLargeRecordHandler(),
 							this.getExecutionConfig().isObjectReuseEnabled());
-					
+
 					this.localStrategy = sorter;
 					input1 = sorter.getIterator();
 				} catch (Exception e) {
@@ -183,9 +183,9 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 			default:
 				throw new RuntimeException("Invalid local strategy for DataSinkTask");
 			}
-			
+
 			// read the reader and write it to the output
-			
+
 			final TypeSerializer<IT> serializer = this.inputTypeSerializerFactory.getSerializer();
 			final MutableObjectIterator<IT> input = input1;
 			final OutputFormat<IT> format = this.format;
@@ -218,7 +218,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 					format.writeRecord(record);
 				}
 			}
-			
+
 			// close. We close here such that a regular close throwing an exception marks a task as failed.
 			if (!this.taskCanceled) {
 				this.format.close();
@@ -226,7 +226,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 			}
 		}
 		catch (Exception ex) {
-			
+
 			// make a best effort to clean up
 			try {
 				if (!cleanupCalled && format instanceof CleanupWhenUnsuccessful) {
@@ -237,7 +237,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 			catch (Throwable t) {
 				LOG.error("Cleanup on error failed.", t);
 			}
-			
+
 			ex = ExceptionInChainedStubException.exceptionUnwrap(ex);
 
 			if (ex instanceof CancelTaskException) {
@@ -293,7 +293,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 			try {
 				this.format.close();
 			} catch (Throwable t) {}
-			
+
 			// make a best effort to clean up
 			try {
 				if (!cleanupCalled && format instanceof CleanupWhenUnsuccessful) {
@@ -305,13 +305,13 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 				LOG.error("Cleanup on error failed.", t);
 			}
 		}
-		
+
 		LOG.debug(getLogString("Cancelling data sink operator"));
 	}
 
 	/**
 	 * Initializes the OutputFormat implementation and configuration.
-	 * 
+	 *
 	 * @throws RuntimeException
 	 *         Throws if instance of OutputFormat implementation can not be
 	 *         obtained.
@@ -327,7 +327,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 
 			// check if the class is a subclass, if the check is required
 			if (!OutputFormat.class.isAssignableFrom(this.format.getClass())) {
-				throw new RuntimeException("The class '" + this.format.getClass().getName() + "' is not a subclass of '" + 
+				throw new RuntimeException("The class '" + this.format.getClass().getName() + "' is not a subclass of '" +
 						OutputFormat.class.getName() + "' as is required.");
 			}
 		}
@@ -337,13 +337,13 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 
 		Thread thread = Thread.currentThread();
 		ClassLoader original = thread.getContextClassLoader();
-		// configure the stub. catch exceptions here extra, to report them as originating from the user code 
+		// configure the stub. catch exceptions here extra, to report them as originating from the user code
 		try {
 			thread.setContextClassLoader(userCodeClassLoader);
 			this.format.configure(this.config.getStubParameters());
 		}
 		catch (Throwable t) {
-			throw new RuntimeException("The user defined 'configure()' method in the Output Format caused an error: " 
+			throw new RuntimeException("The user defined 'configure()' method in the Output Format caused an error: "
 				+ t.getMessage(), t);
 		}
 		finally {
@@ -353,7 +353,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 
 	/**
 	 * Initializes the input readers of the DataSinkTask.
-	 * 
+	 *
 	 * @throws RuntimeException
 	 *         Thrown in case of invalid task input configuration.
 	 */
@@ -377,7 +377,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 		} else {
 			throw new Exception("Illegal input group size in task configuration: " + groupSize);
 		}
-		
+
 		this.inputTypeSerializerFactory = this.config.getInputSerializer(0, getUserCodeClassLoader());
 		@SuppressWarnings({ "rawtypes" })
 		final MutableObjectIterator<?> iter = new ReaderIterator(inputReader, this.inputTypeSerializerFactory.getSerializer());
@@ -392,11 +392,11 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 	// ------------------------------------------------------------------------
 	//                               Utilities
 	// ------------------------------------------------------------------------
-	
+
 	/**
 	 * Utility function that composes a string for logging purposes. The string includes the given message and
 	 * the index of the task in its task group together with the number of tasks in the task group.
-	 * 
+	 *
 	 * @param message The main message for the log.
 	 * @return The string ready for logging.
 	 */

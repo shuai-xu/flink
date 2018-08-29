@@ -320,6 +320,30 @@ public class TaskManagerOptions {
 			.withDescription("The interval (in ms) for the log thread to log the current memory usage.");
 
 	// ------------------------------------------------------------------------
+	//  External Shuffle Options
+	// ------------------------------------------------------------------------
+	/**
+	 * The maximum number of external subpartitions that can be requested at the same time.
+	 * To support the input selection, there must be at least one input channel in each gate
+	 * that is requested, so this value should be larger than or equal to the number of
+	 * SingleInputGate. If the configured value is smaller than the number of inputs, then
+	 * the larger one will be used. This config option only takes effect when external shuffle
+	 * service is used.
+	 */
+	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS =
+		key("task.external.shuffle.max-concurrent-requests")
+			.defaultValue(10);
+
+	/**
+	 * Currently we support two shuffle services for blocking result partition. The default
+	 * 'TM' refers to internal task manager shuffle service, and the value 'YARN' indicates
+	 * the external shuffle service deployed on the node manager of yarn.
+	 */
+	public static final ConfigOption<String> TASK_BLOCKING_SHUFFLE_TYPE =
+		key("task.blocking.shuffle.type")
+			.defaultValue("TM");
+
+	// ------------------------------------------------------------------------
 	//  Managed Memory Options
 	// ------------------------------------------------------------------------
 

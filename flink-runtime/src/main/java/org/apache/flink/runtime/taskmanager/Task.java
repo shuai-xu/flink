@@ -47,15 +47,16 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.JobInformation;
 import org.apache.flink.runtime.executiongraph.TaskInformation;
 import org.apache.flink.runtime.filecache.FileCache;
-import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
 import org.apache.flink.runtime.io.network.netty.PartitionProducerStateChecker;
+import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionMetrics;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGateMetrics;
+import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -65,6 +66,7 @@ import org.apache.flink.runtime.jobgraph.tasks.StoppableTask;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
+import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -385,22 +387,40 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		this.inputGates = new SingleInputGate[inputGateDeploymentDescriptors.size()];
 		this.inputGatesById = new HashMap<>();
 
-		counter = 0;
+		if (inputGates.length > 0) {
+			counter = 0;
 
-		for (InputGateDeploymentDescriptor inputGateDeploymentDescriptor: inputGateDeploymentDescriptors) {
-			SingleInputGate gate = SingleInputGate.create(
-				taskNameWithSubtaskAndId,
-				jobId,
-				executionId,
-				inputGateDeploymentDescriptor,
-				networkEnvironment,
-				this,
-				metricGroup.getIOMetricGroup());
+			final int maxConcurrentPartitionRequests = Math.max(inputGates.length,
+				jobConfiguration.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS));
+			BlockingShuffleType shuffleType;
+			try {
+				shuffleType = BlockingShuffleType.valueOf(jobConfiguration.getString(
+					TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
+			} catch (IllegalArgumentException e) {
+				LOG.warn("The configured blocking shuffle is illegal, using default value.", e);
+				shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
+			}
 
-			inputGates[counter] = gate;
-			inputGatesById.put(gate.getConsumedResultId(), gate);
+			PartitionRequestManager partitionRequestManager = new PartitionRequestManager(
+				maxConcurrentPartitionRequests, inputGates.length);
 
-			++counter;
+			for (InputGateDeploymentDescriptor inputGateDeploymentDescriptor : inputGateDeploymentDescriptors) {
+				SingleInputGate gate = SingleInputGate.create(
+					taskNameWithSubtaskAndId,
+					jobId,
+					executionId,
+					inputGateDeploymentDescriptor,
+					networkEnvironment,
+					this,
+					metricGroup.getIOMetricGroup(),
+					partitionRequestManager,
+					shuffleType);
+
+				inputGates[counter] = gate;
+				inputGatesById.put(gate.getConsumedResultId(), gate);
+
+				++counter;
+			}
 		}
 
 		invokableHasBeenCanceled = new AtomicBoolean(false);
