@@ -687,7 +687,7 @@ public class JobMasterTest extends TestLogger {
 				.setSubmitTaskConsumer((taskDeploymentDescriptor, jobMasterId) -> {
 					tddFuture.complete(taskDeploymentDescriptor);
 					return CompletableFuture.completedFuture(Acknowledge.get());
-                })
+				})
 				.createTestingTaskExecutorGateway();
 			rpcService.registerGateway(testingTaskExecutorGateway.getAddress(), testingTaskExecutorGateway);
 
@@ -909,6 +909,27 @@ public class JobMasterTest extends TestLogger {
 
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
+	public void testSettingGraphManagerPluginClass() throws Exception {
+		final JobVertex jobVertex = new JobVertex("Test vertex");
+		jobVertex.setInvokableClass(NoOpInvokable.class);
+
+		final JobGraph jobGraph = new JobGraph(jobVertex);
+		jobGraph.getSchedulingConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, "TestGraphManagerPluginClass");
+
+		try {
+			createJobMaster(
+				configuration,
+				jobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().build());
+			fail("Should throw a exception");
+		} catch (Throwable t) {
+			assertTrue(t instanceof IllegalArgumentException);
+			assertTrue(t.getMessage().contains("TestGraphManagerPluginClass"));
 		}
 	}
 

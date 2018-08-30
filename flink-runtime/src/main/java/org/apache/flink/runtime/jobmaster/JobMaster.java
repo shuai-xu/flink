@@ -87,8 +87,8 @@ import org.apache.flink.runtime.messages.checkpoint.AcknowledgeCheckpoint;
 import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
-import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationCoordinator;
+import org.apache.flink.runtime.preaggregatedaccumulators.CommitAccumulator;
 import org.apache.flink.runtime.query.KvStateLocation;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.query.UnknownKvStateLocation;
@@ -1250,17 +1250,17 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	private GraphManagerPlugin createGraphManagerPlugin(VertexScheduler scheduler) {
-		Configuration jobConfig = jobGraph.getJobConfiguration();
+		Configuration schedulingConfig = jobGraph.getSchedulingConfiguration();
 		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
-			jobGraph.getJobConfiguration(), userCodeLoader);
+			schedulingConfig, userCodeLoader);
 
-		Configuration schedulerConfig = jobGraph.getSchedulingConfiguration();
+		Configuration jobConfig = jobGraph.getJobConfiguration();
 		Configuration configuration = new Configuration();
 		if (jobConfig != null) {
 			configuration.addAll(jobConfig);
 		}
-		if (schedulerConfig != null) {
-			configuration.addAll(schedulerConfig);
+		if (schedulingConfig != null) {
+			configuration.addAll(schedulingConfig);
 		}
 
 		graphManagerPlugin.open(scheduler, jobGraph, new SchedulingConfig(configuration, userCodeLoader));
