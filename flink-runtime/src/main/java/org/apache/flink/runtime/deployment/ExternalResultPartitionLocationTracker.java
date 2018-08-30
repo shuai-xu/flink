@@ -48,10 +48,6 @@ public class ExternalResultPartitionLocationTracker implements ResultPartitionLo
 		Integer dataPort = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY);
 
-		if (dataPort == null) {
-			throw new IllegalStateException("The yarn shuffle port is not configured.");
-		}
-
 		// use the taskmanager ip address, for the shuffle service deployed on the same host
 		// of the taskmanager is used to shuffle data to down streams.
 		InetSocketAddress address = new InetSocketAddress(producerLocation.address(), dataPort);
