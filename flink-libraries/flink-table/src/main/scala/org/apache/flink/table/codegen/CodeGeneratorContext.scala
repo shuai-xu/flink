@@ -111,7 +111,7 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
     reusableFunctionCallExprs.pop()
   }
 
-  def addReusableExpression(key:String, expr: GeneratedExpression): Unit = {
+  def addReusableExpression(key: String, expr: GeneratedExpression): Unit = {
     if (reusableFunctionCallExprs.isEmpty) {
       reusableFunctionCallExprs.push(mutable.Map[String, GeneratedExpression]())
     }

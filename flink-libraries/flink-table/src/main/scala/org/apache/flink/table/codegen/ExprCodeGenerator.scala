@@ -654,7 +654,8 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
 
     val isIdempotent = call.getOperator.isDeterministic && (!call.getOperator.isDynamicFunction)
     if (isIdempotent) {
-      ctx.getReusableExpression(call.toString) match {
+      val key = getReusableExpressionKey(call)
+      ctx.getReusableExpression(key) match {
         case Some(expr) => return expr
         case _ =>
       }
@@ -698,7 +699,8 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
     if (isIdempotent && call.getKind == SqlKind.OTHER_FUNCTION) {
       // remove the code. it will be executed only once.
       val reusedExpr = GeneratedExpression(expr.resultTerm, expr.nullTerm, "", expr.resultType)
-      ctx.addReusableExpression(call.toString, reusedExpr)
+      val key = getReusableExpressionKey(call)
+      ctx.addReusableExpression(key, reusedExpr)
     }
 
     expr
@@ -713,4 +715,6 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
   override def visitPatternFieldRef(fieldRef: RexPatternFieldRef): GeneratedExpression =
     throw new CodeGenException("Pattern field references are not supported yet.")
 
+  private def getReusableExpressionKey(call: RexCall): String =
+    call.toString + " | " + call.`type`.getFullTypeString
 }

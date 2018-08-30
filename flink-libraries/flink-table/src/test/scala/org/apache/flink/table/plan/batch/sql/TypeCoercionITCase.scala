@@ -31,7 +31,7 @@ import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTimestamp}
 import scala.collection.Seq
 
 /**
-  * This class includes cases of [BLINK-14781302] and its sub classes.
+  * This class includes cases of type coericion.
   */
 class TypeCoercionITCase extends QueryTest {
   @Before
@@ -53,7 +53,7 @@ class TypeCoercionITCase extends QueryTest {
       Seq(row(null, "abc d".getBytes, "123 4".getBytes,
         128L, 32768L, 2147483648L, new java.math.BigDecimal("9223372036854775808"),
         -129L, -32769L, -2147483649L, new java.math.BigDecimal("-9223372036854775809"),
-        1.1, UTCTimestamp("2018-06-08 00:00:00"), UTCDate("1996-11-10"))),
+        1.1f, 1.1, UTCTimestamp("2018-06-08 00:00:00"), UTCDate("1996-11-10"))),
       new RowTypeInfo(
         INT_TYPE_INFO,
         BYTE_PRIMITIVE_ARRAY_TYPE_INFO,
@@ -66,13 +66,15 @@ class TypeCoercionITCase extends QueryTest {
         LONG_TYPE_INFO,
         LONG_TYPE_INFO,
         BIG_DEC_TYPE_INFO,
+        FLOAT_TYPE_INFO,
         DOUBLE_TYPE_INFO,
         Types.SQL_TIMESTAMP,
         Types.SQL_DATE),
     "x,y,z," +
       "tinyintMax,smallintMax,intMax,bigintMax," +
-      "tinyintMin,smallintMin,intMin,bigintMin,f,a,b",
-      Seq(true, true, true, true, true, true, true, true, true, true, true, true, true, true)
+      "tinyintMin,smallintMin,intMin,bigintMin,f1,f,a,b",
+      Seq(true, true, true, true, true, true, true,
+        true, true, true, true, true, true, true, true)
     )
     registerCollection(
       "t6",
@@ -124,9 +126,6 @@ class TypeCoercionITCase extends QueryTest {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
   }
 
-  /**
-    * Test Cases for [BLINK-15437557].
-    */
   @Test
   def testUnionWithMisMatchType(): Unit = {
     checkResult(
@@ -187,9 +186,6 @@ class TypeCoercionITCase extends QueryTest {
       Seq(row("2018-06-06"), row("2018-06-07")))
   }
 
-  /**
-    * Test cases for [BLINK-15443860].
-    */
   @Test
   def testIfFunc(): Unit = {
     checkResult(
@@ -206,9 +202,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row("2018-06-08")))
   }
 
-  /**
-    * Test cases for [BLINK-15418401].
-    */
   @Test
   def testIfFuncNumericArgs(): Unit = {
     val numericTypes = Seq(
@@ -293,9 +286,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row(true)))
   }
 
-  /**
-    * Test cases for [BLINK-15419613].
-    */
   @Test
   def testDecimalEqualToBoolean(): Unit = {
     checkResult(
@@ -330,9 +320,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-15420286], [BLINK-15435038].
-    */
   @Test
   def testVarcharToBoolean(): Unit = {
     // Will do implicit cast from varchar -> boolean.
@@ -360,9 +347,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row(null)))
   }
 
-  /**
-    * Test cases for [BLINK-15423916].
-    */
   @Test
   def testCaseWhenWithDateTime(): Unit = {
     // Calcite use leastRestrictive type here, which is date type.
@@ -373,9 +357,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row("2017-12-12")))
   }
 
-  /**
-    * Test cases for [BLINK-15430643].
-    */
   @Test
   def testVarcharToDate(): Unit = {
     checkResult(
@@ -388,9 +369,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row("2017-11-12")))
   }
 
-  /**
-    * Test cases for [BLINK-14903067].
-    */
   @Test
   def testBooleanToNumeric(): Unit = {
     checkResult(
@@ -451,9 +429,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row(0)))
   }
 
-  /**
-    * Test cases for [BLINK-14903389] [BLINK-14893674].
-    */
   @Test
   def testVarcharToNumeric(): Unit = {
     checkResult(
@@ -499,9 +474,6 @@ class TypeCoercionITCase extends QueryTest {
       """.stripMargin, Seq(row(-4)))
   }
 
-  /**
-    * Test cases for [BLINK-15409786].
-    */
   @Test
   def testVarCharToDateNotEquals(): Unit = {
     checkResult(
@@ -516,9 +488,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14903010].
-    */
   @Test
   def testTimestampToDecimal(): Unit = {
     //have accuracy error
@@ -534,9 +503,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14691902].
-    */
   @Test
   def testDateEqualString(): Unit = {
     //add timezone in string
@@ -572,9 +538,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-15778343].
-    */
   @Test
   def testCastStringToNumericWithSpace(): Unit = {
     checkResult(
@@ -629,9 +592,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-15540080]
-    */
   @Test
   def testBinaryToString(): Unit = {
     checkResult(
@@ -656,9 +616,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14897260]
-    */
   @Test
   def testDecimalToTimestamp() :Unit = {
     checkResult(
@@ -678,9 +635,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-13607105]
-    */
   @Test
   def testCompareNull(): Unit = {
     checkResult(
@@ -695,9 +649,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14896339]
-    */
   @Test
   def testDecimalToBoolean(): Unit = {
     checkResult(
@@ -722,9 +673,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14903216]
-    */
   @Test
   def testDecimalOutOfRange(): Unit = {
     checkResult(
@@ -744,9 +692,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14950296]
-    */
   @Test
   def testNullableIntersect(): Unit = {
     checkResult(
@@ -763,9 +708,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16356122]
-    */
   @Test
   def testBooleanToDecimal(): Unit = {
     checkResult(
@@ -800,9 +742,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16228712]
-    */
   @Test
   def testBooleanAndNumeric(): Unit = {
     val listInt = List("tinyint", "smallint", "int", "bigint")
@@ -878,9 +817,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16228642].
-    */
   @Test
   def testNumericToTimestamp(): Unit = {
     checkResult(
@@ -990,9 +926,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16228712]
-    */
   @Test
   def testNumericOutOfRangeUpExplicit(): Unit = {
     //Overflow
@@ -1021,9 +954,6 @@ class TypeCoercionITCase extends QueryTest {
     }
   }
 
-  /**
-    * Test cases for [BLINK-16228712]
-    */
   @Test
   def testNumericOutOfRangeDownExplicit(): Unit = {
     //Overflow
@@ -1052,9 +982,6 @@ class TypeCoercionITCase extends QueryTest {
     }
   }
 
-  /**
-    * Test cases for [BLINK-16228712]
-    */
   @Test
   def testNumericOutOfRangeUpImplicit(): Unit = {
     //Overflow
@@ -1073,9 +1000,6 @@ class TypeCoercionITCase extends QueryTest {
     }
   }
 
-  /**
-    * Test cases for [BLINK-16228712]
-    */
   @Test
   def testNumericOutOfRangeDownImplicit(): Unit = {
     //Overflow
@@ -1094,9 +1018,6 @@ class TypeCoercionITCase extends QueryTest {
     }
   }
 
-  /**
-    * Test cases for [BLINK-16228712]
-    */
   @Test
   def testFloatingPointToInteger(): Unit = {
     //Overflow
@@ -1112,9 +1033,6 @@ class TypeCoercionITCase extends QueryTest {
     }
   }
 
-  /**
-    * Test cases for [BLINK-16228712].
-    */
   @Test
   def testColumnOverflow(): Unit = {
     val list = List(
@@ -1142,9 +1060,6 @@ class TypeCoercionITCase extends QueryTest {
     }
   }
 
-  /**
-    * Test cases for [BLINK-16228642]
-    */
   @Test
   def testTimestampToNumeric(): Unit = {
     checkResult(
@@ -1219,9 +1134,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16228642]
-    */
   @Test
   def testTimestampWithNullable(): Unit = {
     checkResult(
@@ -1266,9 +1178,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16228642].
-    */
   @Test
   def testTimestampLiteralAndInterval(): Unit = {
     checkResult(
@@ -1313,9 +1222,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16228642]
-    */
   @Test
   def testStringCastToTimestampAndInterval(): Unit = {
     checkResult(
@@ -1350,10 +1256,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-
-  /**
-    * Test cases for [BLINK-16228642]
-    */
   @Test
   def testNumericCastToTimestampAndInterval(): Unit = {
     checkResult(
@@ -1388,9 +1290,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-16356167]
-    */
   @Test
   def testIllegalStrToDate(): Unit = {
     checkResult(
@@ -1440,9 +1339,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14903216]
-    */
   @Test
   def testDoubleToDecimalOverflow(): Unit = {
     checkResult(
@@ -1491,9 +1387,6 @@ class TypeCoercionITCase extends QueryTest {
     )
   }
 
-  /**
-    * Test cases for [BLINK-14903216]
-    */
   @Test
   def testOverflowDecimalToOtherType(): Unit = {
     checkResult(
@@ -1514,5 +1407,22 @@ class TypeCoercionITCase extends QueryTest {
         """.stripMargin, Seq(row(null))
       )
     })
+  }
+
+  @Test
+  def testCallReuse(): Unit = {
+    checkResult(
+      s"""
+         |SELECT
+         |  IF(TRUE, 1, 2),
+         |  IF(FALSE, 1, 2),
+         |  IF(FALSE, 1.0, 2.0),
+         |  IF(FALSE, CAST(1 AS BIGINT), CAST(2 AS BIGINT)),
+         |  IF(FALSE, CAST(1 AS INT), CAST(2 AS INT)),
+         |  IF(FALSE, CAST(1 AS DOUBLE), CAST(2 AS DOUBLE)),
+         |  IF(FALSE, CAST(1 AS FLOAT), CAST(2 AS FLOAT))
+       """.stripMargin,
+      Seq(row(1, 2, 2.0, 2, 2, 2.0, 2.0))
+    )
   }
 }
