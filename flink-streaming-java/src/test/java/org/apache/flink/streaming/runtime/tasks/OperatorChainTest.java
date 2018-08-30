@@ -92,11 +92,11 @@ public class OperatorChainTest {
 		final TwoInputStreamOperator<String, String, String> twoInput = new DummyTwoInputStreamOperator();
 		final StreamSink<String> dummySink = new StreamSink<>(new DummySinkFunction());
 
-		StreamNode sourceOutOfChainVertexDummy = new StreamNode(null, 0, null, dummySource, "source out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
-		StreamNode anotherSourceOutOfChainVertexDummy = new StreamNode(null, 1, null, dummySource, "another source out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
-		StreamNode sourceInChainVertexDummy = new StreamNode(null, 2, null, dummySource, "source in chain dummy", new LinkedList<>(), SourceStreamTask.class);
-		StreamNode unionVertexDummy = new StreamNode(null, 3, null, union, "union dummy", new LinkedList<>(), OneInputStreamTask.class);
-		StreamNode twoInputVertexDummy = new StreamNode(null, 4, null, twoInput, "two input dummy", new LinkedList<>(), TwoInputStreamTask.class);
+		StreamNode sourceOutOfChainVertexDummy = new StreamNode(0, null, dummySource, "source out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
+		StreamNode anotherSourceOutOfChainVertexDummy = new StreamNode(1, null, dummySource, "another source out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
+		StreamNode sourceInChainVertexDummy = new StreamNode(2, null, dummySource, "source in chain dummy", new LinkedList<>(), SourceStreamTask.class);
+		StreamNode unionVertexDummy = new StreamNode(3, null, union, "union dummy", new LinkedList<>(), OneInputStreamTask.class);
+		StreamNode twoInputVertexDummy = new StreamNode(4, null, twoInput, "two input dummy", new LinkedList<>(), TwoInputStreamTask.class);
 //		StreamNode sinkDummy = new StreamNode(null, 5, null, dummySink, "sink dummy", new LinkedList<>(), OneInputStreamTask.class);
 
 		final List<StreamEdge> inEdges = new LinkedList<>();
@@ -257,8 +257,8 @@ public class OperatorChainTest {
 		}});
 		streamConfig.setInStreamEdgesOfChain(Collections.singletonList(
 			new StreamEdge(
-				new StreamNode(null, 0, null, new DummyOperator(), "operator-0", null, null),
-				new StreamNode(null, 1, null, new DummyOperator(), "operator-1", null, null),
+				new StreamNode(0, null, new DummyOperator(), "operator-0", null, null),
+				new StreamNode(1, null, new DummyOperator(), "operator-1", null, null),
 				1,
 				null,
 				null,
@@ -293,8 +293,8 @@ public class OperatorChainTest {
 		config1.setChainedOutputs(
 			Collections.singletonList(
 				new StreamEdge(
-					new StreamNode(null, 1, null, operator1, "operator-1", null, null),
-					new StreamNode(null, 4, null, operator2, "operator-2", null, null),
+					new StreamNode(1, null, operator1, "operator-1", null, null),
+					new StreamNode(4, null, operator2, "operator-2", null, null),
 					1,
 					null,
 					null,
@@ -303,8 +303,8 @@ public class OperatorChainTest {
 		config2.setChainedOutputs(
 			Collections.singletonList(
 				new StreamEdge(
-					new StreamNode(null, 2, null, operator2, "operator-2", null, null),
-					new StreamNode(null, 3, null, operator3, "operator-3", null, null),
+					new StreamNode(2, null, operator2, "operator-2", null, null),
+					new StreamNode(3, null, operator3, "operator-3", null, null),
 					1,
 					null,
 					null,
@@ -313,8 +313,8 @@ public class OperatorChainTest {
 		config3.setChainedOutputs(
 			Collections.singletonList(
 				new StreamEdge(
-					new StreamNode(null, 3, null, operator3, "operator-3", null, null),
-					new StreamNode(null, 4, null, operator4, "operator-4", null, null),
+					new StreamNode(3, null, operator3, "operator-3", null, null),
+					new StreamNode(4, null, operator4, "operator-4", null, null),
 					2,
 					null,
 					null,
@@ -323,8 +323,8 @@ public class OperatorChainTest {
 		config4.setChainedOutputs(
 			Collections.singletonList(
 				new StreamEdge(
-					new StreamNode(null, 4, null, operator4, "operator-4", null, null),
-					new StreamNode(null, 5, null, operator5, "operator-5", null, null),
+					new StreamNode(4, null, operator4, "operator-4", null, null),
+					new StreamNode(5, null, operator5, "operator-5", null, null),
 					1,
 					null,
 					null,
@@ -367,12 +367,12 @@ public class OperatorChainTest {
 		final TwoInputStreamOperator<String, String, String> twoInput = new DummyTwoInputStreamOperator();
 		final StreamSink<String> dummySink = new StreamSink<>(new DummySinkFunction());
 
-		StreamNode sourceOutOfChainVertexDummy0 = new StreamNode(null, 0, null, dummySource, "source 0 out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
-		StreamNode sourceOutOfChainVertexDummy1 = new StreamNode(null, 1, null, dummySource, "source 1 out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
-		StreamNode sourceOutOfChainVertexDummy2 = new StreamNode(null, 2, null, dummySource, "source 2 out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
-		StreamNode twoInputVertexDummy3 = new StreamNode(null, 3, null, twoInput, "two input 3 dummy", new LinkedList<>(), TwoInputStreamTask.class);
-		StreamNode twoInputVertexDummy4 = new StreamNode(null, 4, null, twoInput, "two input 4 dummy", new LinkedList<>(), TwoInputStreamTask.class);
-		StreamNode sinkDummy = new StreamNode(null, 5, null, dummySink, "sink dummy", new LinkedList<>(), OneInputStreamTask.class);
+		StreamNode sourceOutOfChainVertexDummy0 = new StreamNode(0, null, dummySource, "source 0 out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
+		StreamNode sourceOutOfChainVertexDummy1 = new StreamNode(1, null, dummySource, "source 1 out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
+		StreamNode sourceOutOfChainVertexDummy2 = new StreamNode(2, null, dummySource, "source 2 out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
+		StreamNode twoInputVertexDummy3 = new StreamNode(3, null, twoInput, "two input 3 dummy", new LinkedList<>(), TwoInputStreamTask.class);
+		StreamNode twoInputVertexDummy4 = new StreamNode(4, null, twoInput, "two input 4 dummy", new LinkedList<>(), TwoInputStreamTask.class);
+		StreamNode sinkDummy = new StreamNode(5, null, dummySink, "sink dummy", new LinkedList<>(), OneInputStreamTask.class);
 
 		final List<StreamEdge> inEdges = new LinkedList<>();
 		inEdges.add(new StreamEdge(sourceOutOfChainVertexDummy0, twoInputVertexDummy3, 1, new LinkedList<>(), new BroadcastPartitioner<>(), null /* output tag */));

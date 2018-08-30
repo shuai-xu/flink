@@ -19,6 +19,7 @@ package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
@@ -34,6 +35,7 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -82,7 +84,6 @@ public class StreamGraph extends StreamingPlan {
 
 	private String jobName = StreamExecutionEnvironment.DEFAULT_JOB_NAME;
 
-	private final StreamExecutionEnvironment environment;
 	private final ExecutionConfig executionConfig;
 	private final CheckpointConfig checkpointConfig;
 
@@ -101,13 +102,20 @@ public class StreamGraph extends StreamingPlan {
 	private StateBackend stateBackend;
 	private Set<Tuple2<StreamNode, StreamNode>> iterationSourceSinkPairs;
 
+	private TimeCharacteristic timeCharacteristic;
+	private List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cachedFiles;
+
 	/** This configuration is for custom parameters. */
 	private final Configuration customConfiguration = new Configuration();
 
-	public StreamGraph(StreamExecutionEnvironment environment) {
-		this.environment = environment;
-		this.executionConfig = environment.getConfig();
-		this.checkpointConfig = environment.getCheckpointConfig();
+	private final transient int defaultParallelism;
+	private final transient long defaultBufferTimeout;
+
+	public StreamGraph(ExecutionConfig executionConfig, CheckpointConfig checkpointConfig, int defaultParallelism, long defaultBufferTimeout) {
+		this.executionConfig = executionConfig;
+		this.checkpointConfig = checkpointConfig;
+		this.defaultParallelism = defaultParallelism;
+		this.defaultBufferTimeout = defaultBufferTimeout;
 
 		// set default schedule mode
 		this.customConfiguration.setString(ScheduleMode.class.getName(), ScheduleMode.EAGER.toString());
@@ -129,10 +137,7 @@ public class StreamGraph extends StreamingPlan {
 		iterationSourceSinkPairs = new HashSet<>();
 		sources = new HashSet<>();
 		sinks = new HashSet<>();
-	}
-
-	public StreamExecutionEnvironment getEnvironment() {
-		return environment;
+		cachedFiles = new ArrayList<>();
 	}
 
 	public ExecutionConfig getExecutionConfig() {
@@ -163,8 +168,27 @@ public class StreamGraph extends StreamingPlan {
 		this.stateBackend = backend;
 	}
 
+	public void setTimeCharacteristic(TimeCharacteristic timeCharacteristic) {
+		this.timeCharacteristic = timeCharacteristic;
+	}
+
+	public void setCachedFiles(List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cachedFiles) {
+		if (this.cachedFiles.size() > 0) {
+			this.cachedFiles.clear();
+		}
+		this.cachedFiles.addAll(cachedFiles);
+	}
+
 	public StateBackend getStateBackend() {
 		return this.stateBackend;
+	}
+
+	public TimeCharacteristic getTimeCharacteristic() {
+		return timeCharacteristic;
+	}
+
+	public List<Tuple2<String, DistributedCache.DistributedCacheEntry>> getCachedFiles() {
+		return cachedFiles;
 	}
 
 	public Configuration getCustomConfiguration() {
@@ -286,13 +310,14 @@ public class StreamGraph extends StreamingPlan {
 			throw new RuntimeException("Duplicate vertexID " + vertexID);
 		}
 
-		StreamNode vertex = new StreamNode(environment,
-			vertexID,
+		StreamNode vertex = new StreamNode(vertexID,
 			slotSharingGroup,
 			operatorObject,
 			operatorName,
 			new ArrayList<OutputSelector<?>>(),
 			vertexClass);
+		vertex.setParallelism(defaultParallelism);
+		vertex.setBufferTimeout(defaultBufferTimeout);
 
 		streamNodes.put(vertexID, vertex);
 

@@ -168,7 +168,7 @@ public class StreamingJobGraphGenerator {
 		setSchedulerConfiguration();
 
 		// add registered cache file into job configuration
-		for (Tuple2<String, DistributedCache.DistributedCacheEntry> e : streamGraph.getEnvironment().getCachedFiles()) {
+		for (Tuple2<String, DistributedCache.DistributedCacheEntry> e : streamGraph.getCachedFiles()) {
 			DistributedCache.writeFileInfoToConfig(e.f0, e.f1, jobGraph.getJobConfiguration());
 		}
 
@@ -664,7 +664,7 @@ public class StreamingJobGraphGenerator {
 		config.setNonChainedOutputs(nonChainableOutputs);
 		config.setChainedOutputs(chainableOutputs);
 
-		config.setTimeCharacteristic(streamGraph.getEnvironment().getStreamTimeCharacteristic());
+		config.setTimeCharacteristic(streamGraph.getTimeCharacteristic());
 
 		final CheckpointConfig ceckpointCfg = streamGraph.getCheckpointConfig();
 

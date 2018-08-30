@@ -93,8 +93,11 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	@Test
 	public void testBasicChaining() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		env.setParallelism(12345);
+		env.setBufferTimeout(54321L);
 		env.enableCheckpointing(10, CheckpointingMode.AT_LEAST_ONCE);
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		env.registerCachedFile("file:///testCachedFile", "test");
 		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
 
 		ClassLoader cl = getClass().getClassLoader();
@@ -128,6 +131,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		streamNodeMap.get("filter2").setOutputFormat(new SerializedOutputFormat());
 
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+		assertEquals(12345, jobGraph.getSerializedExecutionConfig().deserializeValue(getClass().getClassLoader()).getParallelism());
+		assertEquals("file:///testCachedFile", jobGraph.getJobConfiguration().getString("DISTRIBUTED_CACHE_FILE_PATH_1", null));
 		assertEquals(ScheduleMode.EAGER,
 			ScheduleMode.valueOf(jobGraph.getSchedulingConfiguration().getString(ScheduleMode.class.getName(), null)));
 
@@ -160,6 +165,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifyChainedNode("Source: source1", true, true, 0,
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("Source: source1", "map1")),
+				54321L,
 				sourceConfig, cl);
 		}
 
@@ -190,6 +196,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifyChainedNode("map1", true, false, 1,
 				Lists.newArrayList(Tuple2.of("map1", "filter1"), Tuple2.of("map1", "filter2")),
 				Collections.emptyList(),
+				54321L,
 				mapConfig, cl);
 
 			List<StreamEdge> mapChainedOutEdges = mapConfig.getChainedOutputs(cl);
@@ -198,12 +205,14 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifyChainedNode("filter1", false, true, 0,
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("filter1", "map2")),
+				54321L,
 				filter1Config, cl);
 
 			StreamConfig filter2Config = mapFilterTaskConfig.getChainedNodeConfigs().get(mapChainedOutEdges.get(1).getTargetId());
 			verifyChainedNode("filter2", false, true, 0,
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("filter2", "map2"), Tuple2.of("filter2", "Sink: print2")),
+				54321L,
 				filter2Config, cl);
 		}
 
@@ -226,6 +235,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifyChainedNode("map2", true, false, 2,
 				Lists.newArrayList(Tuple2.of("map2", "Sink: print1")),
 				Collections.emptyList(),
+				54321L,
 				mapConfig, cl);
 
 			List<StreamEdge> mapChainedOutEdges = mapConfig.getChainedOutputs(cl);
@@ -234,6 +244,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifyChainedNode("Sink: print1", false, true, 0,
 				Collections.emptyList(),
 				Collections.emptyList(),
+				54321L,
 				printConfig, cl);
 		}
 
@@ -256,6 +267,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifyChainedNode("Sink: print2", true, true, 1,
 				Collections.emptyList(),
 				Collections.emptyList(),
+				54321L,
 				printConfig, cl);
 		}
 	}
@@ -425,7 +437,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	@Test
 	public void testDisabledCheckpointing() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamGraph streamGraph = new StreamGraph(env);
+		StreamGraph streamGraph = new StreamGraph(env.getConfig(), env.getCheckpointConfig(), env.getParallelism(), env.getBufferTimeout());
 		assertFalse("Checkpointing enabled", streamGraph.getCheckpointConfig().isCheckpointingEnabled());
 
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
@@ -685,6 +697,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		int expectedNumInputs,
 		List<Tuple2<String, String>> expectedChainedOutputs,
 		List<Tuple2<String, String>> expectedNonChainedOutputs,
+		long expectedBufferTimeout,
 		final StreamConfig nodeConfig,
 		final ClassLoader classLoader) {
 
@@ -712,5 +725,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			StreamEdge edge = nonChainedOutEdges.get(i);
 			assertEquals(expectedNonChainedOutEdgesKeys.get(i), edge.getSourceVertex().getOperatorName() + "|" + edge.getTargetVertex().getOperatorName());
 		}
+
+		assertEquals(expectedBufferTimeout, nodeConfig.getBufferTimeout());
 	}
 }

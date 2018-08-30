@@ -18,7 +18,6 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
@@ -26,7 +25,6 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 
 import java.io.Serializable;
@@ -40,8 +38,6 @@ import java.util.List;
 public class StreamNode implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-
-	private transient StreamExecutionEnvironment env;
 
 	private final int id;
 	private Integer parallelism = null;
@@ -76,14 +72,12 @@ public class StreamNode implements Serializable {
 	private String transformationUID;
 	private String userHash;
 
-	public StreamNode(StreamExecutionEnvironment env,
-		Integer id,
+	public StreamNode(Integer id,
 		String slotSharingGroup,
 		StreamOperator<?> operator,
 		String operatorName,
 		List<OutputSelector<?>> outputSelector,
 		Class<? extends AbstractInvokable> jobVertexClass) {
-		this.env = env;
 		this.id = id;
 		this.operatorName = operatorName;
 		this.operator = operator;
@@ -141,11 +135,7 @@ public class StreamNode implements Serializable {
 	}
 
 	public int getParallelism() {
-		if (parallelism == ExecutionConfig.PARALLELISM_DEFAULT) {
-			return env.getParallelism();
-		} else {
-			return parallelism;
-		}
+		return parallelism;
 	}
 
 	public void setParallelism(Integer parallelism) {
@@ -184,7 +174,7 @@ public class StreamNode implements Serializable {
 	}
 
 	public Long getBufferTimeout() {
-		return bufferTimeout != null ? bufferTimeout : env.getBufferTimeout();
+		return bufferTimeout;
 	}
 
 	public void setBufferTimeout(Long bufferTimeout) {
