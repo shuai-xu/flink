@@ -210,6 +210,18 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	}
 
 	/**
+	 * Get the floating memory needed in MB
+	 * @return The floating memory in MB
+	 */
+	public int getFloatingManagedMemoryInMB() {
+		Resource floatingMemory = extendedResources.get(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME);
+		if (floatingMemory != null) {
+			return (int) floatingMemory.getValue();
+		}
+		return 0;
+	}
+
+	/**
 	 * Check whether required resource profile can be matched.
 	 *
 	 * @param required the required resource profile
@@ -222,6 +234,10 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 				nativeMemoryInMB >= required.getNativeMemoryInMB() &&
 				networkMemoryInMB >= required.getNetworkMemoryInMB()) {
 			for (Map.Entry<String, Resource> resource : required.extendedResources.entrySet()) {
+				// Skip floating memory, floating memory will not be considered when findMatchingSlot in slot manager
+				if (resource.getKey().equals(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME)) {
+					continue;
+				}
 				if (!extendedResources.containsKey(resource.getKey()) ||
 						!extendedResources.get(resource.getKey()).getResourceAggregateType().equals(resource.getValue().getResourceAggregateType()) ||
 						extendedResources.get(resource.getKey()).getValue() < resource.getValue().getValue()) {

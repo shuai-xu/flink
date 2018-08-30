@@ -77,6 +77,13 @@ public class TaskManagerServicesConfiguration {
 	 */
 	private final long configuredMemory;
 
+	/**
+	 * Floating managed memory (in megabytes).
+	 *
+	 * @see TaskManagerOptions#FLOATING_MANAGED_MEMORY_SIZE
+	 */
+	private final long floatingManagedMemorySizeMB;
+
 	private final MemoryType memoryType;
 
 	private final boolean preAllocateMemory;
@@ -100,6 +107,7 @@ public class TaskManagerServicesConfiguration {
 			QueryableStateConfiguration queryableStateConfig,
 			int numberOfSlots,
 			long configuredMemory,
+			long floatingManagedMemorySizeMB,
 			MemoryType memoryType,
 			boolean preAllocateMemory,
 			float memoryFraction,
@@ -116,6 +124,7 @@ public class TaskManagerServicesConfiguration {
 		this.numberOfSlots = checkNotNull(numberOfSlots);
 
 		this.configuredMemory = configuredMemory;
+		this.floatingManagedMemorySizeMB = floatingManagedMemorySizeMB;
 		this.memoryType = checkNotNull(memoryType);
 		this.preAllocateMemory = preAllocateMemory;
 		this.memoryFraction = memoryFraction;
@@ -183,6 +192,17 @@ public class TaskManagerServicesConfiguration {
 	 */
 	public long getConfiguredMemory() {
 		return configuredMemory;
+	}
+
+	/**
+	 * Returns the size of the floating managed memory (in megabytes), if configured.
+	 *
+	 * @return floating managed memory or a default value (currently <tt>0</tt>) if not configured
+	 *
+	 * @see TaskManagerOptions#FLOATING_MANAGED_MEMORY_SIZE
+	 */
+	public long getFloatingManagedMemory() {
+		return floatingManagedMemorySizeMB;
 	}
 
 	public boolean isPreAllocateMemory() {
@@ -257,6 +277,8 @@ public class TaskManagerServicesConfiguration {
 				"If you leave this config parameter empty, the system automatically " +
 				"pick a fraction of the available memory.");
 
+		final long floatingMemorySizeMB = configuration.getLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE);
+
 		// check whether we use heap or off-heap memory
 		final MemoryType memType;
 		if (configuration.getBoolean(TaskManagerOptions.MEMORY_OFF_HEAP)) {
@@ -303,6 +325,7 @@ public class TaskManagerServicesConfiguration {
 			queryableStateConfig,
 			slots,
 			configuredMemory,
+			floatingMemorySizeMB,
 			memType,
 			preAllocateMemory,
 			memoryFraction,

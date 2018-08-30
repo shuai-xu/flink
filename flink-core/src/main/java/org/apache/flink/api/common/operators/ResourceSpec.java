@@ -57,6 +57,8 @@ public class ResourceSpec implements Serializable {
 
 	public static final String MANAGED_MEMORY_NAME = "MANAGED_MEMORY_MB";
 
+	public static final String FLOATING_MANAGED_MEMORY_NAME = "FLOATING_MANAGED_MEMORY_MB";
+
 	/** How many cpu cores are needed, use double so we can specify cpu like 0.1. */
 	private final double cpuCores;
 

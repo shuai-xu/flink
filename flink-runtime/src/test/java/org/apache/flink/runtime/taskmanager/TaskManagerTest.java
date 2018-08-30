@@ -1052,6 +1052,8 @@ public class TaskManagerTest extends TestLogger {
 		config.setInteger(TaskManagerOptions.NETWORK_REQUEST_BACKOFF_MAX, 200);
 		config.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, 10);
 		config.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, 100);
+		config.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
+		config.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 128);
 
 		TaskManagerServicesConfiguration tmConfig =
 			TaskManagerServicesConfiguration.fromConfiguration(config, InetAddress.getLoopbackAddress(), true);
@@ -1060,6 +1062,8 @@ public class TaskManagerTest extends TestLogger {
 		assertEquals(tmConfig.getNetworkConfig().partitionRequestMaxBackoff(), 200);
 		assertEquals(tmConfig.getNetworkConfig().networkBuffersPerChannel(), 10);
 		assertEquals(tmConfig.getNetworkConfig().floatingNetworkBuffersPerGate(), 100);
+		assertEquals(tmConfig.getConfiguredMemory(), 128);
+		assertEquals(tmConfig.getFloatingManagedMemory(), 128);
 	}
 
 	/**

@@ -109,6 +109,10 @@ public class TaskManagerResource {
 		return taskResourceProfile.getManagedMemoryInMB() * slotNum;
 	}
 
+	public int getFloatingManagedMemorySize() {
+		return taskResourceProfile.getFloatingManagedMemoryInMB() * slotNum;
+	}
+
 	/**
 	 * Get the memory for network buffer pool, it is calculated by job master according to the input and output channel number.
 	 * @return the network memory for all tasks in the task executor.
@@ -145,7 +149,7 @@ public class TaskManagerResource {
 	public int getTotalDirectMemory() {
 		int directMemory = taskManagerNettyMemorySizeMB + taskResourceProfile.getDirectMemoryInMB() * slotNum + getNetworkMemorySize();
 		if (offHeap) {
-			directMemory += getManagedMemorySize();
+			directMemory += getManagedMemorySize() + getFloatingManagedMemorySize();
 		}
 		return directMemory;
 	}
@@ -178,7 +182,7 @@ public class TaskManagerResource {
 	int getPersistentHeapMemory() {
 		int persistentMemory = 0;
 		if (!offHeap) {
-			persistentMemory += getManagedMemorySize();
+			persistentMemory += getManagedMemorySize() + getFloatingManagedMemorySize();
 		}
 		return persistentMemory;
 	}
@@ -273,6 +277,8 @@ public class TaskManagerResource {
 		Map<String, Resource> extendedResources = new HashMap<>();
 		extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME,
 			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, taskManagerResource.getManagedMemorySize()));
+		extendedResources.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
+			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, taskManagerResource.getFloatingManagedMemorySize()));
 		return new ResourceProfile(taskManagerResource.getTaskResourceProfile().getCpuCores(),
 			taskManagerResource.getTaskResourceProfile().getHeapMemoryInMB(),
 			taskManagerResource.getTaskResourceProfile().getDirectMemoryInMB(),

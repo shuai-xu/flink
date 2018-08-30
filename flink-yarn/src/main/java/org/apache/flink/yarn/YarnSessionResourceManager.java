@@ -425,6 +425,9 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		Map<String, org.apache.flink.api.common.resources.Resource> resourceMap = getExtendedResources();
 		resourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
 				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemory));
+		long floatingManagedMemory = flinkConfig.getLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE);
+		resourceMap.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
+				new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, floatingManagedMemory));
 		return new ResourceProfile(
 				core,
 				heapMemory,
@@ -560,6 +563,10 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		if (managedMemory > 1) {
 			taskManagerConfig.setInteger(TaskManagerOptions.MANAGED_MEMORY_SIZE.key(), managedMemory);
 		}
+
+		// config the floating managed memory for task manager
+		final int floatingMemory = taskManagerResource.getFloatingManagedMemorySize();
+		taskManagerConfig.setInteger(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.key(), floatingMemory);
 
 		// config the network memory for task manager
 		final int networkBuffersNum = MathUtils.checkedDownCast(taskManagerResource.getNetworkMemorySize()

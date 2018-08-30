@@ -91,6 +91,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 	private YarnSessionResourceManager createYarnSessionResourceManager() {
 		Configuration conf = new Configuration();
 		conf.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
+		conf.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 256);
 		ResourceManagerConfiguration rmConfig =
 			new ResourceManagerConfiguration(Time.seconds(1), Time.seconds(10));
 		final HighAvailabilityServices highAvailabilityServices = mock(HighAvailabilityServices.class);
@@ -156,7 +157,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 	}
 
 	@Test
-	public void testAllocateContainerWithManagedMemory() {
+	public void testAllocateContainerWithFloatingManagedMemory() {
 		AMRMClientAsync yarnClient = mock(AMRMClientAsync.class);
 		yarnSessionResourceManager.setAMRMClient(yarnClient);
 		ArgumentCaptor<AMRMClient.ContainerRequest> containerRequestCaptor =
@@ -166,8 +167,8 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 
 		verify(yarnClient, times(5)).addContainerRequest(containerRequestCaptor.capture());
 		AMRMClient.ContainerRequest request = containerRequestCaptor.getAllValues().get(0);
-		// Check memory allocated for YARN should contain managed memory
-		assertEquals(1792, request.getCapability().getMemory());
+		// Check memory allocated for YARN should contain managed and floating managed memory
+		assertEquals(2048, request.getCapability().getMemory());
 	}
 
 	@Test

@@ -45,23 +45,27 @@ public class NetworkBufferCalculationTest extends TestLogger {
 		TaskManagerServicesConfiguration tmConfig;
 
 		tmConfig = getTmConfig(TaskManagerOptions.MANAGED_MEMORY_SIZE.defaultValue(),
+			TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.defaultValue(),
 			TaskManagerOptions.MANAGED_MEMORY_FRACTION.defaultValue(),
 			0.1f, 60L << 20, 1L << 30, MemoryType.HEAP);
 		assertEquals((100L << 20) + 1 /* one too many due to floating point imprecision */,
 			TaskManagerServices.calculateNetworkBufferMemory(tmConfig, 900L << 20)); // 900MB
 
 		tmConfig = getTmConfig(TaskManagerOptions.MANAGED_MEMORY_SIZE.defaultValue(),
+			TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.defaultValue(),
 			TaskManagerOptions.MANAGED_MEMORY_FRACTION.defaultValue(),
 			0.2f, 60L << 20, 1L << 30, MemoryType.HEAP);
 		assertEquals((200L << 20) + 3 /* slightly too many due to floating point imprecision */,
 			TaskManagerServices.calculateNetworkBufferMemory(tmConfig, 800L << 20)); // 800MB
 
-		tmConfig = getTmConfig(10, TaskManagerOptions.MANAGED_MEMORY_FRACTION.defaultValue(),
+		tmConfig = getTmConfig(10,
+			TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.defaultValue(),
+			TaskManagerOptions.MANAGED_MEMORY_FRACTION.defaultValue(),
 			0.1f, 60L << 20, 1L << 30, MemoryType.OFF_HEAP);
 		assertEquals((100L << 20) + 1 /* one too many due to floating point imprecision */,
 			TaskManagerServices.calculateNetworkBufferMemory(tmConfig, 890L << 20)); // 890MB
 
-		tmConfig = getTmConfig(-1, 0.1f,
+		tmConfig = getTmConfig(-1, TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.defaultValue(),0.1f,
 			0.1f, 60L << 20, 1L << 30, MemoryType.OFF_HEAP);
 		assertEquals((100L << 20) + 1 /* one too many due to floating point imprecision */,
 			TaskManagerServices.calculateNetworkBufferMemory(tmConfig, 810L << 20)); // 810MB
@@ -80,7 +84,7 @@ public class NetworkBufferCalculationTest extends TestLogger {
 	 * @return configuration object
 	 */
 	private static TaskManagerServicesConfiguration getTmConfig(
-		final long managedMemory, final float managedMemoryFraction, float networkBufFraction,
+		final long managedMemory, final long floatingMemory, final float managedMemoryFraction, float networkBufFraction,
 		long networkBufMin, long networkBufMax,
 		final MemoryType memType) {
 
@@ -105,6 +109,7 @@ public class NetworkBufferCalculationTest extends TestLogger {
 			QueryableStateConfiguration.disabled(),
 			1,
 			managedMemory,
+			floatingMemory,
 			memType,
 			false,
 			managedMemoryFraction,

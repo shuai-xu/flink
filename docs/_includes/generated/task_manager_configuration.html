@@ -8,6 +8,11 @@
     </thead>
     <tbody>
         <tr>
+            <td><h5>task.blocking.shuffle.type</h5></td>
+            <td style="word-wrap: break-word;">"TM"</td>
+            <td></td>
+        </tr>
+        <tr>
             <td><h5>task.cancellation.interval</h5></td>
             <td style="word-wrap: break-word;">30000</td>
             <td>Time interval between two successive task cancellation attempts in milliseconds.</td>
@@ -26,6 +31,11 @@
             <td><h5>task.checkpoint.alignment.max-size</h5></td>
             <td style="word-wrap: break-word;">-1</td>
             <td>The maximum number of bytes that a checkpoint alignment may buffer. If the checkpoint alignment buffers more than the configured amount of data, the checkpoint is aborted (skipped). A value of -1 indicates that there is no limit.</td>
+        </tr>
+        <tr>
+            <td><h5>task.external.shuffle.max-concurrent-requests</h5></td>
+            <td style="word-wrap: break-word;">10</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>taskmanager.cpu.core</h5></td>
@@ -65,6 +75,11 @@
         <tr>
             <td><h5>taskmanager.extended.resources</h5></td>
             <td style="word-wrap: break-word;">"Extended resources will supply for user. Specified as resource-type:value pairs separated by commas. such as GPU:1,FPGA:1."</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.floating.memory.size</h5></td>
+            <td style="word-wrap: break-word;">0</td>
             <td></td>
         </tr>
         <tr>

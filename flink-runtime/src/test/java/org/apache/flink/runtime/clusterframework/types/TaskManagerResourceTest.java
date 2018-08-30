@@ -23,6 +23,7 @@ import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -38,6 +39,7 @@ public class TaskManagerResourceTest {
 	private static final int TM_NETTY_MEMORY_MB = 13;
 	private static final int TM_NATIVE_MEMORY_MB = 15;
 	private static final int TM_HEAP_MEMORY_MB = 17;
+	private static final int NETTY_MEMORY_MB = 13;
 	private static final int NUM_SLOTS = 2;
 
 	private static final double CORE = 1.0;
@@ -182,6 +184,50 @@ public class TaskManagerResourceTest {
 		assertEquals((int) (((persistentHeapSize + gcOccupyRatio * dynamicHeapSize * (1 - dynamicYoungGenRatio)) /
 				(dynamicHeapSize * (1 - dynamicYoungGenRatio) + persistentHeapSize)) * 100),
 			tmResourceProfile.getCMSGCOccupancyFraction());
+	}
+
+	/**
+	 * getTotalHeapMemory() will be used in -Xms and -Xmx.
+	 * getTotalDirectMemory() will be used in -XX:MaxDirectMemorySize.
+	 * Check on-heap and off-heap memory settings.
+	 */
+	@Test
+	public void testSetFloatingManagedMemory() {
+		final int managedMemoryInMB = 64;
+		final int floatingMemoryInMB = 96;
+		final int networkMemoryInMB = 32;
+
+		Map<String, Resource> extendedResourceMap = new HashMap<>();
+		extendedResourceMap.put(ResourceSpec.MANAGED_MEMORY_NAME,
+				new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, managedMemoryInMB));
+		extendedResourceMap.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
+				new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, floatingMemoryInMB));
+		final ResourceProfile taskResourceProfile = new ResourceProfile(CORE, HEAP_MEMORY_MB,
+				DIRECT_MEMORY_MB, NATIVE_MEMORY_MB, networkMemoryInMB, extendedResourceMap);
+
+		// On heap.
+		final Configuration config = initializeConfiguration();
+		config.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, false);
+		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(
+				config,
+				taskResourceProfile,
+				NUM_SLOTS
+		);
+		Assert.assertEquals(TM_HEAP_MEMORY_MB + (HEAP_MEMORY_MB + managedMemoryInMB + floatingMemoryInMB) * NUM_SLOTS,
+				tmResource.getTotalHeapMemory());
+		Assert.assertEquals((DIRECT_MEMORY_MB + networkMemoryInMB) * NUM_SLOTS + NETTY_MEMORY_MB, tmResource.getTotalDirectMemory());
+
+		// Off heap.
+		config.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, true);
+		tmResource = TaskManagerResource.fromConfiguration(
+				config,
+				taskResourceProfile,
+				NUM_SLOTS
+		);
+		Assert.assertEquals(TM_HEAP_MEMORY_MB + HEAP_MEMORY_MB * NUM_SLOTS,
+				tmResource.getTotalHeapMemory());
+		Assert.assertEquals((DIRECT_MEMORY_MB + networkMemoryInMB + managedMemoryInMB + floatingMemoryInMB) * NUM_SLOTS
+				+ NETTY_MEMORY_MB, tmResource.getTotalDirectMemory());
 	}
 
 	private Configuration initializeConfiguration() {

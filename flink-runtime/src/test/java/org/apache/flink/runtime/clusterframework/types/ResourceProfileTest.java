@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.clusterframework.types;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.resources.GPUResource;
 import org.apache.flink.api.common.resources.Resource;
 import org.junit.Test;
@@ -70,6 +71,18 @@ public class ResourceProfileTest {
 		assertFalse(rp1.isMatching(ResourceProfile.fromResourceSpec(rs1, 0)));
 		assertTrue(ResourceProfile.fromResourceSpec(rs1, 0).isMatching(ResourceProfile.fromResourceSpec(rs2, 0)));
 		assertFalse(ResourceProfile.fromResourceSpec(rs2, 0).isMatching(ResourceProfile.fromResourceSpec(rs1, 0)));
+
+		ResourceSpec rs3 = ResourceSpec.newBuilder().
+				setCpuCores(1.0).
+				setHeapMemoryInMB(100).
+				addExtendedResource(new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, 200)).
+				build();
+		ResourceSpec rs4 = ResourceSpec.newBuilder().
+				setCpuCores(1.0).
+				setHeapMemoryInMB(100).
+				addExtendedResource(new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, 400)).
+				build();
+		assertTrue(ResourceProfile.fromResourceSpec(rs3, 0).isMatching(ResourceProfile.fromResourceSpec(rs4, 0)));
 	}
 
 	@Test

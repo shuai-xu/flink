@@ -379,6 +379,10 @@ public class TaskManagerOptions {
 				" created by user-defined functions. This parameter is only evaluated, if " + MANAGED_MEMORY_SIZE.key() +
 				" is not set.");
 
+	public static final ConfigOption<Long> FLOATING_MANAGED_MEMORY_SIZE =
+			key("taskmanager.floating.memory.size")
+			.defaultValue(0L);
+
 	/**
 	 * Memory allocation method (JVM heap or off-heap), used for managed memory of the TaskManager
 	 * as well as the network buffers.

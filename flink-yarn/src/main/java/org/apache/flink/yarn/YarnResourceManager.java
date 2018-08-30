@@ -19,6 +19,7 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigConstants;
@@ -680,6 +681,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 				flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
 		taskManagerConfig.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE.key(), managedMemory);
 
+		final int floatingManagedMemory = tmResource.getFloatingManagedMemorySize();
+		taskManagerConfig.setInteger(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.key(), floatingManagedMemory);
+
 		final int networkBuffersNum = MathUtils.checkedDownCast(tmResource.getNetworkMemorySize()
 			* 1024L * 1024L / tmResource.getPageSize());
 		taskManagerConfig.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS.key(),
@@ -791,6 +795,10 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 				(maxMemoryPerContainer / resourceProfile.getMemoryInMB()));
 
 			for (org.apache.flink.api.common.resources.Resource extendedResource : resourceProfile.getExtendedResources().values()) {
+				// Skip floating memory, it has been added to memory
+				if (extendedResource.getName().equals(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME)) {
+					continue;
+				}
 				Double maxPerContainer = maxExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
 				if (maxPerContainer != null) {
 					if (extendedResource.getValue() > maxPerContainer) {
