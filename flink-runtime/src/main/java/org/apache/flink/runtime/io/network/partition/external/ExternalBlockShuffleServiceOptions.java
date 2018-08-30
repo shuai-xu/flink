@@ -160,21 +160,19 @@ public class ExternalBlockShuffleServiceOptions {
 		key("flink.shuffle-service.unfinished-partition-ttl-in-seconds")
 		.defaultValue(60 * 60);
 
-	// --------------------------- Unstable configurations -----------------------------
 	/**
-	 * If set true, shuffle service won't load PartitionIndices for one Partition,
-	 * and will load PartitionIndex for each subpartition request. It's inefficient
-	 * for handling subpartition requests since indices of a partition will be
-	 * partially read multiple times (equals to subpartition number). While this
-	 * mode will cost the least memory for it don't hold unused PartitionIndices
-	 * in memory.
-	 *
-	 * WARNING: Leave it alone unless you want to minimize shuffle service's memory
-	 * cost desperately.
+	 * If this comparator is configured, disk IO thread will serve subpartition request based on
+	 * the corresponding sort sequence. If this configuration is empty string, just use FIFO sequence.
+	 * Users can customize their own comparator by implementing {@link java.util.Comparator}.
 	 */
-	public static final ConfigOption<Boolean> LOAD_INDEX_PER_SUBPARTITION =
-		key("flink.shuffle-service.unstable.load-index-per-subpartition")
-		.defaultValue(false);
+	public static final ConfigOption<String> SUBPARTITION_REQUEST_COMPARATOR_CLASS =
+		key("flink.shuffle-service.subpartition-request-comparator-class")
+		.defaultValue("org.apache.flink.runtime.io.network.partition.external.CreditBasedSubpartitionViewComparator");
+
+	// ------------------------- Configurations for internal use ------------------------
+	public static final ConfigOption<String> LOCAL_RESULT_PARTITION_RESOLVER_CLASS =
+		key("flink.shuffle-service.internal.local-result-partition-resolver-class")
+		.noDefaultValue();
 
 	/** Not intended to be instantiated */
 	private ExternalBlockShuffleServiceOptions() { }

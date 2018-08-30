@@ -52,7 +52,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * <p>Reads of the spilled file are done in synchronously.
  */
-class SpilledSubpartitionView implements ResultSubpartitionView, NotificationListener {
+public class SpilledSubpartitionView implements ResultSubpartitionView, NotificationListener {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SpilledSubpartitionView.class);
 
@@ -251,13 +251,13 @@ class SpilledSubpartitionView implements ResultSubpartitionView, NotificationLis
 	 * <p>This pool ensures that a consuming input gate makes progress in all cases, even when all
 	 * buffers of the input gate buffer pool have been requested by remote input channels.
 	 */
-	private static class SpillReadBufferPool implements BufferRecycler {
+	public static class SpillReadBufferPool implements BufferRecycler {
 
 		private final Queue<Buffer> buffers;
 
 		private boolean isDestroyed;
 
-		SpillReadBufferPool(int numberOfBuffers, int memorySegmentSize) {
+		public SpillReadBufferPool(int numberOfBuffers, int memorySegmentSize) {
 			this.buffers = new ArrayDeque<>(numberOfBuffers);
 
 			synchronized (buffers) {
@@ -297,7 +297,7 @@ class SpilledSubpartitionView implements ResultSubpartitionView, NotificationLis
 			}
 		}
 
-		private void destroy() {
+		public void destroy() {
 			synchronized (buffers) {
 				isDestroyed = true;
 				buffers.notifyAll();

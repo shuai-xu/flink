@@ -22,7 +22,6 @@ import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuff
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
@@ -106,18 +105,6 @@ public class YarnShuffleService extends AuxiliaryService {
 		logger.info("Stop Application for {}.", appId);
 	}
 
-	@Override
-	public void initializeContainer(ContainerInitializationContext context) {
-		ContainerId containerId = context.getContainerId();
-		logger.info("Initialize container {}", containerId);
-	}
-
-	@Override
-	public void stopContainer(ContainerTerminationContext context) {
-		ContainerId containerId = context.getContainerId();
-		logger.info("Stop container {}", containerId);
-	}
-
 	/**
 	 * Closes the shuffle server to clean up any associated state.
 	 */
@@ -128,6 +115,14 @@ public class YarnShuffleService extends AuxiliaryService {
 		}
 		logger.info("Stop YARN shuffle service for flink");
 	}
+
+	/** Currently this method is of no use. */
+	@Override
+	public void initializeContainer(ContainerInitializationContext context) { }
+
+	/** Currently this method is of no use. */
+	@Override
+	public void stopContainer(ContainerTerminationContext context) { }
 
 	/** Currently this method is of no use. */
 	@Override
@@ -158,6 +153,9 @@ public class YarnShuffleService extends AuxiliaryService {
 		if (!nmLocalDirs.isEmpty() && flinkLocalDirs.isEmpty()) {
 			flinkConf.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), nmLocalDirs);
 		}
+
+		flinkConf.setString(ExternalBlockShuffleServiceOptions.LOCAL_RESULT_PARTITION_RESOLVER_CLASS.key(),
+			"org.apache.flink.runtime.io.network.partition.external.YarnLocalResultPartitionResolver");
 
 		return flinkConf;
 	}

@@ -37,6 +37,10 @@ public class ExecutionAttemptID extends AbstractID {
 		super(lowerPart, upperPart);
 	}
 
+	public ExecutionAttemptID(byte[] bytes) {
+		super(bytes);
+	}
+
 	public void writeTo(ByteBuf buf) {
 		buf.writeLong(this.lowerPart);
 		buf.writeLong(this.upperPart);
