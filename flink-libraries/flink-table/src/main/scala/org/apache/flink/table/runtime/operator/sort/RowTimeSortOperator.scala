@@ -115,11 +115,11 @@ class RowTimeSortOperator(
   override def onEventTime(timer: InternalTimer[BaseRow, VoidNamespace]): Unit = {
     val timestamp = timer.getTimestamp
     // gets all rows for the triggering timestamps
-    val timeList = timeListState.get(timestamp)
-    if (timeList != null) {
+    val itr = timeListState.get(timestamp).iterator
+    if (itr.hasNext) {
       // sort the inputs
-      for (time <- timeList) {
-        buffer.write(time)
+      while (itr.hasNext) {
+        buffer.write(itr.next)
       }
       sorter.sort(buffer)
 

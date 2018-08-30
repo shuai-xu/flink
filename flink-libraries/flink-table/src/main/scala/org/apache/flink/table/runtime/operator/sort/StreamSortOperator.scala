@@ -118,7 +118,9 @@ class StreamSortOperator(
 
     // restore state
     if (bufferState != null) {
-      for (input: Tuple2[BaseRow, JInt] <- bufferState.get()) {
+      val itr = bufferState.get.iterator
+      while (itr.hasNext) {
+        val input: Tuple2[BaseRow, JInt] = itr.next
         inputBuffer += (input.f0 -> input.f1)
       }
       bufferState = null

@@ -80,10 +80,10 @@ class OnlyRowTimeSortOperator(
   override def onEventTime(timer: InternalTimer[BaseRow, VoidNamespace]): Unit = {
     val timestamp = timer.getTimestamp
     // gets all rows for the triggering timestamps
-    val timeList = timeListState.get(timestamp)
-    if (timeList != null) {
-      for (time <- timeList) {
-        collector.collect(time)
+    val itr = timeListState.get(timestamp).iterator
+    if (itr.hasNext) {
+      while (itr.hasNext) {
+        collector.collect(itr.next)
       }
       // remove emitted rows from state
       timeListState.remove(timestamp)

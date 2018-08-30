@@ -96,10 +96,10 @@ class ProcTimeSortOperator(
     */
   override def onProcessingTime(timer: InternalTimer[BaseRow, VoidNamespace]): Unit = {
     // gets all rows for the triggering timestamps
-    val dataList = dataState.get(VoidNamespace.INSTANCE)
-    if (dataList != null) {
-      for (data <- dataList) {
-        buffer.write(data)
+    val itr = dataState.get(VoidNamespace.INSTANCE).iterator
+    if (itr.hasNext) {
+      while (itr.hasNext) {
+        buffer.write(itr.next)
       }
       sorter.sort(buffer)
 
