@@ -85,7 +85,7 @@ class SpillableSubpartition extends ResultSubpartition {
 	/** The read view to consume this subpartition. */
 	private ResultSubpartitionView readView;
 
-	SpillableSubpartition(int index, ResultPartition parent, IOManager ioManager) {
+	SpillableSubpartition(int index, InternalResultPartition parent, IOManager ioManager) {
 		super(index, parent);
 
 		this.ioManager = checkNotNull(ioManager);

@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.api.writer;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -25,6 +26,8 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.event.AbstractEvent;
+import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
@@ -36,9 +39,14 @@ import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
 import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.util.TestPooledBufferProvider;
+import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.testutils.serialization.types.SerializationTestType;
 import org.apache.flink.testutils.serialization.types.SerializationTestTypeFactory;
 import org.apache.flink.testutils.serialization.types.Util;
@@ -80,6 +88,9 @@ public class RecordWriterTest {
 
 	@Rule
 	public TemporaryFolder tempFolder = new TemporaryFolder();
+
+	/** Asynchronous I/O manager. */
+	private static final IOManager ioManager = new IOManagerAsync();
 
 	// ---------------------------------------------------------------------------------------------
 	// Resource release tests
@@ -475,10 +486,9 @@ public class RecordWriterTest {
 	/**
 	 * Partition writer that collects the added buffers/events in multiple queue.
 	 */
-	private static class CollectingPartitionWriter implements ResultPartitionWriter {
+	private static class CollectingPartitionWriter extends InternalResultPartition {
 		private final Queue<BufferConsumer>[] queues;
 		private final BufferProvider bufferProvider;
-		private final ResultPartitionID partitionId = new ResultPartitionID();
 
 		/**
 		 * Create the partition writer.
@@ -487,28 +497,19 @@ public class RecordWriterTest {
 		 * @param bufferProvider buffer provider
 		 */
 		private CollectingPartitionWriter(Queue<BufferConsumer>[] queues, BufferProvider bufferProvider) {
+			super("TestTask",
+				mock(TaskActions.class),
+				new JobID(),
+				new ResultPartitionID(),
+				ResultPartitionType.PIPELINED,
+				queues.length,
+				1,
+				mock(ResultPartitionManager.class),
+				mock(ResultPartitionConsumableNotifier.class),
+				mock(IOManager.class),
+				false);
 			this.queues = queues;
 			this.bufferProvider = bufferProvider;
-		}
-
-		@Override
-		public BufferProvider getBufferProvider() {
-			return bufferProvider;
-		}
-
-		@Override
-		public ResultPartitionID getPartitionId() {
-			return partitionId;
-		}
-
-		@Override
-		public int getNumberOfSubpartitions() {
-			return queues.length;
-		}
-
-		@Override
-		public int getNumTargetKeyGroups() {
-			return 1;
 		}
 
 		@Override
@@ -517,11 +518,13 @@ public class RecordWriterTest {
 		}
 
 		@Override
-		public void flushAll() {
+		public BufferProvider getBufferProvider() {
+			return bufferProvider;
 		}
 
 		@Override
-		public void flush(int subpartitionIndex) {
+		public int getNumberOfSubpartitions() {
+			return queues.length;
 		}
 	}
 
@@ -540,11 +543,21 @@ public class RecordWriterTest {
 	/**
 	 * Partition writer that recycles all received buffers and does no further processing.
 	 */
-	private static class RecyclingPartitionWriter implements ResultPartitionWriter {
+	private static class RecyclingPartitionWriter extends InternalResultPartition {
 		private final BufferProvider bufferProvider;
-		private final ResultPartitionID partitionId = new ResultPartitionID();
 
 		private RecyclingPartitionWriter(BufferProvider bufferProvider) {
+			super("TestTask",
+				mock(TaskActions.class),
+				new JobID(),
+				new ResultPartitionID(),
+				ResultPartitionType.PIPELINED,
+				1,
+				1,
+				mock(ResultPartitionManager.class),
+				mock(ResultPartitionConsumableNotifier.class),
+				mock(IOManager.class),
+				false);
 			this.bufferProvider = bufferProvider;
 		}
 
@@ -554,31 +567,8 @@ public class RecordWriterTest {
 		}
 
 		@Override
-		public ResultPartitionID getPartitionId() {
-			return partitionId;
-		}
-
-		@Override
-		public int getNumberOfSubpartitions() {
-			return 1;
-		}
-
-		@Override
-		public int getNumTargetKeyGroups() {
-			return 1;
-		}
-
-		@Override
-		public void addBufferConsumer(BufferConsumer bufferConsumer, int targetChannel) throws IOException {
+		public void addBufferConsumer(BufferConsumer bufferConsumer, int subpartitionIndex) throws IOException {
 			bufferConsumer.close();
-		}
-
-		@Override
-		public void flushAll() {
-		}
-
-		@Override
-		public void flush(int subpartitionIndex) {
 		}
 	}
 

@@ -40,9 +40,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests for {@link ResultPartition}.
+ * Tests for {@link InternalResultPartition}.
  */
-public class ResultPartitionTest {
+public class InternalResultPartitionTest {
 
 	/** Asynchronous I/O manager. */
 	private static final IOManager ioManager = new IOManagerAsync();
@@ -60,7 +60,7 @@ public class ResultPartitionTest {
 		{
 			// Pipelined, send message => notify
 			ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
-			ResultPartition partition = createPartition(notifier, ResultPartitionType.PIPELINED, true);
+			InternalResultPartition partition = createPartition(notifier, ResultPartitionType.PIPELINED, true);
 			partition.addBufferConsumer(createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE), 0);
 			verify(notifier, times(1))
 				.notifyPartitionConsumable(
@@ -72,7 +72,7 @@ public class ResultPartitionTest {
 		{
 			// Pipelined, don't send message => don't notify
 			ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
-			ResultPartition partition = createPartition(notifier, ResultPartitionType.PIPELINED, false);
+			InternalResultPartition partition = createPartition(notifier, ResultPartitionType.PIPELINED, false);
 			partition.addBufferConsumer(createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE), 0);
 			verify(notifier, never()).notifyPartitionConsumable(any(JobID.class), any(ResultPartitionID.class), any(TaskActions.class));
 		}
@@ -80,7 +80,7 @@ public class ResultPartitionTest {
 		{
 			// Blocking, send message => don't notify
 			ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
-			ResultPartition partition = createPartition(notifier, ResultPartitionType.BLOCKING, true);
+			InternalResultPartition partition = createPartition(notifier, ResultPartitionType.BLOCKING, true);
 			partition.addBufferConsumer(createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE), 0);
 			verify(notifier, never()).notifyPartitionConsumable(any(JobID.class), any(ResultPartitionID.class), any(TaskActions.class));
 		}
@@ -88,7 +88,7 @@ public class ResultPartitionTest {
 		{
 			// Blocking, don't send message => don't notify
 			ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
-			ResultPartition partition = createPartition(notifier, ResultPartitionType.BLOCKING, false);
+			InternalResultPartition partition = createPartition(notifier, ResultPartitionType.BLOCKING, false);
 			partition.addBufferConsumer(createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE), 0);
 			verify(notifier, never()).notifyPartitionConsumable(any(JobID.class), any(ResultPartitionID.class), any(TaskActions.class));
 		}
@@ -105,7 +105,7 @@ public class ResultPartitionTest {
 	}
 
 	/**
-	 * Tests {@link ResultPartition#addBufferConsumer} on a partition which has already finished.
+	 * Tests {@link InternalResultPartition#addBufferConsumer} on a partition which has already finished.
 	 *
 	 * @param pipelined the result partition type to set up
 	 */
@@ -114,7 +114,7 @@ public class ResultPartitionTest {
 		BufferConsumer bufferConsumer = createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE);
 		ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
 		try {
-			ResultPartition partition = createPartition(notifier, pipelined, true);
+			InternalResultPartition partition = createPartition(notifier, pipelined, true);
 			partition.finish();
 			reset(notifier);
 			// partition.add() should fail
@@ -143,7 +143,7 @@ public class ResultPartitionTest {
 	}
 
 	/**
-	 * Tests {@link ResultPartition#addBufferConsumer} on a partition which has already been released.
+	 * Tests {@link InternalResultPartition#addBufferConsumer} on a partition which has already been released.
 	 *
 	 * @param pipelined the result partition type to set up
 	 */
@@ -152,7 +152,7 @@ public class ResultPartitionTest {
 		BufferConsumer bufferConsumer = createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE);
 		ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
 		try {
-			ResultPartition partition = createPartition(notifier, pipelined, true);
+			InternalResultPartition partition = createPartition(notifier, pipelined, true);
 			partition.release();
 			// partition.add() silently drops the bufferConsumer but recycles it
 			partition.addBufferConsumer(bufferConsumer, 0);
@@ -177,14 +177,14 @@ public class ResultPartitionTest {
 	}
 
 	/**
-	 * Tests {@link ResultPartition#addBufferConsumer(BufferConsumer, int)} on a working partition.
+	 * Tests {@link InternalResultPartition#addBufferConsumer(BufferConsumer, int)} on a working partition.
 	 *
 	 * @param pipelined the result partition type to set up
 	 */
 	protected void testAddOnPartition(final ResultPartitionType pipelined)
 		throws Exception {
 		ResultPartitionConsumableNotifier notifier = mock(ResultPartitionConsumableNotifier.class);
-		ResultPartition partition = createPartition(notifier, pipelined, true);
+		InternalResultPartition partition = createPartition(notifier, pipelined, true);
 		BufferConsumer bufferConsumer = createFilledBufferConsumer(BufferBuilderTestUtils.BUFFER_SIZE);
 		try {
 			// partition.add() adds the bufferConsumer without recycling it (if not spilling)
@@ -207,11 +207,11 @@ public class ResultPartitionTest {
 
 	// ------------------------------------------------------------------------
 
-	private static ResultPartition createPartition(
+	private static InternalResultPartition createPartition(
 		ResultPartitionConsumableNotifier notifier,
 		ResultPartitionType type,
 		boolean sendScheduleOrUpdateConsumersMessage) {
-		return new ResultPartition(
+		return new InternalResultPartition(
 			"TestTask",
 			mock(TaskActions.class),
 			new JobID(),

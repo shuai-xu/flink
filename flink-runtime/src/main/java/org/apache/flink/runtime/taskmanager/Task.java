@@ -51,13 +51,16 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
 import org.apache.flink.runtime.io.network.netty.PartitionProducerStateChecker;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionMetrics;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGateMetrics;
 import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
+import org.apache.flink.runtime.io.network.partition.external.ExternalResultPartition;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -86,6 +89,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -193,6 +197,10 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	private final SerializedValue<ExecutionConfig> serializedExecutionConfig;
 
 	private final ResultPartition[] producedPartitions;
+
+	private final List<InternalResultPartition> internalPartitions;
+
+	private final List<ExternalResultPartition> externalPartitions;
 
 	private final SingleInputGate[] inputGates;
 
@@ -356,31 +364,15 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		this.executor = Preconditions.checkNotNull(executor);
 
 		// create the reader and writer structures
-
 		final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
 
 		// Produced intermediate result partitions
+		this.internalPartitions = new ArrayList<>();
+		this.externalPartitions = new ArrayList<>();
 		this.producedPartitions = new ResultPartition[resultPartitionDeploymentDescriptors.size()];
-
-		int counter = 0;
-
-		for (ResultPartitionDeploymentDescriptor desc: resultPartitionDeploymentDescriptors) {
-			ResultPartitionID partitionId = new ResultPartitionID(desc.getPartitionId(), executionId);
-
-			this.producedPartitions[counter] = new ResultPartition(
-				taskNameWithSubtaskAndId,
-				this,
-				jobId,
-				partitionId,
-				desc.getPartitionType(),
-				desc.getNumberOfSubpartitions(),
-				desc.getMaxParallelism(),
-				networkEnvironment.getResultPartitionManager(),
-				resultPartitionConsumableNotifier,
-				ioManager,
-				desc.sendScheduleOrUpdateConsumersMessage());
-
-			++counter;
+		if (producedPartitions.length > 0) {
+			createAllResultPartitions(
+				taskNameWithSubtaskAndId, resultPartitionDeploymentDescriptors, resultPartitionConsumableNotifier);
 		}
 
 		// Consumed intermediate result partitions
@@ -388,39 +380,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		this.inputGatesById = new HashMap<>();
 
 		if (inputGates.length > 0) {
-			counter = 0;
-
-			final int maxConcurrentPartitionRequests = Math.max(inputGates.length,
-				jobConfiguration.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS));
-			BlockingShuffleType shuffleType;
-			try {
-				shuffleType = BlockingShuffleType.valueOf(jobConfiguration.getString(
-					TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
-			} catch (IllegalArgumentException e) {
-				LOG.warn("The configured blocking shuffle is illegal, using default value.", e);
-				shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
-			}
-
-			PartitionRequestManager partitionRequestManager = new PartitionRequestManager(
-				maxConcurrentPartitionRequests, inputGates.length);
-
-			for (InputGateDeploymentDescriptor inputGateDeploymentDescriptor : inputGateDeploymentDescriptors) {
-				SingleInputGate gate = SingleInputGate.create(
-					taskNameWithSubtaskAndId,
-					jobId,
-					executionId,
-					inputGateDeploymentDescriptor,
-					networkEnvironment,
-					this,
-					metricGroup.getIOMetricGroup(),
-					partitionRequestManager,
-					shuffleType);
-
-				inputGates[counter] = gate;
-				inputGatesById.put(gate.getConsumedResultId(), gate);
-
-				++counter;
-			}
+			createAllInputGates(taskNameWithSubtaskAndId, inputGateDeploymentDescriptors);
 		}
 
 		invokableHasBeenCanceled = new AtomicBoolean(false);
@@ -468,6 +428,14 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 
 	public ResultPartition[] getProducedPartitions() {
 		return producedPartitions;
+	}
+
+	public List<InternalResultPartition> getInternalPartitions() {
+		return internalPartitions;
+	}
+
+	public List<ExternalResultPartition> getExternalPartitions() {
+		return externalPartitions;
 	}
 
 	public SingleInputGate getInputGateById(IntermediateDataSetID id) {
@@ -638,9 +606,9 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				MetricGroup inputGroup = networkGroup.addGroup("Input");
 
 				// output metrics
-				for (int i = 0; i < producedPartitions.length; i++) {
+				for (int i = 0; i < internalPartitions.size(); i++) {
 					ResultPartitionMetrics.registerQueueLengthMetrics(
-						outputGroup.addGroup(i), producedPartitions[i]);
+						outputGroup.addGroup(i), internalPartitions.get(i));
 				}
 
 				for (int i = 0; i < inputGates.length; i++) {
@@ -845,6 +813,10 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				// free memory resources
 				if (invokable != null) {
 					memoryManager.releaseAll(invokable);
+					// free the memory used by external result partition
+					for (ExternalResultPartition resultPartition: externalPartitions) {
+						memoryManager.releaseAll(resultPartition);
+					}
 				}
 
 				// remove all of the tasks library resources
@@ -877,6 +849,94 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				LOG.error("Error during metrics de-registration of task {} ({}).", taskNameWithSubtask, executionId, t);
 			}
 		}
+	}
+
+	private void createAllResultPartitions(
+		String taskNameWithSubtaskAndId,
+		Collection<ResultPartitionDeploymentDescriptor> resultPartitionDeploymentDescriptors,
+		ResultPartitionConsumableNotifier resultPartitionConsumableNotifier) {
+		final BlockingShuffleType shuffleType = getBlockingShuffleType();
+
+		int counter = 0;
+		for (ResultPartitionDeploymentDescriptor desc: resultPartitionDeploymentDescriptors) {
+			ResultPartitionID partitionId = new ResultPartitionID(desc.getPartitionId(), executionId);
+			ResultPartitionType partitionType = desc.getPartitionType();
+			if (partitionType.isBlocking() && shuffleType == BlockingShuffleType.YARN) {
+				ExternalResultPartition resultPartition = new ExternalResultPartition(
+					taskManagerConfig.getConfiguration(),
+					taskNameWithSubtaskAndId,
+					this,
+					jobId,
+					partitionId,
+					partitionType,
+					desc.getNumberOfSubpartitions(),
+					desc.getMaxParallelism(),
+					resultPartitionConsumableNotifier,
+					memoryManager,
+					ioManager,
+					desc.sendScheduleOrUpdateConsumersMessage());
+				producedPartitions[counter] = resultPartition;
+				externalPartitions.add(resultPartition);
+			} else {
+				InternalResultPartition resultPartition = new InternalResultPartition(
+					taskNameWithSubtaskAndId,
+					this,
+					jobId,
+					partitionId,
+					partitionType,
+					desc.getNumberOfSubpartitions(),
+					desc.getMaxParallelism(),
+					network.getResultPartitionManager(),
+					resultPartitionConsumableNotifier,
+					ioManager,
+					desc.sendScheduleOrUpdateConsumersMessage());
+				producedPartitions[counter] = resultPartition;
+				internalPartitions.add(resultPartition);
+			}
+			++counter;
+		}
+	}
+
+	private void createAllInputGates(
+		String taskNameWithSubtaskAndId,
+		Collection<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
+		final int maxConcurrentPartitionRequests = Math.max(inputGates.length,
+			jobConfiguration.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS));
+		final BlockingShuffleType shuffleType = getBlockingShuffleType();
+
+		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(
+			maxConcurrentPartitionRequests, inputGates.length);
+
+		int counter = 0;
+		for (InputGateDeploymentDescriptor inputGateDeploymentDescriptor : inputGateDeploymentDescriptors) {
+			SingleInputGate gate = SingleInputGate.create(
+				taskNameWithSubtaskAndId,
+				jobId,
+				executionId,
+				inputGateDeploymentDescriptor,
+				network,
+				this,
+				metrics.getIOMetricGroup(),
+				partitionRequestManager,
+				shuffleType);
+
+			inputGates[counter] = gate;
+			inputGatesById.put(gate.getConsumedResultId(), gate);
+
+			++counter;
+		}
+	}
+
+	private BlockingShuffleType getBlockingShuffleType() {
+		BlockingShuffleType shuffleType;
+		try {
+			shuffleType = BlockingShuffleType.valueOf(jobConfiguration.getString(
+				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
+		} catch (IllegalArgumentException e) {
+			LOG.warn("The configured blocking shuffle is illegal, using default value.", e);
+			shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
+		}
+		return shuffleType;
 	}
 
 	private ClassLoader createUserCodeClassloader() throws Exception {
@@ -1079,7 +1139,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 								invokable,
 								executingThread,
 								taskNameWithSubtask,
-								producedPartitions,
+								internalPartitions,
 								inputGates);
 
 						Thread cancelThread = new Thread(
@@ -1504,7 +1564,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		private final AbstractInvokable invokable;
 		private final Thread executer;
 		private final String taskName;
-		private final ResultPartition[] producedPartitions;
+		private final List<InternalResultPartition> internalPartitions;
 		private final SingleInputGate[] inputGates;
 
 		public TaskCanceler(
@@ -1512,14 +1572,14 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				AbstractInvokable invokable,
 				Thread executer,
 				String taskName,
-				ResultPartition[] producedPartitions,
+				List<InternalResultPartition> internalPartitions,
 				SingleInputGate[] inputGates) {
 
 			this.logger = logger;
 			this.invokable = invokable;
 			this.executer = executer;
 			this.taskName = taskName;
-			this.producedPartitions = producedPartitions;
+			this.internalPartitions = internalPartitions;
 			this.inputGates = inputGates;
 		}
 
@@ -1542,7 +1602,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				//
 				// Don't do this before cancelling the invokable. Otherwise we
 				// will get misleading errors in the logs.
-				for (ResultPartition partition : producedPartitions) {
+				for (InternalResultPartition partition : internalPartitions) {
 					try {
 						partition.destroyBufferPool();
 					} catch (Throwable t) {

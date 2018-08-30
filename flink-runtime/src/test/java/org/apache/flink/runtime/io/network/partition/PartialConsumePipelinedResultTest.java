@@ -127,8 +127,8 @@ public class PartialConsumePipelinedResultTest extends TestLogger {
 			final ResultPartitionWriter writer = getEnvironment().getWriter(0);
 
 			for (int i = 0; i < 8; i++) {
-				final BufferBuilder bufferBuilder = writer.getBufferProvider().requestBufferBuilderBlocking();
-				writer.addBufferConsumer(bufferBuilder.createBufferConsumer(), 0);
+				final BufferBuilder bufferBuilder = ((InternalResultPartition) writer).getBufferProvider().requestBufferBuilderBlocking();
+				((InternalResultPartition) writer).addBufferConsumer(bufferBuilder.createBufferConsumer(), 0);
 				Thread.sleep(50);
 				bufferBuilder.finish();
 			}

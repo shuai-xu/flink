@@ -66,7 +66,7 @@ public class InputGateFairnessTest {
 		final int numChannels = 37;
 		final int buffersPerChannel = 27;
 
-		final ResultPartition resultPartition = mock(ResultPartition.class);
+		final InternalResultPartition internalResultPartition = mock(InternalResultPartition.class);
 		final BufferConsumer bufferConsumer = createFilledBufferConsumer(42);
 
 		// ----- create some source channels and fill them with buffers -----
@@ -74,7 +74,7 @@ public class InputGateFairnessTest {
 		final PipelinedSubpartition[] sources = new PipelinedSubpartition[numChannels];
 
 		for (int i = 0; i < numChannels; i++) {
-			PipelinedSubpartition partition = new PipelinedSubpartition(0, resultPartition);
+			PipelinedSubpartition partition = new PipelinedSubpartition(0, internalResultPartition);
 
 			for (int p = 0; p < buffersPerChannel; p++) {
 				partition.add(bufferConsumer.copy());
@@ -129,7 +129,7 @@ public class InputGateFairnessTest {
 		final int numChannels = 37;
 		final int buffersPerChannel = 27;
 
-		final ResultPartition resultPartition = mock(ResultPartition.class);
+		final InternalResultPartition internalResultPartition = mock(InternalResultPartition.class);
 		try (BufferConsumer bufferConsumer = createFilledBufferConsumer(42)) {
 
 			// ----- create some source channels and fill them with one buffer each -----
@@ -137,7 +137,7 @@ public class InputGateFairnessTest {
 			final PipelinedSubpartition[] sources = new PipelinedSubpartition[numChannels];
 
 			for (int i = 0; i < numChannels; i++) {
-				sources[i] = new PipelinedSubpartition(0, resultPartition);
+				sources[i] = new PipelinedSubpartition(0, internalResultPartition);
 			}
 
 			// ----- create reading side -----

@@ -22,7 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
-import org.apache.flink.runtime.io.network.partition.ResultPartition;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
@@ -97,11 +97,11 @@ public class NetworkEnvironmentTest {
 			enableCreditBasedFlowControl);
 
 		// result partitions
-		ResultPartition rp1 = createResultPartition(ResultPartitionType.PIPELINED, 2);
-		ResultPartition rp2 = createResultPartition(ResultPartitionType.BLOCKING, 2);
-		ResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 2);
-		ResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 8);
-		final ResultPartition[] resultPartitions = new ResultPartition[] {rp1, rp2, rp3, rp4};
+		InternalResultPartition rp1 = createResultPartition(ResultPartitionType.PIPELINED, 2);
+		InternalResultPartition rp2 = createResultPartition(ResultPartitionType.BLOCKING, 2);
+		InternalResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 2);
+		InternalResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 8);
+		final InternalResultPartition[] internalResultPartitions = new InternalResultPartition[] {rp1, rp2, rp3, rp4};
 
 		// input gates
 		SingleInputGate ig1 = createSingleInputGate(ResultPartitionType.PIPELINED, 2);
@@ -112,7 +112,7 @@ public class NetworkEnvironmentTest {
 
 		// overall task to register
 		Task task = mock(Task.class);
-		when(task.getProducedPartitions()).thenReturn(resultPartitions);
+		when(task.getInternalPartitions()).thenReturn(Arrays.asList(internalResultPartitions));
 		when(task.getAllInputGates()).thenReturn(inputGates);
 
 		network.registerTask(task);
@@ -146,7 +146,7 @@ public class NetworkEnvironmentTest {
 		verify(ig3, times(invokations)).assignExclusiveSegments(network.getNetworkBufferPool(), 2);
 		verify(ig4, times(invokations)).assignExclusiveSegments(network.getNetworkBufferPool(), 2);
 
-		for (ResultPartition rp : resultPartitions) {
+		for (InternalResultPartition rp : internalResultPartitions) {
 			rp.release();
 		}
 		for (SingleInputGate ig : inputGates) {
@@ -215,11 +215,11 @@ public class NetworkEnvironmentTest {
 		final ConnectionManager connManager = createDummyConnectionManager();
 
 		// result partitions
-		ResultPartition rp1 = createResultPartition(ResultPartitionType.PIPELINED, 2);
-		ResultPartition rp2 = createResultPartition(ResultPartitionType.BLOCKING, 2);
-		ResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 2);
-		ResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 4);
-		final ResultPartition[] resultPartitions = new ResultPartition[] {rp1, rp2, rp3, rp4};
+		InternalResultPartition rp1 = createResultPartition(ResultPartitionType.PIPELINED, 2);
+		InternalResultPartition rp2 = createResultPartition(ResultPartitionType.BLOCKING, 2);
+		InternalResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 2);
+		InternalResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 4);
+		final InternalResultPartition[] internalResultPartitions = new InternalResultPartition[] {rp1, rp2, rp3, rp4};
 
 		// input gates
 		SingleInputGate ig1 = createSingleInputGate(ResultPartitionType.PIPELINED, 2);
@@ -248,7 +248,7 @@ public class NetworkEnvironmentTest {
 
 		// overall task to register
 		Task task = mock(Task.class);
-		when(task.getProducedPartitions()).thenReturn(resultPartitions);
+		when(task.getInternalPartitions()).thenReturn(Arrays.asList(internalResultPartitions));
 		when(task.getAllInputGates()).thenReturn(inputGates);
 
 		network.registerTask(task);
@@ -259,7 +259,7 @@ public class NetworkEnvironmentTest {
 		assertEquals(2 * 2 + 8, rp3.getBufferPool().getMaxNumberOfMemorySegments());
 		assertEquals(4 * 2 + 8, rp4.getBufferPool().getMaxNumberOfMemorySegments());
 
-		for (ResultPartition rp : resultPartitions) {
+		for (InternalResultPartition rp : internalResultPartitions) {
 			assertEquals(rp.getNumberOfSubpartitions(), rp.getBufferPool().getNumberOfRequiredMemorySegments());
 			assertEquals(rp.getNumberOfSubpartitions(), rp.getBufferPool().getNumBuffers());
 		}
@@ -282,7 +282,7 @@ public class NetworkEnvironmentTest {
 		verify(ig3, times(invokations)).assignExclusiveSegments(network.getNetworkBufferPool(), 2);
 		verify(ig4, times(invokations)).assignExclusiveSegments(network.getNetworkBufferPool(), 2);
 
-		for (ResultPartition rp : resultPartitions) {
+		for (InternalResultPartition rp : internalResultPartitions) {
 			rp.release();
 		}
 		for (SingleInputGate ig : inputGates) {
@@ -292,7 +292,7 @@ public class NetworkEnvironmentTest {
 	}
 
 	/**
-	 * Helper to create simple {@link ResultPartition} instance for use by a {@link Task} inside
+	 * Helper to create simple {@link InternalResultPartition} instance for use by a {@link Task} inside
 	 * {@link NetworkEnvironment#registerTask(Task)}.
 	 *
 	 * @param partitionType
@@ -303,9 +303,9 @@ public class NetworkEnvironmentTest {
 	 * @return instance with minimal data set and some mocks so that it is useful for {@link
 	 * NetworkEnvironment#registerTask(Task)}
 	 */
-	private static ResultPartition createResultPartition(
+	private static InternalResultPartition createResultPartition(
 			final ResultPartitionType partitionType, final int channels) {
-		return new ResultPartition(
+		return new InternalResultPartition(
 			"TestTask-" + partitionType + ":" + channels,
 			mock(TaskActions.class),
 			new JobID(),
@@ -349,17 +349,17 @@ public class NetworkEnvironmentTest {
 	private static void createRemoteInputChannel(
 			SingleInputGate inputGate,
 			int channelIndex,
-			ResultPartition resultPartition,
+			InternalResultPartition internalResultPartition,
 			ConnectionManager connManager) {
 		RemoteInputChannel channel = new RemoteInputChannel(
 			inputGate,
 			channelIndex,
-			resultPartition.getPartitionId(),
+			internalResultPartition.getPartitionId(),
 			mock(ConnectionID.class),
 			connManager,
 			0,
 			0,
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
-		inputGate.setInputChannel(resultPartition.getPartitionId().getPartitionId(), channel);
+		inputGate.setInputChannel(internalResultPartition.getPartitionId().getPartitionId(), channel);
 	}
 }

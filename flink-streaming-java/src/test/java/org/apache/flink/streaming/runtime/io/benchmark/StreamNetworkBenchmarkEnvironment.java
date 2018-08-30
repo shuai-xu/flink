@@ -39,7 +39,7 @@ import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.apache.flink.runtime.io.network.netty.NettyConnectionManager;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
-import org.apache.flink.runtime.io.network.partition.ResultPartition;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
@@ -207,7 +207,7 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 			NetworkEnvironment environment,
 			int channels) throws Exception {
 
-		ResultPartition resultPartition = new ResultPartition(
+		InternalResultPartition internalResultPartition = new InternalResultPartition(
 			"sender task",
 			new NoOpTaskActions(),
 			jobId,
@@ -220,9 +220,9 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 			ioManager,
 			false);
 
-		environment.setupPartition(resultPartition);
+		environment.setupPartition(internalResultPartition);
 
-		return resultPartition;
+		return internalResultPartition;
 	}
 
 	private InputGate createInputGate(

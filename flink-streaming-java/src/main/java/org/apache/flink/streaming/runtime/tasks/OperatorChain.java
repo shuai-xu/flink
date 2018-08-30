@@ -131,7 +131,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 					streamRecordWriters.get(i),
 					outEdge,
 					chainedConfigs.get(outEdge.getSourceId()),
-					containingTask.getEnvironment());
+					containingTask.getEnvironment(),
+					i);
 
 				this.streamOutputs[i] = streamOutput;
 				streamOutputMap.put(outEdge, streamOutput);
@@ -456,7 +457,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 			StreamRecordWriter<SerializationDelegate<StreamRecord<?>>> streamRecordWriter,
 			StreamEdge edge,
 			StreamConfig upStreamConfig,
-			Environment taskEnvironment) {
+			Environment taskEnvironment,
+			int outputIndex) {
 		OutputTag sideOutputTag = edge.getOutputTag(); // OutputTag, return null if not sideOutput
 
 		TypeSerializer outSerializer = null;
@@ -469,6 +471,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 			// main output
 			outSerializer = upStreamConfig.getTypeSerializerOut(taskEnvironment.getUserClassLoader());
 		}
+
+		taskEnvironment.getWriter(outputIndex).setTypeSerializer(outSerializer);
 
 		return new RecordWriterOutput(streamRecordWriter, outSerializer, sideOutputTag, this);
 	}

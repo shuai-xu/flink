@@ -25,7 +25,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager.IOMode;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
-import org.apache.flink.runtime.io.network.partition.ResultPartition;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -182,14 +183,14 @@ public class NetworkEnvironment {
 	// --------------------------------------------------------------------------------------------
 
 	public void registerTask(Task task) throws IOException {
-		final ResultPartition[] producedPartitions = task.getProducedPartitions();
+		final List<InternalResultPartition> resultPartitions = task.getInternalPartitions();
 
 		synchronized (lock) {
 			if (isShutdown) {
 				throw new IllegalStateException("NetworkEnvironment is shut down");
 			}
 
-			for (final ResultPartition partition : producedPartitions) {
+			for (final InternalResultPartition partition : resultPartitions) {
 				setupPartition(partition);
 			}
 
@@ -202,7 +203,7 @@ public class NetworkEnvironment {
 	}
 
 	@VisibleForTesting
-	public void setupPartition(ResultPartition partition) throws IOException {
+	public void setupPartition(InternalResultPartition partition) throws IOException {
 		BufferPool bufferPool = null;
 
 		try {
@@ -275,7 +276,7 @@ public class NetworkEnvironment {
 				resultPartitionManager.releasePartitionsProducedBy(executionId, task.getFailureCause());
 			}
 
-			for (ResultPartition partition : task.getProducedPartitions()) {
+			for (InternalResultPartition partition : task.getInternalPartitions()) {
 				taskEventDispatcher.unregisterPartition(partition.getPartitionId());
 				partition.destroyBufferPool();
 			}

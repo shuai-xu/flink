@@ -55,7 +55,7 @@ public class InputGateConcurrentTest {
 		final int numChannels = 11;
 		final int buffersPerChannel = 1000;
 
-		final ResultPartition resultPartition = mock(ResultPartition.class);
+		final InternalResultPartition internalResultPartition = mock(InternalResultPartition.class);
 
 		final PipelinedSubpartition[] partitions = new PipelinedSubpartition[numChannels];
 		final Source[] sources = new Source[numChannels];
@@ -80,7 +80,7 @@ public class InputGateConcurrentTest {
 					resultPartitionManager, mock(TaskEventDispatcher.class), UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
 			gate.setInputChannel(new IntermediateResultPartitionID(), channel);
 
-			partitions[i] = new PipelinedSubpartition(0, resultPartition);
+			partitions[i] = new PipelinedSubpartition(0, internalResultPartition);
 			sources[i] = new PipelinedSubpartitionSource(partitions[i]);
 			inputChannels[i] = channel;
 		}
@@ -151,7 +151,7 @@ public class InputGateConcurrentTest {
 		Collections.shuffle(localOrRemote);
 
 		final ConnectionManager connManager = createDummyConnectionManager();
-		final ResultPartition resultPartition = mock(ResultPartition.class);
+		final InternalResultPartition internalResultPartition = mock(InternalResultPartition.class);
 
 		final PipelinedSubpartition[] localPartitions = new PipelinedSubpartition[numLocalChannels];
 		final ResultPartitionManager resultPartitionManager = createResultPartitionManager(localPartitions);
@@ -175,7 +175,7 @@ public class InputGateConcurrentTest {
 		for (int i = 0, local = 0; i < numChannels; i++) {
 			if (localOrRemote.get(i)) {
 				// local channel
-				PipelinedSubpartition psp = new PipelinedSubpartition(0, resultPartition);
+				PipelinedSubpartition psp = new PipelinedSubpartition(0, internalResultPartition);
 				localPartitions[local++] = psp;
 				sources[i] = new PipelinedSubpartitionSource(psp);
 

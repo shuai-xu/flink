@@ -25,7 +25,7 @@ import org.apache.flink.metrics.MeterView;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.executiongraph.IOMetrics;
-import org.apache.flink.runtime.io.network.partition.ResultPartition;
+import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.taskmanager.Task;
@@ -158,7 +158,7 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 		public Integer getValue() {
 			int totalBuffers = 0;
 
-			for (ResultPartition producedPartition : task.getProducedPartitions()) {
+			for (InternalResultPartition producedPartition : task.getInternalPartitions()) {
 				totalBuffers += producedPartition.getNumberOfQueuedBuffers();
 			}
 
@@ -211,9 +211,9 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 			int usedBuffers = 0;
 			int bufferPoolSize = 0;
 
-			for (ResultPartition resultPartition : task.getProducedPartitions()) {
-				usedBuffers += resultPartition.getBufferPool().bestEffortGetNumOfUsedBuffers();
-				bufferPoolSize += resultPartition.getBufferPool().getNumBuffers();
+			for (InternalResultPartition internalResultPartition : task.getInternalPartitions()) {
+				usedBuffers += internalResultPartition.getBufferPool().bestEffortGetNumOfUsedBuffers();
+				bufferPoolSize += internalResultPartition.getBufferPool().getNumBuffers();
 			}
 
 			if (bufferPoolSize != 0) {

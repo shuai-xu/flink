@@ -276,7 +276,7 @@ class SpillableSubpartitionView implements ResultSubpartitionView {
 	public String toString() {
 		boolean hasSpilled = spilledView != null;
 
-		return String.format("SpillableSubpartitionView(index: %d, buffers: %d, spilled? %b) of ResultPartition %s",
+		return String.format("SpillableSubpartitionView(index: %d, buffers: %d, spilled? %b) of InternalResultPartition %s",
 			parent.index,
 			numBuffers,
 			hasSpilled,

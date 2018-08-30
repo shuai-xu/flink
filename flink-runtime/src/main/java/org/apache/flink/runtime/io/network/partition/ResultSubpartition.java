@@ -30,7 +30,7 @@ import java.util.ArrayDeque;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * A single subpartition of a {@link ResultPartition} instance.
+ * A single subpartition of a {@link InternalResultPartition} instance.
  */
 public abstract class ResultSubpartition {
 
@@ -38,7 +38,7 @@ public abstract class ResultSubpartition {
 	protected final int index;
 
 	/** The parent partition this subpartition belongs to. */
-	protected final ResultPartition parent;
+	protected final InternalResultPartition parent;
 
 	/** All buffers of this subpartition. Access to the buffers is synchronized on this object. */
 	protected final ArrayDeque<BufferConsumer> buffers = new ArrayDeque<>();
@@ -55,7 +55,7 @@ public abstract class ResultSubpartition {
 	/** The total number of bytes (both data and event buffers) */
 	private long totalNumberOfBytes;
 
-	public ResultSubpartition(int index, ResultPartition parent) {
+	public ResultSubpartition(int index, InternalResultPartition parent) {
 		this.index = index;
 		this.parent = parent;
 	}

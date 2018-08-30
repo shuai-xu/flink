@@ -95,7 +95,7 @@ public class SpillableSubpartitionTest extends SubpartitionTestBase {
 	}
 
 	private static SpillableSubpartition createSubpartition(IOManager ioManager) {
-		ResultPartition parent = mock(ResultPartition.class);
+		InternalResultPartition parent = mock(InternalResultPartition.class);
 		BufferProvider bufferProvider = mock(BufferProvider.class);
 		when(parent.getBufferProvider()).thenReturn(bufferProvider);
 		when(bufferProvider.getMemorySegmentSize()).thenReturn(32 * 1024);
@@ -131,7 +131,7 @@ public class SpillableSubpartitionTest extends SubpartitionTestBase {
 
 		// The partition
 		final SpillableSubpartition partition = new SpillableSubpartition(
-			0, mock(ResultPartition.class), ioManager);
+			0, mock(InternalResultPartition.class), ioManager);
 
 		// Spill the partition initially (creates the spill writer)
 		assertEquals(0, partition.releaseMemory());
