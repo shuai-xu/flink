@@ -18,7 +18,7 @@
 package org.apache.flink.table.runtime.operator.join.stream;
 
 import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -54,13 +54,13 @@ public class FullOuterJoinStreamOperator extends OuterJoinStreamOperator {
 	}
 
 	@Override
-	public InputElementSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
 		return processElement(element.getValue(), leftStateHandler, rightStateHandler, leftMatchStateHandler,
 				rightMatchStateHandler, true, true, true, leftTimerState);
 	}
 
 	@Override
-	public InputElementSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
 		return processElement(element.getValue(), rightStateHandler, leftStateHandler, rightMatchStateHandler,
 				leftMatchStateHandler, false, true, true, rightTimerState);
 	}

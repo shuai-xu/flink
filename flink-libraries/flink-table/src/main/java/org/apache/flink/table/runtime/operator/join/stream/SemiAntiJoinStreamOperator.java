@@ -19,8 +19,8 @@ package org.apache.flink.table.runtime.operator.join.stream;
 
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
 import org.apache.flink.streaming.api.operators.InternalTimer;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -133,7 +133,7 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 	}
 
 	@Override
-	public InputElementSelection processElement1(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord1(StreamRecord<BaseRow> element) throws Exception {
 		long currentTime = internalTimerService.currentProcessingTime();
 		BaseRow input = element.getValue();
 		BaseRow joinKey = leftKeySelector.getKey(input);
@@ -189,18 +189,18 @@ public class SemiAntiJoinStreamOperator extends JoinStreamOperator {
 				leftNotEmitedStateHandler.add(input, currentTime + maxRetentionTime);
 			}
 		}
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	@Override
-	public InputElementSelection processElement2(StreamRecord<BaseRow> element) throws Exception {
+	public TwoInputSelection processRecord2(StreamRecord<BaseRow> element) throws Exception {
 		BaseRow input = element.getValue();
 		if (isAntiJoin) {
 			processReceivedRightRow(input, leftNotEmitedStateHandler, leftEmitedStateHandler);
 		} else {
 			processReceivedRightRow(input, leftEmitedStateHandler, leftNotEmitedStateHandler);
 		}
-		return InputElementSelection.ANY;
+		return TwoInputSelection.ANY;
 	}
 
 	private void processReceivedRightRow(BaseRow rightRow, JoinStateHandler leftJoinStateHandler,

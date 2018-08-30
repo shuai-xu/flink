@@ -27,8 +27,8 @@ import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.streaming.api.graph.StreamGraph
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics._
-import org.apache.sling.commons.json.JSONObject
 import PlanUtil._
+import org.json.JSONObject
 
 import scala.collection.mutable
 import scala.collection.JavaConversions._

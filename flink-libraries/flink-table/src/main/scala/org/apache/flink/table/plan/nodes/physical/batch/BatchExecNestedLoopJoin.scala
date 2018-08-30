@@ -214,12 +214,10 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
             s"""
                |sendStageDoneEvent(0);
                |$buildEndCode
-               |return $SECOND;
              """.stripMargin,
             probeProcessCode,
             s"""
                |$probeEndCode
-               |return $NONE;
              """.stripMargin
             )
       }  else {
@@ -228,7 +226,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
             probeProcessCode,
             s"""
                |$probeEndCode
-               |return $NONE;
              """.stripMargin,
             s"""
                |$buildProcessCode
@@ -237,7 +234,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
             s"""
                |sendStageDoneEvent(0);
                |$buildEndCode
-               |return $FIRST;
              """.stripMargin
             )
       }

@@ -37,19 +37,16 @@ object OperatorCodeGenerator extends Logging {
 
   val STREAM_RECORD = "org.apache.flink.streaming.runtime.streamrecord.StreamRecord"
 
-  val SELECTION = "org.apache.flink.streaming.api.operators.InputElementSelection"
+  val SELECTION = "org.apache.flink.streaming.api.operators.TwoInputSelection"
 
   val ANY: String =
-    "org.apache.flink.streaming.api.operators.InputElementSelection.ANY"
+    "org.apache.flink.streaming.api.operators.TwoInputSelection.ANY"
 
   val FIRST: String =
-    "org.apache.flink.streaming.api.operators.InputElementSelection.FIRST"
+    "org.apache.flink.streaming.api.operators.TwoInputSelection.FIRST"
 
   val SECOND: String =
-    "org.apache.flink.streaming.api.operators.InputElementSelection.SECOND"
-
-  val NONE: String =
-    "org.apache.flink.streaming.api.operators.InputElementSelection.NONE"
+    "org.apache.flink.streaming.api.operators.TwoInputSelection.SECOND"
 
   def addReuseOutElement(ctx: CodeGeneratorContext): Unit = {
     ctx.addReusableMember(s"private final $STREAM_RECORD $OUT_ELEMENT = new $STREAM_RECORD(null);")
@@ -291,7 +288,7 @@ object OperatorCodeGenerator extends Logging {
         }
 
         @Override
-        public $SELECTION processElement1($STREAM_RECORD $ELEMENT)
+        public $SELECTION processRecord1($STREAM_RECORD $ELEMENT)
          throws Exception {
           ${ctx.reuseFieldCode()}
           $inputTypeTerm1 $input1Term = ${generatorInputTerm(inputTypeTerm1)}
@@ -299,12 +296,12 @@ object OperatorCodeGenerator extends Logging {
         }
 
         @Override
-        public $SELECTION endInput1() throws Exception {
+        public void endInput1() throws Exception {
           $endInputCode1
         }
 
         @Override
-        public $SELECTION processElement2($STREAM_RECORD $ELEMENT)
+        public $SELECTION processRecord2($STREAM_RECORD $ELEMENT)
          throws Exception {
           ${ctx.reuseFieldCode()}
           $inputTypeTerm2 $input2Term = ${generatorInputTerm(inputTypeTerm2)}
@@ -312,7 +309,7 @@ object OperatorCodeGenerator extends Logging {
         }
 
         @Override
-        public $SELECTION endInput2() throws Exception {
+        public void endInput2() throws Exception {
           $endInputCode2
         }
 

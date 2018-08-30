@@ -39,18 +39,15 @@ public class RowCsvOutputFormat extends AbstractCsvOutputFormat<Row> {
 		super(outputPath, fieldDelimiter);
 	}
 
-	public RowCsvOutputFormat(Path outputPath, String recordDelimiter,
-							  String fieldDelimiter) {
+	public RowCsvOutputFormat(Path outputPath, String recordDelimiter, String fieldDelimiter) {
 		super(outputPath, recordDelimiter, fieldDelimiter);
 	}
 
-	public RowCsvOutputFormat(Path outputPath, String recordDelimiter,
-							  String fieldDelimiter, String quoteCharacter) {
+	public RowCsvOutputFormat(Path outputPath, String recordDelimiter, String fieldDelimiter, String quoteCharacter) {
 		super(outputPath, recordDelimiter, fieldDelimiter, quoteCharacter);
 	}
 
-	public RowCsvOutputFormat(Path outputPath, String recordDelimiter,
-							  String fieldDelimiter, char quoteCharacter) {
+	public RowCsvOutputFormat(Path outputPath, String recordDelimiter, String fieldDelimiter, char quoteCharacter) {
 		super(outputPath, recordDelimiter, fieldDelimiter, quoteCharacter);
 	}
 

@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.operator.range;
 
 import org.apache.flink.api.common.distributions.RangeBoundaries;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.streaming.api.operators.InputElementSelection;
+import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -52,19 +52,19 @@ public class AssignRangeIndexOperator extends AbstractStreamOperatorWithMetrics<
 	}
 
 	@Override
-	public InputElementSelection firstInputSelection() {
-		return InputElementSelection.FIRST;
+	public TwoInputSelection firstInputSelection() {
+		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public InputElementSelection processElement1(
+	public TwoInputSelection processRecord1(
 			StreamRecord<Object[][]> streamRecord) throws Exception {
 		rangeBoundaries = new CommonRangeBoundaries(keyExtractor, streamRecord.getValue());
-		return InputElementSelection.FIRST;
+		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public InputElementSelection processElement2(
+	public TwoInputSelection processRecord2(
 			StreamRecord<BaseRow> streamRecord) throws Exception {
 		if (rangeBoundaries == null) {
 			throw new RuntimeException("There should be one data from the first input.");
@@ -73,16 +73,6 @@ public class AssignRangeIndexOperator extends AbstractStreamOperatorWithMetrics<
 		tupleWithPartitionId.f0 = rangeBoundaries.getRangeIndex(streamRecord.getValue());
 		tupleWithPartitionId.f1 = streamRecord.getValue();
 		collector.collect(tupleWithPartitionId);
-		return InputElementSelection.SECOND;
-	}
-
-	@Override
-	public InputElementSelection endInput1() throws Exception {
-		return InputElementSelection.SECOND;
-	}
-
-	@Override
-	public InputElementSelection endInput2() throws Exception {
-		return InputElementSelection.NONE;
+		return TwoInputSelection.SECOND;
 	}
 }

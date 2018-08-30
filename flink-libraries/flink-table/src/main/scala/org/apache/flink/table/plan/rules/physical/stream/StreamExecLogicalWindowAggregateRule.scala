@@ -16,35 +16,50 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.rules.physical.batch
+package org.apache.flink.table.plan.rules.physical.stream
 
-import java.math.BigDecimal
+import java.math.{BigDecimal => JBigDecimal}
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
-import org.apache.flink.table.api.{TableException, WindowExpression}
+import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.table.api.scala.{Session, Slide, Tumble}
+import org.apache.flink.table.api.{TableException, ValidationException, WindowExpression}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.expressions.{Expression, Literal, ResolvedFieldReference, WindowReference}
+import org.apache.flink.table.expressions.{Literal, ResolvedFieldReference, WindowReference}
 import org.apache.flink.table.plan.rules.physical.LogicalWindowAggregateRule
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.validate.BasicOperatorTable
 
-class BatchExecLogicalWindowAggregateRule
-  extends LogicalWindowAggregateRule("BatchExecLogicalWindowAggregateRule") {
+class StreamExecLogicalWindowAggregateRule
+  extends LogicalWindowAggregateRule("StreamExecLogicalWindowAggregateRule") {
 
-  /** Returns the operand of the group window function. */
+  /** Returns a reference to the time attribute with a time indicator type */
   override private[table] def getInAggregateGroupExpression(
     rexBuilder: RexBuilder,
-    windowExpression: RexCall): RexNode = windowExpression.getOperands.get(0)
+    windowExpression: RexCall): RexNode = {
 
-  /** Returns a zero literal of the correct type. */
+    val timeAttribute = windowExpression.operands.get(0)
+    timeAttribute match {
+
+      case _ if FlinkTypeFactory.isTimeIndicatorType(timeAttribute.getType) =>
+        timeAttribute
+
+      case _ =>
+        throw TableException(
+          s"Time attribute expected but ${timeAttribute.getType} encountered.")
+    }
+  }
+
+  /** Returns a zero literal of a timestamp type */
   override private[table] def getOutAggregateGroupExpression(
     rexBuilder: RexBuilder,
     windowExpression: RexCall): RexNode = {
 
-    val literalType = windowExpression.getOperands.get(0).getType
-    rexBuilder.makeZeroLiteral(literalType)
+    rexBuilder.makeLiteral(
+      0L,
+      rexBuilder.getTypeFactory.createSqlType(SqlTypeName.TIMESTAMP),
+      true)
   }
 
   override private[table] def translateWindowExpression(
@@ -53,42 +68,47 @@ class BatchExecLogicalWindowAggregateRule
 
     def getOperandAsLong(call: RexCall, idx: Int): Long =
       call.getOperands.get(idx) match {
-        case v: RexLiteral => v.getValue.asInstanceOf[BigDecimal].longValue()
-        case _ => throw new TableException("Only constant window descriptors are supported")
+        case v: RexLiteral => v.getValue.asInstanceOf[JBigDecimal].longValue()
+        case _ => throw TableException("Only constant window descriptors are supported.")
       }
 
-    def getFieldReference(operand: RexNode): Expression = {
-      operand match {
-        case ref: RexInputRef =>
-          // resolve field name of window attribute
-          val fieldName = rowType.getFieldList.get(ref.getIndex).getName
-          val fieldType = rowType.getFieldList.get(ref.getIndex).getType
-          ResolvedFieldReference(fieldName, FlinkTypeFactory.toInternalType(fieldType))
+    def getOperandAsTimeIndicator(call: RexCall, idx: Int): ResolvedFieldReference =
+      call.getOperands.get(idx) match {
+        case v: RexInputRef if FlinkTypeFactory.isTimeIndicatorType(v.getType) =>
+          ResolvedFieldReference(
+            rowType.getFieldList.get(v.getIndex).getName,
+            FlinkTypeFactory.toInternalType(v.getType))
+        case _ =>
+          throw ValidationException("Window can only be defined over a time attribute column.")
       }
-    }
 
-    val timeField = getFieldReference(windowExpr.getOperands.get(0))
     windowExpr.getOperator match {
       case BasicOperatorTable.TUMBLE =>
+        val time = getOperandAsTimeIndicator(windowExpr, 0)
         val interval = getOperandAsLong(windowExpr, 1)
         val w = Tumble.over(Literal(interval, DataTypes.INTERVAL_MILLIS))
-        w.on(timeField).as(WindowReference("w$", Some(timeField.resultType)))
+
+        w.on(time).as(WindowReference("w$", Some(time.resultType)))
 
       case BasicOperatorTable.HOP =>
+        val time = getOperandAsTimeIndicator(windowExpr, 0)
         val (slide, size) = (getOperandAsLong(windowExpr, 1), getOperandAsLong(windowExpr, 2))
         val w = Slide
           .over(Literal(size, DataTypes.INTERVAL_MILLIS))
           .every(Literal(slide, DataTypes.INTERVAL_MILLIS))
-        w.on(timeField).as(WindowReference("w$", Some(timeField.resultType)))
+
+        w.on(time).as(WindowReference("w$", Some(time.resultType)))
 
       case BasicOperatorTable.SESSION =>
+        val time = getOperandAsTimeIndicator(windowExpr, 0)
         val gap = getOperandAsLong(windowExpr, 1)
         val w = Session.withGap(Literal(gap, DataTypes.INTERVAL_MILLIS))
-        w.on(timeField).as(WindowReference("w$", Some(timeField.resultType)))
+
+        w.on(time).as(WindowReference("w$", Some(time.resultType)))
     }
   }
 }
 
-object BatchExecLogicalWindowAggregateRule {
-  val INSTANCE = new BatchExecLogicalWindowAggregateRule
+object StreamExecLogicalWindowAggregateRule {
+  val INSTANCE = new StreamExecLogicalWindowAggregateRule
 }
