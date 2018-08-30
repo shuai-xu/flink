@@ -21,8 +21,10 @@ import java.lang.{Iterable => JIterable}
 import java.math.BigDecimal
 
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
+import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.types.{DataType, DataTypes, DecimalType}
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.typeutils.BinaryStringTypeInfo
 
 /** The initial accumulator for Max aggregate function */
 class Max2ndAccumulator[T] extends JTuple3[T, T, Boolean]
@@ -164,7 +166,15 @@ class DecimalMax2ndAggFunction(decimalType: DecimalType)
 /**
   * Built-in String Max aggregate function
   */
-class StringMax2ndAggFunction extends Max2ndAggFunction[String] {
-  override def getInitValue = ""
-  override def getValueTypeInfo = DataTypes.STRING
+class StringMax2ndAggFunction extends Max2ndAggFunction[BinaryString] {
+
+  override def getValueTypeInfo: DataType = DataTypes.of(
+    BinaryStringTypeInfo.INSTANCE)
+  override def getInitValue = BinaryString.EMPTY_UTF8
+
+  override def accumulate(acc: Max2ndAccumulator[BinaryString], value: Any): Unit = {
+    if (null != value) {
+      accumulate(acc, value.asInstanceOf[BinaryString].copy())
+    }
+  }
 }

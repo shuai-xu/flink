@@ -135,4 +135,17 @@ class StringFirstValueAggFunction extends FirstValueAggFunction[BinaryString] {
     BinaryStringTypeInfo.INSTANCE)
   override def getValueType: DataType = DataTypes.of(
     BinaryStringTypeInfo.INSTANCE)
+
+  override def accumulate(acc: GenericRow, value: Any): Unit = {
+    if (null != value) {
+      super.accumulate(acc, value.asInstanceOf[BinaryString].copy())
+    }
+  }
+
+  override def accumulate(acc: GenericRow, value: Any, order: JLong): Unit = {
+    // just ignore nulls values and orders
+    if (null != value && null != order) {
+      super.accumulate(acc, value.asInstanceOf[BinaryString].copy(), order)
+    }
+  }
 }

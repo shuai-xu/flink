@@ -22,8 +22,10 @@ import java.util.{HashMap => JHashMap}
 import java.lang.{Iterable => JIterable}
 
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
+import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.types._
+import org.apache.flink.table.typeutils.BinaryStringTypeInfo
 
 /** The initial accumulator for Max2nd with retraction aggregate function */
 class Max2ndWithRetractAccumulator[T] extends JTuple3[T, T, JHashMap[T, Long]]
@@ -229,7 +231,16 @@ class DecimalMax2ndWithRetractAggFunction(decimalType: DecimalType)
 /**
   * Built-in String Max with retraction aggregate function
   */
-class StringMax2ndWithRetractAggFunction extends Max2ndWithRetractAggFunction[String] {
-  override def getInitValue: String = ""
-  override def getValueTypeInfo = DataTypes.STRING
+class StringMax2ndWithRetractAggFunction extends Max2ndWithRetractAggFunction[BinaryString] {
+
+  override def getValueTypeInfo: InternalType = DataTypes.createGenericType(
+    BinaryStringTypeInfo.INSTANCE)
+
+  override def getInitValue = BinaryString.EMPTY_UTF8
+
+  override def accumulate(acc: Max2ndWithRetractAccumulator[BinaryString], value: Any): Unit = {
+    if (null != value) {
+      accumulate(acc, value.asInstanceOf[BinaryString].copy())
+    }
+  }
 }
