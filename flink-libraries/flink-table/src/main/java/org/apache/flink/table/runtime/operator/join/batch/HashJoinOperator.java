@@ -199,16 +199,12 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 
 	@Override
 	public void endInput1() throws Exception {
-		sendStageDoneEvent(0);
 		LOG.info("Finish build phase.");
 		this.table.endBuild();
 	}
 
 	@Override
 	public void endInput2() throws Exception {
-		if (type.buildLeftSemiOrAnti()) {
-			sendStageDoneEvent(1);
-		}
 		LOG.info("Finish probe phase.");
 		while (this.table.nextMatching()) {
 			joinWithNextKey();

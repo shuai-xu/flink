@@ -66,7 +66,7 @@ public class StreamConfigTest {
 		}
 	}
 
-	private static class TestSubstituteStreamOperator<OUT> extends AbstractSubstituteStreamOperator<OUT> {
+	private static class TestSubstituteStreamOperator<OUT> implements AbstractSubstituteStreamOperator<OUT> {
 
 		private ChainingStrategy chainingStrategy = ChainingStrategy.ALWAYS;
 		private final StreamOperator<OUT> actualStreamOperator;

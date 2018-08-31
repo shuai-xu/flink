@@ -34,7 +34,7 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow, GenericRow}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
-import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -166,7 +166,7 @@ trait CommonCalc {
     calcProgram: RexProgram,
     condition: Option[RexNode],
     retainHeader: Boolean = false,
-    ruleDescription: String): (SubstituteStreamOperator[BaseRow], BaseRowTypeInfo[BaseRow]) = {
+    ruleDescription: String): (OneInputSubstituteStreamOperator[BaseRow], BaseRowTypeInfo[BaseRow]) = {
     val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
     // filter out time attributes
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
@@ -194,7 +194,7 @@ trait CommonCalc {
       splitFunc = codeSplit,
       filterSplitFunc = filterCodeSplit,
       lazyInputUnboxingCode = true)
-    val substituteStreamOperator = new SubstituteStreamOperator[BaseRow](
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow](
       genOperatorExpression.name,
       genOperatorExpression.code,
       references = ctx.references)

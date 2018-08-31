@@ -42,7 +42,7 @@ class SubstituteStreamOperatorTest {
     val generatedOperator = OperatorCodeGenerator.generateOneInputStreamOperator[Date, Date](
       ctx, operatorName, processCode, "", new BaseRowType(classOf[BaseRow], DataTypes.DATE),
       new TableConfig)
-    val substituteOperator = new SubstituteStreamOperator[Date](
+    val substituteOperator = new OneInputSubstituteStreamOperator[Date](
       generatedOperator.name, generatedOperator.code)
     val operator = substituteOperator.getActualStreamOperator(getClass.getClassLoader)
       .asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]]

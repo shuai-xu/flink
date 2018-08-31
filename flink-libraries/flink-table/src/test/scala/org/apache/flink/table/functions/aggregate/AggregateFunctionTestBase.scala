@@ -38,7 +38,7 @@ import org.apache.flink.table.plan.logical.Aggregate
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat._
-import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit.Assert
@@ -219,7 +219,7 @@ abstract class AggregateFunctionTestBase {
       DataTypes.internal(inputDataType).asInstanceOf[BaseRowType],
       DataTypes.internal(outputRowType).asInstanceOf[BaseRowType],
       "Sort")
-    val operator = new SubstituteStreamOperator[BaseRow](
+    val operator = new OneInputSubstituteStreamOperator[BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)
@@ -271,7 +271,7 @@ abstract class AggregateFunctionTestBase {
         DataTypes.internal(inputDataType).asInstanceOf[BaseRowType],
         DataTypes.internal(localOutputRowType).asInstanceOf[BaseRowType],
         "Sort")
-      new SubstituteStreamOperator[BaseRow](
+      new OneInputSubstituteStreamOperator[BaseRow](
         generatedLocalOperator.name,
         generatedLocalOperator.code,
         references = ctx.references)
@@ -312,7 +312,7 @@ abstract class AggregateFunctionTestBase {
       DataTypes.internal(localOutputRowType).asInstanceOf[BaseRowType],
       DataTypes.internal(gloablOutRowType).asInstanceOf[BaseRowType],
       "Sort")
-    val globalOperator = new SubstituteStreamOperator[BaseRow](
+    val globalOperator = new OneInputSubstituteStreamOperator[BaseRow](
       generatedGlobalOperator.name,
       generatedGlobalOperator.code,
       references = ctx.references)

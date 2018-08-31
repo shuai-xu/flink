@@ -63,7 +63,7 @@ import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
-import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.types._
@@ -1093,7 +1093,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       rowtimeField: Option[Int],
       withChangeFlag: Boolean,
       dataType: DataType)
-    : (Option[SubstituteStreamOperator[OUT]], TypeInformation[OUT])  = {
+    : (Option[OneInputSubstituteStreamOperator[OUT]], TypeInformation[OUT])  = {
 
     val resultType = DataTypes.toTypeInfo(dataType).asInstanceOf[TypeInformation[OUT]]
 
@@ -1207,7 +1207,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       endInputCode,
       DataTypes.internal(inputTypeInfo),
       config)
-    val substituteStreamOperator = new SubstituteStreamOperator[OUT](
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[OUT](
       generated.name,
       generated.code,
       references = ctx.references)

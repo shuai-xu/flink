@@ -26,20 +26,19 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
-import org.apache.flink.streaming.api.graph.StreamEdge.InputOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
-import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{FIRST, NONE, SECOND, generatorCollect}
+import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{FIRST, SECOND, generatorCollect}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{BatchExecResourceUtil, ResettableExternalBuffer}
@@ -212,7 +211,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
                |return $FIRST;
              """.stripMargin,
             s"""
-               |sendStageDoneEvent(0);
                |$buildEndCode
              """.stripMargin,
             probeProcessCode,
@@ -232,7 +230,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
                |return $SECOND;
              """.stripMargin,
             s"""
-               |sendStageDoneEvent(0);
                |$buildEndCode
              """.stripMargin
             )
@@ -254,7 +251,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
         input2Term = input2Term
       )
 
-    val substituteStreamOperator = new SubstituteStreamOperator[BaseRow](
+    val substituteStreamOperator = new TwoInputSubstituteStreamOperator[BaseRow, BaseRow, BaseRow](
       operatorExpression.name,
       operatorExpression.code)
 

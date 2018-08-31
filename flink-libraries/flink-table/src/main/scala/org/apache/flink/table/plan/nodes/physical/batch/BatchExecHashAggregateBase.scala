@@ -213,7 +213,6 @@ abstract class BatchExecHashAggregateBase(
     val endInputCode = if (isFinal) {
       val memPoolTypeTerm = classOf[BytesHashMapSpillMemorySegmentPool].getName
       s"""
-         |sendStageDoneEvent(0);
          |if ($sorterTerm == null) {
          | // no spilling, output by iterating aggregate map.
          | $outputResultFromMap

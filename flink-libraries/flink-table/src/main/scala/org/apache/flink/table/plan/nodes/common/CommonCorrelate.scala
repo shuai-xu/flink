@@ -34,7 +34,8 @@ import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.schema.FlinkTableFunction
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
-import org.apache.flink.table.runtime.operator.{StreamRecordCollector, SubstituteStreamOperator}
+import org.apache.flink.table.runtime.operator.{StreamRecordCollector,
+  OneInputSubstituteStreamOperator}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -157,7 +158,7 @@ trait CommonCorrelate {
       ruleDescription: String,
       functionClass: Class[T],
       udtfCollector: GeneratedCollector,
-      retainHeader: Boolean = true): SubstituteStreamOperator[BaseRow] = {
+      retainHeader: Boolean = true): OneInputSubstituteStreamOperator[BaseRow] = {
     ctx.references ++= collectorCtx.references
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
       .bindInput(inputType)
@@ -273,7 +274,7 @@ trait CommonCorrelate {
       "",
       inputType,
       config)
-    new SubstituteStreamOperator[BaseRow](
+    new OneInputSubstituteStreamOperator[BaseRow](
       genOperator.name,
       genOperator.code,
       references = ctx.references)

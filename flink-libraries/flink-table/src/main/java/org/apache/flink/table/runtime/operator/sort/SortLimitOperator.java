@@ -94,7 +94,6 @@ public class SortLimitOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 
 	@Override
 	public void endInput() throws Exception {
-		sendStageDoneEvent(0);
 		if (isGlobal) {
 			// Global sort, we need sort the results and pick records in limitStart to limitEnd.
 			List<BaseRow> list = new ArrayList<>(heap);

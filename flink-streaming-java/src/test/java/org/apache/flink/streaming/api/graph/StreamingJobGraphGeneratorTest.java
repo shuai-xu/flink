@@ -705,7 +705,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 	//  Test Utilities
 	// ------------------------------------------------------------------------
 
-	private static class TestSubstituteStreamOperator<IN, OUT> extends AbstractOneInputSubstituteStreamOperator<IN, OUT> {
+	private static class TestSubstituteStreamOperator<IN, OUT> implements AbstractOneInputSubstituteStreamOperator<IN, OUT> {
 
 		private ChainingStrategy chainingStrategy = ChainingStrategy.ALWAYS;
 		private final OneInputStreamOperator<IN, OUT> actualStreamOperator;

@@ -261,7 +261,6 @@ abstract class BatchExecHashWindowAggregateBase(
     val baseClass = classOf[AbstractStreamOperatorWithMetrics[_]].getName
     val endInputCode = if (isFinal) {
       s"""
-         |sendStageDoneEvent(0);
          |${outputWhenEndInputCode}
                """.stripMargin
     } else {

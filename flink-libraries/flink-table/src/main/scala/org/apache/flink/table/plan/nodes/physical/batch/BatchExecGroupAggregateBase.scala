@@ -223,7 +223,6 @@ abstract class BatchExecGroupAggregateBase(
     // if the input is empty in final phase, we should output default values
     val endInputCode = if (isFinal) {
       s"""
-         |sendStageDoneEvent(0);
          |if (!hasInput) {
          |  $initAggBufferCode
          |}
@@ -232,7 +231,6 @@ abstract class BatchExecGroupAggregateBase(
          |""".stripMargin
     } else {
       s"""
-         |sendStageDoneEvent(0);
          |if (hasInput) {
          |  ${aggOutputExpr.code}
          |  ${generatorCollect(aggOutputExpr.resultTerm)}

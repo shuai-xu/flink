@@ -38,69 +38,69 @@ import org.apache.flink.streaming.runtime.tasks.StreamTask;
  * @param <OUT> output type of the actual stream operator
  */
 @PublicEvolving
-public abstract class AbstractSubstituteStreamOperator <OUT> implements StreamOperator<OUT>, StreamOperatorSubstitutor<OUT> {
+public interface AbstractSubstituteStreamOperator <OUT> extends StreamOperator<OUT>, StreamOperatorSubstitutor<OUT> {
 	@Override
-	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
+	default void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void open() throws Exception {
+	default void open() throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void close() throws Exception {
+	default void close() throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void dispose() throws Exception {
+	default void dispose() throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public OperatorSnapshotFutures snapshotState(long checkpointId, long timestamp, CheckpointOptions checkpointOptions, CheckpointStreamFactory storageLocation) throws Exception {
+	default OperatorSnapshotFutures snapshotState(long checkpointId, long timestamp, CheckpointOptions checkpointOptions, CheckpointStreamFactory storageLocation) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void initializeState() throws Exception {
+	default void initializeState() throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void setKeyContextElement1(StreamRecord<?> record) throws Exception {
+	default void setKeyContextElement1(StreamRecord<?> record) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void setKeyContextElement2(StreamRecord<?> record) throws Exception {
+	default void setKeyContextElement2(StreamRecord<?> record) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public MetricGroup getMetricGroup() {
+	default MetricGroup getMetricGroup() {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public OperatorID getOperatorID() {
+	default OperatorID getOperatorID() {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void notifyCheckpointComplete(long checkpointId) throws Exception {
+	default void notifyCheckpointComplete(long checkpointId) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void setCurrentKey(Object key) {
+	default void setCurrentKey(Object key) {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public Object getCurrentKey() {
+	default Object getCurrentKey() {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
 }

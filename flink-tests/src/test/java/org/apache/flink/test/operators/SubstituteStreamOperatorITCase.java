@@ -113,7 +113,7 @@ public class SubstituteStreamOperatorITCase extends AbstractTestBase {
 	//  Test Utilities
 	// ------------------------------------------------------------------------
 
-	private static class TestOneInputSubstituteStreamOperator<IN, OUT> extends AbstractOneInputSubstituteStreamOperator<IN, OUT> {
+	private static class TestOneInputSubstituteStreamOperator<IN, OUT> implements AbstractOneInputSubstituteStreamOperator<IN, OUT> {
 
 		private ChainingStrategy chainingStrategy = ChainingStrategy.ALWAYS;
 		private final OneInputStreamOperator<IN, OUT> actualStreamOperator;
@@ -161,7 +161,7 @@ public class SubstituteStreamOperatorITCase extends AbstractTestBase {
 		}
 	}
 
-	private static class TestTwoInputSubstituteStreamOperator<IN1, IN2, OUT> extends AbstractTwoInputSubstituteStreamOperator<IN1, IN2, OUT> {
+	private static class TestTwoInputSubstituteStreamOperator<IN1, IN2, OUT> implements AbstractTwoInputSubstituteStreamOperator<IN1, IN2, OUT> {
 
 		private ChainingStrategy chainingStrategy = ChainingStrategy.ALWAYS;
 		private final TwoInputStreamOperator<IN1, IN2, OUT> actualStreamOperator;

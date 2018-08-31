@@ -28,41 +28,41 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
  * @param <IN2> The input type of the actual operator
  * @param <OUT> The output type of the actual operator
  */
-public abstract class AbstractTwoInputSubstituteStreamOperator<IN1, IN2, OUT> extends AbstractSubstituteStreamOperator<OUT>
-	implements TwoInputStreamOperator<IN1, IN2, OUT> {
+public interface AbstractTwoInputSubstituteStreamOperator<IN1, IN2, OUT> extends AbstractSubstituteStreamOperator<OUT>,
+	TwoInputStreamOperator<IN1, IN2, OUT> {
 
 	@Override
-	public TwoInputSelection firstInputSelection() {
+	default TwoInputSelection firstInputSelection() {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
+	default TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
+	default TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void processWatermark1(Watermark mark) throws Exception {
+	default void processWatermark1(Watermark mark) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void processWatermark2(Watermark mark) throws Exception {
+	default void processWatermark2(Watermark mark) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void processLatencyMarker1(LatencyMarker latencyMarker) throws Exception {
+	default void processLatencyMarker1(LatencyMarker latencyMarker) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void processLatencyMarker2(LatencyMarker latencyMarker) throws Exception {
+	default void processLatencyMarker2(LatencyMarker latencyMarker) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractTwoInputSubstituteStreamOperator, this method should not be called");
 	}
 }

@@ -246,7 +246,6 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 
 	@Override
 	public void endInput1() throws Exception {
-		sendStageDoneEvent(0);
 		isFinished[0] = true;
 		if (isAllFinished()) {
 			doSortMergeJoin();
@@ -255,7 +254,6 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 
 	@Override
 	public void endInput2() throws Exception {
-		sendStageDoneEvent(1);
 		isFinished[1] = true;
 		if (isAllFinished()) {
 			doSortMergeJoin();

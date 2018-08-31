@@ -31,7 +31,7 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD, generatorCollect}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
-import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -157,7 +157,7 @@ trait CommonScan[T] {
       splitFunc = codeSplit,
       converter = inputTermConverter)
 
-    val substituteStreamOperator = new SubstituteStreamOperator[BaseRow](
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)

@@ -27,7 +27,7 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD}
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext, ExprCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.operator.SubstituteStreamOperator
+import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -43,7 +43,7 @@ trait CommonExpand {
       config: TableConfig,
       projects: util.List[util.List[RexNode]],
       ruleDescription: String,
-      retainHeader: Boolean = false): SubstituteStreamOperator[BaseRow] = {
+      retainHeader: Boolean = false): OneInputSubstituteStreamOperator[BaseRow] = {
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val inputTypeTerm = boxedTypeTermForType(inputType)
 
@@ -96,7 +96,7 @@ trait CommonExpand {
         splitFunc = splitFunc,
         lazyInputUnboxingCode = false)
 
-    new SubstituteStreamOperator[BaseRow](
+    new OneInputSubstituteStreamOperator[BaseRow](
       genOperatorExpression.name,
       genOperatorExpression.code)
   }

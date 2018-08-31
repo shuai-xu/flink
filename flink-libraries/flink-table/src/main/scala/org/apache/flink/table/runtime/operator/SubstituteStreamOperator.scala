@@ -18,18 +18,18 @@
 
 package org.apache.flink.table.runtime.operator
 
-import org.apache.flink.streaming.api.operators.{AbstractSubstituteStreamOperator, ChainingStrategy, StreamOperator}
+import org.apache.flink.streaming.api.operators.{ChainingStrategy, StreamOperator}
 import org.apache.flink.table.codegen.{Compiler, JavaSourceManipulator}
 import org.apache.flink.table.util.Logging
 
 import scala.collection.mutable
 
-class SubstituteStreamOperator[OUT <: Any](
+abstract class SubstituteStreamOperator[OUT <: Any](
     name: String,
     @transient code: String,
     var chainingStrategy: ChainingStrategy = ChainingStrategy.ALWAYS,
     val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
-  extends AbstractSubstituteStreamOperator[OUT]
+  extends StreamOperator[OUT]
   with Compiler[StreamOperator[OUT]]
   with Logging {
 

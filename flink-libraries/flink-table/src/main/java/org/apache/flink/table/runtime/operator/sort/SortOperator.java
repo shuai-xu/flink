@@ -130,7 +130,6 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 
 	@Override
 	public void endInput() throws Exception {
-		sendStageDoneEvent(0);
 		BinaryRow row = binarySerializer.createInstance();
 		MutableObjectIterator<BinaryRow> iterator = sorter.getIterator();
 		while ((row = iterator.next(row)) != null) {

@@ -27,21 +27,21 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
  * @param <IN> The input type of the actual operator
  * @param <OUT> The output type of the actual operator
  */
-public abstract class AbstractOneInputSubstituteStreamOperator<IN, OUT> extends AbstractSubstituteStreamOperator<OUT>
-	implements OneInputStreamOperator<IN, OUT> {
+public interface AbstractOneInputSubstituteStreamOperator<IN, OUT> extends AbstractSubstituteStreamOperator<OUT>,
+	OneInputStreamOperator<IN, OUT> {
 
 	@Override
-	public void processElement(StreamRecord<IN> element) throws Exception {
+	default void processElement(StreamRecord<IN> element) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractOneInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void processWatermark(Watermark mark) throws Exception {
+	default void processWatermark(Watermark mark) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractOneInputSubstituteStreamOperator, this method should not be called");
 	}
 
 	@Override
-	public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+	default void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
 		throw new UnsupportedOperationException("For an AbstractOneInputSubstituteStreamOperator, this method should not be called");
 	}
 }
