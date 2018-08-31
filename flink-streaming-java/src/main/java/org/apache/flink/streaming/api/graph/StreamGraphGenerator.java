@@ -21,6 +21,7 @@ package org.apache.flink.streaming.api.graph;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction;
@@ -106,7 +107,12 @@ public class StreamGraphGenerator {
 	 * Private constructor. The generator should only be invoked using {@link #generate}.
 	 */
 	private StreamGraphGenerator(StreamExecutionEnvironment env) {
-		this.streamGraph = new StreamGraph(env.getConfig(), env.getCheckpointConfig(), env.getParallelism(), env.getBufferTimeout());
+		this.streamGraph = new StreamGraph(env.getConfig(),
+			env.getCheckpointConfig(),
+			env.getParallelism(),
+			env.getBufferTimeout(),
+			ResultPartitionType.PIPELINED_BOUNDED);
+
 		this.streamGraph.setTimeCharacteristic(env.getStreamTimeCharacteristic());
 		this.streamGraph.setCachedFiles(env.getCachedFiles());
 		this.streamGraph.setChaining(env.isChainingEnabled());
@@ -249,7 +255,7 @@ public class StreamGraphGenerator {
 		Collection<Integer> transformedIds = transform(input);
 		for (Integer transformedId: transformedIds) {
 			int virtualId = StreamTransformation.getNewNodeId();
-			streamGraph.addVirtualPartitionNode(transformedId, virtualId, partition.getPartitioner());
+			streamGraph.addVirtualPartitionNode(transformedId, virtualId, partition.getPartitioner(), null);
 			resultIds.add(virtualId);
 		}
 

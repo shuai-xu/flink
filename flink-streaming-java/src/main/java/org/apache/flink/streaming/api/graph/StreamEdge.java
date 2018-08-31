@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.EdgeID;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
@@ -69,6 +70,7 @@ public class StreamEdge implements Serializable {
 	 */
 	private ResultPartitionType resultPartitionType;
 
+	@VisibleForTesting
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag) {
 		this(sourceVertex, targetVertex, typeNumber, selectedNames, outputPartitioner, outputTag,
