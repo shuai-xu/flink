@@ -92,6 +92,11 @@ public interface FileIOChannel {
 		
 		private final int threadNum;
 
+		public ID(String path) {
+			this.path = new File(path);
+			this.threadNum = 0;
+		}
+
 		protected ID(File path, int threadNum) {
 			this.path = path;
 			this.threadNum = threadNum;

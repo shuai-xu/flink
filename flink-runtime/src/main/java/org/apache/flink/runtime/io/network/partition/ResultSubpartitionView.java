@@ -59,4 +59,6 @@ public interface ResultSubpartitionView {
 	boolean nextBufferIsEvent();
 
 	boolean isAvailable();
+
+	void notifyCreditAdded(int creditDeltas);
 }

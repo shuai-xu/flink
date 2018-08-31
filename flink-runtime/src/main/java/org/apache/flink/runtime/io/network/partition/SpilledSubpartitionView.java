@@ -233,6 +233,11 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 	}
 
 	@Override
+	public void notifyCreditAdded(int creditDeltas) {
+		// No operations.
+	}
+
+	@Override
 	public Throwable getFailureCause() {
 		return parent.getFailureCause();
 	}
@@ -279,7 +284,7 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 			}
 		}
 
-		private Buffer requestBufferBlocking() throws InterruptedException {
+		public Buffer requestBufferBlocking() throws InterruptedException {
 			synchronized (buffers) {
 				while (true) {
 					if (isDestroyed) {

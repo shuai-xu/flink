@@ -37,6 +37,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkState;
+
 class ExternalBlockResultPartitionMeta {
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalBlockResultPartitionMeta.class);
 
@@ -65,7 +68,7 @@ class ExternalBlockResultPartitionMeta {
 	 * holding PartitionIndices of the corresponding subpartition. Furthermore
 	 * we can just set null to make those unused PartitionIndices GC when memory gets tight.
 	 */
-	private List<ExternalBlockSubpartitionView.ExternalSubpartitionMeta>[] subpartitionMetas;
+	private List<ExternalSubpartitionMeta>[] subpartitionMetas;
 
 	/**
 	 * Spill count actually shows the count of logical partitioned files.
@@ -142,6 +145,13 @@ class ExternalBlockResultPartitionMeta {
 		return resultPartitionDir;
 	}
 
+	public synchronized List<ExternalSubpartitionMeta> getSubpartitionMeta(int subpartitionIndex) {
+		checkState(hasInitialized, "The meta info has not been initialized.");
+		checkArgument(subpartitionIndex >= 0 && subpartitionIndex < subpartitionNum, "Invalid subpartition index.");
+
+		return subpartitionMetas[subpartitionIndex];
+	}
+
 	public ExternalBlockSubpartitionView createSubpartitionView(
 		ThreadPoolExecutor threadPool,
 		ResultPartitionID resultPartitionId,
@@ -149,7 +159,7 @@ class ExternalBlockResultPartitionMeta {
 		BufferAvailabilityListener availabilityListener,
 		SpilledSubpartitionView.SpillReadBufferPool bufferPool) throws IOException {
 
-		List<ExternalBlockSubpartitionView.ExternalSubpartitionMeta> subpartitionMeta =
+		List<ExternalSubpartitionMeta> subpartitionMeta =
 			(subpartitionMetas != null) ? subpartitionMetas[index] : null;
 
 		increaseReference();
@@ -171,11 +181,6 @@ class ExternalBlockResultPartitionMeta {
 		}
 	}
 
-	void decreaseReference() {
-		lastActiveTimeInMs.set(System.currentTimeMillis());
-		refCount.decrementAndGet();
-	}
-
 	/**
 	 * Notify one subpartition finishes consuming this result partition.
 	 * @param subpartitionIndex The index of the consumed subpartition.
@@ -193,6 +198,10 @@ class ExternalBlockResultPartitionMeta {
 					resultPartitionID.toString(), allSubpartitionsConsumedTimeInMs);
 			}
 		}
+
+		// Decrease reference count.
+		lastActiveTimeInMs.set(System.currentTimeMillis());
+		refCount.decrementAndGet();
 	}
 
 	int getReferenceCount() {
@@ -325,9 +334,9 @@ class ExternalBlockResultPartitionMeta {
 		}
 
 		// matrix transposition from partitionIndices to subpartitionMetas
-		subpartitionMetas = (List<ExternalBlockSubpartitionView.ExternalSubpartitionMeta>[])new ArrayList<?>[subpartitionNum];
+		subpartitionMetas = (List<ExternalSubpartitionMeta>[])new ArrayList<?>[subpartitionNum];
 		for (int subpartitionIndex = 0; subpartitionIndex < subpartitionNum; subpartitionIndex++) {
-			List<ExternalBlockSubpartitionView.ExternalSubpartitionMeta> subpartitionMeta = new ArrayList<>();
+			List<ExternalSubpartitionMeta> subpartitionMeta = new ArrayList<>();
 			for(int spillIdx = 0; spillIdx < spillCount; spillIdx++) {
 				PartitionIndex partitionIndex = partitionIndices[spillIdx][subpartitionIndex];
 				if (partitionIndex == null) {
@@ -342,7 +351,7 @@ class ExternalBlockResultPartitionMeta {
 				} else {
 					dataFile = dataFiles[spillIdx];
 				}
-				subpartitionMeta.add(new ExternalBlockSubpartitionView.ExternalSubpartitionMeta(
+				subpartitionMeta.add(new ExternalSubpartitionMeta(
 					dataFile, partitionIndex.getStartOffset(), partitionIndex.getNumBuffers()));
 			}
 			subpartitionMetas[subpartitionIndex] = subpartitionMeta;
@@ -356,14 +365,53 @@ class ExternalBlockResultPartitionMeta {
 
 	// Utility for debug.
 	private static String convertSubpartitionMetasToString(
-		List<ExternalBlockSubpartitionView.ExternalSubpartitionMeta> subpartitionMeta) {
+		List<ExternalSubpartitionMeta> subpartitionMeta) {
 
 		final StringBuilder stringBuilder = new StringBuilder();
 		stringBuilder.append("subpartition metas' detail: {");
-		for (ExternalBlockSubpartitionView.ExternalSubpartitionMeta meta : subpartitionMeta) {
+		for (ExternalSubpartitionMeta meta : subpartitionMeta) {
 			stringBuilder.append(meta.toString());
 		}
 		stringBuilder.append("}");
 		return stringBuilder.toString();
+	}
+
+	static final class ExternalSubpartitionMeta {
+
+		private final Path dataFile;
+
+		private final long offset;
+
+		private final long bufferNum;
+
+		ExternalSubpartitionMeta(
+			Path dataFile, long offset, long bufferNum) {
+
+			assert dataFile != null;
+			assert offset >= 0;
+			assert bufferNum >= 0;
+
+			this.dataFile = dataFile;
+			this.offset = offset;
+			this.bufferNum = bufferNum;
+		}
+
+		Path getDataFile() {
+			return dataFile;
+		}
+
+		long getOffset() {
+			return offset;
+		}
+
+		long getBufferNum() {
+			return bufferNum;
+		}
+
+		@Override
+		public String toString() {
+			return "{ dataFilePath = " + dataFile + ", offset = " + offset
+				+ ", buffNum = " + bufferNum + " }";
+		}
 	}
 }

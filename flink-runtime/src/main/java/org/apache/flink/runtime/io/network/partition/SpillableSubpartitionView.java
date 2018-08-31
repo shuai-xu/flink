@@ -263,6 +263,11 @@ class SpillableSubpartitionView implements ResultSubpartitionView {
 	}
 
 	@Override
+	public void notifyCreditAdded(int creditDeltas) {
+		// No operations.
+	}
+
+	@Override
 	public Throwable getFailureCause() {
 		SpilledSubpartitionView spilled = spilledView;
 		if (spilled != null) {

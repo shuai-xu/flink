@@ -29,7 +29,7 @@ public class CreditBasedSubpartitionViewComparator implements Comparator {
 		if (o1 instanceof ExternalBlockSubpartitionView && o2 instanceof ExternalBlockSubpartitionView) {
 			ExternalBlockSubpartitionView v1 = (ExternalBlockSubpartitionView) o1;
 			ExternalBlockSubpartitionView v2 = (ExternalBlockSubpartitionView) o2;
-			int deltaCredit = v2.getCredit() - v1.getCredit();
+			int deltaCredit = v2.getCreditUnsafe() - v1.getCreditUnsafe();
 			if (deltaCredit != 0) {
 				return deltaCredit;
 			}
