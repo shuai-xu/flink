@@ -21,10 +21,10 @@ package org.apache.flink.runtime.io.network.partition.external;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
+import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionProvider;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartitionView;
-import org.apache.flink.runtime.io.network.partition.SpilledSubpartitionView;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +61,7 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 		resultPartitionMetaMap = new ConcurrentHashMap<>();
 
 	/** The buffer pool to read data into. */
-	private final SpilledSubpartitionView.SpillReadBufferPool bufferPool;
+	private final FixedLengthBufferPool bufferPool;
 
 	/** Periodically recycle result partitions. */
 	private final ScheduledExecutorService resultPartitionRecycler;
@@ -75,7 +75,7 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 		this.resultPartitionResolver = LocalResultPartitionResolverFactory.create(shuffleServiceConfiguration);
 
 		// Init the buffer pool
-		this.bufferPool = new SpilledSubpartitionView.SpillReadBufferPool(
+		this.bufferPool = new FixedLengthBufferPool(
 			shuffleServiceConfiguration.getBufferNumber(),
 			shuffleServiceConfiguration.getMemorySizePerBufferInBytes());
 
@@ -176,7 +176,7 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 
 			resultPartitionResolver.stop();
 
-			bufferPool.destroy();
+			bufferPool.lazyDestroy();
 
 			resultPartitionMetaMap.clear();
 		} catch (Throwable e) {

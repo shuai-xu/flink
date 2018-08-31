@@ -25,10 +25,10 @@ import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.DataConsumptionException;
+import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartition;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartitionView;
-import org.apache.flink.runtime.io.network.partition.SpilledSubpartitionView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	private final ResultPartitionID resultPartitionId;
 
 	/** The buffer pool to read data into. */
-	private final SpilledSubpartitionView.SpillReadBufferPool bufferPool;
+	private final FixedLengthBufferPool bufferPool;
 
 	/**
 	 * Timeout of waiting for more credit to arrive after reading stopped due to credit consumed. If it
@@ -117,7 +117,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 			int subpartitionIndex,
 			ExecutorService threadPool,
 			ResultPartitionID resultPartitionId,
-			SpilledSubpartitionView.SpillReadBufferPool bufferPool,
+			FixedLengthBufferPool bufferPool,
 			long waitCreditTimeoutInMills,
 			BufferAvailabilityListener listener) {
 

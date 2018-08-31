@@ -24,8 +24,8 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
+import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
-import org.apache.flink.runtime.io.network.partition.SpilledSubpartitionView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,7 +157,7 @@ class ExternalBlockResultPartitionMeta {
 		ResultPartitionID resultPartitionId,
 		int index,
 		BufferAvailabilityListener availabilityListener,
-		SpilledSubpartitionView.SpillReadBufferPool bufferPool) throws IOException {
+		FixedLengthBufferPool bufferPool) throws IOException {
 
 		List<ExternalSubpartitionMeta> subpartitionMeta =
 			(subpartitionMetas != null) ? subpartitionMetas[index] : null;

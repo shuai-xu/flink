@@ -147,6 +147,23 @@ public abstract class IOManager {
 	}
 
 	/**
+	 * Creates a new {@link FileIOChannel.ID} out of all the tmp directories to avoid get cleared
+	 * unexpected.
+	 *
+	 * @param path The file to write
+	 * @return A channel in an directory out of all the tmp directories.
+	 */
+	public FileIOChannel.ID createChannel(File path) {
+		final int num = getNextPathNum();
+		for (File localPath : paths) {
+			if (path.getPath().startsWith(localPath.getPath())) {
+				throw new RuntimeException(path.getPath() + " is not allowed in path: " + localPath.toString());
+			}
+		}
+		return new FileIOChannel.ID(path, num);
+	}
+
+	/**
 	 * Creates a new {@link FileIOChannel.Enumerator}, spreading the channels in a round-robin fashion
 	 * across the temporary file directories.
 	 *

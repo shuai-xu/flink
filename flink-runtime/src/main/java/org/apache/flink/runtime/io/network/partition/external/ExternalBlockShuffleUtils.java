@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.DatatypeConverter;
+import org.apache.flink.core.memory.DataOutputView;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -141,5 +143,4 @@ public class ExternalBlockShuffleUtils {
 		}
 		return indices;
 	}
-
 }

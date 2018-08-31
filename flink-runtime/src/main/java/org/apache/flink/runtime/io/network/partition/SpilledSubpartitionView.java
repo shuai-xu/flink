@@ -18,14 +18,10 @@
 
 package org.apache.flink.runtime.io.network.partition;
 
-import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileReader;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.SynchronousBufferFileReader;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
-import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
-import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartition.BufferAndBacklog;
 import org.apache.flink.runtime.util.event.NotificationListener;
 
@@ -36,8 +32,6 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -67,7 +61,7 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 	private final BufferFileReader fileReader;
 
 	/** The buffer pool to read data into. */
-	private final SpillReadBufferPool bufferPool;
+	private final FixedLengthBufferPool bufferPool;
 
 	/** Buffer availability listener. */
 	private final BufferAvailabilityListener availabilityListener;
@@ -93,7 +87,7 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 		BufferAvailabilityListener availabilityListener) throws IOException {
 
 		this.parent = checkNotNull(parent);
-		this.bufferPool = new SpillReadBufferPool(2, memorySegmentSize);
+		this.bufferPool = new FixedLengthBufferPool(2, memorySegmentSize);
 		this.spillWriter = checkNotNull(spillWriter);
 		this.fileReader = new SynchronousBufferFileReader(spillWriter.getChannelID(), false);
 		checkArgument(numberOfSpilledBuffers >= 0);
@@ -200,7 +194,7 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 				}
 			}
 
-			bufferPool.destroy();
+			bufferPool.lazyDestroy();
 		}
 	}
 
@@ -248,65 +242,5 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 			parent.index,
 			numberOfSpilledBuffers,
 			parent.parent.getPartitionId());
-	}
-
-	/**
-	 * A buffer pool to provide buffer to read the file into.
-	 *
-	 * <p>This pool ensures that a consuming input gate makes progress in all cases, even when all
-	 * buffers of the input gate buffer pool have been requested by remote input channels.
-	 */
-	public static class SpillReadBufferPool implements BufferRecycler {
-
-		private final Queue<Buffer> buffers;
-
-		private boolean isDestroyed;
-
-		public SpillReadBufferPool(int numberOfBuffers, int memorySegmentSize) {
-			this.buffers = new ArrayDeque<>(numberOfBuffers);
-
-			synchronized (buffers) {
-				for (int i = 0; i < numberOfBuffers; i++) {
-					buffers.add(new NetworkBuffer(MemorySegmentFactory.allocateUnpooledSegment(memorySegmentSize), this));
-				}
-			}
-		}
-
-		@Override
-		public void recycle(MemorySegment memorySegment) {
-			synchronized (buffers) {
-				if (isDestroyed) {
-					memorySegment.free();
-				} else {
-					buffers.add(new NetworkBuffer(memorySegment, this));
-					buffers.notifyAll();
-				}
-			}
-		}
-
-		public Buffer requestBufferBlocking() throws InterruptedException {
-			synchronized (buffers) {
-				while (true) {
-					if (isDestroyed) {
-						return null;
-					}
-
-					Buffer buffer = buffers.poll();
-
-					if (buffer != null) {
-						return buffer;
-					}
-					// Else: wait for a buffer
-					buffers.wait();
-				}
-			}
-		}
-
-		public void destroy() {
-			synchronized (buffers) {
-				isDestroyed = true;
-				buffers.notifyAll();
-			}
-		}
 	}
 }

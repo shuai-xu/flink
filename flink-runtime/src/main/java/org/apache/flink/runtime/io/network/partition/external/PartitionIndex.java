@@ -19,12 +19,16 @@
 package org.apache.flink.runtime.io.network.partition.external;
 
 /**
- * Partition index for external file.
+ * Partition index for external data file.
  */
 public class PartitionIndex {
-
+	/** The subpartition index. */
 	private final int partition;
+
+	/** The offset in the file. */
 	private final long startOffset;
+
+	/** The number of buffers. */
 	private final long numBuffers;
 
 	public PartitionIndex(int partition, long startOffset, long numBuffers) {
