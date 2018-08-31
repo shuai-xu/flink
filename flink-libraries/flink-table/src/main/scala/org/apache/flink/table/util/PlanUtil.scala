@@ -67,7 +67,7 @@ class PlanWihMetrics(streamGraph: StreamGraph) {
     pw.close()
     val planWithMetrics = sw.toString
     if (LOG.isDebugEnabled) {
-      val jobName = streamGraph.getProperties.getJobName
+      val jobName = streamGraph.getJobName
       LOG.debug(s"planWithMetrics of Job [$jobName] : \n $planWithMetrics")
     }
     planWithMetrics

@@ -112,7 +112,7 @@ class ParquetVectorizedColumnRowTableSource(
       case e: Exception => throw new RuntimeException(e)
     }
     inputFormat.setNestedFileEnumeration(enumerateNestedFiles)
-    execEnv.createInput(inputFormat, getPhysicalType, numTimes, sourceName)
+    execEnv.createInput(inputFormat, getPhysicalType, sourceName).setParallelism(numTimes)
   }
 
   override def getUniqueKeys(): util.Set[util.Set[String]] = uniqueKeySet

@@ -23,7 +23,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
 import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.streaming.api.operators.StreamOperator
+import org.apache.flink.streaming.api.operators.{StreamOperator, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
@@ -192,7 +192,8 @@ class StreamExecWindowJoin(
       leftDataStream,
       rightDataStream,
       "Co-Process",
-      new KeyedCoProcessOperator(procInnerJoinFunc).asInstanceOf[StreamOperator[BaseRow]],
+      new KeyedCoProcessOperator(procInnerJoinFunc)
+        .asInstanceOf[TwoInputStreamOperator[BaseRow, BaseRow, BaseRow]],
       returnTypeInfo.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       tableEnv.execEnv.getParallelism)
 

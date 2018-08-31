@@ -18,7 +18,10 @@
 
 package org.apache.flink.table.errorcode;
 
-import static com.alibaba.blink.errcode.ErrorFactory.ErrCode;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * error codes in flink table, and associated methods for call in corresponding scenario
@@ -127,6 +130,21 @@ import static com.alibaba.blink.errcode.ErrorFactory.ErrCode;
  *     c. Associated function for call by developers can have parameters when needed.
  */
 public interface TableErrorCode {
+	/**
+	 * err code id, cause, detailed message and action.
+	 **/
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	@interface ErrCode {
+		String codeId();
+
+		String cause();
+
+		String details();
+
+		String action();
+	}
+
 
 	/* ################################### QC ################################### */
 	/** ----------------------------- others ----------------------------- .**/

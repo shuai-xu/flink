@@ -219,7 +219,7 @@ abstract class AggregateFunctionTestBase {
       DataTypes.internal(inputDataType).asInstanceOf[BaseRowType],
       DataTypes.internal(outputRowType).asInstanceOf[BaseRowType],
       "Sort")
-    val operator = new OneInputSubstituteStreamOperator[BaseRow](
+    val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)
@@ -271,7 +271,7 @@ abstract class AggregateFunctionTestBase {
         DataTypes.internal(inputDataType).asInstanceOf[BaseRowType],
         DataTypes.internal(localOutputRowType).asInstanceOf[BaseRowType],
         "Sort")
-      new OneInputSubstituteStreamOperator[BaseRow](
+      new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
         generatedLocalOperator.name,
         generatedLocalOperator.code,
         references = ctx.references)
@@ -312,7 +312,7 @@ abstract class AggregateFunctionTestBase {
       DataTypes.internal(localOutputRowType).asInstanceOf[BaseRowType],
       DataTypes.internal(gloablOutRowType).asInstanceOf[BaseRowType],
       "Sort")
-    val globalOperator = new OneInputSubstituteStreamOperator[BaseRow](
+    val globalOperator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedGlobalOperator.name,
       generatedGlobalOperator.code,
       references = ctx.references)

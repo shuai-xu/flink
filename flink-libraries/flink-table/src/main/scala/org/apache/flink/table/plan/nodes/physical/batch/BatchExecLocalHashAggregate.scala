@@ -144,7 +144,7 @@ class BatchExecLocalHashAggregate(
       codegenWithKeys(ctx, tableEnv, inputType, outputRowType, managedMem,
         preferredManagedMem)
     }
-    val operator = new OneInputSubstituteStreamOperator[BaseRow](
+    val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)

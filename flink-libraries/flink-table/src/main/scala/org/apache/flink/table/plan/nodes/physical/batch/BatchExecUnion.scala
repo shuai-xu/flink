@@ -104,7 +104,6 @@ class BatchExecUnion(
       queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
     val transformations = getInputs.map(
       _.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig))
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
-    new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+    new UnionTransformation(transformations)
   }
 }

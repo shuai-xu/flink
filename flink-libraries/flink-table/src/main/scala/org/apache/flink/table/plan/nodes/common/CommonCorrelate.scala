@@ -158,7 +158,7 @@ trait CommonCorrelate {
       ruleDescription: String,
       functionClass: Class[T],
       udtfCollector: GeneratedCollector,
-      retainHeader: Boolean = true): OneInputSubstituteStreamOperator[BaseRow] = {
+      retainHeader: Boolean = true): OneInputSubstituteStreamOperator[BaseRow, BaseRow] = {
     ctx.references ++= collectorCtx.references
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
       .bindInput(inputType)
@@ -274,7 +274,7 @@ trait CommonCorrelate {
       "",
       inputType,
       config)
-    new OneInputSubstituteStreamOperator[BaseRow](
+    new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       genOperator.name,
       genOperator.code,
       references = ctx.references)

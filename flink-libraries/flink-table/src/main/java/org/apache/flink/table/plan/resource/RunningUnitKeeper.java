@@ -19,6 +19,8 @@
 package org.apache.flink.table.plan.resource;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.graph.StreamGraph;
@@ -161,9 +163,18 @@ public class RunningUnitKeeper {
 		preferBuilder.setCpuCores(relResource.getCpu());
 		reservedBuilder.setHeapMemoryInMB(relResource.getHeapMem());
 		preferBuilder.setHeapMemoryInMB(relResource.getHeapMem());
-		reservedBuilder.setManagedMemoryInMB(relResource.getReservedManagedMem());
-		preferBuilder.setManagedMemoryInMB(relResource.getPreferManagedMem());
-		reservedBuilder.addExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY, relResource.getPreferManagedMem() - relResource.getReservedManagedMem());
+		reservedBuilder.addExtendedResource(new CommonExtendedResource(
+				ResourceSpec.MANAGED_MEMORY_NAME,
+				relResource.getReservedManagedMem(),
+				Resource.ResourceAggregateType.AGGREGATE_TYPE_SUM));
+		preferBuilder.addExtendedResource(new CommonExtendedResource(
+				ResourceSpec.MANAGED_MEMORY_NAME,
+				relResource.getPreferManagedMem(),
+				Resource.ResourceAggregateType.AGGREGATE_TYPE_SUM));
+		reservedBuilder.addExtendedResource(new CommonExtendedResource(
+				ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
+				relResource.getPreferManagedMem() - relResource.getReservedManagedMem(),
+				Resource.ResourceAggregateType.AGGREGATE_TYPE_SUM));
 		return new Tuple2<>(reservedBuilder.build(), preferBuilder.build());
 	}
 

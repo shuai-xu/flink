@@ -157,7 +157,7 @@ trait CommonScan[T] {
       splitFunc = codeSplit,
       converter = inputTermConverter)
 
-    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow](
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[Any, BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)

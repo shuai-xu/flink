@@ -48,7 +48,7 @@ import org.apache.flink.table.plan.resource.RunningUnitKeeper
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
-import org.apache.flink.table.dataformat.BinaryRow
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks.{BatchExecCompatibleStreamTableSink, BatchExecTableSink, CollectTableSink, TableSink}
 import org.apache.flink.table.sources._
@@ -149,12 +149,13 @@ class BatchTableEnvironment(
 
   private def execute(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
       jobName: Option[String]): JobExecutionResult = {
-    val streamGraph = StreamGraphGenerator.generateForBatch(
-      streamEnv, streamingTransformations, config.createShuffleProperties)
+    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv);
     jobName match {
-      case Some(jn) => streamGraph.getProperties.setJobName(jn)
-      case None => streamGraph.getProperties.setJobName(DEFAULT_JOB_NAME)
+      case Some(jn) => context.setJobName(jn)
+      case None => context.setJobName(DEFAULT_JOB_NAME)
     }
+    val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
+
     ruKeeper.setScheduleConfig(streamEnv, streamGraph)
     setQueryPlan()
 
@@ -240,14 +241,12 @@ class BatchTableEnvironment(
   }
 
   def generateStreamGraph(jobName: Option[String]): StreamGraph = {
-    val streamGraph = StreamGraphGenerator.generateForBatch(
-      streamEnv, transformations, config.createShuffleProperties)
+    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv);
     jobName match {
-      case Some(jn) => streamGraph.getProperties.setJobName(jn)
-      case None => streamGraph.getProperties.setJobName(DEFAULT_JOB_NAME)
+      case Some(jn) => context.setJobName(jn)
+      case None => context.setJobName(DEFAULT_JOB_NAME)
     }
-
-    streamGraph
+    StreamGraphGenerator.generate(context, transformations)
   }
 
   private def translateLogicalNodeBlock(block: LogicalNodeBlock): DataStream[_] = {
@@ -475,16 +474,16 @@ class BatchTableEnvironment(
    *                    field naming during optimization we pass the row type separately.
    * @param resultType  The [[DataType]] of the resulting [[DataStream]].
     *@param queryConfig The configuration for the query to generate.
-   * @tparam A The type of the resulting [[DataStream]].
+   * @tparam OUT The type of the resulting [[DataStream]].
    * @return The [[DataStream]] that corresponds to the translated [[Table]].
    */
-  protected def translate[A](
+  protected def translate[OUT](
       logicalPlan: RelNode,
       logicalType: RelDataType,
       withChangeFlag: Boolean,
       resultType: DataType,
       sink: TableSink[_],
-      queryConfig: BatchQueryConfig): DataStream[A] = {
+      queryConfig: BatchQueryConfig): DataStream[OUT] = {
     TableEnvironment.validateType(resultType)
 
     logicalPlan match {
@@ -499,7 +498,7 @@ class BatchTableEnvironment(
           plan
         }
         val convertTransformation =
-          getConversionMapper[A](
+          getConversionMapper[BaseRow, OUT](
             parTransformation,
             parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]],
             logicalType,
@@ -538,15 +537,15 @@ class BatchTableEnvironment(
    * @param withChangeFlag   Set to true to emit records with change flags.
    * @param resultType       The [[DataType]] of the resulting [[DataStream]].
    */
-  protected def getConversionMapper[OUT](
-      input: StreamTransformation[_],
+  protected def getConversionMapper[IN, OUT](
+      input: StreamTransformation[IN],
       physicalTypeInfo: BaseRowTypeInfo[_],
       relType: RelDataType,
       name: String,
       withChangeFlag: Boolean,
       resultType: DataType): StreamTransformation[OUT] = {
 
-    val (converterOperator, outputTypeInfo) = generateRowConverterOperator[OUT](
+    val (converterOperator, outputTypeInfo) = generateRowConverterOperator[IN, OUT](
       CodeGeneratorContext(config, true),
       physicalTypeInfo,
       relType,
@@ -742,8 +741,9 @@ class BatchTableEnvironment(
       new BaseRowType(classOf[BinaryRow], fieldTypes: _*),
       null,
       queryConfig)
-    val streamGraph = StreamGraphGenerator.generateForBatch(
-      streamEnv, ArrayBuffer(boundedStream.getTransformation))
+    val streamGraph = StreamGraphGenerator.generate(
+      StreamGraphGenerator.Context.buildBatchProperties(streamEnv),
+      ArrayBuffer(boundedStream.getTransformation))
 
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
 
@@ -819,7 +819,8 @@ class BatchTableEnvironment(
 
     blockPlan.foreach(visitBlock(_, isSinkBlock = true))
 
-    val streamGraph = StreamGraphGenerator.generateForBatch(streamEnv, transformations)
+    val streamGraph = StreamGraphGenerator.generate(
+      StreamGraphGenerator.Context.buildBatchProperties(streamEnv), transformations)
     transformations.clear()
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
     sb.append("== Physical Execution Plan ==")

@@ -164,7 +164,6 @@ class BatchExecSegmentTop(
       operator,
       outputType.asInstanceOf[TypeInformation[BaseRow]],
       resultPartitionCount)
-    operator.setRelID(transformation.getId)
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation.setResources(reservedResSpec, preferResSpec)

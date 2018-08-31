@@ -43,7 +43,7 @@ trait CommonExpand {
       config: TableConfig,
       projects: util.List[util.List[RexNode]],
       ruleDescription: String,
-      retainHeader: Boolean = false): OneInputSubstituteStreamOperator[BaseRow] = {
+      retainHeader: Boolean = false): OneInputSubstituteStreamOperator[BaseRow, BaseRow] = {
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val inputTypeTerm = boxedTypeTermForType(inputType)
 
@@ -96,7 +96,7 @@ trait CommonExpand {
         splitFunc = splitFunc,
         lazyInputUnboxingCode = false)
 
-    new OneInputSubstituteStreamOperator[BaseRow](
+    new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       genOperatorExpression.name,
       genOperatorExpression.code)
   }

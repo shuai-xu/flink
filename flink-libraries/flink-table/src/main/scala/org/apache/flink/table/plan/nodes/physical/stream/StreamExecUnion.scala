@@ -89,8 +89,6 @@ class StreamExecUnion(
 
     val leftInput = getLeft.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
     val rightInput = getRight.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
-    new UnionTransformation(Array(
-      leftInput, rightInput).toList, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
+    new UnionTransformation(Array(leftInput, rightInput).toList)
   }
 }

@@ -23,7 +23,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
-import org.apache.flink.streaming.api.operators.StreamOperator
+import org.apache.flink.streaming.api.operators.{OneInputStreamOperator, StreamOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BinaryRow
@@ -123,10 +123,9 @@ class BatchExecSort(
     val transformation = new OneInputTransformation(
       input,
       s"Sort(${sortFieldsToString(collations, getRowType)})",
-      operator.asInstanceOf[StreamOperator[BaseRow]],
+      operator.asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]],
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    operator.setRelID(transformation.getId)
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     tableEnv.getRUKeeper().setRelID(this, transformation.getId)

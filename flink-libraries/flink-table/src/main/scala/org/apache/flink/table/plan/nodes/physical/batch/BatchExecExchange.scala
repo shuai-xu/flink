@@ -24,7 +24,6 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.sampling.IntermediateSampleData
 import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.runtime.io.network.DataExchangeMode
-import org.apache.flink.streaming.api.graph.StreamEdge.InputOrder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig, TableEnvironment}

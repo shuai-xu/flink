@@ -42,7 +42,6 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    env.setConfiguration(TaskManagerOptions.MANAGED_MEMORY_SIZE.key, "1024")
     registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfSmallData3)
     registerCollection("Table3", data3, type3, "a, b, c", nullablesOfData3)
     registerCollection("Table5", data5, type5, "d, e, f, g, h", nullablesOfData5)

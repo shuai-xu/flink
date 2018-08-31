@@ -22,12 +22,11 @@ import org.apache.flink.streaming.api.operators.{AbstractOneInputSubstituteStrea
 
 import scala.collection.mutable
 
-class OneInputSubstituteStreamOperator[OUT <: Any](
+class OneInputSubstituteStreamOperator[IN <: Any, OUT <: Any](
     name: String,
     @transient code: String,
-    override var chainingStrategy: ChainingStrategy = ChainingStrategy.ALWAYS,
     override val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
-  extends SubstituteStreamOperator[OUT](name, code, chainingStrategy, references)
-  with AbstractOneInputSubstituteStreamOperator[OUT] {
+  extends SubstituteStreamOperator[OUT](name, code, ChainingStrategy.ALWAYS, references)
+  with AbstractOneInputSubstituteStreamOperator[IN, OUT] {
 }
 

@@ -166,7 +166,7 @@ trait CommonCalc {
     calcProgram: RexProgram,
     condition: Option[RexNode],
     retainHeader: Boolean = false,
-    ruleDescription: String): (OneInputSubstituteStreamOperator[BaseRow], BaseRowTypeInfo[BaseRow]) = {
+    ruleDescription: String): (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
     val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
     // filter out time attributes
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
@@ -194,7 +194,7 @@ trait CommonCalc {
       splitFunc = codeSplit,
       filterSplitFunc = filterCodeSplit,
       lazyInputUnboxingCode = true)
-    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow](
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       genOperatorExpression.name,
       genOperatorExpression.code,
       references = ctx.references)

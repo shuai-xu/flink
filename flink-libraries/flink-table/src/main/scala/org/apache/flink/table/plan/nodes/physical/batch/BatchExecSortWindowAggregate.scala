@@ -127,7 +127,7 @@ class BatchExecSortWindowAggregate(
         groupBufferLimitSize, windowStart, windowSize, slideSize)
     }
 
-    val operator = new OneInputSubstituteStreamOperator[BaseRow](
+    val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)

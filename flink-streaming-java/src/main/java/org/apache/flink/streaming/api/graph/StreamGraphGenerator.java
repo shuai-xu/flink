@@ -19,10 +19,18 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
+import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
@@ -40,10 +48,13 @@ import org.apache.flink.streaming.api.transformations.SplitTransformation;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation;
 import org.apache.flink.streaming.api.transformations.UnionTransformation;
+import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.InstantiationUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -89,7 +100,7 @@ public class StreamGraphGenerator {
 	// The StreamGraph that is being built, this is initialized at the beginning.
 	private final StreamGraph streamGraph;
 
-	private final StreamExecutionEnvironment env;
+	private final Context context;
 
 	// This is used to assign a unique ID to iteration source/sink
 	protected static Integer iterationIdCounter = 0;
@@ -106,19 +117,20 @@ public class StreamGraphGenerator {
 	/**
 	 * Private constructor. The generator should only be invoked using {@link #generate}.
 	 */
-	private StreamGraphGenerator(StreamExecutionEnvironment env) {
-		this.streamGraph = new StreamGraph(env.getConfig(),
-			env.getCheckpointConfig(),
-			env.getParallelism(),
-			env.getBufferTimeout(),
+	private StreamGraphGenerator(Context context) {
+		this.context = context;
+		this.streamGraph = new StreamGraph(context.getExecutionConfig(),
+			context.getCheckpointConfig(),
+			context.getDefaultParallelism(),
+			context.getBufferTimeout(),
 			ResultPartitionType.PIPELINED_BOUNDED);
-
-		this.streamGraph.setTimeCharacteristic(env.getStreamTimeCharacteristic());
-		this.streamGraph.setCachedFiles(env.getCachedFiles());
-		this.streamGraph.setChaining(env.isChainingEnabled());
-		this.streamGraph.setMultiHeadChainMode(env.isMultiHeadChainMode());
-		this.streamGraph.setStateBackend(env.getStateBackend());
-		this.env = env;
+		this.streamGraph.setJobName(context.getJobName());
+		this.streamGraph.getCustomConfiguration().setString(ScheduleMode.class.getName(), context.getScheduleMode().toString());
+		this.streamGraph.setTimeCharacteristic(context.getTimeCharacteristic());
+		this.streamGraph.setCachedFiles(context.getCacheFiles());
+		this.streamGraph.setChaining(context.isChainingEnabled());
+		this.streamGraph.setMultiHeadChainMode(context.isMultiHeadChainMode());
+		this.streamGraph.setStateBackend(context.getStateBackend());
 		this.alreadyTransformed = new HashMap<>();
 	}
 
@@ -126,14 +138,14 @@ public class StreamGraphGenerator {
 	 * Generates a {@code StreamGraph} by traversing the graph of {@code StreamTransformations}
 	 * starting from the given transformations.
 	 *
-	 * @param env The {@code StreamExecutionEnvironment} that is used to set some parameters of the
+	 * @param context The {@code StreamExecutionEnvironment} that is used to set some parameters of the
 	 *            job
 	 * @param transformations The transformations starting from which to transform the graph
 	 *
 	 * @return The generated {@code StreamGraph}
 	 */
-	public static StreamGraph generate(StreamExecutionEnvironment env, List<StreamTransformation<?>> transformations) {
-		return new StreamGraphGenerator(env).generateInternal(transformations);
+	public static StreamGraph generate(Context context, List<StreamTransformation<?>> transformations) {
+		return new StreamGraphGenerator(context).generateInternal(transformations);
 	}
 
 	/**
@@ -164,7 +176,7 @@ public class StreamGraphGenerator {
 
 			// if the max parallelism hasn't been set, then first use the job wide max parallelism
 			// from theExecutionConfig.
-			int globalMaxParallelismFromConfig = env.getConfig().getMaxParallelism();
+			int globalMaxParallelismFromConfig = context.getExecutionConfig().getMaxParallelism();
 			if (globalMaxParallelismFromConfig > 0) {
 				transform.setMaxParallelism(globalMaxParallelismFromConfig);
 			}
@@ -380,8 +392,8 @@ public class StreamGraphGenerator {
 		StreamNode itSink = itSourceAndSink.f1;
 
 		// We set the proper serializers for the sink/source
-		streamGraph.setSerializers(itSource.getId(), null, null, iterate.getOutputType().createSerializer(env.getConfig()));
-		streamGraph.setSerializers(itSink.getId(), iterate.getOutputType().createSerializer(env.getConfig()), null, null);
+		streamGraph.setSerializers(itSource.getId(), null, null, iterate.getOutputType().createSerializer(context.getExecutionConfig()));
+		streamGraph.setSerializers(itSink.getId(), iterate.getOutputType().createSerializer(context.getExecutionConfig()), null, null);
 
 		// also add the feedback source ID to the result IDs, so that downstream operators will
 		// add both as input
@@ -445,8 +457,8 @@ public class StreamGraphGenerator {
 		StreamNode itSink = itSourceAndSink.f1;
 
 		// We set the proper serializers for the sink/source
-		streamGraph.setSerializers(itSource.getId(), null, null, coIterate.getOutputType().createSerializer(env.getConfig()));
-		streamGraph.setSerializers(itSink.getId(), coIterate.getOutputType().createSerializer(env.getConfig()), null, null);
+		streamGraph.setSerializers(itSource.getId(), null, null, coIterate.getOutputType().createSerializer(context.getExecutionConfig()));
+		streamGraph.setSerializers(itSink.getId(), coIterate.getOutputType().createSerializer(context.getExecutionConfig()), null, null);
 
 		Collection<Integer> resultIds = Collections.singleton(itSource.getId());
 
@@ -547,7 +559,7 @@ public class StreamGraphGenerator {
 		}
 
 		if (sink.getStateKeySelector() != null) {
-			TypeSerializer<?> keySerializer = sink.getStateKeyType().createSerializer(env.getConfig());
+			TypeSerializer<?> keySerializer = sink.getStateKeyType().createSerializer(context.getExecutionConfig());
 			streamGraph.setOneInputStateKey(sink.getId(), sink.getStateKeySelector(), keySerializer);
 		}
 
@@ -579,7 +591,7 @@ public class StreamGraphGenerator {
 				transform.getName());
 
 		if (transform.getStateKeySelector() != null) {
-			TypeSerializer<?> keySerializer = transform.getStateKeyType().createSerializer(env.getConfig());
+			TypeSerializer<?> keySerializer = transform.getStateKeyType().createSerializer(context.getExecutionConfig());
 			streamGraph.setOneInputStateKey(transform.getId(), transform.getStateKeySelector(), keySerializer);
 		}
 
@@ -625,7 +637,7 @@ public class StreamGraphGenerator {
 				transform.getName());
 
 		if (transform.getStateKeySelector1() != null || transform.getStateKeySelector2() != null) {
-			TypeSerializer<?> keySerializer = transform.getStateKeyType().createSerializer(env.getConfig());
+			TypeSerializer<?> keySerializer = transform.getStateKeyType().createSerializer(context.getExecutionConfig());
 			streamGraph.setTwoInputStateKey(transform.getId(), transform.getStateKeySelector1(), transform.getStateKeySelector2(), keySerializer);
 		}
 
@@ -675,5 +687,177 @@ public class StreamGraphGenerator {
 			}
 			return inputGroup == null ? "default" : inputGroup;
 		}
+	}
+
+	/** An container used for keep properties of StreamGraph. **/
+	public static class Context {
+		private ExecutionConfig executionConfig;
+		private CheckpointConfig checkpointConfig;
+		private TimeCharacteristic timeCharacteristic;
+		private StateBackend stateBackend;
+		private boolean chainingEnabled;
+		private boolean isMultiHeadChainMode;
+		private String jobName = StreamExecutionEnvironment.DEFAULT_JOB_NAME;
+		private List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cacheFile = new ArrayList<>();
+		private ScheduleMode scheduleMode;
+		private long bufferTimeout;
+		private ResultPartitionType defaultResultPartitionType;
+		private Configuration configuration;
+
+		public static Context buildStreamProperties(StreamExecutionEnvironment env) {
+			Context context = new Context();
+
+			context.setExecutionConfig(env.getConfig());
+			context.setCheckpointConfig(env.getCheckpointConfig());
+			context.setTimeCharacteristic(env.getStreamTimeCharacteristic());
+			context.setStateBackend(env.getStateBackend());
+			context.setChainingEnabled(env.isChainingEnabled());
+			context.setCacheFiles(env.getCachedFiles());
+			context.setBufferTimeout(env.getBufferTimeout());
+			context.setDefaultResultPartitionType(ResultPartitionType.PIPELINED_BOUNDED);
+			context.setDefaultParallelism(env.getParallelism());
+			context.setMultiHeadChainMode(env.isMultiHeadChainMode());
+
+			// For infinite stream job, by default schedule tasks in eager mode
+			context.setScheduleMode(ScheduleMode.EAGER);
+
+			Configuration flinkConf = GlobalConfiguration.loadConfiguration();
+			flinkConf.addAll(context.getConfiguration());
+			return context;
+		}
+
+		public static Context buildBatchProperties(StreamExecutionEnvironment env) {
+			Context context = new Context();
+			try {
+				// we need to update some value in executionConfig.
+				ExecutionConfig executionConfig = InstantiationUtil.clone(env.getConfig());
+				executionConfig.enableObjectReuse();
+				context.setExecutionConfig(executionConfig);
+				executionConfig.setLatencyTrackingInterval(-1L);
+				CheckpointConfig checkpointConfig = new CheckpointConfig();
+				context.setCheckpointConfig(checkpointConfig);
+				context.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
+				context.setChainingEnabled(true);
+				context.setCacheFiles(env.getCachedFiles());
+				context.setBufferTimeout(-1L);
+				context.setDefaultResultPartitionType(ResultPartitionType.PIPELINED);
+				context.setMultiHeadChainMode(env.isMultiHeadChainMode());
+
+				// For finite stream job, by default schedule tasks in lazily from sources mode
+				context.setScheduleMode(ScheduleMode.LAZY_FROM_SOURCES);
+				return context;
+			} catch (IOException e) {
+				throw new FlinkRuntimeException("This exception could not happen.", e);
+			} catch (ClassNotFoundException e) {
+				throw new FlinkRuntimeException("This exception could not happen.", e);
+			}
+		}
+
+		public void setExecutionConfig(ExecutionConfig executionConfig) {
+			this.executionConfig = executionConfig;
+		}
+
+		public void setCheckpointConfig(CheckpointConfig checkpointConfig) {
+			this.checkpointConfig = checkpointConfig;
+		}
+
+		public void setTimeCharacteristic(TimeCharacteristic timeCharacteristic) {
+			this.timeCharacteristic = timeCharacteristic;
+		}
+
+		public void setStateBackend(StateBackend stateBackend) {
+			this.stateBackend = stateBackend;
+		}
+
+		public void setChainingEnabled(boolean chainingEnabled) {
+			this.chainingEnabled = chainingEnabled;
+		}
+
+		public ExecutionConfig getExecutionConfig() {
+			return executionConfig;
+		}
+
+		public CheckpointConfig getCheckpointConfig() {
+			return checkpointConfig;
+		}
+
+		public TimeCharacteristic getTimeCharacteristic() {
+			return timeCharacteristic;
+		}
+
+		public StateBackend getStateBackend() {
+			return stateBackend;
+		}
+
+		public boolean isChainingEnabled() {
+			return chainingEnabled;
+		}
+
+		public String getJobName() {
+			return jobName;
+		}
+
+		public void setJobName(String jobName) {
+			this.jobName = jobName;
+		}
+
+		public void setCacheFiles(List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cacheFile) {
+			this.cacheFile = cacheFile;
+		}
+
+		public List<Tuple2<String, DistributedCache.DistributedCacheEntry>> getCacheFiles() {
+			return cacheFile;
+		}
+
+		public ScheduleMode getScheduleMode() {
+			return scheduleMode;
+		}
+
+		public void setScheduleMode(ScheduleMode scheduleMode) {
+			this.scheduleMode = scheduleMode;
+		}
+
+		public long getBufferTimeout() {
+			return bufferTimeout;
+		}
+
+		public void setBufferTimeout(long bufferTimeout) {
+			this.bufferTimeout = bufferTimeout;
+		}
+
+		public ResultPartitionType getDefaultResultPartitionType() {
+			return defaultResultPartitionType;
+		}
+
+		public void setDefaultResultPartitionType(ResultPartitionType defaultResultPartitionType) {
+			this.defaultResultPartitionType = defaultResultPartitionType;
+		}
+
+		public Configuration getConfiguration() {
+			return configuration;
+		}
+
+		public void setConfiguration(Configuration configuration) {
+			this.configuration = configuration;
+		}
+
+		public int getDefaultParallelism() {
+			return defaultParallelism;
+		}
+
+		public void setDefaultParallelism(int defaultParallelism) {
+			this.defaultParallelism = defaultParallelism;
+		}
+
+		private int defaultParallelism;
+
+		public boolean isMultiHeadChainMode() {
+			return isMultiHeadChainMode;
+		}
+
+		public void setMultiHeadChainMode(boolean multiHeadChainMode) {
+			isMultiHeadChainMode = multiHeadChainMode;
+		}
+
 	}
 }

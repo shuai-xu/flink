@@ -24,6 +24,8 @@ import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.calcite.rel.RelDistribution.Type._
+import org.apache.flink.api.common.operators.ResourceSpec.MANAGED_MEMORY_NAME
+import org.apache.flink.api.common.resources.Resource
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -153,9 +155,13 @@ class BatchExecHashAggregate(
       codegenWithoutKeys(isMerge, isFinal, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
     } else {
       val reservedManagedMem =
-        BatchExecResourceUtil.getManagedMemory(reservedManagedMem) * BatchExecResourceUtil.SIZE_IN_MB
+        reservedResSpec.getExtendedResources
+          .get(MANAGED_MEMORY_NAME)
+          .getValue.intValue * BatchExecResourceUtil.SIZE_IN_MB
       val preferredManagedMem =
-        BatchExecResourceUtil.getManagedMemory(preferredManagedMem) * BatchExecResourceUtil.SIZE_IN_MB
+        preferResSpec.getExtendedResources
+          .get(MANAGED_MEMORY_NAME)
+          .getValue.intValue * BatchExecResourceUtil.SIZE_IN_MB * BatchExecResourceUtil.SIZE_IN_MB
       codegenWithKeys(
         ctx,
         tableEnv,
@@ -164,7 +170,7 @@ class BatchExecHashAggregate(
         reservedManagedMem,
         preferredManagedMem)
     }
-    val operator = new OneInputSubstituteStreamOperator[BaseRow](
+    val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)

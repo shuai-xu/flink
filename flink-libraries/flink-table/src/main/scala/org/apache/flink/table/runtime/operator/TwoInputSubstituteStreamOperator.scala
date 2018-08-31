@@ -26,9 +26,8 @@ import scala.collection.mutable
 class TwoInputSubstituteStreamOperator[IN1 <: Any, IN2 <: Any, OUT <: Any](
     name: String,
     @transient code: String,
-    override var chainingStrategy: ChainingStrategy = ChainingStrategy.ALWAYS,
     override val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
-  extends SubstituteStreamOperator[OUT](name, code, chainingStrategy, references)
+  extends SubstituteStreamOperator[OUT](name, code, ChainingStrategy.ALWAYS, references)
   with AbstractTwoInputSubstituteStreamOperator[IN1, IN2, OUT] {
 }
 

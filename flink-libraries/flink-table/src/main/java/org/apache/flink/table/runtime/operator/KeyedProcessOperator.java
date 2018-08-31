@@ -22,7 +22,7 @@ import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.streaming.api.ContextTimerService;
+import org.apache.flink.streaming.api.SimpleTimerService;
 import org.apache.flink.streaming.api.TimeDomain;
 import org.apache.flink.streaming.api.TimerService;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -92,10 +92,10 @@ public class KeyedProcessOperator<K, IN, OUT>
 
 		collector = new StreamRecordCollector<>(output);
 
-		InternalTimerService<Object, VoidNamespace> internalTimerService =
+		InternalTimerService<VoidNamespace> internalTimerService =
 			getInternalTimerService("user-timers", VoidNamespaceSerializer.INSTANCE, this);
 
-		TimerService timerService = new ContextTimerService(this, internalTimerService);
+		TimerService timerService = new SimpleTimerService(internalTimerService);
 
 		context = new ContextImpl(timerService);
 		onTimerContext = new OnTimerContextImpl(timerService);
@@ -107,8 +107,8 @@ public class KeyedProcessOperator<K, IN, OUT>
 	// ------------------------------------------------------------------------
 
 	@Override
-	public void notifyOfCompletedCheckpoint(long checkpointId) throws Exception {
-		super.notifyOfCompletedCheckpoint(checkpointId);
+	public void notifyCheckpointComplete(long checkpointId) throws Exception {
+		super.notifyCheckpointComplete(checkpointId);
 
 		if (function instanceof CheckpointListener) {
 			((CheckpointListener) function).notifyCheckpointComplete(checkpointId);

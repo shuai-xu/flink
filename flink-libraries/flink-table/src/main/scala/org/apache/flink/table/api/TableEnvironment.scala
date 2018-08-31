@@ -1085,7 +1085,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
   }
 
-  protected def generateRowConverterOperator[OUT](
+  protected def generateRowConverterOperator[IN, OUT](
       ctx: CodeGeneratorContext,
       inputTypeInfo: BaseRowTypeInfo[_],
       relType: RelDataType,
@@ -1093,7 +1093,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       rowtimeField: Option[Int],
       withChangeFlag: Boolean,
       dataType: DataType)
-    : (Option[OneInputSubstituteStreamOperator[OUT]], TypeInformation[OUT])  = {
+    : (Option[OneInputSubstituteStreamOperator[IN, OUT]], TypeInformation[OUT])  = {
 
     val resultType = DataTypes.toTypeInfo(dataType).asInstanceOf[TypeInformation[OUT]]
 
@@ -1207,7 +1207,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       endInputCode,
       DataTypes.internal(inputTypeInfo),
       config)
-    val substituteStreamOperator = new OneInputSubstituteStreamOperator[OUT](
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[IN, OUT](
       generated.name,
       generated.code,
       references = ctx.references)

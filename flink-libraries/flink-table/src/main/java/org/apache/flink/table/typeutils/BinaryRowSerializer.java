@@ -223,7 +223,7 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 
 	@Override
 	public BinaryRow deserializeFromPages(BinaryRow reuse,
-			AbstractPagedInputView source) throws IOException {
+		AbstractPagedInputView source) throws IOException {
 		checkSkipRead(source);
 		return deserialize(reuse, source);
 	}

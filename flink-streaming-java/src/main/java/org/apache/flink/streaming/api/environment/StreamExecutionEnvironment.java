@@ -1808,7 +1808,7 @@ public abstract class StreamExecutionEnvironment {
 		if (transformations.size() <= 0) {
 			throw new IllegalStateException("No operators defined in streaming topology. Cannot execute.");
 		}
-		return StreamGraphGenerator.generate(this, transformations);
+		return StreamGraphGenerator.generate(StreamGraphGenerator.Context.buildStreamProperties(this), transformations);
 	}
 
 	/**

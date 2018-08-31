@@ -122,7 +122,7 @@ class BatchExecLocalHashWindowAggregate(
       BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
       windowStart, windowSize, slideSize)
 
-    val operator = new OneInputSubstituteStreamOperator[BaseRow](
+    val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
       generatedOperator.code,
       references = ctx.references)

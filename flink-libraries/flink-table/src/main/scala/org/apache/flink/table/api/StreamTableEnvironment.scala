@@ -650,7 +650,7 @@ abstract class StreamTableEnvironment(
     val optionRowTimeField = if (rowtimeFields.isEmpty) None else Some(rowtimeFields.head.getIndex)
     val ctx = CodeGeneratorContext(config, true)
         .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
-    val (converterOperator, outputType) = generateRowConverterOperator[A](
+    val (converterOperator, outputType) = generateRowConverterOperator[BaseRow, A](
       ctx,
       convType.asInstanceOf[BaseRowTypeInfo[_]],
       logicalType,
@@ -704,7 +704,7 @@ abstract class StreamTableEnvironment(
     val transformStream = translateToBaseRow(optimizedPlan, queryConfig)
 
     val streamGraph = StreamGraphGenerator.generate(
-      execEnv, ArrayBuffer(transformStream))
+      StreamGraphGenerator.Context.buildStreamProperties(execEnv), ArrayBuffer(transformStream))
 
     val sqlPlan = PlanUtil.explainPlan(streamGraph)
 
@@ -738,7 +738,6 @@ abstract class StreamTableEnvironment(
         }
       }
 
-      parameters.addAll(execEnv.getConfiguration)
       execEnv.getConfig.setGlobalJobParameters(parameters)
       isConfigMerged = true
     }
