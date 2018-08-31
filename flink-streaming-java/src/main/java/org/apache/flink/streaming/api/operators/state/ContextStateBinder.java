@@ -28,6 +28,8 @@ import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapState;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
 import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
@@ -35,6 +37,8 @@ import org.apache.flink.runtime.state.keyed.KeyedListState;
 import org.apache.flink.runtime.state.keyed.KeyedListStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedSortedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedSortedMapStateDescriptor;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -117,6 +121,27 @@ public class ContextStateBinder implements StateBinder {
 		KeyedMapState<Object, MK, MV> keyedState = operator.getKeyedState(keyedStateDescriptor);
 
 		return new ContextMapState<>(operator, keyedState);
+	}
+
+	@Override
+	public <MK, MV> SortedMapState<MK, MV> createSortedMapState(SortedMapStateDescriptor<MK, MV> stateDesc) {
+		Preconditions.checkNotNull(stateDesc);
+
+		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
+
+		KeyedSortedMapStateDescriptor<Object, MK, MV> keyedStateDescriptor =
+			new KeyedSortedMapStateDescriptor<>(
+				stateDesc.getName(),
+				operator.getKeySerializer(),
+				stateDesc.getSerializer()
+			);
+		if (stateDesc.isQueryable()) {
+			keyedStateDescriptor.setQueryable(stateDesc.getQueryableStateName());
+		}
+
+		KeyedSortedMapState<Object, MK, MV> keyedState = operator.getKeyedState(keyedStateDescriptor);
+
+		return new ContextSortedMapState<>(operator, keyedState);
 	}
 
 	@Override

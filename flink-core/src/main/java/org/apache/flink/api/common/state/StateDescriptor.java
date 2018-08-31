@@ -68,7 +68,8 @@ public abstract class StateDescriptor<S extends State, T> implements Serializabl
 		REDUCING,
 		FOLDING,
 		AGGREGATING,
-		MAP
+		MAP,
+		SORTEDMAP
 	}
 
 	private static final long serialVersionUID = 1L;
@@ -87,7 +88,7 @@ public abstract class StateDescriptor<S extends State, T> implements Serializabl
 	/** The type information describing the value type. Only used to if the serializer
 	 * is created lazily. */
 	@Nullable
-	private TypeInformation<T> typeInfo;
+	protected TypeInformation<T> typeInfo;
 
 	/** Name for queries against state created from this StateDescriptor. */
 	@Nullable
@@ -273,12 +274,12 @@ public abstract class StateDescriptor<S extends State, T> implements Serializabl
 	// ------------------------------------------------------------------------
 
 	@Override
-	public final int hashCode() {
+	public int hashCode() {
 		return name.hashCode() + 31 * getClass().hashCode();
 	}
 
 	@Override
-	public final boolean equals(Object o) {
+	public boolean equals(Object o) {
 		if (o == this) {
 			return true;
 		}

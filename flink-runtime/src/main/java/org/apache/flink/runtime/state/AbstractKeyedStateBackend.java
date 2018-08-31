@@ -30,6 +30,8 @@ import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
+import org.apache.flink.api.common.state.SortedMapState;
+import org.apache.flink.api.common.state.SortedMapStateDescriptor;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateBinder;
 import org.apache.flink.api.common.state.StateDescriptor;
@@ -376,6 +378,10 @@ public abstract class AbstractKeyedStateBackend<K> implements
 				return AbstractKeyedStateBackend.this.createMapState(namespaceSerializer, stateDesc);
 			}
 
+			@Override
+			public <MK, MV> SortedMapState<MK, MV> createSortedMapState(SortedMapStateDescriptor<MK, MV> stateDesc) throws Exception {
+				throw new UnsupportedOperationException();
+			}
 		});
 
 		@SuppressWarnings("unchecked")

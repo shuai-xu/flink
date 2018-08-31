@@ -53,7 +53,7 @@ public interface StateBinder {
 
 	/**
 	 * Creates and returns a new {@link AggregatingState}.
-	 * @param stateDesc The {@code StateDescriptor} that contains the name of the state.
+	 * @param stateDesc The {@code stateDesc} that contains the name of the state.
 	 *
 	 * @param <IN> The type of the values that go into the aggregating state
 	 * @param <ACC> The type of the values that are stored in the aggregating state
@@ -64,7 +64,7 @@ public interface StateBinder {
 
 	/**
 	 * Creates and returns a new {@link FoldingState}.
-	 * @param stateDesc The {@code StateDescriptor} that contains the name of the state.
+	 * @param stateDesc The {@code stateDesc} that contains the name of the state.
 	 *
 	 * @param <T> Type of the values folded into the state
 	 * @param <ACC> Type of the value in the state
@@ -76,10 +76,17 @@ public interface StateBinder {
 
 	/**
 	 * Creates and returns a new {@link MapState}.
-	 * @param stateDesc The {@code StateDescriptor} that contains the name of the state.
+	 * @param stateDesc The {@code stateDesc} that contains the name of the state.
 	 *
 	 * @param <MK> Type of the keys in the state
 	 * @param <MV> Type of the values in the state
 	 */
 	<MK, MV> MapState<MK, MV> createMapState(MapStateDescriptor<MK, MV> stateDesc) throws Exception;
+
+	/**
+	 * Creates and returns a new {@link SortedMapState}.
+	 *
+	 * @param stateDesc The {@code stateDesc}
+	 */
+	<MK, MV> SortedMapState<MK, MV> createSortedMapState(SortedMapStateDescriptor<MK, MV> stateDesc) throws Exception;
 }
