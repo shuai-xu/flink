@@ -47,7 +47,7 @@ import java.util.Map;
  */
 @PublicEvolving
 public abstract class FieldParser<T> {
-	
+
 	/**
 	 * An enumeration of different types of errors that may occur.
 	 */
@@ -77,7 +77,9 @@ public abstract class FieldParser<T> {
 		EMPTY_COLUMN,
 
 		/** Invalid Boolean value **/
-		BOOLEAN_INVALID
+		BOOLEAN_INVALID,
+
+		CHARSET_INVALID,
 	}
 
 	private Charset charset = StandardCharsets.UTF_8;
@@ -89,19 +91,26 @@ public abstract class FieldParser<T> {
 	 * the state of this parser.
 	 * The start position within the byte array and the array's valid length is given.
 	 * The content of the value is delimited by a field delimiter.
-	 * 
+	 *
 	 * @param bytes The byte array that holds the value.
 	 * @param startPos The index where the field starts
 	 * @param limit The limit unto which the byte contents is valid for the parser. The limit is the
 	 *              position one after the last valid byte.
 	 * @param delim The field delimiter character
 	 * @param reuse An optional reusable field to hold the value
-	 * 
+	 * @param emptyColumnAsNull the result is null empty with emptyColumnAsNull enabled
+	 *
 	 * @return The index of the next delimiter, if the field was parsed correctly. A value less than 0 otherwise.
 	 */
-	public int resetErrorStateAndParse(byte[] bytes, int startPos, int limit, byte[] delim, T reuse) {
+	public int resetErrorStateAndParse(
+		byte[] bytes, int startPos, int limit, byte[] delim, T reuse, boolean emptyColumnAsNull) {
 		resetParserState();
-		return parseField(bytes, startPos, limit, delim, reuse);
+		if (startPos == limit - delim.length + 1 && emptyColumnAsNull) {
+			setErrorState(ParseErrorState.EMPTY_COLUMN);
+			return startPos;
+		} else {
+			return parseField(bytes, startPos, limit, delim, reuse);
+		}
 	}
 
 	/**
@@ -111,7 +120,7 @@ public abstract class FieldParser<T> {
 
 	/**
 	 * Reset the state of the parser. Called as the very first method inside
-	 * {@link FieldParser#resetErrorStateAndParse(byte[], int, int, byte[], Object)}, by default it just reset
+	 * {@link FieldParser#resetErrorStateAndParse(byte[], int, int, byte[], Object, boolean)}, by default it just reset
 	 * its error state.
 	 * */
 	protected void resetParserState() {
@@ -122,27 +131,27 @@ public abstract class FieldParser<T> {
 	 * Gets the parsed field. This method returns the value parsed by the last successful invocation of
 	 * {@link #parseField(byte[], int, int, byte[], Object)}. It objects are mutable and reused, it will return
 	 * the object instance that was passed the parse function.
-	 * 
+	 *
 	 * @return The latest parsed field.
 	 */
 	public abstract T getLastResult();
-	
+
 	/**
 	 * Returns an instance of the parsed value type.
-	 * 
-	 * @return An instance of the parsed value type. 
+	 *
+	 * @return An instance of the parsed value type.
 	 */
 	public abstract T createValue();
-	
+
 	/**
 	 * Checks if the delimiter starts at the given start position of the byte array.
-	 * 
+	 *
 	 * Attention: This method assumes that enough characters follow the start position for the delimiter check!
-	 * 
+	 *
 	 * @param bytes The byte array that holds the value.
 	 * @param startPos The index of the byte array where the check for the delimiter starts.
 	 * @param delim The delimiter to check for.
-	 * 
+	 *
 	 * @return true if a delimiter starts at the given start position, false otherwise.
 	 */
 	public static final boolean delimiterNext(byte[] bytes, int startPos, byte[] delim) {
@@ -154,7 +163,7 @@ public abstract class FieldParser<T> {
 			}
 		}
 		return true;
-		
+
 	}
 
 	/**
@@ -177,21 +186,21 @@ public abstract class FieldParser<T> {
 		}
 		return true;
 	}
-	
+
 	/**
 	 * Sets the error state of the parser. Called by subclasses of the parser to set the type of error
 	 * when failing a parse.
-	 * 
+	 *
 	 * @param error The error state to set.
 	 */
 	protected void setErrorState(ParseErrorState error) {
 		this.errorState = error;
 	}
-	
+
 	/**
 	 * Gets the error state of the parser, as a value of the enumeration {@link ParseErrorState}.
 	 * If no error occurred, the error state will be {@link ParseErrorState#NONE}.
-	 * 
+	 *
 	 * @return The current error state of the parser.
 	 */
 	public ParseErrorState getErrorState() {
@@ -204,21 +213,22 @@ public abstract class FieldParser<T> {
 	 * @return the end position of the string or -1 if an error occurred
 	 */
 	protected final int nextStringEndPos(byte[] bytes, int startPos, int limit, byte[] delimiter) {
+
 		int endPos = startPos;
 
 		final int delimLimit = limit - delimiter.length + 1;
 
 		while (endPos < limit) {
 			if (endPos < delimLimit && delimiterNext(bytes, endPos, delimiter)) {
+				if (endPos == startPos) {
+					setErrorState(ParseErrorState.EMPTY_COLUMN);
+					return -1;
+				}
 				break;
 			}
 			endPos++;
 		}
 
-		if (endPos == startPos) {
-			setErrorState(ParseErrorState.EMPTY_COLUMN);
-			return -1;
-		}
 		return endPos;
 	}
 
@@ -262,11 +272,11 @@ public abstract class FieldParser<T> {
 	// --------------------------------------------------------------------------------------------
 	//  Mapping from types to parsers
 	// --------------------------------------------------------------------------------------------
-	
+
 	/**
 	 * Gets the parser for the type specified by the given class. Returns null, if no parser for that class
 	 * is known.
-	 * 
+	 *
 	 * @param type The class of the type to get the parser for.
 	 * @return The parser for the given type, or null, if no such parser exists.
 	 */
@@ -280,10 +290,10 @@ public abstract class FieldParser<T> {
 			return typedParser;
 		}
 	}
-	
-	private static final Map<Class<?>, Class<? extends FieldParser<?>>> PARSERS = 
-			new HashMap<Class<?>, Class<? extends FieldParser<?>>>();
-	
+
+	private static final Map<Class<?>, Class<? extends FieldParser<?>>> PARSERS =
+		new HashMap<Class<?>, Class<? extends FieldParser<?>>>();
+
 	static {
 		// basic types
 		PARSERS.put(Byte.class, ByteParser.class);
