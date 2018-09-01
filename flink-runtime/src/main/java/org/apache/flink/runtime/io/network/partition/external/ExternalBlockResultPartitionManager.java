@@ -118,21 +118,17 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 			}
 		}
 
-		if (!resultPartitionMeta.hasInitialized()) {
-			try {
-				resultPartitionMeta.initialize();
-			} catch (IOException e) {
-				resultPartitionMetaMap.remove(resultPartitionId);
-				throw e;
-			}
-		}
-
-		ExternalBlockSubpartitionView subpartitionView = resultPartitionMeta.createSubpartitionView(
+		ExternalBlockSubpartitionView subpartitionView = new ExternalBlockSubpartitionView(
+			resultPartitionMeta,
+			index,
 			dirToThreadPool.get(resultPartitionMeta.getRootDir()),
 			resultPartitionId,
-			index,
-			availabilityListener,
-			bufferPool);
+			bufferPool,
+			shuffleServiceConfiguration.getWaitCreditDelay(),
+			availabilityListener);
+
+		resultPartitionMeta.notifySubpartitionStartConsuming(index);
+
 		return subpartitionView;
 	}
 

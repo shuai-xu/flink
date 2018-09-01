@@ -23,8 +23,6 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
-import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
-import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +31,6 @@ import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -152,33 +149,18 @@ class ExternalBlockResultPartitionMeta {
 		return subpartitionMetas[subpartitionIndex];
 	}
 
-	public ExternalBlockSubpartitionView createSubpartitionView(
-		ThreadPoolExecutor threadPool,
-		ResultPartitionID resultPartitionId,
-		int index,
-		BufferAvailabilityListener availabilityListener,
-		FixedLengthBufferPool bufferPool) throws IOException {
-
-		List<ExternalSubpartitionMeta> subpartitionMeta =
-			(subpartitionMetas != null) ? subpartitionMetas[index] : null;
-
-		increaseReference();
-
-		if (LOG.isDebugEnabled()) {
-			LOG.debug("partitionId {} : subpartitionIndex {} create view, {}",
-				resultPartitionId.toString(), index, convertSubpartitionMetasToString(subpartitionMeta));
-		}
-
-		// TODO
-		return null;
-	}
-
 	ExternalBlockFileType getExternalBlockFileType() {
 		if (hasInitialized()) {
 			return externalFileType;
 		} else {
 			throw new RuntimeException("This method should be called after initialize()");
 		}
+	}
+
+	void notifySubpartitionStartConsuming(int subpartitionIndex) {
+		// Increase reference count
+		lastActiveTimeInMs.set(System.currentTimeMillis());
+		refCount.addAndGet(1);
 	}
 
 	/**
@@ -356,11 +338,6 @@ class ExternalBlockResultPartitionMeta {
 			}
 			subpartitionMetas[subpartitionIndex] = subpartitionMeta;
 		}
-	}
-
-	private void increaseReference() {
-		lastActiveTimeInMs.set(System.currentTimeMillis());
-		refCount.addAndGet(1);
 	}
 
 	// Utility for debug.

@@ -115,6 +115,15 @@ public class ExternalBlockShuffleServiceOptions {
 		.defaultValue(32768);
 
 	/**
+	 * The duration to retain a partition's data after its last modified time
+	 * if this partition is unfinished and cannot be consumed, probably due to upstream write failure,
+	 * in seconds.
+	 */
+	public static final ConfigOption<Long> WAIT_CREDIT_DELAY_IN_MS =
+		key("flink.shuffle-service.wait-credit-delay-in-ms")
+			.defaultValue(0L);
+
+	/**
 	 * The interval to do self check periodically, in milliseconds.
 	 */
 	public static final ConfigOption<Integer> SELF_CHECK_INTERVAL_IN_MS =

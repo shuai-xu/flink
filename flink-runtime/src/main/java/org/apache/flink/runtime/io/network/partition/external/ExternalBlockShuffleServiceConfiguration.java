@@ -65,6 +65,8 @@ public class ExternalBlockShuffleServiceConfiguration {
 	/** The size of a buffer used to transfer partition data, in bytes. */
 	private final Integer memorySizePerBufferInBytes;
 
+	private final Long waitCreditDelay;
+
 	/** TTL for consumed partitions, in milliseconds */
 	private final Integer consumedPartitionTTL;
 
@@ -90,6 +92,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 		Map<String, Integer> diskTypeToIOThreadNum,
 		Integer bufferNumber,
 		Integer memorySizePerBufferInBytes,
+		Long waitCreditDelay,
 		Integer consumedPartitionTTL,
 		Integer partialConsumedPartitionTTL,
 		Integer unconsumedPartitionTTL,
@@ -103,6 +106,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 		this.diskTypeToIOThreadNum = diskTypeToIOThreadNum;
 		this.bufferNumber = bufferNumber;
 		this.memorySizePerBufferInBytes = memorySizePerBufferInBytes;
+		this.waitCreditDelay = waitCreditDelay;
 		this.consumedPartitionTTL = consumedPartitionTTL;
 		this.partialConsumedPartitionTTL = partialConsumedPartitionTTL;
 		this.unconsumedPartitionTTL = unconsumedPartitionTTL;
@@ -139,6 +143,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	Integer getMemorySizePerBufferInBytes() {
 		return memorySizePerBufferInBytes;
+	}
+
+	Long getWaitCreditDelay() {
+		return waitCreditDelay;
 	}
 
 	Integer getConsumedPartitionTTL() {
@@ -265,6 +273,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 			Comparator subpartitionViewComparator = (Comparator) subpartitionViewComparatorClass.newInstance();
 		}
 
+		// 6. Get the delay of waiting credit for subpartition view.
+		long waitCreditDelay = configuration.getLong(
+			ExternalBlockShuffleServiceOptions.WAIT_CREDIT_DELAY_IN_MS);
+
 		return new ExternalBlockShuffleServiceConfiguration(
 			configuration,
 			FileSystem.getLocalFileSystem(),
@@ -272,6 +284,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 			diskTypeToIOThreadNum,
 			bufferNum,
 			memorySizePerBufferInBytes,
+			waitCreditDelay,
 			consumedPartitionTTL,
 			partialConsumedPartitionTTL,
 			unconsumedPartitionTTL,
