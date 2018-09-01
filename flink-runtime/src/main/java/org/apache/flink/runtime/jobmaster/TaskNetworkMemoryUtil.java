@@ -53,8 +53,8 @@ public class TaskNetworkMemoryUtil {
 		final int buffersPerPipelineChannel = configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL);
 		final int buffersPerSubpartition = configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION);
 		final int extraBuffersPerPipelineGate = configuration.getInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE);
-		final int buffersPerBlockingChannel = configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_BLOCKING_CHANNEL);
-		final int extraBuffersPerBlockingGate = configuration.getInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_BLOCKING_GATE);
+		final int buffersPerBlockingChannel = configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL);
+		final int extraBuffersPerBlockingGate = configuration.getInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE);
 
 		int extraBuffersAllPipelineGates;
 		if (extraBuffersPerPipelineGate >= 0) {

@@ -99,8 +99,8 @@ public class StreamNetworkThroughputBenchmarkTest {
 		int writers = 2;
 		int channels = 2;
 
-		env.setUp(writers, channels, 100, false, writers * channels, writers * channels *
-			TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL.defaultValue());
+		env.setUp(writers, channels, 100, false, writers * channels * TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION.defaultValue(),
+			writers * channels * TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL.defaultValue() + writers * TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE.defaultValue());
 		env.executeBenchmark(10_000);
 		env.tearDown();
 	}

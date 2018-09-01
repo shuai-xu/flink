@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.taskexecutor;
 
-import org.apache.commons.net.util.Base64;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
@@ -36,6 +35,7 @@ import org.apache.flink.runtime.taskmanager.NetworkEnvironmentConfiguration;
 import org.apache.flink.util.MathUtils;
 import org.apache.flink.util.NetUtils;
 
+import org.apache.commons.net.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -429,6 +429,14 @@ public class TaskManagerServicesConfiguration {
 		int extraBuffersPerGate = configuration.getInteger(
 			TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE);
 
+		int buffersPerExternalBlockingChannel = configuration.getInteger(
+			TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL);
+		int extraBuffersPerExternalBlockingGate = configuration.getInteger(
+			TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE);
+
+		int buffersPerSubpartition = configuration.getInteger(
+			TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION);
+
 		return new NetworkEnvironmentConfiguration(
 			networkBufFraction,
 			networkBufMin,
@@ -439,6 +447,9 @@ public class TaskManagerServicesConfiguration {
 			maxRequestBackoff,
 			buffersPerChannel,
 			extraBuffersPerGate,
+			buffersPerExternalBlockingChannel,
+			extraBuffersPerExternalBlockingGate,
+			buffersPerSubpartition,
 			nettyConfig);
 	}
 

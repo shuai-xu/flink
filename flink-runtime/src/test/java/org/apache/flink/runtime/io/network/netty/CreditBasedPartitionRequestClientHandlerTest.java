@@ -143,7 +143,8 @@ public class CreditBasedPartitionRequestClientHandlerTest {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(8, 8);
 			inputGate.setBufferPool(bufferPool);
 			final int numExclusiveBuffers = 2;
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 
 			final CreditBasedPartitionRequestClientHandler handler = new CreditBasedPartitionRequestClientHandler();
 			handler.addInputChannel(inputChannel);
@@ -253,7 +254,8 @@ public class CreditBasedPartitionRequestClientHandlerTest {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(6, 6);
 			inputGate.setBufferPool(bufferPool);
 			final int numExclusiveBuffers = 2;
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 
 			inputChannel1.requestSubpartition(0);
 			inputChannel2.requestSubpartition(0);
@@ -353,7 +355,8 @@ public class CreditBasedPartitionRequestClientHandlerTest {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(6, 6);
 			inputGate.setBufferPool(bufferPool);
 			final int numExclusiveBuffers = 2;
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 
 			inputChannel.requestSubpartition(0);
 

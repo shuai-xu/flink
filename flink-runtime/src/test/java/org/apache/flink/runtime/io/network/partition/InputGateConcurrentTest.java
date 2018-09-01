@@ -19,12 +19,14 @@
 package org.apache.flink.runtime.io.network.partition;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.testutils.CheckedThread;
 import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.ConnectionManager;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.buffer.BufferBuilderTestUtils;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
+import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.LocalInputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
@@ -38,6 +40,7 @@ import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -46,7 +49,9 @@ import static org.apache.flink.runtime.io.network.partition.InputChannelTestUtil
 import static org.apache.flink.runtime.io.network.partition.InputChannelTestUtils.createResultPartitionManager;
 import static org.apache.flink.util.Preconditions.checkState;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class InputGateConcurrentTest {
 
@@ -116,6 +121,10 @@ public class InputGateConcurrentTest {
 				true,
 				false);
 
+		NetworkBufferPool networkBufferPool = mock(NetworkBufferPool.class);
+		when(networkBufferPool.requestMemorySegments(anyInt())).thenReturn(Arrays.asList(mock(MemorySegment.class)));
+		gate.setNetworkProperties(networkBufferPool, 1);
+
 		InputChannel[] inputChannels = new InputChannel[numChannels];
 		for (int i = 0; i < numChannels; i++) {
 			RemoteInputChannel channel = new RemoteInputChannel(
@@ -170,6 +179,10 @@ public class InputGateConcurrentTest {
 				partitionRequestManager,
 				true,
 				false);
+
+		NetworkBufferPool networkBufferPool = mock(NetworkBufferPool.class);
+		when(networkBufferPool.requestMemorySegments(anyInt())).thenReturn(Arrays.asList(mock(MemorySegment.class)));
+		gate.setNetworkProperties(networkBufferPool, 1);
 
 		InputChannel[] inputChannels = new InputChannel[numChannels];
 		for (int i = 0, local = 0; i < numChannels; i++) {

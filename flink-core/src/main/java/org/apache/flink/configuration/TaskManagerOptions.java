@@ -484,16 +484,16 @@ public class TaskManagerOptions {
 	 *
 	 * <p>This value should be large for external channels to avoid random reads in the shuffle service
 	 */
-	public static final ConfigOption<Integer> NETWORK_BUFFERS_PER_BLOCKING_CHANNEL =
-			key("taskmanager.network.memory.buffers-per-blocking-channel")
+	public static final ConfigOption<Integer> NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL =
+			key("taskmanager.network.memory.buffers-per-external-blocking-channel")
 			.defaultValue(128);
 
 	/**
 	 * Number of extra network buffers for to use for each ingoing external gate (input gate).
 	 * The non-positive value will be replaced with 2 * number of active input channel in the runtime.
 	 */
-	public static final ConfigOption<Integer> NETWORK_EXTRA_BUFFERS_PER_BLOCKING_GATE =
-			key("taskmanager.network.memory.floating-buffers-per-blocking-gate")
+	public static final ConfigOption<Integer> NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE =
+			key("taskmanager.network.memory.floating-buffers-per-external-blocking-gate")
 			.defaultValue(0);
 
 	/**

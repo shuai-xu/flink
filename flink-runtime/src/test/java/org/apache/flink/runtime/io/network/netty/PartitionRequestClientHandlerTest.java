@@ -138,7 +138,8 @@ public class PartitionRequestClientHandlerTest {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(8, 8);
 			inputGate.setBufferPool(bufferPool);
 			final int numExclusiveBuffers = 2;
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 
 			final PartitionRequestClientHandler handler = new PartitionRequestClientHandler();
 			handler.addInputChannel(inputChannel);

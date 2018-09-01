@@ -96,8 +96,11 @@ public class PartitionRequestManagerTest {
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
+		int buffersPerBlockingChannel = 128;
+		int extraNetworkBuffersPerBlockingGate = 0;
+		int buffersPerSubpartition = 2;
 		final NetworkEnvironment network = createNetworkEnvironment(networkBufferPool, partitionManager, connectionManager,
-			buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+			buffersPerChannel, extraNetworkBuffersPerGate, buffersPerBlockingChannel, extraNetworkBuffersPerBlockingGate, buffersPerSubpartition, 0, 0);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(2, 1);
 		final SingleInputGate inputGate = createInputGate(network, partitionRequestManager);
@@ -144,8 +147,11 @@ public class PartitionRequestManagerTest {
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
+		int buffersPerBlockingChannel = 128;
+		int extraNetworkBuffersPerBlockingGate = 0;
+		int buffersPerSubpartition = 2;
 		final NetworkEnvironment network = createNetworkEnvironment(networkBufferPool, partitionManager, connectionManager,
-			buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+			buffersPerChannel, extraNetworkBuffersPerGate, buffersPerBlockingChannel, extraNetworkBuffersPerBlockingGate, buffersPerSubpartition, 0, 0);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(1, 1);
 		final SingleInputGate inputGate = createInputGate(network, partitionRequestManager);
@@ -207,8 +213,11 @@ public class PartitionRequestManagerTest {
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
+		int buffersPerBlockingChannel = 128;
+		int extraNetworkBuffersPerBlockingGate = 0;
+		int buffersPerSubpartition = 2;
 		final NetworkEnvironment network = createNetworkEnvironment(networkBufferPool, partitionManager, connectionManager,
-			buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+			buffersPerChannel, extraNetworkBuffersPerGate, buffersPerBlockingChannel, extraNetworkBuffersPerBlockingGate, buffersPerSubpartition, 0, 0);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(1, 1);
 		final SingleInputGate inputGate = createInputGate(network, partitionRequestManager);
@@ -272,8 +281,11 @@ public class PartitionRequestManagerTest {
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
+		int buffersPerBlockingChannel = 128;
+		int extraNetworkBuffersPerBlockingGate = 0;
+		int buffersPerSubpartition = 2;
 		final NetworkEnvironment network = createNetworkEnvironment(networkBufferPool, partitionManager, connectionManager,
-			buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+			buffersPerChannel, extraNetworkBuffersPerGate, buffersPerBlockingChannel, extraNetworkBuffersPerBlockingGate, buffersPerSubpartition, 0, 0);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(4, 2);
 		final SingleInputGate inputGate1 = createInputGate(network, partitionRequestManager);
@@ -339,8 +351,11 @@ public class PartitionRequestManagerTest {
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
+		int buffersPerBlockingChannel = 128;
+		int extraNetworkBuffersPerBlockingGate = 0;
+		int buffersPerSubpartition = 2;
 		final NetworkEnvironment network = createNetworkEnvironment(networkBufferPool, partitionManager, connectionManager,
-			buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+			buffersPerChannel, extraNetworkBuffersPerGate, buffersPerBlockingChannel, extraNetworkBuffersPerBlockingGate, buffersPerSubpartition, 0, 0);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(2, 2);
 		final SingleInputGate inputGate1 = createInputGate(
@@ -443,12 +458,13 @@ public class PartitionRequestManagerTest {
 
 	private static List<int[]> generateParameters() {
 		List<int[]> parameters = new LinkedList<>();
-		for (int numberOfGate = 2; numberOfGate <= 8; ++numberOfGate) {
-			for (int numberOfChannel = 2; numberOfChannel <= 8; ++numberOfChannel) {
+		for (int numberOfGate = 2; numberOfGate <= 5; ++numberOfGate) {
+			for (int numberOfChannel = 2; numberOfChannel <= 5; ++numberOfChannel) {
 				for (int numberOfUnknownChannel = 0; numberOfUnknownChannel <= numberOfChannel; ++numberOfUnknownChannel) {
 					for (int quota = numberOfGate; quota <= numberOfGate * numberOfChannel; ++quota) {
 						parameters.add(new int[] {numberOfGate, numberOfChannel, numberOfUnknownChannel, quota});
 					}
+					parameters.add(new int[] {numberOfGate, numberOfChannel, numberOfUnknownChannel, Integer.MAX_VALUE});
 				}
 			}
 		}
@@ -480,8 +496,11 @@ public class PartitionRequestManagerTest {
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
+		int buffersPerBlockingChannel = 128;
+		int extraNetworkBuffersPerBlockingGate = 0;
+		int buffersPerSubpartition = 2;
 		final NetworkEnvironment network = createNetworkEnvironment(networkBufferPool, partitionManager, connectionManager,
-			buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+			buffersPerChannel, extraNetworkBuffersPerGate, buffersPerBlockingChannel, extraNetworkBuffersPerBlockingGate, buffersPerSubpartition, 0, 0);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(
 			parameter[3], parameter[0]);
@@ -619,6 +638,9 @@ public class PartitionRequestManagerTest {
 		ConnectionManager connectionManager,
 		int buffersPerChannel,
 		int extraNetworkBuffersPerGate,
+		int buffersPerBlockingChannel,
+		int extraNetworkBuffersPerBlockingGate,
+		int buffersPerSubpartition,
 		int initialBackoff,
 		int maxBackoff) {
 		return new NetworkEnvironment(
@@ -634,6 +656,9 @@ public class PartitionRequestManagerTest {
 			maxBackoff,
 			buffersPerChannel,
 			extraNetworkBuffersPerGate,
+			buffersPerBlockingChannel,
+			extraNetworkBuffersPerBlockingGate,
+			buffersPerSubpartition,
 			true);
 	}
 
@@ -672,7 +697,7 @@ public class PartitionRequestManagerTest {
 			true,
 			true);
 
-		inputGate.assignExclusiveSegments(networkEnvironment.getNetworkBufferPool(), 2);
+		inputGate.setNetworkProperties(networkEnvironment.getNetworkBufferPool(), 2);
 		assertEquals(partitionType, inputGate.getConsumedPartitionType());
 
 		return inputGate;

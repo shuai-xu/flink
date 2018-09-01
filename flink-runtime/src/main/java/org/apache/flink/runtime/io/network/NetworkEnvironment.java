@@ -80,11 +80,20 @@ public class NetworkEnvironment {
 
 	private final int partitionRequestMaxBackoff;
 
-	/** Number of network buffers to use for each outgoing/incoming channel (subpartition/input channel). */
+	/** Number of network buffers to use for each input channel. */
 	private final int networkBuffersPerChannel;
 
-	/** Number of extra network buffers to use for each outgoing/incoming gate (result partition/input gate). */
+	/** Number of extra network buffers to use for each input gate. */
 	private final int extraNetworkBuffersPerGate;
+
+	/** Number of network buffers to use for each external shuffle blocking input channel. */
+	private final int networkBuffersPerExternalBlockingChannel;
+
+	/** Number of extra network buffers to use for each external shuffle blocking input gate. */
+	private final int extraNetworkBuffersPerExternalBlockingGate;
+
+	/** Number of network buffers to use for each internal result subpartition. */
+	private final int networkBuffersPerSubpartition;
 
 	private final boolean enableCreditBased;
 
@@ -103,6 +112,9 @@ public class NetworkEnvironment {
 			int partitionRequestMaxBackoff,
 			int networkBuffersPerChannel,
 			int extraNetworkBuffersPerGate,
+			int networkBuffersPerExternalBlockingChannel,
+			int extraNetworkBuffersPerExternalBlockingGate,
+			int networkBuffersPerSubpartition,
 			boolean enableCreditBased) {
 
 		this.networkBufferPool = checkNotNull(networkBufferPool);
@@ -122,6 +134,9 @@ public class NetworkEnvironment {
 		isShutdown = false;
 		this.networkBuffersPerChannel = networkBuffersPerChannel;
 		this.extraNetworkBuffersPerGate = extraNetworkBuffersPerGate;
+		this.networkBuffersPerExternalBlockingChannel = networkBuffersPerExternalBlockingChannel;
+		this.extraNetworkBuffersPerExternalBlockingGate = extraNetworkBuffersPerExternalBlockingGate;
+		this.networkBuffersPerSubpartition = networkBuffersPerSubpartition;
 
 		this.enableCreditBased = enableCreditBased;
 	}
@@ -207,11 +222,8 @@ public class NetworkEnvironment {
 		BufferPool bufferPool = null;
 
 		try {
-			int maxNumberOfMemorySegments = partition.getPartitionType().isBounded() ?
-				partition.getNumberOfSubpartitions() * networkBuffersPerChannel +
-					extraNetworkBuffersPerGate : Integer.MAX_VALUE;
-			bufferPool = networkBufferPool.createBufferPool(partition.getNumberOfSubpartitions(),
-				maxNumberOfMemorySegments);
+			int numberOfMemorySegments = partition.getNumberOfSubpartitions() * networkBuffersPerSubpartition;
+			bufferPool = networkBufferPool.createBufferPool(numberOfMemorySegments, numberOfMemorySegments);
 			partition.registerBufferPool(bufferPool);
 
 			resultPartitionManager.registerResultPartition(partition);
@@ -236,12 +248,14 @@ public class NetworkEnvironment {
 		int maxNumberOfMemorySegments;
 		try {
 			if (enableCreditBased) {
-				maxNumberOfMemorySegments = gate.getConsumedPartitionType().isBounded() ?
-					extraNetworkBuffersPerGate : Integer.MAX_VALUE;
-
-				// assign exclusive buffers to input channels directly and use the rest for floating buffers
-				gate.assignExclusiveSegments(networkBufferPool, networkBuffersPerChannel);
-				bufferPool = networkBufferPool.createBufferPool(0, maxNumberOfMemorySegments);
+				if (gate.isPartitionRequestRestricted()) {
+					gate.setNetworkProperties(networkBufferPool, networkBuffersPerExternalBlockingChannel);
+					// for external shuffle, extra buffer is not used currently
+					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBuffersPerExternalBlockingGate);
+				} else {
+					gate.setNetworkProperties(networkBufferPool, networkBuffersPerChannel);
+					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBuffersPerGate);
+				}
 			} else {
 				maxNumberOfMemorySegments = gate.getConsumedPartitionType().isBounded() ?
 					gate.getNumberOfInputChannels() * networkBuffersPerChannel +

@@ -333,7 +333,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = spy(networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers));
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			// Prepare the exclusive and floating buffers to verify recycle logic later
@@ -475,7 +476,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = spy(networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers));
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			// Prepare the exclusive and floating buffers to verify recycle logic later
@@ -553,7 +555,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = spy(networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers));
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			// Prepare the exclusive and floating buffers to verify recycle logic later
@@ -649,7 +652,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = spy(networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers));
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 			channel1.requestSubpartition(0);
 			channel2.requestSubpartition(0);
 			channel3.requestSubpartition(0);
@@ -721,7 +725,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers);
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			final Callable<Void> requestBufferTask = new Callable<Void>() {
@@ -790,7 +795,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers);
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveSegments);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveSegments);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			final Callable<Void> requestBufferTask = new Callable<Void>() {
@@ -846,7 +852,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers);
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveSegments);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveSegments);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			final Callable<Void> releaseTask = new Callable<Void>() {
@@ -907,7 +914,8 @@ public class RemoteInputChannelTest {
 		try {
 			final BufferPool bufferPool = networkBufferPool.createBufferPool(numFloatingBuffers, numFloatingBuffers);
 			inputGate.setBufferPool(bufferPool);
-			inputGate.assignExclusiveSegments(networkBufferPool, numExclusiveBuffers);
+			inputGate.setNetworkProperties(networkBufferPool, numExclusiveBuffers);
+			inputGate.assignExclusiveSegments();
 			inputChannel.requestSubpartition(0);
 
 			final Callable<Void> bufferPoolInteractionsTask = () -> {

@@ -98,6 +98,9 @@ public class NetworkBufferCalculationTest extends TestLogger {
 			TaskManagerOptions.NETWORK_REQUEST_BACKOFF_MAX.defaultValue(),
 			TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL.defaultValue(),
 			TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE.defaultValue(),
+			TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL.defaultValue(),
+			TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE.defaultValue(),
+			TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION.defaultValue(),
 			null);
 
 		return new TaskManagerServicesConfiguration(

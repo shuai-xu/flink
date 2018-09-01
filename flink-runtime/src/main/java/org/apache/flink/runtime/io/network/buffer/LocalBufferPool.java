@@ -118,8 +118,8 @@ class LocalBufferPool implements BufferPool {
 			"Maximum number of memory segments (%s) should not be smaller than minimum (%s).",
 			maxNumberOfMemorySegments, numberOfRequiredMemorySegments);
 
-		checkArgument(maxNumberOfMemorySegments > 0,
-			"Maximum number of memory segments (%s) should be larger than 0.",
+		checkArgument(maxNumberOfMemorySegments >= 0,
+			"Maximum number of memory segments (%s) should be larger than or equal to 0.",
 			maxNumberOfMemorySegments);
 
 		LOG.debug("Using a local buffer pool with {}-{} buffers",

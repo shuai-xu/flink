@@ -900,8 +900,13 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	private void createAllInputGates(
 		String taskNameWithSubtaskAndId,
 		Collection<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
-		final int maxConcurrentPartitionRequests = Math.max(inputGates.length,
-			jobConfiguration.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS));
+		int maxConcurrentPartitionRequests = jobConfiguration.getInteger(
+			TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS);
+		if (maxConcurrentPartitionRequests > 0) {
+			maxConcurrentPartitionRequests = Math.max(inputGates.length, maxConcurrentPartitionRequests);
+		} else {
+			maxConcurrentPartitionRequests = Integer.MAX_VALUE;
+		}
 		final BlockingShuffleType shuffleType = getBlockingShuffleType();
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(

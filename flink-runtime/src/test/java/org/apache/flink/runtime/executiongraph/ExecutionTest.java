@@ -19,12 +19,19 @@
 package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
 import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
 import org.apache.flink.runtime.instance.SimpleSlot;
+import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.jobgraph.DistributionPattern;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
@@ -61,6 +68,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Tests for the {@link Execution}.
@@ -417,6 +426,87 @@ public class ExecutionTest extends TestLogger {
 		executionVertex.scheduleForExecution(slotProvider, false, LocationPreferenceConstraint.ANY).get();
 
 		assertThat(execution.getTaskRestore(), is(nullValue()));
+	}
+
+	@Test
+	public void testNetworkMemoryCalculation() throws Exception {
+		int[][] parameters = {{2, 8, 128, 2, 10, 10 * 128 + 2 * 2 + 2 * 10 + 8},
+			{2, 8, 128, 2, 1, 2 * 128 + 2 * 2 + 2 * 10 + 8}};
+
+		for (int[] parameter: parameters) {
+			testNetworkMemoryCalculation(parameter);
+		}
+	}
+
+	private void testNetworkMemoryCalculation(int[] parameters) throws Exception {
+		final int NETWORK_BUFFERS_PER_CHANNEL = parameters[0];
+		final int NETWORK_EXTRA_BUFFERS_PER_GATE = parameters[1];
+		final int NETWORK_BUFFERS_PER_BLOCKING_CHANNEL = parameters[2];
+		final int NETWORK_EXTRA_BUFFERS_PER_BLOCKING_GATE = parameters[3];
+		final int YARN_SHUFFLE_SERVICE_MAX_REQUESTS_IN_FLIGHT = parameters[4];
+
+		final JobVertex jobVertex1 = createNoOpJobVertex();
+		final JobVertexID jobVertexId1 = jobVertex1.getID();
+
+		final JobVertex jobVertex2 = createNoOpJobVertex();
+		jobVertex2.setParallelism(10);
+
+		final JobVertex jobVertex3 = createNoOpJobVertex();
+		jobVertex3.setParallelism(10);
+
+		final JobVertex jobVertex4 = createNoOpJobVertex();
+		jobVertex4.setParallelism(10);
+
+		final Configuration configuration = jobVertex4.getConfiguration();
+		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, NETWORK_BUFFERS_PER_CHANNEL);
+		configuration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, NETWORK_EXTRA_BUFFERS_PER_GATE);
+		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL, NETWORK_BUFFERS_PER_BLOCKING_CHANNEL);
+		configuration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE, NETWORK_EXTRA_BUFFERS_PER_BLOCKING_GATE);
+		configuration.setInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS, YARN_SHUFFLE_SERVICE_MAX_REQUESTS_IN_FLIGHT);
+		configuration.setString(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE, BlockingShuffleType.YARN.toString());
+		configuration.setInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE, 1024 * 1024);
+
+		IntermediateDataSetID dataSetID1 = new IntermediateDataSetID();
+		IntermediateDataSet dataSet1 = mock(IntermediateDataSet.class);
+		when(dataSet1.getId()).thenReturn(dataSetID1);
+
+		IntermediateDataSetID dataSetID2 = new IntermediateDataSetID();
+		IntermediateDataSet dataSet2 = mock(IntermediateDataSet.class);
+		when(dataSet2.getId()).thenReturn(dataSetID2);
+
+		IntermediateDataSetID dataSetID3 = new IntermediateDataSetID();
+		IntermediateDataSet dataSet3 = mock(IntermediateDataSet.class);
+		when(dataSet3.getId()).thenReturn(dataSetID3);
+
+		DistributionPattern distributionPattern = DistributionPattern.ALL_TO_ALL;
+
+		jobVertex4.connectDataSetAsInput(jobVertex1, dataSet1.getId(), distributionPattern, ResultPartitionType.BLOCKING);
+
+		jobVertex4.connectDataSetAsInput(jobVertex2, dataSet2.getId(), distributionPattern, ResultPartitionType.PIPELINED_BOUNDED);
+
+		jobVertex4.connectDataSetAsInput(jobVertex3, dataSet3.getId(), distributionPattern, ResultPartitionType.BLOCKING);
+
+		final SingleSlotTestingSlotOwner slotOwner = new SingleSlotTestingSlotOwner();
+		final ProgrammedSlotProvider slotProvider = createProgrammedSlotProvider(
+			1,
+			Collections.singleton(jobVertexId1),
+			slotOwner);
+
+		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createSimpleTestGraph(
+			new JobID(),
+			slotProvider,
+			new NoRestartStrategy(),
+			new JobVertex[] {jobVertex1, jobVertex2, jobVertex3, jobVertex4});
+
+		executionGraph.getJobConfiguration().addAll(configuration);
+
+		ExecutionJobVertex executionJobVertex = executionGraph.getJobVertex(jobVertex4.getID());
+
+		ExecutionVertex executionVertex = executionJobVertex.getTaskVertices()[0];
+
+		final Execution execution = executionVertex.getCurrentExecutionAttempt();
+
+		assertEquals(parameters[5], execution.calculateTaskNetworkMemory(executionVertex));
 	}
 
 	@Nonnull

@@ -36,6 +36,7 @@ import org.apache.flink.runtime.io.network.buffer.FreeingBufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
+import org.apache.flink.runtime.io.network.netty.PartitionRequestClient;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
@@ -353,7 +354,7 @@ public class SingleInputGateTest {
 		int initialBackoff = 137;
 		int maxBackoff = 1001;
 
-		final NetworkEnvironment netEnv = createNetworkEnvironment(2, 8, initialBackoff, maxBackoff);
+		final NetworkEnvironment netEnv = createNetworkEnvironment(2, 8, 128, 0, 2, initialBackoff, maxBackoff);
 
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, 1);
 		SingleInputGate gate = SingleInputGate.create(
@@ -418,7 +419,7 @@ public class SingleInputGateTest {
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
 		final NetworkEnvironment network = createNetworkEnvironment(buffersPerChannel,
-			extraNetworkBuffersPerGate, 0, 0);
+			extraNetworkBuffersPerGate, 128, 0, 2, 0, 0);
 
 		try {
 			final ResultPartitionID resultPartitionId = new ResultPartitionID();
@@ -429,6 +430,7 @@ public class SingleInputGateTest {
 
 			NetworkBufferPool bufferPool = network.getNetworkBufferPool();
 			if (enableCreditBasedFlowControl) {
+				inputGate.requestPartitions();
 				verify(bufferPool,
 					times(1)).requestMemorySegments(buffersPerChannel);
 				RemoteInputChannel remote = (RemoteInputChannel) inputGate.getInputChannels()
@@ -459,7 +461,7 @@ public class SingleInputGateTest {
 		final SingleInputGate inputGate = createInputGate(1, ResultPartitionType.PIPELINED_BOUNDED, partitionRequestManager);
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
-		final NetworkEnvironment network = createNetworkEnvironment(buffersPerChannel, extraNetworkBuffersPerGate, 0, 0);
+		final NetworkEnvironment network = createNetworkEnvironment(buffersPerChannel, extraNetworkBuffersPerGate, 128, 0, 2, 0, 0);
 
 		try {
 			final ResultPartitionID resultPartitionId = new ResultPartitionID();
@@ -486,6 +488,7 @@ public class SingleInputGateTest {
 				ResultPartitionLocation.createRemote(connectionId)));
 
 			if (enableCreditBasedFlowControl) {
+				inputGate.requestPartitions();
 				verify(bufferPool,
 					times(1)).requestMemorySegments(buffersPerChannel);
 				RemoteInputChannel remote = (RemoteInputChannel) inputGate.getInputChannels()
@@ -515,7 +518,7 @@ public class SingleInputGateTest {
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, 1);
 		final SingleInputGate inputGate = createInputGate(2, partitionRequestManager);
 		int buffersPerChannel = 2;
-		final NetworkEnvironment network = createNetworkEnvironment(buffersPerChannel, 8, 0, 0);
+		final NetworkEnvironment network = createNetworkEnvironment(buffersPerChannel, 8, 128, 0, 2, 0, 0);
 
 		try {
 			final ResultPartitionID localResultPartitionId = new ResultPartitionID();
@@ -562,11 +565,17 @@ public class SingleInputGateTest {
 	private NetworkEnvironment createNetworkEnvironment(
 			int buffersPerChannel,
 			int extraNetworkBuffersPerGate,
+			int buffersPerBlockingChannel,
+			int extraNetworkBuffersPerBlockingGate,
+			int buffersPerSubpartition,
 			int initialBackoff,
-			int maxBackoff) {
+			int maxBackoff) throws IOException, InterruptedException {
+		PartitionRequestClient partitionRequestClient = mock(PartitionRequestClient.class);
+		ConnectionManager connectionManager = mock(ConnectionManager.class);
+		when(connectionManager.createPartitionRequestClient(any(ConnectionID.class))).thenReturn(partitionRequestClient);
 		return new NetworkEnvironment(
 			spy(new NetworkBufferPool(100, 32)),
-			new LocalConnectionManager(),
+			connectionManager,
 			new ResultPartitionManager(),
 			new TaskEventDispatcher(),
 			new KvStateRegistry(),
@@ -577,6 +586,9 @@ public class SingleInputGateTest {
 			maxBackoff,
 			buffersPerChannel,
 			extraNetworkBuffersPerGate,
+			buffersPerBlockingChannel,
+			extraNetworkBuffersPerBlockingGate,
+			buffersPerSubpartition,
 			enableCreditBasedFlowControl);
 	}
 

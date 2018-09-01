@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.io.network.partition;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.ConnectionManager;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
@@ -26,6 +27,7 @@ import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
+import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.LocalInputChannel;
@@ -45,6 +47,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -57,7 +60,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class InputGateFairnessTest {
 
@@ -209,6 +214,10 @@ public class InputGateFairnessTest {
 				partitionRequestManager,
 				true);
 
+		NetworkBufferPool networkBufferPool = mock(NetworkBufferPool.class);
+		when(networkBufferPool.requestMemorySegments(anyInt())).thenReturn(Arrays.asList(mock(MemorySegment.class)));
+		gate.setNetworkProperties(networkBufferPool, 1);
+
 		final ConnectionManager connManager = createDummyConnectionManager();
 
 		final RemoteInputChannel[] channels = new RemoteInputChannel[numChannels];
@@ -265,6 +274,10 @@ public class InputGateFairnessTest {
 				UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 				partitionRequestManager,
 				true);
+
+		NetworkBufferPool networkBufferPool = mock(NetworkBufferPool.class);
+		when(networkBufferPool.requestMemorySegments(anyInt())).thenReturn(Arrays.asList(mock(MemorySegment.class)));
+		gate.setNetworkProperties(networkBufferPool, 1);
 
 		final ConnectionManager connManager = createDummyConnectionManager();
 

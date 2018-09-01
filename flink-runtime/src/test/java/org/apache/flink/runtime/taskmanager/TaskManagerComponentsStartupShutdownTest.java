@@ -136,10 +136,10 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 			// accordingly to be consistent
 			final NetworkEnvironmentConfiguration netConf = new NetworkEnvironmentConfiguration(
 					0.1f, networkBufNum * BUFFER_SIZE, networkBufNum * BUFFER_SIZE, BUFFER_SIZE, IOManager.IOMode.SYNC,
-					0, 0, 2, 8, null);
+					0, 0, 2, 8, 128, 0,  2, null);
 
 			ResourceID taskManagerId = ResourceID.generate();
-			
+
 			final TaskManagerLocation connectionInfo = new TaskManagerLocation(taskManagerId, InetAddress.getLocalHost(), 10000);
 
 			final MemoryManager memManager = new MemoryManager(networkBufNum * BUFFER_SIZE, 1, BUFFER_SIZE, MemoryType.HEAP, false);
@@ -157,6 +157,9 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 				netConf.partitionRequestMaxBackoff(),
 				netConf.networkBuffersPerChannel(),
 				netConf.floatingNetworkBuffersPerGate(),
+				netConf.networkBuffersPerExternalBlockingChannel(),
+				netConf.floatingNetworkBuffersPerExternalBlockingGate(),
+				netConf.networkBuffersPerSubpartition(),
 				true);
 
 			network.start();

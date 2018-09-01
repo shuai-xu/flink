@@ -24,6 +24,7 @@ import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.accumulators.StringifiedAccumulatorResult;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -37,6 +38,7 @@ import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
+import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
@@ -49,11 +51,11 @@ import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
-
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.OptionalFailure;
+
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
@@ -547,37 +549,58 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 		Configuration config = getVertex().getJobVertex().getGraph().getJobConfiguration();
 
+		BlockingShuffleType shuffleType;
+		try {
+			shuffleType = BlockingShuffleType.valueOf(config.getString(
+				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
+		} catch (IllegalArgumentException e) {
+			LOG.warn("The configured blocking shuffle is illegal, using default value.", e);
+			shuffleType = BlockingShuffleType.valueOf(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE.defaultValue());
+		}
+
 		int numSubpartitions = 0;
 		for (IntermediateResultPartition irp : executionVertex.getProducedPartitions().values()) {
-			for (List<ExecutionEdge> consumer : irp.getConsumers()) {
-				numSubpartitions += consumer.size();
+			if (!(shuffleType == BlockingShuffleType.YARN && irp.getIntermediateResult().getResultType().isBlocking())) {
+				for (List<ExecutionEdge> consumer : irp.getConsumers()) {
+					numSubpartitions += consumer.size();
+				}
 			}
 		}
 
+		final int maxBlockingRequestsInFlight = config.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS);
+
 		int numPipelineChannels = 0;
 		int numPipelineGates = 0;
-		int numBlockingChannels = 0;
-		int numBlockingGates = 0;
+		int numExternalBlockingChannels = 0;
+		int numExternalBlockingGates = 0;
 		for (int j = 0; j < executionVertex.getNumberOfInputs(); ++j) {
 			ExecutionEdge[] edges = executionVertex.getInputEdges(j);
 
 			checkState(edges.length > 0, "There should be at least on edge for each input");
 
 			// Check the result type by viewing the first edge
-			boolean isBlocking = edges[0].getSource().getIntermediateResult().getResultType().isBlocking();
+			boolean isExternalBlocking = edges[0].getSource().getIntermediateResult().getResultType().isBlocking()
+				&& shuffleType == BlockingShuffleType.YARN;
 
-			if (isBlocking) {
-				numBlockingChannels += edges.length;
-				numBlockingGates++;
+			if (isExternalBlocking) {
+				numExternalBlockingChannels += edges.length;
+				numExternalBlockingGates++;
 			} else {
 				numPipelineChannels += edges.length;
 				numPipelineGates++;
 			}
 		}
 
+		if (maxBlockingRequestsInFlight > 0) {
+			numExternalBlockingChannels = Math.min(numExternalBlockingChannels, maxBlockingRequestsInFlight);
+			// each blocking input gate should monopolize at least one piece of resource to
+			// support input selection by operator
+			numExternalBlockingChannels = Math.max(numExternalBlockingChannels, numExternalBlockingGates);
+		}
+
 		final int networkMemory =
 			TaskNetworkMemoryUtil.calculateTaskNetworkMemory(config, numSubpartitions, numPipelineChannels, numPipelineGates,
-				numBlockingChannels, numBlockingGates);
+				numExternalBlockingChannels, numExternalBlockingGates);
 
 		return networkMemory;
 	}

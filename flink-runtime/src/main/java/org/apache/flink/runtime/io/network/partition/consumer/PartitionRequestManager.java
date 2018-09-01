@@ -135,7 +135,7 @@ public class PartitionRequestManager {
 		if (!inputGate.isPartitionRequestRestricted()) {
 			// request all subpartitions directly
 			for (InputChannel inputChannel : inputChannels.values()) {
-				inputChannel.requestSubpartition(consumedSubpartitionIndex);
+				internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 			}
 			return;
 		}
@@ -150,15 +150,15 @@ public class PartitionRequestManager {
 			for (InputChannel inputChannel : allInputChannels) {
 				if (!(inputChannel instanceof RemoteInputChannel)) {
 					// local and unknown channel do not consume quota
-					inputChannel.requestSubpartition(consumedSubpartitionIndex);
+					internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 				} else if (remainingQuota > 0) {
 					// firstly, use the assigned quota
-					inputChannel.requestSubpartition(consumedSubpartitionIndex);
+					internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 					--remainingQuota;
 					++numberOfUsedQuota;
 				} else if (availableRequestQuota > 0) {
 					// then use the available quota
-					inputChannel.requestSubpartition(consumedSubpartitionIndex);
+					internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 					--availableRequestQuota;
 					++numberOfUsedQuota;
 				} else {
@@ -206,12 +206,13 @@ public class PartitionRequestManager {
 			return;
 		}
 
+		int consumedSubpartitionIndex = inputGate.getConsumedSubpartitionIndex();
 		// handle the returned quota
 		synchronized (lock) {
 			RemoteInputChannel inputChannel = getPendingRemoteChannel(inputGate);
 			if (inputChannel != null) {
 				// assign the returned quota to the same input gate if possible
-				inputChannel.requestSubpartition(inputGate.getConsumedSubpartitionIndex());
+				internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 				return;
 			}
 
@@ -229,7 +230,7 @@ public class PartitionRequestManager {
 						inputChannel = getPendingRemoteChannel(currentInputGate);
 
 						if (inputChannel != null) {
-							inputChannel.requestSubpartition(inputGate.getConsumedSubpartitionIndex());
+							internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 							currentUsedPartitionRequestQuota.put(
 								currentInputGate, currentUsedPartitionRequestQuota.get(currentInputGate) + 1);
 							break;
@@ -278,7 +279,7 @@ public class PartitionRequestManager {
 
 		if (!inputGate.isPartitionRequestRestricted() || !(inputChannel instanceof RemoteInputChannel)) {
 			// request directly
-			inputChannel.requestSubpartition(consumedSubpartitionIndex);
+			internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 			return;
 		}
 
@@ -288,12 +289,12 @@ public class PartitionRequestManager {
 			if (reservedQuota > 0) {
 				// firstly, use the reserved quota
 				checkState(reservedQuota == 1, "The reserved quota must be 1, but actual is " + reservedQuota);
-				inputChannel.requestSubpartition(consumedSubpartitionIndex);
+				internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 				reservedPartitionRequestQuota.put(inputGate, reservedQuota - 1);
 				currentUsedPartitionRequestQuota.put(inputGate, currentUsedQuota + 1);
 			} else if (availableRequestQuota > 0) {
 				// then use the free quota
-				inputChannel.requestSubpartition(consumedSubpartitionIndex);
+				internalRequestSubpartition(inputGate, inputChannel, consumedSubpartitionIndex);
 				--availableRequestQuota;
 				currentUsedPartitionRequestQuota.put(inputGate, currentUsedQuota + 1);
 			} else {
@@ -358,5 +359,24 @@ public class PartitionRequestManager {
 		}
 
 		channelList.addLast(inputChannel);
+	}
+
+	/**
+	 * Assigns exclusive memory segments to the remote input channel and requests the subpartition.
+	 *
+	 * @param inputGate the given input gate.
+	 * @param inputChannel the input channel to request subpartition.
+	 * @param consumedSubpartitionIndex the subpartition index
+	 * @throws IOException when {@link SingleInputGate#assignExclusiveSegments()} throws IOException.
+	 * @throws InterruptedException when {@link InputChannel#requestSubpartition(int)} throw InterruptedException
+	 */
+	private void internalRequestSubpartition(
+		SingleInputGate inputGate,
+		InputChannel inputChannel,
+		int consumedSubpartitionIndex) throws IOException, InterruptedException {
+		if (inputChannel instanceof RemoteInputChannel) {
+			inputGate.assignExclusiveSegments(inputChannel);
+		}
+		inputChannel.requestSubpartition(consumedSubpartitionIndex);
 	}
 }
