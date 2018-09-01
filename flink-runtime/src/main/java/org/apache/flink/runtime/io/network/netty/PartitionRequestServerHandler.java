@@ -87,6 +87,12 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
 
 				LOG.debug("Read channel on {}: {}.", ctx.channel().localAddress(), request);
 
+				// If the partition request arrives later than cancel request during downstream failover, we should
+				// ignore this partition request, otherwise the resources may be leaked for external shuffle mode.
+				if (outboundQueue.isMarkedReleased(request.receiverId)) {
+					return;
+				}
+
 				try {
 					NetworkSequenceViewReader reader;
 					if (creditBasedEnabled) {
