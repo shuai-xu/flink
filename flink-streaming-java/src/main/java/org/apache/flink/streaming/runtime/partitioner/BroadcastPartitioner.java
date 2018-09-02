@@ -18,7 +18,6 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 /**
@@ -35,7 +34,7 @@ public class BroadcastPartitioner<T> extends StreamPartitioner<T> {
 	int setNumber;
 
 	@Override
-	public int[] selectChannels(SerializationDelegate<StreamRecord<T>> record,
+	public int[] selectChannels(StreamRecord<T> record,
 			int numberOfOutputChannels) {
 		if (set && setNumber == numberOfOutputChannels) {
 			return returnArray;

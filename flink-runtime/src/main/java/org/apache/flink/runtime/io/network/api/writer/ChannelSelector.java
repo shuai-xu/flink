@@ -18,15 +18,13 @@
 
 package org.apache.flink.runtime.io.network.api.writer;
 
-import org.apache.flink.core.io.IOReadableWritable;
-
 /**
  * The {@link ChannelSelector} determines to which logical channels a record
  * should be written to.
  *
  * @param <T> the type of record which is sent through the attached output gate
  */
-public interface ChannelSelector<T extends IOReadableWritable> {
+public interface ChannelSelector<T> {
 
 	/**
 	 * Returns the logical channel indexes, to which the given record should be

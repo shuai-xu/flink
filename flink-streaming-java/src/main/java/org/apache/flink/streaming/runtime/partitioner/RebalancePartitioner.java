@@ -18,7 +18,6 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 /**
@@ -34,7 +33,7 @@ public class RebalancePartitioner<T> extends StreamPartitioner<T> {
 	private final int[] returnArray = new int[] {-1};
 
 	@Override
-	public int[] selectChannels(SerializationDelegate<StreamRecord<T>> record,
+	public int[] selectChannels(StreamRecord<T> record,
 			int numberOfOutputChannels) {
 		int newChannel = ++this.returnArray[0];
 		if (newChannel >= numberOfOutputChannels) {

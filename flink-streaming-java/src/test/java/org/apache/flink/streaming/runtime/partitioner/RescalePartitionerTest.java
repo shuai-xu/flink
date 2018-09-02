@@ -35,7 +35,6 @@ import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobmanager.scheduler.Scheduler;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -65,8 +64,6 @@ public class RescalePartitionerTest extends TestLogger {
 
 	private RescalePartitioner<Tuple> distributePartitioner;
 	private StreamRecord<Tuple> streamRecord = new StreamRecord<Tuple>(null);
-	private SerializationDelegate<StreamRecord<Tuple>> sd = new SerializationDelegate<StreamRecord<Tuple>>(
-			null);
 
 	@Before
 	public void setPartitioner() {
@@ -75,19 +72,17 @@ public class RescalePartitionerTest extends TestLogger {
 
 	@Test
 	public void testSelectChannelsLength() {
-		sd.setInstance(streamRecord);
-		assertEquals(1, distributePartitioner.selectChannels(sd, 1).length);
-		assertEquals(1, distributePartitioner.selectChannels(sd, 2).length);
-		assertEquals(1, distributePartitioner.selectChannels(sd, 1024).length);
+		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 1).length);
+		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 2).length);
+		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 1024).length);
 	}
 
 	@Test
 	public void testSelectChannelsInterval() {
-		sd.setInstance(streamRecord);
-		assertEquals(0, distributePartitioner.selectChannels(sd, 3)[0]);
-		assertEquals(1, distributePartitioner.selectChannels(sd, 3)[0]);
-		assertEquals(2, distributePartitioner.selectChannels(sd, 3)[0]);
-		assertEquals(0, distributePartitioner.selectChannels(sd, 3)[0]);
+		assertEquals(0, distributePartitioner.selectChannels(streamRecord, 3)[0]);
+		assertEquals(1, distributePartitioner.selectChannels(streamRecord, 3)[0]);
+		assertEquals(2, distributePartitioner.selectChannels(streamRecord, 3)[0]);
+		assertEquals(0, distributePartitioner.selectChannels(streamRecord, 3)[0]);
 	}
 
 	@Test

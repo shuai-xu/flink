@@ -19,6 +19,8 @@
 package org.apache.flink.runtime.io.network.api.writer;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -47,10 +49,10 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.util.TestPooledBufferProvider;
 import org.apache.flink.runtime.taskmanager.TaskActions;
+import org.apache.flink.testutils.serialization.types.IntType;
 import org.apache.flink.testutils.serialization.types.SerializationTestType;
 import org.apache.flink.testutils.serialization.types.SerializationTestTypeFactory;
 import org.apache.flink.testutils.serialization.types.Util;
-import org.apache.flink.types.IntValue;
 import org.apache.flink.util.XORShiftRandom;
 
 import org.junit.Assert;
@@ -137,13 +139,14 @@ public class RecordWriterTest {
 			when(bufferProvider.requestBufferBuilderBlocking()).thenAnswer(request);
 
 			ResultPartitionWriter partitionWriter = new RecyclingPartitionWriter(bufferProvider);
+			partitionWriter.setTypeSerializer(new IntSerializer());
 
-			final RecordWriter<IntValue> recordWriter = new RecordWriter<IntValue>(partitionWriter);
+			final RecordWriter<Integer> recordWriter = new RecordWriter<>(partitionWriter);
 
 			Future<?> result = executor.submit(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					IntValue val = new IntValue(0);
+					Integer val = 0;
 
 					try {
 						recordWriter.emit(val);
@@ -189,11 +192,12 @@ public class RecordWriterTest {
 	public void testSerializerClearedAfterClearBuffers() throws Exception {
 		ResultPartitionWriter partitionWriter =
 			spy(new RecyclingPartitionWriter(new TestPooledBufferProvider(1, 16)));
+		partitionWriter.setTypeSerializer(new IntSerializer());
 
-		RecordWriter<IntValue> recordWriter = new RecordWriter<>(partitionWriter);
+		RecordWriter<Integer> recordWriter = new RecordWriter<>(partitionWriter);
 
 		// Fill a buffer, but don't write it out.
-		recordWriter.emit(new IntValue(0));
+		recordWriter.emit(0);
 
 		// Clear all buffers.
 		recordWriter.clearBuffers();
@@ -220,6 +224,7 @@ public class RecordWriterTest {
 		TestPooledBufferProvider bufferProvider = new TestPooledBufferProvider(Integer.MAX_VALUE, bufferSize);
 
 		ResultPartitionWriter partitionWriter = new CollectingPartitionWriter(queues, bufferProvider);
+
 		RecordWriter<ByteArrayIO> writer = new RecordWriter<>(partitionWriter, new RoundRobin<ByteArrayIO>());
 		CheckpointBarrier barrier = new CheckpointBarrier(Integer.MAX_VALUE + 919192L, Integer.MAX_VALUE + 18828228L, CheckpointOptions.forCheckpointWithDefaultLocation());
 
@@ -246,7 +251,7 @@ public class RecordWriterTest {
 		Random rand = new XORShiftRandom();
 		int numChannels = 4;
 		int bufferSize = 32;
-		int lenBytes = 4; // serialized length
+		int lenBytes = 4 + 4; // serialized length + byte array length
 
 		@SuppressWarnings("unchecked")
 		Queue<BufferConsumer>[] queues = new Queue[numChannels];
@@ -257,7 +262,8 @@ public class RecordWriterTest {
 		TestPooledBufferProvider bufferProvider = new TestPooledBufferProvider(Integer.MAX_VALUE, bufferSize);
 
 		ResultPartitionWriter partitionWriter = new CollectingPartitionWriter(queues, bufferProvider);
-		RecordWriter<ByteArrayIO> writer = new RecordWriter<>(partitionWriter, new RoundRobin<ByteArrayIO>());
+		partitionWriter.setTypeSerializer(new BytePrimitiveArraySerializer());
+		RecordWriter<byte[]> writer = new RecordWriter<>(partitionWriter, new RoundRobin<>());
 		CheckpointBarrier barrier = new CheckpointBarrier(Integer.MAX_VALUE + 1292L, Integer.MAX_VALUE + 199L, CheckpointOptions.forCheckpointWithDefaultLocation());
 
 		// Emit records on some channels first (requesting buffers), then
@@ -268,19 +274,19 @@ public class RecordWriterTest {
 		byte[] bytes = new byte[bufferSize / 2];
 		rand.nextBytes(bytes);
 
-		writer.emit(new ByteArrayIO(bytes));
+		writer.emit(bytes);
 
 		// (ii) Larger than the buffer size (two buffer requests => 1 + 2)
 		bytes = new byte[bufferSize + 1];
 		rand.nextBytes(bytes);
 
-		writer.emit(new ByteArrayIO(bytes));
+		writer.emit(bytes);
 
 		// (iii) Exactly the buffer size (single buffer request => 1 + 2 + 1)
 		bytes = new byte[bufferSize - lenBytes];
 		rand.nextBytes(bytes);
 
-		writer.emit(new ByteArrayIO(bytes));
+		writer.emit(bytes);
 
 		// (iv) Nothing on the 4th channel (no buffer request => 1 + 2 + 1 + 0 = 4)
 
@@ -381,9 +387,10 @@ public class RecordWriterTest {
 
 		ResultPartitionWriter partition =
 			new CollectingPartitionWriter(queues, new TestPooledBufferProvider(Integer.MAX_VALUE));
-		RecordWriter<IntValue> writer = new RecordWriter<>(partition);
+		partition.setTypeSerializer(new IntSerializer());
+		RecordWriter<Integer> writer = new RecordWriter<>(partition);
 
-		writer.broadcastEmit(new IntValue(0));
+		writer.broadcastEmit(0);
 		writer.flushAll();
 
 		// Verify added to all queues
@@ -401,7 +408,7 @@ public class RecordWriterTest {
 
 	/**
 	 * Tests that records are broadcasted via {@link ChannelSelector} and
-	 * {@link RecordWriter#emit(IOReadableWritable)}.
+	 * {@link RecordWriter#emit(Object)}.
 	 */
 	@Test
 	public void testBroadcastEmitRecord() throws Exception {
@@ -409,7 +416,7 @@ public class RecordWriterTest {
 	}
 
 	/**
-	 * Tests that records are broadcasted via {@link RecordWriter#broadcastEmit(IOReadableWritable)}.
+	 * Tests that records are broadcasted via {@link RecordWriter#broadcastEmit(Object)}.
 	 */
 	@Test
 	public void testEmitRecordInBroadcastPartitioner() throws Exception {
@@ -420,7 +427,7 @@ public class RecordWriterTest {
 	 * The results of emitting records via BroadcastPartitioner or broadcasting records directly are the same,
 	 * that is all the target channels can receive the whole outputs.
 	 *
-	 * @param isBroadcastEmit whether using {@link RecordWriter#broadcastEmit(IOReadableWritable)} or not
+	 * @param isBroadcastEmit whether using {@link RecordWriter#broadcastEmit(Object)} or not
 	 */
 	private void emitRecordInBroadcastPartitionerOrBroadcastEmitRecord(boolean isBroadcastEmit) throws Exception {
 		final int numChannels = 4;
@@ -436,7 +443,8 @@ public class RecordWriterTest {
 
 		final TestPooledBufferProvider bufferProvider = new TestPooledBufferProvider(Integer.MAX_VALUE, bufferSize);
 		final ResultPartitionWriter partitionWriter = new CollectingPartitionWriter(queues, bufferProvider);
-		final RecordWriter<SerializationTestType> writer = new RecordWriter<>(partitionWriter, new Broadcast<>());
+		partitionWriter.setTypeSerializer(new IntSerializer());
+		final RecordWriter<Integer> writer = new RecordWriter<>(partitionWriter, new Broadcast<>());
 		final RecordDeserializer<SerializationTestType> deserializer = new SpillingAdaptiveSpanningRecordDeserializer<>(
 			new String[]{ tempFolder.getRoot().getAbsolutePath() });
 
@@ -446,9 +454,9 @@ public class RecordWriterTest {
 			serializedRecords.add(record);
 
 			if (isBroadcastEmit) {
-				writer.broadcastEmit(record);
+				writer.broadcastEmit(((IntType) record).getValue());
 			} else {
-				writer.emit(record);
+				writer.emit(((IntType) record).getValue());
 			}
 		}
 
@@ -594,7 +602,7 @@ public class RecordWriterTest {
 	/**
 	 * RoundRobin channel selector starting at 0 ({@link RoundRobinChannelSelector} starts at 1).
 	 */
-	private static class RoundRobin<T extends IOReadableWritable> implements ChannelSelector<T> {
+	private static class RoundRobin<T> implements ChannelSelector<T> {
 
 		private int[] nextChannel = new int[] { -1 };
 
@@ -605,7 +613,7 @@ public class RecordWriterTest {
 		}
 	}
 
-	private static class Broadcast<T extends IOReadableWritable> implements ChannelSelector<T> {
+	private static class Broadcast<T> implements ChannelSelector<T> {
 
 		private int[] returnChannel;
 		boolean set;

@@ -32,7 +32,6 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.OperatorIOMetricGroup;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.streaming.api.collector.selector.CopyingDirectedOutput;
 import org.apache.flink.streaming.api.collector.selector.DirectedOutput;
@@ -53,6 +52,8 @@ import org.apache.flink.streaming.runtime.io.RecordWriterOutput;
 import org.apache.flink.streaming.runtime.io.StreamRecordWriter;
 import org.apache.flink.streaming.runtime.metrics.WatermarkGauge;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
+import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
+import org.apache.flink.streaming.runtime.streamrecord.StreamElementSerializer;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
@@ -107,7 +108,7 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 	public OperatorChain(
 			StreamTask containingTask,
-			List<StreamRecordWriter<SerializationDelegate<StreamRecord<?>>>> streamRecordWriters) {
+			List<StreamRecordWriter<StreamRecord<?>>> streamRecordWriters) {
 
 		final ClassLoader userCodeClassloader = containingTask.getUserCodeClassLoader();
 		streamTaskConfig = containingTask.getStreamTaskConfig();
@@ -454,7 +455,7 @@ public class OperatorChain implements StreamStatusMaintainer {
 	}
 
 	private RecordWriterOutput<?> createStreamOutput(
-			StreamRecordWriter<SerializationDelegate<StreamRecord<?>>> streamRecordWriter,
+			StreamRecordWriter<StreamRecord<?>> streamRecordWriter,
 			StreamEdge edge,
 			StreamConfig upStreamConfig,
 			Environment taskEnvironment,
@@ -472,9 +473,10 @@ public class OperatorChain implements StreamStatusMaintainer {
 			outSerializer = upStreamConfig.getTypeSerializerOut(taskEnvironment.getUserClassLoader());
 		}
 
-		taskEnvironment.getWriter(outputIndex).setTypeSerializer(outSerializer);
+		TypeSerializer<StreamElement> outRecordSerializer = new StreamElementSerializer<>(outSerializer);
+		taskEnvironment.getWriter(outputIndex).setTypeSerializer(outRecordSerializer);
 
-		return new RecordWriterOutput(streamRecordWriter, outSerializer, sideOutputTag, this);
+		return new RecordWriterOutput(streamRecordWriter, sideOutputTag, this);
 	}
 
 	// ------------------------------------------------------------------------

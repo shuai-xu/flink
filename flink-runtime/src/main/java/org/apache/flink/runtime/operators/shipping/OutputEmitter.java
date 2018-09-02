@@ -22,7 +22,6 @@ import org.apache.flink.api.common.distributions.DataDistribution;
 import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.util.MathUtils;
 
 /**
@@ -33,17 +32,17 @@ import org.apache.flink.util.MathUtils;
  * @param <T> The type of the element handled by the emitter.
  */
 
-public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T>> {
-	
+public class OutputEmitter<T> implements ChannelSelector<T> {
+
 	/** the shipping strategy used by this output emitter */
-	private final ShipStrategyType strategy; 
+	private final ShipStrategyType strategy;
 
 	/** the reused array defining target channels */
 	private int[] channels;
 
 	/** counter to go over channels round robin */
 	private int nextChannelToSendTo = 0;
-	
+
 	/** the comparator for hashing / sorting */
 	private final TypeComparator<T> comparator;
 
@@ -56,7 +55,7 @@ public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T
 	private TypeComparator[] flatComparators;
 
 	private Object[] keys;
-	
+
 	private Object[] extractedKeys;
 
 	// ------------------------------------------------------------------------
@@ -66,29 +65,29 @@ public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T
 	/**
 	 * Creates a new channel selector that uses the given strategy (broadcasting, partitioning, ...)
 	 * and uses the supplied task index perform a round robin distribution.
-	 * 
+	 *
 	 * @param strategy The distribution strategy to be used.
 	 */
 	public OutputEmitter(ShipStrategyType strategy, int indexInSubtaskGroup) {
 		this(strategy, indexInSubtaskGroup, null, null, null);
 	}
-	
+
 	/**
 	 * Creates a new channel selector that uses the given strategy (broadcasting, partitioning, ...)
 	 * and uses the supplied comparator to hash / compare records for partitioning them deterministically.
-	 * 
+	 *
 	 * @param strategy The distribution strategy to be used.
 	 * @param comparator The comparator used to hash / compare the records.
 	 */
 	public OutputEmitter(ShipStrategyType strategy, TypeComparator<T> comparator) {
 		this(strategy, 0, comparator, null, null);
 	}
-	
-	
+
+
 	@SuppressWarnings("unchecked")
-	public OutputEmitter(ShipStrategyType strategy, int indexInSubtaskGroup, 
+	public OutputEmitter(ShipStrategyType strategy, int indexInSubtaskGroup,
 							TypeComparator<T> comparator, Partitioner<?> partitioner, DataDistribution distribution) {
-		if (strategy == null) { 
+		if (strategy == null) {
 			throw new NullPointerException();
 		}
 
@@ -131,7 +130,7 @@ public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T
 	// ------------------------------------------------------------------------
 
 	@Override
-	public final int[] selectChannels(SerializationDelegate<T> record, int numberOfChannels) {
+	public final int[] selectChannels(T record, int numberOfChannels) {
 		switch (strategy) {
 		case FORWARD:
 			return forward();
@@ -139,18 +138,18 @@ public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T
 		case PARTITION_FORCED_REBALANCE:
 			return robin(numberOfChannels);
 		case PARTITION_HASH:
-			return hashPartitionDefault(record.getInstance(), numberOfChannels);
+			return hashPartitionDefault(record, numberOfChannels);
 		case BROADCAST:
 			return broadcast(numberOfChannels);
 		case PARTITION_CUSTOM:
-			return customPartition(record.getInstance(), numberOfChannels);
+			return customPartition(record, numberOfChannels);
 		case PARTITION_RANGE:
-			return rangePartition(record.getInstance(), numberOfChannels);
+			return rangePartition(record, numberOfChannels);
 		default:
 			throw new UnsupportedOperationException("Unsupported distribution strategy: " + strategy.name());
 		}
 	}
-	
+
 	// --------------------------------------------------------------------------------------------
 
 	private int[] forward() {

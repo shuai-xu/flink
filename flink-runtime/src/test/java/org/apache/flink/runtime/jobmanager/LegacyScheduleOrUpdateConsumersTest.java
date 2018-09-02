@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmanager;
 
+import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
@@ -28,7 +29,6 @@ import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.testingUtils.TestingCluster;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
-import org.apache.flink.types.IntValue;
 import org.apache.flink.util.TestLogger;
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
@@ -133,26 +133,27 @@ public class LegacyScheduleOrUpdateConsumersTest extends TestLogger {
 
 		@Override
 		public void invoke() throws Exception {
-			List<RecordWriter<IntValue>> writers = Lists.newArrayListWithCapacity(2);
+			List<RecordWriter<Integer>> writers = Lists.newArrayListWithCapacity(2);
 
 			// The order of intermediate result creation in the job graph specifies which produced
 			// result partition is pipelined/blocking.
-			final RecordWriter<IntValue> pipelinedWriter =
+			final RecordWriter<Integer> pipelinedWriter =
 					new RecordWriter<>(getEnvironment().getWriter(0));
+			getEnvironment().getWriter(0).setTypeSerializer(new IntSerializer());
 
-			final RecordWriter<IntValue> blockingWriter =
+			final RecordWriter<Integer> blockingWriter =
 					new RecordWriter<>(getEnvironment().getWriter(1));
+			getEnvironment().getWriter(1).setTypeSerializer(new IntSerializer());
 
 			writers.add(pipelinedWriter);
 			writers.add(blockingWriter);
 
 			final int numberOfTimesToSend = getTaskConfiguration().getInteger(CONFIG_KEY, 0);
 
-			final IntValue subtaskIndex = new IntValue(
-					getEnvironment().getTaskInfo().getIndexOfThisSubtask());
+			final int subtaskIndex = getEnvironment().getTaskInfo().getIndexOfThisSubtask();
 
 			// Produce the first intermediate result and then the second in a serial fashion.
-			for (RecordWriter<IntValue> writer : writers) {
+			for (RecordWriter<Integer> writer : writers) {
 				try {
 					for (int i = 0; i < numberOfTimesToSend; i++) {
 						writer.emit(subtaskIndex);

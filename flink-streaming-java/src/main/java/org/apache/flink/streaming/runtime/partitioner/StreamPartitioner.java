@@ -19,7 +19,6 @@ package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import java.io.Serializable;
@@ -29,7 +28,7 @@ import java.io.Serializable;
  */
 @Internal
 public abstract class StreamPartitioner<T> implements
-		ChannelSelector<SerializationDelegate<StreamRecord<T>>>, Serializable {
+		ChannelSelector<StreamRecord<T>>, Serializable {
 	private static final long serialVersionUID = 1L;
 
 	public abstract StreamPartitioner<T> copy();

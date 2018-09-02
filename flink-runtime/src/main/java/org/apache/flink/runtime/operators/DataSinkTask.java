@@ -28,7 +28,6 @@ import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.execution.CancelTaskException;
@@ -390,7 +389,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 					getEnvironment().getTaskManagerInfo().getTmpDirectories());
 		} else if (groupSize > 1){
 			// union case
-			inputReader = new MutableRecordReader<IOReadableWritable>(
+			inputReader = new MutableRecordReader<>(
 					new UnionInputGate(getEnvironment().getAllInputGates()),
 					getEnvironment().getTaskManagerInfo().getTmpDirectories());
 		} else {

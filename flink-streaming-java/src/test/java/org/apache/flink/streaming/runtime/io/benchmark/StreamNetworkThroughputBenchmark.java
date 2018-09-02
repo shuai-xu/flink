@@ -18,7 +18,7 @@
 
 package org.apache.flink.streaming.runtime.io.benchmark;
 
-import org.apache.flink.types.LongValue;
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
  * <a href="https://github.com/dataArtisans/flink-benchmarks">flink-benchmarks</a> project.
  */
 public class StreamNetworkThroughputBenchmark {
-	private StreamNetworkBenchmarkEnvironment<LongValue> environment;
+	private StreamNetworkBenchmarkEnvironment<Long> environment;
 	private ReceiverThread receiver;
 	private LongRecordWriterThread[] writerThreads;
 
@@ -42,9 +42,6 @@ public class StreamNetworkThroughputBenchmark {
 	 * @param records to pass through the network stack
 	 */
 	public void executeBenchmark(long records, long timeout) throws Exception {
-		final LongValue value = new LongValue();
-		value.setValue(0);
-
 		long lastRecord = records / writerThreads.length;
 		CompletableFuture<?> recordsReceived = receiver.setExpectedRecord(lastRecord);
 
@@ -84,7 +81,7 @@ public class StreamNetworkThroughputBenchmark {
 		receiver = environment.createReceiver();
 		writerThreads = new LongRecordWriterThread[recordWriters];
 		for (int writer = 0; writer < recordWriters; writer++) {
-			writerThreads[writer] = new LongRecordWriterThread(environment.createRecordWriter(writer, flushTimeout));
+			writerThreads[writer] = new LongRecordWriterThread(environment.createRecordWriter(writer, flushTimeout, new LongSerializer()));
 			writerThreads[writer].start();
 		}
 	}

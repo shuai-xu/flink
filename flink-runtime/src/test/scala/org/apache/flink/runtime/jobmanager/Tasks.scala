@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmanager
 
+import org.apache.flink.api.common.typeutils.base.IntSerializer
 import org.apache.flink.runtime.execution.Environment
 import org.apache.flink.runtime.io.network.api.reader.RecordReader
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter
@@ -31,11 +32,12 @@ object Tasks {
     extends AbstractInvokable(environment) {
 
     override def invoke(): Unit = {
-      val writer = new RecordWriter[IntValue](getEnvironment.getWriter(0))
+      val writer = new RecordWriter[Integer](getEnvironment.getWriter(0))
+      getEnvironment.getWriter(0).setTypeSerializer(new IntSerializer())
 
       try{
-        writer.emit(new IntValue(42))
-        writer.emit(new IntValue(1337))
+        writer.emit(42)
+        writer.emit(1337)
         writer.flushAll()
       }finally{
         writer.clearBuffers()
@@ -51,8 +53,9 @@ object Tasks {
         getEnvironment.getInputGate(0),
         classOf[IntValue],
         getEnvironment.getTaskManagerInfo.getTmpDirectories)
-      
-      val writer = new RecordWriter[IntValue](getEnvironment.getWriter(0))
+
+      val writer = new RecordWriter[Integer](getEnvironment.getWriter(0))
+      getEnvironment.getWriter(0).setTypeSerializer(new IntSerializer())
 
       try {
         while (true) {
@@ -62,7 +65,7 @@ object Tasks {
             return
           }
 
-          writer.emit(record)
+          writer.emit(record.getValue)
         }
 
         writer.flushAll()
@@ -151,7 +154,7 @@ object Tasks {
         getEnvironment.getInputGate(0),
         classOf[IntValue],
         getEnvironment.getTaskManagerInfo.getTmpDirectories)
-      
+
       val reader2 = new RecordReader[IntValue](
         getEnvironment.getInputGate(1),
         classOf[IntValue],
@@ -172,12 +175,12 @@ object Tasks {
         env.getInputGate(0),
         classOf[IntValue],
         getEnvironment.getTaskManagerInfo.getTmpDirectories)
-      
+
       val reader2 = new RecordReader[IntValue](
         env.getInputGate(1),
         classOf[IntValue],
         getEnvironment.getTaskManagerInfo.getTmpDirectories)
-      
+
       val reader3 = new RecordReader[IntValue](
         env.getInputGate(2),
         classOf[IntValue],

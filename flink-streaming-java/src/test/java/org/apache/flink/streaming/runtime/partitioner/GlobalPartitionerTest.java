@@ -18,7 +18,6 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.api.java.tuple.Tuple;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import org.junit.Before;
@@ -33,8 +32,6 @@ public class GlobalPartitionerTest {
 
 	private GlobalPartitioner<Tuple> globalPartitioner;
 	private StreamRecord<Tuple> streamRecord = new StreamRecord<Tuple>(null);
-	private SerializationDelegate<StreamRecord<Tuple>> sd = new SerializationDelegate<StreamRecord<Tuple>>(
-			null);
 
 	@Before
 	public void setPartitioner() {
@@ -45,10 +42,8 @@ public class GlobalPartitionerTest {
 	public void testSelectChannels() {
 		int[] result = new int[] { 0 };
 
-		sd.setInstance(streamRecord);
-
-		assertArrayEquals(result, globalPartitioner.selectChannels(sd, 1));
-		assertArrayEquals(result, globalPartitioner.selectChannels(sd, 2));
-		assertArrayEquals(result, globalPartitioner.selectChannels(sd, 1024));
+		assertArrayEquals(result, globalPartitioner.selectChannels(streamRecord, 1));
+		assertArrayEquals(result, globalPartitioner.selectChannels(streamRecord, 2));
+		assertArrayEquals(result, globalPartitioner.selectChannels(streamRecord, 1024));
 	}
 }

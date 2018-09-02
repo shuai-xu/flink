@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmanager;
 
+import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.client.JobExecutionException;
@@ -146,11 +147,11 @@ public class SlotCountExceedingParallelismTest extends TestLogger {
 
 		@Override
 		public void invoke() throws Exception {
-			RecordWriter<IntValue> writer = new RecordWriter<>(getEnvironment().getWriter(0));
+			RecordWriter<Integer> writer = new RecordWriter<>(getEnvironment().getWriter(0));
+			getEnvironment().getWriter(0).setTypeSerializer(new IntSerializer());
 			final int numberOfTimesToSend = getTaskConfiguration().getInteger(CONFIG_KEY, 0);
 
-			final IntValue subtaskIndex = new IntValue(
-					getEnvironment().getTaskInfo().getIndexOfThisSubtask());
+			final int subtaskIndex = getEnvironment().getTaskInfo().getIndexOfThisSubtask();
 
 			try {
 				for (int i = 0; i < numberOfTimesToSend; i++) {

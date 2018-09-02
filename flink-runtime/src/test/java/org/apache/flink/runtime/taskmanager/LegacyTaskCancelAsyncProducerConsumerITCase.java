@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskmanager;
 
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -37,7 +38,6 @@ import org.apache.flink.runtime.messages.JobManagerMessages.CancelJob;
 import org.apache.flink.runtime.testingUtils.TestingCluster;
 import org.apache.flink.runtime.testingUtils.TestingJobManagerMessages.NotifyWhenJobStatus;
 import org.apache.flink.runtime.testingUtils.TestingJobManagerMessages.WaitForAllVerticesToBeRunning;
-import org.apache.flink.types.LongValue;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
@@ -209,19 +209,20 @@ public class LegacyTaskCancelAsyncProducerConsumerITCase extends TestLogger {
 		 */
 		private static class ProducerThread extends Thread {
 
-			private final RecordWriter<LongValue> recordWriter;
+			private final RecordWriter<Long> recordWriter;
 
 			public ProducerThread(ResultPartitionWriter partitionWriter) {
 				this.recordWriter = new RecordWriter<>(partitionWriter);
+				partitionWriter.setTypeSerializer(new LongSerializer());
 			}
 
 			@Override
 			public void run() {
-				LongValue current = new LongValue(0);
+				Long current = 0L;
 
 				try {
 					while (true) {
-						current.setValue(current.getValue() + 1);
+						current = current + 1;
 						recordWriter.emit(current);
 						recordWriter.flushAll();
 					}

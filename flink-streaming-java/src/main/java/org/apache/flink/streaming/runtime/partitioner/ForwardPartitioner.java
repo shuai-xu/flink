@@ -18,7 +18,6 @@
 package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 /**
@@ -33,7 +32,7 @@ public class ForwardPartitioner<T> extends StreamPartitioner<T> {
 	private final int[] returnArray = new int[] {0};
 
 	@Override
-	public int[] selectChannels(SerializationDelegate<StreamRecord<T>> record, int numberOfOutputChannels) {
+	public int[] selectChannels(StreamRecord<T> record, int numberOfOutputChannels) {
 		return returnArray;
 	}
 

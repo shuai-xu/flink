@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.io.network.partition;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
@@ -27,6 +26,8 @@ import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.consumer.LocalInputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.RemoteInputChannel;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
+import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +62,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * results, receivers are deployed as soon as the first buffer is added to the result partition.
  * With blocking results on the other hand, receivers are deployed after the partition is finished.
  */
-public abstract class ResultPartition<T extends IOReadableWritable> implements ResultPartitionWriter<T> {
+public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ResultPartition.class);
 
@@ -81,6 +82,8 @@ public abstract class ResultPartition<T extends IOReadableWritable> implements R
 	protected Counter numBytesOut = new SimpleCounter();
 
 	protected TypeSerializer typeSerializer;
+
+	protected SerializationDelegate serializationDelegate;
 
 	// - Runtime state --------------------------------------------------------
 
@@ -155,7 +158,7 @@ public abstract class ResultPartition<T extends IOReadableWritable> implements R
 
 	@Override
 	public void setTypeSerializer(TypeSerializer typeSerializer) {
-		this.typeSerializer = typeSerializer;
+		this.typeSerializer = Preconditions.checkNotNull(typeSerializer);
 	}
 
 	@Override

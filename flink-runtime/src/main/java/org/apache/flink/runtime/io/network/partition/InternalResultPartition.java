@@ -20,7 +20,7 @@ package org.apache.flink.runtime.io.network.partition;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.core.io.IOReadableWritable;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
@@ -31,6 +31,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.BufferPoolOwner;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
+import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.runtime.taskmanager.TaskManager;
 
@@ -51,13 +52,13 @@ import static org.apache.flink.util.Preconditions.checkState;
 /**
  * InternalResultPartition is used when shuffling data through taskmanager.
  */
-public class InternalResultPartition<T extends IOReadableWritable> extends ResultPartition<T> implements BufferPoolOwner {
+public class InternalResultPartition<T> extends ResultPartition<T> implements BufferPoolOwner {
 
 	private static final Logger LOG = LoggerFactory.getLogger(InternalResultPartition.class);
 
 	private final TaskActions taskActions;
 
-	private final RecordSerializer<T> serializer;
+	private final RecordSerializer serializer;
 
 	private final Optional<BufferBuilder>[] bufferBuilders;
 
@@ -180,7 +181,9 @@ public class InternalResultPartition<T extends IOReadableWritable> extends Resul
 
 	@Override
 	public void addRecord(T record, int[] targetChannels, boolean flushAlways) throws IOException, InterruptedException {
-		serializer.serializeRecord(record);
+		serializationDelegate.setInstance(record);
+
+		serializer.serializeRecord(serializationDelegate);
 
 		for (int targetChannel : targetChannels) {
 			copyToTarget(targetChannel, flushAlways);
@@ -462,5 +465,11 @@ public class InternalResultPartition<T extends IOReadableWritable> extends Resul
 		for (int targetChannel = 0; targetChannel < subpartitions.length; targetChannel++) {
 			closeBufferBuilder(targetChannel);
 		}
+	}
+
+	@Override
+	public void setTypeSerializer(TypeSerializer typeSerializer) {
+		super.setTypeSerializer(typeSerializer);
+		serializationDelegate = new SerializationDelegate<>(typeSerializer);
 	}
 }

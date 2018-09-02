@@ -20,7 +20,6 @@ package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
@@ -36,7 +35,7 @@ import java.io.IOException;
  * ExternalResultPartition is used when shuffling data through external shuffle service,
  * e.g. yarn shuffle service.
  */
-public class ExternalResultPartition<T extends IOReadableWritable> extends ResultPartition<T> {
+public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 	public ExternalResultPartition(
 		Configuration taskManagerConfiguration,

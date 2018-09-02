@@ -19,6 +19,7 @@
 package org.apache.flink.test.runtime;
 
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.IOReadableWritable;
@@ -77,7 +78,8 @@ public class NetworkStackThroughputITCase extends TestLogger {
 
 		@Override
 		public void invoke() throws Exception {
-			RecordWriter<SpeedTestRecord> writer = new RecordWriter<>(getEnvironment().getWriter(0));
+			RecordWriter<byte[]> writer = new RecordWriter<>(getEnvironment().getWriter(0));
+			getEnvironment().getWriter(0).setTypeSerializer(new BytePrimitiveArraySerializer());
 
 			try {
 				// Determine the amount of data to send per subtask
@@ -99,7 +101,7 @@ public class NetworkStackThroughputITCase extends TestLogger {
 						Thread.sleep(IS_SLOW_SLEEP_MS);
 					}
 
-					writer.emit(record);
+					writer.emit(record.buf);
 				}
 			}
 			finally {
@@ -127,12 +129,13 @@ public class NetworkStackThroughputITCase extends TestLogger {
 					SpeedTestRecord.class,
 					getEnvironment().getTaskManagerInfo().getTmpDirectories());
 
-			RecordWriter<SpeedTestRecord> writer = new RecordWriter<>(getEnvironment().getWriter(0));
+			RecordWriter<byte[]> writer = new RecordWriter<>(getEnvironment().getWriter(0));
+			getEnvironment().getWriter(0).setTypeSerializer(new BytePrimitiveArraySerializer());
 
 			try {
 				SpeedTestRecord record;
 				while ((record = reader.next()) != null) {
-					writer.emit(record);
+					writer.emit(record.buf);
 				}
 			}
 			finally {
@@ -202,6 +205,7 @@ public class NetworkStackThroughputITCase extends TestLogger {
 
 		@Override
 		public void read(DataInputView in) throws IOException {
+			in.readInt();
 			in.readFully(this.buf);
 		}
 	}

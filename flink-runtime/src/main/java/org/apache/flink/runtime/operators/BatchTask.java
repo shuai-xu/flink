@@ -29,7 +29,6 @@ import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.broadcast.BroadcastVariableMaterialization;
 import org.apache.flink.runtime.execution.CancelTaskException;
@@ -62,7 +61,6 @@ import org.apache.flink.runtime.operators.util.LocalStrategy;
 import org.apache.flink.runtime.operators.util.ReaderIterator;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
-import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.taskmanager.TaskManagerRuntimeInfo;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.InstantiationUtil;
@@ -676,7 +674,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 			if (groupSize == 1) {
 				// non-union case
-				inputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+				inputReaders[i] = new MutableRecordReader<>(
 						getEnvironment().getInputGate(currentReaderOffset),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else if (groupSize > 1){
@@ -685,7 +683,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				for (int j = 0; j < groupSize; ++j) {
 					readers[j] = getEnvironment().getInputGate(currentReaderOffset + j);
 				}
-				inputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+				inputReaders[i] = new MutableRecordReader<>(
 						new UnionInputGate(readers),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else {
@@ -719,7 +717,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			final int groupSize = this.config.getBroadcastGroupSize(i);
 			if (groupSize == 1) {
 				// non-union case
-				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+				broadcastInputReaders[i] = new MutableRecordReader<>(
 						getEnvironment().getInputGate(currentReaderOffset),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else if (groupSize > 1){
@@ -728,7 +726,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				for (int j = 0; j < groupSize; ++j) {
 					readers[j] = getEnvironment().getInputGate(currentReaderOffset + j);
 				}
-				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+				broadcastInputReaders[i] = new MutableRecordReader<>(
 						new UnionInputGate(readers),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else {
@@ -1243,7 +1241,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 		// get the factory for the serializer
 		final TypeSerializerFactory<T> serializerFactory = config.getOutputSerializer(cl);
-		final List<RecordWriter<SerializationDelegate<T>>> writers = new ArrayList<>(numOutputs);
+		final List<RecordWriter<T>> writers = new ArrayList<>(numOutputs);
 
 		// create a writer for each output
 		for (int i = 0; i < numOutputs; i++)
@@ -1253,7 +1251,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			final int indexInSubtaskGroup = task.getIndexInSubtaskGroup();
 			final TypeComparatorFactory<T> compFactory = config.getOutputComparator(i, cl);
 
-			final ChannelSelector<SerializationDelegate<T>> oe;
+			final ChannelSelector<T> oe;
 			if (compFactory == null) {
 				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup);
 			}
@@ -1267,8 +1265,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 			task.getEnvironment().getWriter(outputOffset + i).setTypeSerializer(serializerFactory.getSerializer());
 
-			final RecordWriter<SerializationDelegate<T>> recordWriter =
-					new RecordWriter<SerializationDelegate<T>>(task.getEnvironment().getWriter(outputOffset + i), oe);
+			final RecordWriter<T> recordWriter =
+					new RecordWriter<T>(task.getEnvironment().getWriter(outputOffset + i), oe);
 
 			recordWriter.setMetricGroup(task.getEnvironment().getMetricGroup().getIOMetricGroup());
 
@@ -1277,7 +1275,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		if (eventualOutputs != null) {
 			eventualOutputs.addAll(writers);
 		}
-		return new OutputCollector<T>(writers, serializerFactory.getSerializer());
+		return new OutputCollector<T>(writers);
 	}
 
 	/**

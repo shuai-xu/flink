@@ -20,6 +20,7 @@ package org.apache.flink.runtime.taskmanager;
 
 import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.concurrent.FutureUtils;
@@ -37,7 +38,6 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.MiniClusterConfiguration;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
-import org.apache.flink.types.LongValue;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
@@ -208,19 +208,20 @@ public class TaskCancelAsyncProducerConsumerITCase extends TestLogger {
 		 */
 		private static class ProducerThread extends Thread {
 
-			private final RecordWriter<LongValue> recordWriter;
+			private final RecordWriter<Long> recordWriter;
 
 			public ProducerThread(ResultPartitionWriter partitionWriter) {
 				this.recordWriter = new RecordWriter<>(partitionWriter);
+				partitionWriter.setTypeSerializer(new LongSerializer());
 			}
 
 			@Override
 			public void run() {
-				LongValue current = new LongValue(0);
+				Long current = 0L;
 
 				try {
 					while (true) {
-						current.setValue(current.getValue() + 1);
+						current = current + 1;
 						recordWriter.emit(current);
 						recordWriter.flushAll();
 					}

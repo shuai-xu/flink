@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.io.network.api.writer;
 
-import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 import org.apache.flink.util.XORShiftRandom;
@@ -33,13 +32,13 @@ import java.util.Random;
  * serializing records into buffers.
  *
  * <p><strong>Important</strong>: it is necessary to call {@link #flushAll()} after
- * all records have been written with {@link #emit(IOReadableWritable)}. This
+ * all records have been written with {@link #emit(T)}. This
  * ensures that all produced records are written to the output stream (incl.
  * partially filled ones).
  *
  * @param <T> the type of the record that can be emitted with this record writer
  */
-public class RecordWriter<T extends IOReadableWritable> {
+public class RecordWriter<T> {
 
 	protected final ResultPartitionWriter targetPartition;
 
