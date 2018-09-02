@@ -33,7 +33,7 @@ public class PartitionMergeFileWriterTest extends PersistentFileWriterTestBase {
 	protected PersistentFileWriter<Integer> createFileWriter(int numberPartitions, String partitionRootPath) throws Exception {
 		AbstractInvokable parentTask = mock(AbstractInvokable.class);
 
-		return new SpillMergePersistentFileWriter<>(
+		return new PartitionMergeFileWriter<>(
 			numberPartitions,
 			partitionRootPath,
 			2,

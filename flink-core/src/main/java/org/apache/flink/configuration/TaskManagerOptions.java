@@ -343,6 +343,50 @@ public class TaskManagerOptions {
 		key("task.blocking.shuffle.type")
 			.defaultValue("TM");
 
+	/**
+	 * The type of disks that can be used for external result partition on this task manager.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_OUTPUT_LOCAL_DISK_TYPE =
+		key("taskmanager.output.local-disk.type")
+			.defaultValue("");
+
+	/**
+	 * The memory to be allocated from MemoryManager for each external result partition.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MEMORY_MB =
+		key("taskmanager.output.memory.mb")
+			.defaultValue(200);
+
+	/**
+	 * The maximum number of subpartitions can hash file writer supported.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS =
+		key("taskmanager.output.hash.max-subpartitions")
+			.defaultValue(200);
+
+	/**
+	 * The maximum of file handles that can be merged at one time.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MERGE_FACTOR =
+		key("taskmanager.output.merge.factor")
+			.defaultValue(64);
+
+	/**
+	 * The maximum number of data files that the result of merging writing can have.
+	 */
+	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES =
+		key("taskmanager.output.merge.max-data-files")
+			.defaultValue(10);
+
+	/**
+	 * The list of dirs to be used for the external result partitions on this task manager.
+	 * This configuration should be computed from the hadoop configuration and should not be
+	 * configured by users manually.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS =
+		key("taskmanager.output.local-output-dirs")
+			.defaultValue("");
+
 	// ------------------------------------------------------------------------
 	//  Managed Memory Options
 	// ------------------------------------------------------------------------

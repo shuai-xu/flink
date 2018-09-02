@@ -85,11 +85,11 @@ public abstract class PersistentFileWriterTestBase {
 
 	@Test
 	public void testNormal() throws Exception {
-		test(4, 100, new ChannelSelector<IOReadableWritable>() {
+		test(4, 100, new ChannelSelector<Integer>() {
 			private int nextIndex = 0;
 
 			@Override
-			public int[] selectChannels(IOReadableWritable record, int numChannels) {
+			public int[] selectChannels(Integer record, int numChannels) {
 				return new int[]{(nextIndex++) % numChannels};
 			}
 		});
@@ -97,11 +97,11 @@ public abstract class PersistentFileWriterTestBase {
 
 	@Test
 	public void testMoreRecords() throws Exception {
-		test(4, 100000, new ChannelSelector<IOReadableWritable>() {
+		test(4, 100000, new ChannelSelector<Integer>() {
 			private int nextIndex = 0;
 
 			@Override
-			public int[] selectChannels(IOReadableWritable record, int numChannels) {
+			public int[] selectChannels(Integer record, int numChannels) {
 				return new int[]{(nextIndex++) % numChannels};
 			}
 		});
@@ -109,11 +109,11 @@ public abstract class PersistentFileWriterTestBase {
 
 	@Test
 	public void testMorePartitions() throws Exception {
-		test(40, 100000, new ChannelSelector<IOReadableWritable>() {
+		test(40, 100000, new ChannelSelector<Integer>() {
 			private int nextIndex = 0;
 
 			@Override
-			public int[] selectChannels(IOReadableWritable record, int numChannels) {
+			public int[] selectChannels(Integer record, int numChannels) {
 				return new int[]{(nextIndex++) % numChannels};
 			}
 		});
@@ -121,16 +121,16 @@ public abstract class PersistentFileWriterTestBase {
 
 	@Test
 	public void testBroadcast() throws Exception {
-		test(40, 100000, new ChannelSelector<IOReadableWritable>() {
+		test(40, 100000, new ChannelSelector<Integer>() {
 
 			@Override
-			public int[] selectChannels(IOReadableWritable record, int numChannels) {
+			public int[] selectChannels(Integer record, int numChannels) {
 				return new int[]{0, 1, 2, 3};
 			}
 		});
 	}
 
-	protected void test(int numberPartitions, int numberOfRecords, ChannelSelector<IOReadableWritable> channelSelector)
+	protected void test(int numberPartitions, int numberOfRecords, ChannelSelector<Integer> channelSelector)
 		throws Exception {
 		String partitionRootPath = temporaryFolder.newFolder().getAbsolutePath() + "/";
 
@@ -141,8 +141,7 @@ public abstract class PersistentFileWriterTestBase {
 			expectedResult.add(new HashSet<>());
 		}
 		for (int i = 0; i < numberOfRecords; ++i) {
-			// TODO: will fix null after the IOReadWritable is removed.
-			int[] channels = channelSelector.selectChannels(null, numberPartitions);
+			int[] channels = channelSelector.selectChannels(i, numberPartitions);
 			shuffleWriter.add(i, channels);
 
 			for (int channel : channels) {
@@ -150,7 +149,7 @@ public abstract class PersistentFileWriterTestBase {
 			}
 		}
 
-		shuffleWriter.finishAddingRecords();
+		shuffleWriter.finish();
 		List<List<PartitionIndex>> partitionIndices = shuffleWriter.generatePartitionIndices();
 
 		List<Set<Integer>> actualResult = new ArrayList<>();

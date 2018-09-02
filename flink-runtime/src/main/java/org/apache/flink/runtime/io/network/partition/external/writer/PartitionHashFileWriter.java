@@ -48,10 +48,10 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
- * A file writer who writes a single file for each subpartition.
+ * A shuffle writer who writes a single file for each subpartition.
  */
-public class HashPartitionFileWriter<T> implements PersistentFileWriter<T> {
-	private static final Logger LOG = LoggerFactory.getLogger(HashPartitionFileWriter.class);
+public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
+	private static final Logger LOG = LoggerFactory.getLogger(PartitionHashFileWriter.class);
 
 	private final int numPartitions;
 
@@ -66,13 +66,13 @@ public class HashPartitionFileWriter<T> implements PersistentFileWriter<T> {
 	private final BufferBuilder[] currentBufferBuilders;
 	private final int[] buffersWritten;
 
-	public HashPartitionFileWriter(
+	public PartitionHashFileWriter(
 		int numPartitions,
 		String partitionDataRootPath,
 		MemoryManager memoryManager,
 		List<MemorySegment> memory,
-		TypeSerializer<T> serializer,
-		IOManager ioManager) throws IOException {
+		IOManager ioManager,
+		TypeSerializer<T> serializer) throws IOException {
 
 		checkArgument(numPartitions > 0,
 			"The number of subpartitions should be larger than 0, but actually is: " + numPartitions);
@@ -116,7 +116,7 @@ public class HashPartitionFileWriter<T> implements PersistentFileWriter<T> {
 	}
 
 	@Override
-	public void finishAddingRecords() throws IOException, InterruptedException {
+	public void finish() throws IOException, InterruptedException {
 		for (int i = 0; i < numPartitions; i++) {
 			tryFinishCurrentBufferBuilder(i);
 			fileWriters[i].close();

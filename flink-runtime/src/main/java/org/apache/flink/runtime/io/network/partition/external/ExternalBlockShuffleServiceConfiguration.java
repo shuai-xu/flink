@@ -345,9 +345,13 @@ public class ExternalBlockShuffleServiceConfiguration {
 	}
 
 	private static Map<String, String> parseDirToDiskType(Configuration configuration) {
+		String strConfig = configuration.getString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS);
+		return parseDirToDiskType(strConfig);
+	}
+
+	public static Map<String, String> parseDirToDiskType(String strConfig) {
 		Map<String, String> dirToDiskType = new HashMap<>();
 
-		String strConfig = configuration.getString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS);
 		String[] dirConfigList = strConfig.split(",");
 		if (dirConfigList != null && dirConfigList.length > 0) {
 			for (String strDirConfig : dirConfigList) {

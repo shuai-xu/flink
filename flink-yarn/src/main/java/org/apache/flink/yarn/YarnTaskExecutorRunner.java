@@ -28,7 +28,9 @@ import org.apache.flink.configuration.SecurityOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
+import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceConfiguration;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
+import org.apache.flink.runtime.io.network.partition.external.YarnLocalResultPartitionResolver;
 import org.apache.flink.runtime.security.SecurityConfiguration;
 import org.apache.flink.runtime.security.SecurityUtils;
 import org.apache.flink.runtime.taskexecutor.TaskManagerRunner;
@@ -37,6 +39,7 @@ import org.apache.flink.runtime.util.JvmShutdownSafeguard;
 import org.apache.flink.runtime.util.SignalHandler;
 import org.apache.flink.util.Preconditions;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -44,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -135,6 +140,10 @@ public class YarnTaskExecutorRunner {
 			//configure shuffle port
 			configureShufflePort(configuration);
 
+			// configure local directory for shuffle service
+			String yarnAppId = ENV.get(YarnConfigKeys.ENV_APP_ID);
+			configureLocalOutputDirs(configuration, localDirs, yarnClientUsername, yarnAppId);
+
 			// tell akka to die in case of an error
 			configuration.setBoolean(AkkaOptions.JVM_EXIT_ON_FATAL_ERROR, true);
 
@@ -190,5 +199,31 @@ public class YarnTaskExecutorRunner {
 			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.defaultValue());
 		LOG.info("update shuffle service port {} by yarn configuration.", shufflePort);
 		configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), shufflePort);
+	}
+
+	private static void configureLocalOutputDirs(Configuration configuration, String nmLocalDirs, String username, String appId) {
+		org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
+
+		// Use nm-local-dirs if flink shuffle service's configuration is not set.
+		String flinkLocalDirs = hadoopConf.get(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "");
+
+		String shuffleLocalDir = (flinkLocalDirs.isEmpty() ? nmLocalDirs : flinkLocalDirs);
+		if (shuffleLocalDir.isEmpty()) {
+			return;
+		}
+
+		String relativeAppDir = YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(username, appId);
+
+		String expectedDiskType = configuration.getString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_DISK_TYPE).trim();
+		List<String> chosenDirs = new ArrayList<>();
+
+		Map<String, String> dirToDirTypes = ExternalBlockShuffleServiceConfiguration.parseDirToDiskType(shuffleLocalDir);
+		for (Map.Entry<String, String> entry : dirToDirTypes.entrySet()) {
+			if (expectedDiskType.isEmpty() || (entry.getValue().equalsIgnoreCase(expectedDiskType))) {
+				chosenDirs.add(entry.getKey().endsWith("/") ? entry.getKey() : entry.getKey() + "/" + relativeAppDir);
+			}
+		}
+
+		configuration.setString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS, StringUtils.join(chosenDirs, ","));
 	}
 }

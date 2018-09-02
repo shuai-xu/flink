@@ -58,7 +58,7 @@ class ExternalBlockResultPartitionMeta {
 	@GuardedBy("this")
 	private volatile boolean hasInitialized = false;
 
-	private ExternalBlockFileType externalFileType = ExternalBlockFileType.UNDEFINED_SUBPARTITION_FILE;
+	private PersistentFileType externalFileType = PersistentFileType.UNDEFINED;
 
 	/**
 	 * Whole partition indices, use an array of which each entry contain a list
@@ -149,7 +149,7 @@ class ExternalBlockResultPartitionMeta {
 		return subpartitionMetas[subpartitionIndex];
 	}
 
-	ExternalBlockFileType getExternalBlockFileType() {
+	PersistentFileType getExternalBlockFileType() {
 		if (hasInitialized()) {
 			return externalFileType;
 		} else {
@@ -242,11 +242,11 @@ class ExternalBlockResultPartitionMeta {
 			int typeLength = finishView.readInt();
 			byte[] typeContent = new byte[typeLength];
 			finishView.read(typeContent);
-			externalFileType = ExternalBlockFileType.valueOf(new String(typeContent));
+			externalFileType = PersistentFileType.valueOf(new String(typeContent));
 
 			// Read spill count.
 			spillCount = finishView.readInt();
-			if (externalFileType == ExternalBlockFileType.SINGLE_SUBPARTITION_FILE) {
+			if (externalFileType == PersistentFileType.HASH_PARTITION_FILE) {
 				assert spillCount == 1;
 			} else {
 				// In MULTI_SUBPARTITION_FILE mode, spill count can be zero if there is
@@ -294,7 +294,7 @@ class ExternalBlockResultPartitionMeta {
 				indexView = new DataInputViewStreamWrapper(indexIn);
 
 				// generate data file path for sharing among indices
-				if (externalFileType != ExternalBlockFileType.SINGLE_SUBPARTITION_FILE) {
+				if (externalFileType != PersistentFileType.HASH_PARTITION_FILE) {
 					// Unlike the other mode, data files in SINGLE_SUBPARTITION_FILE mode
 					// is one per subpartition, we will generate its data files during
 					// matrix transposition.
@@ -326,7 +326,7 @@ class ExternalBlockResultPartitionMeta {
 					continue;
 				}
 				Path dataFile;
-				if (externalFileType == ExternalBlockFileType.SINGLE_SUBPARTITION_FILE) {
+				if (externalFileType == PersistentFileType.HASH_PARTITION_FILE) {
 					// spillCount should be only one in this mode, so actual
 					// new operation will do only once for each subpartition
 					dataFile = new Path(ExternalBlockShuffleUtils.generateDataPath(resultPartitionDir, subpartitionIndex));

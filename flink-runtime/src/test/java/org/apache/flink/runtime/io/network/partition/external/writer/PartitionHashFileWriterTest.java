@@ -31,9 +31,9 @@ public class PartitionHashFileWriterTest extends PersistentFileWriterTestBase {
 
 	@Override
 	protected PersistentFileWriter<Integer> createFileWriter(int numberPartitions, String partitionRootPath) throws Exception {
-		return new HashPartitionFileWriter<>(
+		return new PartitionHashFileWriter<>(
 			numberPartitions, partitionRootPath, memoryManager, memoryManager.allocatePages(this, NUM_PAGES),
-			serializer, ioManager);
+			ioManager, serializer);
 	}
 
 	@Override

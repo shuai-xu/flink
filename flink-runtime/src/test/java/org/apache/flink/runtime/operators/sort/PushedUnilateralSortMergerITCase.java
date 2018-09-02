@@ -122,8 +122,7 @@ public class PushedUnilateralSortMergerITCase {
 		Tuple2<Integer, Integer> tuple2 = new Tuple2<>();
 
 		while (iterator.next(tuple2) != null) {
-			System.out.println(tuple2);
-			Thread.sleep(100);
+
 		}
 	}
 
@@ -160,8 +159,7 @@ public class PushedUnilateralSortMergerITCase {
 		Tuple2<Integer, Integer> tuple2 = new Tuple2<>();
 
 		while (iterator.next(tuple2) != null) {
-			System.out.println(tuple2);
-			Thread.sleep(100);
+
 		}
 	}
 }

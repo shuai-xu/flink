@@ -1264,6 +1264,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			}
 
 			task.getEnvironment().getWriter(outputOffset + i).setTypeSerializer(serializerFactory.getSerializer());
+			task.getEnvironment().getWriter(outputOffset + i).setParentTask(task);
 
 			final RecordWriter<T> recordWriter =
 					new RecordWriter<T>(task.getEnvironment().getWriter(outputOffset + i), oe);

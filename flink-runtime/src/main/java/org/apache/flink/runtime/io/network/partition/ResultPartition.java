@@ -25,6 +25,7 @@ import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.consumer.LocalInputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.RemoteInputChannel;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.util.Preconditions;
@@ -84,6 +85,9 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 	protected TypeSerializer typeSerializer;
 
 	protected SerializationDelegate serializationDelegate;
+
+	protected AbstractInvokable parentTask;
+
 
 	// - Runtime state --------------------------------------------------------
 
@@ -159,6 +163,11 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 	@Override
 	public void setTypeSerializer(TypeSerializer typeSerializer) {
 		this.typeSerializer = Preconditions.checkNotNull(typeSerializer);
+	}
+
+	@Override
+	public void setParentTask(AbstractInvokable parentTask) {
+		this.parentTask = parentTask;
 	}
 
 	@Override

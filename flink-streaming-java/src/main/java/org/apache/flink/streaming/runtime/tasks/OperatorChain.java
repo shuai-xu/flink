@@ -29,6 +29,7 @@ import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.OperatorIOMetricGroup;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
@@ -86,6 +87,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 	private static final Logger LOG = LoggerFactory.getLogger(OperatorChain.class);
 
+	private final AbstractInvokable containingTask;
+
 	private final Map<Integer, AbstractStreamOperatorProxy<?>> allOperators;
 
 	private final Deque<StreamOperator<?>> allOperatorsTopologySorted;
@@ -109,6 +112,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 	public OperatorChain(
 			StreamTask containingTask,
 			List<StreamRecordWriter<StreamRecord<?>>> streamRecordWriters) {
+
+		this.containingTask = containingTask;
 
 		final ClassLoader userCodeClassloader = containingTask.getUserCodeClassLoader();
 		streamTaskConfig = containingTask.getStreamTaskConfig();
@@ -475,6 +480,7 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		TypeSerializer<StreamElement> outRecordSerializer = new StreamElementSerializer<>(outSerializer);
 		taskEnvironment.getWriter(outputIndex).setTypeSerializer(outRecordSerializer);
+		taskEnvironment.getWriter(outputIndex).setParentTask(containingTask);
 
 		return new RecordWriterOutput(streamRecordWriter, sideOutputTag, this);
 	}

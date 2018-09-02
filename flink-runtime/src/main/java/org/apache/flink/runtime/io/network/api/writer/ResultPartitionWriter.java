@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 
 import java.io.IOException;
@@ -80,4 +81,11 @@ public interface ResultPartitionWriter<T> {
 	 * @param typeSerializer The type serializer used.
 	 */
 	void setTypeSerializer(TypeSerializer typeSerializer);
+
+	/**
+	 * Sets the parent task.
+	 *
+	 * @param parentTask The parent task.
+	 */
+	void setParentTask(AbstractInvokable parentTask);
 }

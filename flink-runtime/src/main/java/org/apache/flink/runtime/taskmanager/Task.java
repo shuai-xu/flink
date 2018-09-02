@@ -813,10 +813,6 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				// free memory resources
 				if (invokable != null) {
 					memoryManager.releaseAll(invokable);
-					// free the memory used by external result partition
-					for (ExternalResultPartition resultPartition: externalPartitions) {
-						memoryManager.releaseAll(resultPartition);
-					}
 				}
 
 				// remove all of the tasks library resources

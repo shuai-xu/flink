@@ -165,7 +165,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 *
 	 * <p>See {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer}
 	 */
-	private static String generateRelativeLocalAppDir(String user, String appId) {
+	public static String generateRelativeLocalAppDir(String user, String appId) {
 		return "usercache/" + user + "/appcache/" + appId + "/";
 	}
 

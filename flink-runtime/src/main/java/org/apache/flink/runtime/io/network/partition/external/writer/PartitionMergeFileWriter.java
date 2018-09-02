@@ -52,8 +52,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * Shuffle writing using the outer sort-merger.
  */
-public class SpillMergePersistentFileWriter<T> implements PersistentFileWriter<T> {
-	private static final Logger LOG = LoggerFactory.getLogger(SpillMergePersistentFileWriter.class);
+public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
+	private static final Logger LOG = LoggerFactory.getLogger(PartitionMergeFileWriter.class);
 
 	private final int numPartitions;
 	private final String partitionDataRootPath;
@@ -79,7 +79,7 @@ public class SpillMergePersistentFileWriter<T> implements PersistentFileWriter<T
 
 	private final PushedUnilateralSortMerger<Tuple2<Integer, T>> sortMerger;
 
-	public SpillMergePersistentFileWriter(
+	public PartitionMergeFileWriter(
 		int numPartitions,
 		String partitionDataRootPath,
 		int maxDataFiles,
@@ -137,7 +137,7 @@ public class SpillMergePersistentFileWriter<T> implements PersistentFileWriter<T
 	}
 
 	@Override
-	public void finishAddingRecords() throws IOException, InterruptedException {
+	public void finish() throws IOException, InterruptedException {
 		sortMerger.finishAdding();
 
 		List<SortedDataFile<Tuple2<Integer, T>>> remainFiles = sortMerger.getRemainingSortedDataFiles();

@@ -35,9 +35,9 @@ public interface PersistentFileWriter<T> {
 	void add(T record, int[] targetPartitions) throws IOException, InterruptedException;
 
 	/**
-	 * Notifies all the records have been added.
+	 * Notifies all the records have been written.
 	 */
-	void finishAddingRecords() throws IOException, InterruptedException;
+	void finish() throws IOException, InterruptedException;
 
 	/**
 	 * Acquires the partition indices of written files.
