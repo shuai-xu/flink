@@ -50,7 +50,11 @@ import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableOb
 import org.apache.flink.runtime.operators.shipping.OutputCollector;
 import org.apache.flink.runtime.operators.shipping.OutputEmitter;
 import org.apache.flink.runtime.operators.shipping.ShipStrategyType;
+import org.apache.flink.runtime.operators.sort.BlockSortedDataFileFactory;
 import org.apache.flink.runtime.operators.sort.CombiningUnilateralSortMerger;
+import org.apache.flink.runtime.operators.sort.RecordComparisonMerger;
+import org.apache.flink.runtime.operators.sort.SortedDataFileFactory;
+import org.apache.flink.runtime.operators.sort.SortedDataFileMerger;
 import org.apache.flink.runtime.operators.sort.UnilateralSortMerger;
 import org.apache.flink.runtime.operators.util.CloseableInputProvider;
 import org.apache.flink.runtime.operators.util.DistributedRuntimeUDFContext;
@@ -934,10 +938,19 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				this.inputs[inputNum] = this.inputIterators[inputNum];
 				break;
 			case SORT:
+				SortedDataFileFactory<?> sortedDataFileFactory = new BlockSortedDataFileFactory<>(
+					getIOManager().createChannelEnumerator(), this.inputSerializers[inputNum].getSerializer(),
+					getIOManager());
 				@SuppressWarnings({ "rawtypes", "unchecked" })
-				UnilateralSortMerger<?> sorter = new UnilateralSortMerger(getMemoryManager(), getIOManager(),
+				SortedDataFileMerger<?> merger = new RecordComparisonMerger(sortedDataFileFactory, getIOManager(),
+					this.inputSerializers[inputNum].getSerializer(), getLocalStrategyComparator(inputNum),
+					this.config.getFilehandlesInput(inputNum),
+					this.getExecutionConfig().isObjectReuseEnabled());
+				@SuppressWarnings({ "rawtypes", "unchecked" })
+				UnilateralSortMerger<?> sorter = new UnilateralSortMerger(sortedDataFileFactory, merger,
+					getMemoryManager(), getIOManager(),
 					this.inputIterators[inputNum], this, this.inputSerializers[inputNum], getLocalStrategyComparator(inputNum),
-					this.config.getRelativeMemoryInput(inputNum), this.config.getFilehandlesInput(inputNum),
+					this.config.getRelativeMemoryInput(inputNum), this.config.getFilehandlesInput(inputNum), true,
 					this.config.getSpillingThresholdInput(inputNum), this.config.getUseLargeRecordHandler(),
 					this.getExecutionConfig().isObjectReuseEnabled());
 				// set the input to null such that it will be lazily fetched from the input strategy
@@ -970,11 +983,14 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 					throw new IllegalStateException("Performing combining sort outside a reduce task!");
 				}
 
+				sortedDataFileFactory = new BlockSortedDataFileFactory<>(
+					getIOManager().createChannelEnumerator(), this.inputSerializers[inputNum].getSerializer(),
+					getIOManager());
 				@SuppressWarnings({ "rawtypes", "unchecked" })
-				CombiningUnilateralSortMerger<?> cSorter = new CombiningUnilateralSortMerger(
+				CombiningUnilateralSortMerger<?> cSorter = new CombiningUnilateralSortMerger(sortedDataFileFactory,
 					(GroupCombineFunction) localStub, getMemoryManager(), getIOManager(), this.inputIterators[inputNum],
 					this, this.inputSerializers[inputNum], getLocalStrategyComparator(inputNum),
-					this.config.getRelativeMemoryInput(inputNum), this.config.getFilehandlesInput(inputNum),
+					this.config.getRelativeMemoryInput(inputNum), this.config.getFilehandlesInput(inputNum), true,
 					this.config.getSpillingThresholdInput(inputNum), this.getTaskConfig().getUseLargeRecordHandler(),
 					this.getExecutionConfig().isObjectReuseEnabled());
 				cSorter.setUdfConfiguration(this.config.getStubParameters());

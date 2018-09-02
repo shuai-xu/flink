@@ -23,6 +23,7 @@ import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.io.CleanupWhenUnsuccessful;
 import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.io.RichOutputFormat;
+import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
@@ -39,6 +40,10 @@ import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.metrics.groups.OperatorIOMetricGroup;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.operators.chaining.ExceptionInChainedStubException;
+import org.apache.flink.runtime.operators.sort.BlockSortedDataFileFactory;
+import org.apache.flink.runtime.operators.sort.RecordComparisonMerger;
+import org.apache.flink.runtime.operators.sort.SortedDataFileFactory;
+import org.apache.flink.runtime.operators.sort.SortedDataFileMerger;
 import org.apache.flink.runtime.operators.sort.UnilateralSortMerger;
 import org.apache.flink.runtime.operators.util.CloseableInputProvider;
 import org.apache.flink.runtime.operators.util.DistributedRuntimeUDFContext;
@@ -163,12 +168,26 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 						throw new Exception("Missing comparator factory for local strategy on input " + 0);
 					}
 
+					TypeComparator<IT> comparator = compFact.createComparator();
+					SortedDataFileFactory<IT> sortedDataFileFactory = new BlockSortedDataFileFactory<>(
+						getEnvironment().getIOManager().createChannelEnumerator(),
+						this.inputTypeSerializerFactory.getSerializer(),
+						getEnvironment().getIOManager());
+					@SuppressWarnings({ "rawtypes", "unchecked" })
+					SortedDataFileMerger<IT> merger = new RecordComparisonMerger(sortedDataFileFactory,
+						getEnvironment().getIOManager(),
+						this.inputTypeSerializerFactory.getSerializer(), comparator,
+						this.config.getFilehandlesInput(0),
+						this.getExecutionConfig().isObjectReuseEnabled());
+					
 					// initialize sorter
 					UnilateralSortMerger<IT> sorter = new UnilateralSortMerger<IT>(
-							getEnvironment().getMemoryManager(),
+						sortedDataFileFactory, merger,
+							getEnvironment().getMemoryManager(), 
 							getEnvironment().getIOManager(),
-							this.reader, this, this.inputTypeSerializerFactory, compFact.createComparator(),
+							this.reader, this, this.inputTypeSerializerFactory, comparator,
 							this.config.getRelativeMemoryInput(0), this.config.getFilehandlesInput(0),
+							true,
 							this.config.getSpillingThresholdInput(0),
 							this.config.getUseLargeRecordHandler(),
 							this.getExecutionConfig().isObjectReuseEnabled());

@@ -30,14 +30,12 @@ import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
-import org.apache.flink.util.MutableObjectIterator;
-
 
 /**
  * A simple iterator over the input read though an I/O channel.
  *
  */
-public class ChannelReaderInputViewIterator<E> implements MutableObjectIterator<E>
+public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableObjectIterator<E>
 {
 	private final ChannelReaderInputView inView;
 	
@@ -105,5 +103,10 @@ public class ChannelReaderInputViewIterator<E> implements MutableObjectIterator<
 			}
 			return null;
 		}
+	}
+
+	@Override
+	public FileIOChannel getReaderChannel() {
+		return inView.getChannel();
 	}
 }

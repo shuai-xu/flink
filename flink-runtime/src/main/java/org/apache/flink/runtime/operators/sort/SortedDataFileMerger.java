@@ -16,21 +16,8 @@
  * limitations under the License.
  */
 
-
 package org.apache.flink.runtime.operators.sort;
 
-import org.apache.flink.runtime.operators.util.CloseableInputProvider;
-import org.apache.flink.util.MutableObjectIterator;
+public interface SortedDataFileMerger<T> {
 
-import java.util.List;
-
-/**
- * The SortMerger interface representing the public interface to all specific Sort-Merge implementations.
- * 
- */
-public interface Sorter<E> extends CloseableInputProvider<E>
-{
-	List<SortedDataFile<E>> getRemainingSortedDataFiles() throws InterruptedException;
-
-	MutableObjectIterator<E> getIterator() throws InterruptedException;
 }

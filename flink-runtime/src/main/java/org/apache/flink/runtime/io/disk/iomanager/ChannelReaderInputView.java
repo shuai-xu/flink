@@ -265,4 +265,8 @@ public class ChannelReaderInputView extends AbstractPagedInputView {
 			this.freeMem.add(seg);
 		}
 	}
+
+	public FileIOChannel getChannel() {
+		return reader;
+	}
 }

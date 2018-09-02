@@ -16,21 +16,16 @@
  * limitations under the License.
  */
 
+package org.apache.flink.runtime.io.disk;
 
-package org.apache.flink.runtime.operators.sort;
-
-import org.apache.flink.runtime.operators.util.CloseableInputProvider;
+import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.util.MutableObjectIterator;
 
-import java.util.List;
-
 /**
- * The SortMerger interface representing the public interface to all specific Sort-Merge implementations.
- * 
+ * A MutableObjectIterator backend by a file reader.
  */
-public interface Sorter<E> extends CloseableInputProvider<E>
-{
-	List<SortedDataFile<E>> getRemainingSortedDataFiles() throws InterruptedException;
+public interface ChannelBackendMutableObjectIterator<T> extends MutableObjectIterator<T> {
 
-	MutableObjectIterator<E> getIterator() throws InterruptedException;
+	FileIOChannel getReaderChannel();
+
 }
