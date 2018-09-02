@@ -172,7 +172,7 @@ public class ExternalSortITCase extends TestLogger {
 				ioManager.createChannelEnumerator(), pactRecordSerializer.getSerializer(), ioManager);
 			SortedDataFileMerger<Tuple2<Integer, String>> mergePolicy = new RecordComparisonMerger<>(
 				sortedDataFileFactory, ioManager, pactRecordSerializer.getSerializer(),
-				pactRecordComparator, 2, true);
+				pactRecordComparator, 2, false);
 			Sorter<Tuple2<Integer, String>> merger = new UnilateralSortMerger<>(sortedDataFileFactory, mergePolicy,
 				this.memoryManager, this.ioManager,
 					source, this.parentTask, this.pactRecordSerializer, this.pactRecordComparator,

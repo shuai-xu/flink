@@ -155,8 +155,7 @@ public abstract class DriverTestBase<S extends Function> extends TestLogger impl
 		@SuppressWarnings({ "rawtypes", "unchecked" })
 		SortedDataFileMerger<Record> merger = new RecordComparisonMerger(sortedDataFileFactory, getIOManager(),
 			RecordSerializerFactory.get().getSerializer(), comp,
-			32,
-			this.getExecutionConfig().isObjectReuseEnabled());
+			32, true);
 		UnilateralSortMerger<Record> sorter = new UnilateralSortMerger<Record>(
 			sortedDataFileFactory, merger,
 				this.memManager, this.ioManager, input, this.owner, RecordSerializerFactory.get(), comp,

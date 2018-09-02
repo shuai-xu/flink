@@ -25,15 +25,11 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.util.EmptyMutableObjectIterator;
-import org.apache.flink.runtime.util.NonReusingKeyGroupedIterator;
-import org.apache.flink.runtime.util.ReusingKeyGroupedIterator;
-import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
 import org.apache.flink.util.TraversableOnceException;
 import org.slf4j.Logger;
@@ -305,9 +301,9 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				
 				// open next channel
 				SortedDataFile<E> output = sortedDataFileFactory.createFile(writeMemory);
-				registerChannelToBeRemovedAtShudown(output.getChannelID());
-				registerOpenChannelToBeRemovedAtShudown(output.getWriteChannel());
-				
+				channelDeleteRegistry.registerChannelToBeDelete(output.getChannelID());
+				channelDeleteRegistry.registerOpenChannel(output.getWriteChannel());
+
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Creating temp file " + output.getChannelID().toString() + '.');
 				}
@@ -360,8 +356,8 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				}
 
 				output.finishWriting();
-				unregisterOpenChannelToBeRemovedAtShudown(output.getWriteChannel());
-				
+				channelDeleteRegistry.unregisterOpenChannel(output.getWriteChannel());
+
 				sortedDataFiles.add(output);
 
 				// pass empty sort-buffer to reading thread
@@ -398,9 +394,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 			// ------------------- Merging Phase ------------------------
 
 			// merge channels until sufficient file handles are available
-			while (isRunning() && sortedDataFiles.size() > this.maxFanIn) {
-				sortedDataFiles = mergeChannelList(sortedDataFiles, this.mergeReadMemory, this.writeMemory);
-			}
+			sortedDataFiles = merger.merge(sortedDataFiles, writeMemory, mergeReadMemory, channelDeleteRegistry, getRunningFlag());
 			
 			// from here on, we won't write again
 			this.memManager.release(this.writeMemory);
@@ -414,21 +408,14 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Beginning final merge.");
 				}
-				
-				// allocate the memory for the final merging step
-				List<List<MemorySegment>> readBuffers = new ArrayList<List<MemorySegment>>(sortedDataFiles.size());
-				
-				// allocate the read memory and register it to be released
-				getSegmentsForReaders(readBuffers, this.mergeReadMemory, sortedDataFiles.size());
-				
-				// get the readers and register them to be released
-				final MergeIterator<E> mergeIterator = getMergingIterator(
-						sortedDataFiles, readBuffers, new ArrayList<FileIOChannel>(sortedDataFiles.size()), null);
-				
+
+				MutableObjectIterator<E> finalMergedIterator =
+					merger.getMergingIterator(sortedDataFiles, mergeReadMemory, null, channelDeleteRegistry);
+
 				// set the target for the user iterator
 				// if the final merge combines, create a combining iterator around the merge iterator,
 				// otherwise not
-				setResult(sortedDataFiles, mergeIterator);
+				setResult(sortedDataFiles, finalMergedIterator);
 			}
 
 			// done
@@ -436,72 +423,6 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				LOG.debug("Spilling and merging thread done.");
 			}
 		}
-		
-		// ------------------ Combining & Merging Methods -----------------
-
-		/**
-		 * Merges the sorted runs described by the given Channel IDs into a single sorted run. The merging process
-		 * uses the given read and write buffers. During the merging process, the combiner is used to reduce the
-		 * number of values with identical key.
-		 * 
-		 * @param channelIDs The IDs of the runs' channels.
-		 * @param readBuffers The buffers for the readers that read the sorted runs.
-		 * @param writeBuffers The buffers for the writer that writes the merged channel.
-		 * @return The ID of the channel that describes the merged run.
-		 */
-		@Override
-		protected SortedDataFile<E> mergeChannels(List<SortedDataFile<E>> channelIDs, List<List<MemorySegment>> readBuffers,
-				List<MemorySegment> writeBuffers)
-		throws IOException
-		{
-			// the list with the readers, to be closed at shutdown
-			final List<FileIOChannel> channelAccesses = new ArrayList<FileIOChannel>(channelIDs.size());
-
-			// the list with the target iterators
-			final MergeIterator<E> mergeIterator = getMergingIterator(channelIDs, readBuffers, channelAccesses, null);
-
-			// create a new channel writer
-			SortedDataFile<E> output = sortedDataFileFactory.createFile(writeBuffers);
-			registerChannelToBeRemovedAtShudown(output.getChannelID());
-			registerOpenChannelToBeRemovedAtShudown(output.getWriteChannel());
-
-			final WriterCollector<E> collector = new WriterCollector<E>(output);
-			final GroupCombineFunction<E, E> combineStub = CombiningUnilateralSortMerger.this.combineStub;
-
-			// combine and write to disk
-			try {
-				if (objectReuseEnabled) {
-					final ReusingKeyGroupedIterator<E> groupedIter = new ReusingKeyGroupedIterator<>(
-							mergeIterator, this.serializer, this.comparator2);
-					while (groupedIter.nextKey()) {
-						combineStub.combine(groupedIter.getValues(), collector);
-					}
-				} else {
-					final NonReusingKeyGroupedIterator<E> groupedIter = new NonReusingKeyGroupedIterator<>(
-							mergeIterator, this.comparator2);
-					while (groupedIter.nextKey()) {
-						combineStub.combine(groupedIter.getValues(), collector);
-					}
-				}
-			}
-			catch (Exception e) {
-				throw new IOException("An error occurred in the combiner user code.");
-			}
-			output.finishWriting(); //IS VERY IMPORTANT!!!!
-			
-			// register merged result to be removed at shutdown
-			unregisterOpenChannelToBeRemovedAtShudown(output.getWriteChannel());
-			
-			// remove the merged channel readers from the clear-at-shutdown list
-			for (int i = 0; i < channelAccesses.size(); i++) {
-				FileIOChannel access = channelAccesses.get(i);
-				access.closeAndDelete();
-				unregisterOpenChannelToBeRemovedAtShudown(access);
-			}
-
-			return output;
-		}
-
 	} // end spilling/merging thread
 
 	// ------------------------------------------------------------------------
@@ -593,37 +514,4 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 			}
 		}
 	}
-
-	// ------------------------------------------------------------------------
-
-	/**
-	 * A simple collector that collects Key and Value and writes them into a given <code>Writer</code>.
-	 */
-	public static final class WriterCollector<E> implements Collector<E> {
-
-		private final SortedDataFile<E> output; // the writer to write to
-
-		/**
-		 * Creates a new writer collector that writes to the given writer.
-		 *
-		 * @param output The writer output view to write to.
-		 */
-		public WriterCollector(SortedDataFile<E> output) {
-			this.output = output;
-		}
-
-		@Override
-		public void collect(E record) {
-			try {
-				output.writeRecord(record);
-			}
-			catch (IOException ioex) {
-				throw new RuntimeException("An error occurred forwarding the record to the writer.", ioex);
-			}
-		}
-
-		@Override
-		public void close() {}
-	}
-
 }

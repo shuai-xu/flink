@@ -130,7 +130,7 @@ public class ExternalSortLargeRecordsITCase extends TestLogger {
 				ioManager.createChannelEnumerator(), serializerFactory.getSerializer(), ioManager);
 			SortedDataFileMerger<Tuple2<Long, SomeMaybeLongValue>> mergePolicy = new RecordComparisonMerger<>(
 				sortedDataFileFactory, ioManager, serializerFactory.getSerializer(),
-				comparator, 2, true);
+				comparator, 128, false);
 			@SuppressWarnings("unchecked")
 			Sorter<Tuple2<Long, SomeMaybeLongValue>> sorter = new UnilateralSortMerger<Tuple2<Long, SomeMaybeLongValue>>(
 					sortedDataFileFactory, mergePolicy,
@@ -207,7 +207,7 @@ public class ExternalSortLargeRecordsITCase extends TestLogger {
 				ioManager.createChannelEnumerator(), serializerFactory.getSerializer(), ioManager);
 			SortedDataFileMerger<Tuple2<Long, SomeMaybeLongValue>> mergePolicy = new RecordComparisonMerger<>(
 				sortedDataFileFactory, ioManager, serializerFactory.getSerializer(),
-				comparator, 2, true);
+				comparator, 128, true);
 			@SuppressWarnings("unchecked")
 			Sorter<Tuple2<Long, SomeMaybeLongValue>> sorter = new UnilateralSortMerger<Tuple2<Long, SomeMaybeLongValue>>(
 					sortedDataFileFactory, mergePolicy,
@@ -299,7 +299,7 @@ public class ExternalSortLargeRecordsITCase extends TestLogger {
 				ioManager.createChannelEnumerator(), serializerFactory.getSerializer(), ioManager);
 			SortedDataFileMerger<Tuple2<Long, SmallOrMediumOrLargeValue>> mergePolicy = new RecordComparisonMerger<>(
 				sortedDataFileFactory, ioManager, serializerFactory.getSerializer(),
-				comparator, 2, true);
+				comparator, 128, false);
 			@SuppressWarnings("unchecked")
 			Sorter<Tuple2<Long, SmallOrMediumOrLargeValue>> sorter = new UnilateralSortMerger<Tuple2<Long, SmallOrMediumOrLargeValue>>(
 					sortedDataFileFactory, mergePolicy,
@@ -377,7 +377,7 @@ public class ExternalSortLargeRecordsITCase extends TestLogger {
 				ioManager.createChannelEnumerator(), serializerFactory.getSerializer(), ioManager);
 			SortedDataFileMerger<Tuple2<Long, SmallOrMediumOrLargeValue>> mergePolicy = new RecordComparisonMerger<>(
 				sortedDataFileFactory, ioManager, serializerFactory.getSerializer(),
-				comparator, 2, true);
+				comparator, 128, true);
 			@SuppressWarnings("unchecked")
 			Sorter<Tuple2<Long, SmallOrMediumOrLargeValue>> sorter = new UnilateralSortMerger<Tuple2<Long, SmallOrMediumOrLargeValue>>(
 					sortedDataFileFactory, mergePolicy,

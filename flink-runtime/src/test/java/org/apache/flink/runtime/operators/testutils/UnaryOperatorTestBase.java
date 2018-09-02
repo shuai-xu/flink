@@ -159,7 +159,7 @@ public abstract class UnaryOperatorTestBase<S extends Function, IN, OUT> extends
 			sortedDataFileFactory, getIOManager(),
 			this.<IN>getInputSerializer(0).getSerializer(), comp,
 			32,
-			this.getExecutionConfig().isObjectReuseEnabled());
+			false);
 		this.sorter = new UnilateralSortMerger<IN>(
 				sortedDataFileFactory, merger,
 				this.memManager, this.ioManager, input, this.owner,

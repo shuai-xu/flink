@@ -156,7 +156,7 @@ public abstract class BinaryOperatorTestBase<S extends Function, IN, OUT> extend
 			sortedDataFileFactory, getIOManager(),
 			serializerFactory.getSerializer(), comp,
 			32,
-			this.getExecutionConfig().isObjectReuseEnabled());
+			false);
 		UnilateralSortMerger<IN> sorter = new UnilateralSortMerger<>(
 				sortedDataFileFactory,
 				merger,
