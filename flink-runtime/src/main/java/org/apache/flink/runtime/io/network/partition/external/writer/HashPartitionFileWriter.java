@@ -27,6 +27,7 @@ import org.apache.flink.runtime.io.network.api.serialization.RecordSerializer;
 import org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
+import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
@@ -177,11 +178,14 @@ public class HashPartitionFileWriter<T> implements PersistentFileWriter<T> {
 	private void tryFinishCurrentBufferBuilder(int partition) throws IOException {
 		if (currentBufferBuilders[partition] != null) {
 			currentBufferBuilders[partition].finish();
-			Buffer buffer = currentBufferBuilders[partition].createBufferConsumer().build();
+
+			BufferConsumer consumer = currentBufferBuilders[partition].createBufferConsumer();
+			Buffer buffer = consumer.build();
 
 			fileWriters[partition].writeBlock(buffer);
 			buffersWritten[partition] += 1;
 
+			consumer.close();
 			currentBufferBuilders[partition] = null;
 		}
 	}

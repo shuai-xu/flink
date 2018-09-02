@@ -109,12 +109,16 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 	// ------------------------------------------------------------------------
 	//                            Miscellaneous Fields
 	// ------------------------------------------------------------------------
-	
+
+	protected final CircularQueues<E> circularQueues;
+
+	protected final long startSpillingBytes;
+
 	/**
 	 * The handler for large records, that do not go though the in-memory sorter as a whole, but
 	 * directly go to disk.
 	 */
-	private final LargeRecordHandler<E> largeRecordHandler;
+	protected final LargeRecordHandler<E> largeRecordHandler;
 
 	/** Maintains files to be delete when closing the sorter. */
 	protected final ChannelDeleteRegistry<E> channelDeleteRegistry;
@@ -328,7 +332,7 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 		}
 		
 		// circular queues pass buffers between the threads
-		final CircularQueues<E> circularQueues = new CircularQueues<E>();
+		this.circularQueues = new CircularQueues<E>();
 		
 		// allocate the sort buffers and fill empty queue with them
 		final Iterator<MemorySegment> segments = this.sortReadMemory.iterator();
@@ -377,9 +381,11 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 			startSpillingFraction = 0;
 		}
 
+		this.startSpillingBytes = ((long) (startSpillingFraction * sortMemory));
+
 		// start the thread that reads the input channels
 		this.readThread = getReadingThread(exceptionHandler, input, circularQueues, largeRecordHandler,
-				parentTask, serializer, ((long) (startSpillingFraction * sortMemory)));
+				parentTask, serializer, startSpillingBytes);
 
 		// start the thread that sorts the buffers
 		this.sortThread = getSortingThread(exceptionHandler, circularQueues, parentTask);

@@ -34,6 +34,8 @@ import org.apache.flink.runtime.plugable.ReusingDeserializationDelegate;
 import java.io.File;
 import java.io.IOException;
 
+import static org.apache.flink.util.Preconditions.checkState;
+
 /**
  * Read record from a buffer sorted file.
  */
@@ -43,9 +45,14 @@ public class BufferSortedDataFileReader<T> {
 	private final DeserializationDelegate<T> deserializationDelegate;
 	private final int segmentSize;
 
+	private final long startOffset;
+	private final long maxNumberOfBuffers;
+
+	private int numBuffersRead;
 	private boolean eof;
 
-	public BufferSortedDataFileReader(String path, String tmpDir, IOManager ioManager, int segmentSize, TypeSerializer<T> serializer) throws IOException {
+	public BufferSortedDataFileReader(String path, String tmpDir, IOManager ioManager, int segmentSize,
+									  TypeSerializer<T> serializer, long startOffset, long maxNumberOfBuffers) throws IOException {
 		this.synchronousBufferFileReader = new SynchronousBufferFileReader(
 			ioManager.createChannel(new File(path)),
 			false);
@@ -53,6 +60,11 @@ public class BufferSortedDataFileReader<T> {
 
 		this.recordDeserializer = new SpillingAdaptiveSpanningRecordDeserializer<>(new String[]{tmpDir});
 		this.deserializationDelegate = new ReusingDeserializationDelegate<>(serializer);
+
+		this.startOffset = startOffset;
+		this.maxNumberOfBuffers = maxNumberOfBuffers;
+
+		synchronousBufferFileReader.seekToPosition(startOffset);
 	}
 
 	public T next() throws IOException {
@@ -73,16 +85,24 @@ public class BufferSortedDataFileReader<T> {
 					currentBuffer.recycleBuffer();
 				}
 
-				if (synchronousBufferFileReader.hasReachedEndOfFile()) {
+				if (numBuffersRead >= maxNumberOfBuffers) {
 					eof = true;
 					return null;
 				}
+
+				checkState(!synchronousBufferFileReader.hasReachedEndOfFile(),
+					"The file are fully read before allowed maximum buffers are read");
 
 				Buffer buffer = new NetworkBuffer(MemorySegmentFactory.allocateUnpooledSegment(segmentSize),
 					FreeingBufferRecycler.INSTANCE);
 				synchronousBufferFileReader.readInto(buffer);
 				recordDeserializer.setNextBuffer(buffer);
+				numBuffersRead++;
 			}
 		}
+	}
+
+	public void close() {
+
 	}
 }

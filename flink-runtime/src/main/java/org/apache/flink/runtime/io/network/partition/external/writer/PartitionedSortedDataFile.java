@@ -16,24 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.io.disk.iomanager;
+package org.apache.flink.runtime.io.network.partition.external.writer;
 
-import org.apache.flink.runtime.io.network.buffer.Buffer;
-import org.apache.flink.runtime.util.event.NotificationListener;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
+import org.apache.flink.runtime.operators.sort.SortedDataFile;
 
-import java.io.IOException;
+import java.util.List;
 
-public interface BufferFileWriter extends BlockChannelWriterWithCallback<Buffer> {
-	public static final int BUFFER_HEAD_LENGTH = 8;
+/**
+ * A sorted data file who saves records together with its partition. The records belong
+ * to the same partition is saved continuously.
+ */
+public interface PartitionedSortedDataFile<T> extends SortedDataFile<Tuple2<Integer, T>> {
 
-	/**
-	 * Returns the number of outstanding requests.
-	 */
-	int getNumberOfOutstandingRequests();
-
-	/**
-	 * Registers a listener, which is notified after all outstanding requests have been processed.
-	 */
-	boolean registerAllRequestsProcessedListener(NotificationListener listener) throws IOException;
+	List<PartitionIndex> getPartitionIndexList();
 
 }

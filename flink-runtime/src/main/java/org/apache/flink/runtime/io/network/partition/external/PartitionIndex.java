@@ -31,10 +31,18 @@ public class PartitionIndex {
 	/** The number of buffers. */
 	private final long numBuffers;
 
+	/** The number of records of this part. */
+	private final transient long numRecords;
+
 	public PartitionIndex(int partition, long startOffset, long numBuffers) {
+		this(partition, startOffset, numBuffers, 0);
+	}
+
+	public PartitionIndex(int partition, long startOffset, long numBuffers, long numRecords) {
 		this.partition = partition;
 		this.startOffset = startOffset;
 		this.numBuffers = numBuffers;
+		this.numRecords = numRecords;
 	}
 
 	public int getPartition() {
@@ -47,6 +55,10 @@ public class PartitionIndex {
 
 	public long getNumBuffers() {
 		return numBuffers;
+	}
+
+	public long getNumRecords() {
+		return numRecords;
 	}
 
 	@Override
@@ -62,7 +74,8 @@ public class PartitionIndex {
 
 		return partition == that.partition
 			&& startOffset == that.startOffset
-			&& numBuffers == that.numBuffers;
+			&& numBuffers == that.numBuffers
+			&& numRecords == that.numRecords;
 	}
 
 	@Override
@@ -70,6 +83,7 @@ public class PartitionIndex {
 		int result = partition;
 		result = 31 * result + (int) (startOffset ^ (startOffset >>> 32));
 		result = 31 * result + (int) (numBuffers ^ (numBuffers >>> 32));
+		result = 31 * result + (int) (numRecords ^ (numRecords >>> 32));
 		return result;
 	}
 
@@ -78,7 +92,9 @@ public class PartitionIndex {
 		StringBuilder stringBuilder = new StringBuilder();
 		stringBuilder.append("PartitionIndex :{ partition=").append(partition)
 			.append(", startOffset=").append(startOffset)
-			.append(", numBuffers=").append(numBuffers).append("}");
+			.append(", numBuffers=").append(numBuffers)
+			.append(", numRecords=").append(numRecords)
+			.append("}");
 		return stringBuilder.toString();
 	}
 }
