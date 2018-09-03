@@ -21,7 +21,6 @@ package org.apache.flink.table.errorcode;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.util.TableTestBase;
 
-import com.alibaba.blink.errcode.ErrorFactory;
 import org.junit.Test;
 
 /**
@@ -31,7 +30,7 @@ public class TableErrCodeTest extends TableTestBase {
 
 	@Test
 	public void testTableErrCodeValidation() {
-		ErrorFactory.validate(TableErrorCode.class);
+		TableErrors.validate(TableErrorCode.class);
 	}
 
 	@Test

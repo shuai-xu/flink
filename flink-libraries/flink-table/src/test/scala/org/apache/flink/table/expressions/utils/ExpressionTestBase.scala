@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.expressions.utils
 
-import java.util
+import java.util.concurrent.CompletableFuture
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.hep.{HepMatchOrder, HepPlanner, HepProgramBuilder}
@@ -27,6 +27,7 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{Programs, RelBuilder}
 import org.apache.flink.api.common.TaskInfo
+import org.apache.flink.api.common.accumulators.{AbstractAccumulatorRegistry, Accumulator}
 import org.apache.flink.api.common.functions._
 import org.apache.flink.api.common.functions.util.RuntimeUDFContext
 import org.apache.flink.api.java.typeutils.RowTypeInfo
@@ -84,7 +85,7 @@ abstract class ExpressionTestBase {
   private def prepareContext(t: BaseRowType)
     : (RelBuilder, TableEnvironment, StreamExecutionEnvironment) = {
 
-    val env = StreamExecutionEnvironment.createFlip6LocalEnvironment(4)
+    val env = StreamExecutionEnvironment.createLocalEnvironment(4)
     val tEnv = TableEnvironment.getBatchTableEnvironment(env, config)
     tEnv.registerCollection(tableName, Seq(), DataTypes.toTypeInfo(t), null)
     functions.foreach(f => tEnv.registerFunction(f._1, f._2))
@@ -161,12 +162,21 @@ abstract class ExpressionTestBase {
     // call setRuntimeContext method and open method for RichFunction
     if (isRichFunction) {
       val richMapper = mapper.asInstanceOf[RichMapFunction[_, _]]
+      val testRegistry = new AbstractAccumulatorRegistry {
+        override def addPreAggregatedAccumulator[V, A <: Serializable](name: String, accumulator: Accumulator[V, A]): Unit = {}
+
+        override def getPreAggregatedAccumulators: java.util.Map[String, Accumulator[_, _ <: Serializable]] = null
+
+        override def commitPreAggregatedAccumulator(name: String): Unit = {}
+
+        override def queryPreAggregatedAccumulator[V, A <: Serializable](name: String) = new CompletableFuture[Accumulator[V, A]]
+      }
       val t = new RuntimeUDFContext(
         new TaskInfo("ExpressionTest", 1, 0, 1, 1),
         null,
         context._3.getConfig,
-        new util.HashMap(),
-        new util.HashMap(),
+        new java.util.HashMap(),
+        testRegistry,
         null)
       richMapper.setRuntimeContext(t)
       richMapper.open(new Configuration())

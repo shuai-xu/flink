@@ -380,6 +380,14 @@ public class StreamTaskTestHarness<OUT> {
 	 * This only returns after all input queues are empty.
 	 */
 	public void waitForInputProcessing() throws Exception {
+		List<Integer> inputs = new LinkedList<>();
+		for (int i = 0; i < inputGates.length; i++) {
+			inputs.add(i);
+		}
+		waitForInputProcessing(inputs);
+	}
+
+	public void waitForInputProcessing(List<Integer> inputs) throws Exception {
 
 		while (true) {
 			Throwable error = taskThread.getError();
@@ -389,6 +397,9 @@ public class StreamTaskTestHarness<OUT> {
 
 			boolean allEmpty = true;
 			for (int i = 0; i < numInputGates; i++) {
+				if (!inputs.contains(i)) {
+					continue;
+				}
 				if (!inputGates[i].allQueuesEmpty()) {
 					allEmpty = false;
 				}
@@ -405,7 +416,7 @@ public class StreamTaskTestHarness<OUT> {
 		while (true) {
 			Thread.State state = taskThread.getState();
 			if (state == Thread.State.BLOCKED || state == Thread.State.TERMINATED ||
-					state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) {
+				state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) {
 				break;
 			}
 
@@ -423,6 +434,10 @@ public class StreamTaskTestHarness<OUT> {
 		for (int i = 0; i < numInputGates; i++) {
 			inputGates[i].endInput();
 		}
+	}
+
+	public void endInput(int index) {
+		inputGates[index].endInput();
 	}
 
 	public void endInput(int gate, int channel) {

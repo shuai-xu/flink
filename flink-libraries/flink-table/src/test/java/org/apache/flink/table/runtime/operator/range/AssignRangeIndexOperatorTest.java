@@ -25,8 +25,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
+import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
-import org.apache.flink.streaming.api.graph.StreamTaskConfig;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTaskTestHarness;
@@ -81,11 +81,9 @@ public class AssignRangeIndexOperatorTest {
 
 		TypeInformation<Object[][]> rangesTypeInfo = TypeExtractor.getForClass(Object[][].class);
 		TupleTypeInfo<Tuple2<Integer, BinaryRow>> outTypeInfo = new TupleTypeInfo(BasicTypeInfo.INT_TYPE_INFO, typeInfo);
-		TwoInputStreamTask<Object[][], BinaryRow, Tuple2<Integer, BinaryRow>> task = new TwoInputStreamTask<>();
 		TwoInputStreamTaskTestHarness<Object[][], BinaryRow, Tuple2<Integer, BinaryRow>> testHarness =
-				new TwoInputStreamTaskTestHarness(task, rangesTypeInfo, typeInfo, outTypeInfo);
+				new TwoInputStreamTaskTestHarness(env -> new TwoInputStreamTask((Environment) env), rangesTypeInfo, typeInfo, outTypeInfo);
 
-		StreamTaskConfig streamTaskConfig = testHarness.getStreamTaskConfig();
 		testHarness.setupOperatorChain(new OperatorID(), sampleAndHistogramOperator);
 		testHarness.setupOutputForSingletonOperatorChain();
 
@@ -93,7 +91,7 @@ public class AssignRangeIndexOperatorTest {
 		testHarness.waitForTaskRunning();
 
 		testHarness.processElement(new StreamRecord<>(ranges), 0, 0);
-		testHarness.endInput(0);
+		testHarness.endInput();
 
 		for (BinaryRow row : data) {
 			testHarness.processElement(new StreamRecord<>(row, 0), 1, 0);

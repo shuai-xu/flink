@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryManager;
@@ -66,7 +67,7 @@ public class BinaryExternalSorterTest {
 	@SuppressWarnings("unchecked")
 	@Before
 	public void beforeTest() {
-		this.memoryManager = new MemoryManager(MEMORY_SIZE, MEMORY_SIZE, 1);
+		this.memoryManager = new MemoryManager(MEMORY_SIZE, MEMORY_SIZE, 1, MemoryType.HEAP, true);
 		this.ioManager = new IOManagerAsync();
 
 		TypeInformation[] types = new TypeInformation[]{Types.INT, Types.STRING};

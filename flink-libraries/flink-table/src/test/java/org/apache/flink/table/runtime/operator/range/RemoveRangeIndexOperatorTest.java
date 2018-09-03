@@ -22,7 +22,6 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.runtime.jobgraph.OperatorID;
-import org.apache.flink.streaming.api.graph.StreamTaskConfig;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
@@ -56,12 +55,10 @@ public class RemoveRangeIndexOperatorTest {
 		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, STRING_TYPE_INFO, STRING_TYPE_INFO);
 		TupleTypeInfo<Tuple2<Integer, BinaryRow>> inTypeInfo =
 				new TupleTypeInfo(BasicTypeInfo.INT_TYPE_INFO, typeInfo);
-		OneInputStreamTask<Tuple2<Integer, BinaryRow>, BinaryRow> task = new OneInputStreamTask<>();
 		OneInputStreamTaskTestHarness<Tuple2<Integer, BinaryRow>, BinaryRow> testHarness =
 				new OneInputStreamTaskTestHarness<>(
-						task, 2, 2, inTypeInfo, typeInfo);
+						OneInputStreamTask::new, 2, 2, inTypeInfo, typeInfo);
 
-		StreamTaskConfig streamTaskConfig = testHarness.getStreamTaskConfig();
 		testHarness.setupOperatorChain(new OperatorID(), operator);
 		testHarness.setupOutputForSingletonOperatorChain();
 

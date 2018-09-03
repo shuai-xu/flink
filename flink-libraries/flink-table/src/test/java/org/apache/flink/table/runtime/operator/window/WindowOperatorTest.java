@@ -19,9 +19,7 @@
 package org.apache.flink.table.runtime.operator.window;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.runtime.checkpoint.CheckpointOptions;
-import org.apache.flink.runtime.checkpoint2.OperatorPartitionSnapshot;
-import org.apache.flink.runtime.checkpoint2.heap.HeapCheckpointBackend;
+import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
@@ -138,10 +136,10 @@ public class WindowOperatorTest {
 		assertor.assertOutputEqualsSorted("Output was not correct.", expectedOutputOutput, testHarness.getOutput());
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshot = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshot);
+		testHarness.initializeState(snapshot);
 		testHarness.open();
 
 		testHarness.processWatermark(new Watermark(3999));
@@ -277,10 +275,10 @@ public class WindowOperatorTest {
 		assertor.assertOutputEqualsSorted("Output was not correct.", expectedOutputOutput, testHarness.getOutput());
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshot = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshot);
+		testHarness.initializeState(snapshot);
 		testHarness.open();
 
 		testHarness.processWatermark(new Watermark(2999));
@@ -371,10 +369,10 @@ public class WindowOperatorTest {
 		assertor.assertOutputEqualsSorted("Output was not correct.", expectedOutputOutput, testHarness.getOutput());
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshot = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshot);
+		testHarness.initializeState(snapshot);
 		testHarness.open();
 
 		testHarness.setProcessingTime(3001);
@@ -488,10 +486,10 @@ public class WindowOperatorTest {
 		assertor.assertOutputEqualsSorted("Output was not correct.", expectedOutputOutput, testHarness.getOutput());
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshot = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshot);
+		testHarness.initializeState(snapshot);
 		testHarness.open();
 
 		testHarness.setProcessingTime(3001);
@@ -634,10 +632,10 @@ public class WindowOperatorTest {
 		testHarness.processElement(record("key1", 2, 1000L));
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshotV2 = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshotV2 = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshotV2);
+		testHarness.initializeState(snapshotV2);
 		testHarness.open();
 
 		assertEquals(0L, operator.getWatermarkLatency().getValue());
@@ -761,10 +759,10 @@ public class WindowOperatorTest {
 		testHarness.processElement(record("key2", 33, 1000L));
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshot = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshot);
+		testHarness.initializeState(snapshot);
 		testHarness.open();
 
 		testHarness.processElement(record("key2", 33, 2500L));
@@ -966,10 +964,10 @@ public class WindowOperatorTest {
 		assertor.assertOutputEqualsSorted("Output was not correct.", expectedOutputOutput, testHarness.getOutput());
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshotV2 = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshotV2 = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshotV2);
+		testHarness.initializeState(snapshotV2);
 		testHarness.open();
 
 		testHarness.processElement(record("key1", 2, 2500L));
@@ -1036,10 +1034,10 @@ public class WindowOperatorTest {
 		assertor.assertOutputEqualsSorted("Output was not correct.", expectedOutputOutput, testHarness.getOutput());
 
 		// do a snapshot, close and restore again
-		OperatorPartitionSnapshot snapshotV2 = testHarness.snapshot(0L, CheckpointOptions.forCheckpoint(), new HeapCheckpointBackend());
+		OperatorSubtaskState snapshotV2 = testHarness.snapshot(0L, 0);
 		testHarness.close();
 		testHarness.setup();
-		testHarness.restore(snapshotV2);
+		testHarness.initializeState(snapshotV2);
 		testHarness.open();
 
 		testHarness.processElement(record("key1", 3, 2500L));

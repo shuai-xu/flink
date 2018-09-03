@@ -17,18 +17,21 @@
  */
 package org.apache.flink.table.functions.aggregate
 
+import java.util.function.{Function => JFunction}
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.logical.LogicalAggregate
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.{BigDecimalTypeInfo, TypeInformation}
+import org.apache.flink.runtime.execution.Environment
 import org.apache.flink.runtime.jobgraph.OperatorID
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.operators.StreamOperator
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.runtime.tasks.{OneInputStreamTask, OneInputStreamTaskTestHarness}
+import org.apache.flink.streaming.runtime.tasks.{OneInputStreamTask, OneInputStreamTaskTestHarness, StreamTask}
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelOptClusterFactory, FlinkTypeFactory}
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -371,8 +374,13 @@ abstract class AggregateFunctionTestBase {
       inputData: Seq[BaseRow],
       inputType: TypeInformation[BaseRow],
       outputType: TypeInformation[BaseRow]): Seq[BaseRow] = {
-    val task = new OneInputStreamTask[BaseRow, BaseRow]
-    val testHarness = new OneInputStreamTaskTestHarness(task, inputType, outputType)
+    val taskFunc = new JFunction[Environment, OneInputStreamTask[BaseRow, BaseRow]] {
+      override def apply(env: Environment): OneInputStreamTask[BaseRow, BaseRow] = {
+        new OneInputStreamTask[BaseRow, BaseRow](env)
+      }
+    }
+    val testHarness = new OneInputStreamTaskTestHarness[BaseRow, BaseRow](taskFunc,
+      inputType, outputType)
 
     testHarness.setupOperatorChain(new OperatorID, operator)
     testHarness.setupOutputForSingletonOperatorChain()

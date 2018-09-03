@@ -17,10 +17,10 @@
  */
 package org.apache.flink.table.api.validation
 
-import com.alibaba.blink.errcode.ErrorFactory
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.utils.{Func0, Func9}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.OverAgg0
 import org.apache.flink.table.util.TableTestBase
@@ -31,7 +31,7 @@ class UserDefinedFunctionValidationTest extends TableTestBase {
   @Test
   def testScalarFunctionOperandTypeCheck(): Unit = {
     thrown.expect(classOf[ValidationException])
-    thrown.expectMessage(ErrorFactory.prettyPrint(
+    thrown.expectMessage(TableErrors.prettyPrint(
       "SQL validation failed:\nGiven parameters of function 'func' do not match any " +
         "signature. \n" +
         "Actual: (java.lang.String) \n" +
@@ -45,7 +45,7 @@ class UserDefinedFunctionValidationTest extends TableTestBase {
   @Test
   def testScalarFunctionUnmatch(): Unit = {
     thrown.expect(classOf[ValidationException])
-    thrown.expectMessage(ErrorFactory.prettyPrint(
+    thrown.expectMessage(TableErrors.prettyPrint(
       "SQL validation failed:\nGiven parameters of function 'func' do not match any " +
         "signature. \n" +
         "Actual: (java.lang.Integer) \n" +
@@ -60,7 +60,7 @@ class UserDefinedFunctionValidationTest extends TableTestBase {
   def testAggregateFunctionOperandTypeCheck(): Unit = {
     thrown.expect(classOf[ValidationException])
     thrown.expectMessage(
-      ErrorFactory.prettyPrint(
+      TableErrors.prettyPrint(
         "SQL validation failed:\nGiven parameters of function 'agg' do not match any" +
           " signature. \nActual: (java.lang.String, java.lang.Integer) \n" +
           "Expected: (org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions" +

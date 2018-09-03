@@ -24,7 +24,6 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.sampling.IntermediateSampleData;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.runtime.jobgraph.OperatorID;
-import org.apache.flink.streaming.api.graph.StreamTaskConfig;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
@@ -110,11 +109,9 @@ public class SampleAndHistogramOperatorTest {
 		TypeInformation<IntermediateSampleData> inTypeInfo =
 				TypeExtractor.getForClass(IntermediateSampleData.class);
 		TypeInformation<Object[][]> outTypeInfo = TypeExtractor.getForClass(Object[][].class);
-		OneInputStreamTask<IntermediateSampleData, Object[][]> task = new OneInputStreamTask<>();
 		OneInputStreamTaskTestHarness<IntermediateSampleData, Object[][]> testHarness =
-				new OneInputStreamTaskTestHarness<>(task, 2, 2, inTypeInfo, outTypeInfo);
+				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, inTypeInfo, outTypeInfo);
 
-		StreamTaskConfig streamTaskConfig = testHarness.getStreamTaskConfig();
 		testHarness.setupOperatorChain(new OperatorID(), sampleAndHistogramOperator);
 		testHarness.setupOutputForSingletonOperatorChain();
 

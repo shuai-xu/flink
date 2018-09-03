@@ -30,8 +30,6 @@ import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.util.LockAndCondition;
-import org.apache.flink.util.LockGetReleaseWrapper;
 import org.apache.flink.util.Preconditions;
 
 import java.io.ByteArrayInputStream;
@@ -165,8 +163,6 @@ public class FailingCollectionSource<T>
 			this.numElementsEmitted = this.numElementsToSkip;
 		}
 
-		final LockAndCondition lock = ctx.getFairCheckpointLock();
-
 		while (isRunning && numElementsEmitted < numElements) {
 			if (!failedBefore) {
 				// delay a bit, if we have not failed before
@@ -192,7 +188,7 @@ public class FailingCollectionSource<T>
 						"serialization functions.\nSerializer is " + serializer);
 				}
 
-				try (LockGetReleaseWrapper wrapper = new LockGetReleaseWrapper(lock.getLock())) {
+				synchronized (ctx.getCheckpointLock()) {
 					ctx.collect(next);
 					numElementsEmitted++;
 				}

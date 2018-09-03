@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.operator.join.batch;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
@@ -199,7 +200,8 @@ public class BinaryHashTableTest {
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
 
 		// allocate the memory for the HashTable
-		MemoryManager memManager = new MemoryManager(200 * PAGE_SIZE, 696 * PAGE_SIZE, 1);
+		MemoryManager memManager = new MemoryManager(200 * PAGE_SIZE, 696 * PAGE_SIZE, 1,
+			MemoryType.HEAP, true);
 		final BinaryHashTable table = newBinaryHashTable(
 				this.buildSideSerializer, this.probeSideSerializer,
 				new MyProjection(), new MyProjection(), memManager,

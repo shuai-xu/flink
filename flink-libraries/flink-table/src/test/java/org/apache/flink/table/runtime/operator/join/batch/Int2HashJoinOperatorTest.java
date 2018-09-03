@@ -209,8 +209,8 @@ public class Int2HashJoinOperatorTest {
 		BaseRowTypeInfo<JoinedRow> baseRowType = new BaseRowTypeInfo<>(
 				JoinedRow.class, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO);
 		TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness =
-				new TwoInputStreamTaskTestHarness<>(
-						new TwoInputStreamTask<>(), 2, 2, new int[]{1, 2}, typeInfo, typeInfo, baseRowType);
+				new TwoInputStreamTaskTestHarness<>(TwoInputStreamTask::new,
+					2, 2, new int[]{1, 2}, typeInfo, typeInfo, baseRowType);
 		testHarness.memorySize = 36 * 1024 * 1024;
 		testHarness.getExecutionConfig().enableObjectReuse();
 		testHarness.setupOperatorChain(new OperatorID(), operator);
