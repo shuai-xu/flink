@@ -158,7 +158,13 @@ public abstract class AbstractPagedInputView implements DataInputView {
 		this.currentSegment = nextSegment(this.currentSegment);
 		this.limitInSegment = getLimitForSegment(this.currentSegment);
 		this.positionInSegment = this.headerLength;
+		afterAdvance();
 	}
+
+	/**
+	 * This method will run after advance(). Override it if you want to use it.
+	 */
+	protected void afterAdvance() {}
 
 	/**
 	 * Sets the internal state of the view such that the next bytes will be read from the given memory segment,
