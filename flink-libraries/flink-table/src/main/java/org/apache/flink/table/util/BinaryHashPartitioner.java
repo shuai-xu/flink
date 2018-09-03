@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.util;
 
+import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.api.TableConfig;
@@ -62,10 +63,10 @@ public class BinaryHashPartitioner extends StreamPartitioner<BaseRow> {
 	}
 
 	@Override
-	public int[] selectChannels(
-			StreamRecord<BaseRow> record, int numChannels) {
+	public int[] selectChannels(SerializationDelegate<StreamRecord<BaseRow>> record,
+			int numChannels) {
 		returnArray[0] = MathUtils.murmurHash(
-				getHashFunc().apply(record.getValue())) % numChannels;
+				getHashFunc().apply(record.getInstance().getValue())) % numChannels;
 		return returnArray;
 	}
 

@@ -133,7 +133,7 @@ public abstract class AbstractPagedOutputView implements DataOutputView {
 	 * @throws IOException Thrown, if the current segment could not be processed or a new segment could not
 	 *                     be obtained.
 	 */
-	protected void advance() throws IOException {
+	public void advance() throws IOException {
 		this.currentSegment = nextSegment(this.currentSegment, this.positionInSegment);
 		this.positionInSegment = this.headerLength;
 	}
@@ -405,6 +405,16 @@ public abstract class AbstractPagedOutputView implements DataOutputView {
 				numBytes -= remaining;
 			}
 
+			advance();
+		}
+	}
+
+	public int getHeaderLength() {
+		return headerLength;
+	}
+
+	public void checkAdvance() throws IOException {
+		if (this.positionInSegment >= this.segmentSize) {
 			advance();
 		}
 	}

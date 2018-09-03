@@ -1334,6 +1334,36 @@ public abstract class MemorySegment {
 	}
 
 	/**
+	 * Equals two memory segment regions.
+	 *
+	 * @param seg2 Segment to equal this segment with
+	 * @param offset1 Offset of this segment to start equaling
+	 * @param offset2 Offset of seg2 to start equaling
+	 * @param len Length of the equaled memory region
+	 *
+	 * @return true if equal, false otherwise
+	 */
+	public final boolean equalTo(MemorySegment seg2, int offset1, int offset2, int len) {
+		while (len >= 8) {
+			if (this.getLong(offset1) != seg2.getLong(offset2)) {
+				return false;
+			}
+			offset1 += 8;
+			offset2 += 8;
+			len -= 8;
+		}
+		while (len > 0) {
+			if (this.get(offset1) != seg2.get(offset2)) {
+				return false;
+			}
+			offset1++;
+			offset2++;
+			len--;
+		}
+		return true;
+	}
+
+	/**
 	 * Swaps bytes between two memory segments, using the given auxiliary buffer.
 	 *
 	 * @param tempBuffer The auxiliary buffer in which to put data during triangle swap.
@@ -1370,6 +1400,14 @@ public abstract class MemorySegment {
 		throw new IndexOutOfBoundsException(
 					String.format("offset1=%d, offset2=%d, len=%d, bufferSize=%d, address1=%d, address2=%d",
 							offset1, offset2, len, tempBuffer.length, this.address, seg2.address));
+	}
+
+	/**
+	 * Get the heap byte array object.
+	 * @return Return non-null if the memory is on the heap, and return null, if the memory if off the heap.
+	 */
+	public byte[] getHeapMemory() {
+		return heapMemory;
 	}
 
 	/**

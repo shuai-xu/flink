@@ -29,9 +29,9 @@ import org.apache.flink.util.InstantiationUtil;
 
 import java.io.IOException;
 
-import static org.apache.flink.core.memory.MemoryUtils.BYTE_ARRAY_OFFSET;
 import static org.apache.flink.table.dataformat.BinaryRow.getBinaryStringFromSeg;
 import static org.apache.flink.table.util.BinaryRowUtil.BOOLEAN_ARRAY_OFFSET;
+import static org.apache.flink.table.util.BinaryRowUtil.BYTE_ARRAY_BASE_OFFSET;
 import static org.apache.flink.table.util.BinaryRowUtil.DOUBLE_ARRAY_OFFSET;
 import static org.apache.flink.table.util.BinaryRowUtil.FLOAT_ARRAY_OFFSET;
 import static org.apache.flink.table.util.BinaryRowUtil.INT_ARRAY_OFFSET;
@@ -382,7 +382,7 @@ public class BinaryArray implements TypeGetterSetters {
 	public byte[] toByteArray() {
 		byte[] values = new byte[numElements];
 		BinaryRowUtil.copyToUnsafe(
-				segments, elementOffset, values, BYTE_ARRAY_OFFSET, numElements);
+				segments, elementOffset, values, BYTE_ARRAY_BASE_OFFSET, numElements);
 		return values;
 	}
 
@@ -433,9 +433,9 @@ public class BinaryArray implements TypeGetterSetters {
 
 		final byte[] data = new byte[(int) totalSize];
 
-		UNSAFE.putInt(data, BYTE_ARRAY_OFFSET, length);
+		UNSAFE.putInt(data, BYTE_ARRAY_BASE_OFFSET, length);
 		UNSAFE.copyMemory(
-				arr, offset, data, BYTE_ARRAY_OFFSET + headerInBytes, valueRegionInBytes);
+				arr, offset, data, BYTE_ARRAY_BASE_OFFSET + headerInBytes, valueRegionInBytes);
 
 		BinaryArray result = new BinaryArray();
 		result.pointTo(MemorySegmentFactory.wrap(data), 0, (int) totalSize);
@@ -447,7 +447,7 @@ public class BinaryArray implements TypeGetterSetters {
 	}
 
 	public static BinaryArray fromPrimitiveArray(byte[] arr) {
-		return fromPrimitiveArray(arr, BYTE_ARRAY_OFFSET, arr.length, 1);
+		return fromPrimitiveArray(arr, BYTE_ARRAY_BASE_OFFSET, arr.length, 1);
 	}
 
 	public static BinaryArray fromPrimitiveArray(short[] arr) {
