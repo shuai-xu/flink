@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.util;
 
+import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 import org.apache.flink.util.SerializedValue;
 
@@ -35,11 +36,11 @@ public class RuntimeFilterUtils {
 
 	public static CompletableFuture<BloomFilter> asyncGetBroadcastBloomFilter(
 			StreamingRuntimeContext context, String broadcastId) {
-		CompletableFuture<SerializedValue> future =
-				context.asyncGetBroadcastAccumulator(broadcastId);
-		return future.handleAsync((serializedValue, e) -> {
-			if (e == null && serializedValue != null) {
-				return BloomFilter.fromBytes(serializedValue.getByteArray());
+		CompletableFuture<Accumulator<SerializedValue, SerializedValue>> future =
+				context.queryPreAggregatedAccumulator(broadcastId);
+		return future.handleAsync((accumulator, e) -> {
+			if (e == null && accumulator != null) {
+				return BloomFilter.fromBytes(accumulator.getLocalValue().getByteArray());
 			}
 			if (e != null) {
 				LOG.error(e.getMessage(), e);

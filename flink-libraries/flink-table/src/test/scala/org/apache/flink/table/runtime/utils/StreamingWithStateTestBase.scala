@@ -52,16 +52,16 @@ class StreamingWithStateTestBase(state: StateBackendMode)
     this.env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // set state backend
-    state match {
-      case HEAP_BACKEND =>
-        env.setConfiguration(CoreOptions.STATE_BACKEND_CLASSNAME,
-          classOf[HeapInternalStateBackend].getCanonicalName)
-
-      case NIAGARA_BACKEND =>
-        env.getConfiguration.setString(
-          CoreOptions.STATE_BACKEND_CLASSNAME,
-          classOf[NiagaraStateBackend].getCanonicalName)
-    }
+//    state match {
+//      case HEAP_BACKEND =>
+//        env.setConfiguration(CoreOptions.STATE_BACKEND_CLASSNAME,
+//          classOf[HeapInternalStateBackend].getCanonicalName)
+//
+//      case NIAGARA_BACKEND =>
+//        env.getConfiguration.setString(
+//          CoreOptions.STATE_BACKEND_CLASSNAME,
+//          classOf[NiagaraStateBackend].getCanonicalName)
+//    }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
   }
 
