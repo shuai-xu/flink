@@ -24,7 +24,6 @@ import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
@@ -741,9 +740,6 @@ public class StreamGraphGenerator {
 
 			// For infinite stream job, by default schedule tasks in eager mode
 			context.setScheduleMode(ScheduleMode.EAGER);
-
-			Configuration flinkConf = GlobalConfiguration.loadConfiguration();
-			flinkConf.addAll(context.getConfiguration());
 			return context;
 		}
 

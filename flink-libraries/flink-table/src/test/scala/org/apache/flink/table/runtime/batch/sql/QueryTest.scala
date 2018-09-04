@@ -19,6 +19,8 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import java.lang.{Iterable => JIterable}
+import java.util
+import java.util.{List => JList}
 import java.util.regex.Pattern
 
 import org.apache.calcite.runtime.CalciteContextException
@@ -26,6 +28,7 @@ import org.apache.calcite.sql.parser.SqlParseException
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.java.BatchTableEnvironment
@@ -40,7 +43,10 @@ import org.junit.Assert._
 import org.junit.rules.TestName
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import scala.collection.Seq
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting
 
 class QueryTest {
 
@@ -64,8 +70,8 @@ class QueryTest {
 
   protected def generatorTestEnv: StreamExecutionEnvironment = {
     val config: Configuration = getConfiguration
-    StreamExecutionEnvironment.createFlip6LocalEnvironment(config,
-      Runtime.getRuntime.availableProcessors)
+    StreamExecutionEnvironment.createLocalEnvironment(Runtime.getRuntime.availableProcessors,
+      config)
   }
 
   def checkResult(sqlQuery: String, expectedResult: Seq[Row], isSorted: Boolean = false): Unit = {
@@ -398,5 +404,45 @@ object QueryTest {
     //dynamic allocate memory.
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_PER_REQUEST_MEM, 1)
     conf
+  }
+
+  def compareResult[T](expectedStrings: Array[String],
+    result: Array[T],
+    sort: Boolean,
+    asTuples: Boolean = false): Unit = {
+    val resultStringsBuffer: ArrayBuffer[String] = new ArrayBuffer[String](result.size)
+    result.foreach { v =>
+      v match {
+        case t0: Tuple if asTuples =>
+          val first: Any = t0.getField(0)
+          val bld: StringBuilder = new StringBuilder(if (first == null) "null" else first.toString)
+          (1 until t0.getArity).foreach {
+            idx => val next = t0.getField(idx)
+              bld.append(',').append(if (next == null) "null" else next.toString)
+              resultStringsBuffer += bld.toString()
+          }
+        case _ =>
+      }
+      if (asTuples && !v.isInstanceOf[Tuple]) {
+        throw new IllegalArgumentException(v + " is no tuple")
+      }
+      if (!asTuples) {
+        resultStringsBuffer += (if (v == null) "null" else v.toString)
+      }
+    }
+    val resultStrings = resultStringsBuffer.toArray
+    if (sort) {
+      Sorting.quickSort(expectedStrings)
+      Sorting.quickSort(resultStrings)
+    }
+    val msg = s"Different elements in arrays: expected ${expectedStrings.length} elements " +
+      s"and received ${resultStrings.length}\n " +
+      s"expected: ${expectedStrings.mkString}\n " +
+      s"received: ${resultStrings.mkString}"
+    assertEquals(msg, expectedStrings.length, resultStrings.length)
+    expectedStrings.zip(resultStrings).foreach{
+      case (e, r) =>
+        assertEquals(msg, e, r)
+    }
   }
 }

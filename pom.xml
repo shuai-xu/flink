@@ -1222,7 +1222,8 @@ under the License.
 						</goals>
 						<configuration>
 							<includes>
-								<include>**/*Test.*</include>
+								<include>**/*Test.java</include>
+								<include>**/*Test.scala</include>
 							</includes>
 						</configuration>
 					</execution>
@@ -1235,7 +1236,8 @@ under the License.
 						</goals>
 						<configuration>
 							<includes>
-								<include>**/*ITCase.*</include>
+								<include>**/*ITCase.java</include>
+								<include>**/*ITCase.scala</include>
 							</includes>
 							<reuseForks>false</reuseForks>
 						</configuration>

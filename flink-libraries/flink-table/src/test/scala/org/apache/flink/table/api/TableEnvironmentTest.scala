@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.api
 
-import com.alibaba.blink.errcode.ErrorFactory
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.{MockTableEnvironment, TableTestBase}
@@ -45,7 +45,7 @@ class TableEnvironmentTest extends TableTestBase {
 
     thrown.expect(classOf[ValidationException])
     thrown.expectMessage(
-      ErrorFactory.prettyPrint(
+      TableErrors.prettyPrint(
         "Insert into: Query result and target table 'sink_1' field type(s) not match."))
     t.insertInto("sink_1")
   }

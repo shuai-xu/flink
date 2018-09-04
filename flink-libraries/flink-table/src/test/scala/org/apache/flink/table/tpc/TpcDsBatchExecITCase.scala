@@ -96,7 +96,7 @@ class TpcDsBatchExecITCase(
     val expectedResource = getClass.getResource(getResultFile).getFile
     val expected = Source.fromFile(expectedResource).getLines().toArray
     val actual = Source.fromFile(actualFile).getLines().toArray
-    TestBaseUtils.compareResult(expected, actual, isUncertain)
+    QueryTest.compareResult[String](expected, actual, isUncertain)
   }
 
   @Test

@@ -19,9 +19,7 @@ package org.apache.flink.table.runtime.harness
 
 import java.lang.{Integer => JInt, Long => JLong}
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.{Queue => JQueue}
 
-import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
@@ -105,15 +103,13 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       getMiniBatchTrigger(queryConfig)
     )
 
-    val typeSerializer1 = rowType.createSerializer(new ExecutionConfig)
-
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
         operator,
         leftKeySelector,
         rightKeySelector,
         rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0, typeSerializer1, typeSerializer1)
+        1, 1, 0)
 
     testHarness.open()
 
@@ -201,15 +197,13 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       getMiniBatchTrigger(queryConfig)
     )
 
-    val typeSerializer1 = rowType.createSerializer(new ExecutionConfig)
-
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
         operator,
         leftKeySelector,
         rightKeySelector,
         rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0, typeSerializer1, typeSerializer1)
+        1, 1, 0)
 
     testHarness.open()
 

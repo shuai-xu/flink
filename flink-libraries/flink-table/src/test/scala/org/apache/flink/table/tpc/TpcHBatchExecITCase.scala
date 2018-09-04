@@ -55,8 +55,6 @@ class TpcHBatchExecITCase(caseName: String,
     }
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
-    tEnv.streamEnv.setConfiguration(TaskManagerOptions.MANAGED_MEMORY_SIZE.key(), "1024")
-    tEnv.streamEnv.setConfiguration(TaskManagerOptions.NETWORK_NUM_BUFFERS.key(), "10240")
     TpcUtils.disableBroadcastHashJoin(tEnv)
     TpcUtils.disableRangeSort(tEnv)
     tEnv.getConfig.setSubsectionOptimization(subsectionOptimization)

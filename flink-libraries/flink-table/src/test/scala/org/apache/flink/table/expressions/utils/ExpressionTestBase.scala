@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.expressions.utils
 
+import java.{io, util}
 import java.util.concurrent.CompletableFuture
 
 import com.google.common.collect.ImmutableList
@@ -163,13 +164,15 @@ abstract class ExpressionTestBase {
     if (isRichFunction) {
       val richMapper = mapper.asInstanceOf[RichMapFunction[_, _]]
       val testRegistry = new AbstractAccumulatorRegistry {
-        override def addPreAggregatedAccumulator[V, A <: Serializable](name: String, accumulator: Accumulator[V, A]): Unit = {}
+        override def queryPreAggregatedAccumulator[V, A <: io.Serializable](name: String) =
+          new CompletableFuture[Accumulator[V, A]]
 
-        override def getPreAggregatedAccumulators: java.util.Map[String, Accumulator[_, _ <: Serializable]] = null
+        override def addPreAggregatedAccumulator[V, A <: io.Serializable](name: String,
+          accumulator: Accumulator[V, A]): Unit = ???
 
-        override def commitPreAggregatedAccumulator(name: String): Unit = {}
+        override def getPreAggregatedAccumulators: util.Map[String, Accumulator[_, _ <: io.Serializable]] = ???
 
-        override def queryPreAggregatedAccumulator[V, A <: Serializable](name: String) = new CompletableFuture[Accumulator[V, A]]
+        override def commitPreAggregatedAccumulator(name: String): Unit = ???
       }
       val t = new RuntimeUDFContext(
         new TaskInfo("ExpressionTest", 1, 0, 1, 1),

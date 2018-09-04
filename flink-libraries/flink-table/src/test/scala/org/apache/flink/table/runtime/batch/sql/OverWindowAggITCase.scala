@@ -37,7 +37,6 @@ class OverWindowAggITCase extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    env.setConfiguration(TaskManagerOptions.MANAGED_MEMORY_SIZE.key, "1024")
     registerCollection("Table5", data5, type5, "d, e, f, g, h", nullablesOfData5)
     registerCollection("ShuflledTable5",
       Random.shuffle(data5), type5, "sd, se, sf, sg, sh", nullablesOfData5)

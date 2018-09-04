@@ -24,6 +24,7 @@ import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
+import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
 import org.apache.flink.table.api.{BatchQueryConfig, Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
@@ -133,8 +134,8 @@ class PlanUtilTest extends AbstractTestBase {
     val sinkTransformation = sink.emitBoundedStream(
       tableEnv.translate[Row](inputOfSink, sink.getOutputType, sink, queryConfig),
       tableEnv.getConfig, env.getConfig).getTransformation
-    val streamGraph = StreamGraphGenerator.generateForBatch(
-      tableEnv.streamEnv,
+    val streamGraph = StreamGraphGenerator.generate(
+      Context.buildBatchProperties(tableEnv.streamEnv),
       _root_.java.util.Arrays.asList(sinkTransformation))
     setDumpFileToConfig()
     val jobResult = env.execute(streamGraph)

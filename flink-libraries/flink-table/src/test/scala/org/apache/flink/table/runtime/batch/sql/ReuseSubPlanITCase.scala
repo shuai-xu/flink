@@ -43,8 +43,6 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_PER_REQUEST_MEM, 2)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
 
-    env.setConfiguration(TaskManagerOptions.MANAGED_MEMORY_SIZE.key, "1024")
-
     registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfSmallData3)
     registerCollection("SmallTable5", smallData5, type5, "a, b, c, d, e", nullablesOfSmallData5)
     tEnv.registerTableSource("x", CommonTestData.getSmall3Source(Array("a", "b", "c")))
