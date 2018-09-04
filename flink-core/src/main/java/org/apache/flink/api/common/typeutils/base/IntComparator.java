@@ -60,7 +60,7 @@ public final class IntComparator extends BasicTypeComparator<Integer> {
 
 	@Override
 	public void putNormalizedKey(Integer iValue, MemorySegment target, int offset, int numBytes) {
-		ComparatorUtil.putIntegerNormalizedKey(iValue, target, offset, numBytes);
+		ComparatorUtil.putIntNormalizedKey(iValue.intValue(), target, offset, numBytes);
 	}
 
 	@Override

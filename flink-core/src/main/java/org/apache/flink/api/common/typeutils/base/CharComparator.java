@@ -59,7 +59,7 @@ public final class CharComparator extends BasicTypeComparator<Character> {
 
 	@Override
 	public void putNormalizedKey(Character value, MemorySegment target, int offset, int numBytes) {
-		ComparatorUtil.putCharacterNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putCharNormalizedKey(value.charValue(), target, offset, numBytes);
 	}
 
 	@Override

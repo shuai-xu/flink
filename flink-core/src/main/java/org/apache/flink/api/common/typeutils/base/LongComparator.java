@@ -60,7 +60,7 @@ public final class LongComparator extends BasicTypeComparator<Long> {
 
 	@Override
 	public void putNormalizedKey(Long lValue, MemorySegment target, int offset, int numBytes) {
-		ComparatorUtil.putLongNormalizedKey(lValue, target, offset, numBytes);
+		ComparatorUtil.putLongNormalizedKey(lValue.longValue(), target, offset, numBytes);
 	}
 
 	@Override

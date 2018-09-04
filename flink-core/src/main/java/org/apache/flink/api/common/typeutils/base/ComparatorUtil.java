@@ -27,7 +27,7 @@ import org.apache.flink.core.memory.MemorySegment;
 @Internal
 public class ComparatorUtil {
 
-	public static void putByteNormalizedKey(Byte value, MemorySegment target, int offset, int numBytes) {
+	public static void putByteNormalizedKey(byte value, MemorySegment target, int offset, int numBytes) {
 		if (numBytes == 1) {
 			// default case, full normalized key. need to explicitly convert to int to
 			// avoid false results due to implicit type conversion to int when subtracting
@@ -48,7 +48,7 @@ public class ComparatorUtil {
 		}
 	}
 
-	public static void putCharacterNormalizedKey(Character value, MemorySegment target, int offset, int numBytes) {
+	public static void putCharNormalizedKey(char value, MemorySegment target, int offset, int numBytes) {
 		// note that the char is an unsigned data type in java and consequently needs
 		// no code that transforms the signed representation to an offset representation
 		// that is equivalent to unsigned, when compared byte by byte
@@ -71,7 +71,7 @@ public class ComparatorUtil {
 		}
 	}
 
-	public static void putBooleanNormalizedKey(Boolean value, MemorySegment target, int offset, int numBytes) {
+	public static void putBooleanNormalizedKey(boolean value, MemorySegment target, int offset, int numBytes) {
 		if (numBytes > 0) {
 			target.put(offset, (byte) (value ? 1 : 0));
 
@@ -81,7 +81,7 @@ public class ComparatorUtil {
 		}
 	}
 
-	public static void putShortNormalizedKey(Short value, MemorySegment target, int offset, int numBytes) {
+	public static void putShortNormalizedKey(short value, MemorySegment target, int offset, int numBytes) {
 		if (numBytes == 2) {
 			// default case, full normalized key
 			int highByte = ((value >>> 8) & 0xff);
@@ -107,11 +107,11 @@ public class ComparatorUtil {
 		}
 	}
 
-	public static void putIntegerNormalizedKey(Integer iValue, MemorySegment target, int offset, int numBytes) {
+	public static void putIntNormalizedKey(int iValue, MemorySegment target, int offset, int numBytes) {
 		putUnsignedIntegerNormalizedKey(iValue - Integer.MIN_VALUE, target, offset, numBytes);
 	}
 
-	public static void putUnsignedIntegerNormalizedKey(Integer value, MemorySegment target, int offset, int numBytes) {
+	public static void putUnsignedIntegerNormalizedKey(int value, MemorySegment target, int offset, int numBytes) {
 		if (numBytes == 4) {
 			// default case, full normalized key
 			target.putIntBigEndian(offset, value);
@@ -129,11 +129,11 @@ public class ComparatorUtil {
 		}
 	}
 
-	public static void putLongNormalizedKey(Long lValue, MemorySegment target, int offset, int numBytes) {
+	public static void putLongNormalizedKey(long lValue, MemorySegment target, int offset, int numBytes) {
 		putUnsignedLongNormalizedKey(lValue - Long.MIN_VALUE, target, offset, numBytes);
 	}
 
-	public static void putUnsignedLongNormalizedKey(Long value, MemorySegment target, int offset, int numBytes) {
+	public static void putUnsignedLongNormalizedKey(long value, MemorySegment target, int offset, int numBytes) {
 		if (numBytes == 8) {
 			// default case, full normalized key
 			target.putLongBigEndian(offset, value);
