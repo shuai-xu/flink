@@ -131,7 +131,7 @@ public class S3FileSystemFactory implements FileSystemFactory {
 			final PrestoS3FileSystem fs = new PrestoS3FileSystem();
 			fs.initialize(initUri, hadoopConfig);
 
-			return new HadoopFileSystem(fs);
+			return new HadoopFileSystem(hadoopConfig, fs);
 		}
 		catch (IOException e) {
 			throw e;

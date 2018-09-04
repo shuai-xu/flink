@@ -132,7 +132,7 @@ public class S3FileSystemFactory implements FileSystemFactory {
 			final S3AFileSystem fs = new S3AFileSystem();
 			fs.initialize(fsUri, hadoopConfig);
 
-			return new HadoopFileSystem(fs);
+			return new HadoopFileSystem(hadoopConfig, fs);
 		}
 		catch (IOException e) {
 			throw e;

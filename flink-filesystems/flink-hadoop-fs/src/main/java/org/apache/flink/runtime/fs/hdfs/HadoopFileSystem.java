@@ -25,6 +25,7 @@ import org.apache.flink.core.fs.FileSystemKind;
 import org.apache.flink.core.fs.LocatedFileStatus;
 import org.apache.flink.core.fs.Path;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.IOException;
@@ -46,14 +47,16 @@ public class HadoopFileSystem extends FileSystem {
 	* URL is lazily initialized. */
 	private FileSystemKind fsKind;
 
+	private Configuration config;
 
 	/**
 	 * Wraps the given Hadoop File System object as a Flink File System object.
 	 * The given Hadoop file system object is expected to be initialized already.
-	 *
+	 * @param conf The configuration to get hadoop file system
 	 * @param hadoopFileSystem The Hadoop FileSystem that will be used under the hood.
 	 */
-	public HadoopFileSystem(org.apache.hadoop.fs.FileSystem hadoopFileSystem) {
+	public HadoopFileSystem(Configuration conf, org.apache.hadoop.fs.FileSystem hadoopFileSystem) {
+		this.config = conf;
 		this.fs = checkNotNull(hadoopFileSystem, "hadoopFileSystem");
 	}
 
@@ -81,6 +84,10 @@ public class HadoopFileSystem extends FileSystem {
 	@Override
 	public URI getUri() {
 		return fs.getUri();
+	}
+
+	public Configuration getConfig() {
+		return config;
 	}
 
 	@Override
