@@ -29,7 +29,6 @@ import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.util.TestConsumerCallback;
@@ -38,9 +37,10 @@ import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.DummyInvokable;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
-import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.runtime.util.EnvironmentInformation;
+
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -56,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 public class ExternalResultPartitionReadWriteTest {
@@ -216,16 +215,13 @@ public class ExternalResultPartitionReadWriteTest {
 		ExternalResultPartition<Integer> resultPartition = new ExternalResultPartition<>(
 			configuration,
 			"taskName",
-			mock(TaskActions.class),
 			JOB_ID,
 			partitionID,
 			ResultPartitionType.BLOCKING,
 			NUM_PARTITIONS,
 			NUM_PARTITIONS,
-			mock(ResultPartitionConsumableNotifier.class),
 			memoryManager,
-			ioManager,
-			true);
+			ioManager);
 
 		resultPartition.setTypeSerializer(serializer);
 		resultPartition.setParentTask(parentTask);

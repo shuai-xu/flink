@@ -30,15 +30,14 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.external.writer.PartitionHashFileWriter;
-import org.apache.flink.runtime.io.network.partition.external.writer.PersistentFileWriter;
 import org.apache.flink.runtime.io.network.partition.external.writer.PartitionMergeFileWriter;
+import org.apache.flink.runtime.io.network.partition.external.writer.PersistentFileWriter;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.util.ExceptionUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,41 +58,31 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalResultPartition.class);
 
 	private final Configuration taskManagerConfiguration;
-	private final TaskActions taskActions;
 	private final MemoryManager memoryManager;
 	private final IOManager ioManager;
-	private final boolean sendScheduleOrUpdateConsumersMessage;
-	private final ResultPartitionConsumableNotifier partitionConsumableNotifier;
 	private final String partitionRootPath;
 
 	private PersistentFileWriter<T> fileWriter;
-	private boolean hasNotifiedExternalConsumers;
 
 	private boolean initialized;
 
 	public ExternalResultPartition(
 		Configuration taskManagerConfiguration,
 		String owningTaskName,
-		TaskActions taskActions,
 		JobID jobId,
 		ResultPartitionID partitionId,
 		ResultPartitionType partitionType,
 		int numberOfSubpartitions,
 		int numTargetKeyGroups,
-		ResultPartitionConsumableNotifier partitionConsumableNotifier,
 		MemoryManager memoryManager,
-		IOManager ioManager,
-		boolean sendScheduleOrUpdateConsumersMessage) {
+		IOManager ioManager) {
 
 		super(owningTaskName, jobId, partitionId, partitionType, numberOfSubpartitions, numTargetKeyGroups);
 
 		this.taskManagerConfiguration = checkNotNull(taskManagerConfiguration);
-		this.taskActions = checkNotNull(taskActions);
-		this.partitionConsumableNotifier = checkNotNull(partitionConsumableNotifier);
 		this.memoryManager = checkNotNull(memoryManager);
 		this.ioManager = checkNotNull(ioManager);
 
-		this.sendScheduleOrUpdateConsumersMessage = sendScheduleOrUpdateConsumersMessage;
 		this.partitionRootPath = ExternalBlockShuffleUtils.generatePartitionRootPath(
 			getSpillRootPath(taskManagerConfiguration, jobId.toString(), partitionId.toString()),
 			partitionId.getProducerId().toString(),
@@ -216,13 +205,18 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 			}
 		} catch (IOException e) {
 			LOG.error("Fail to clear external shuffler", e);
-			ExceptionUtils.rethrow(e);
 		}
 	}
 
 	@Override
 	public void finish() throws IOException {
 		try {
+			if (isReleased.get()) {
+				LOG.warn("The result partition {} has been released already before finish.", partitionId);
+				deletePartitionDirOnFailure();
+				return;
+			}
+
 			checkInProduceState();
 
 			FileSystem fs = FileSystem.get(new Path(partitionRootPath).toUri());
@@ -254,7 +248,6 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 				finishedView.writeInt(numberOfSubpartitions);
 			}
 
-			notifyExternalConsumers();
 		} catch (Throwable e) {
 			deletePartitionDirOnFailure();
 			ExceptionUtils.rethrow(e);
@@ -263,18 +256,6 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 		}
 
 		isFinished = true;
-	}
-
-	/**
-	 * Notifies master that the result partition is ready to consume.
-	 */
-	private void notifyExternalConsumers() {
-		if (sendScheduleOrUpdateConsumersMessage && !hasNotifiedExternalConsumers
-			&& partitionType.isBlocking()) {
-			partitionConsumableNotifier.notifyPartitionConsumable(jobId, partitionId, taskActions);
-
-			hasNotifiedExternalConsumers = true;
-		}
 	}
 
 	private void deletePartitionDirOnFailure() {
@@ -286,7 +267,6 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 			checkState(deleteSuccess, "Failed to delete dirty data.");
 		} catch (Throwable e) {
 			LOG.error("Exception occurred on deletePartitionDirOnFailure.", e);
-			ExceptionUtils.rethrow(e);
 		}
 	}
 

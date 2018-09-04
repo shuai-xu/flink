@@ -85,13 +85,10 @@ public class ResultPartitionLocationTrackerProxy {
 			// use the yarn shuffle service
 			return externalResultPartitionLocationTracker.getResultPartitionLocation(
 				producerLocation, consumerLocation, intermediateResult);
-		} else if (shuffleType == BlockingShuffleType.TM) {
+		} else {
 			// use internal shuffle service
 			return internalResultPartitionLocationTracker.getResultPartitionLocation(
 				producerLocation, consumerLocation, intermediateResult);
-		} else {
-			throw new IllegalStateException("Configuration conflict, the result partition type is: " +
-				intermediateResult.getResultType() + ", but the shuffle type is: " + shuffleType);
 		}
 	}
 }

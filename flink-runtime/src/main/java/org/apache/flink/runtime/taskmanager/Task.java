@@ -861,18 +861,16 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				ExternalResultPartition resultPartition = new ExternalResultPartition(
 					taskManagerConfig.getConfiguration(),
 					taskNameWithSubtaskAndId,
-					this,
 					jobId,
 					partitionId,
 					partitionType,
 					desc.getNumberOfSubpartitions(),
 					desc.getMaxParallelism(),
-					resultPartitionConsumableNotifier,
 					memoryManager,
-					ioManager,
-					desc.sendScheduleOrUpdateConsumersMessage());
+					ioManager);
 				producedPartitions[counter] = resultPartition;
 				externalPartitions.add(resultPartition);
+				LOG.info("Create external result partition " + taskNameWithSubtaskAndId + " " + partitionId);
 			} else {
 				InternalResultPartition resultPartition = new InternalResultPartition(
 					taskNameWithSubtaskAndId,
@@ -888,6 +886,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 					desc.sendScheduleOrUpdateConsumersMessage());
 				producedPartitions[counter] = resultPartition;
 				internalPartitions.add(resultPartition);
+				LOG.info("Create internal result partition " + taskNameWithSubtaskAndId + " " + partitionId);
 			}
 			++counter;
 		}

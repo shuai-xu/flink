@@ -35,6 +35,8 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 
+import static org.apache.flink.yarn.Utils.YARN_SHUFFLE_SERVICE_NAME;
+
 
 /**
  * Yarn implementation of flink external shuffle service. It should be deployed along with
@@ -43,18 +45,6 @@ import java.util.Map;
 public class YarnShuffleService extends AuxiliaryService {
 
 	private static final Logger logger = LoggerFactory.getLogger(YarnShuffleService.class);
-
-	/**
-	 * Define the name of flink shuffle service, it has the following usages:
-	 * (1) Configure shuffle service in NodeManger in yarn-site.xml
-	 * (2) Suggest the auxiliary service name of shuffle service in NodeManger
-	 * (3) Yarn(Session)ResourceManager need to configure its serviceData in
-	 * 		ContainerLaunchContext so that flink shuffle service will get method
-	 * 		initializeApplication() being invoked. Furthermore we can add more
-	 * 		information through service data if we want to add authentication
-	 * 		mechanism.
-	 */
-	public static final String YARN_SHUFFLE_SERVICE_NAME = "yarn_shuffle_service_for_flink";
 
 	/**
 	 * Configuration key to suggest whether to stop NodeManager if fails to

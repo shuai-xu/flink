@@ -42,7 +42,6 @@ import org.apache.flink.util.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,9 +136,6 @@ public class YarnTaskExecutorRunner {
 				configuration.setString(CoreOptions.TMP_DIRS, localDirs);
 			}
 
-			//configure shuffle port
-			configureShufflePort(configuration);
-
 			// configure local directory for shuffle service
 			String yarnAppId = ENV.get(YarnConfigKeys.ENV_APP_ID);
 			configureLocalOutputDirs(configuration, localDirs, yarnClientUsername, yarnAppId);
@@ -191,14 +187,6 @@ public class YarnTaskExecutorRunner {
 			LOG.error("YARN TaskManager initialization failed.", t);
 			System.exit(INIT_ERROR_EXIT_CODE);
 		}
-	}
-
-	private static void configureShufflePort(Configuration configuration) {
-		int shufflePort = new YarnConfiguration(new org.apache.hadoop.conf.Configuration()).getInt(
-			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(),
-			ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.defaultValue());
-		LOG.info("update shuffle service port {} by yarn configuration.", shufflePort);
-		configuration.setInteger(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), shufflePort);
 	}
 
 	private static void configureLocalOutputDirs(Configuration configuration, String nmLocalDirs, String username, String appId) {

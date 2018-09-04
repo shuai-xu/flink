@@ -86,7 +86,8 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 
 		this.fileSystem = shuffleServiceConfiguration.getFileSystem();
 
-		this.containerExecutorExecutablePath = parseContainerExecutorExecutablePath();
+		this.containerExecutorExecutablePath = parseContainerExecutorExecutablePath(
+			shuffleServiceConfiguration, fileSystem);
 
 		diskScanner = Executors.newSingleThreadScheduledExecutor();
 		diskScanner.scheduleWithFixedDelay(
@@ -406,7 +407,9 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		}
 	}
 
-	private String parseContainerExecutorExecutablePath() {
+	private static String parseContainerExecutorExecutablePath(
+		ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration,
+		FileSystem fileSystem) {
 		String yarnHomeEnvVar = System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
 		File hadoopBin = new File(yarnHomeEnvVar, "bin");
 		String defaultContainerExecutorPath = new File(hadoopBin, "container-executor").getAbsolutePath();
@@ -417,7 +420,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		try {
 			if (fileSystem.exists(new Path(containerExecutorPath))) {
 				LOG.info("Use container-executor to do recycling, file path: " + containerExecutorPath);
-				return containerExecutorExecutablePath;
+				return containerExecutorPath;
 			}
 		} catch (IOException e) {
 			// Do nothing.
