@@ -37,6 +37,7 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.util.MemUtil;
 import org.apache.flink.table.util.MemorySegmentPool;
 import org.apache.flink.table.util.PagedChannelReaderInputViewIterator;
 import org.apache.flink.table.util.RowIterator;
@@ -725,7 +726,7 @@ public class BinaryHashTable implements MemorySegmentPool {
 	public void free() {
 		if (this.closed.get()) {
 			if (allocatedFloatingNum > 0) {
-				MemoryManager.releaseSpecificNumFloatingSegments(memManager, availableMemory, allocatedFloatingNum);
+				MemUtil.releaseSpecificNumFloatingSegments(memManager, availableMemory, allocatedFloatingNum);
 				allocatedFloatingNum = 0;
 			}
 			memManager.release(availableMemory);
@@ -1027,7 +1028,7 @@ public class BinaryHashTable implements MemorySegmentPool {
 						allocatedFloatingNum);
 				//apply for much more memory.
 				try {
-					List<MemorySegment> allocates = memManager.allocateFloatingPages(owner, requestNum);
+					List<MemorySegment> allocates = memManager.allocatePages(owner, requestNum, false);
 					this.availableMemory.addAll(allocates);
 					allocatedFloatingNum += allocates.size();
 					allocates.clear();

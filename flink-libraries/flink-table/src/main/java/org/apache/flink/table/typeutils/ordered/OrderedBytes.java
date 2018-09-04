@@ -554,7 +554,7 @@ public final class OrderedBytes implements Serializable {
 		if (ord == Order.DESCENDING) {
 			// DESCENDING ordered string requires a termination bit to preserve
 			// sort-order semantics of empty values.
-			reuseBaos.seek(reuseBaos.size() - 1);
+			reuseBaos.setPosition(reuseBaos.size() - 1);
 		}
 		return BinaryString.fromBytes(ord.apply(reuseBaos.toByteArray()));
 	}
@@ -596,7 +596,7 @@ public final class OrderedBytes implements Serializable {
 		if (ord == Order.DESCENDING) {
 			// DESCENDING ordered string requires a termination bit to preserve
 			// sort-order semantics of empty values.
-			reuseBaos.seek(reuseBaos.size() - 1);
+			reuseBaos.setPosition(reuseBaos.size() - 1);
 		}
 		return new String(ord.apply(reuseBaos.toByteArray()), UTF8);
 	}
@@ -656,7 +656,7 @@ public final class OrderedBytes implements Serializable {
 		if (ord == Order.DESCENDING) {
 			// DESCENDING ordered ByteArray requires a termination bit to preserve
 			// sort-order semantics of empty values.
-			reuseBaos.seek(reuseBaos.size() - 1);
+			reuseBaos.setPosition(reuseBaos.size() - 1);
 		}
 		return ord.apply(reuseBaos.toByteArray());
 	}

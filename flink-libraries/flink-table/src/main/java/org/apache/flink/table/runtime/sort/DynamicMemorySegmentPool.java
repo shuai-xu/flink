@@ -61,7 +61,7 @@ public class DynamicMemorySegmentPool implements MemorySegmentPool {
 		} else if (allocateFloatingNum < additionalLimitNumPages) {
 			int requestNum = Math.min(perRequestNumBuffers, additionalLimitNumPages - allocateFloatingNum);
 			try {
-				List<MemorySegment> allocates = memoryManager.allocateFloatingPages(owner, requestNum);
+				List<MemorySegment> allocates = memoryManager.allocatePages(owner, requestNum, false);
 				this.segments.addAll(allocates);
 				allocateFloatingNum += allocates.size();
 				allocates.clear();

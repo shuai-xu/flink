@@ -18,13 +18,8 @@
 package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeutils.base.BooleanComparator;
-import org.apache.flink.api.common.typeutils.base.ByteComparator;
-import org.apache.flink.api.common.typeutils.base.CharComparator;
+import org.apache.flink.api.common.typeutils.base.ComparatorUtil;
 import org.apache.flink.api.common.typeutils.base.DateComparator;
-import org.apache.flink.api.common.typeutils.base.IntComparator;
-import org.apache.flink.api.common.typeutils.base.LongComparator;
-import org.apache.flink.api.common.typeutils.base.ShortComparator;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemoryUtils;
@@ -268,17 +263,17 @@ public class BinaryRowUtil {
 
 	public static void putShortNormalizedKey(short value, MemorySegment target, int offset,
 			int numBytes) {
-		ShortComparator.putNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putShortNormalizedKey(value, target, offset, numBytes);
 	}
 
 	public static void putByteNormalizedKey(byte value, MemorySegment target, int offset,
 			int numBytes) {
-		ByteComparator.putNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putByteNormalizedKey(value, target, offset, numBytes);
 	}
 
 	public static void putBooleanNormalizedKey(boolean value, MemorySegment target, int offset,
 			int numBytes) {
-		BooleanComparator.putNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putBooleanNormalizedKey(value, target, offset, numBytes);
 	}
 
 	public static void putBinaryStringNormalizedKey(
@@ -314,12 +309,12 @@ public class BinaryRowUtil {
 	}
 
 	public static void putIntNormalizedKey(int value, MemorySegment target, int offset, int numBytes) {
-		IntComparator.putNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putIntNormalizedKey(value, target, offset, numBytes);
 	}
 
 	public static void putLongNormalizedKey(long value, MemorySegment target, int offset,
 			int numBytes) {
-		LongComparator.putNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putLongNormalizedKey(value, target, offset, numBytes);
 	}
 
 	/**
@@ -329,19 +324,19 @@ public class BinaryRowUtil {
 			int numBytes) {
 		int iValue = Float.floatToIntBits(value);
 		iValue ^= ((iValue >> (Integer.SIZE - 1)) | Integer.MIN_VALUE);
-		IntComparator.putUnsignedNormalizedKey(iValue, target, offset, numBytes);
+		ComparatorUtil.putUnsignedIntegerNormalizedKey(iValue, target, offset, numBytes);
 	}
 
 	public static void putDoubleNormalizedKey(double value, MemorySegment target, int offset,
 			int numBytes) {
 		long lValue = Double.doubleToLongBits(value);
 		lValue ^= ((lValue >> (Long.SIZE - 1)) | Long.MIN_VALUE);
-		LongComparator.putUnsignedNormalizedKey(lValue, target, offset, numBytes);
+		ComparatorUtil.putUnsignedLongNormalizedKey(lValue, target, offset, numBytes);
 	}
 
 	public static void putCharNormalizedKey(char value, MemorySegment target, int offset,
 			int numBytes) {
-		CharComparator.putNormalizedKey(value, target, offset, numBytes);
+		ComparatorUtil.putCharNormalizedKey(value, target, offset, numBytes);
 	}
 
 	public static void putDateNormalizedKey(Date value, MemorySegment target, int offset,

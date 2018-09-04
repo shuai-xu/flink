@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.functions.python;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.python.api.PythonOptions;
+import org.apache.flink.runtime.filecache.FileCache;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.errorcode.TableErrors;
@@ -389,7 +390,7 @@ public class PythonUDFUtil {
 			}
 			else {
 				Path targetFilePath = new Path(tmpFileDirPath, usrFile.getName());
-				FileUtils.copy(new Path(usrFile.toURI().toString()), targetFilePath, false);
+				FileCache.copy(new Path(usrFile.toURI().toString()), targetFilePath, false);
 			}
 		}
 

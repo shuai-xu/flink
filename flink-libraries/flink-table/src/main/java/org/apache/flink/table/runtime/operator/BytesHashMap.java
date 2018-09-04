@@ -30,6 +30,7 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.table.util.MemUtil;
 import org.apache.flink.util.MathUtils;
 import org.apache.flink.util.MutableObjectIterator;
 
@@ -383,7 +384,7 @@ public class BytesHashMap {
 			throw new MemoryAllocationException("Could not allocate " + required + " pages limited to the" +
 					" max memory size. ");
 		} else {
-			List<MemorySegment> memorySegments = memoryManager.allocateFloatingPages(owner, required);
+			List<MemorySegment> memorySegments = memoryManager.allocatePages(owner, required, false);
 			if (memorySegments.size() != required) {
 				throw new MemoryAllocationException(
 						"Could not allocate " + required + " pages limited to the max memory size. ");
@@ -548,7 +549,7 @@ public class BytesHashMap {
 
 	private void releaseFloatingMemory() {
 		if (allocatedFloatingNum > 0) {
-			MemoryManager.releaseSpecificNumFloatingSegments(memoryManager, freeMemorySegments, allocatedFloatingNum);
+			MemUtil.releaseSpecificNumFloatingSegments(memoryManager, freeMemorySegments, allocatedFloatingNum);
 			allocatedFloatingNum = 0;
 		}
 	}

@@ -25,6 +25,7 @@ import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
+import org.apache.flink.table.util.MemUtil;
 import org.apache.flink.table.util.MemorySegmentPool;
 import org.apache.flink.util.MutableObjectIterator;
 
@@ -131,7 +132,7 @@ public final class BinaryInMemorySortBuffer extends BinaryIndexedSortable {
 		//release floating memory in advance
 		int releaseNum = ((DynamicMemorySegmentPool) memorySegmentPool).resetAndReturnFloatingNum();
 		if (releaseNum > 0) {
-			MemoryManager.releaseSpecificNumFloatingSegments(memoryManager, segments, releaseNum);
+			MemUtil.releaseSpecificNumFloatingSegments(memoryManager, segments, releaseNum);
 			LOG.info("release {} floating pages in advance.", releaseNum);
 		}
 	}

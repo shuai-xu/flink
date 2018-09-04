@@ -30,6 +30,7 @@ import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.sort.ExceptionHandler;
 import org.apache.flink.runtime.operators.sort.IndexedSorter;
 import org.apache.flink.runtime.operators.sort.QuickSort;
+import org.apache.flink.runtime.operators.sort.SortedDataFile;
 import org.apache.flink.runtime.operators.sort.Sorter;
 import org.apache.flink.runtime.util.EmptyMutableObjectIterator;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -37,6 +38,7 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryMergeIterator;
 import org.apache.flink.table.util.ChannelWithMeta;
+import org.apache.flink.table.util.MemUtil;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.slf4j.Logger;
@@ -450,7 +452,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 			try {
 				if (mergeReadMemory.size() > fixedReadMemoryNum) {
 					int releaseNum = mergeReadMemory.size() - fixedReadMemoryNum;
-					MemoryManager.releaseSpecificNumFloatingSegments(memoryManager, mergeReadMemory, releaseNum);
+					MemUtil.releaseSpecificNumFloatingSegments(memoryManager, mergeReadMemory, releaseNum);
 				}
 			} catch (Throwable ignored) {
 				LOG.info("error.", ignored);
@@ -575,6 +577,11 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		while ((row = iterator.next(row)) != null) {
 			write(row);
 		}
+	}
+
+	@Override
+	public List<SortedDataFile<BinaryRow>> getRemainingSortedDataFiles() throws InterruptedException {
+		return null;
 	}
 
 	@Override

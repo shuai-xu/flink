@@ -72,7 +72,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							expectedLengths[i], orderedBytes.encodeBigDecimal(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", expectedLengths[i], outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", expectedLengths[i], outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -80,7 +80,7 @@ public class OrderedBytesTest {
 				inputView.skipBytesToRead(1);
 				BigDecimal decoded = orderedBytes.decodeBigDecimal(inputView, ord);
 				assertEquals("Deserialization failed.", 0, vals[i].compareTo(decoded));
-				assertEquals("Did not consume enough bytes.", expectedLengths[i], inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", expectedLengths[i], inputStream.getPosition() - 1);
 			}
 		}
 
@@ -144,7 +144,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							expectedLengths[i], orderedBytes.encodeBigInteger(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", expectedLengths[i], outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", expectedLengths[i], outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -152,7 +152,7 @@ public class OrderedBytesTest {
 				inputView.skipBytesToRead(1);
 				BigInteger decoded = orderedBytes.decodeBigInteger(inputView, ord);
 				assertEquals("Deserialization failed.", 0, vals[i].compareTo(decoded));
-				assertEquals("Did not consume enough bytes.", expectedLengths[i], inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", expectedLengths[i], inputStream.getPosition() - 1);
 			}
 		}
 
@@ -208,7 +208,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							1, orderedBytes.encodeByte(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", 1, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", 1, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -216,7 +216,7 @@ public class OrderedBytesTest {
 				inputView.skipBytesToRead(1);
 				assertEquals("Deserialization failed.",
 							vals[i].byteValue(), orderedBytes.decodeByte(inputView, ord));
-				assertEquals("Did not consume enough bytes.", 1, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", 1, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -275,7 +275,7 @@ public class OrderedBytesTest {
 				assertEquals("Surprising return value.",
 							2, orderedBytes.encodeShort(outputView, vals[i], ord));
 				assertEquals("Surprising serialized length.",
-							2, outputStream.getPos() - 1);
+							2, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -283,7 +283,7 @@ public class OrderedBytesTest {
 				inputView.skipBytesToRead(1);
 				assertEquals("Deserialization failed.",
 							vals[i].shortValue(), orderedBytes.decodeShort(inputView, ord));
-				assertEquals("Did not consume enough bytes.", 2, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", 2, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -341,7 +341,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							4, orderedBytes.encodeInt(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", 4, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", 4, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -349,7 +349,7 @@ public class OrderedBytesTest {
 				inputView.skipBytesToRead(1);
 				assertEquals("Deserialization failed.",
 							vals[i].intValue(), orderedBytes.decodeInt(inputView, ord));
-				assertEquals("Did not consume enough bytes.", 4, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", 4, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -407,7 +407,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							8, orderedBytes.encodeLong(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", 8, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", 8, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -415,7 +415,7 @@ public class OrderedBytesTest {
 				inputView.skipBytesToRead(1);
 				assertEquals("Deserialization failed.",
 							vals[i].longValue(), orderedBytes.decodeLong(inputView, ord));
-				assertEquals("Did not consume enough bytes.", 8, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", 8, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -473,7 +473,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							4, orderedBytes.encodeFloat(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", 4, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", 4, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -483,7 +483,7 @@ public class OrderedBytesTest {
 					"Deserialization failed.",
 					Float.floatToIntBits(vals[i].floatValue()),
 					Float.floatToIntBits(orderedBytes.decodeFloat(inputView, ord)));
-				assertEquals("Did not consume enough bytes.", 4, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", 4, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -542,7 +542,7 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							8, orderedBytes.encodeDouble(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", 8, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", 8, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
@@ -552,7 +552,7 @@ public class OrderedBytesTest {
 					"Deserialization failed.",
 					Double.doubleToLongBits(vals[i].doubleValue()),
 					Double.doubleToLongBits(orderedBytes.decodeDouble(inputView, ord)));
-				assertEquals("Did not consume enough bytes.", 8, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", 8, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -613,14 +613,14 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							encodeLength, orderedBytes.encodeString(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", encodeLength, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", encodeLength, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
 				DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 				inputView.skipBytesToRead(1);
 				assertEquals("Deserialization failed.", vals[i], orderedBytes.decodeString(inputView, ord));
-				assertEquals("Did not consume enough bytes.", encodeLength, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", encodeLength, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -683,14 +683,14 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							encodeLength, orderedBytes.encodeBinaryString(outputView, vals[i], ord));
-				assertEquals("Surprising serialized length.", encodeLength, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", encodeLength, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
 				DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 				inputView.skipBytesToRead(1);
 				assertEquals("Deserialization failed.", vals[i], orderedBytes.decodeBinaryString(inputView, ord));
-				assertEquals("Did not consume enough bytes.", encodeLength, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", encodeLength, inputStream.getPosition() - 1);
 			}
 		}
 
@@ -762,14 +762,14 @@ public class OrderedBytesTest {
 				// verify encode
 				assertEquals("Surprising return value.",
 							encodeLength , orderedBytes.encodeByteArray(outputView, val, ord));
-				assertEquals("Surprising serialized length.", encodeLength, outputStream.getPos() - 1);
+				assertEquals("Surprising serialized length.", encodeLength, outputStream.getPosition() - 1);
 
 				// verify decode
 				ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(outputStream.toByteArray());
 				DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 				inputView.skipBytesToRead(1);
 				assertArrayEquals("Deserialization failed.", val, orderedBytes.decodeByteArray(inputView, ord));
-				assertEquals("Did not consume enough bytes.", encodeLength, inputStream.getPos() - 1);
+				assertEquals("Did not consume enough bytes.", encodeLength, inputStream.getPosition() - 1);
 			}
 		}
 
