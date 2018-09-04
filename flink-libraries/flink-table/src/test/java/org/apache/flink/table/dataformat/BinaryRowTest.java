@@ -32,14 +32,17 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.RandomAccessOutputView;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.hash.Murmur32;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.Time;
@@ -49,6 +52,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -685,6 +689,81 @@ public class BinaryRowTest {
 					"i=" + i +
 					", j=" + j +
 					'}';
+		}
+	}
+
+	@Test
+	public void testBoundarySituationOfMapFromPages() throws IOException {
+		BinaryRow lRow = new BinaryRow(2);
+		BinaryRowWriter lWriter = new BinaryRowWriter(lRow);
+		lWriter.writeString(0, RandomStringUtils.randomNumeric(2));
+		lWriter.writeString(1, RandomStringUtils.randomNumeric(2));
+		lWriter.complete();
+
+		BinaryRow row = new BinaryRow(2);
+		BinaryRowWriter writer = new BinaryRowWriter(row);
+		writer.writeString(0, RandomStringUtils.randomNumeric(72));
+		writer.writeString(1, RandomStringUtils.randomNumeric(64));
+		writer.complete();
+
+		BinaryRowSerializer serializer = new BinaryRowSerializer(DataTypes.STRING, DataTypes.STRING);
+
+		{
+			MemorySegment[] segments = new MemorySegment[7];
+			for (int i = 0; i < segments.length; i++) {
+				segments[i] = MemorySegmentFactory.wrap(new byte[64]);
+			}
+			RandomAccessOutputView out = new RandomAccessOutputView(segments, segments[0].size());
+			serializer.serializeToPages(lRow, out);
+			serializer.serializeToPages(row, out);
+			serializer.serializeToPages(row, out);
+
+			RandomAccessInputView in = new RandomAccessInputView(
+					new ArrayList<>(Arrays.asList(segments)),
+					segments[0].size(),
+					out.getCurrentPositionInSegment());
+
+			BinaryRow retRow = new BinaryRow(2);
+			List<BinaryRow> rets = new ArrayList<>();
+			while (true) {
+				try {
+					retRow = serializer.mapFromPages(retRow, in);
+				} catch (EOFException e) {
+					break;
+				}
+				rets.add(retRow.copy());
+			}
+			assertEquals(lRow, rets.get(0));
+			assertEquals(row, rets.get(1));
+			assertEquals(row, rets.get(2));
+		}
+
+		{
+			MemorySegment[] segments = new MemorySegment[3];
+			for (int i = 0; i < segments.length; i++) {
+				segments[i] = MemorySegmentFactory.wrap(new byte[64]);
+			}
+			RandomAccessOutputView out = new RandomAccessOutputView(segments, segments[0].size());
+			serializer.serializeToPages(lRow, out);
+			serializer.serializeToPages(row, out);
+
+			RandomAccessInputView in = new RandomAccessInputView(
+					new ArrayList<>(Arrays.asList(segments)),
+					segments[0].size(),
+					out.getCurrentPositionInSegment());
+
+			BinaryRow retRow = new BinaryRow(2);
+			List<BinaryRow> rets = new ArrayList<>();
+			while (true) {
+				try {
+					retRow = serializer.mapFromPages(retRow, in);
+				} catch (EOFException e) {
+					break;
+				}
+				rets.add(retRow.copy());
+			}
+			assertEquals(lRow, rets.get(0));
+			assertEquals(row, rets.get(1));
 		}
 	}
 }

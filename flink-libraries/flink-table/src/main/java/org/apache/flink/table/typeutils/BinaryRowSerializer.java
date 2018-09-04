@@ -279,9 +279,15 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 		for (int i = 0; i < varSegSize; i++) {
 			source.advance();
 			segments[i + 1] = source.getCurrentSegment();
-			if (i == varSegSize - 1 && rem != 0) {
-				source.skipBytesToRead(rem);
-			}
+		}
+		if (rem != 0) {
+			// Skip the last remaining offset
+			source.skipBytesToRead(rem);
+		} else {
+			// The remaining is 0. There is no next Segment at this time. The current Segment is
+			// all the data of this row, so we need to skip segmentSize bytes to read. We can't
+			// jump directly to the next Segment. Because maybe there are no segment in later.
+			source.skipBytesToRead(segmentSize);
 		}
 		row.pointTo(segments, currPosInSeg, length);
 	}
