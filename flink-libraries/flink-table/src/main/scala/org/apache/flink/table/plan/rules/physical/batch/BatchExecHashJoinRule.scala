@@ -51,8 +51,8 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
 
     val (isBroadcast, _) = canBroadcast(
       join,
-      getRelNodeSize(join.getLeft),
-      getRelNodeSize(join.getRight))
+      binaryRowRelNodeSize(join.getLeft),
+      binaryRowRelNodeSize(join.getRight))
 
     !joinInfo.pairs().isEmpty && (if (isBroadcast) enableBroadcastHash else enableShuffleHash)
   }
@@ -79,8 +79,8 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
       }
     }
 
-    val leftSize = getRelNodeSize(left)
-    val rightSize = getRelNodeSize(right)
+    val leftSize = binaryRowRelNodeSize(left)
+    val rightSize = binaryRowRelNodeSize(right)
 
     val (isBroadcast, leftIsBroadcast) = canBroadcast(join, leftSize, rightSize)
 

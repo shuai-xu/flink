@@ -192,13 +192,13 @@ object BatchExecRel {
     //TODO It's hard to make sure that the normailized key's length is accurate in optimized stage.
     val normalizedKeyBytes = SortCodeGenerator.MAX_NORMALIZED_KEY_LEN
     val rowCount = mq.getRowCount(input)
-    val averageRowSize = needStorageRowAverageSize(input)
+    val averageRowSize = binaryRowAverageSize(input)
     val recordAreaInBytes = rowCount * (averageRowSize + BinaryRowSerializer.LENGTH_SIZE_IN_BYTES)
     val indexAreaInBytes = rowCount * (normalizedKeyBytes + BinaryIndexedSortable.OFFSET_LEN)
     recordAreaInBytes + indexAreaInBytes
   }
 
-  private[flink] def needStorageRowAverageSize(rel: RelNode): Double = {
+  private[flink] def binaryRowAverageSize(rel: RelNode): Double = {
     val binaryType = FlinkTypeFactory.toInternalBaseRowType(rel.getRowType, classOf[BinaryRow])
     val mq = reuseOrCreate(rel.getCluster.getMetadataQuery)
     val columnSizes = mq.getAverageColumnSizes(rel)

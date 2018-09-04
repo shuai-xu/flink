@@ -1147,7 +1147,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroad
   <TestCase name="testInWithOver2[HashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
+HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])

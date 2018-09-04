@@ -31,7 +31,7 @@ import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalHashAggregate
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalHashAggregate, BatchExecRel}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
 
 import scala.collection.JavaConverters._
@@ -96,13 +96,13 @@ trait BatchExecJoinRuleBase {
     case _ => throw new IllegalArgumentException(s"Illegal join node: ${join.getClass.getName}")
   }
 
-  def getRelNodeSize(relNode: RelNode): Double = {
+  private[flink] def binaryRowRelNodeSize(relNode: RelNode): Double = {
     val mq = relNode.getCluster.getMetadataQuery
     val rowCount = mq.getRowCount(relNode)
     if(rowCount == null) {
       null
     } else {
-      rowCount * mq.getAverageRowSize(relNode)
+      rowCount * BatchExecRel.binaryRowAverageSize(relNode)
     }
   }
 }

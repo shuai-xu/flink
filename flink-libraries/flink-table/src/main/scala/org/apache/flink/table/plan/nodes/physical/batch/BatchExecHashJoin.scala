@@ -117,9 +117,9 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     // count in network cost of Exchange node before build size child here
     val cpuCost = HASH_CPU_COST * (leftRowCnt + rightRowCnt)
     val (buildRowCount, buildRowSize) = if (leftIsBuild) {
-      (leftRowCnt, BatchExecRel.needStorageRowAverageSize(getLeft))
+      (leftRowCnt, BatchExecRel.binaryRowAverageSize(getLeft))
     } else {
-      (rightRowCnt,  BatchExecRel.needStorageRowAverageSize(getRight))
+      (rightRowCnt,  BatchExecRel.binaryRowAverageSize(getRight))
     }
     // We aim for a 200% utilization of the bucket table when all the partition buffers are full.
     val bucketSize =

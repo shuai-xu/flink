@@ -741,7 +741,7 @@ abstract class BatchExecHashWindowAggregateBase(
     // happen under the assumption
     //  We aim for a 200% utilization of the bucket table.
     val bucketSize = rowCnt * BytesHashMap.BUCKET_SIZE / BatchExecRel.HASH_COLLISION_WEIGHT
-    val recordSize = rowCnt * (BatchExecRel.needStorageRowAverageSize(this) + BytesHashMap
+    val recordSize = rowCnt * (BatchExecRel.binaryRowAverageSize(this) + BytesHashMap
         .RECORD_EXTRA_LENGTH)
     val memCost = bucketSize + recordSize
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]

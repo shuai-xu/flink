@@ -82,7 +82,7 @@ abstract class BatchExecHashAggregateBase(
       val ndvOfGroupKey = Util.first(mq.getRowCount(this), 1d)
       //  We aim for a 200% utilization of the bucket table.
       val bucketSize = ndvOfGroupKey * BytesHashMap.BUCKET_SIZE / BatchExecRel.HASH_COLLISION_WEIGHT
-      val recordSize = ndvOfGroupKey * (BatchExecRel.needStorageRowAverageSize(this) +
+      val recordSize = ndvOfGroupKey * (BatchExecRel.binaryRowAverageSize(this) +
           BytesHashMap.RECORD_EXTRA_LENGTH)
       bucketSize + recordSize
     }

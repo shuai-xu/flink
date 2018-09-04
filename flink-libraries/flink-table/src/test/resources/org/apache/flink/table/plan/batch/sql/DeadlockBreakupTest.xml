@@ -260,8 +260,8 @@ LogicalProject(a=[$0])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- HashJoin(where=[=(a, a0)], join=[a, a0, b], joinType=[InnerJoin], build=[left])
-   :- Exchange(distribution=[hash[a]])
++- HashJoin(where=[=(a, a0)], join=[a, a0, b], joinType=[InnerJoin], build=[right])
+   :- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
    :  +- Calc(select=[a], where=[=(b, 5)])
    :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b], reuse_id=[1])
    +- HashSemiJoin(where=[=(a, a0)], join=[a, b], joinType=[LeftSemiJoin], build=[left])

@@ -49,8 +49,8 @@ class BatchExecNestedLoopJoinRule(joinClass: Class[_ <: Join])
       case JoinRelType.LEFT => false
       case JoinRelType.RIGHT => true
       case JoinRelType.INNER | JoinRelType.FULL =>
-        val leftSize = getRelNodeSize(left)
-        val rightSize = getRelNodeSize(right)
+        val leftSize = binaryRowRelNodeSize(left)
+        val rightSize = binaryRowRelNodeSize(right)
         // use left as build size if leftSize or rightSize is unknown.
         if (leftSize == null || rightSize == null) {
           true
