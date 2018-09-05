@@ -134,10 +134,10 @@ class PlanUtilTest extends AbstractTestBase {
     val sinkTransformation = sink.emitBoundedStream(
       tableEnv.translate[Row](inputOfSink, sink.getOutputType, sink, queryConfig),
       tableEnv.getConfig, env.getConfig).getTransformation
+    setDumpFileToConfig()
     val streamGraph = StreamGraphGenerator.generate(
       Context.buildBatchProperties(tableEnv.streamEnv),
       _root_.java.util.Arrays.asList(sinkTransformation))
-    setDumpFileToConfig()
     val jobResult = env.execute(streamGraph)
     streamGraph.dumpPlanWithMetrics(tmpFile, jobResult)
   }

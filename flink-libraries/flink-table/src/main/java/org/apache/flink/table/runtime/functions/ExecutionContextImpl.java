@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.functions;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -90,6 +91,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, V> KeyedValueState<K, V> getKeyedValueState(
 		ValueStateDescriptor<V> descriptor) {
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedValueStateDescriptor<>(
 				descriptor.getName(),
@@ -103,6 +105,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, V> KeyedListState<K, V> getKeyedListState(
 		ListStateDescriptor<V> descriptor
 	) {
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedListStateDescriptor<>(
 				descriptor.getName(),
@@ -116,6 +119,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, UK, UV> KeyedMapState<K, UK, UV> getKeyedMapState(
 		MapStateDescriptor<UK, UV> descriptor
 	) {
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedMapStateDescriptor<>(
 				descriptor.getName(),
@@ -129,6 +133,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, UK, UV> KeyedSortedMapState<K, UK, UV> getKeyedSortedMapState(
 		SortedMapStateDescriptor<UK, UV> descriptor
 	) {
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedSortedMapStateDescriptor<>(
 				descriptor.getName(),
@@ -146,6 +151,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		return operator.getSubKeyedState(
 			new SubKeyedValueStateDescriptor<>(
 				descriptor.getName(),
@@ -164,6 +170,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		return operator.getSubKeyedState(new SubKeyedListStateDescriptor<>(
 			descriptor.getName(),
 			(TypeSerializer<K>) operator.getKeySerializer(),
@@ -179,6 +186,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		MapSerializer<UK, UV> mapSerializer = (MapSerializer<UK, UV>) descriptor.getSerializer();
 		return operator.getSubKeyedState(new SubKeyedMapStateDescriptor<>(
 			descriptor.getName(),
@@ -195,7 +203,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 		if (namespaceSerializer == null) {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
-
+		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
 		SortedMapSerializer<UK, UV> sortedMapSerializer = (SortedMapSerializer<UK, UV>) descriptor.getSerializer();
 		return operator.getSubKeyedState(new SubKeyedSortedMapStateDescriptor<>(
 			descriptor.getName(),

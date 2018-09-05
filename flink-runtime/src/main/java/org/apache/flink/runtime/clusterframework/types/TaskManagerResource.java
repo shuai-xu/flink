@@ -280,7 +280,7 @@ public class TaskManagerResource {
 		extendedResources.put(ResourceSpec.MANAGED_MEMORY_NAME,
 			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, taskManagerResource.getManagedMemorySize()));
 		extendedResources.put(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME,
-			new CommonExtendedResource(ResourceSpec.MANAGED_MEMORY_NAME, taskManagerResource.getFloatingManagedMemorySize()));
+			new CommonExtendedResource(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME, taskManagerResource.getFloatingManagedMemorySize()));
 		return new ResourceProfile(taskManagerResource.getTaskResourceProfile().getCpuCores(),
 			taskManagerResource.getTaskResourceProfile().getHeapMemoryInMB(),
 			taskManagerResource.getTaskResourceProfile().getDirectMemoryInMB(),

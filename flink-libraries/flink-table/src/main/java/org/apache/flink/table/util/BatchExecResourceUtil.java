@@ -19,6 +19,7 @@
 package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.table.api.TableConfig;
 
@@ -384,8 +385,10 @@ public class BatchExecResourceUtil {
 		if (managedMemory == null) {
 			return 0;
 		}
+		managedMemory = ((Resource) managedMemory).getValue();
 		try {
-			return  (int) managedMemory;
+			// we need a int value here, cast to double first in order to accept double config val.
+			return  ((Double) managedMemory).intValue();
 		} catch (ClassCastException ex) {
 			return 0;
 		}

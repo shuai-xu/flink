@@ -18,6 +18,7 @@
 
 package org.apache.flink.api.common.state;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -109,6 +110,7 @@ public final class SortedMapStateDescriptor<K, V> extends StateDescriptor<Sorted
 
 	@Override
 	public SortedMapSerializer<K, V> getSerializer() {
+		initializeSerializerUnlessSet(new ExecutionConfig());
 		TypeSerializer<SortedMap<K, V>> sortedMapSerializer =
 			super.getSerializer();
 		Preconditions.checkState(sortedMapSerializer instanceof SortedMapSerializer);
