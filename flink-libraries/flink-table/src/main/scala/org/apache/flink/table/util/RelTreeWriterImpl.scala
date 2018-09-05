@@ -174,13 +174,17 @@ class RelTreeWriterImpl(
 
   private def resourceSpecToString(resourceSpec: ResourceSpec): String = {
     val s = "Resource: {cpu=" + resourceSpec.getCpuCores + ", heap=" + resourceSpec.getHeapMemory;
-    if (resourceSpec.getExtendedResources.containsKey(ResourceSpec.MANAGED_MEMORY_NAME) ||
-        resourceSpec.getExtendedResources.
-            get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt == 0) {
-      s + "}"
-    } else {
-      s + ", managed=" +
-          resourceSpec.getExtendedResources.get(ResourceSpec.MANAGED_MEMORY_NAME) + "}"
+    try {
+      if (!resourceSpec.getExtendedResources.containsKey(ResourceSpec.MANAGED_MEMORY_NAME) ||
+          resourceSpec.getExtendedResources.
+              get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt == 0) {
+        s + "}"
+      } else {
+        s + ", managed=" +
+            resourceSpec.getExtendedResources.get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt + "}"
+      }
+    } catch {
+      case _: Exception => null
     }
   }
 }

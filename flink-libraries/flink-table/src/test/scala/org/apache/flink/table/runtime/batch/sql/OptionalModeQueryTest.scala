@@ -22,13 +22,11 @@ import java.io.File
 import java.util.UUID
 
 import org.apache.flink.configuration.{ConfigConstants, TaskManagerOptions}
-//import org.apache.flink.runtime.io.network.partition.external.ExternalShuffleUtils
-//import org.apache.flink.runtime.io.network.partition.external.yarnShuffleService.YarnShuffleServiceOptions
 //import org.apache.flink.runtime.util.MockYarnShuffleService
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.runtime.batchexec.sql.PartitionShufflerMode.{ExternalPartitionMergeShuffler, PartitionShufflerMode, PipelinePartitionShuffler, mockApp, mockOutput, mockRootDir, mockUser}
+import org.apache.flink.table.runtime.batchexec.sql.PartitionShufflerMode.{PartitionShufflerMode}
 import org.apache.flink.util.NetUtils
 import org.apache.hadoop.fs.FileUtil
 import org.junit.{After, Before}

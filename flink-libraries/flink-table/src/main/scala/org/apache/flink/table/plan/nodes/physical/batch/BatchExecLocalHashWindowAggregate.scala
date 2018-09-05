@@ -118,7 +118,8 @@ class BatchExecLocalHashWindowAggregate(
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val generatedOperator = codegen(ctx, tableEnv,
       DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType], outputRowType,
-      groupBufferLimitSize, BatchExecResourceUtil.getManagedMemory(reservedResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
+      groupBufferLimitSize,
+      BatchExecResourceUtil.getManagedMemory(reservedResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
       BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
       windowStart, windowSize, slideSize)
 

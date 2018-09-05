@@ -170,7 +170,8 @@ abstract class ExpressionTestBase {
         override def addPreAggregatedAccumulator[V, A <: io.Serializable](name: String,
           accumulator: Accumulator[V, A]): Unit = ???
 
-        override def getPreAggregatedAccumulators: util.Map[String, Accumulator[_, _ <: io.Serializable]] = ???
+        override def getPreAggregatedAccumulators:
+        util.Map[String, Accumulator[_, _ <: io.Serializable]] = ???
 
         override def commitPreAggregatedAccumulator(name: String): Unit = ???
       }

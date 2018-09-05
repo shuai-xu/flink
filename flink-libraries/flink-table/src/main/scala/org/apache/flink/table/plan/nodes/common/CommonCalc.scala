@@ -166,7 +166,8 @@ trait CommonCalc {
     calcProgram: RexProgram,
     condition: Option[RexNode],
     retainHeader: Boolean = false,
-    ruleDescription: String): (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
+    ruleDescription: String):
+  (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
     val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
     // filter out time attributes
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
