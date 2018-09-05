@@ -212,7 +212,7 @@ abstract class ExpressionTestBase {
       }
   }
 
-  private def addSqlTestExpr(sqlExpr: String, expected: String): Unit = {
+  private[flink] def addSqlTestExpr(sqlExpr: String, expected: String): Unit = {
     // create RelNode from SQL expression
     val parsed = planner.parse(s"SELECT $sqlExpr FROM $tableName")
     val validated = planner.validate(parsed)

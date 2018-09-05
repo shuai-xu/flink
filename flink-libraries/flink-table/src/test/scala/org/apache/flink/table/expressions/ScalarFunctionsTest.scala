@@ -3195,4 +3195,11 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
       "decode(encode('中国', 'UTF-16LE'), 'UTF-16LE')",
       "中国")
   }
+
+  @Test
+  def testEmptyStringToTime(): Unit = {
+    TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+    addSqlTestExpr("to_date('2017-09-15 00:00:00') <> ''", "null")
+    addSqlTestExpr("to_timestamp(1513135677000) <> ''", "null")
+  }
 }
