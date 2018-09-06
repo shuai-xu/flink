@@ -128,6 +128,8 @@ class SortProcessOperatorHarnessTest extends TableTestBase {
 
     TestHarnessUtil.assertOutputEquals("Output was not correctly sorted.", expectedOutput, result)
 
+    testHarness.getEnvironment.getIOManager.shutdown()
+    testHarness.getEnvironment.getMemoryManager.shutdown()
     testHarness.close()
   }
 
@@ -243,6 +245,8 @@ class SortProcessOperatorHarnessTest extends TableTestBase {
 
     TestHarnessUtil.assertOutputEquals("Output was not correctly sorted.", expectedOutput, result)
 
+    testHarness.getEnvironment.getIOManager.shutdown()
+    testHarness.getEnvironment.getMemoryManager.shutdown()
     testHarness.close()
 
   }

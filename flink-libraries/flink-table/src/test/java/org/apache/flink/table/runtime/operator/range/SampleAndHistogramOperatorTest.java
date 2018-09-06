@@ -112,8 +112,9 @@ public class SampleAndHistogramOperatorTest {
 		OneInputStreamTaskTestHarness<IntermediateSampleData, Object[][]> testHarness =
 				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, inTypeInfo, outTypeInfo);
 
-		testHarness.setupOperatorChain(new OperatorID(), sampleAndHistogramOperator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(sampleAndHistogramOperator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();

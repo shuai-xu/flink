@@ -59,8 +59,9 @@ public class RemoveRangeIndexOperatorTest {
 				new OneInputStreamTaskTestHarness<>(
 						OneInputStreamTask::new, 2, 2, inTypeInfo, typeInfo);
 
-		testHarness.setupOperatorChain(new OperatorID(), operator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(operator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		long initialTime = 0L;
 

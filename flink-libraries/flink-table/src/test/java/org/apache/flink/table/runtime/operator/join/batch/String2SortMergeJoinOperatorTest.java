@@ -141,8 +141,9 @@ public class String2SortMergeJoinOperatorTest {
 					new int[]{1, 2}, typeInfo, typeInfo, joinedInfo);
 
 		testHarness.memorySize = 36 * 1024 * 1024;
-		testHarness.setupOperatorChain(new OperatorID(), operator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(operator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		long initialTime = 0L;
 

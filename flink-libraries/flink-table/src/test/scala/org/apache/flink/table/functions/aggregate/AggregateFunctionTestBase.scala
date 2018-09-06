@@ -382,8 +382,10 @@ abstract class AggregateFunctionTestBase {
     val testHarness = new OneInputStreamTaskTestHarness[BaseRow, BaseRow](taskFunc,
       inputType, outputType)
 
-    testHarness.setupOperatorChain(new OperatorID, operator)
     testHarness.setupOutputForSingletonOperatorChain()
+    testHarness.getStreamConfig.setStreamOperator(operator)
+    testHarness.getStreamConfig.setOperatorID(new OperatorID)
+
     testHarness.invoke()
     testHarness.waitForTaskRunning()
     for (row <- inputData) {

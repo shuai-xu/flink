@@ -72,8 +72,9 @@ public class LocalSampleOperatorTest {
 		OneInputStreamTaskTestHarness<BinaryRow, IntermediateSampleData> testHarness =
 				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, inTypeInfo, outTypeInfo);
 
-		testHarness.setupOperatorChain(new OperatorID(), operator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(operator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		long initialTime = 0L;
 

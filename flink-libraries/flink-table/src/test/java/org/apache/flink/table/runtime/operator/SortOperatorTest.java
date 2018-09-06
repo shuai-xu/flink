@@ -25,6 +25,7 @@ import org.apache.flink.api.common.typeutils.base.StringComparator;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
@@ -85,8 +86,10 @@ public class SortOperatorTest {
 		OneInputStreamTaskTestHarness<BinaryRow, BinaryRow> testHarness =
 				new OneInputStreamTaskTestHarness<>(OneInputStreamTask::new, 2, 2, typeInfo, typeInfo);
 
-		testHarness.setupOperatorChain(new OperatorID(), operator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		StreamConfig streamConfig = testHarness.getStreamConfig();
+		streamConfig.setStreamOperator(operator);
+		streamConfig.setOperatorID(new OperatorID());
 
 		long initialTime = 0L;
 

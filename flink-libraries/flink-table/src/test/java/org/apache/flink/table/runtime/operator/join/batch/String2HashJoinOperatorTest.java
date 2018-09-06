@@ -80,8 +80,9 @@ public class String2HashJoinOperatorTest {
 				TwoInputStreamTask::new, 2, 2, new int[]{1, 2}, typeInfo, typeInfo, joinedInfo);
 		testHarness.memorySize = 36 * 1024 * 1024;
 		testHarness.getExecutionConfig().enableObjectReuse();
-		testHarness.setupOperatorChain(new OperatorID(), operator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(operator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();

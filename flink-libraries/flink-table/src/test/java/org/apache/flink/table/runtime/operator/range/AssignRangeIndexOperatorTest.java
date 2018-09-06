@@ -84,8 +84,9 @@ public class AssignRangeIndexOperatorTest {
 		TwoInputStreamTaskTestHarness<Object[][], BinaryRow, Tuple2<Integer, BinaryRow>> testHarness =
 				new TwoInputStreamTaskTestHarness(env -> new TwoInputStreamTask((Environment) env), rangesTypeInfo, typeInfo, outTypeInfo);
 
-		testHarness.setupOperatorChain(new OperatorID(), sampleAndHistogramOperator);
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(sampleAndHistogramOperator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();

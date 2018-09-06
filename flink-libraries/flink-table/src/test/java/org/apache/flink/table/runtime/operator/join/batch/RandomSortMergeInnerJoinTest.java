@@ -250,8 +250,9 @@ public class RandomSortMergeInnerJoinTest {
 		testHarness.getExecutionConfig().enableObjectReuse();
 
 		testHarness.memorySize = 36 * 1024 * 1024;
-		testHarness.setupOperatorChain(new OperatorID(), operator).finish();
 		testHarness.setupOutputForSingletonOperatorChain();
+		testHarness.getStreamConfig().setStreamOperator(operator);
+		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
 		long initialTime = 0L;
 
