@@ -90,7 +90,7 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 
 		Configuration configuration = new Configuration();
 		configuration.addAll(jobGraph.getJobConfiguration());
-		configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, -1L);
+		configuration.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 500L);
 
 		// add (and override) the settings with what the user defined
 		configuration.addAll(this.configuration);

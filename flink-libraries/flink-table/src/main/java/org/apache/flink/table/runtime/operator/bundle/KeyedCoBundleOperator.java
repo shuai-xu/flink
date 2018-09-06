@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.operator.bundle;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.runtime.state.StateSnapshotContext;
@@ -28,7 +29,6 @@ import org.apache.flink.streaming.api.bundle.CoBundleTrigger;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.Output;
-import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Used for MiniBatch Join.
@@ -71,6 +72,9 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 	private long input2Watermark = Long.MIN_VALUE;
 	private long currentWatermark = Long.MIN_VALUE;
 
+	private TypeSerializer<L> lTypeSerializer;
+	private TypeSerializer<R> rTypeSerializer;
+
 	public KeyedCoBundleOperator(CoBundleTrigger<L, R> coBundleTrigger) {
 		Preconditions.checkNotNull(coBundleTrigger, "coBundleTrigger is null");
 		this.coBundleTrigger = coBundleTrigger;
@@ -78,24 +82,22 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public TwoInputSelection processRecord1(StreamRecord<L> element) throws Exception {
+	public void processElement1(StreamRecord<L> element) throws Exception {
 		K key = (K) getCurrentKey();
 		L row = element.getValue();
 		List<L> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		records.add(row);
 		coBundleTrigger.onLeftElement(row);
-		return TwoInputSelection.ANY;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public TwoInputSelection processRecord2(StreamRecord<R> element) throws Exception {
+	public void processElement2(StreamRecord<R> element) throws Exception {
 		K key = (K) getCurrentKey();
 		R row = element.getValue();
 		List<R> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		records.add(row);
 		coBundleTrigger.onRightElement(row);
-		return TwoInputSelection.ANY;
 	}
 
 	@Override
@@ -132,13 +134,14 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@Override
 	public void finishBundle() throws Exception {
-		assert(Thread.holdsLock(checkpointingLock));
-		if (!leftBuffer.isEmpty() || !rightBuffer.isEmpty()) {
-			this.processBundles(leftBuffer, rightBuffer, collector);
-			leftBuffer.clear();
-			rightBuffer.clear();
+		synchronized (checkpointingLock) {
+			if (!leftBuffer.isEmpty() || !rightBuffer.isEmpty()) {
+				this.processBundles(leftBuffer, rightBuffer, collector);
+				leftBuffer.clear();
+				rightBuffer.clear();
+			}
+			coBundleTrigger.reset();
 		}
-		coBundleTrigger.reset();
 	}
 
 	protected abstract void processBundles(
@@ -152,13 +155,25 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 	}
 
+	@VisibleForTesting
+	public void setupTypeSerializer(TypeSerializer<L> lSerializer, TypeSerializer<R> rSerializer) {
+		Objects.requireNonNull(lSerializer);
+		Objects.requireNonNull(rSerializer);
+		this.lTypeSerializer = lSerializer;
+		this.rTypeSerializer = rSerializer;
+	}
+
 	@Override
 	public void open() throws Exception {
 		super.open();
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 		this.collector = new StreamRecordCollector<>(output);
-		TypeSerializer<L> leftSerializer = config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader());
-		TypeSerializer<R> rightSerializer = config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader());
+		TypeSerializer<L> leftSerializer = this.lTypeSerializer == null
+			? config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader())
+			: this.lTypeSerializer;
+		TypeSerializer<R> rightSerializer = this.rTypeSerializer == null
+			? config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader())
+			: this.rTypeSerializer;
 
 		// create & restore state
 		//noinspection unchecked

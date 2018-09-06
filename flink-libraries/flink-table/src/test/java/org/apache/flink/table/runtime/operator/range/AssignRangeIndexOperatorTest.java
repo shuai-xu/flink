@@ -28,6 +28,7 @@ import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.tasks.StreamMockEnvironment;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTaskTestHarness;
 import org.apache.flink.streaming.util.TestHarnessUtil;
@@ -42,6 +43,7 @@ import org.junit.Test;
 import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.STRING_TYPE_INFO;
 import static org.apache.flink.table.dataformat.BinaryString.fromString;
 import static org.apache.flink.table.runtime.operator.join.batch.String2HashJoinOperatorTest.newRow;
+import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,11 +90,11 @@ public class AssignRangeIndexOperatorTest {
 		testHarness.getStreamConfig().setStreamOperator(sampleAndHistogramOperator);
 		testHarness.getStreamConfig().setOperatorID(new OperatorID());
 
-		testHarness.invoke();
+		StreamMockEnvironment environment = spy(testHarness.createEnvironment());
+		testHarness.invoke(environment);
 		testHarness.waitForTaskRunning();
 
 		testHarness.processElement(new StreamRecord<>(ranges), 0, 0);
-		testHarness.endInput();
 
 		for (BinaryRow row : data) {
 			testHarness.processElement(new StreamRecord<>(row, 0), 1, 0);

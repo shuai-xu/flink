@@ -39,10 +39,11 @@ import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.apache.flink.util.AbstractID
-import org.junit.{After, Assert, Before, Test}
+import org.junit._
 
 import scala.io.Source
 
+@Ignore
 class PlanUtilTest extends AbstractTestBase {
 
   private val conf = QueryTest.initConfigForTest(new TableConfig)

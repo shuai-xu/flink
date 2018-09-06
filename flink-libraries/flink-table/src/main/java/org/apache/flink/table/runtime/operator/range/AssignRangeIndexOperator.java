@@ -57,14 +57,13 @@ public class AssignRangeIndexOperator extends AbstractStreamOperatorWithMetrics<
 	}
 
 	@Override
-	public TwoInputSelection processRecord1(
+	public void processElement1(
 			StreamRecord<Object[][]> streamRecord) throws Exception {
 		rangeBoundaries = new CommonRangeBoundaries(keyExtractor, streamRecord.getValue());
-		return TwoInputSelection.FIRST;
 	}
 
 	@Override
-	public TwoInputSelection processRecord2(
+	public void processElement2(
 			StreamRecord<BaseRow> streamRecord) throws Exception {
 		if (rangeBoundaries == null) {
 			throw new RuntimeException("There should be one data from the first input.");
@@ -73,6 +72,5 @@ public class AssignRangeIndexOperator extends AbstractStreamOperatorWithMetrics<
 		tupleWithPartitionId.f0 = rangeBoundaries.getRangeIndex(streamRecord.getValue());
 		tupleWithPartitionId.f1 = streamRecord.getValue();
 		collector.collect(tupleWithPartitionId);
-		return TwoInputSelection.SECOND;
 	}
 }

@@ -371,6 +371,9 @@ public class WindowOperatorTest {
 		// do a snapshot, close and restore again
 		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
+		expectedOutputOutput.clear();
+		// new a testHarness
+		testHarness = createTestHarness(operator);
 		testHarness.setup();
 		testHarness.initializeState(snapshot);
 		testHarness.open();
@@ -488,6 +491,9 @@ public class WindowOperatorTest {
 		// do a snapshot, close and restore again
 		OperatorSubtaskState snapshot = testHarness.snapshot(0L, 0);
 		testHarness.close();
+		expectedOutputOutput.clear();
+		// new a testHarness
+		testHarness = createTestHarness(operator);
 		testHarness.setup();
 		testHarness.initializeState(snapshot);
 		testHarness.open();
@@ -1309,5 +1315,11 @@ public class WindowOperatorTest {
 			GenericRow right = BaseRowUtil.toGenericRow(row2, fieldTypes);
 			return left.equalsWithoutHeader(right);
 		}
+	}
+
+	private OneInputStreamOperatorTestHarness<BaseRow, BaseRow> createTestHarness(WindowOperator operator)
+		throws Exception {
+		return new KeyedOneInputStreamOperatorTestHarness<BaseRow, BaseRow, BaseRow>(
+			operator, keySelector, keyType);
 	}
 }

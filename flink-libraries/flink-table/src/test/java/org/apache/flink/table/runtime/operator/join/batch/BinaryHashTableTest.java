@@ -201,7 +201,7 @@ public class BinaryHashTableTest {
 
 		// allocate the memory for the HashTable
 		MemoryManager memManager = new MemoryManager(200 * PAGE_SIZE, 696 * PAGE_SIZE, 1,
-			MemoryType.HEAP, true);
+			PAGE_SIZE, MemoryType.HEAP, true);
 		final BinaryHashTable table = newBinaryHashTable(
 				this.buildSideSerializer, this.probeSideSerializer,
 				new MyProjection(), new MyProjection(), memManager,
