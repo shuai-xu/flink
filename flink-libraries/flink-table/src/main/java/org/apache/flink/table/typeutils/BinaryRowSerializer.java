@@ -30,10 +30,6 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -43,8 +39,6 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * Serializer for {@link BinaryRow}.
  */
 public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
-
-	private static final Logger LOG = LoggerFactory.getLogger(BinaryRowSerializer.class);
 
 	private static final long serialVersionUID = 1L;
 	public static final int LENGTH_SIZE_IN_BYTES = 4;
@@ -122,24 +116,12 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 
 	// ============================ serializeToPages ===================================
 
-	/**
-	 * TODO now stream runtime force use non-reuse version.
-	 */
 	@Override
 	public BinaryRow deserialize(DataInputView source) throws IOException {
-		return getBinaryRow(source, numFields);
-	}
-
-	public static BinaryRow getBinaryRow(DataInputView source, int numFields) throws IOException {
 		BinaryRow row = new BinaryRow(numFields);
 		int length = source.readInt();
 		byte[] bytes = new byte[length];
-		try {
-			source.readFully(bytes);
-		} catch (EOFException e) {
-			LOG.error("ReadFully fail, Length is: " + length);
-			throw e;
-		}
+		source.readFully(bytes);
 		row.pointTo(MemorySegmentFactory.wrap(bytes), 0, length);
 		return row;
 	}
@@ -166,52 +148,34 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 		checkArgument(target.getHeaderLength() == 0);
 
 		int sizeInBytes = record.getSizeInBytes();
-		int currSegAvailable = target.getSegmentSize() - target.getCurrentPositionInSegment();
 
-		if (record.getAllSegments().length == 1 &&
-				currSegAvailable >= getSerializedRowFixedPartLength()) {
+		int skip = checkSkipWrite(target);
+		if (record.getAllSegments().length == 1) {
 			target.writeInt(sizeInBytes);
 			target.write(record.getMemorySegment(), record.getBaseOffset(), sizeInBytes);
-			return 0;
 		} else {
-			return serializeToPagesSlow(record, target, currSegAvailable);
+			serializeToPagesSlow(record, target);
 		}
+		return skip;
 	}
 
-	private int serializeToPagesSlow(
-			BinaryRow record, AbstractPagedOutputView target,
-			int currSegAvailable) throws IOException {
-		int skip = 0;
+	private void serializeToPagesSlow(BinaryRow record, AbstractPagedOutputView out) throws IOException {
+		out.writeInt(record.getSizeInBytes());
+		int remainSize = record.getSizeInBytes();
+		int posInSegOfRecord = record.getBaseOffset();
+		for (MemorySegment segOfRecord : record.getAllSegments()) {
+			int nWrite = Math.min(record.getMemorySegment().size() - posInSegOfRecord, remainSize);
+			assert nWrite > 0;
+			out.write(segOfRecord, posInSegOfRecord, nWrite);
 
-		if (currSegAvailable < getSerializedRowFixedPartLength()) {
-			skip = currSegAvailable;
-			target.advance();
-		}
-
-		target.writeInt(record.getSizeInBytes());
-
-		int len = record.getSizeInBytes();
-		int point = record.getBaseOffset();
-		int restOfCurrSeg = record.getMemorySegment().size() - point;
-		int needCopy;
-		for (MemorySegment ms : record.getAllSegments()) {
-			needCopy = restOfCurrSeg > len ? len : restOfCurrSeg;
-			len -= needCopy;
-			while (needCopy > 0) {
-				target.checkAdvance();
-				int outSize = (target.getSegmentSize() - target.getCurrentPositionInSegment());
-				int currCopy = needCopy > outSize ? outSize : needCopy;
-				ms.copyTo(point, target.getCurrentSegment(), target.getCurrentPositionInSegment(), currCopy);
-				target.skipBytesToWrite(currCopy);
-				point += currCopy;
-				needCopy -= currCopy;
+			// next new segment.
+			posInSegOfRecord = 0;
+			remainSize -= nWrite;
+			if (remainSize == 0) {
+				break;
 			}
-			point = 0;
-			restOfCurrSeg = ms.size();
 		}
-		checkArgument(len == 0);
-
-		return skip;
+		checkArgument(remainSize == 0);
 	}
 
 	// ============================ deserializeFromPages ===================================
@@ -246,50 +210,49 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 
 		checkArgument(source.getHeaderLength() == 0);
 
-		// skip if there is no enough size.
 		checkSkipRead(source);
 
 		int length = source.readInt();
+		if (length < 0) {
+			throw new IOException(String.format(
+					"Read unexpected bytes in source of positionInSegment[%d] and limitInSegment[%d]",
+					source.getCurrentPositionInSegment(), source.getCurrentSegmentLimit()));
+		}
 
-		int currSegAvailable = source.getCurrentSegmentLimit() - source.getCurrentPositionInSegment();
+		int remainInSegment = source.getCurrentSegmentLimit() - source.getCurrentPositionInSegment();
 		MemorySegment currSeg = source.getCurrentSegment();
 		int currPosInSeg = source.getCurrentPositionInSegment();
-		if (currSegAvailable >= length) {
+		if (remainInSegment >= length) {
 			// all in one segment, that's good.
 			row.pointTo(currSeg, currPosInSeg, length);
 			source.skipBytesToRead(length);
 		} else {
-			pointToSlow(row, length, source, currSegAvailable, currSeg, currPosInSeg);
+			pointToSlow(row, source, length, length - remainInSegment, currSeg, currPosInSeg);
 		}
 	}
 
 	private void pointToSlow(
-			BinaryRow row, int length, AbstractPagedInputView source,
-			int currSegAvailable, MemorySegment currSeg, int currPosInSeg) throws IOException {
-
-		int restSize = length - currSegAvailable;
+			BinaryRow row, AbstractPagedInputView source, int sizeInBytes,
+			int remainLength, MemorySegment currSeg, int currPosInSeg) throws IOException {
 
 		int segmentSize = currSeg.size();
-		int div = restSize / segmentSize;
-		int rem = restSize - segmentSize * div; // equal to p % q
-		int varSegSize = rem == 0 ? div : div + 1;
+		int div = remainLength / segmentSize;
+		int remainder = remainLength - segmentSize * div; // equal to p % q
+		int varSegSize = remainder == 0 ? div : div + 1;
 
 		MemorySegment[] segments = new MemorySegment[varSegSize + 1];
 		segments[0] = currSeg;
-		for (int i = 0; i < varSegSize; i++) {
+		for (int i = 1; i <= varSegSize; i++) {
 			source.advance();
-			segments[i + 1] = source.getCurrentSegment();
+			segments[i] = source.getCurrentSegment();
 		}
-		if (rem != 0) {
-			// Skip the last remaining offset
-			source.skipBytesToRead(rem);
-		} else {
-			// The remaining is 0. There is no next Segment at this time. The current Segment is
-			// all the data of this row, so we need to skip segmentSize bytes to read. We can't
-			// jump directly to the next Segment. Because maybe there are no segment in later.
-			source.skipBytesToRead(segmentSize);
-		}
-		row.pointTo(segments, currPosInSeg, length);
+
+		// The remaining is 0. There is no next Segment at this time. The current Segment is
+		// all the data of this row, so we need to skip segmentSize bytes to read. We can't
+		// jump directly to the next Segment. Because maybe there are no segment in later.
+		int remainLenInLastSeg = remainder == 0 ? segmentSize : remainder;
+		source.skipBytesToRead(remainLenInLastSeg);
+		row.pointTo(segments, currPosInSeg, sizeInBytes);
 	}
 
 	@Override
@@ -342,8 +305,24 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 		return true;
 	}
 
+	/**
+	 * For {@link #pointTo}, we need skip bytes when the remain bytes of current segment is not
+	 * enough to write binary row fixed part.
+	 * See {@link BinaryRow}.
+	 */
+	private int checkSkipWrite(AbstractPagedOutputView out) throws IOException {
+		// skip if there is no enough size.
+		int available = out.getSegmentSize() - out.getCurrentPositionInSegment();
+		if (available < getSerializedRowFixedPartLength()) {
+			out.advance();
+			return available;
+		}
+		return 0;
+	}
+
 	public void checkSkipRead(AbstractPagedInputView source) throws IOException {
 		// skip if there is no enough size.
+		// Note: Use currentSegmentLimit instead of segmentSize.
 		int available = source.getCurrentSegmentLimit() - source.getCurrentPositionInSegment();
 		if (available < getSerializedRowFixedPartLength()) {
 			source.advance();

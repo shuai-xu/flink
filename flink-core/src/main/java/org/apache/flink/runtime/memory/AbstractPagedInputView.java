@@ -574,4 +574,58 @@ public abstract class AbstractPagedInputView implements DataInputView {
 	public int getHeaderLength() {
 		return headerLength;
 	}
+
+	/**
+	 * Reads up to {@code len} bytes of memory and stores it into {@code segment} starting at offset {@code off}.
+	 * It returns the number of read bytes or -1 if there is no more data left.
+	 *
+	 * @param segment memory segment to store the data to.
+	 * @param off offset into memory segment.
+	 * @param len byte length to read.
+	 * @return the number of actually read bytes of -1 if there is no more data left.
+	 * @throws IOException if an I/O error occurs.
+	 */
+	public int read(MemorySegment segment, int off, int len) throws IOException{
+		int remaining = this.limitInSegment - this.positionInSegment;
+		if (remaining >= len) {
+			this.currentSegment.copyTo(this.positionInSegment, segment, off, len);
+			this.positionInSegment += len;
+			return len;
+		}
+		else {
+			if (remaining == 0) {
+				try {
+					advance();
+				}
+				catch (EOFException eof) {
+					return -1;
+				}
+				remaining = this.limitInSegment - this.positionInSegment;
+			}
+
+			int bytesRead = 0;
+			while (true) {
+				int toRead = Math.min(remaining, len - bytesRead);
+				this.currentSegment.copyTo(this.positionInSegment, segment, off, toRead);
+				off += toRead;
+				bytesRead += toRead;
+
+				if (len > bytesRead) {
+					try {
+						advance();
+					}
+					catch (EOFException eof) {
+						this.positionInSegment += toRead;
+						return bytesRead;
+					}
+					remaining = this.limitInSegment - this.positionInSegment;
+				}
+				else {
+					this.positionInSegment += toRead;
+					break;
+				}
+			}
+			return len;
+		}
+	}
 }

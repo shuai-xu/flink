@@ -47,8 +47,9 @@ public class MultiSegUtil {
 	private static void bitUnSetMultiSeg(MemorySegment[] segments, int baseOffset, int index) {
 		int offset = baseOffset + ((index & BIT_BYTE_POSITION_MASK) >>> 3);
 		int segSize = segments[0].size();
-		int segOffset = offset % segSize;
-		MemorySegment segment = segments[offset / segSize];
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
+		MemorySegment segment = segments[segIndex];
 
 		byte current = segment.get(segOffset);
 		current &= ~(1 << (index & BIT_BYTE_INDEX_MASK));
@@ -70,8 +71,9 @@ public class MultiSegUtil {
 	private static void bitSetMultiSeg(MemorySegment[] segments, int baseOffset, int index) {
 		int offset = baseOffset + ((index & BIT_BYTE_POSITION_MASK) >>> 3);
 		int segSize = segments[0].size();
-		int segOffset = offset % segSize;
-		MemorySegment segment = segments[offset / segSize];
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
+		MemorySegment segment = segments[segIndex];
 
 		byte current = segment.get(segOffset);
 		current |= (1 << (index & BIT_BYTE_INDEX_MASK));
@@ -94,7 +96,9 @@ public class MultiSegUtil {
 
 	private static boolean getBooleanMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		return segments[offset / segSize].getBoolean(offset % segSize);
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
+		return segments[segIndex].getBoolean(segOffset);
 	}
 
 	public static void setBoolean(MemorySegment[] segments, int offset, boolean value) {
@@ -107,7 +111,9 @@ public class MultiSegUtil {
 
 	private static void setBooleanMultiSeg(MemorySegment[] segments, int offset, boolean value) {
 		int segSize = segments[0].size();
-		segments[offset / segSize].putBoolean(offset % segSize, value);
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
+		segments[segIndex].putBoolean(segOffset, value);
 	}
 
 	public static byte getByte(MemorySegment[] segments, int offset) {
@@ -120,7 +126,9 @@ public class MultiSegUtil {
 
 	private static byte getByteMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		return segments[offset / segSize].get(offset % segSize);
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
+		return segments[segIndex].get(segOffset);
 	}
 
 	public static void setByte(MemorySegment[] segments, int offset, byte value) {
@@ -133,7 +141,9 @@ public class MultiSegUtil {
 
 	private static void setByteMultiSeg(MemorySegment[] segments, int offset, byte value) {
 		int segSize = segments[0].size();
-		segments[offset / segSize].put(offset % segSize, value);
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
+		segments[segIndex].put(segOffset, value);
 	}
 
 	public static int getInt(MemorySegment[] segments, int offset) {
@@ -146,13 +156,13 @@ public class MultiSegUtil {
 
 	private static int getIntMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 3) {
-			return segments[segNum].getInt(segOffset);
+			return segments[segIndex].getInt(segOffset);
 		} else {
-			return getIntSlowly(segments, segSize, segNum, segOffset);
+			return getIntSlowly(segments, segSize, segIndex, segOffset);
 		}
 	}
 
@@ -186,13 +196,13 @@ public class MultiSegUtil {
 
 	private static void setIntMultiSeg(MemorySegment[] segments, int offset, int value) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 3) {
-			segments[segNum].putInt(segOffset, value);
+			segments[segIndex].putInt(segOffset, value);
 		} else {
-			setIntSlowly(segments, segSize, segNum, segOffset, value);
+			setIntSlowly(segments, segSize, segIndex, segOffset, value);
 		}
 	}
 
@@ -225,13 +235,13 @@ public class MultiSegUtil {
 
 	private static long getLongMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 7) {
-			return segments[segNum].getLong(segOffset);
+			return segments[segIndex].getLong(segOffset);
 		} else {
-			return getLongSlowly(segments, segSize, segNum, segOffset);
+			return getLongSlowly(segments, segSize, segIndex, segOffset);
 		}
 	}
 
@@ -265,13 +275,13 @@ public class MultiSegUtil {
 
 	private static void setLongMultiSeg(MemorySegment[] segments, int offset, long value) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 7) {
-			segments[segNum].putLong(segOffset, value);
+			segments[segIndex].putLong(segOffset, value);
 		} else {
-			setLongSlowly(segments, segSize, segNum, segOffset, value);
+			setLongSlowly(segments, segSize, segIndex, segOffset, value);
 		}
 	}
 
@@ -304,13 +314,13 @@ public class MultiSegUtil {
 
 	private static short getShortMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 1) {
-			return segments[segNum].getShort(segOffset);
+			return segments[segIndex].getShort(segOffset);
 		} else {
-			return (short) get2ByteSlowly(segments, segSize, segNum, segOffset);
+			return (short) get2ByteSlowly(segments, segSize, segIndex, segOffset);
 		}
 	}
 
@@ -324,13 +334,13 @@ public class MultiSegUtil {
 
 	private static void setShortMultiSeg(MemorySegment[] segments, int offset, short value) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 1) {
-			segments[segNum].putShort(segOffset, value);
+			segments[segIndex].putShort(segOffset, value);
 		} else {
-			set2ByteSlowly(segments, segSize, segNum, segOffset, value, value >> 8);
+			set2ByteSlowly(segments, segSize, segIndex, segOffset, value, value >> 8);
 		}
 	}
 
@@ -344,13 +354,13 @@ public class MultiSegUtil {
 
 	private static float getFloatMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 3) {
-			return segments[segNum].getFloat(segOffset);
+			return segments[segIndex].getFloat(segOffset);
 		} else {
-			return Float.intBitsToFloat(getIntSlowly(segments, segSize, segNum, segOffset));
+			return Float.intBitsToFloat(getIntSlowly(segments, segSize, segIndex, segOffset));
 		}
 	}
 
@@ -364,13 +374,13 @@ public class MultiSegUtil {
 
 	private static void setFloatMultiSeg(MemorySegment[] segments, int offset, float value) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 3) {
-			segments[segNum].putFloat(segOffset, value);
+			segments[segIndex].putFloat(segOffset, value);
 		} else {
-			setIntSlowly(segments, segSize, segNum, segOffset, Float.floatToRawIntBits(value));
+			setIntSlowly(segments, segSize, segIndex, segOffset, Float.floatToRawIntBits(value));
 		}
 	}
 
@@ -384,13 +394,13 @@ public class MultiSegUtil {
 
 	private static double getDoubleMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 7) {
-			return segments[segNum].getDouble(segOffset);
+			return segments[segIndex].getDouble(segOffset);
 		} else {
-			return Double.longBitsToDouble(getLongSlowly(segments, segSize, segNum, segOffset));
+			return Double.longBitsToDouble(getLongSlowly(segments, segSize, segIndex, segOffset));
 		}
 	}
 
@@ -404,13 +414,13 @@ public class MultiSegUtil {
 
 	private static void setDoubleMultiSeg(MemorySegment[] segments, int offset, double value) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 7) {
-			segments[segNum].putDouble(segOffset, value);
+			segments[segIndex].putDouble(segOffset, value);
 		} else {
-			setLongSlowly(segments, segSize, segNum, segOffset, Double.doubleToRawLongBits(value));
+			setLongSlowly(segments, segSize, segIndex, segOffset, Double.doubleToRawLongBits(value));
 		}
 	}
 
@@ -424,13 +434,13 @@ public class MultiSegUtil {
 
 	private static char getCharMultiSeg(MemorySegment[] segments, int offset) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 1) {
-			return segments[segNum].getChar(segOffset);
+			return segments[segIndex].getChar(segOffset);
 		} else {
-			return (char) get2ByteSlowly(segments, segSize, segNum, segOffset);
+			return (char) get2ByteSlowly(segments, segSize, segIndex, segOffset);
 		}
 	}
 
@@ -464,13 +474,13 @@ public class MultiSegUtil {
 
 	private static void setCharMultiSeg(MemorySegment[] segments, int offset, char value) {
 		int segSize = segments[0].size();
-		int segNum = offset / segSize;
-		int segOffset = offset % segSize;
+		int segIndex = offset / segSize;
+		int segOffset = offset - segIndex * segSize; // equal to %
 
 		if (segOffset < segSize - 3) {
-			segments[segNum].putChar(segOffset, value);
+			segments[segIndex].putChar(segOffset, value);
 		} else {
-			set2ByteSlowly(segments, segSize, segNum, segOffset, value, value >> 8);
+			set2ByteSlowly(segments, segSize, segIndex, segOffset, value, value >> 8);
 		}
 	}
 

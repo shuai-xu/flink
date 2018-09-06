@@ -405,7 +405,7 @@ public class BinaryRowUtil {
 	public static boolean equals(
 			MemorySegment[] segments1, int offset1,
 			MemorySegment[] segments2, int offset2, int len) {
-		if (segments1.length == 1 && segments2.length == 1) {
+		if (allInFirstSeg(segments1, offset1, len) && allInFirstSeg(segments2, offset2, len)) {
 			return segments1[0].equalTo(segments2[0], offset1, offset2, len);
 		} else {
 			return equalsSlow(segments1, offset1, segments2, offset2, len);
@@ -416,28 +416,33 @@ public class BinaryRowUtil {
 			MemorySegment[] segments1, int offset1,
 			MemorySegment[] segments2, int offset2, int len) {
 		if (len == 0) {
+			// quick way and avoid segSize is zero.
 			return true;
 		}
+
 		int segSize1 = segments1[0].size();
 		int segSize2 = segments2[0].size();
+
+		// find first segIndex and segOffset of segments.
 		int segIndex1 = offset1 / segSize1;
 		int segIndex2 = offset2 / segSize2;
-		int segOffset1 = offset1 % segSize1;
-		int segOffset2 = offset2 % segSize2;
+		int segOffset1 = offset1 - segSize1 * segIndex1; // equal to %
+		int segOffset2 = offset2 - segSize2 * segIndex2; // equal to %
+
 		while (len > 0) {
-			int nowLen = Math.min(Math.min(len, segSize1 - segOffset1), segSize2 - segOffset2);
-			if (!segments1[segIndex1].equalTo(segments2[segIndex2], segOffset1, segOffset2, nowLen)) {
+			int equalLen = Math.min(Math.min(len, segSize1 - segOffset1), segSize2 - segOffset2);
+			if (!segments1[segIndex1].equalTo(segments2[segIndex2], segOffset1, segOffset2, equalLen)) {
 				return false;
 			}
-			len -= nowLen;
-			segOffset1 += nowLen;
-			if (segOffset1 >= segSize1) {
-				segOffset1 -= segSize1;
+			len -= equalLen;
+			segOffset1 += equalLen;
+			if (segOffset1 == segSize1) {
+				segOffset1 = 0;
 				segIndex1++;
 			}
-			segOffset2 += nowLen;
-			if (segOffset2 >= segSize2) {
-				segOffset2 -= segSize2;
+			segOffset2 += equalLen;
+			if (segOffset2 == segSize2) {
+				segOffset2 = 0;
 				segIndex2++;
 			}
 		}
@@ -450,7 +455,7 @@ public class BinaryRowUtil {
 
 	public static byte[] copy(MemorySegment[] segments, int offset, byte[] bytes,
 			int bytesOffset, int numBytes) {
-		if (segments.length == 1) {
+		if (allInFirstSeg(segments, offset, numBytes)) {
 			segments[0].get(offset, bytes, bytesOffset, numBytes);
 		} else {
 			copySlow(segments, offset, bytes, bytesOffset, numBytes);
@@ -464,18 +469,21 @@ public class BinaryRowUtil {
 
 	public static void copySlow(MemorySegment[] segments, int offset, byte[] bytes,
 			int bytesOffset, int numBytes) {
-		int needCopy = numBytes;
-		for (MemorySegment ms : segments) {
-			int remain = ms.size() - offset;
+		int remainSize = numBytes;
+		for (MemorySegment segment : segments) {
+			int remain = segment.size() - offset;
 			if (remain > 0) {
-				int currCopy = remain > needCopy ? needCopy : remain;
-				ms.get(offset, bytes, numBytes - needCopy + bytesOffset, currCopy);
-				needCopy -= currCopy;
-				if (needCopy == 0) {
+				int nCopy = Math.min(remain, remainSize);
+				segment.get(offset, bytes, numBytes - remainSize + bytesOffset, nCopy);
+				remainSize -= nCopy;
+				// next new segment.
+				offset = 0;
+				if (remainSize == 0) {
 					return;
 				}
-				offset = 0;
 			} else {
+				// remain is negative, let's advance to next segment
+				// now the offset = offset - segmentSize (-remain)
 				offset = -remain;
 			}
 		}
@@ -494,18 +502,21 @@ public class BinaryRowUtil {
 	private static void copyToUnsafeSlow(
 			MemorySegment[] segments, int offset,
 			Object target, int pointer, int numBytes) {
-		int needCopy = numBytes;
-		for (MemorySegment ms : segments) {
-			int remain = ms.size() - offset;
+		int remainSize = numBytes;
+		for (MemorySegment segment : segments) {
+			int remain = segment.size() - offset;
 			if (remain > 0) {
-				int currCopy = remain > needCopy ? needCopy : remain;
-				ms.copyToUnsafe(offset, target, pointer + numBytes - needCopy, currCopy);
-				needCopy -= currCopy;
-				if (needCopy == 0) {
+				int nCopy = Math.min(remain, remainSize);
+				segment.copyToUnsafe(offset, target, numBytes - remainSize + pointer, nCopy);
+				remainSize -= nCopy;
+				// next new segment.
+				offset = 0;
+				if (remainSize == 0) {
 					return;
 				}
-				offset = 0;
 			} else {
+				// remain is negative, let's advance to next segment
+				// now the offset = offset - segmentSize (-remain)
 				offset = -remain;
 			}
 		}
@@ -530,18 +541,21 @@ public class BinaryRowUtil {
 	private static void copyFromUnsafeSlow(
 			MemorySegment[] segments, int offset,
 			Object target, int pointer, int numBytes) {
-		int needCopy = numBytes;
-		for (MemorySegment ms : segments) {
-			int remain = ms.size() - offset;
+		int remainSize = numBytes;
+		for (MemorySegment segment : segments) {
+			int remain = segment.size() - offset;
 			if (remain > 0) {
-				int currCopy = remain > needCopy ? needCopy : remain;
-				ms.copyFromUnsafe(offset, target, pointer + numBytes - needCopy, currCopy);
-				needCopy -= currCopy;
-				if (needCopy == 0) {
+				int nCopy = Math.min(remain, remainSize);
+				segment.copyFromUnsafe(offset, target, numBytes - remainSize + pointer, nCopy);
+				remainSize -= nCopy;
+				// next new segment.
+				offset = 0;
+				if (remainSize == 0) {
 					return;
 				}
-				offset = 0;
 			} else {
+				// remain is negative, let's advance to next segment
+				// now the offset = offset - segmentSize (-remain)
 				offset = -remain;
 			}
 		}
@@ -571,7 +585,7 @@ public class BinaryRowUtil {
 		return length;
 	}
 
-	private static boolean inOneSeg(MemorySegment[] segments, int offset, int numBytes) {
+	private static boolean allInFirstSeg(MemorySegment[] segments, int offset, int numBytes) {
 		return numBytes + offset <= segments[0].size();
 	}
 
@@ -587,8 +601,8 @@ public class BinaryRowUtil {
 		if (numBytes2 == 0) { // quick way 1.
 			return offset1;
 		}
-		if (inOneSeg(segments1, offset1, numBytes1) &&
-				inOneSeg(segments2, offset2, numBytes2)) {
+		if (allInFirstSeg(segments1, offset1, numBytes1) &&
+				allInFirstSeg(segments2, offset2, numBytes2)) {
 			byte first = segments2[0].get(offset2);
 			int end = numBytes1 - numBytes2 + offset1;
 			for (int i = offset1; i <= end; i++) {

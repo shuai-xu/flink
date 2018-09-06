@@ -144,7 +144,7 @@ object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.Column
     columns: ImmutableBitSet,
     ignoreNulls: Boolean): JBool = {
 
-    columns != null && columns.toArray.equals(rel.getUniqueKeys)
+    columns != null && columns.toArray.sameElements(rel.getUniqueKeys)
   }
 
   def areColumnsUnique(
