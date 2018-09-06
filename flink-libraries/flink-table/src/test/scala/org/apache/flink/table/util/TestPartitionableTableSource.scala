@@ -27,7 +27,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala.getCallLocationName
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.io.{GenericInputSplit, InputSplit, InputSplitAssigner}
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
@@ -86,7 +86,7 @@ class TestPartitionableTableSource(
     remainingData
   }
 
-  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] = {
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
     val streamSource = streamEnv.createInput(
       new TestPartitionInputFormat(getPartitionData),
       returnType, getCallLocationName()).setParallelism(1)

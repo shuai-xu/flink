@@ -27,7 +27,7 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
 import org.apache.flink.streaming.api.functions.source.SourceFunction
@@ -391,8 +391,7 @@ class JoinDimensionTableITCase extends QueryTest {
      * [[org.apache.flink.table.sources.TableSource]].
      * Do not use it in Table API programs.
      */
-    override def getBoundedStream(streamEnv: StreamExecutionEnvironment):
-      DataStreamSource[BaseRow] = {
+    override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
       val mockKey = IndexKey.of(true, 1)
       val fetcher = getLookupFunction(mockKey)
       val sourceFunction = new TestSourceFunction(fetcher.asInstanceOf[TestSingleKeyFetcher])

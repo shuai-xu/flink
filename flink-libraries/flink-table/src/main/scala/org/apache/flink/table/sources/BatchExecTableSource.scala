@@ -19,7 +19,6 @@
 package org.apache.flink.table.sources
 
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.streaming.api.datastream.DataStreamSource
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 /** Defines an external batch exec table and provides access to its data.
@@ -34,5 +33,5 @@ trait BatchExecTableSource[T] extends TableSource {
     * NOTE: This method is for internal use only for defining a [[TableSource]].
     *       Do not use it in Table API programs.
     */
-  def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStreamSource[T]
+  def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[T]
 }

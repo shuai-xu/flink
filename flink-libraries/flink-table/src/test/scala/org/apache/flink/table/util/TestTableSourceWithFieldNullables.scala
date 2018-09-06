@@ -20,7 +20,7 @@ package org.apache.flink.table.util
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.stats.TableStats
@@ -48,7 +48,7 @@ class TestTableSourceWithFieldNullables(
 
   override def getTableStats: TableStats = null
 
-  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] = null
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = null
 
   /** Returns the nullable properties of the table fields. */
   override def getFieldNullables: Array[Boolean] = fieldNullables

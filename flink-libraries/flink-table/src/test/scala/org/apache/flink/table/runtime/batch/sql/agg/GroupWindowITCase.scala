@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_T
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.TIMESTAMP
 import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import scala.collection.JavaConversions._
@@ -71,8 +71,7 @@ class GroupWindowITCase extends QueryTest {
 
       override def getTableStats: TableStats = TableStats(10000000L, colStats)
 
-      override def getBoundedStream(streamEnv: StreamExecutionEnvironment):
-        DataStreamSource[Row] = {
+      override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
         streamEnv.createInput(
           new CollectionInputFormat[Row](data3WithTimestamp.asJava,
             type3WithTimestamp.createSerializer(env.getConfig)),

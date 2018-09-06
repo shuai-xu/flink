@@ -24,7 +24,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.RowCsvInputFormat
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction
 import org.apache.flink.streaming.api.operators.StreamSource
@@ -259,7 +259,7 @@ object BatchExecResourceTest {
       stats: TableStats) extends BatchExecTableSource[Row] with LimitableTableSource {
     var isLimitPushdown = false
 
-    override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] = {
+    override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
       val inputFormat = new RowCsvInputFormat(
         new Path("/tmp/tmp"),
         schema.getFieldTypes.map(DataTypes.toTypeInfo),

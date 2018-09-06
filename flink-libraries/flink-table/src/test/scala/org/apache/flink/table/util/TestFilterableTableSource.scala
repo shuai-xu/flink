@@ -26,7 +26,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala.getCallLocationName
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.Types._
 import org.apache.flink.table.expressions._
@@ -79,7 +79,7 @@ class TestFilterableTableSource(
       physicalRowType)
   }
 
-  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] =
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] =
     streamEnv.createInput(
       new CollectionInputFormat[Row](
         generateDynamicCollection().asJava,

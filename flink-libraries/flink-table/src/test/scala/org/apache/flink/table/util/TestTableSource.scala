@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.RowCsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.stats.TableStats
@@ -45,8 +45,7 @@ class TestTableSource(
 
   override def getTableStats: TableStats = null
 
-  override def getBoundedStream(
-    streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] = {
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
     val inputFormat = new RowCsvInputFormat(new Path("/tmp/tmp"),
       fieldTypes,
       "\n",

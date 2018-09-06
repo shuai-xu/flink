@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.batch.sql
 import java.sql.Timestamp
 
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableSchema
@@ -61,8 +61,7 @@ class WindowAggregateTest extends TableTestBatchExecBase {
 
       override def getTableStats: TableStats = TableStats(10000000L, colStats)
 
-      override def getBoundedStream(
-        streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] = null
+      override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = null
     }
     util.addTable("t1", table)
   }

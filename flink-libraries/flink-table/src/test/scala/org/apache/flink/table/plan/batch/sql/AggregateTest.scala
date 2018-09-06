@@ -17,7 +17,7 @@
  */
 package org.apache.flink.table.plan.batch.sql
 
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
@@ -57,7 +57,7 @@ class AggregateTest extends TableTestBatchExecBase {
       override def getTableStats: TableStats = TableStats(10000000L, colStats)
 
       override def getBoundedStream(streamEnv: StreamExecutionEnvironment):
-        DataStreamSource[Row] = null
+        DataStream[Row] = null
     }
     util.addTable("t1", table)
     // sets the table memory size of hashAgg operator to 1MB

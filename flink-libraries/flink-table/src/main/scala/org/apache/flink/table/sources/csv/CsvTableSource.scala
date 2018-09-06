@@ -24,7 +24,7 @@ import java.util.TimeZone
 
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -114,8 +114,7 @@ class CsvTableSource(
     * NOTE: This method is for internal use only for defining a [[TableSource]].
     * Do not use it in Table API programs.
     */
-  override def getBoundedStream(streamExecEnv: StreamExecutionEnvironment):
-    DataStreamSource[BaseRow] = {
+  override def getBoundedStream(streamExecEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
     streamExecEnv.createInput(createCsvInput, returnTypeInfo, s"csv source: $path")
   }
 

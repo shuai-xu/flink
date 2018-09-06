@@ -19,7 +19,7 @@
 package org.apache.flink.table.sources.orc
 
 import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
@@ -85,8 +85,7 @@ class OrcVectorizedColumnRowTableSource(
     tableSource
   }
 
-  override def getBoundedStream(streamEnv: StreamExecutionEnvironment):
-    DataStreamSource[ColumnarRow] = {
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[ColumnarRow] = {
     val inputFormat =
       new VectorizedColumnRowInputOrcFormat(filePath, fieldTypes, fieldNames, copyToFlink)
     try

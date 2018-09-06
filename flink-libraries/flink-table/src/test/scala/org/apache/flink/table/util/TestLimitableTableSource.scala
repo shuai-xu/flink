@@ -22,7 +22,7 @@ import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.streaming.api.datastream.DataStreamSource
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.sources._
 import org.apache.flink.table.types.{DataType, DataTypes}
@@ -47,7 +47,7 @@ class TestLimitableTableSource(
    * NOTE: This method is for internal use only for defining a [[TableSource]].
    * Do not use it in Table API programs.
    */
-  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStreamSource[Row] = {
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
     if (limit == 0 && limit >= 0) {
       throw new RuntimeException("This source can't generate data due abnormal limit " + limit)
     }
