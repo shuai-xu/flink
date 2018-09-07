@@ -148,7 +148,7 @@ public abstract class AbstractRocksDBSortedPartitionIterator<T> implements Itera
 		}
 
 		Pair<Row, Row> getCurrentPair() {
-			return currentEntry.getRowPair(descriptor);
+			return currentEntry.getRowPair(descriptor, descriptor.getKeySerializer(), descriptor.getValueSerializer());
 		}
 
 		byte[] getCurrentDBKey() {

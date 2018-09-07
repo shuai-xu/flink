@@ -297,14 +297,15 @@ public class RocksDBIncrementalRestoreOperation {
 	}
 
 	private void restoreStateData(
-		RocksDBInstance tablet,
+		RocksDBInstance dbInstance,
 		RocksDBInstance extraInstance,
 		GroupSet groups
-	) {
+	) throws RocksDBException {
 		long numEntries = 0;
 		long startMillis = System.currentTimeMillis();
 
-		try (RocksIterator iterator = extraInstance.iterator()) {
+		try (RocksIterator iterator = extraInstance.iterator();
+			RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(dbInstance.getDb(), dbInstance.getWriteOptions())) {
 			for (int group : stateBackend.getGroups().intersect(groups)) {
 
 				byte[] keyGroupPrefix = serializeGroupPrefix(group);
@@ -315,7 +316,7 @@ public class RocksDBIncrementalRestoreOperation {
 						break;
 					}
 
-					tablet.put(iterator.key(), iterator.value());
+					writeBatchWrapper.put(dbInstance.getDefaultColumnFamily(), iterator.key(), iterator.value());
 					numEntries++;
 
 					iterator.next();

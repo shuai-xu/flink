@@ -69,7 +69,7 @@ public class RocksDBInternalState implements InternalState {
 	 */
 	static final byte KEY_END_BYTE = 0x7F;
 
-	private static final int KEY = 0;
+	static final int KEY = 0;
 
 	private static final int VALUE = 1;
 
@@ -574,7 +574,7 @@ public class RocksDBInternalState implements InternalState {
 
 				byte[] dbKeyEnd = serializePrefixKeysEnd(group, prefixKeys);
 				if (RocksDBInstance.compare(dbKey, dbKeyEnd) < 0) {
-					result = (new RocksDBEntry(dbInstance, dbKey, dbValue)).getRowPair(descriptor);
+					result = (new RocksDBEntry(dbInstance, dbKey, dbValue)).getRowPair(descriptor, GROUP_BYTES_TO_SKIP + stateNameBytes.length);
 				}
 			}
 		}
@@ -604,7 +604,7 @@ public class RocksDBInternalState implements InternalState {
 
 				byte[] dbKeyStart = serializePrefixKeys(group, prefixKeys, null);
 				if (RocksDBInstance.compare(dbKeyStart, dbKey) < 0) {
-					result = (new RocksDBEntry(dbInstance, dbKey, dbValue)).getRowPair(descriptor);
+					result = (new RocksDBEntry(dbInstance, dbKey, dbValue)).getRowPair(descriptor, GROUP_BYTES_TO_SKIP + stateNameBytes.length);
 				}
 			}
 		}
@@ -641,7 +641,7 @@ public class RocksDBInternalState implements InternalState {
 			new RocksDBStateRangeIterator<Pair<Row, Row>>(dbInstance, startKeyBytes, endKeyBytes) {
 				@Override
 				public Pair<Row, Row> next() {
-					return getNextEntry().getRowPair(descriptor);
+					return getNextEntry().getRowPair(descriptor, GROUP_BYTES_TO_SKIP + stateNameBytes.length);
 				}
 			};
 	}
@@ -730,7 +730,7 @@ public class RocksDBInternalState implements InternalState {
 			ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(bytes);
 			DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 
-			return deserializeRow(descriptor, inputView, VALUE);
+			return deserializeValueRow(descriptor, inputView);
 		} catch (IOException e) {
 			throw new SerializationException(e);
 		}
@@ -772,7 +772,50 @@ public class RocksDBInternalState implements InternalState {
 			if (isNullField) {
 				result.setField(i, null);
 			} else {
-				TypeSerializer<Object> serializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[i];
+				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
+				result.setField(i, serializer.deserialize(inputView));
+			}
+		}
+
+		return result;
+	}
+
+	static Row deserializeKeyRow(
+		InternalStateDescriptor descriptor,
+		DataInputViewStreamWrapper inputView
+	) throws IOException {
+		int len = descriptor.getNumKeyColumns();
+		RowSerializer rowSerializer = descriptor.getKeySerializer();
+
+		Row result = new Row(len);
+		for (int i = 0; i < len; i++) {
+			inputView.skipBytesToRead(1);
+			boolean isNullField = inputView.readBoolean();
+			if (isNullField) {
+				result.setField(i, null);
+			} else {
+				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
+				result.setField(i, serializer.deserialize(inputView));
+			}
+		}
+
+		return result;
+	}
+
+	static Row deserializeValueRow(
+		InternalStateDescriptor descriptor,
+		DataInputViewStreamWrapper inputView
+	) throws IOException {
+		int len = descriptor.getNumValueColumns();
+		RowSerializer rowSerializer = descriptor.getValueSerializer();
+
+		Row result = new Row(len);
+		for (int i = 0; i < len; i++) {
+			boolean isNullField = inputView.readBoolean();
+			if (isNullField) {
+				result.setField(i, null);
+			} else {
+				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
 				result.setField(i, serializer.deserialize(inputView));
 			}
 		}
@@ -796,7 +839,7 @@ public class RocksDBInternalState implements InternalState {
 				if (isNullField) {
 					result.setField(i, null);
 				} else {
-					TypeSerializer<Object> serializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[i];
+					TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
 					result.setField(i, serializer.deserialize(inputView));
 				}
 			}
@@ -869,8 +912,8 @@ public class RocksDBInternalState implements InternalState {
 		private int keyField;
 
 		private RocksDBSortedPartitionIterator(Collection<Iterator<RocksDBEntry>> groupIterators,
-											RocksDBKeyComparator comparator,
-											int keyField) {
+												RocksDBKeyComparator comparator,
+												int keyField) {
 			super(groupIterators, RocksDBInternalState.this.descriptor);
 
 			this.comparator = Preconditions.checkNotNull(comparator);

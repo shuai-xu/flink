@@ -36,6 +36,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.flink.contrib.streaming.state.RocksDBInternalState.GROUP_BYTES_TO_SKIP;
+
 /**
  * The rocksDB entry of (dbKey, dbValue).
  */
@@ -73,7 +75,7 @@ public class RocksDBEntry {
 	 *
 	 * @param descriptor the given internal state descriptor
 	 */
-	Pair<Row, Row> getRowPair(InternalStateDescriptor descriptor) {
+	Pair<Row, Row> getRowPair(InternalStateDescriptor descriptor, int prefixKeyLength) {
 		Preconditions.checkNotNull(descriptor,
 			"Must provide internal state descriptor to get the pair of row");
 
@@ -87,7 +89,7 @@ public class RocksDBEntry {
 			@Override
 			public Row getKey() {
 				if (key == null) {
-					key = RocksDBInternalState.deserializeStateKey(dbKey, descriptor);
+					key = deserializeStateKey(dbKey, descriptor, prefixKeyLength);
 				}
 				return key;
 			}
@@ -118,6 +120,19 @@ public class RocksDBEntry {
 				return oldValue;
 			}
 		};
+	}
+
+	private Row deserializeStateKey(byte[] bytes, InternalStateDescriptor descriptor, int prefixKeyLength) {
+		try {
+			ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(bytes);
+			DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
+
+			inputView.skipBytesToRead(prefixKeyLength);
+
+			return RocksDBInternalState.deserializeKeyRow(descriptor, inputView);
+		} catch (IOException e) {
+			throw new SerializationException(e);
+		}
 	}
 
 	/**
@@ -183,7 +198,7 @@ public class RocksDBEntry {
 			ByteArrayInputStreamWithPos inputStream = new ByteArrayInputStreamWithPos(dbKey);
 			DataInputViewStreamWrapper inputView = new DataInputViewStreamWrapper(inputStream);
 
-			inputView.skipBytesToRead(RocksDBInternalState.GROUP_BYTES_TO_SKIP);
+			inputView.skipBytesToRead(GROUP_BYTES_TO_SKIP);
 			StringSerializer.INSTANCE.deserialize(inputView);
 			for (int i = 0; i < numKeyColumns; i++) {
 				inputView.skipBytesToRead(1);

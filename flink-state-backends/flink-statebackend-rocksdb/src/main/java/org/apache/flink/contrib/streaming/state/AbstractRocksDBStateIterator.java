@@ -32,7 +32,6 @@ import java.util.NoSuchElementException;
  */
 abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 
-	private static final int CACHE_SIZE_BASE = 1;
 	private static final int CACHE_SIZE_LIMIT = 128;
 
 	/** The rocksDB instance where entries are located. */
@@ -46,6 +45,9 @@ abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 	 *  it would load at most {@code Math.min(last-cache-size * 2, 128)} elements into the {@code cacheEntries} for the next time.
 	 */
 	private final List<RocksDBEntry> cacheEntries;
+
+	/** The entry pointing to the current position which is last returned by calling {@link #getNextEntry()}. */
+	private RocksDBEntry currentEntry;
 
 	private boolean expired;
 
@@ -78,12 +80,11 @@ abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 
 	@Override
 	public void remove() {
-		if (cacheIndex == 0 || cacheIndex > cacheEntries.size()) {
-			throw new IllegalStateException("The remove operation must be called after an valid next operation.");
+		if (currentEntry == null || currentEntry.isDeleted()) {
+			throw new IllegalStateException("The remove operation must be called after a valid next operation.");
 		}
 
-		RocksDBEntry lastRocksDBEntry = cacheEntries.get(cacheIndex - 1);
-		lastRocksDBEntry.remove();
+		currentEntry.remove();
 	}
 
 	final RocksDBEntry getNextEntry() {
@@ -94,10 +95,10 @@ abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 			throw new NoSuchElementException();
 		}
 
-		RocksDBEntry entry = cacheEntries.get(cacheIndex);
+		this.currentEntry = cacheEntries.get(cacheIndex);
 		cacheIndex++;
 
-		return entry;
+		return currentEntry;
 	}
 
 	/**
@@ -113,14 +114,11 @@ abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 
 		try (RocksIterator iterator = dbInstance.iterator()) {
 			/*
-			 * The iteration starts from the prefix bytes at the first loading.
-			 * The cache then is reloaded when the next entry to return is the
-			 * last one in the cache. At that time, we will start the iterating
-			 * from the last returned entry.
+			 * The iteration starts from the prefix bytes at the first loading. After #nextEntry() is called,
+			 * the currentEntry points to the last returned entry, and at that time, we will start
+			 * the iterating from currentEntry if reloading cache is needed.
 			 */
-			RocksDBEntry lastEntry = cacheEntries.size() == 0 ? null : cacheEntries.get(cacheEntries.size() - 1);
-			byte[] startRocksKey = (lastEntry == null ? getStartDBKey() : lastEntry.getDBKey());
-			int numEntries = (lastEntry == null ? CACHE_SIZE_BASE : Math.min(cacheEntries.size() * 2, CACHE_SIZE_LIMIT));
+			byte[] startRocksKey = (currentEntry == null ? getStartDBKey() : currentEntry.getDBKey());
 
 			cacheEntries.clear();
 			cacheIndex = 0;
@@ -136,10 +134,8 @@ abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 			 * entry in the iterating. Skip it to avoid redundant access in such
 			 * cases.
 			 */
-			if (lastEntry != null && !lastEntry.isDeleted()) {
+			if (currentEntry != null && !currentEntry.isDeleted()) {
 				iterator.next();
-				cacheEntries.add(lastEntry);
-				cacheIndex = 1;
 			}
 
 			while (true) {
@@ -148,7 +144,7 @@ abstract class AbstractRocksDBStateIterator<T> implements Iterator<T> {
 					break;
 				}
 
-				if (cacheEntries.size() >= numEntries) {
+				if (cacheEntries.size() >= CACHE_SIZE_LIMIT) {
 					break;
 				}
 

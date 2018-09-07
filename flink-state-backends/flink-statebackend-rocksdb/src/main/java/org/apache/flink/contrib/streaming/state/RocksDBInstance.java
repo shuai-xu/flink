@@ -115,8 +115,12 @@ public class RocksDBInstance implements AutoCloseable {
 	}
 
 	void multiPut(Map<byte[], byte[]> keyValueBytesMap) {
-		for (Map.Entry<byte[], byte[]> entry : keyValueBytesMap.entrySet()) {
-			put(entry.getKey(), entry.getValue());
+		try (RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(db, writeOptions)) {
+			for (Map.Entry<byte[], byte[]> entry : keyValueBytesMap.entrySet()) {
+				writeBatchWrapper.put(defaultColumnFamily, entry.getKey(), entry.getValue());
+			}
+		} catch (RocksDBException e) {
+			throw new StateAccessException(e);
 		}
 	}
 
@@ -143,6 +147,18 @@ public class RocksDBInstance implements AutoCloseable {
 	void snapshot(String localCheckpointPath) throws RocksDBException {
 		Checkpoint checkpoint = Checkpoint.create(db);
 		checkpoint.createCheckpoint(localCheckpointPath);
+	}
+
+	RocksDB getDb() {
+		return db;
+	}
+
+	WriteOptions getWriteOptions() {
+		return writeOptions;
+	}
+
+	ColumnFamilyHandle getDefaultColumnFamily() {
+		return defaultColumnFamily;
 	}
 
 	//--------------------------------------------------------------------------

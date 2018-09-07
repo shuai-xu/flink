@@ -206,7 +206,6 @@ public enum PredefinedOptions {
 	 *     <li>setLevel0FileNumCompactionTrigger(4)</li>
 	 *     <li>setUseFsync(false)</li>
 	 *     <li>setMaxOpenFiles(-1)</li>
-	 *     <li>BlockBasedTableConfig.setCacheIndexAndFilterBlocks(true)</li>
 	 *     <li>BlockBasedTableConfig.setBlockCacheSize(512 MBytes)</li>
 	 *     <li>BlockBasedTableConfig.setBlockSize(4 KBytes)</li>
 	 *     <li>BlockBasedTableConfig.setFilter(BloomFilter(10, false))</li>
@@ -246,7 +245,6 @@ public enum PredefinedOptions {
 				.setTableFormatConfig(
 					new BlockBasedTableConfig()
 						.setFilter(new BloomFilter(10, false))
-						.setCacheIndexAndFilterBlocks(true)
 						.setBlockCacheSize(blockCacheSize)
 						.setBlockSize(blockSize)
 				);
