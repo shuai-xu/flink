@@ -538,3 +538,8 @@ final class TestingRetractTableSink extends RetractStreamTableSink[Row]
     outputFormat.getResults
   }
 }
+
+final class TestingAppendRowSink extends RichSinkFunction[Row] {
+  val localResults = new ArrayBuffer[Row]()
+  override def invoke(value: Row): Unit = localResults += value
+}

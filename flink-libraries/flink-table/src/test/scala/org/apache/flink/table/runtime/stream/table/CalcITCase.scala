@@ -22,16 +22,17 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment, TableException}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, RichFunc1, RichFunc2, SplitUDF}
 import org.apache.flink.table.functions.ScalarFunction
-import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendSink, UserDefinedFunctionTestUtils}
+import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendRowSink, TestingAppendSink, UserDefinedFunctionTestUtils}
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.{Ignore, Test}
 
-import scala.collection.mutable
+import scala.collection.{Seq, mutable}
 
 class CalcITCase extends AbstractTestBase {
 
@@ -414,6 +415,32 @@ class CalcITCase extends AbstractTestBase {
 
     testPrimitiveType()
     testNonPrimitiveType()
+  }
+
+  @Test
+  def testSelectStarFromNestedTable(): Unit = {
+
+    val sqlQuery = "SELECT * FROM MyTable"
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val table = tEnv.fromDataStream(env.fromCollection(Seq(
+      ((0, 0), "0"),
+      ((1, 1), "1"),
+      ((2, 2), "2")
+    )))
+
+    val sink = new TestingAppendRowSink
+    table.select('*).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    sink.localResults.zipWithIndex.foreach {
+      case (row, i) =>
+        val baseRow = row.getField(0).asInstanceOf[BaseRow]
+        assertEquals(i, baseRow.getInt(0))
+        assertEquals(i, baseRow.getInt(1))
+        assertEquals(i.toString, row.getField(1))
+    }
   }
 }
 

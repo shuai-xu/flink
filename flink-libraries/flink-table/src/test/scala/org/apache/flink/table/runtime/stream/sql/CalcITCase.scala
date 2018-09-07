@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendBaseRowSink, TestingAppendSink}
+import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendBaseRowSink, TestingAppendRowSink, TestingAppendSink}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.types.Row
@@ -239,6 +239,35 @@ class CalcITCase {
     val fieldSerializers = fieldTypes.map(_.createSerializer(config))
     testBaseRowResults.map { r =>
       BaseRowUtil.toGenericRow(r, fieldTypes, fieldSerializers)
+    }
+  }
+
+  @Test
+  def testSelectStarFromNestedTable(): Unit = {
+
+    val sqlQuery = "SELECT * FROM MyTable"
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val table = tEnv.fromDataStream(env.fromCollection(Seq(
+      ((0, 0), "0"),
+      ((1, 1), "1"),
+      ((2, 2), "2")
+    )))
+    tEnv.registerTable("MyTable", table)
+
+    val result = tEnv.sqlQuery(sqlQuery)
+
+    val sink = new TestingAppendRowSink
+    result.toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    sink.localResults.zipWithIndex.foreach {
+      case (row, i) =>
+        val baseRow = row.getField(0).asInstanceOf[BaseRow]
+        assertEquals(i, baseRow.getInt(0))
+        assertEquals(i, baseRow.getInt(1))
+        assertEquals(i.toString, row.getField(1))
     }
   }
 }

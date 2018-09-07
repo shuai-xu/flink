@@ -632,6 +632,44 @@ class CalcITCase extends QueryTest {
         assertEquals(i.toString, row.getField(1))
     }
   }
+
+  @Test
+  def testSelectStarFromNestedValues(): Unit = {
+    val table = tEnv.fromCollection(Seq(
+      (0L, "0"),
+      (1L, "1"),
+      (2L, "2")
+    ), "a, b")
+    tEnv.registerTable("MyTable", table)
+
+    checkResult(
+      "select * from (select MAP[a,b], a from MyTable)",
+      Seq(
+        row("{0=0}", 0),
+        row("{1=1}", 1),
+        row("{2=2}", 2)
+      )
+    )
+
+    checkResult(
+      "select * from (select ARRAY[a,cast(b as BIGINT)], a from MyTable)",
+      Seq(
+        row("[0, 0]", 0),
+        row("[1, 1]", 1),
+        row("[2, 2]", 2)
+      )
+    )
+
+    val result = tEnv.sqlQuery("select * from (select ROW(a, a), b from MyTable)")
+    val results = result.collect()
+    results.zipWithIndex.foreach {
+      case (row, i) =>
+        val baseRow = row.getField(0).asInstanceOf[BaseRow]
+        assertEquals(i, baseRow.getLong(0))
+        assertEquals(i, baseRow.getLong(1))
+        assertEquals(i.toString, row.getField(1))
+    }
+  }
 }
 
 object MyHashCode extends ScalarFunction {
