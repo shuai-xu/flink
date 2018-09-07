@@ -181,7 +181,8 @@ class RelTreeWriterImpl(
         s + "}"
       } else {
         s + ", managed=" +
-            resourceSpec.getExtendedResources.get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt + "}"
+            resourceSpec.getExtendedResources
+              .get(ResourceSpec.MANAGED_MEMORY_NAME).getValue.toInt + "}"
       }
     } catch {
       case _: Exception => null

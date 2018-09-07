@@ -24,7 +24,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.{ConcatAgg, SingleValue}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.junit.Test
+import org.junit.{Ignore, Test}
 
 class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
 
@@ -361,7 +361,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
     )
   }
 
-  @Test
+  @Test @Ignore
   def testCount(): Unit = {
     val resultType = new BaseRowTypeInfo(classOf[BinaryRow],
       Types.LONG,

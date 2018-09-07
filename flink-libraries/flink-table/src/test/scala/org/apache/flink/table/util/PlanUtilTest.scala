@@ -43,7 +43,6 @@ import org.junit._
 
 import scala.io.Source
 
-@Ignore
 class PlanUtilTest extends AbstractTestBase {
 
   private val conf = QueryTest.initConfigForTest(new TableConfig)
