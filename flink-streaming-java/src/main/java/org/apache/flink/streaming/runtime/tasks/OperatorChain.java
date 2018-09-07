@@ -193,10 +193,15 @@ public class OperatorChain implements StreamStatusMaintainer {
 				}
 			}
 
-			this.allOperators = allOps;
+			final Map<Integer, StreamOperator<?>> originalOperators = new HashMap<>();
+			for (Map.Entry<Integer, AbstractStreamOperatorProxy<?>> entry : allOps.entrySet()) {
+				originalOperators.put(entry.getKey(), entry.getValue().getOperator());
+			}
 
 			// Here we got all inputs inside the chain, get the topology sorted operators.
-			allOperatorsTopologySorted = getTopologySortedOperators(headIds, userCodeClassloader, allOperators, chainedConfigs);
+			allOperatorsTopologySorted = getTopologySortedOperators(headIds, userCodeClassloader, originalOperators, chainedConfigs);
+
+			this.allOperators = allOps;
 
 			success = true;
 		}
