@@ -169,6 +169,16 @@ public class JobManagerOptions {
 			.defaultValue(true)
 			.withDescription("Whether to enable slot sharing group when allocating slots in Slot Pool.");
 
+	public static final ConfigOption<Long> JOB_RECONCILE_TIMEOUT =
+		key("jobmanager.failover.reconcile-timeout")
+			.defaultValue(60L)
+			.withDescription("The timeout for job master to reconcile with task executors for recovering the execution status.");
+
+	public static final ConfigOption<String> OPERATION_LOG_STORE =
+		key("jobmanager.failover.operation-log-store")
+			.defaultValue("none")
+			.withDescription("The operation log store type for job master failover.");
+
 	// ---------------------------------------------------------------------------------------------
 
 	private JobManagerOptions() {
