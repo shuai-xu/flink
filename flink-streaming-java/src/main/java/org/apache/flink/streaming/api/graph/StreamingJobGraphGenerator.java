@@ -55,6 +55,7 @@ import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
+import org.apache.flink.streaming.runtime.tasks.ArbitraryInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.StreamIterationHead;
 import org.apache.flink.streaming.runtime.tasks.StreamIterationTail;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfig;
@@ -586,7 +587,7 @@ public class StreamingJobGraphGenerator {
 		if (!streamGraph.isMultiHeadChainMode()) {
 			jobVertex.setInvokableClass(startStreamNode.getJobVertexClass());
 		} else {
-			// TODO: set the invokable class which support multi-head chain
+			jobVertex.setInvokableClass(ArbitraryInputStreamTask.class);
 		}
 
 		int parallelism = startStreamNode.getParallelism();

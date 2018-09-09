@@ -173,8 +173,8 @@ public class SingleInputGate implements InputGate {
 	/** Flag indicating whether all resources have been released. */
 	private volatile boolean isReleased;
 
-	/** Registered listener to forward buffer notifications to. */
-	private volatile InputGateListener inputGateListener;
+	/** Registered listeners to forward buffer notifications to. */
+	private final List<InputGateListener> inputGateListeners = new ArrayList<>();
 
 	private final List<TaskEvent> pendingEvents = new ArrayList<>();
 
@@ -509,6 +509,14 @@ public class SingleInputGate implements InputGate {
 	}
 
 	@Override
+	public boolean moreAvailable() {
+		// inputChannelsWithData is an ArrayDeque, isEmpty is not a thread-safe operation
+		synchronized (inputChannelsWithData) {
+			return !inputChannelsWithData.isEmpty();
+		}
+	}
+
+	@Override
 	public void requestPartitions() throws IOException, InterruptedException {
 		synchronized (requestLock) {
 			if (!requestedPartitionsFlag) {
@@ -546,6 +554,11 @@ public class SingleInputGate implements InputGate {
 
 	@Override
 	public Optional<BufferOrEvent> pollNextBufferOrEvent() throws IOException, InterruptedException {
+		return getNextBufferOrEvent(false);
+	}
+
+	@Override
+	public Optional<BufferOrEvent> pollNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
 		return getNextBufferOrEvent(false);
 	}
 
@@ -646,10 +659,8 @@ public class SingleInputGate implements InputGate {
 
 	@Override
 	public void registerListener(InputGateListener inputGateListener) {
-		if (this.inputGateListener == null) {
-			this.inputGateListener = inputGateListener;
-		} else {
-			throw new IllegalStateException("Multiple listeners");
+		synchronized (inputGateListeners) {
+			inputGateListeners.add(inputGateListener);
 		}
 	}
 
@@ -679,9 +690,10 @@ public class SingleInputGate implements InputGate {
 		}
 
 		if (availableChannels == 0) {
-			InputGateListener listener = inputGateListener;
-			if (listener != null) {
-				listener.notifyInputGateNonEmpty(this);
+			synchronized (inputGateListeners) {
+				for (InputGateListener listener : inputGateListeners) {
+					listener.notifyInputGateNonEmpty(this);
+				}
 			}
 		}
 	}
@@ -775,7 +787,7 @@ public class SingleInputGate implements InputGate {
 			inputGate.setInputChannel(partitionId.getPartitionId(), inputChannels[i]);
 		}
 
-		LOG.debug("Created {} input channels (local: {}, remote: {}, unknown: {}).",
+		LOG.info("Created {} input channels (local: {}, remote: {}, unknown: {}).",
 			inputChannels.length,
 			numLocalChannels,
 			numRemoteChannels,

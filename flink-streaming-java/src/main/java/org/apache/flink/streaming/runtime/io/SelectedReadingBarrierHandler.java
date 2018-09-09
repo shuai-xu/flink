@@ -53,6 +53,25 @@ public interface SelectedReadingBarrierHandler extends CheckpointBarrierHandler 
 	BufferOrEvent getNextNonBlocked(InputGate subInputGate) throws Exception;
 
 	/**
+	 * Returns the next {@link BufferOrEvent} on the given sub {@link InputGate} that
+	 * the operator may consume, if input is a complex {@link InputGate}
+	 * (e.g. {@link org.apache.flink.runtime.io.network.partition.consumer.UnionInputGate}).
+	 * This call will not block if there is no BufferOrEvent available.
+	 *
+	 * @param subInputGate is a sub InputGate of input
+	 *
+	 * @return The next BufferOrEvent, or {@code null}, if there is no BufferOrEvent available.
+	 *
+	 * @throws IOException Thrown if the network or local disk I/O fails.
+	 *
+	 * @throws InterruptedException Thrown if the thread is interrupted while blocking during
+	 *                              waiting for the next BufferOrEvent to become available.
+	 * @throws Exception Thrown in case that a checkpoint fails that is started as the result of receiving
+	 *                   the last checkpoint barrier
+	 */
+	BufferOrEvent pollNext(InputGate subInputGate) throws Exception;
+
+	/**
 	 * Get the number of all reading sub {@link InputGate}.
 	 *
 	 * @return see {@link InputGate#getSubInputGateCount()}.

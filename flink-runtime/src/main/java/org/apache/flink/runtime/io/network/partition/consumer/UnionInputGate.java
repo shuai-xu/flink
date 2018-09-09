@@ -26,7 +26,9 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -81,8 +83,8 @@ public class UnionInputGate implements InputGate, InputGateListener {
 	/** The total number of input channels across all unioned input gates. */
 	private final int totalNumberOfInputChannels;
 
-	/** Registered listener to forward input gate notifications to. */
-	private volatile InputGateListener inputGateListener;
+	/** Registered listeners to forward input gate notifications to. */
+	private final List<InputGateListener> inputGateListeners = new ArrayList<>();
 
 	/**
 	 * A mapping from input gate to (logical) channel index offset. Valid channel indexes go from 0
@@ -136,6 +138,14 @@ public class UnionInputGate implements InputGate, InputGateListener {
 	}
 
 	@Override
+	public boolean moreAvailable() {
+		// inputGatesWithData is an ArrayDeque, isEmpty is not a thread-safe operation
+		synchronized (inputGatesWithData) {
+			return !inputGatesWithData.isEmpty();
+		}
+	}
+
+	@Override
 	public void requestPartitions() throws IOException, InterruptedException {
 		if (!requestedPartitionsFlag) {
 			for (InputGate inputGate : inputGates) {
@@ -154,6 +164,11 @@ public class UnionInputGate implements InputGate, InputGateListener {
 	@Override
 	public Optional<BufferOrEvent> pollNextBufferOrEvent() throws IOException, InterruptedException {
 		return getNextBufferOrEvent(Optional.empty(), false);
+	}
+
+	@Override
+	public Optional<BufferOrEvent> pollNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
+		return getNextBufferOrEvent(Optional.of(subInputGate), false);
 	}
 
 	public Optional<BufferOrEvent> getNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
@@ -292,10 +307,8 @@ public class UnionInputGate implements InputGate, InputGateListener {
 
 	@Override
 	public void registerListener(InputGateListener listener) {
-		if (this.inputGateListener == null) {
-			this.inputGateListener = listener;
-		} else {
-			throw new IllegalStateException("Multiple listeners");
+		synchronized (inputGateListeners) {
+			inputGateListeners.add(listener);
 		}
 	}
 
@@ -346,9 +359,10 @@ public class UnionInputGate implements InputGate, InputGateListener {
 		}
 
 		if (availableInputGates == 0) {
-			InputGateListener listener = inputGateListener;
-			if (listener != null) {
-				listener.notifyInputGateNonEmpty(this);
+			synchronized (inputGateListeners) {
+				for (InputGateListener listener : inputGateListeners) {
+					listener.notifyInputGateNonEmpty(this);
+				}
 			}
 		}
 	}

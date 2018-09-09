@@ -157,11 +157,6 @@ public class FromElementsFunctionV2<T> extends RichSourceFunctionV2<T>
 	}
 
 	@Override
-	public boolean isIdle() {
-		return false;
-	}
-
-	@Override
 	public boolean isFinished() {
 		return !isRunning;
 	}

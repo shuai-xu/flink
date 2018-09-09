@@ -32,13 +32,6 @@ import java.io.Serializable;
 public interface SourceFunctionV2<T> extends Function, Serializable {
 
 	/**
-	 * Is idle boolean.
-	 *
-	 * @return the boolean
-	 */
-	boolean isIdle();
-
-	/**
 	 * Is finished boolean.
 	 *
 	 * @return the boolean
@@ -49,7 +42,7 @@ public interface SourceFunctionV2<T> extends Function, Serializable {
 	 * Next source record.
 	 * This should be non-blocking operation.
 	 *
-	 * @return the source record
+	 * @return the source record, or null that means there is no data temporarily
 	 * @throws Exception the exception
 	 */
 	SourceRecord<T> next() throws Exception;

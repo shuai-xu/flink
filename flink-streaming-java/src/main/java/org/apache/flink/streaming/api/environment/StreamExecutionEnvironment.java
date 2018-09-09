@@ -1476,7 +1476,7 @@ public abstract class StreamExecutionEnvironment {
 		return createInputV2(inputFormat, typeInfo, "Custom Source");
 	}
 
-	private <OUT> DataStreamSource<OUT> createInput(InputFormat<OUT, ?> inputFormat,
+	public <OUT> DataStreamSource<OUT> createInput(InputFormat<OUT, ?> inputFormat,
 													TypeInformation<OUT> typeInfo,
 													String sourceName) {
 
@@ -1484,7 +1484,7 @@ public abstract class StreamExecutionEnvironment {
 		return addSource(function, sourceName, typeInfo);
 	}
 
-	private <OUT> DataStreamSourceV2<OUT> createInputV2(InputFormat<OUT, ?> inputFormat,
+	public <OUT> DataStreamSourceV2<OUT> createInputV2(InputFormat<OUT, ?> inputFormat,
 													TypeInformation<OUT> typeInfo,
 													String sourceName) {
 

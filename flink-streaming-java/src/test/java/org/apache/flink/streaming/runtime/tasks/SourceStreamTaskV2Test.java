@@ -171,11 +171,6 @@ public class SourceStreamTaskV2Test {
 		}
 
 		@Override
-		public boolean isIdle() {
-			return false;
-		}
-
-		@Override
 		public boolean isFinished() {
 			return !isRunning;
 		}
@@ -286,11 +281,6 @@ public class SourceStreamTaskV2Test {
 				Assert.fail("Open was not called before close.");
 			}
 			closeCalled = true;
-		}
-
-		@Override
-		public boolean isIdle() {
-			return false;
 		}
 
 		@Override

@@ -64,6 +64,7 @@ public class StreamSourceV2<OUT, SRC extends SourceFunctionV2<OUT>>
 
 	@Override
 	public void close() throws Exception {
+		super.close();
 		if (latencyEmitter != null) {
 			latencyEmitter.close();
 		}
@@ -71,10 +72,6 @@ public class StreamSourceV2<OUT, SRC extends SourceFunctionV2<OUT>>
 
 	public SourceRecord next() throws Exception {
 		return userFunction.next();
-	}
-
-	public boolean isIdle() {
-		return userFunction.isIdle();
 	}
 
 	public boolean isFinished() {

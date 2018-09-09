@@ -62,10 +62,10 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 		if (config != null) {
 			this.timeChar = config.getTimeCharacteristic();
 
-			this.chainedNodeConfigMap = config.getChainedNodeConfigs(this.classLoader);
-			this.chainedHeadNodeIds = config.getChainedHeadNodeIds(this.classLoader);
-			this.inStreamEdgesOfChain = config.getInStreamEdgesOfChain(this.classLoader);
-			this.outStreamEdgesOfChain = config.getOutStreamEdgesOfChain(this.classLoader);
+			this.chainedNodeConfigMap = Collections.unmodifiableMap(config.getChainedNodeConfigs(this.classLoader));
+			this.chainedHeadNodeIds = Collections.unmodifiableList(config.getChainedHeadNodeIds(this.classLoader));
+			this.inStreamEdgesOfChain = Collections.unmodifiableList(config.getInStreamEdgesOfChain(this.classLoader));
+			this.outStreamEdgesOfChain = Collections.unmodifiableList(config.getOutStreamEdgesOfChain(this.classLoader));
 
 			this.isCheckpointingEnabled = config.isCheckpointingEnabled();
 			this.checkpointMode = config.getCheckpointMode();
@@ -130,7 +130,7 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 
 	@Override
 	public List<StreamEdge> getInStreamEdgesOfChain() {
-		return this.inStreamEdgesOfChain == null ? null : Collections.unmodifiableList(this.inStreamEdgesOfChain);
+		return this.inStreamEdgesOfChain;
 	}
 
 	public void setOutStreamEdgesOfChain(List<StreamEdge> outEdges) {
@@ -139,7 +139,7 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 
 	@Override
 	public List<StreamEdge> getOutStreamEdgesOfChain() {
-		return this.outStreamEdgesOfChain == null ? null : Collections.unmodifiableList(this.outStreamEdgesOfChain);
+		return this.outStreamEdgesOfChain;
 	}
 
 	public void setChainedNodeConfigs(Map<Integer, StreamConfig> chainedConfigMap) {
@@ -148,7 +148,7 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 
 	@Override
 	public Map<Integer, StreamConfig> getChainedNodeConfigs() {
-		return this.chainedNodeConfigMap == null ? null : Collections.unmodifiableMap(this.chainedNodeConfigMap);
+		return this.chainedNodeConfigMap;
 	}
 
 	public void setChainedHeadNodeIds(List<Integer> headNodeIds) {
@@ -157,7 +157,7 @@ public class StreamTaskConfigCache implements StreamTaskConfigSnapshot {
 
 	@Override
 	public List<Integer> getChainedHeadNodeIds()  {
-		return this.chainedHeadNodeIds == null ? null : Collections.unmodifiableList(this.chainedHeadNodeIds);
+		return this.chainedHeadNodeIds;
 	}
 
 	@Override

@@ -92,13 +92,29 @@ public class BarrierTracker implements SelectedReadingBarrierHandler {
 
 	@Override
 	public BufferOrEvent getNextNonBlocked() throws Exception {
-		return getNextNonBlocked(Optional.empty());
+		return getNext(Optional.empty(), true);
+	}
+
+	@Override
+	public BufferOrEvent pollNext() throws Exception {
+		return getNext(Optional.empty(), false);
+	}
+
+	@Override
+	public boolean isFinished() {
+		return inputGate.isFinished();
 	}
 
 	@Override
 	public BufferOrEvent getNextNonBlocked(InputGate subInputGate) throws Exception {
 		checkNotNull(subInputGate, "subInputGate is null");
-		return getNextNonBlocked(Optional.of(subInputGate));
+		return getNext(Optional.of(subInputGate), true);
+	}
+
+	@Override
+	public BufferOrEvent pollNext(InputGate subInputGate) throws Exception {
+		checkNotNull(subInputGate, "subInputGate is null");
+		return getNext(Optional.of(subInputGate), false);
 	}
 
 	@Override
@@ -142,12 +158,16 @@ public class BarrierTracker implements SelectedReadingBarrierHandler {
 		return 0L;
 	}
 
-	private BufferOrEvent getNextNonBlocked(Optional<InputGate> subInputGate) throws Exception {
+	private BufferOrEvent getNext(Optional<InputGate> subInputGate, boolean blocking) throws Exception {
 		while (true) {
-			Optional<BufferOrEvent> next = subInputGate.isPresent() ?
-				inputGate.getNextBufferOrEvent(subInputGate.get()) : inputGate.getNextBufferOrEvent();
+			final Optional<BufferOrEvent> next;
+			if (subInputGate.isPresent()) {
+				next = blocking ? inputGate.getNextBufferOrEvent(subInputGate.get()) : inputGate.pollNextBufferOrEvent(subInputGate.get());
+			} else {
+				next = blocking ? inputGate.getNextBufferOrEvent() : inputGate.pollNextBufferOrEvent();
+			}
+
 			if (!next.isPresent()) {
-				// buffer or input exhausted
 				return null;
 			}
 

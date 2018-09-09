@@ -66,6 +66,8 @@ import org.apache.flink.util.XORShiftRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -76,6 +78,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
@@ -83,7 +86,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * {@link StreamTask}.
  */
 @Internal
-public class OperatorChain implements StreamStatusMaintainer {
+public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 
 	private static final Logger LOG = LoggerFactory.getLogger(OperatorChain.class);
 
@@ -99,7 +102,11 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 	private final Map<Integer, StreamOperator> headOperators = new HashMap<>();
 
+	private final Map<Integer, AbstractStreamOperatorProxy<?>> sourceHeadOperators = new HashMap<>();
+
 	private final StreamTaskConfigSnapshot streamTaskConfig;
+
+	private SelectionChangedListener listener;
 
 	/**
 	 * Current status of the input stream of the operator chain.
@@ -177,6 +184,9 @@ public class OperatorChain implements StreamStatusMaintainer {
 							headOperator.getMetricGroup().gauge(MetricNames.IO_CURRENT_OUTPUT_WATERMARK, output.getWatermarkGauge());
 
 							headOperators.put(headId, originalHeadOperator);
+							if (originalHeadOperator instanceof StreamSource || originalHeadOperator instanceof StreamSourceV2) {
+								sourceHeadOperators.put(headId, headOperator);
+							}
 							allOps.put(headId, headOperator);
 							chainEntryPoints.put(headId, output);
 						}
@@ -316,16 +326,37 @@ public class OperatorChain implements StreamStatusMaintainer {
 		return allOperators == null ? 0 : allOperators.size();
 	}
 
-	public List<StreamEdge> getNextSelectedEdges() {
-		// TODO: optimize cost
-		final Map<StreamEdge, Boolean> visited = new HashMap<>(allOperators.size());
-		final List<StreamEdge> selectedEdges = new ArrayList<>();
-		for (StreamEdge inEdge : streamTaskConfig.getInStreamEdgesOfChain()) {
-			if (allOperators.get(inEdge.getTargetId()).isSelected(inEdge, visited)) {
-				selectedEdges.add(inEdge);
+	@Override
+	public void registerSelectionChangedListener(SelectionChangedListener listener) {
+		this.listener = listener;
+		for (AbstractStreamOperatorProxy operatorProxy : allOperators.values()) {
+			if (operatorProxy instanceof TwoInputStreamOperatorProxy) {
+				((TwoInputStreamOperatorProxy) operatorProxy).registerSelectionChangedListener(listener);
 			}
 		}
-		return selectedEdges;
+	}
+
+	public List<InputSelection> getNextSelectedInputs() {
+		Map<StreamEdge, Boolean> visited = null;
+		// If the DAG in chain is not large enough, we should skip checking duplicated visit
+		if (allOperators.size() > 16) {
+			visited = new HashMap<>(allOperators.size());
+		}
+		final List<InputSelection> selectedInputs = new ArrayList<>();
+
+		for (StreamEdge inEdge : streamTaskConfig.getInStreamEdgesOfChain()) {
+			if (allOperators.get(inEdge.getTargetId()).isSelected(inEdge, visited)) {
+				selectedInputs.add(EdgeInputSelection.create(inEdge));
+			}
+		}
+
+		for (Map.Entry<Integer, AbstractStreamOperatorProxy<?>> entry : sourceHeadOperators.entrySet()) {
+			if (entry.getValue().isSelected(null, visited)) {
+				selectedInputs.add(SourceInputSelection.create(entry.getKey()));
+			}
+		}
+
+		return selectedInputs;
 	}
 	// ------------------------------------------------------------------------
 	//  initialization utilities
@@ -455,7 +486,12 @@ public class OperatorChain implements StreamStatusMaintainer {
 			currentOperatorOutput = new ChainingOutput<>(chainedOperator, this, inputEdge);
 		}
 		else {
-			TypeSerializer<IN> inSerializer = operatorConfig.getTypeSerializerIn1(userCodeClassloader);
+			final TypeSerializer<IN> inSerializer;
+			if (inputEdge.getTypeNumber() == 2) {
+				inSerializer = operatorConfig.getTypeSerializerIn2(userCodeClassloader);
+			} else {
+				inSerializer = operatorConfig.getTypeSerializerIn1(userCodeClassloader);
+			}
 			currentOperatorOutput = new CopyingChainingOutput<>(chainedOperator, inSerializer, inputEdge, this);
 		}
 
@@ -620,7 +656,7 @@ public class OperatorChain implements StreamStatusMaintainer {
 				StreamEdge edge,
 				StreamStatusProvider streamStatusProvider) {
 			super(operator, streamStatusProvider, edge);
-			this.serializer = serializer;
+			this.serializer = checkNotNull(serializer);
 		}
 
 		@Override
@@ -821,19 +857,25 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		public abstract void endInput(StreamEdge inputEdge) throws Exception;
 
-		public boolean isSelected(StreamEdge inputEdge, Map<StreamEdge, Boolean> visited) {
-			final Boolean isSelected = visited.get(inputEdge);
-			if (isSelected != null) {
-				return isSelected;
+		public boolean isSelected(@Nullable StreamEdge inputEdge, @Nullable Map<StreamEdge, Boolean> visited) {
+			if (inputEdge != null && visited != null) {
+				final Boolean isSelected = visited.get(inputEdge);
+				if (isSelected != null) {
+					return isSelected;
+				}
 			}
 
 			for (Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge> successor : successors) {
 				if (!successor.f0.isSelected(successor.f1, visited)) {
-					visited.put(inputEdge, false);
+					if (inputEdge != null && visited != null) {
+						visited.put(inputEdge, false);
+					}
 					return false;
 				}
 			}
-			visited.put(inputEdge, true);
+			if (inputEdge != null && visited != null) {
+				visited.put(inputEdge, true);
+			}
 			return true;
 		}
 
@@ -948,10 +990,7 @@ public class OperatorChain implements StreamStatusMaintainer {
 		}
 
 		public void endInput(StreamEdge inputEdge) throws Exception {
-			if (--unfinishedInputEdges == 0) {
-				endInput();
-				endSuccessorsInput();
-			}
+			endInput();
 		}
 
 		@Override
@@ -971,7 +1010,10 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		@Override
 		public void endInput() throws Exception {
-			operator.endInput();
+			if (--unfinishedInputEdges == 0) {
+				operator.endInput();
+				endSuccessorsInput();
+			}
 		}
 	}
 
@@ -983,6 +1025,8 @@ public class OperatorChain implements StreamStatusMaintainer {
 		private volatile int unfinishedInputEdges2 = 0;
 
 		private TwoInputSelection lastSelection = null;
+
+		private SelectionChangedListener listener;
 
 		TwoInputStreamOperatorProxy(
 				TwoInputStreamOperator<IN1, IN2, OUT> operator,
@@ -999,26 +1043,48 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		@Override
 		public TwoInputSelection processRecord1(StreamRecord<IN1> element) throws Exception {
-			lastSelection = operator.processRecord1(element);
+			final TwoInputSelection selection = operator.processRecord1(element);
+			if (selection != lastSelection) {
+				lastSelection = selection;
+				if (listener != null) {
+					listener.notifySelectionChanged();
+				}
+			}
 			return lastSelection;
 		}
 
 		@Override
 		public TwoInputSelection processRecord2(StreamRecord<IN2> element) throws Exception {
-			lastSelection = operator.processRecord2(element);
+			final TwoInputSelection selection = operator.processRecord2(element);
+			if (selection != lastSelection) {
+				lastSelection = selection;
+				if (listener != null) {
+					listener.notifySelectionChanged();
+				}
+			}
 			return lastSelection;
 		}
 
 		@Override
 		public void processElement1(StreamRecord<IN1> element) throws Exception {
 			operator.processElement1(element);
-			lastSelection = TwoInputSelection.ANY;
+			if (lastSelection != TwoInputSelection.ANY) {
+				lastSelection = TwoInputSelection.ANY;
+				if (listener != null) {
+					listener.notifySelectionChanged();
+				}
+			}
 		}
 
 		@Override
 		public void processElement2(StreamRecord<IN2> element) throws Exception {
 			operator.processElement2(element);
-			lastSelection = TwoInputSelection.ANY;
+			if (lastSelection != TwoInputSelection.ANY) {
+				lastSelection = TwoInputSelection.ANY;
+				if (listener != null) {
+					listener.notifySelectionChanged();
+				}
+			}
 		}
 
 		@Override
@@ -1043,12 +1109,34 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		@Override
 		public void endInput1() throws Exception {
-			operator.endInput1();
+			if (--unfinishedInputEdges1 == 0) {
+				operator.endInput1();
+				if (lastSelection != TwoInputSelection.SECOND) {
+					lastSelection = TwoInputSelection.SECOND;
+					if (listener != null) {
+						listener.notifySelectionChanged();
+					}
+				}
+			}
+			if (unfinishedInputEdges1 == 0 && unfinishedInputEdges2 == 0) {
+				endSuccessorsInput();
+			}
 		}
 
 		@Override
 		public void endInput2() throws Exception {
-			operator.endInput2();
+			if (--unfinishedInputEdges2 == 0) {
+				operator.endInput2();
+				if (lastSelection != TwoInputSelection.FIRST) {
+					lastSelection = TwoInputSelection.FIRST;
+					if (listener != null) {
+						listener.notifySelectionChanged();
+					}
+				}
+			}
+			if (unfinishedInputEdges1 == 0 && unfinishedInputEdges2 == 0) {
+				endSuccessorsInput();
+			}
 		}
 
 		@Override
@@ -1065,13 +1153,9 @@ public class OperatorChain implements StreamStatusMaintainer {
 		@Override
 		public void endInput(StreamEdge inputEdge) throws Exception {
 			if (inputEdge.getTypeNumber() == 1) {
-				if (--unfinishedInputEdges1 == 0) {
-					endInput1();
-				}
+				endInput1();
 			} else if (inputEdge.getTypeNumber() == 2) {
-				if (--unfinishedInputEdges2 == 0) {
-					endInput2();
-				}
+				endInput2();
 			} else {
 				throw new RuntimeException("Unknown stream edge type number " + inputEdge.getTypeNumber());
 			}
@@ -1083,23 +1167,37 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		@Override
 		public boolean isSelected(StreamEdge inputEdge, Map<StreamEdge, Boolean> visited) {
+			Preconditions.checkNotNull(inputEdge);
+
 			if (lastSelection == null) {
 				// For the first visiting
 				lastSelection = firstInputSelection();
 			}
 			if ((inputEdge.getTypeNumber() == 1 && lastSelection == TwoInputSelection.SECOND) ||
 				(inputEdge.getTypeNumber() == 2 && lastSelection == TwoInputSelection.FIRST)) {
-				visited.put(inputEdge, false);
+				if (visited != null) {
+					visited.put(inputEdge, false);
+				}
 				return false;
 			}
-			Boolean isSelected = visited.get(inputEdge);
-			if (isSelected != null) {
-				return isSelected;
+
+			Boolean isSelected;
+			if (visited != null) {
+				isSelected = visited.get(inputEdge);
+				if (isSelected != null) {
+					return isSelected;
+				}
 			}
 
 			isSelected = super.isSelected(inputEdge, visited);
-			visited.put(inputEdge, isSelected);
+			if (visited != null) {
+				visited.put(inputEdge, isSelected);
+			}
 			return isSelected;
+		}
+
+		public void registerSelectionChangedListener(SelectionChangedListener listener) {
+			this.listener = listener;
 		}
 	}
 
@@ -1144,10 +1242,9 @@ public class OperatorChain implements StreamStatusMaintainer {
 		}
 	}
 
-	private static class SourceV2StreamOperatorProxy<OUT> extends AbstractStreamOperatorProxy<OUT> {
+	private static class SourceV2StreamOperatorProxy<OUT> extends AbstractStreamOperatorProxy<OUT> implements OneInputStreamOperator<OUT, OUT> {
 
-		SourceV2StreamOperatorProxy(StreamOperator<OUT> operator,
-									List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
+		SourceV2StreamOperatorProxy(StreamOperator<OUT> operator, List<Tuple2<AbstractStreamOperatorProxy<?>, StreamEdge>> successors) {
 			super(operator, successors);
 		}
 
@@ -1158,6 +1255,26 @@ public class OperatorChain implements StreamStatusMaintainer {
 
 		@Override
 		public void endInput(StreamEdge inputEdge) throws Exception {
+			endSuccessorsInput();
+		}
+
+		@Override
+		public void processElement(StreamRecord<OUT> element) throws Exception {
+			throw new UnsupportedOperationException("Should not come to here");
+		}
+
+		@Override
+		public void processWatermark(Watermark mark) throws Exception {
+			throw new UnsupportedOperationException("Should not come to here");
+		}
+
+		@Override
+		public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+			throw new UnsupportedOperationException("Should not come to here");
+		}
+
+		@Override
+		public void endInput() throws Exception {
 			endSuccessorsInput();
 		}
 	}

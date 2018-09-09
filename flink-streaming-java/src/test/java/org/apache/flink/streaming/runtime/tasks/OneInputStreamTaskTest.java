@@ -920,6 +920,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		streamConfig.setStreamOperator(previousOperator);
 		streamConfig.setOperatorID(new OperatorID(0L, 0L));
 		streamConfig.setVertexID(0);
+		streamConfig.setTypeSerializerIn1(new IntSerializer());
 
 		// create the chain of operators
 		Map<Integer, StreamConfig> chainedTaskConfigs = new HashMap<>(numberChainedTasks);
@@ -933,6 +934,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 			chainedConfig.setStreamOperator(chainedOperator);
 			chainedConfig.setOperatorID(new OperatorID(0L, chainedIndex));
 			chainedConfig.setVertexID(chainedIndex);
+			chainedConfig.setTypeSerializerIn1(new IntSerializer());
 			chainedTaskConfigs.put(chainedIndex, chainedConfig);
 
 			StreamEdge outputEdge = new StreamEdge(
@@ -952,7 +954,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 					null,
 					null
 				),
-				0,
+				1,
 				Collections.<String>emptyList(),
 				null,
 				null

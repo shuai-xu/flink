@@ -100,9 +100,7 @@ public class SourceStreamTaskV2<OUT, SRC extends SourceFunctionV2<OUT>, OP exten
 						if (sourceRecord.getWatermark() != null) {
 							ctx.emitWatermark(sourceRecord.getWatermark());
 						}
-					}
-
-					if (headOperator.isIdle()) {
+					} else {
 						ctx.markAsTemporarilyIdle();
 					}
 					if (headOperator.isFinished()) {

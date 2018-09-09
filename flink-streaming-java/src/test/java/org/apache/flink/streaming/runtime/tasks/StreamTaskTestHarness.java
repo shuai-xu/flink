@@ -185,7 +185,7 @@ public class StreamTaskTestHarness<OUT> {
 		StreamNode sourceVertexDummy = new StreamNode(0, "group", dummyOperator, "source dummy", new LinkedList<OutputSelector<?>>(), SourceStreamTask.class);
 		StreamNode targetVertexDummy = new StreamNode(1, "group", dummyOperator, "target dummy", new LinkedList<OutputSelector<?>>(), SourceStreamTask.class);
 
-		outEdgesInOrder.add(new StreamEdge(sourceVertexDummy, targetVertexDummy, 0, new LinkedList<String>(), new BroadcastPartitioner<Object>(), null /* output tag */));
+		outEdgesInOrder.add(new StreamEdge(sourceVertexDummy, targetVertexDummy, 1, new LinkedList<String>(), new BroadcastPartitioner<Object>(), null /* output tag */));
 
 		streamConfig.setNonChainedOutputs(outEdgesInOrder);
 

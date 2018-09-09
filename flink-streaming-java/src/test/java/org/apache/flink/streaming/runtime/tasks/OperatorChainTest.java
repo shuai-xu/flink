@@ -44,6 +44,8 @@ import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.tasks.InputSelector.InputSelection;
+import org.apache.flink.streaming.runtime.tasks.InputSelector.SelectionChangedListener;
 import org.apache.flink.types.Record;
 
 import org.junit.Test;
@@ -461,6 +463,8 @@ public class OperatorChainTest {
 
 		final StreamTask streamTask = new NoOpStreamTask(env);
 		final OperatorChain operatorChain = new OperatorChain(streamTask, StreamTask.createStreamRecordWriters(streamConfig, env));
+		final SelectionChangedMonitor monitor = new SelectionChangedMonitor();
+		operatorChain.registerSelectionChangedListener(monitor);
 		streamTask.setProcessingTimeService(new TestProcessingTimeService());
 
 		for (StreamOperator operator : operatorChain.getAllOperatorsTopologySorted()) {
@@ -476,47 +480,65 @@ public class OperatorChainTest {
 		final TwoInputStreamOperator twoInputOperator3 = (TwoInputStreamOperator) operatorChain.getOperatorProxy(3);
 		final TwoInputStreamOperator twoInputOperator4 = (TwoInputStreamOperator) operatorChain.getOperatorProxy(4);
 
-		final List<StreamEdge> nextSelectedEdges0 = operatorChain.getNextSelectedEdges();
+		final List<InputSelection> nextSelectedInputs0 = operatorChain.getNextSelectedInputs();
 		// 0 -> 3 -> 4 -> 5
-		assertEquals(1, nextSelectedEdges0.size());
-		assertEquals(2, nextSelectedEdges0.get(0).getTypeNumber());
-		assertEquals(1, nextSelectedEdges0.get(0).getSourceId());
-		assertEquals(3, nextSelectedEdges0.get(0).getTargetId());
+		assertEquals(1, nextSelectedInputs0.size());
+		assertEquals(InputSelector.InputType.EDGE, nextSelectedInputs0.get(0).getInputType());
+		assertEquals(2, nextSelectedInputs0.get(0).toEdgeInputSelection().getStreamEdge().getTypeNumber());
+		assertEquals(1, nextSelectedInputs0.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
+		assertEquals(3, nextSelectedInputs0.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
+		assertFalse(monitor.selectionChanged);
 		// record-$operator-$typeNum-$recordSequence
 		twoInputOperator3.processRecord2(new StreamRecord<>("record-3-2-1"));
+
+		assertTrue(monitor.selectionChanged);
+		monitor.selectionChanged = false;
 		// 0 -> 3
 		// 2 -> 4 -> 5
-		final List<StreamEdge> nextSelectedEdges1 = operatorChain.getNextSelectedEdges();
-		assertEquals(1, nextSelectedEdges1.size());
-		assertEquals(1, nextSelectedEdges1.get(0).getTypeNumber());
-		assertEquals(2, nextSelectedEdges1.get(0).getSourceId());
-		assertEquals(4, nextSelectedEdges1.get(0).getTargetId());
+		final List<InputSelection> nextSelectedInputs1 = operatorChain.getNextSelectedInputs();
+		assertEquals(1, nextSelectedInputs1.size());
+		assertEquals(InputSelector.InputType.EDGE, nextSelectedInputs1.get(0).getInputType());
+		assertEquals(1, nextSelectedInputs1.get(0).toEdgeInputSelection().getStreamEdge().getTypeNumber());
+		assertEquals(2, nextSelectedInputs1.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
+		assertEquals(4, nextSelectedInputs1.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
 		twoInputOperator4.processRecord1(new StreamRecord<>("record-4-1-1"));
+
+		assertTrue(monitor.selectionChanged);
+		monitor.selectionChanged = false;
 		// 0 -> 3 -> 4 -> 5
-		final List<StreamEdge> nextSelectedEdges2 = operatorChain.getNextSelectedEdges();
-		assertEquals(1, nextSelectedEdges2.size());
-		assertEquals(1, nextSelectedEdges2.get(0).getTypeNumber());
-		assertEquals(0, nextSelectedEdges2.get(0).getSourceId());
-		assertEquals(3, nextSelectedEdges2.get(0).getTargetId());
+		final List<InputSelection> nextSelectedInputs2 = operatorChain.getNextSelectedInputs();
+		assertEquals(1, nextSelectedInputs2.size());
+		assertEquals(InputSelector.InputType.EDGE, nextSelectedInputs2.get(0).getInputType());
+		assertEquals(1, nextSelectedInputs2.get(0).toEdgeInputSelection().getStreamEdge().getTypeNumber());
+		assertEquals(0, nextSelectedInputs2.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
+		assertEquals(3, nextSelectedInputs2.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
 		twoInputOperator3.processRecord1(new StreamRecord<>("record-3-1-1"));
+
+		assertTrue(monitor.selectionChanged);
+		monitor.selectionChanged = false;
 		// 1 -> 3
 		// 2 -> 4 -> 5
-		final List<StreamEdge> nextSelectedEdges3 = operatorChain.getNextSelectedEdges();
-		assertEquals(1, nextSelectedEdges3.size());
-		assertEquals(1, nextSelectedEdges3.get(0).getTypeNumber());
-		assertEquals(2, nextSelectedEdges3.get(0).getSourceId());
-		assertEquals(4, nextSelectedEdges3.get(0).getTargetId());
+		final List<InputSelection> nextSelectedInputs3 = operatorChain.getNextSelectedInputs();
+		assertEquals(1, nextSelectedInputs3.size());
+		assertEquals(InputSelector.InputType.EDGE, nextSelectedInputs3.get(0).getInputType());
+		assertEquals(1, nextSelectedInputs3.get(0).toEdgeInputSelection().getStreamEdge().getTypeNumber());
+		assertEquals(2, nextSelectedInputs3.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
+		assertEquals(4, nextSelectedInputs3.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
 		twoInputOperator4.processRecord1(new StreamRecord<>("record-4-1-2"));
+
+		assertTrue(monitor.selectionChanged);
+		monitor.selectionChanged = false;
 		// 1 -> 3 -> 4 -> 5
-		final List<StreamEdge> nextSelectedEdges4 = operatorChain.getNextSelectedEdges();
-		assertEquals(1, nextSelectedEdges4.size());
-		assertEquals(2, nextSelectedEdges4.get(0).getTypeNumber());
-		assertEquals(1, nextSelectedEdges4.get(0).getSourceId());
-		assertEquals(3, nextSelectedEdges4.get(0).getTargetId());
+		final List<InputSelection> nextSelectedInputs4 = operatorChain.getNextSelectedInputs();
+		assertEquals(1, nextSelectedInputs4.size());
+		assertEquals(InputSelector.InputType.EDGE, nextSelectedInputs4.get(0).getInputType());
+		assertEquals(2, nextSelectedInputs4.get(0).toEdgeInputSelection().getStreamEdge().getTypeNumber());
+		assertEquals(1, nextSelectedInputs4.get(0).toEdgeInputSelection().getStreamEdge().getSourceId());
+		assertEquals(3, nextSelectedInputs4.get(0).toEdgeInputSelection().getStreamEdge().getTargetId());
 
 		final DummyTwoInputStreamOperator realOperator3 = ((DummyTwoInputStreamOperator) ((AbstractStreamOperatorProxy) twoInputOperator3).getOperator());
 		assertEquals(1, realOperator3.firstRecords.size());
@@ -653,6 +675,16 @@ public class OperatorChainTest {
 
 	private static class DummyOperator extends AbstractStreamOperator<String> {
 		private static final long serialVersionUID = 1L;
+	}
+
+	private static class SelectionChangedMonitor implements SelectionChangedListener {
+
+		public boolean selectionChanged = false;
+
+		@Override
+		public void notifySelectionChanged() {
+			selectionChanged = true;
+		}
 	}
 }
 

@@ -157,6 +157,11 @@ public class BarrierBufferMassiveRandomTest {
 		}
 
 		@Override
+		public boolean moreAvailable() {
+			return true;
+		}
+
+		@Override
 		public void requestPartitions() {}
 
 		@Override
@@ -185,6 +190,11 @@ public class BarrierBufferMassiveRandomTest {
 
 		@Override
 		public Optional<BufferOrEvent> pollNextBufferOrEvent() throws IOException, InterruptedException {
+			return getNextBufferOrEvent();
+		}
+
+		@Override
+		public Optional<BufferOrEvent> pollNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException {
 			return getNextBufferOrEvent();
 		}
 

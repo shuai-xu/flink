@@ -158,29 +158,32 @@ public class BarrierBuffer implements SelectedReadingBarrierHandler {
 
 	@Override
 	public BufferOrEvent getNextNonBlocked() throws Exception {
+		return getNext(true);
+	}
+
+	BufferOrEvent getNext(boolean blocking) throws Exception {
 		while (true) {
 			// process buffered BufferOrEvents before grabbing new ones
 			Optional<BufferOrEvent> next;
 			if (currentBuffered == null) {
-				next = inputGate.getNextBufferOrEvent();
+				next = blocking ? inputGate.getNextBufferOrEvent() : inputGate.pollNextBufferOrEvent();
 			}
 			else {
 				next = Optional.ofNullable(currentBuffered.getNext());
 				if (!next.isPresent()) {
 					completeBufferedSequence();
-					return getNextNonBlocked();
+					return getNext(blocking);
 				}
 			}
 
 			if (!next.isPresent()) {
-				if (!endOfStream) {
-					// end of input stream. stream continues with the buffered data
+				if (inputGate.isFinished() && !endOfStream) {
 					endOfStream = true;
+					// end of input stream. stream continues with the buffered data
 					releaseBlocksAndResetBarriers();
-					return getNextNonBlocked();
+					return getNext(blocking);
 				}
 				else {
-					// final end of both input and buffered data
 					return null;
 				}
 			}
@@ -213,8 +216,23 @@ public class BarrierBuffer implements SelectedReadingBarrierHandler {
 	}
 
 	@Override
+	public BufferOrEvent pollNext() throws Exception {
+		return getNext(false);
+	}
+
+	@Override
+	public boolean isFinished() {
+		return inputGate.isFinished();
+	}
+
+	@Override
 	public BufferOrEvent getNextNonBlocked(InputGate subInputGate) throws UnsupportedOperationException {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("BarrierBuffer does not support selecting input gate");
+	}
+
+	@Override
+	public BufferOrEvent pollNext(InputGate subInputGate) throws Exception {
+		throw new UnsupportedOperationException("BarrierBuffer does not support selecting input gate");
 	}
 
 	@Override

@@ -26,6 +26,7 @@ import org.apache.flink.util.OutputTag;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * An edge in the streaming topology. One edge like this does not necessarily
@@ -144,7 +145,7 @@ public class StreamEdge implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return edgeName.hashCode();
+		return Objects.hash(edgeName, edgeID);
 	}
 
 	@Override
@@ -158,13 +159,13 @@ public class StreamEdge implements Serializable {
 
 		StreamEdge that = (StreamEdge) o;
 
-		return edgeName.equals(that.edgeName);
+		return edgeName.equals(that.edgeName) && edgeID.equals(that.getEdgeID());
 	}
 
 	@Override
 	public String toString() {
 		return "(" + sourceVertex + " -> " + targetVertex + ", typeNumber=" + typeNumber
 				+ ", selectedNames=" + selectedNames + ", outputPartitioner=" + outputPartitioner
-				+ ", outputTag=" + outputTag + ", resultPartitionType" + resultPartitionType + ')';
+				+ ", outputTag=" + outputTag + ", resultPartitionType" + resultPartitionType + ", edgeID=" + edgeID + ')';
 	}
 }

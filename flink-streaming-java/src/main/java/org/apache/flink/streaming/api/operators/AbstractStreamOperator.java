@@ -109,7 +109,7 @@ public abstract class AbstractStreamOperator<OUT>
 	// ----------- configuration properties -------------
 
 	// A sane default for most operators
-	protected ChainingStrategy chainingStrategy = ChainingStrategy.HEAD;
+	protected ChainingStrategy chainingStrategy = ChainingStrategy.ALWAYS;
 
 	// ---------------- runtime fields ------------------
 

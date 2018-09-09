@@ -84,7 +84,7 @@ public class StreamConfigChainer {
 			new StreamEdge(
 				new StreamNode(tailConfig.getChainIndex(), null, null, null, null, null),
 				new StreamNode(chainIndex, null, null, null, null, null),
-				0,
+				1,
 				Collections.<String>emptyList(),
 				null,
 				null)));
@@ -107,7 +107,7 @@ public class StreamConfigChainer {
 			new StreamEdge(
 				new StreamNode(chainIndex, null, null, null, null, null),
 				new StreamNode(chainIndex , null, null, null, null, null),
-				0,
+				1,
 				Collections.<String>emptyList(),
 				new BroadcastPartitioner<Object>(),
 				null));

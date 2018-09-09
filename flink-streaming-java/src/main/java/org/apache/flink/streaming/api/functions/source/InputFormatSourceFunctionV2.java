@@ -57,7 +57,7 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 
 	private transient OUT reusableElement;
 
-	private transient SourceRecord<OUT> sourceRecord = new SourceRecord<>();
+	private transient SourceRecord<OUT> sourceRecord;
 
 	private transient boolean isObjectReuse;
 
@@ -97,13 +97,8 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 		if (hasMoreData) {
 			format.open(splitIterator.next());
 		}
-		reusableElement = serializer.createInstance();
 		isObjectReuse = getRuntimeContext().getExecutionConfig().isObjectReuseEnabled();
-	}
-
-	@Override
-	public boolean isIdle() {
-		return false;
+		sourceRecord = new SourceRecord<>();
 	}
 
 	@Override
@@ -115,15 +110,16 @@ public class InputFormatSourceFunctionV2<OUT> extends RichParallelSourceFunction
 	public SourceRecord<OUT> next() throws Exception {
 		Preconditions.checkNotNull(format, "InputFormat should not be null");
 
-		if (!isObjectReuse) {
+		if (!isObjectReuse || reusableElement == null) {
 			reusableElement = serializer.createInstance();
 		}
 
 		while (hasMoreData) {
 			if (!format.reachedEnd()) {
-				reusableElement = format.nextRecord(reusableElement);
-				if (reusableElement != null) {
-					return sourceRecord.replace(reusableElement);
+				OUT element = format.nextRecord(reusableElement);
+				if (element != null) {
+					reusableElement = element;
+					return sourceRecord.replace(element);
 				} else {
 					completedSplitsCounter.inc();
 					requestNextSplit();

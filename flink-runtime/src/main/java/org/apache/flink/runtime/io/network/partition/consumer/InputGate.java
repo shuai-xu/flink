@@ -67,16 +67,41 @@ import java.util.Optional;
  */
 public interface InputGate {
 
+	/**
+	 * Gets number of input channels.
+	 *
+	 * @return the number of input channels
+	 */
 	int getNumberOfInputChannels();
 
+	/**
+	 * Check this input gate is finished or not.
+	 *
+	 * @return true if is finished, false otherwise
+	 */
 	boolean isFinished();
 
+	/**
+	 * Check is there any data available currently.
+	 *
+	 * @return true if there is some data available, false otherwise
+	 */
+	boolean moreAvailable();
+
+	/**
+	 * Send the request of partitions.
+	 *
+	 * @throws IOException          the io exception
+	 * @throws InterruptedException the interrupted exception
+	 */
 	void requestPartitions() throws IOException, InterruptedException;
 
 	/**
 	 * Blocking call waiting for next {@link BufferOrEvent}.
 	 *
 	 * @return {@code Optional.empty()} if {@link #isFinished()} returns true.
+	 * @throws IOException          the io exception
+	 * @throws InterruptedException the interrupted exception
 	 */
 	Optional<BufferOrEvent> getNextBufferOrEvent() throws IOException, InterruptedException;
 
@@ -86,7 +111,10 @@ public interface InputGate {
 	 *
 	 * <p>If being single InputGate, its behavior must be equivalent to {@link #getNextBufferOrEvent()}.
 	 *
+	 * @param subInputGate the sub input gate
 	 * @return {@code Optional.empty()} if {@link #isFinished()} returns true.
+	 * @throws IOException          the io exception
+	 * @throws InterruptedException the interrupted exception
 	 */
 	Optional<BufferOrEvent> getNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException;
 
@@ -94,13 +122,43 @@ public interface InputGate {
 	 * Poll the {@link BufferOrEvent}.
 	 *
 	 * @return {@code Optional.empty()} if there is no data to return or if {@link #isFinished()} returns true.
+	 * @throws IOException          the io exception
+	 * @throws InterruptedException the interrupted exception
 	 */
 	Optional<BufferOrEvent> pollNextBufferOrEvent() throws IOException, InterruptedException;
 
+	/**
+	 * Poll the {@link BufferOrEvent} on the given sub {@link InputGate}.
+	 *
+	 * @param subInputGate the given sub {@link InputGate}.
+	 * @return {@code Optional.empty()} if there is no data to return or if {@link #isFinished()} returns true.
+	 * @throws IOException          the io exception
+	 * @throws InterruptedException the interrupted exception
+	 */
+	Optional<BufferOrEvent> pollNextBufferOrEvent(InputGate subInputGate) throws IOException, InterruptedException;
+
+	/**
+	 * Send task event.
+	 *
+	 * @param event the event
+	 * @throws IOException the io exception
+	 */
 	void sendTaskEvent(TaskEvent event) throws IOException;
 
+	/**
+	 * Register a listener that observe not empty event.
+	 * Input gate accepts multiple listeners.
+	 * These listeners would be notified by the registering order.
+	 *
+	 * @param listener the listener
+	 */
 	void registerListener(InputGateListener listener);
 
+	/**
+	 * Gets page size.
+	 *
+	 * @return the page size
+	 */
 	int getPageSize();
 
 	/**
