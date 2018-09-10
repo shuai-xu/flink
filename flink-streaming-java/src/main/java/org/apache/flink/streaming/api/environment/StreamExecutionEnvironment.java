@@ -1502,8 +1502,8 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	@Internal
 	public <OUT> DataStreamSource<OUT> createInput(InputFormat<OUT, ?> inputFormat,
-												   TypeInformation<OUT> typeInfo,
-												   String sourceName) {
+													TypeInformation<OUT> typeInfo,
+													String sourceName) {
 
 		InputFormatSourceFunction<OUT> function = new InputFormatSourceFunction<>(inputFormat, typeInfo);
 		return addSource(function, sourceName, typeInfo);

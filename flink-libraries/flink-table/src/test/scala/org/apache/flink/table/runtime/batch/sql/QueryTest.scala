@@ -19,8 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import java.lang.{Iterable => JIterable}
-import java.util
-import java.util.{List => JList}
+import java.util.TimeZone
 import java.util.regex.Pattern
 
 import org.apache.calcite.runtime.CalciteContextException
@@ -43,13 +42,13 @@ import org.junit.Assert._
 import org.junit.rules.TestName
 
 import scala.collection.JavaConverters._
-import scala.collection.JavaConversions._
 import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Sorting
 
 class QueryTest {
 
+  TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
   val conf: TableConfig = QueryTest.initConfigForTest(new TableConfig)
   val jobConfig = new Configuration()
   val env: StreamExecutionEnvironment = generatorTestEnv

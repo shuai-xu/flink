@@ -216,8 +216,15 @@ public class TimeConvertUtils {
 			d = dateStringToUnixDate(s.substring(0, space));
 			t = timeStringToUnixDate(s, space + 1);
 		} else {
-			d = dateStringToUnixDate(s);
-			t = 0;
+			int hyphen = s.indexOf('-');
+			if (hyphen >= 0) {
+				d = dateStringToUnixDate(s);
+				t = 0;
+			} else {
+				// Numeric To Timestamp : Precision is second
+				d = 0;
+				t = Integer.parseInt(s) * 1000;
+			}
 		}
 		return d * MILLIS_PER_DAY + t;
 	}

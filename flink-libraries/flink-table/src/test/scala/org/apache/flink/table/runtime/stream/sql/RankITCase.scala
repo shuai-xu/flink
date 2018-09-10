@@ -86,7 +86,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  @Test
+  @Test @Ignore
   def testLimitWithSubQueryWithoutOrderBy(): Unit = {
     val data = List(
       ("book", 1, 12),

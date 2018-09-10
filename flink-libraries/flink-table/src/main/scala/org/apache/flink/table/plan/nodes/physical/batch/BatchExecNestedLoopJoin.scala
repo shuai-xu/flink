@@ -160,7 +160,8 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
         ctx.addReusableOpenStatement(
           s"""
              |$BINARY_ROW_SERIALIZER $binaryRowSerializer = new $BINARY_ROW_SERIALIZER(
-             |(($ABSTRACT_ROW_SERIALIZER) getOperatorContext().getTypeSerializerIn$i()).getTypes());
+             |(($ABSTRACT_ROW_SERIALIZER) getOperatorConfig()
+             |.getTypeSerializerIn$i(getUserCodeClassloader())).getTypes());
              |""".stripMargin)
       }
       if (leftIsBuild) initSerializer(1) else initSerializer(2)
@@ -176,7 +177,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
 
     val buildProcessCode = if (singleRowJoin) {
       s"this.$buildRow = ($BASE_ROW) $buildRow.copy();"
-    } else {
+    } else
       s"""
          |if ($isFirstRow) {
          |  $isFirstRow = false;
@@ -185,8 +186,8 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
          |  } else {
          |    $isBinaryRow = false;
          |    $baseRowSerializer = new $BASE_ROW_SERIALIZER(
-         |    (($ABSTRACT_ROW_SERIALIZER) getOperatorContext().getTypeSerializerIn${
-              if (leftIsBuild) 1 else 2}()).getTypes());
+         |    (($ABSTRACT_ROW_SERIALIZER) getOperatorConfig().getTypeSerializerIn${
+                if (leftIsBuild) 1 else 2}(getUserCodeClassloader())).getTypes());
          |  }
          |}
          |
@@ -196,7 +197,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
          |  $buffer.add($baseRowSerializer.baseRowToBinary($buildRow));
          |}
        """.stripMargin
-    }
 
     val (probeProcessCode, buildEndCode, probeEndCode) =
       genProcessAndEndCode(ctx, condExpr, iter, buffer)

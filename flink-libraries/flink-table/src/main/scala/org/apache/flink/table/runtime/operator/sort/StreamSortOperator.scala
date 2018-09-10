@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.operator.sort
 
-import java.lang.{Integer => JInt}
+import java.lang.{Long => JLong}
 import java.util
 
 import org.apache.flink.api.common.state.{ListState, ListStateDescriptor}
@@ -48,7 +48,7 @@ class StreamSortOperator(
   with Logging {
 
   /** The map store elements. **/
-  @transient private var inputBuffer: mutable.HashMap[BaseRow, Int] = _
+  @transient private var inputBuffer: mutable.HashMap[BaseRow, Long] = _
 
   @transient private var sortBuffer: BinaryInMemorySortBuffer = _
 
@@ -62,7 +62,7 @@ class StreamSortOperator(
   @transient private var collector: StreamRecordCollector[BaseRow] = _
 
   /** The state to store buffer to make it exactly once. **/
-  @transient private var bufferState: ListState[Tuple2[BaseRow, JInt]] = _
+  @transient private var bufferState: ListState[Tuple2[BaseRow, JLong]] = _
 
   protected def getComparator(gSorter: GeneratedSorter): RecordComparator = {
     val name = gSorter.comparator.name
@@ -120,10 +120,9 @@ class StreamSortOperator(
     if (bufferState != null) {
       val itr = bufferState.get.iterator
       while (itr.hasNext) {
-        val input: Tuple2[BaseRow, JInt] = itr.next
+        val input: Tuple2[BaseRow, JLong] = itr.next
         inputBuffer += (input.f0 -> input.f1)
       }
-      bufferState = null
     }
   }
 
@@ -131,7 +130,7 @@ class StreamSortOperator(
     val originalInput = in.getValue
     val input = baseRowSerializer.baseRowToBinary(originalInput).copy()
     BaseRowUtil.setAccumulate(input)
-    val nowCount : Int = inputBuffer.getOrElse(input, 0)
+    val nowCount : Long = inputBuffer.getOrElse(input, 0)
     if (BaseRowUtil.isAccumulateMsg(originalInput)) {
       inputBuffer += ((input, nowCount + 1))
     } else {
@@ -148,8 +147,8 @@ class StreamSortOperator(
   override def endInput(): Unit = {
     if (inputBuffer.nonEmpty) {
       inputBuffer.keys.foreach { i =>
-        val nowCount: Option[Int] = inputBuffer.get(i)
-        (1 to nowCount.getOrElse(0)).foreach(_ => sortBuffer.write(i))
+        val nowCount: Option[Long] = inputBuffer.get(i)
+        (1 to nowCount.getOrElse(0L).intValue).foreach(_ => sortBuffer.write(i))
       }
       sorter.sort(sortBuffer)
       // emit the sorted inputs
@@ -165,11 +164,11 @@ class StreamSortOperator(
 
   override def initializeState(context: StateInitializationContext): Unit = {
     super.initializeState(context)
-    val tupleType = new TupleTypeInfo[Tuple2[BaseRow, JInt]](inputRowType, Types.LONG)
+    val tupleType = new TupleTypeInfo[Tuple2[BaseRow, JLong]](inputRowType, Types.LONG)
     this.bufferState = context
       .getOperatorStateStore
       .getListState(
-        new ListStateDescriptor[Tuple2[BaseRow, JInt]]("localBufferState", tupleType))
+        new ListStateDescriptor[Tuple2[BaseRow, JLong]]("localBufferState", tupleType))
   }
 
   override def snapshotState(context: StateSnapshotContext): Unit = {
@@ -177,7 +176,7 @@ class StreamSortOperator(
     // clear state first
     bufferState.clear()
 
-    val stateToPut = new util.ArrayList[Tuple2[BaseRow, JInt]](inputBuffer.size)
+    val stateToPut = new util.ArrayList[Tuple2[BaseRow, JLong]](inputBuffer.size)
     inputBuffer.foreach { case (key, count) =>
       stateToPut.add(Tuple2.of(key, count))
     }

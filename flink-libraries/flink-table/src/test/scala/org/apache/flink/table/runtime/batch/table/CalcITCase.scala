@@ -486,7 +486,7 @@ class CalcITCase extends QueryTest {
       .select(map('a, 'b, 'c, 'd))
       .collect()
     val expected4 = "{AAA=123.45, BBB=234.56}\n" +
-      "{CCC=345.67, DDD=456.78}\n" +
+      "{DDD=456.78, CCC=345.67}\n" +
       "{EEE=567.89, FFF=678.99}\n"
     TestBaseUtils.compareResultAsText(result4.asJava, expected4)
   }

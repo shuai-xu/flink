@@ -36,6 +36,7 @@ import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.StringUtils
 import org.apache.flink.table.util.{BinaryRowUtil, BloomFilter, BloomFilterAcc, RuntimeFilterUtils}
+import org.apache.flink.util.SerializedValue
 
 object ScalarOperators {
 
@@ -1816,13 +1817,20 @@ object ScalarOperators {
     ctx.addReusableOpenStatement(s"$bf = new $bfField(" +
         s"$bfField.suitableMaxNumEntries(${func.ndv.longValue()})," +
         s"${func.minFpp(ctx.tableConfig)});")
-    val accField = classOf[BloomFilterAcc].getCanonicalName
+    val accTypeField = classOf[BloomFilterAcc].getCanonicalName
     val quotaBid = "\"" + func.broadcastId + "\""
-    ctx.addReusableOpenStatement(s"getRuntimeContext().registerBroadcastAccumulator(" +
-        s"$quotaBid, $accField.class.getCanonicalName());")
+
+    val accField = newName("acc")
+    val serializedValue = classOf[SerializedValue[_]].getCanonicalName
+    ctx.addReusableMember(s"$accTypeField $accField = new $accTypeField();")
+    ctx.addReusableOpenStatement(s"getRuntimeContext().addPreAggregatedAccumulator(" +
+        s"$quotaBid, $accField);")
     // must endInput because close will be invoke in failover.
-    ctx.addReusableEndInputStatement(s"getRuntimeContext().commitBroadcastAccumulator(" +
-        s"$quotaBid, $accField.fromBytes($bfField.toBytes($bf)));")
+    ctx.addReusableEndInputStatement(
+      s"""
+         |$accField.add(new $serializedValue($bfField.toBytes($bf)));
+         |getRuntimeContext().commitPreAggregatedAccumulator($quotaBid);
+       """.stripMargin)
 
     val (hashCode, hash) = runtimeFilterHash(operands.head)
     val code =

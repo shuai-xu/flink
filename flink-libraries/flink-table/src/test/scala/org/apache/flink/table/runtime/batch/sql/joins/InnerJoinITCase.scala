@@ -205,6 +205,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
   private def testSpillForRuntimeFilterInner(waitRf: Boolean = false): Unit = {
 
+    tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
     if (waitRf) {
       tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_WAIT, true)
     }
@@ -236,8 +237,8 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
   def testRuntimeFilterPushDownToAgg(): Unit = {
     if (expectedJoinType == HashJoin) {
 
-      tEnv.getConfig.getParameters.setBoolean(
-        TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
+      tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_ENABLE, true)
+      tEnv.getConfig.getParameters.setBoolean(TableConfig.SQL_RUNTIME_FILTER_WAIT, true)
       InsertRuntimeFilterRule.resetBroadcastIdCounter()
       tEnv.getConfig.getParameters.setInteger(
         TableConfig.SQL_RUNTIME_FILTER_PROBE_ROW_COUNT_MIN, 5)

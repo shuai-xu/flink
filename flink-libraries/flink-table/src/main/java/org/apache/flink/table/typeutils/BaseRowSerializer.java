@@ -115,14 +115,13 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 		} else if (rowType.equals(BoxedWrapperRow.class)) {
 			//noinspection unchecked
 			return (T) new BoxedWrapperRow(getNumFields());
-		} else if (rowType.equals(BinaryRow.class)) {
-			//noinspection unchecked
-			return (T) new BinaryRow(getNumFields());
 		} else if (rowType.equals(ColumnarRow.class)) {
 			//noinspection unchecked
 			return (T) new ColumnarRow();
 		} else {
-			throw new UnsupportedOperationException(rowType + " can't been created now directly!");
+			// default use binary row to deserializer
+			//noinspection unchecked
+			return (T) new BinaryRow(getNumFields());
 		}
 	}
 

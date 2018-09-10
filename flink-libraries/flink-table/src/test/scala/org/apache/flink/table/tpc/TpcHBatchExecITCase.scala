@@ -28,11 +28,12 @@ import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.Test
+import org.junit.{Ignore, Test}
 import org.scalatest.prop.PropertyChecks
 
 import scala.collection.JavaConversions._
 
+@Ignore
 @RunWith(classOf[Parameterized])
 class TpcHBatchExecITCase(caseName: String,
     shuffleMode: PartitionShufflerMode,
