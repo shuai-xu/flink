@@ -23,6 +23,7 @@ import org.apache.flink.table.api.{Table, TableException, UnresolvedException, V
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory.isTimeIndicatorType
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}
+import org.apache.flink.table.functions.sql.StreamRecordTimestampSqlFunction
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
@@ -347,6 +348,19 @@ case class ProctimeAttribute(expr: Expression) extends TimeAttribute(expr) {
     NamedWindowProperty(name, this)
 
   override def toString: String = s"proctime($child)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+/** Expression to access the timestamp of a StreamRecord. */
+case class StreamRecordTimestamp() extends LeafExpression {
+
+  override private[flink] def resultType = DataTypes.LONG
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(StreamRecordTimestampSqlFunction)
+  }
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)

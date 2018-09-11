@@ -28,6 +28,8 @@ import org.apache.flink.table.types.{DataTypes, _}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
 import org.apache.flink.types.Row
 
+import _root_.scala.collection.mutable.ArrayBuffer
+
 /**
  * A TableSchema represents a Table's structure.
  */
@@ -768,4 +770,30 @@ object TableSchema {
     withProctime
   }
 
+  def builder(): TableSchemaBuilder = {
+    new TableSchemaBuilder
+  }
+
+}
+
+class TableSchemaBuilder {
+
+  private val fieldNames: ArrayBuffer[String] = new ArrayBuffer[String]()
+  private val fieldTypes: ArrayBuffer[InternalType] = new ArrayBuffer[InternalType]()
+  private val columns: ArrayBuffer[Column] = new ArrayBuffer[Column]()
+
+  def field(name: String, tpe: InternalType): TableSchemaBuilder = {
+    fieldNames.append(name)
+    fieldTypes.append(tpe)
+    this
+  }
+
+  def build(): TableSchema = {
+    fieldNames.zipWithIndex foreach {
+      case(name, idx) =>
+        columns.append(Column.apply(name, idx, fieldTypes(idx)))
+    }
+
+    new TableSchema(columns.toArray)
+  }
 }
