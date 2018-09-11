@@ -445,8 +445,12 @@ object InternalTypeConverters {
         if (isPrimitive(keyType)) keys else keys.map(keyConverter.toExternal)
       val convertedValues =
         if (isPrimitive(valueType)) values else values.map(valueConverter.toExternal)
-
-      convertedKeys.zip(convertedValues).toMap.asJava
+      // avoid use scala toMap here, because this may change the order of map values
+      val map = new util.HashMap[Any, Any]()
+      for (i <- keys.indices) {
+        map.put(convertedKeys(i), convertedValues(i))
+      }
+      map
     }
 
     override def toExternalImpl(row: BaseRow, column: Int): Any =

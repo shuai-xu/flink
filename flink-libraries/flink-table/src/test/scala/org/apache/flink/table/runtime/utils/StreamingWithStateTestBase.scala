@@ -35,6 +35,7 @@ import org.junit.runners.Parameterized
 import org.junit.{After, Assert, Before, Rule}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 
 class StreamingWithStateTestBase(state: StateBackendMode)
   extends AbstractTestBase {
@@ -99,6 +100,99 @@ class StreamingWithStateTestBase(state: StateBackendMode)
           data.length / 2) // fail after half elements
 
         env.addSource(function)(typeInfo).setMaxParallelism(1)
+    }
+  }
+
+  private def mapStrEquals(str1: String, str2: String): Boolean = {
+    val array1 = str1.toCharArray
+    val array2 = str2.toCharArray
+    if (array1.length != array2.length) {
+      return false
+    }
+    val l = array1.length
+    val leftBrace = "{".charAt(0)
+    val rightBrace = "}".charAt(0)
+    val equalsChar = "=".charAt(0)
+    val lParenthesis = "(".charAt(0)
+    val rParenthesis = ")".charAt(0)
+    val dot = ",".charAt(0)
+    val whiteSpace = " ".charAt(0)
+    val map1 = Map[String, String]()
+    val map2 = Map[String, String]()
+    var idx = 0
+    def findEquals(ss: CharSequence): Array[Int] = {
+      val ret = new ArrayBuffer[Int]()
+      (0 until ss.length) foreach (idx => if (ss.charAt(idx) == equalsChar) ret += idx)
+      ret.toArray
+    }
+
+    def splitKV(ss: CharSequence, equalsIdx: Int): (String, String) = {
+      // find right, if starts with '(' find until the ')', else until the ','
+      var endFlag = false
+      var curIdx = equalsIdx + 1
+      var endChar = if (ss.charAt(curIdx) == lParenthesis) rParenthesis else dot
+      var valueStr: CharSequence = null
+      var keyStr: CharSequence = null
+      while (curIdx < ss.length && !endFlag) {
+        val curChar = ss.charAt(curIdx)
+        if (curChar != endChar && curChar != rightBrace) {
+          curIdx += 1
+          if (curIdx == ss.length) {
+            valueStr = ss.subSequence(equalsIdx + 1, curIdx)
+          }
+        } else {
+          valueStr = ss.subSequence(equalsIdx + 1, curIdx)
+          endFlag = true
+        }
+      }
+
+      // find left, if starts with ')' find until the '(', else until the ' ,'
+      endFlag = false
+      curIdx = equalsIdx - 1
+      endChar = if (ss.charAt(curIdx) == rParenthesis) lParenthesis else whiteSpace
+      while (curIdx >= 0 && !endFlag) {
+        val curChar = ss.charAt(curIdx)
+        if (curChar != endChar && curChar != leftBrace) {
+          curIdx -= 1
+          if (curIdx == -1) {
+            keyStr = ss.subSequence(0, equalsIdx)
+          }
+        } else {
+          keyStr = ss.subSequence(curIdx, equalsIdx)
+          endFlag = true
+        }
+      }
+      require(keyStr != null)
+      require(valueStr != null)
+      (keyStr.toString, valueStr.toString)
+    }
+
+    def appendStrToMap(ss: CharSequence, m: Map[String, String]): Unit = {
+      val equalsIdxs = findEquals(ss)
+      equalsIdxs.foreach (idx => m + splitKV(ss, idx))
+    }
+
+    while (idx < l) {
+      val char1 = array1(idx)
+      val char2 = array2(idx)
+      if (char1 != char2) {
+        return false
+      }
+
+      if (char1 == leftBrace) {
+        val rightBraceIdx = array1.subSequence(idx+1, l).toString.indexOf(rightBrace)
+        appendStrToMap(array1.subSequence(idx+1, rightBraceIdx + idx + 2), map1)
+        idx += rightBraceIdx
+      } else {
+        idx += 1
+      }
+    }
+    map1.equals(map2)
+  }
+
+  def assertMapStrEquals(str1: String, str2: String): Unit = {
+    if (!mapStrEquals(str1, str2)) {
+      throw new AssertionError(s"Expected: $str1 \n Actual: $str2")
     }
   }
 }
