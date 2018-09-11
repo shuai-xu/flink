@@ -188,6 +188,14 @@ public class JobVertexTaskManagersHandler extends AbstractExecutionGraphHandler<
 			for (ExecutionState state : ExecutionState.values()) {
 				statusCounts.put(state, tasksPerState[state.ordinal()]);
 			}
+
+			String resourceId = "";
+			if (taskVertices != null && !taskVertices.isEmpty()) {
+				TaskManagerLocation taskManagerLocation = taskVertices.get(0).getCurrentAssignedResourceLocation();
+				if (taskManagerLocation != null) {
+					resourceId = taskManagerLocation.getResourceID().getResourceIdString();
+				}
+			}
 			taskManagersInfoList.add(new JobVertexTaskManagersInfo.TaskManagersInfo(
 				host,
 				jobVertexState,
@@ -195,7 +203,8 @@ public class JobVertexTaskManagersHandler extends AbstractExecutionGraphHandler<
 				endTime,
 				duration,
 				jobVertexMetrics,
-				statusCounts));
+				statusCounts,
+				resourceId));
 		}
 
 		return new JobVertexTaskManagersInfo(jobVertex.getJobVertexId(), jobVertex.getName(), now, taskManagersInfoList);
