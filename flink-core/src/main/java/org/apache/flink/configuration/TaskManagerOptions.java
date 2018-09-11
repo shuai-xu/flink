@@ -117,14 +117,6 @@ public class TaskManagerOptions {
 			.withDescription("Ratio of young generation for persistent memory in task manager.");
 
 	/**
-	 * CMS occupy fraction for a task manager.
-	 */
-	public static final ConfigOption<Double> TASK_MANAGER_MEMORY_CMS_GC_RATIO =
-			key("taskmanager.jvm.memory.cms.gc.ratio")
-			.defaultValue(0.7)
-			.withDescription("CMS occupy fraction for a task manager.");
-
-	/**
 	 * Cpu core limitation for a task manager, used to decide how many slots can be placed on a task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MULTI_SLOTS_MAX_CORE =

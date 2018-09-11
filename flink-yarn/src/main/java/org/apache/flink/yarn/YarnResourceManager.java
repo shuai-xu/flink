@@ -648,16 +648,14 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 					tmResource.getTotalNativeMemory()),
 			tmResource.getTotalDirectMemory(),
 			tmResource.getSlotNum(),
-			tmResource.getYoungHeapMemory(),
-			tmResource.getCMSGCOccupancyFraction());
+			tmResource.getYoungHeapMemory());
 
 		log.info("TaskExecutor {} will be started with container size {} MB, JVM heap size {} MB, " +
-				"new generation size {} MB, CMSInitiatingOccupancyFraction {}, JVM direct memory limit {} MB on {}",
+				"new generation size {} MB, JVM direct memory limit {} MB on {}",
 			container.getId(),
 			taskManagerParameters.taskManagerTotalMemoryMB(),
 			taskManagerParameters.taskManagerHeapSizeMB(),
 			taskManagerParameters.getYoungMemoryMB(),
-			taskManagerParameters.getCmsOccupyFraction(),
 			taskManagerParameters.taskManagerDirectMemoryLimitMB(),
 			container.getNodeHttpAddress());
 

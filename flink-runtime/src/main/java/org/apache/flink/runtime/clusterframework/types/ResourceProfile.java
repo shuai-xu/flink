@@ -206,7 +206,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			return (int)managedMemory.getValue();
 		}
 
-		return 0;
+		return -1;
 	}
 
 	/**

@@ -72,6 +72,9 @@ public class ResourceProfileTest {
 		assertTrue(ResourceProfile.fromResourceSpec(rs1, 0).isMatching(ResourceProfile.fromResourceSpec(rs2, 0)));
 		assertFalse(ResourceProfile.fromResourceSpec(rs2, 0).isMatching(ResourceProfile.fromResourceSpec(rs1, 0)));
 
+		assertEquals(-1, rp5.getManagedMemoryInMB());
+		assertEquals(0, rp5.getFloatingManagedMemoryInMB());
+
 		ResourceSpec rs3 = ResourceSpec.newBuilder().
 				setCpuCores(1.0).
 				setHeapMemoryInMB(100).

@@ -44,6 +44,19 @@ public class TaskManagerResource {
 	/** The reserved heap memory for TaskManager process.  */
 	private final int taskManagerHeapMemorySizeMB;
 
+	/** Fraction of memory allocated by the memory manager
+	 * On heap, jvmTotalMem = heapMem(tmHeapMem + taskTotalHeapMem(taskHeapMem + managedMem + floatingMem))
+	 *                        + directMem(tmNettyMem + taskDirectMem + taskNetworkMem)
+	 *          fraction = managedMem / heapMem
+	 *          managedMem = heapMem * fraction
+	 * Off heap, jvmTotalMem = heapMem(tmHeapMem + taskTotalHeapMem(taskHeapMem))
+	 *                        + directMem(tmNettyMem + taskDirectMem + taskNetworkMem + managedMem + floatingMem)
+	 *          fraction = managedMem / jvmTotalMemNoNet(jvmTotalMem - tmNettyMem - taskNetworkMem)
+	 *          managedMem = (tmHeapMem + taskHeapMem + taskDirectMem + floatingMem) / (1 - fraction) * fraction
+	 * {@link TaskManagerOptions#MANAGED_MEMORY_FRACTION}
+	 * Calculation is same as TaskManagerServices#createMemoryManager() */
+	private final float managedMemoryFraction;
+
 	/** The memory type used for NetworkBufferPool and MemoryManager, heap or off-heap. */
 	private final boolean offHeap;
 
@@ -52,9 +65,6 @@ public class TaskManagerResource {
 
 	/** The ratio for young generation of dynamic memory. */
 	private final double dynamicYoungHeapRatio;
-
-	/** The ratio for CMS gc occupy. */
-	private final double cmsGCRatio;
 
 	/** The resource profile of running tasks in TaskManager. */
 	private ResourceProfile taskResourceProfile;
@@ -65,28 +75,28 @@ public class TaskManagerResource {
 	/** The memory segment size for network and managed buffers. */
 	private final int pageSize;
 
-	protected TaskManagerResource(
+	private TaskManagerResource(
 		int taskManagerNettyMemorySizeMB,
 		int taskManagerNativeMemorySizeMB,
 		int taskManagerHeapMemorySizeMB,
+		float managedMemoryFraction,
 		boolean offHeap,
 		int pageSize,
 		double dynamicYoungHeapRatio,
 		double persistentYoungHeapRatio,
-		double cmsGCRatio,
 		ResourceProfile taskResourceProfile,
 		int slotNum) {
 
 		this.taskManagerNettyMemorySizeMB = taskManagerNettyMemorySizeMB;
 		this.taskManagerNativeMemorySizeMB = taskManagerNativeMemorySizeMB;
 		this.taskManagerHeapMemorySizeMB = taskManagerHeapMemorySizeMB;
+		this.managedMemoryFraction = managedMemoryFraction;
 		this.offHeap = offHeap;
 		this.pageSize = pageSize;
 		this.taskResourceProfile = taskResourceProfile;
 		this.slotNum = slotNum;
 		this.persistentYoungHeapRatio = persistentYoungHeapRatio;
 		this.dynamicYoungHeapRatio = dynamicYoungHeapRatio;
-		this.cmsGCRatio = cmsGCRatio;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -101,12 +111,23 @@ public class TaskManagerResource {
 		return getTotalHeapMemory() + getTotalDirectMemory() + getTotalNativeMemory();
 	}
 
-	public ResourceProfile getTotalResourceProfile() {
-		return new ResourceProfile(getContainerCpuCores(), getTotalContainerMemory());
-	}
-
+	/**
+	 * Calculate the managed memory based on the fraction when it is not set.
+	 * @return managedMemory size
+	 */
 	public int getManagedMemorySize() {
-		return taskResourceProfile.getManagedMemoryInMB() * slotNum;
+		int managedMemory =  taskResourceProfile.getManagedMemoryInMB() * slotNum;
+		if (taskResourceProfile.getManagedMemoryInMB() == TaskManagerOptions.MANAGED_MEMORY_SIZE.defaultValue()) {
+			if (offHeap) {
+				managedMemory = (int)((taskManagerHeapMemorySizeMB + taskResourceProfile.getHeapMemoryInMB() * slotNum
+						+ taskResourceProfile.getDirectMemoryInMB() * slotNum + getFloatingManagedMemorySize())
+						/ (1 - managedMemoryFraction) * managedMemoryFraction);
+			} else {
+				managedMemory = (int)((taskManagerHeapMemorySizeMB +
+						taskResourceProfile.getHeapMemoryInMB() * slotNum) * managedMemoryFraction);
+			}
+		}
+		return managedMemory;
 	}
 
 	public int getFloatingManagedMemorySize() {
@@ -143,7 +164,7 @@ public class TaskManagerResource {
 	 * TaskManager more GC friendly when persistent memory is not pre-allocated.
 	 */
 	public int getTotalHeapMemory() {
-		return getYoungHeapMemory() + getOldHeapMemory();
+		return taskManagerHeapMemorySizeMB + taskResourceProfile.getHeapMemoryInMB() * slotNum;
 	}
 
 	public int getTotalDirectMemory() {
@@ -152,16 +173,6 @@ public class TaskManagerResource {
 			directMemory += getManagedMemorySize() + getFloatingManagedMemorySize();
 		}
 		return directMemory;
-	}
-
-	int getOldHeapMemory() {
-		// dynamic memory in old generation
-		int dynamicMemory = getDynamicHeapMemory();
-		int result = (int) (dynamicMemory - dynamicMemory * dynamicYoungHeapRatio);
-
-		// persistent memory in old generation
-		result += getPersistentHeapMemory();
-		return result;
 	}
 
 	public int getYoungHeapMemory() {
@@ -179,7 +190,7 @@ public class TaskManagerResource {
 	 *
 	 * @return size of the persistent memory
 	 */
-	int getPersistentHeapMemory() {
+	private int getPersistentHeapMemory() {
 		int persistentMemory = 0;
 		if (!offHeap) {
 			persistentMemory += getManagedMemorySize() + getFloatingManagedMemorySize();
@@ -193,17 +204,8 @@ public class TaskManagerResource {
 	 *
 	 * @return size of the dynamic memory
 	 */
-	int getDynamicHeapMemory() {
-		return taskResourceProfile.getHeapMemoryInMB() * slotNum + taskManagerHeapMemorySizeMB;
-	}
-
-	public int getCMSGCOccupancyFraction() {
-		int dynamicMemory = getDynamicHeapMemory();
-		int persistentMemory = getPersistentHeapMemory();
-
-		// we want to trigger gc when given fraction of dynamic memory in old generation is used.
-		double userDefinedTriggerMemory = dynamicMemory * (1 - dynamicYoungHeapRatio) * cmsGCRatio;
-		return (int) ((persistentMemory + userDefinedTriggerMemory) / (getOldHeapMemory()) * 100);
+	private int getDynamicHeapMemory() {
+		return getTotalHeapMemory() - getPersistentHeapMemory();
 	}
 
 	public int getSlotNum() {
@@ -246,8 +248,8 @@ public class TaskManagerResource {
 				TaskManagerOptions.TASK_MANAGER_MEMORY_DYNAMIC_YOUNG_RATIO);
 		double persistentYoungRatio = configuration.getDouble(
 				TaskManagerOptions.TASK_MANAGER_MEMORY_PERSISTENT_YOUNG_RATIO);
-		double cmsGCRatio = configuration.getDouble(
-				TaskManagerOptions.TASK_MANAGER_MEMORY_CMS_GC_RATIO);
+
+		float managedMemoryFraction = configuration.getFloat(TaskManagerOptions.MANAGED_MEMORY_FRACTION);
 
 		// check whether we use heap or off-heap memory
 		final boolean useOffHeap = configuration.getBoolean(TaskManagerOptions.MEMORY_OFF_HEAP);
@@ -258,11 +260,11 @@ public class TaskManagerResource {
 				taskManagerNettyMemorySizeMB,
 				taskManagerNativeMemorySizeMB,
 				taskManagerHeapMemorySizeMB,
+				managedMemoryFraction,
 				useOffHeap,
 				pageSize,
 				dynamicYoungRatio,
 				persistentYoungRatio,
-				cmsGCRatio,
 				resourceProfile,
 				slotNum);
 	}
@@ -292,7 +294,7 @@ public class TaskManagerResource {
 	public int hashCode() {
 		return Objects.hash(
 				taskManagerNettyMemorySizeMB, offHeap, taskManagerNativeMemorySizeMB, taskManagerHeapMemorySizeMB,
-				dynamicYoungHeapRatio, persistentYoungHeapRatio, cmsGCRatio, taskResourceProfile, slotNum);
+				dynamicYoungHeapRatio, persistentYoungHeapRatio, taskResourceProfile, slotNum);
 	}
 
 	@Override
@@ -306,8 +308,8 @@ public class TaskManagerResource {
 					this.taskManagerNativeMemorySizeMB == that.taskManagerNativeMemorySizeMB &&
 					this.taskManagerHeapMemorySizeMB == that.taskManagerHeapMemorySizeMB &&
 					this.offHeap == that.offHeap &&
+					this.managedMemoryFraction == that.managedMemoryFraction &&
 					this.slotNum == that.slotNum &&
-					this.cmsGCRatio == that.cmsGCRatio &&
 					this.dynamicYoungHeapRatio == that.dynamicYoungHeapRatio &&
 					this.persistentYoungHeapRatio == that.persistentYoungHeapRatio;
 		} else {
@@ -324,7 +326,6 @@ public class TaskManagerResource {
 				", taskManagerHeapMemorySizeMB=" + taskManagerHeapMemorySizeMB +
 				", dynamicYoungRatio=" + dynamicYoungHeapRatio +
 				", persistentYoungRatio=" + persistentYoungHeapRatio +
-				", cmsGCRatio=" + cmsGCRatio +
 				", offHeap=" + offHeap +
 				", slotNum=" + slotNum +
 				'}';

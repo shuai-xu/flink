@@ -42,9 +42,6 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 	/** Young generation size for heap */
 	private int youngMemoryMB;
 
-	/** CMS GC occupy fraction */
-	private int cmsOccupyFraction;
-
 	/** Direct memory limit for the Java process. */
 	private final long taskManagerDirectMemoryLimitMB;
 
@@ -61,7 +58,7 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 			int numSlots,
 			HashMap<String, String> taskManagerEnv) {
 
-		this(totalContainerMemoryMB, taskManagerHeapSizeMB, taskManagerDirectMemoryLimitMB, numSlots, taskManagerEnv, 0, 0);
+		this(totalContainerMemoryMB, taskManagerHeapSizeMB, taskManagerDirectMemoryLimitMB, numSlots, taskManagerEnv, 0);
 	}
 
 	public ContaineredTaskManagerParameters(
@@ -70,8 +67,7 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 			long taskManagerDirectMemoryLimitMB,
 			int numSlots,
 			HashMap<String, String> taskManagerEnv,
-			int youngMemoryMB,
-			int cmsOccupyFraction) {
+			int youngMemoryMB) {
 
 		this.totalContainerMemoryMB = totalContainerMemoryMB;
 		this.taskManagerHeapSizeMB = taskManagerHeapSizeMB;
@@ -79,7 +75,6 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 		this.numSlots = numSlots;
 		this.taskManagerEnv = taskManagerEnv;
 		this.youngMemoryMB = youngMemoryMB;
-		this.cmsOccupyFraction = cmsOccupyFraction;
 	}
 
 	// ------------------------------------------------------------------------
@@ -94,10 +89,6 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 
 	public int getYoungMemoryMB() {
 		return youngMemoryMB;
-	}
-
-	public int getCmsOccupyFraction() {
-		return cmsOccupyFraction;
 	}
 
 	public long taskManagerDirectMemoryLimitMB() {
@@ -121,7 +112,6 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 			"totalContainerMemory=" + totalContainerMemoryMB +
 			", taskManagerHeapSize=" + taskManagerHeapSizeMB +
 			", youngMemoryMB=" + youngMemoryMB +
-			", cmsOccupyFraction=" + cmsOccupyFraction +
 			", taskManagerDirectMemoryLimit=" + taskManagerDirectMemoryLimitMB +
 			", numSlots=" + numSlots +
 			", taskManagerEnv=" + taskManagerEnv +
@@ -192,7 +182,7 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 		final long offHeapSizeMB = containerMemoryMB - heapSizeMB;
 
 		return create(config,
-			containerMemoryMB, (int)heapSizeMB, (int)offHeapSizeMB, numSlots, 0, 0);
+			containerMemoryMB, (int)heapSizeMB, (int)offHeapSizeMB, numSlots, 0);
 	}
 
 	public static ContaineredTaskManagerParameters create(
@@ -201,8 +191,7 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 			int heapMemorySizeMB,
 			int directMemorySizeMB,
 			int numSlots,
-			int youngMemorySizeMB,
-			int cmsOccupyFraction) {
+			int youngMemorySizeMB) {
 
 		// obtain the additional environment variables from the configuration
 		final HashMap<String, String> envVars = new HashMap<>();
@@ -221,7 +210,6 @@ public class ContaineredTaskManagerParameters implements java.io.Serializable {
 				directMemorySizeMB,
 				numSlots,
 				envVars,
-				youngMemorySizeMB,
-				cmsOccupyFraction);
+				youngMemorySizeMB);
 	}
 }

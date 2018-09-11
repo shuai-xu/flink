@@ -167,7 +167,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			for (Container container : containers.values()) {
 				if (container.getLaunchContext().getCommands().get(0).
 						contains(YarnTaskExecutorRunner.class.getSimpleName())) {
-					assertEquals(Resource.newInstance(1792, 1), container.getResource());
+					assertEquals(Resource.newInstance(1664, 1), container.getResource());
 				}
 			}
 		}
@@ -289,7 +289,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			for (Container container : containers.values()) {
 				if (container.getLaunchContext().getCommands().get(0).
 					contains(YarnTaskExecutorRunner.class.getSimpleName())) {
-					assertEquals(Resource.newInstance(1792, 1), container.getResource());
+					assertEquals(Resource.newInstance(1664, 1), container.getResource());
 				}
 			}
 		}
@@ -419,7 +419,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			for (Container container : containers.values()) {
 				if (container.getLaunchContext().getCommands().get(0).
 					contains(YarnTaskExecutorRunner.class.getSimpleName())) {
-					assertEquals(Resource.newInstance(1792, 1), container.getResource());
+					assertEquals(Resource.newInstance(1664, 1), container.getResource());
 				}
 			}
 		}
