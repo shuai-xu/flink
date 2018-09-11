@@ -177,7 +177,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
 
     val buildProcessCode = if (singleRowJoin) {
       s"this.$buildRow = ($BASE_ROW) $buildRow.copy();"
-    } else
+    } else {
       s"""
          |if ($isFirstRow) {
          |  $isFirstRow = false;
@@ -187,7 +187,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
          |    $isBinaryRow = false;
          |    $baseRowSerializer = new $BASE_ROW_SERIALIZER(
          |    (($ABSTRACT_ROW_SERIALIZER) getOperatorConfig().getTypeSerializerIn${
-                if (leftIsBuild) 1 else 2}(getUserCodeClassloader())).getTypes());
+        if (leftIsBuild) 1 else 2}(getUserCodeClassloader())).getTypes());
          |  }
          |}
          |
@@ -197,6 +197,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
          |  $buffer.add($baseRowSerializer.baseRowToBinary($buildRow));
          |}
        """.stripMargin
+    }
 
     val (probeProcessCode, buildEndCode, probeEndCode) =
       genProcessAndEndCode(ctx, condExpr, iter, buffer)
