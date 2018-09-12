@@ -485,6 +485,30 @@ class BuiltinScalarFunctionITCase {
   }
 
   @Test
+  def testConcatWithImplicitCast(): Unit = {
+    val data = new mutable.MutableList[(String, Boolean, Int, Double, SqlDate)]
+    data.+=(("Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val sqlQuery = "SELECT CONCAT(f1, f2, f3, f4, f5) from T1"
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'f1, 'f2, 'f3, 'f4, 'f5, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List("Hellotrue123123.452018-08-08")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
   def testUserDefinedConcat(): Unit = {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=((null, null, null))
@@ -541,6 +565,37 @@ class BuiltinScalarFunctionITCase {
     env.execute()
 
     val expected = List("Harry" + tab + "John", "Jack", "JackHarryJohn", "Jack|Harry|John")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testConcatWsWithImplicitCast(): Unit = {
+    val data = new mutable.MutableList[(String, String, Boolean, Int, Double, SqlDate)]
+    data.+=((null, "Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
+    data.+=(("|", "Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
+    data.+=(("\t", "Hello", true, 123, 123.45, SqlDate.valueOf("2018-08-08")))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val sqlQuery = "SELECT CONCAT_WS(sep, f1, f2, f3, f4, f5) from T1"
+
+    val t1 = env.fromCollection(data)
+      .toTable(tEnv,'sep, 'f1, 'f2, 'f3, 'f4, 'f5, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "Hellotrue123123.452018-08-08",
+      "Hello|true|123|123.45|2018-08-08",
+      "Hello" + tab + "true" + tab + "123" + tab + "123.45" + tab + "2018-08-08"
+    )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 

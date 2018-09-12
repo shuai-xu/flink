@@ -23,7 +23,7 @@ import org.apache.calcite.sql.`type`.{OperandTypes, ReturnTypes, SqlTypeFamily, 
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.calcite.sql.`type`.{FlinkReturnTypes, NumericExceptFirstOperandChecker}
+import org.apache.flink.table.calcite.sql.`type`.{FlinkReturnTypes, NumericExceptFirstOperandChecker, RepeatFamilyOperandTypeChecker}
 import org.apache.flink.table.dataformat.Decimal
 
 /**
@@ -115,7 +115,7 @@ object ScalarSqlFunctions {
     SqlKind.OTHER_FUNCTION,
     ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR), SqlTypeTransforms.TO_NULLABLE),
     null.asInstanceOf[SqlOperandTypeInference],
-    OperandTypes.ONE_OR_MORE,
+    new RepeatFamilyOperandTypeChecker(SqlTypeFamily.CHARACTER),
     SqlFunctionCategory.STRING)
 
   val CONCAT_WS = new SqlFunction(
@@ -123,7 +123,7 @@ object ScalarSqlFunctions {
     SqlKind.OTHER_FUNCTION,
     ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR), SqlTypeTransforms.TO_NULLABLE),
     null.asInstanceOf[SqlOperandTypeInference],
-    OperandTypes.ONE_OR_MORE,
+    new RepeatFamilyOperandTypeChecker(SqlTypeFamily.CHARACTER),
     SqlFunctionCategory.STRING)
 
   val LOG = new SqlFunction(

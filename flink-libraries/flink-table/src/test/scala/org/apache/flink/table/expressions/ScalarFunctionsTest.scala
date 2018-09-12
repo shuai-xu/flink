@@ -715,7 +715,11 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
 
   @Test
   def testMultiConcat(): Unit = {
-    testAllApis(concat("xx", 'f33), "concat('xx', f33)", "CONCAT('xx', f33)", "xx")
+    testAllApis(
+      concat("xx", 'f33),
+      "concat('xx', f33)",
+      "CONCAT('xx', f33)",
+      "xx")
     testAllApis(
       concat("AA", "BB", "CC", "---"),
       "concat('AA','BB','CC','---')",
@@ -762,8 +766,9 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
   @Test
   def testConcat2(): Unit = {
     testSqlApi("concat(f35)", "a")  // FIX BLINK-14882008
-    testSqlApi("concat(f35,f36)", "ab")
-    testSqlApi("concat(f35,f36,f33)", "ab") // note: Spark expects the result to be `null`
+    testSqlApi("concat(f1,f2,f3,f4,f5,f16,f17,f18,f33,f43)",
+      "true4243444.51996-11-1006:55:441996-11-10 06:55:44.333-1")
+    testSqlApi("concat(f35,f36,f33,f1)", "abtrue") // note: Spark expects the result to be `null`
   }
 
   @Test

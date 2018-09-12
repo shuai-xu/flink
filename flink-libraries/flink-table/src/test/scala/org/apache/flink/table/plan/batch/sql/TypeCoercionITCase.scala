@@ -1410,6 +1410,27 @@ class TypeCoercionITCase extends QueryTest {
   }
 
   @Test
+  def testConcatImplicitCast(): Unit = {
+    checkResult(
+      """
+        |SELECT CONCAT('', 'hello', 123, 123.45, true, TO_DATE('2018-08-08'),
+        |TO_TIMESTAMP('2018-08-08 00:00:00'), CAST(NULL as VARCHAR))
+      """.stripMargin, Seq(row("hello123123.45true2018-08-082018-08-08 00:00:00.000"))
+    )
+  }
+
+  @Test
+  def testConcatWsImplicitCast(): Unit = {
+    checkResult(
+      """
+        |SELECT CONCAT_WS('#', '', 'hello', 123, 123.45, true, TO_DATE('2018-08-08'),
+        |TO_TIMESTAMP('2018-08-08 00:00:00'), CAST(NULL as VARCHAR))
+      """.stripMargin,
+      Seq(row("#hello#123#123.45#true#2018-08-08#2018-08-08 00:00:00.000"))
+    )
+  }
+
+  @Test
   def testCallReuse(): Unit = {
     checkResult(
       s"""
