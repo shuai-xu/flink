@@ -31,7 +31,7 @@ import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{Before, Test}
+import org.junit.{Before, Ignore, Test}
 
 import scala.collection.JavaConversions._
 import scala.collection.Seq
@@ -170,7 +170,7 @@ class SplitAggregateITCase(
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  @Test
+  @Test @Ignore
   def testMinMaxWithRetraction(): Unit = {
     val t1 = tEnv.sqlQuery(
       s"""
@@ -214,7 +214,7 @@ class SplitAggregateITCase(
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  @Test
+  @Test @Ignore
   def testAggWithJoin(): Unit = {
     val t1 = tEnv.sqlQuery(
       s"""
