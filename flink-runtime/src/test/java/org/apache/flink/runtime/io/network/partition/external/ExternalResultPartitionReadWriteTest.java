@@ -58,6 +58,9 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 
+/**
+ * Test the reading and writing of the files produced by external result partition.
+ */
 public class ExternalResultPartitionReadWriteTest {
 
 	/*************************** Global configurations ***********************/
@@ -120,32 +123,32 @@ public class ExternalResultPartitionReadWriteTest {
 
 	@Test
 	public void testLocalSpillMultipleFileNoMerge() throws Exception {
-		testTemplate(PersistentFileType.MERGED_PARTITION_FILE, false, false);
+		runTest(PersistentFileType.MERGED_PARTITION_FILE, false, false);
 	}
 
 	@Test
 	public void testLocalSpillMultipleFileNoMergeWithSkewData() throws Exception {
-		testTemplate(PersistentFileType.MERGED_PARTITION_FILE, false, true);
+		runTest(PersistentFileType.MERGED_PARTITION_FILE, false, true);
 	}
 
 	@Test
 	public void testLocalSpillMultipleFileWithMerge() throws Exception {
-		testTemplate(PersistentFileType.MERGED_PARTITION_FILE, true, false);
+		runTest(PersistentFileType.MERGED_PARTITION_FILE, true, false);
 	}
 
 	@Test
 	public void testLocalSpillMultipleFileWithMergeWithSkewData() throws Exception {
-		testTemplate(PersistentFileType.MERGED_PARTITION_FILE, true, true);
+		runTest(PersistentFileType.MERGED_PARTITION_FILE, true, true);
 	}
 
 	@Test
 	public void testLocalSpillSingleFileEachPartition() throws Exception {
-		testTemplate(PersistentFileType.HASH_PARTITION_FILE, false, false);
+		runTest(PersistentFileType.HASH_PARTITION_FILE, false, false);
 	}
 
 	@Test
 	public void testLocalSpillSingleFileEachPartitionWithSkewData() throws Exception {
-		testTemplate(PersistentFileType.HASH_PARTITION_FILE, false, true);
+		runTest(PersistentFileType.HASH_PARTITION_FILE, false, true);
 	}
 
 	private void cleanExternalShuffleDirs() {
@@ -158,13 +161,9 @@ public class ExternalResultPartitionReadWriteTest {
 		}
 	}
 
-	/**
-	 * Basic test processes for this UT class.
-	 * @throws Exception
-	 */
-	private void testTemplate(PersistentFileType externalFileType,
-								boolean withMerge,
-								boolean dataSkew) throws Exception {
+	private void runTest(PersistentFileType externalFileType,
+							boolean withMerge,
+							boolean dataSkew) throws Exception {
 
 		// 1. prepare internal variables according to specific case configuration
 		final int segmentSize = memoryManager.getPageSize();
@@ -261,7 +260,7 @@ public class ExternalResultPartitionReadWriteTest {
 				partitionID.getProducerId().toString(),
 				partitionID.getPartitionId().toString()));
 
-		FixedLengthBufferPool bufferPool = new FixedLengthBufferPool(10, PAGE_SIZE);
+		FixedLengthBufferPool bufferPool = new FixedLengthBufferPool(10, PAGE_SIZE, MemoryType.OFF_HEAP);
 		ExecutorService producerThreadPool = Executors.newFixedThreadPool(
 			NUM_PARTITIONS, new DispatcherThreadFactory(new ThreadGroup("Disk IO Thread"), "IO thread for Disk"));
 		ExecutorService consumerThreadPool = Executors.newFixedThreadPool(
@@ -288,7 +287,7 @@ public class ExternalResultPartitionReadWriteTest {
 
 			consumer.setSubpartitionView(subpartitionView);
 
-			subpartitionView.notifyCreditAdded(2);
+			subpartitionView.notifyCreditAdded(Integer.MAX_VALUE);
 			consumerResults.add(consumerThreadPool.submit(consumer));
 		}
 

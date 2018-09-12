@@ -27,6 +27,9 @@ import java.util.List;
 
 import static junit.framework.TestCase.assertEquals;
 
+/**
+ * Tests the hash file writer.
+ */
 public class PartitionHashFileWriterTest extends PersistentFileWriterTestBase {
 
 	@Override

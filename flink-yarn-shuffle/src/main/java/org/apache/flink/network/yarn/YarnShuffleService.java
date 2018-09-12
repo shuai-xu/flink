@@ -18,6 +18,7 @@
 
 package org.apache.flink.network.yarn;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleService;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
 
@@ -123,11 +124,13 @@ public class YarnShuffleService extends AuxiliaryService {
 	// --------------------------- Utilities -------------------------------
 
 	/**
-	 * Generate flink configuration from hadoop configuration.
-	 * @param hadoopConf The hadoop configuration.
-	 * @return The corresponding link configuration.
+	 * Generates Flink configuration from hadoop configuration.
+	 *
+	 * @param hadoopConf the hadoop configuration.
+	 * @return the corresponding link configuration.
 	 */
-	private static org.apache.flink.configuration.Configuration fromHadoopConfiguration(Configuration hadoopConf) {
+	@VisibleForTesting
+	public static org.apache.flink.configuration.Configuration fromHadoopConfiguration(Configuration hadoopConf) {
 		org.apache.flink.configuration.Configuration flinkConf = new org.apache.flink.configuration.Configuration();
 
 		// Copy all the original configurations to flinkConf.

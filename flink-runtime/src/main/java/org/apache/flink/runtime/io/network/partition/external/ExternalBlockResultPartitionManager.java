@@ -20,6 +20,7 @@ package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
@@ -77,7 +78,8 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 		// Init the buffer pool
 		this.bufferPool = new FixedLengthBufferPool(
 			shuffleServiceConfiguration.getBufferNumber(),
-			shuffleServiceConfiguration.getMemorySizePerBufferInBytes());
+			shuffleServiceConfiguration.getMemorySizePerBufferInBytes(),
+			MemoryType.OFF_HEAP);
 
 		constructThreadPools();
 

@@ -28,6 +28,9 @@ import java.util.List;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
 
+/**
+ * Tests the merge file writer.
+ */
 public class PartitionMergeFileWriterTest extends PersistentFileWriterTestBase {
 	@Override
 	protected PersistentFileWriter<Integer> createFileWriter(int numberPartitions, String partitionRootPath) throws Exception {

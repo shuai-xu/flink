@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.SynchronousBufferFileReader;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
@@ -297,6 +298,10 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 
 			buffers.add(buffer);
 
+			if (buffer.isBuffer()) {
+				--currentCredit;
+			}
+
 			// If EOF is enqueued directly, the condition will fail and there will be no second EOF enqueued.
 			if (++totalReadBuffers == totalBuffers) {
 				buffers.add(EventSerializer.toBuffer(EndOfPartitionEvent.INSTANCE));
@@ -429,5 +434,22 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	public String toString() {
 		return String.format("ExternalSubpartitionView [current read file path : %s]",
 			currFsIn == null ? null : currFsIn.getChannelID().getPath());
+	}
+
+	@VisibleForTesting
+	long getTotalBuffers() {
+		return totalBuffers;
+	}
+
+	@VisibleForTesting
+	Iterator<ExternalBlockResultPartitionMeta.ExternalSubpartitionMeta> getMetaIterator() {
+		return metaIterator;
+	}
+
+	@VisibleForTesting
+	int getCurrentCredit() {
+		synchronized (lock) {
+			return currentCredit;
+		}
 	}
 }

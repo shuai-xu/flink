@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
@@ -202,6 +203,11 @@ class ExternalBlockResultPartitionMeta {
 
 	long getAllSubpartitionsConsumedTimeInMs() {
 		return allSubpartitionsConsumedTimeInMs.get();
+	}
+
+	@VisibleForTesting
+	ResultPartitionID getResultPartitionID() {
+		return resultPartitionID;
 	}
 
 	// -------------------------------- Internal Utilities ------------------------------------

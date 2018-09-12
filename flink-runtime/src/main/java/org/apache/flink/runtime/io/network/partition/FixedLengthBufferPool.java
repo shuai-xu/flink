@@ -20,6 +20,7 @@ package org.apache.flink.runtime.io.network.partition;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
+import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferListener;
@@ -29,6 +30,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
@@ -47,7 +49,7 @@ public class FixedLengthBufferPool implements BufferPool, BufferRecycler {
 
 	private boolean isDestroyed;
 
-	public FixedLengthBufferPool(int numberOfBuffers, int memorySegmentSize) {
+	public FixedLengthBufferPool(int numberOfBuffers, int memorySegmentSize, MemoryType memoryType) {
 		checkArgument(numberOfBuffers > 0, "There should be at least one buffer.");
 
 		this.numberOfBuffers = numberOfBuffers;
@@ -57,8 +59,17 @@ public class FixedLengthBufferPool implements BufferPool, BufferRecycler {
 		this.memorySegments = new ArrayDeque<>(numberOfBuffers);
 
 		synchronized (memorySegments) {
-			for (int i = 0; i < numberOfBuffers; i++) {
-				memorySegments.add(MemorySegmentFactory.allocateUnpooledSegment(memorySegmentSize));
+			if (memoryType == MemoryType.HEAP) {
+				for (int i = 0; i < numberOfBuffers; i++) {
+					memorySegments.add(MemorySegmentFactory.allocateUnpooledSegment(memorySegmentSize));
+				}
+			} else if (memoryType == MemoryType.OFF_HEAP) {
+				for (int i = 0; i < numberOfBuffers; i++) {
+					ByteBuffer memory = ByteBuffer.allocateDirect(memorySegmentSize);
+					memorySegments.add(MemorySegmentFactory.wrapPooledOffHeapMemory(memory, null));
+				}
+			} else {
+				throw new IllegalArgumentException("Unknown memory type " + memoryType);
 			}
 		}
 	}

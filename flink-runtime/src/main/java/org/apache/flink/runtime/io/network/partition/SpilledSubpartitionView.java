@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.partition;
 
+import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileReader;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.SynchronousBufferFileReader;
@@ -87,7 +88,7 @@ public class SpilledSubpartitionView implements ResultSubpartitionView, Notifica
 		BufferAvailabilityListener availabilityListener) throws IOException {
 
 		this.parent = checkNotNull(parent);
-		this.bufferPool = new FixedLengthBufferPool(2, memorySegmentSize);
+		this.bufferPool = new FixedLengthBufferPool(2, memorySegmentSize, MemoryType.HEAP);
 		this.spillWriter = checkNotNull(spillWriter);
 		this.fileReader = new SynchronousBufferFileReader(spillWriter.getChannelID(), false);
 		checkArgument(numberOfSpilledBuffers >= 0);

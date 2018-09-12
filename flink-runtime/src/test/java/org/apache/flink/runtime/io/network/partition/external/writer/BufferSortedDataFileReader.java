@@ -37,7 +37,7 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
- * Read record from a buffer sorted file.
+ * Readers for the data file produced by hash or merge file writer.
  */
 public class BufferSortedDataFileReader<T> {
 	private final SynchronousBufferFileReader synchronousBufferFileReader;
@@ -45,7 +45,10 @@ public class BufferSortedDataFileReader<T> {
 	private final DeserializationDelegate<T> deserializationDelegate;
 	private final int segmentSize;
 
+	/** The offset to start reading */
 	private final long startOffset;
+
+	/** The number of buffers to read */
 	private final long maxNumberOfBuffers;
 
 	private int numBuffersRead;

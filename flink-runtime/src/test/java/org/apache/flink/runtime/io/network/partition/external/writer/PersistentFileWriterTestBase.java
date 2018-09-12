@@ -48,6 +48,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+/**
+ * Test base for persistent file writer.
+ */
 public abstract class PersistentFileWriterTestBase {
 	public static final int PAGE_SIZE = 4096;
 	public static final int NUM_PAGES = 100;
@@ -156,6 +159,7 @@ public abstract class PersistentFileWriterTestBase {
 		for (int i = 0; i < numberPartitions; ++i) {
 			actualResult.add(new HashSet<>());
 		}
+
 		for (int i = 0; i < numberPartitions; ++i) {
 			MutableObjectIterator<Integer> iterator = createResultIterator(numberPartitions, partitionRootPath, partitionIndices, i);
 
@@ -172,11 +176,10 @@ public abstract class PersistentFileWriterTestBase {
 		shuffleWriter.clear();
 	}
 
-
 	protected abstract PersistentFileWriter<Integer> createFileWriter(int numberPartitions, String partitionRootPath) throws Exception;
 
 	protected abstract MutableObjectIterator<Integer> createResultIterator(int numPartitions,
-																		   String partitionRootPath,
-																		   List<List<PartitionIndex>> partitionIndices,
-																		   int subpartitionIndex) throws Exception;
+																			String partitionRootPath,
+																			List<List<PartitionIndex>> partitionIndices,
+																			int subpartitionIndex) throws Exception;
 }

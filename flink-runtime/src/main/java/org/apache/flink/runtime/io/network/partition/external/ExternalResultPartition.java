@@ -219,6 +219,10 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 			checkInProduceState();
 
+			if (!initialized) {
+				initialize();
+			}
+
 			FileSystem fs = FileSystem.get(new Path(partitionRootPath).toUri());
 
 			fileWriter.finish();
