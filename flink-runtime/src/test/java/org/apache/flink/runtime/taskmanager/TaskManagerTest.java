@@ -2195,6 +2195,7 @@ public class TaskManagerTest extends TestLogger {
 			subtaskIndex,
 			attemptNumber,
 			targetSlotNumber,
+			0,
 			null,
 			producedPartitions,
 			inputGates);

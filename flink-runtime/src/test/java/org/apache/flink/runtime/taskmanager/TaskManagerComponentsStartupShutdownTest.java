@@ -59,9 +59,10 @@ import akka.testkit.JavaTestKit;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import scala.Option;
+import scala.compat.java8.OptionConverters;
 import scala.concurrent.duration.FiniteDuration;
 
 import static org.junit.Assert.assertTrue;
@@ -102,7 +103,7 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 				TestingUtils.defaultExecutor(),
 				highAvailabilityServices,
 				NoOpMetricRegistry.INSTANCE,
-				Option.empty(),
+				OptionConverters.<String>toScala(Optional.empty()),
 				JobManager.class,
 				MemoryArchivist.class)._1();
 

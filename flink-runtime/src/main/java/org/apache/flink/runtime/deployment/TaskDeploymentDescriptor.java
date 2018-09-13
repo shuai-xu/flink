@@ -146,6 +146,9 @@ public final class TaskDeploymentDescriptor implements Serializable {
 	@Nullable
 	private final JobManagerTaskRestore taskRestore;
 
+	/** The create timestamp of execution. */
+	private final long createTimestamp;
+
 	public TaskDeploymentDescriptor(
 		JobID jobId,
 		MaybeOffloaded<JobInformation> serializedJobInformation,
@@ -155,6 +158,7 @@ public final class TaskDeploymentDescriptor implements Serializable {
 		int subtaskIndex,
 		int attemptNumber,
 		int targetSlotNumber,
+		long createTimestamp,
 		@Nullable JobManagerTaskRestore taskRestore,
 		Collection<ResultPartitionDeploymentDescriptor> resultPartitionDeploymentDescriptors,
 		Collection<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
@@ -175,6 +179,9 @@ public final class TaskDeploymentDescriptor implements Serializable {
 
 		Preconditions.checkArgument(0 <= targetSlotNumber, "The target slot number must be positive.");
 		this.targetSlotNumber = targetSlotNumber;
+
+		Preconditions.checkArgument(0 <= createTimestamp, "The create timestamp must be positive.");
+		this.createTimestamp = createTimestamp;
 
 		this.taskRestore = taskRestore;
 
@@ -271,6 +278,10 @@ public final class TaskDeploymentDescriptor implements Serializable {
 
 	public AllocationID getAllocationId() {
 		return allocationId;
+	}
+
+	public long getCreateTimestamp() {
+		return createTimestamp;
 	}
 
 	/**

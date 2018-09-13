@@ -208,6 +208,7 @@ public class JvmExitOnFatalErrorTest {
 						Collections.<ResultPartitionDeploymentDescriptor>emptyList(),
 						Collections.<InputGateDeploymentDescriptor>emptyList(),
 						0,       // targetSlotNumber
+						System.currentTimeMillis(),
 						memoryManager,
 						ioManager,
 						networkEnvironment,

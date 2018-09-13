@@ -245,6 +245,9 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	/** Executor to run future callbacks. */
 	private final Executor executor;
 
+	/** The create timestamp of execution */
+	private final long createTimestamp;
+
 	// ------------------------------------------------------------------------
 	//  Fields that control the task execution. All these fields are volatile
 	//  (which means that they introduce memory barriers), to establish
@@ -292,6 +295,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		Collection<ResultPartitionDeploymentDescriptor> resultPartitionDeploymentDescriptors,
 		Collection<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
 		int targetSlotNumber,
+		long createTimestamp,
 		MemoryManager memManager,
 		IOManager ioManager,
 		NetworkEnvironment networkEnvironment,
@@ -340,6 +344,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		Configuration tmConfig = taskManagerConfig.getConfiguration();
 		this.taskCancellationInterval = tmConfig.getLong(TaskManagerOptions.TASK_CANCELLATION_INTERVAL);
 		this.taskCancellationTimeout = tmConfig.getLong(TaskManagerOptions.TASK_CANCELLATION_TIMEOUT);
+
+		this.createTimestamp = createTimestamp;
 
 		this.memoryManager = Preconditions.checkNotNull(memManager);
 		this.ioManager = Preconditions.checkNotNull(ioManager);
@@ -462,6 +468,10 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	@VisibleForTesting
 	long getTaskCancellationTimeout() {
 		return taskCancellationTimeout;
+	}
+
+	public long getCreateTimestamp() {
+		return createTimestamp;
 	}
 
 	// ------------------------------------------------------------------------

@@ -177,6 +177,10 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 		return totalBuffers;
 	}
 
+	public boolean getHasNotifiedPipelinedConsumers() {
+		return hasNotifiedPipelinedConsumers;
+	}
+
 	// ------------------------------------------------------------------------
 
 	@Override

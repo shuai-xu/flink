@@ -110,6 +110,9 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	/** The current or latest execution attempt of this vertex's task */
 	private volatile Execution currentExecution;	// this field must never be null
 
+	/** The create timestamp of execution. */
+	private long createTimestamp;
+
 	private final Map<OperatorID, List<InputSplit>> assignedInputSplitsMap = new HashMap<>();
 
 	private final Map<OperatorID, Integer> inputSplitIndexMap = new HashMap<>();
@@ -174,6 +177,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		this.inputEdges = new ExecutionEdge[jobVertex.getJobVertex().getInputs().size()][];
 
 		this.priorExecutions = new EvictingBoundedList<>(maxPriorExecutionHistoryLength);
+
+		this.createTimestamp = createTimestamp;
 
 		this.currentExecution = new Execution(
 			getExecutionGraph().getFutureExecutor(),
@@ -856,6 +861,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 			subTaskIndex,
 			attemptNumber,
 			targetSlot.getPhysicalSlotNumber(),
+			createTimestamp,
 			taskRestore,
 			producedPartitions,
 			consumedPartitions);

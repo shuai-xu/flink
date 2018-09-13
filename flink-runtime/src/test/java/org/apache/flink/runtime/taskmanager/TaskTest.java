@@ -1019,6 +1019,7 @@ public class TaskTest extends TestLogger {
 			Collections.emptyList(),
 			Collections.emptyList(),
 			0,
+			0,
 			mock(MemoryManager.class),
 			mock(IOManager.class),
 			networkEnvironment,

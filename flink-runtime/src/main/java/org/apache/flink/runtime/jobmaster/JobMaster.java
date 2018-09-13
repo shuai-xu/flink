@@ -112,7 +112,9 @@ import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.taskexecutor.AccumulatorReport;
+import org.apache.flink.runtime.taskexecutor.TaskExecutionStatus;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorGateway;
+import org.apache.flink.runtime.taskexecutor.TaskExecutorReportResponse;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -974,6 +976,14 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	@Override
 	public CompletableFuture<ArchivedExecutionGraph> requestJob(Time timeout) {
 		return CompletableFuture.completedFuture(ArchivedExecutionGraph.createFrom(executionGraph));
+	}
+
+	@Override
+	public CompletableFuture<TaskExecutorReportResponse> reportTasksExecutionStatus(
+		final ResourceID taskManagerId,
+		final List<TaskExecutionStatus> tasksExecutionStatus,
+		final Time timeout) {
+		throw new UnsupportedOperationException("Not yet implement.");
 	}
 
 	@Override

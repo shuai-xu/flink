@@ -46,8 +46,11 @@ import org.apache.flink.runtime.query.KvStateLocation;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
+import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.taskexecutor.AccumulatorReport;
+import org.apache.flink.runtime.taskexecutor.TaskExecutionStatus;
+import org.apache.flink.runtime.taskexecutor.TaskExecutorReportResponse;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -122,6 +125,14 @@ public class TestingJobMasterGateway implements JobMasterGateway {
 
 	@Override
 	public CompletableFuture<Collection<SlotOffer>> offerSlots(ResourceID taskManagerId, Collection<SlotOffer> slots, Time timeout) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public CompletableFuture<TaskExecutorReportResponse> reportTasksExecutionStatus(
+		final ResourceID taskManagerId,
+		final List<TaskExecutionStatus> tasksExecutionStatus,
+		@RpcTimeout final Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 

@@ -238,6 +238,7 @@ public class TaskCheckpointingBehaviourTest extends TestLogger {
 				Collections.<ResultPartitionDeploymentDescriptor>emptyList(),
 				Collections.<InputGateDeploymentDescriptor>emptyList(),
 				0,
+				System.currentTimeMillis(),
 				mock(MemoryManager.class),
 				mock(IOManager.class),
 				network,

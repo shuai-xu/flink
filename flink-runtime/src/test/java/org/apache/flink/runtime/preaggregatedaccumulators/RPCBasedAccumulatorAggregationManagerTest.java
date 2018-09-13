@@ -612,7 +612,7 @@ public class RPCBasedAccumulatorAggregationManagerTest {
 				mock(PartitionProducerStateChecker.class)
 			);
 
-			jobManagerTable.put(jobId, connection);
+			jobManagerTable.add(connection);
 		}
 
 		return jobManagerTable;
