@@ -16,24 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.flink.api.java.io.jdbc;
-
-import org.apache.flink.table.types.DataTypes;
-import org.junit.Test;
-
-import java.sql.Types;
-
-import static org.apache.flink.api.java.io.jdbc.JDBCTypeUtil.typeInformationToSqlType;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+package org.apache.flink.table.util
 
 /**
- * Testing the type conversions from Flink to SQL types.
- */
-public class JDBCTypeUtilTest {
+  * Utils for table sources and sinks.
+  */
+object TableConnectorUtil {
 
-	@Test
-	public void testTypeConversions() {
-		assertEquals(Types.INTEGER, typeInformationToSqlType(DataTypes.INT));
-	}
+  /** Returns the table connector name used for log and web UI */
+  def generateRuntimeName(clazz: Class[_], fields: Array[String]): String = {
+    val className = clazz.getSimpleName
+    if (null == fields) {
+      s"$className(*)"
+    } else {
+      s"$className(${fields.mkString(", ")})"
+    }
+  }
 }
