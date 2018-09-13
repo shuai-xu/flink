@@ -35,7 +35,8 @@ import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, Table
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.{BatchExecResourceUtil, DiffRepository, FlinkRelOptUtil}
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
+import org.apache.flink.table.util.{DiffRepository, FlinkRelOptUtil}
 import org.apache.flink.types.Row
 import org.junit.{Assert, Rule}
 import org.junit.Assert._
@@ -394,11 +395,13 @@ object QueryTest {
   }
 
   def initConfigForTest(conf: TableConfig): TableConfig = {
+    conf.getParameters.setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+      InferMode.ONLY_SOURCE.toString)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM, 5)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 5)
-    conf.getParameters.setInteger(BatchExecResourceUtil.SQL_EXEC_DEFAULT_MEM, 1)
+    conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_MEM, 1)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM, 2)
     //dynamic allocate memory.
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_PER_REQUEST_MEM, 1)

@@ -22,6 +22,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 import org.junit.Ignore
 
 @Ignore
@@ -43,7 +44,7 @@ class ParquetTool extends QueryTest{
       tEnv.registerTableSource(tableSourceName, csvTableSource)
 
       tEnv.getConfig.getParameters.setString(
-        TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY, "NONE")
+        TableConfig.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
       tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 1)
       tEnv.sqlQuery(s"SELECT * from $tableSourceName")
           .writeToSink(new ParquetTableSink(s"$parquetPath/$tableName"))

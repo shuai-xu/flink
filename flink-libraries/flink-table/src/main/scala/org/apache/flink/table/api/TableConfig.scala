@@ -402,19 +402,6 @@ object OperatorType extends Enumeration {
 object TableConfig {
   def DEFAULT = new TableConfig()
 
-  /**
-    * Default parallelism of the job. If any node do not have special
-    * parallelism, use it. Its default value is the num of cpu cores in the client host.
-    */
-  val SQL_EXEC_DEFAULT_PARALLELISM = "sql.exec.default-parallelism"
-  def SQL_EXEC_DEFAULT_PARALLELISM_DEFAULT: Int = Runtime.getRuntime.availableProcessors
-
-  /**
-    * Default cpu for each operator.
-    */
-  val SQL_EXEC_DEFAULT_CPU = "sql.exec.default-cpu"
-  val SQL_EXEC_DEFAULT_CPU_DEFAULT = 0.3
-
   // =================================== Sort ===================================
   /**
     * Sets whether to enable range sort, use range sort to sort all data in
@@ -504,65 +491,91 @@ object TableConfig {
   // =================================== resource ================================
 
   /**
-    * Sets infer resource granularity according to statics.
-    * Only NONE, SOURCE or ALL can be set.
+    * Sets infer resource mode according to statics.
+    * Only NONE, ONLY_SOURCE or ALL can be set.
+    * If set NONE, parallelism and memory of all node are set by config.
+    * If set ONLY_SOURCE, only source parallelism is inferred according to statics.
+    * If set ALL, parallelism and memory of all node are inferred according to statics.
     */
-  val SQL_EXEC_INFER_RESOURCE_GRANULARITY = "sql.exec.infer-resource.granularity"
-  val SQL_EXEC_INFER_RESOURCE_GRANULARITY_DEFAULT = "SOURCE"
+  val SQL_EXEC_INFER_RESOURCE_MODE= "sql.exec.infer-resource.mode"
+  val SQL_EXEC_INFER_RESOURCE_MODE_DEFAULT = "NONE"
+
+  // NONE infer mode
 
   /**
-    * Sets how many rows one partition processes. We will infer the operator
-    * parallelism according to input row count.
+    * Default parallelism of the job. If any node do not have special
+    * parallelism, use it. Its default value is the num of cpu cores in the client host.
     */
-  val SQL_EXEC_REL_PROCESS_ROWS_PER_PARTITION = "sql.exec.infer.rows-per-partition"
-  val SQL_EXEC_REL_PROCESS_ROWS_PER_PARTITION_DEFAULT = 1000000
+  val SQL_EXEC_DEFAULT_PARALLELISM = "sql.exec.default-parallelism"
+  def SQL_EXEC_DEFAULT_PARALLELISM_DEFAULT: Int = Runtime.getRuntime.availableProcessors
 
   /**
-    * Sets max parallelism for all non-source operator.
+    * Default cpu for each operator.
+
     */
-  val SQL_EXEC_INFER_REL_MAX_PARALLELISM = "sql.exec.infer.non-source.max-parallelism"
-  val SQL_EXEC_INFER_REL_MAX_PARALLELISM_DEFAULT = 800
+  val SQL_EXEC_DEFAULT_CPU = "sql.exec.default-cpu"
+  val SQL_EXEC_DEFAULT_CPU_DEFAULT = 0.3
+
+  /**
+    * Default heap memory size for each operator.
+    */
+  val SQL_EXEC_DEFAULT_MEM = "sql.exec.default-memory-mb"
+
+  // infer parallelism and memory
+
+  /**
+    * Sets how many rows one partition processes. We will infer parallelism
+    * according to input row count.
+    */
+  val SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION = "sql.exec.infer-resource.rows-per-partition"
+  val SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION_DEFAULT = 1000000
+
+  /**
+    * Sets max parallelism for source operator.
+    */
+  val SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM =
+    "sql.exec.infer-resource.source.max-parallelism"
+  val SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM_DEFAULT = 1000
 
   /**
     * Sets how many data size in MB one partition processes. We will infer the
     * source parallelism according to source data size.
     */
-  val SQL_EXEC_SOURCE_PROCESS_SIZE_PER_PARTITION  = "sql.exec.infer.source.mb-per-partition"
-  val SQL_EXEC_SOURCE_PROCESS_SIZE_PER_PARTITION_DEFAULT: Int = 200
+  val SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION  =
+    "sql.exec.infer-resource.source.mb-per-partition"
+  val SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION_DEFAULT: Int = Int.MaxValue
 
   /**
-    * Sets max parallelism for source operator.
+    * Sets max parallelism for all operators.
+
     */
-  val SQL_EXEC_SOURCE_MAX_PARALLELISM = "sql.exec.infer.source.max-parallelism"
-  val SQL_EXEC_SOURCE_MAX_PARALLELISM_DEFAULT = 1000
+  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM =
+    "sql.exec.infer-resource.operator.max-parallelism"
+  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM_DEFAULT = 800
 
   /**
-    * Maybe the infer's preferred manager mem is too large, so this setting is upper limit for
-    * the infer's manager mem.
+    * Maybe inferred operator mem is too large, so this setting is upper limit for
+    * the inferred operator mem.
     */
-  val SQL_EXEC_INFER_MANAGER_MAX_MEM = "sql.exec.infer.max-memory-mb"
-  val SQL_EXEC_INFER_MANAGER_MAX_MEM_DEFAULT: Int = 1024
+  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB =
+    "sql.exec.infer-resource.operator.max-memory-mb"
+  val SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB_DEFAULT: Int = 1024
 
   /**
-    * Maybe the infer's reserved manager mem is too small, so this setting is lower limit for
-    * the infer's manager mem.
+    * Sets Whether to limit total cpu and memory of a runningUnit.
+    * If not set, do not limit resource, If set, cpu(double) and memory(in MB, long)
+    * need to be provided,
+    * for example: 0.5d,1024
     */
-  val SQL_EXEC_INFER_MANAGER_MIN_MEM = "sql.exec.infer.manager.min.memory-mb"
-  val SQL_EXEC_INFER_MANAGER_MIN_MEM_DEFAULT: Int = 32
+  val SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM = "sql.resource.runningUnit.total-cpu-mem"
+
+  // ================================ Schedule =================================
 
   /**
     * Whether to schedule according to runningUnits.
     */
-  val SQL_EXEC_RUNNING_UNIT_SCHEDULE_ENABLE = "sql.exec.schedule.running-unit.enable"
-  val SQL_EXEC_RUNNING_UNIT_SCHEDULE_ENABLE_DEFAULT = true
-
-  /**
-    * Sets Whether to adjust resource according to total cpu and memory limit of a runningUnit.
-    * If not set, do not adjust resource, If set, cpu(double) and memory(in MB, long)
-    * need to be provided,
-    * for example: 0.5d,1024
-    */
-  val SQL_EXEC_ADJUST_RUNNING_UNIT_TOTAL_RESOURCE = "sql.exec.adjust.runningUnit.total-resource"
+  val SQL_SCHEDULE_RUNNING_UNIT_ENABLE = "sql.schedule.running-unit.enable"
+  val SQL_SCHEDULE_RUNNING_UNIT_ENABLE_DEFAULT = true
 
   // ================================= PushDown ================================
 
@@ -856,11 +869,11 @@ object TableConfig {
     * to improve alignment between row group and hdfs block.
     */
   val SQL_EXEC_SINK_PARQUET_BLOCK_SIZE = "sql.exec.sink.parquet.block.size"
-  val SQL_EXEC_SINK_PARQUET_BLOCK_SIZE_DEFAULT = 128 * 1024 * 1024
+  val SQL_EXEC_SINK_PARQUET_BLOCK_SIZE_DEFAULT: Int = 128 * 1024 * 1024
 
   /**
     * enable Parquet dictionary encoding by default.
     */
   val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE = "sql.exec.sink.parquet.dictionary.enable"
-  val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE_DEFAULT = true
+  val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE_DEFAULT: Boolean = true
 }

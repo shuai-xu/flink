@@ -22,7 +22,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecResourceTest
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecResourceTest.MockTableSource
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{BatchExecResourceUtil, BatchExecTableTestUtil, TableTestBatchExecBase}
 import org.junit.{Before, Test}
 
 class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
@@ -34,8 +34,8 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
     util = batchExecTestUtil()
     util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY,
-      "ALL"
+      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+      BatchExecResourceUtil.InferMode.ALL.toString
     )
     BatchExecResourceTest.setResourceConfig(util.getTableEnv.getConfig)
   }
@@ -91,7 +91,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
       cpu: Double,
       mem: Long): Unit = {
     util.getTableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_ADJUST_RUNNING_UNIT_TOTAL_RESOURCE,
+      TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM,
       cpu + "," + mem
     )
   }

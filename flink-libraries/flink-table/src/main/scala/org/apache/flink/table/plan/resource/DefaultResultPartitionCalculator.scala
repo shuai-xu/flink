@@ -22,7 +22,7 @@ import org.apache.calcite.rel.{RelDistribution, RelNode, SingleRel}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.util.BatchExecResourceUtil.InferGranularity
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 import org.apache.flink.table.util.{BatchExecResourceUtil, Logging}
 import org.apache.flink.util.Preconditions
 
@@ -44,7 +44,7 @@ class DefaultResultPartitionCalculator(
       return
     }
 
-    val infer = !BatchExecResourceUtil.getInferGranularity(tConfig).equals(InferGranularity.NONE)
+    val infer = !BatchExecResourceUtil.getInferMode(tConfig).equals(InferMode.NONE)
     LOG.info("infer source partitions num: " + infer)
     if (infer) {
       val mq = scanBatchExec.getCluster.getMetadataQuery
@@ -54,7 +54,7 @@ class DefaultResultPartitionCalculator(
       LOG.info("source data size is : " + io)
       val rowsPerPartition = BatchExecResourceUtil.getRelCountPerPartition(tConfig)
       val sizePerPartition = BatchExecResourceUtil.getSourceSizePerPartition(tConfig)
-      val maxNum = BatchExecResourceUtil.getSourcePartitionsMaxNum(tConfig)
+      val maxNum = BatchExecResourceUtil.getSourceMaxParallelism(tConfig)
       scanBatchExec.resultPartitionCount = Math.min(maxNum,
         Math.max(
           Math.max(

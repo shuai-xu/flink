@@ -35,6 +35,7 @@ import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
 import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
@@ -57,8 +58,8 @@ class PlanUtilTest extends AbstractTestBase {
     tableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
     tableEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 2)
     tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY,
-      "NONE"
+      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+      InferMode.NONE.toString
     )
     tableEnv.getConfig.setCalciteConfig(new CalciteConfigBuilder().build())
   }

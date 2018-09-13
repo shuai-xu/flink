@@ -29,11 +29,6 @@ import org.apache.flink.table.api.TableConfig;
 public class BatchExecResourceUtil {
 
 	/**
-	 * Default heap memory size for each operator.
-	 */
-	public static final String SQL_EXEC_DEFAULT_MEM = "sql.exec.default-memory-mb";
-
-	/**
 	 * Sets the preferred buffer memory size for sort. It defines the upper limit for
 	 * the sort.
 	 */
@@ -50,15 +45,15 @@ public class BatchExecResourceUtil {
 	public static final String SQL_EXEC_HASH_AGG_TABLE_PREFER_MEM = "sql.exec.hash-agg.table-prefer-memory-mb";
 
 	/**
-	 * Sets min parallelism for rel.
+	 * Sets min parallelism for operators.
 	 */
-	public static final String SQL_EXEC_INFER_MIN_PARALLELISM  = "sql.exec.infer.min-parallelism";
+	public static final String SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM = "sql.exec.infer-resource.operator.min-parallelism";
 
 	/**
 	 * Maybe the infer's reserved manager mem is too small, so this setting is lower limit for
 	 * the infer's manager mem.
 	 */
-	public static final String SQL_EXEC_INFER_MIN_MEMORY = "sql.exec.infer.min-memory";
+	public static final String SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB = "sql.exec.infer-resource.operator.min-memory-mb";
 
 	/**
 	 * Sets reserve-relative-prefer mem ratio.
@@ -118,7 +113,7 @@ public class BatchExecResourceUtil {
 
 	public static int getDefaultHeapMem(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				SQL_EXEC_DEFAULT_MEM,
+				TableConfig.SQL_EXEC_DEFAULT_MEM(),
 				64);
 	}
 
@@ -199,6 +194,7 @@ public class BatchExecResourceUtil {
 				TableConfig.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE_DEFAULT());
 	}
 
+
 	/**
 	 * Gets the config row count that one partition processes.
 	 * @param tConfig TableConfig.
@@ -206,8 +202,8 @@ public class BatchExecResourceUtil {
 	 */
 	public static long getRelCountPerPartition(TableConfig tConfig) {
 		return tConfig.getParameters().getLong(
-				TableConfig.SQL_EXEC_REL_PROCESS_ROWS_PER_PARTITION(),
-				TableConfig.SQL_EXEC_REL_PROCESS_ROWS_PER_PARTITION_DEFAULT()
+				TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION(),
+				TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION_DEFAULT()
 		);
 	}
 
@@ -218,43 +214,43 @@ public class BatchExecResourceUtil {
 	 */
 	public static long getSourceSizePerPartition(TableConfig tConfig) {
 		return tConfig.getParameters().getLong(
-				TableConfig.SQL_EXEC_SOURCE_PROCESS_SIZE_PER_PARTITION(),
-				TableConfig.SQL_EXEC_SOURCE_PROCESS_SIZE_PER_PARTITION_DEFAULT()
+				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION(),
+				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION_DEFAULT()
 		);
 	}
 
 	/**
-	 * Gets the config max num of source partitions.
+	 * Gets the config max num of source parallelism.
 	 * @param tConfig TableConfig.
-	 * @return the config max num of source partitions.
+	 * @return the config max num of source parallelism.
 	 */
-	public static int getSourcePartitionsMaxNum(TableConfig tConfig) {
+	public static int getSourceMaxParallelism(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_SOURCE_MAX_PARALLELISM(),
-				TableConfig.SQL_EXEC_SOURCE_MAX_PARALLELISM_DEFAULT()
+				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM(),
+				TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM_DEFAULT()
 		);
 	}
 
 	/**
-	 * Gets the config max num of rel parallelism.
+	 * Gets the config max num of operator parallelism.
 	 * @param tConfig TableConfig.
-	 * @return the config max num of rel parallelism.
+	 * @return the config max num of operator parallelism.
 	 */
-	public static int getInferRelMaxParallelism(TableConfig tConfig) {
+	public static int getOperatorMaxParallelism(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_INFER_REL_MAX_PARALLELISM(),
-				TableConfig.SQL_EXEC_INFER_REL_MAX_PARALLELISM_DEFAULT()
+				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM(),
+				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM_DEFAULT()
 		);
 	}
 
 	/**
-	 * Gets the config min num of rel parallelism.
+	 * Gets the config min num of operator parallelism.
 	 * @param tConfig TableConfig.
-	 * @return the config max num of rel parallelism.
+	 * @return the config max num of operator parallelism.
 	 */
-	public static int getInferRelMinParallelism(TableConfig tConfig) {
+	public static int getOperatorMinParallelism(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				SQL_EXEC_INFER_MIN_PARALLELISM,
+				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
 				1
 		);
 	}
@@ -305,11 +301,11 @@ public class BatchExecResourceUtil {
 				2.0);
 
 		int maxMem = tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_INFER_MANAGER_MAX_MEM(),
-				TableConfig.SQL_EXEC_INFER_MANAGER_MAX_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB(),
+				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB_DEFAULT());
 
 		int minMem = tConfig.getParameters().getInteger(
-				SQL_EXEC_INFER_MIN_MEMORY,
+				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
 				32);
 
 		int preferMemCostInMB = (int) (memCostInMB * relativeRatio);
@@ -335,16 +331,16 @@ public class BatchExecResourceUtil {
 	 */
 	public static boolean enableRunningUnitSchedule(TableConfig tConfig) {
 		return tConfig.getParameters().getBoolean(
-				TableConfig.SQL_EXEC_RUNNING_UNIT_SCHEDULE_ENABLE(),
-				TableConfig.SQL_EXEC_RUNNING_UNIT_SCHEDULE_ENABLE_DEFAULT());
+				TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE(),
+				TableConfig.SQL_SCHEDULE_RUNNING_UNIT_ENABLE_DEFAULT());
 	}
 
 	/**
-	 * Gets adjust total resource limit.
+	 * Gets total resource limit for a runningUnit.
 	 */
-	public static Tuple2<Double, Long> getAdjustTotalResource(TableConfig tConfig) {
+	public static Tuple2<Double, Long> getRunningUnitResourceLimit(TableConfig tConfig) {
 		String resource = tConfig.getParameters().getString(
-				TableConfig.SQL_EXEC_ADJUST_RUNNING_UNIT_TOTAL_RESOURCE(),
+				TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM(),
 				null
 		);
 		if (resource == null) {
@@ -352,31 +348,31 @@ public class BatchExecResourceUtil {
 		}
 		String[] s = resource.split(",");
 		if (s.length != 2) {
-			throw new IllegalArgumentException(TableConfig.SQL_EXEC_ADJUST_RUNNING_UNIT_TOTAL_RESOURCE() + " set illegal, need: double, long");
+			throw new IllegalArgumentException(TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM() + " set illegal, need: double, long");
 		}
 		try {
 			double cpu = Double.valueOf(s[0].trim());
 			long mem = Long.valueOf(s[1].trim());
 			return new Tuple2<>(cpu, mem);
 		} catch (NumberFormatException ex) {
-			throw new IllegalArgumentException(TableConfig.SQL_EXEC_ADJUST_RUNNING_UNIT_TOTAL_RESOURCE() + " set illegal, need: double, long", ex);
+			throw new IllegalArgumentException(TableConfig.SQL_RESOURCE_RUNNING_UNIT_TOTAL_CPU_MEM() + " set illegal, need: double, long", ex);
 		}
 	}
 
 	/**
-	 * Infer resource granularity.
+	 * Infer resource mode.
 	 */
-	public enum InferGranularity {
-		NONE, SOURCE, ALL
+	public enum InferMode {
+		NONE, ONLY_SOURCE, ALL
 	}
 
-	public static InferGranularity getInferGranularity(TableConfig tConfig) {
-		String config = tConfig.getParameters().getString(TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY(),
-				TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY_DEFAULT());
+	public static InferMode getInferMode(TableConfig tConfig) {
+		String config = tConfig.getParameters().getString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(),
+				TableConfig.SQL_EXEC_INFER_RESOURCE_MODE_DEFAULT());
 		try {
-			return InferGranularity.valueOf(config);
+			return InferMode.valueOf(config);
 		} catch (IllegalArgumentException ex) {
-			throw new IllegalArgumentException("Infer granularity can only be set: NONE, SOURCE or ALL.");
+			throw new IllegalArgumentException("Infer mode can only be set: NONE, SOURCE or ALL.");
 		}
 	}
 

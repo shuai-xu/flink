@@ -38,7 +38,7 @@ import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.BatchExecResourceUtil
-import org.apache.flink.table.util.BatchExecResourceUtil.InferGranularity
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 
 import scala.collection.JavaConversions._
 
@@ -174,7 +174,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
     val perRequestSize =
       BatchExecResourceUtil.getPerRequestManagedMemory(config)* BatchExecResourceUtil.SIZE_IN_MB
-    val infer = BatchExecResourceUtil.getInferGranularity(config).equals(InferGranularity.ALL)
+    val infer = BatchExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
 
     val leftRatio = if (infer) {
       inferLeftRowCountRatio

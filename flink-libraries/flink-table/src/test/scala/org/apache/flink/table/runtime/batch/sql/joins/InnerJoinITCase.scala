@@ -31,6 +31,7 @@ import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -216,7 +217,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 10)
     tEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY, "NONE")
+      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
 
     val bigData = Random.shuffle(
       bigIntStringData.union(bigIntStringData).union(bigIntStringData).union(bigIntStringData))
@@ -250,7 +251,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
       tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 10)
       tEnv.getConfig.getParameters.setString(
-        TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY, "SOURCE")
+        TableConfig.SQL_EXEC_INFER_RESOURCE_MODE, InferMode.NONE.toString)
 
       val bigData = Random.shuffle(
         bigIntStringData.union(bigIntStringData).union(bigIntStringData).union(bigIntStringData))

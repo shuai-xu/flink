@@ -33,7 +33,6 @@ import org.apache.flink.table.plan.resource.autoconf.RelManagedCalculatorOnStati
 import org.apache.flink.table.plan.resource.autoconf.RelParallelismAdjuster;
 import org.apache.flink.table.plan.resource.autoconf.RelReservedManagedMemAdjuster;
 import org.apache.flink.table.util.BatchExecResourceUtil;
-import org.apache.flink.table.util.BatchExecResourceUtil.InferGranularity;
 
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
@@ -103,8 +102,8 @@ public class RunningUnitKeeper {
 
 	public void calculateRelResource(RowBatchExecRel rootNode) {
 		Map<RowBatchExecRel, RelResource> relResourceMap = new LinkedHashMap<>();
-		InferGranularity inferGranularity = BatchExecResourceUtil.getInferGranularity(tableConfig);
-		if (!useRunningUnit || !inferGranularity.equals(InferGranularity.ALL)) {
+		BatchExecResourceUtil.InferMode inferMode = BatchExecResourceUtil.getInferMode(tableConfig);
+		if (!useRunningUnit || !inferMode.equals(BatchExecResourceUtil.InferMode.ALL)) {
 			// if runningUnit cannot be build, or no statics, we set resource according to config.
 			// we are not able to set resource according to statics when runningUnits are not build.
 			rootNode.accept(new DefaultResultPartitionCalculator(tableConfig, tableEnv));
@@ -118,7 +117,7 @@ public class RunningUnitKeeper {
 			RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
 			rootNode.accept(new ResultPartitionCalculatorOnStatistics(tableConfig, tableEnv, this, mq));
 			rootNode.accept(new RelCpuHeapMemCalculator(tableConfig, tableEnv, relResourceMap));
-			Tuple2<Double, Long> resourceLimit = BatchExecResourceUtil.getAdjustTotalResource(tableConfig);
+			Tuple2<Double, Long> resourceLimit = BatchExecResourceUtil.getRunningUnitResourceLimit(tableConfig);
 			if (resourceLimit != null) {
 				RelParallelismAdjuster adjuster = new RelParallelismAdjuster(resourceLimit.f0, relResourceMap);
 				adjuster.adjust(relShuffleStageMap);

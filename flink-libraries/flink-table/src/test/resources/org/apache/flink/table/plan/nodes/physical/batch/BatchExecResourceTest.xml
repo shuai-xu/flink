@@ -92,7 +92,7 @@ HashAggregate(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46, managed=3
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testAggregateWithJoin[SOURCE]">
+  <TestCase name="testAggregateWithJoin[ONLY_SOURCE]">
     <Resource name="sql">
       <![CDATA[select c.c_name, sum(l.l_quantity) from customer c, orders o, lineitem l where o.o_orderkey in (  select l_orderkey from lineitem group by l_orderkey having sum(l_quantity) > 300) and c.c_custkey = o.o_custkey and o.o_orderkey = l.l_orderkey group by c.c_name]]>
     </Resource>
@@ -145,7 +145,7 @@ TableSourceScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], convers
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testLimitPushDown[SOURCE]">
+  <TestCase name="testLimitPushDown[ONLY_SOURCE]">
     <Resource name="sql">
       <![CDATA[select * from lineitem limit 1]]>
     </Resource>
@@ -181,7 +181,7 @@ Sort(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46, managed=53}], pref
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testRangePartition[SOURCE]">
+  <TestCase name="testRangePartition[ONLY_SOURCE]">
     <Resource name="sql">
       <![CDATA[SELECT * FROM Table5 where d < 100 order by e]]>
     </Resource>
@@ -230,7 +230,7 @@ Calc(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resour
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSortLimit[SOURCE]">
+  <TestCase name="testSortLimit[ONLY_SOURCE]">
     <Resource name="sql">
       <![CDATA[SELECT sum(a) as sum_a, c FROM SmallTable3 group by c order by c limit 2]]>
     </Resource>
@@ -258,7 +258,7 @@ BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], c
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSourcePartitionMaxNum[SOURCE]">
+  <TestCase name="testSourcePartitionMaxNum[ONLY_SOURCE]">
     <Resource name="sql">
       <![CDATA[SELECT * FROM SmallTable3]]>
     </Resource>
@@ -337,18 +337,18 @@ Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resou
    +- Exchange(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[29.97621331867275], distribution=[hash[g]])
       +- LocalHashAggregate(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46, managed=33}], preferRes=[Resource: {cpu=0.3, heap=46, managed=37}], memCost=[1558.7630925709832], rowcount=[29.97621331867275], groupBy=[g], select=[g, Partial_SUM(a) AS sum$0])
          +- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[315.0], select=[g, a])
-            +- HashJoin(partition=[18], shuffleCount=[10742], reserveRes=[Resource: {cpu=0.3, heap=46, managed=43}], preferRes=[Resource: {cpu=0.3, heap=46, managed=47}], memCost=[4.72648E8], rowcount=[315.0], where=[=(b, e)], join=[a, b, e, g], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-               :- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
-               :  +- Union(partition=[18], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
-               :     :- BoundedDataStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
-               :     +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
-               +- Exchange(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], distribution=[broadcast])
-                  +- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
-                     +- BoundedDataStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+            +- HashJoin(partition=[18], shuffleCount=[1], reserveRes=[Resource: {cpu=0.3, heap=46, managed=43}], preferRes=[Resource: {cpu=0.3, heap=46, managed=47}], memCost=[35200.0], rowcount=[315.0], where=[=(b, e)], join=[a, b, e, g], joinType=[InnerJoin], isBroadcast=[true], build=[left])
+               :- Exchange(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], distribution=[broadcast])
+               :  +- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
+               :     +- Union(partition=[18], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
+               :        :- BoundedDataStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :        +- TableSourceScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
+               +- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
+                  +- BoundedDataStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSubsectionOptimization[SOURCE]">
+  <TestCase name="testSubsectionOptimization[ONLY_SOURCE]">
     <Resource name="planAfter">
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_2]]
@@ -377,7 +377,7 @@ Calc(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resour
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testUnionQuery[SOURCE]">
+  <TestCase name="testUnionQuery[ONLY_SOURCE]">
     <Resource name="sql">
       <![CDATA[SELECT sum(a) as sum_a, g FROM (SELECT a, b, c FROM SmallTable3 UNION ALL SELECT a, b, c FROM Table3), Table5 WHERE b = e group by g]]>
     </Resource>
@@ -386,16 +386,16 @@ Calc(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resour
 Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[29.97621331867275], select=[sum_a, g])
 +- HashAggregate(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46, managed=33}], preferRes=[Resource: {cpu=0.3, heap=46, managed=37}], memCost=[1558.7630925709832], rowcount=[29.97621331867275], isMerge=[true], groupBy=[g], select=[g, Final_SUM(sum$0) AS sum_a])
    +- Exchange(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[29.97621331867275], distribution=[hash[g]])
-      +- LocalHashAggregate(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46, managed=33}], preferRes=[Resource: {cpu=0.3, heap=46, managed=37}], memCost=[1558.7630925709832], rowcount=[29.97621331867275], groupBy=[g], select=[g, Partial_SUM(a) AS sum$0])
-         +- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[315.0], select=[g, a])
-            +- HashJoin(partition=[18], shuffleCount=[10742], reserveRes=[Resource: {cpu=0.3, heap=46, managed=43}], preferRes=[Resource: {cpu=0.3, heap=46, managed=47}], memCost=[4.72648E8], rowcount=[315.0], where=[=(b, e)], join=[a, b, e, g], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-               :- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
-               :  +- Union(partition=[18], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
-               :     :- BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
-               :     +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
-               +- Exchange(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], distribution=[broadcast])
-                  +- Calc(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
-                     +- BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+      +- LocalHashAggregate(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46, managed=33}], preferRes=[Resource: {cpu=0.3, heap=46, managed=37}], memCost=[1558.7630925709832], rowcount=[29.97621331867275], groupBy=[g], select=[g, Partial_SUM(a) AS sum$0])
+         +- Calc(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[315.0], select=[g, a])
+            +- HashJoin(partition=[1], shuffleCount=[1], reserveRes=[Resource: {cpu=0.3, heap=46, managed=43}], preferRes=[Resource: {cpu=0.3, heap=46, managed=47}], memCost=[35200.0], rowcount=[315.0], where=[=(b, e)], join=[a, b, e, g], joinType=[InnerJoin], isBroadcast=[true], build=[left])
+               :- Exchange(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], distribution=[broadcast])
+               :  +- Calc(partition=[18], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
+               :     +- Union(partition=[18], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
+               :        :- BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :        +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
+               +- Calc(partition=[1], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
+                  +- BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -410,14 +410,14 @@ Calc(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resou
    +- Exchange(partition=[-1], memCost=[0.0], rowcount=[29.97621331867275], distribution=[hash[g]])
       +- LocalHashAggregate(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46, managed=32}], preferRes=[Resource: {cpu=0.3, heap=46, managed=32}], memCost=[1558.7630925709832], rowcount=[29.97621331867275], groupBy=[g], select=[g, Partial_SUM(a) AS sum$0])
          +- Calc(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[315.0], select=[g, a])
-            +- HashJoin(partition=[20], shuffleCount=[10742], reserveRes=[Resource: {cpu=0.3, heap=46, managed=32}], preferRes=[Resource: {cpu=0.3, heap=46, managed=32}], memCost=[4.72648E8], rowcount=[315.0], where=[=(b, e)], join=[a, b, e, g], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-               :- Calc(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
-               :  +- Union(partition=[-1], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
-               :     :- BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
-               :     +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
-               +- Exchange(partition=[-1], memCost=[0.0], rowcount=[1000.0], distribution=[broadcast])
-                  +- Calc(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
-                     +- BoundedDataStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+            +- HashJoin(partition=[20], shuffleCount=[1], reserveRes=[Resource: {cpu=0.3, heap=46, managed=32}], preferRes=[Resource: {cpu=0.3, heap=46, managed=32}], memCost=[35200.0], rowcount=[315.0], where=[=(b, e)], join=[a, b, e, g], joinType=[InnerJoin], isBroadcast=[true], build=[left])
+               :- Exchange(partition=[-1], memCost=[0.0], rowcount=[1100.0], distribution=[broadcast])
+               :  +- Calc(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1100.0], select=[a, b])
+               :     +- Union(partition=[-1], memCost=[0.0], rowcount=[1100.0], all=[true], union=[a, b, c])
+               :        :- BoundedDataStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :        +- TableSourceScan(partition=[60], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[100.0], table=[[Table3]], fields=[a, b, c])
+               +- Calc(partition=[20], reserveRes=[Resource: {cpu=0.3, heap=46}], preferRes=[Resource: {cpu=0.3, heap=46}], memCost=[0.0], rowcount=[1000.0], select=[e, g])
+                  +- BoundedDataStreamScan(partition=[20], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], reserveRes=[Resource: {cpu=0.3, heap=98}], preferRes=[Resource: {cpu=0.3, heap=98}], memCost=[0.0], rowcount=[1000.0], table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>

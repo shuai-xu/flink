@@ -56,7 +56,7 @@ class ResultPartitionCalculatorOnStatistics(
     LOG.info("source data size is : " + io)
     val rowsPerPartition = BatchExecResourceUtil.getRelCountPerPartition(tableConfig)
     val sizePerPartition = BatchExecResourceUtil.getSourceSizePerPartition(tableConfig)
-    val maxNum = BatchExecResourceUtil.getSourcePartitionsMaxNum(tableConfig)
+    val maxNum = BatchExecResourceUtil.getSourceMaxParallelism(tableConfig)
     val count = Math.min(maxNum,
       Math.max(
         Math.max(
@@ -88,9 +88,9 @@ class ResultPartitionCalculatorOnStatistics(
         }
       case _ => Unit
     }
-    val maxParallelism = BatchExecResourceUtil.getInferRelMaxParallelism(tableConfig)
+    val maxParallelism = BatchExecResourceUtil.getOperatorMaxParallelism(tableConfig)
     val rowCount = mq.getRowCount(singleRel.getInput)
-    val minParallelism = BatchExecResourceUtil.getInferRelMinParallelism(tableConfig)
+    val minParallelism = BatchExecResourceUtil.getOperatorMinParallelism(tableConfig)
 
     val resultParallelism = Math.max(
       Math.min(rowCount /
@@ -101,11 +101,11 @@ class ResultPartitionCalculatorOnStatistics(
 
   private def calculateBiRel[T <: BiRel with RowBatchExecRel](biRel: T): Unit = {
     visitChildren(biRel)
-    val maxParallelism = BatchExecResourceUtil.getInferRelMaxParallelism(tableConfig)
+    val maxParallelism = BatchExecResourceUtil.getOperatorMaxParallelism(tableConfig)
     val leftRowCount = mq.getRowCount(biRel.getLeft)
     val rightRowCount = mq.getRowCount(biRel.getRight)
     val maxRowCount = Math.max(leftRowCount, rightRowCount)
-    val minParallelism = BatchExecResourceUtil.getInferRelMinParallelism(tableConfig)
+    val minParallelism = BatchExecResourceUtil.getOperatorMinParallelism(tableConfig)
 
     val resultParallelism = Math.max(
       Math.min(maxParallelism,

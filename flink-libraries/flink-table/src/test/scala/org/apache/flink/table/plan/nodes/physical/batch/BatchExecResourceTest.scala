@@ -46,7 +46,7 @@ import org.junit.{Before, Test}
 import _root_.scala.collection.JavaConversions._
 
 @RunWith(classOf[Parameterized])
-class BatchExecResourceTest(inferGranularity: String) extends TableTestBatchExecBase {
+class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
 
   private val util = batchExecTestUtil()
 
@@ -54,8 +54,8 @@ class BatchExecResourceTest(inferGranularity: String) extends TableTestBatchExec
   def before(): Unit = {
     util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY,
-      inferGranularity
+      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+      inferMode
     )
     util.addTable[(Int, Long, String)]("SmallTable3", 'a, 'b, 'c)
     util.addTable[(Int, Long, Int, String, Long)]("Table5", 'd, 'e, 'f, 'g, 'h)
@@ -65,7 +65,7 @@ class BatchExecResourceTest(inferGranularity: String) extends TableTestBatchExec
   @Test
   def testSourcePartitionMaxNum(): Unit = {
     util.getTableEnv.getConfig.getParameters.setInteger(
-      TableConfig.SQL_EXEC_SOURCE_MAX_PARALLELISM,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM,
       300
     )
     val sqlQuery = "SELECT * FROM SmallTable3"
@@ -89,6 +89,8 @@ class BatchExecResourceTest(inferGranularity: String) extends TableTestBatchExec
 
   @Test
   def testUnionQuery(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin, SortMergeJoin")
     val table3Schema = new Schema() {
       override def getFieldNames: Array[String] = {
         Array("a", "b", "c")
@@ -176,28 +178,29 @@ class BatchExecResourceTest(inferGranularity: String) extends TableTestBatchExec
 object BatchExecResourceTest {
 
   @Parameterized.Parameters(name = "{0}")
-  def parameters(): JCollection[String] = {
-    JArrays.asList("NONE", "SOURCE", "ALL")
-  }
+  def parameters(): JCollection[String] = JArrays.asList(
+    BatchExecResourceUtil.InferMode.NONE.toString,
+    BatchExecResourceUtil.InferMode.ONLY_SOURCE.toString,
+    BatchExecResourceUtil.InferMode.ALL.toString)
 
   def setResourceConfig(tableConfig: TableConfig): Unit = {
     tableConfig.getParameters.setInteger(
       TableConfig.SQL_EXEC_DEFAULT_PARALLELISM,
       18)
     tableConfig.getParameters.setLong(
-      TableConfig.SQL_EXEC_REL_PROCESS_ROWS_PER_PARTITION,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
       2L)
     tableConfig.getParameters.setLong(
-      TableConfig.SQL_EXEC_SOURCE_PROCESS_SIZE_PER_PARTITION,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MB_PER_PARTITION,
       50000)
     tableConfig.getParameters.setLong(
-      TableConfig.SQL_EXEC_SOURCE_MAX_PARALLELISM,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_SOURCE_MAX_PARALLELISM,
       1000)
     tableConfig.getParameters.setLong(
-      TableConfig.SQL_EXEC_INFER_REL_MAX_PARALLELISM,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_PARALLELISM,
       800)
     tableConfig.getParameters.setInteger(
-      BatchExecResourceUtil.SQL_EXEC_INFER_MIN_PARALLELISM,
+      BatchExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
       20
     )
     tableConfig.getParameters.setDouble(
@@ -209,7 +212,7 @@ object BatchExecResourceTest {
       52
     )
     tableConfig.getParameters.setInteger(
-      BatchExecResourceUtil.SQL_EXEC_DEFAULT_MEM,
+      TableConfig.SQL_EXEC_DEFAULT_MEM,
       46
     )
     tableConfig.getParameters.setInteger(
@@ -237,7 +240,7 @@ object BatchExecResourceTest {
       57
     )
     tableConfig.getParameters.setInteger(
-      TableConfig.SQL_EXEC_REL_PROCESS_ROWS_PER_PARTITION,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
       1000000
     )
     tableConfig.getParameters.setInteger(
@@ -245,11 +248,11 @@ object BatchExecResourceTest {
       2
     )
     tableConfig.getParameters.setInteger(
-      TableConfig.SQL_EXEC_INFER_MANAGER_MAX_MEM,
+      TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB,
       470
     )
     tableConfig.getParameters.setInteger(
-      BatchExecResourceUtil.SQL_EXEC_INFER_MIN_MEMORY,
+      BatchExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
       32
     )
   }

@@ -28,6 +28,7 @@ import org.apache.flink.table.runtime.utils.CommonTestData;
 import org.apache.flink.table.sinks.csv.CsvTableSink;
 import org.apache.flink.table.sources.BatchExecTableSource;
 import org.apache.flink.table.sources.csv.CsvTableSource;
+import org.apache.flink.table.util.BatchExecResourceUtil;
 import org.apache.flink.table.util.FinalizeCsvSink;
 import org.apache.flink.test.util.AbstractTestBase;
 import org.apache.flink.test.util.TestBaseUtils;
@@ -55,9 +56,15 @@ import static org.junit.Assert.assertTrue;
  */
 public class BatchTableITCase extends AbstractTestBase {
 	private File tmpFile = new File("/tmp/123");
+	private StreamExecutionEnvironment env;
+	private BatchTableEnvironment tableEnv;
 
 	@Before
 	public void setUp() {
+		env = StreamExecutionEnvironment.getExecutionEnvironment();
+		tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
+		tableEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(),
+				BatchExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		if (tmpFile.exists()) {
 			tmpFile.delete();
 		}
@@ -72,9 +79,6 @@ public class BatchTableITCase extends AbstractTestBase {
 
 	@Test
 	public void testBatchExecCollect() throws Exception {
-
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		CsvTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
@@ -87,8 +91,6 @@ public class BatchTableITCase extends AbstractTestBase {
 
 	@Test
 	public void testInSubQueryThreshold() throws Exception {
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		CsvTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM(), 1);
@@ -112,10 +114,7 @@ public class BatchTableITCase extends AbstractTestBase {
 
 	@Test
 	public void testBatchExecSink() throws Exception {
-
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
-		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
@@ -140,9 +139,7 @@ public class BatchTableITCase extends AbstractTestBase {
 
 	@Test(expected = TableException.class)
 	public void testNoTableSink() {
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
-		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
@@ -156,9 +153,7 @@ public class BatchTableITCase extends AbstractTestBase {
 	@Test
 	public void testIOVertex() throws IOException {
 
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
-		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);

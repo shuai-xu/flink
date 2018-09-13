@@ -24,7 +24,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.parquet.ParquetVectorizedColumnRowTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 import org.junit.{Before, Ignore}
 
 @Ignore
@@ -59,14 +59,15 @@ class TpchBenchmark extends QueryTest {
     }
     TpcUtils.disableParquetFilterPushDown(tEnv)
     tEnv.getConfig.setJoinReorderEnabled(true)
-    tEnv.getConfig.getParameters.setString(TableConfig.SQL_EXEC_INFER_RESOURCE_GRANULARITY, "NONE")
+    tEnv.getConfig.getParameters.setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+      InferMode.NONE.toString)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 1)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
 
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM, 10)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 80)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 80)
-    conf.getParameters.setInteger(BatchExecResourceUtil.SQL_EXEC_DEFAULT_MEM, 10)
+    conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_MEM, 10)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM, 10)
   }
 

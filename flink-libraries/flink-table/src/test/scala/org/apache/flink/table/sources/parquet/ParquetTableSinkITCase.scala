@@ -31,6 +31,7 @@ import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMod
 import org.apache.flink.table.runtime.utils.{CommonTestData, TableProgramsCollectionTestBase}
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.util.BatchExecResourceUtil
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.lib.input.FileSplit
@@ -39,7 +40,7 @@ import org.apache.hadoop.mapreduce.{JobID, TaskAttemptID, TaskID, TaskType}
 import org.apache.parquet.example.data.GroupValueSource
 import org.apache.parquet.hadoop.example.ExampleInputFormat
 import org.junit.Assert.assertEquals
-import org.junit.{Assert, Test}
+import org.junit.{Assert, Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
@@ -49,11 +50,21 @@ import scala.collection.JavaConversions._
 class ParquetTableSinkITCase(configMode: TableConfigMode)
   extends TableProgramsCollectionTestBase(configMode) {
 
+  var env: StreamExecutionEnvironment = _
+  var tEnv: BatchTableEnvironment = _
+
+  @Before
+  def setUp(): Unit =
+  {
+    env = StreamExecutionEnvironment.getExecutionEnvironment
+    tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig)
+    tEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
+      BatchExecResourceUtil.InferMode.ONLY_SOURCE.toString)
+  }
+
   @Test
   def testParquetTableSinkOverWrite():Unit = {
-    val conf: TableConfig = config
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
 
     // write
     val parquetTable1 = CommonParquetTestData.getParquetVectorizedColumnRowTableSource
@@ -77,9 +88,6 @@ class ParquetTableSinkITCase(configMode: TableConfigMode)
 
   @Test
   def testParquetTableSink(): Unit = {
-    val conf: TableConfig = config
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
 
     // write
     val parquetTable1 = CommonParquetTestData.getParquetVectorizedColumnRowTableSource
@@ -121,9 +129,6 @@ class ParquetTableSinkITCase(configMode: TableConfigMode)
 
   @Test
   def testDecimalType(): Unit = {
-    val conf: TableConfig = config
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
 
     // write
     val tableSource = CommonTestData.getWithDecimalCsvTableSource
