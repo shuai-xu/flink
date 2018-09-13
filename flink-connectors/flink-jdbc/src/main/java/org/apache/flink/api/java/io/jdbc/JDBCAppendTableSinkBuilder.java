@@ -18,7 +18,6 @@
 
 package org.apache.flink.api.java.io.jdbc;
 
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.Preconditions;
 
