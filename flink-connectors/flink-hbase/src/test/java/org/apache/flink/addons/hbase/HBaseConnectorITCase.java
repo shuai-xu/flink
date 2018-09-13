@@ -28,6 +28,7 @@ import org.apache.flink.api.java.LocalEnvironment;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
@@ -81,7 +82,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 	public static void activateHBaseCluster() throws IOException {
 		registerHBaseMiniClusterInClasspath();
 		prepareTable();
-		LimitNetworkBuffersTestEnvironment.setAsContext();
+		//LimitNetworkBuffersTestEnvironment.setAsContext();
 	}
 
 	@AfterClass
@@ -143,9 +144,9 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 	@Test
 	public void testTableSourceFullScan() throws Exception {
 
-		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(4);
-		BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig());
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4, config);
+		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		hbaseTable.addColumn(FAMILY1, F1COL1, Integer.class);
 		hbaseTable.addColumn(FAMILY2, F2COL1, String.class);
@@ -165,8 +166,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 				"  h.family3.col3 " +
 				"FROM hTable AS h"
 		);
-		DataSet<Row> resultSet = tableEnv.toDataSet(result, Row.class);
-		List<Row> results = resultSet.collect();
+		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
 
 		String expected =
 			"10,Hello-1,100,1.01,false,Welt-1\n" +
@@ -184,9 +184,9 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 	@Test
 	public void testTableSourceProjection() throws Exception {
 
-		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(4);
-		BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig());
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4, config);
+		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		hbaseTable.addColumn(FAMILY1, F1COL1, Integer.class);
 		hbaseTable.addColumn(FAMILY2, F2COL1, String.class);
@@ -204,8 +204,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 				"  h.family3.col3 " +
 				"FROM hTable AS h"
 		);
-		DataSet<Row> resultSet = tableEnv.toDataSet(result, Row.class);
-		List<Row> results = resultSet.collect();
+		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
 
 		String expected =
 			"10,1.01,false,Welt-1\n" +
@@ -223,9 +222,9 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 	@Test
 	public void testTableSourceFieldOrder() throws Exception {
 
-		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(4);
-		BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig());
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4, config);
+		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		// shuffle order of column registration
 		hbaseTable.addColumn(FAMILY2, F2COL1, String.class);
@@ -237,10 +236,16 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 		tableEnv.registerTableSource("hTable", hbaseTable);
 
 		Table result = tableEnv.sqlQuery(
-			"SELECT * FROM hTable AS h"
+			"SELECT " +
+				"  h.family2.col1, " +
+				"  h.family2.col2, " +
+				"  h.family3.col1, " +
+				"  h.family3.col2, " +
+				"  h.family3.col3, " +
+				"  h.family1.col1 " +
+				"FROM hTable AS h"
 		);
-		DataSet<Row> resultSet = tableEnv.toDataSet(result, Row.class);
-		List<Row> results = resultSet.collect();
+		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
 
 		String expected =
 			"Hello-1,100,1.01,false,Welt-1,10\n" +
@@ -258,9 +263,9 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 	@Test
 	public void testTableSourceReadAsByteArray() throws Exception {
 
-		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(4);
-		BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig());
+		Configuration config = new Configuration();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(4, config);
+		BatchTableEnvironment tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		// fetch row2 from the table till the end
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		hbaseTable.addColumn(FAMILY2, F2COL1, byte[].class);
@@ -276,8 +281,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 				"  toLong(h.family2.col2) " +
 				"FROM hTable AS h"
 		);
-		DataSet<Row> resultSet = tableEnv.toDataSet(result, Row.class);
-		List<Row> results = resultSet.collect();
+		List<Row> results = scala.collection.JavaConversions.seqAsJavaList(result.collect());
 
 		String expected =
 			"Hello-1,100\n" +
