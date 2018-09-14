@@ -931,6 +931,25 @@ class TemporalTypesTest extends ExpressionTestBase {
   }
 
   @Test
+  def testNullableCases(): Unit = {
+    testSqlApi(
+      "DATE_FORMAT_TZ(TO_TIMESTAMP(cast(NUll as bigInt)), 'yyyy/MM/dd HH:mm:ss', 'Asia/Shanghai')",
+      nullable)
+
+    testSqlApi("CONVERT_TZ(cast(NUll as varchar), 'yyyy-MM-dd HH:mm:ss', 'UTC', 'Asia/Shanghai')",
+      nullable)
+
+    testSqlApi("FROM_TIMESTAMP(f13)", nullable)
+
+    testSqlApi("DATE_FORMAT(cast(NUll as varchar), 'yyyy/MM/dd HH:mm:ss')", nullable)
+
+    testSqlApi("UNIX_TIMESTAMP(TO_TIMESTAMP(cast(NUll as bigInt)))", nullable)
+
+    testSqlApi("FROM_UNIXTIME(cast(NUll as bigInt))", nullable)
+
+  }
+
+  @Test
   def testTimeZoneFunction(): Unit = {
     config.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
 
@@ -958,6 +977,8 @@ class TemporalTypesTest extends ExpressionTestBase {
     // TODO: it is would be better to report the error at compiling stage. timezone/format codegen
     testSqlApi("TO_TIMESTAMP_TZ('2018-03-14 11:00:00', 'invalid_tz')", "2018-03-14 19:00:00.000")
   }
+
+
   // ----------------------------------------------------------------------------------------------
 
   override def rowTestData: Row = {

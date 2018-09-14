@@ -36,6 +36,8 @@ import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._
 
+import scala.collection.mutable
+
 class SqlITCase {
 
    /** test row stream registered table **/
@@ -229,6 +231,47 @@ class SqlITCase {
   }
 
   @Test
+  def testUnionWithDifferentTypeNullRight(): Unit = {
+    val data = new mutable.MutableList[(Int, String)]
+    data.+=((1, null))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(2)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT a FROM T UNION SELECT b FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1","null")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testUnionWithDifferentTypeNullLeft(): Unit = {
+    val data = new mutable.MutableList[(Int, String)]
+    data.+=((1, null))
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(2)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT b FROM T UNION SELECT a FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1","null")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
   def testIntersectWithDifferentType(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(4)
@@ -248,6 +291,113 @@ class SqlITCase {
 
     val expected = List(
       "1"
+    )
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testIntersectWithDifferentTypeNullRight(): Unit = {
+    val data = new mutable.MutableList[(Int, String)]
+    data.+=((1, null))
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT a FROM T INTERSECT SELECT b FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List()
+    assertEquals(expected, sink.getRetractResults)
+  }
+
+  @Test
+  def testIntersectWithDifferentTypeNullLeft(): Unit = {
+    val data = new mutable.MutableList[(Int, String)]
+    data.+=((1, null))
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT b FROM T INTERSECT SELECT a FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List()
+    assertEquals(expected, sink.getRetractResults)
+  }
+
+  @Test
+  def testExceptWithDifferentType(): Unit = {
+    val data = List(
+      (1.toByte, "2")
+    )
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT a FROM T EXCEPT SELECT b FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "1"
+    )
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testExceptWithDifferentTypeNullRight(): Unit = {
+    val data = new mutable.MutableList[(Int, String)]
+    data.+=((1, null))
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT a FROM T EXCEPT SELECT b FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "1"
+    )
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testExceptWithDifferentTypeNullLeft(): Unit = {
+    val data = new mutable.MutableList[(Int, String)]
+    data.+=((1, null))
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(4)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val stream = env.fromCollection(data)
+    tEnv.registerDataStream("T", stream, 'a, 'b)
+
+    val sqlQuery = "SELECT b FROM T EXCEPT SELECT a FROM T"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "null"
     )
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }

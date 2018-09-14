@@ -19,7 +19,6 @@
 package org.apache.flink.table.sources.csv
 
 import java.util.{Set => JSet}
-import java.util.Collections
 import java.util.TimeZone
 
 import org.apache.flink.api.java.io.CsvInputFormat
@@ -36,6 +35,7 @@ import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 
 import _root_.scala.collection.mutable
+import _root_.scala.collection.JavaConversions._
 
 /**
   * A [[BatchExecTableSource]] and [[StreamTableSource]] for simple CSV files with a
@@ -68,13 +68,12 @@ class CsvTableSource(
     private var isLimitPushdown: Boolean = false,
     private var limit: Long = Long.MaxValue,
     private var uniqueKeySet: JSet[JSet[String]] = null,
-    private var timezone: TimeZone = null)
+    private var timezone: TimeZone = null,
+    private var nestedEnumerate: Boolean = true)
   extends BatchExecTableSource[BaseRow]
   with StreamTableSource[BaseRow]
   with LimitableTableSource
   with ProjectableTableSource
-  with DefinedFieldNullables
-  with DefinedUniqueKeys
   with Logging {
 
   if (fieldNames.length != fieldTypes.length) {
@@ -114,7 +113,8 @@ class CsvTableSource(
     * NOTE: This method is for internal use only for defining a [[TableSource]].
     * Do not use it in Table API programs.
     */
-  override def getBoundedStream(streamExecEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
+  override def getBoundedStream(streamExecEnv: StreamExecutionEnvironment):
+    DataStream[BaseRow] = {
     streamExecEnv.createInput(createCsvInput, returnTypeInfo, s"csv source: $path")
   }
 
@@ -149,7 +149,8 @@ class CsvTableSource(
       isLimitPushdown,
       limit,
       null,
-      timezone
+      timezone,
+      nestedEnumerate
     )
     source.selectedFields = newFields
     source
@@ -178,7 +179,10 @@ class CsvTableSource(
       charset,
       emptyColumnAsNull,
       true,
-      applylimit)
+      applylimit,
+      uniqueKeySet,
+      timezone,
+      nestedEnumerate)
     csvTableSource.selectedFields = selectedFields
     csvTableSource
   }
@@ -216,7 +220,10 @@ class CsvTableSource(
     else {
       timezone
     }
+
     inputFormat.setTimezone(tz)
+
+    inputFormat.setNestedFileEnumeration(nestedEnumerate)
 
     inputFormat
   }
@@ -264,16 +271,21 @@ class CsvTableSource(
     s"selectedFields=[${fieldNames.mkString(", ")}]" + limitStr
   }
 
-  /** Returns the nullable properties of the table fields. */
-  override def getFieldNullables: Array[Boolean] = fieldNullables
-
-  override def getUniqueKeys(): JSet[JSet[String]] = {
-    if (uniqueKeySet == null) {
-      Collections.emptySet()
-    } else {
-      uniqueKeySet
+  override def getTableSchema: TableSchema = {
+    val builder = TableSchema.builder()
+    fieldNames.zip(fieldTypes).zip(fieldNullables).foreach {
+      case ((name:String, tpe:InternalType), nullable:Boolean) =>
+        builder.field(name, tpe, nullable)
     }
+    if (uniqueKeySet != null) {
+      uniqueKeySet.foreach {
+        case uniqueKey: JSet[String] =>
+          builder.uniqueKey(uniqueKey.toArray(new Array[String](0)):_*)
+      }
+    }
+    builder.build()
   }
+
 }
 
 object CsvTableSource {
@@ -307,6 +319,7 @@ object CsvTableSource {
     private var emptyColumnAsNull: Boolean = _
     private var uniqueKeySet: JSet[JSet[String]] = _
     private var timezone: TimeZone = _
+    private var enumerateNestedFile: Boolean = true
 
     /**
      * Sets charset of the CSV file.
@@ -454,6 +467,11 @@ object CsvTableSource {
       this
     }
 
+    def setNestedFileEnumerate(isEnabled: Boolean): Builder = {
+      this.enumerateNestedFile = isEnabled
+      this
+    }
+
     /**
       * Apply the current values and constructs a newly-created [[CsvTableSource]].
       *
@@ -482,7 +500,8 @@ object CsvTableSource {
         false,
         Long.MaxValue,
         uniqueKeySet,
-        timezone)
+        timezone,
+        enumerateNestedFile)
     }
 
   }

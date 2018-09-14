@@ -1727,6 +1727,8 @@ object ScalarOperators {
     : String => String = {
 
     val resultTypeTerm = primitiveTypeTermForType(resultType)
+    val resultTypeValue = resultTypeTerm + "Value()"
+    val wrapperClass = boxedTypeTermForType(operandType)
 
     // no casting necessary
     if (operandType == resultType) {
@@ -1752,8 +1754,9 @@ object ScalarOperators {
         s"${Decimal.Ref.castTo(resultType)}($operandTerm)"
     }
     // numeric to numeric
+    // TODO: Create a wrapper layer that handles type conversion between numeric.
     else if (isNumeric(operandType) && isNumeric(resultType)) {
-      operandTerm => s"(($resultTypeTerm) $operandTerm)"
+      operandTerm => s"(new $wrapperClass($operandTerm)).$resultTypeValue"
     }
     // result type is time interval and operand type is integer
     else if (isTimeInterval(resultType) && isInteger(operandType)){

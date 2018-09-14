@@ -19,13 +19,13 @@
 package org.apache.flink.table.plan.rules
 
 import org.apache.calcite.rel.core.RelFactories
-import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalUnion}
+import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalUnion, LogicalMinus}
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.table.plan.nodes.logical._
-import org.apache.flink.table.plan.rules.physical.stream._
 import org.apache.flink.table.plan.rules.logical._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
+import org.apache.flink.table.plan.rules.physical.stream._
 
 import scala.collection.JavaConverters._
 
@@ -165,8 +165,6 @@ object FlinkStreamExecRuleSets {
     // using variants of aggregate union rule
     AggregateUnionAggregateRule.AGG_ON_FIRST_INPUT,
     AggregateUnionAggregateRule.AGG_ON_SECOND_INPUT,
-    // expand distinct aggregate to normal aggregate with groupby
-    FlinkAggregateExpandDistinctAggregatesRule.JOIN,
 
     // reduce aggregate functions like AVG, STDDEV_POP etc.
     AggregateReduceFunctionsRule.INSTANCE,
@@ -257,8 +255,10 @@ object FlinkStreamExecRuleSets {
           WindowPropertiesHavingRule.INSTANCE,
           //ensure union set operator have the same row type
           new CoerceInputsRule(classOf[LogicalUnion], false),
-          //ensure intersect set operator hava the same row type
-          new CoerceInputsRule(classOf[LogicalIntersect], false))
+          //ensure intersect set operator have the same row type
+          new CoerceInputsRule(classOf[LogicalIntersect], false),
+          //ensure except set operator have the same row type
+          new CoerceInputsRule(classOf[LogicalMinus], false))
       ).asJava)
 
   val STREAM_EXEC_WINDOW_RULES: RuleSet = RuleSets.ofList(

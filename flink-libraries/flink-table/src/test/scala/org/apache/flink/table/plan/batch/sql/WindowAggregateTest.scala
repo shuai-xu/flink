@@ -61,7 +61,13 @@ class WindowAggregateTest extends TableTestBatchExecBase {
 
       override def getTableStats: TableStats = TableStats(10000000L, colStats)
 
-      override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = null
+      override def getBoundedStream(
+          streamEnv: StreamExecutionEnvironment): DataStream[Row] = null
+
+      /** Returns the table schema of the table source */
+      override def getTableSchema = TableSchema.fromDataType(getReturnType)
+
+      override def explainSource(): String = ""
     }
     util.addTable("t1", table)
   }

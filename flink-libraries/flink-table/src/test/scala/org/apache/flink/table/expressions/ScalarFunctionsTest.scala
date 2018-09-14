@@ -119,6 +119,7 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
         x._3
       )
     })
+
   }
 
   @Test
@@ -3080,12 +3081,11 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
     val functions = List(
       ("%s.subString(2)",     "SUBSTRING(%s, 2)"),
       ("%s.trim()",           "TRIM(%s)"),
+      ("%s.like('%%link')",   "%s LIKE '%%link'"),
       ("%s.charLength()",     "CHAR_LENGTH(%s)"),
       ("%s.lowerCase()",      "LOWER(%s)"),
       ("%s.upperCase()",      "UPPER(%s)"),
       ("%s.initCap()",        "INITCAP(%s)"),
-      ("%s.like('%%link')",   "%s NOT LIKE '%%link'"),
-      ("!%s.like('%%link')",  "%s LIKE '%%link'"),
       ("%s.position('aa')",   "POSITION('aa' IN %s)"),
       ("%s.overlay('aa', 2)", "OVERLAY(%s PLACING 'aa' FROM 2 FOR 2)")
     )

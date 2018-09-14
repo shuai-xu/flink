@@ -154,7 +154,7 @@ object ScalarSqlFunctions {
   val BITAND = new SqlFunction(
     "BITAND",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.ARG0,
+    ReturnTypes.ARG0_NULLABLE,
     null.asInstanceOf[SqlOperandTypeInference],
     OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
     SqlFunctionCategory.NUMERIC)
@@ -162,7 +162,7 @@ object ScalarSqlFunctions {
   val BITOR = new SqlFunction(
     "BITOR",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.ARG0,
+    ReturnTypes.ARG0_NULLABLE,
     null.asInstanceOf[SqlOperandTypeInference],
     OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
     SqlFunctionCategory.NUMERIC)
@@ -170,7 +170,7 @@ object ScalarSqlFunctions {
   val BITXOR = new SqlFunction(
     "BITXOR",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.ARG0,
+    ReturnTypes.ARG0_NULLABLE,
     null.asInstanceOf[SqlOperandTypeInference],
     OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
     SqlFunctionCategory.NUMERIC)
@@ -178,7 +178,7 @@ object ScalarSqlFunctions {
   val BITNOT = new SqlFunction(
     "BITNOT",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.ARG0,
+    ReturnTypes.ARG0_NULLABLE,
     null.asInstanceOf[SqlOperandTypeInference],
     OperandTypes.NUMERIC,
     SqlFunctionCategory.NUMERIC)
@@ -413,7 +413,7 @@ object ScalarSqlFunctions {
   val DATE_FORMAT = new SqlFunction(
     "DATE_FORMAT",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.explicit(SqlTypeName.VARCHAR),
+    ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR), SqlTypeTransforms.TO_NULLABLE),
     InferTypes.RETURN_TYPE,
     OperandTypes.or(
       OperandTypes.sequence("'(TIMESTAMP, FORMAT)'",
@@ -467,7 +467,7 @@ object ScalarSqlFunctions {
   val UNIX_TIMESTAMP = new SqlFunction(
     "UNIX_TIMESTAMP",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.BIGINT,
+    ReturnTypes.BIGINT_NULLABLE,
     null,
     OperandTypes.or(
       OperandTypes.NILADIC,
@@ -484,7 +484,7 @@ object ScalarSqlFunctions {
   val FROM_UNIXTIME = new SqlFunction(
     "FROM_UNIXTIME",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.VARCHAR_2000,
+    VARCHAR_2000_NULLABLE,
     null,
     OperandTypes.or(
       OperandTypes.family(SqlTypeFamily.NUMERIC),
@@ -559,7 +559,7 @@ object ScalarSqlFunctions {
   val TO_BASE64 = new SqlFunction(
     "TO_BASE64",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.VARCHAR_2000,
+    VARCHAR_2000_NULLABLE,
     null,
     OperandTypes.ANY,
     SqlFunctionCategory.STRING)
@@ -567,7 +567,7 @@ object ScalarSqlFunctions {
   val FROM_BASE64 = new SqlFunction(
     "FROM_BASE64",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.explicit(SqlTypeName.BINARY),
+    ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.BINARY), SqlTypeTransforms.TO_NULLABLE),
     null,
     OperandTypes.family(SqlTypeFamily.STRING),
     SqlFunctionCategory.STRING)
@@ -657,7 +657,7 @@ object ScalarSqlFunctions {
   val FROM_TIMESTAMP = new SqlFunction(
     "FROM_TIMESTAMP",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.BIGINT,
+    ReturnTypes.cascade(ReturnTypes.BIGINT, SqlTypeTransforms.TO_NULLABLE),
     null,
     OperandTypes.family(SqlTypeFamily.TIMESTAMP),
     SqlFunctionCategory.TIMEDATE)
@@ -686,7 +686,7 @@ object ScalarSqlFunctions {
   val DATE_FORMAT_TZ = new SqlFunction(
     "DATE_FORMAT_TZ",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.explicit(SqlTypeName.VARCHAR),
+    ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR), SqlTypeTransforms.TO_NULLABLE),
     InferTypes.RETURN_TYPE,
     OperandTypes.or(
       OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.STRING, SqlTypeFamily.STRING),
@@ -697,7 +697,7 @@ object ScalarSqlFunctions {
   val CONVERT_TZ = new SqlFunction(
     "CONVERT_TZ",
     SqlKind.OTHER_FUNCTION,
-    ReturnTypes.explicit(SqlTypeName.VARCHAR),
+    ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR), SqlTypeTransforms.TO_NULLABLE),
     null,
     OperandTypes.or(
       OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.STRING),

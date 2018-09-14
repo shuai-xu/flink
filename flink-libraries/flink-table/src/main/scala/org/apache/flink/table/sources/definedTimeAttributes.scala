@@ -18,8 +18,10 @@
 
 package org.apache.flink.table.sources
 
+import java.util
 import java.util.Objects
 
+import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.sources.tsextractors.TimestampExtractor
 import org.apache.flink.table.sources.wmstrategies.WatermarkStrategy
 
@@ -73,6 +75,23 @@ trait DefinedProctimeAttribute {
     */
   def getProctimeAttribute: String
 
+}
+
+/**
+  * Extends a [[TableSource]] to specify rowtime attributes via a
+  * [[RowtimeAttributeDescriptor]].
+  */
+trait DefinedRowtimeAttributes {
+
+  /**
+    * Returns a list of [[RowtimeAttributeDescriptor]] for all rowtime attributes of the table.
+    *
+    * All referenced attributes must be present in the [[TableSchema]] of the [[TableSource]] and of
+    * type [[Types.SQL_TIMESTAMP]].
+    *
+    * @return A list of [[RowtimeAttributeDescriptor]].
+    */
+  def getRowtimeAttributeDescriptors: util.List[RowtimeAttributeDescriptor]
 }
 
 /**

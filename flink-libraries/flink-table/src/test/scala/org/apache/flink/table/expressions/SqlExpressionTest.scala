@@ -264,6 +264,39 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("SHA2(CAST(NULL AS VARCHAR), 256)", "null")
   }
 
+  @Test
+  def testNullableCases(): Unit = {
+    testSqlApi(
+      "BITAND(cast(NUll as bigInt), cast(NUll as bigInt))",
+      nullable
+    )
+
+    testSqlApi(
+      "BITNOT(cast(NUll as bigInt))",
+      nullable
+    )
+
+    testSqlApi(
+      "BITOR(cast(NUll as bigInt), cast(NUll as bigInt))",
+      nullable
+    )
+
+    testSqlApi(
+      "BITXOR(cast(NUll as bigInt), cast(NUll as bigInt))",
+      nullable
+    )
+
+    testSqlApi(
+      "TO_BASE64(FROM_BASE64(cast(NUll as varchar)))",
+      nullable
+    )
+
+    testSqlApi(
+      "FROM_BASE64(cast(NUll as varchar))",
+      nullable
+    )
+  }
+
   override def rowTestData: Row = new Row(0)
 
   override def rowType: RowTypeInfo = new RowTypeInfo()

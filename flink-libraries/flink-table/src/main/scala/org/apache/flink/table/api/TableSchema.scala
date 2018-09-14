@@ -781,10 +781,34 @@ class TableSchemaBuilder {
   private val fieldNames: ArrayBuffer[String] = new ArrayBuffer[String]()
   private val fieldTypes: ArrayBuffer[InternalType] = new ArrayBuffer[InternalType]()
   private val columns: ArrayBuffer[Column] = new ArrayBuffer[Column]()
+  private val primaryKey: ArrayBuffer[String] = new ArrayBuffer[String]()
+  private val uniqueKeys: ArrayBuffer[ArrayBuffer[String]] = new ArrayBuffer[ArrayBuffer[String]]()
 
   def field(name: String, tpe: InternalType): TableSchemaBuilder = {
     fieldNames.append(name)
     fieldTypes.append(tpe)
+    this
+  }
+
+  def field(name: String, tpe: InternalType, nullable: Boolean): TableSchemaBuilder = {
+    columns.append(Column(name, columns.length, tpe, nullable))
+    this
+  }
+
+  def fromDataType(dataType: DataType): TableSchemaBuilder = {
+    columns.append(TableSchema.fromDataType(dataType).getColumns:_*)
+    this
+  }
+
+  def primaryKey(field: String*): TableSchemaBuilder = {
+    field.foreach(f => primaryKey.append(f))
+    this
+  }
+
+  def uniqueKey(field: String*): TableSchemaBuilder = {
+    val newUniqueKey = new ArrayBuffer[String]()
+    field.foreach(f => newUniqueKey.append(f))
+    uniqueKeys.append(newUniqueKey)
     this
   }
 

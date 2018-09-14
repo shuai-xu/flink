@@ -29,6 +29,7 @@ import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
 import org.apache.flink.table.types._
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 /**
@@ -868,11 +869,22 @@ object FunctionGenerator {
     DataTypes.DATE,
     BuiltInMethods.INT_TO_DATE)
 
-  addSqlFunctionMethod(
-    ScalarSqlFunctions.TO_TIMESTAMP,
-    Seq(DataTypes.LONG),
+  DataTypes.INTEGRAL_TYPES foreach (
+    dt => addSqlFunctionMethod(ScalarSqlFunctions.TO_TIMESTAMP,
+      Seq(dt),
+      DataTypes.TIMESTAMP,
+      BuiltInMethods.LONG_TO_TIMESTAMP))
+
+  DataTypes.FRACTIONAL_TYPES foreach (
+    dt => addSqlFunctionMethod(ScalarSqlFunctions.TO_TIMESTAMP,
+      Seq(dt),
+      DataTypes.TIMESTAMP,
+      BuiltInMethods.DOUBLE_TO_TIMESTAMP))
+
+  addSqlFunctionMethod(ScalarSqlFunctions.TO_TIMESTAMP,
+    Seq(DecimalType.DEFAULT),
     DataTypes.TIMESTAMP,
-    BuiltInMethods.LONG_TO_TIMESTAMP)
+    BuiltInMethods.DECIMAL_TO_TIMESTAMP)
 
   addSqlFunctionMethod(
     ScalarSqlFunctions.FROM_TIMESTAMP,
@@ -917,11 +929,25 @@ object FunctionGenerator {
     DataTypes.LONG,
     BuiltInMethods.UNIX_TIMESTAMP_FORMAT)
 
+  DataTypes.INTEGRAL_TYPES foreach (
+    dt => addSqlFunctionMethod(
+      ScalarSqlFunctions.FROM_UNIXTIME,
+      Seq(dt),
+      DataTypes.STRING,
+      BuiltInMethods.FROM_UNIXTIME))
+
+  DataTypes.FRACTIONAL_TYPES foreach (
+    dt => addSqlFunctionMethod(
+      ScalarSqlFunctions.FROM_UNIXTIME,
+      Seq(dt),
+      DataTypes.STRING,
+      BuiltInMethods.FROM_UNIXTIME_AS_DOUBLE))
+
   addSqlFunctionMethod(
     ScalarSqlFunctions.FROM_UNIXTIME,
-    Seq(DataTypes.LONG),
+    Seq(DecimalType.DEFAULT),
     DataTypes.STRING,
-    BuiltInMethods.FROM_UNIXTIME)
+    BuiltInMethods.FROM_UNIXTIME_AS_DECIMAL)
 
   addSqlFunctionMethod(
     ScalarSqlFunctions.FROM_UNIXTIME,
@@ -1038,6 +1064,8 @@ object FunctionGenerator {
     BuiltInMethods.UNIX_TIMESTAMP_FORMAT,
     BuiltInMethods.FROM_UNIXTIME,
     BuiltInMethods.FROM_UNIXTIME_FORMAT,
+    BuiltInMethods.FROM_UNIXTIME_AS_DOUBLE,
+    BuiltInMethods.FROM_UNIXTIME_AS_DECIMAL,
     BuiltInMethods.DATEDIFF_T_S,
     BuiltInMethods.DATEDIFF_S_T,
     BuiltInMethods.DATEDIFF_S_S,

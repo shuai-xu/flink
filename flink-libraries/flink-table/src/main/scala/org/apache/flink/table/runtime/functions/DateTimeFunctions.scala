@@ -28,6 +28,7 @@ import org.apache.calcite.avatica.util.{DateTimeUtils, TimeUnit, TimeUnitRange}
 import org.apache.calcite.avatica.util.DateTimeUtils._
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.dataformat.Decimal
 import org.slf4j.LoggerFactory
 
 class DateTimeFunctions {}
@@ -108,6 +109,22 @@ object DateTimeFunctions {
 
   def toTimestamp(v: Long): Long = v
 
+  // Runtime timestamp unit is milliseconds, so keep sync with it.
+  def toTimestamp(v: Double): java.lang.Long = {
+    if (v == null) {
+      null
+    } else {
+      v.longValue()
+    }
+  }
+
+  def toTimestamp(v: Decimal): java.lang.Long = {
+    if (v == null) {
+      null
+    } else {
+      Decimal.castToLong(v)
+    }
+  }
 
   /**
     * Returns the epoch days(days since 1970-01-01
@@ -540,6 +557,36 @@ object DateTimeFunctions {
     */
   def fromUnixtime(unixtime: Long, tz: TimeZone): String = {
     fromUnixtime(unixtime, "yyyy-MM-dd HH:mm:ss", tz)
+  }
+
+  /**
+    * Convert unix timestamp to datetime string
+    * with format yyyy-MM-dd HH:mm:ss
+    * If accept any null arguments, return null.
+    *
+    * @param unixtime unix timestamp.
+    * @return datetime string.
+    */
+  def fromUnixtime(unixtime: Double, tz: TimeZone): String = {
+    if (unixtime == null) {
+      return null
+    }
+    fromUnixtime(unixtime.longValue(), "yyyy-MM-dd HH:mm:ss", tz)
+  }
+
+  /**
+    * Convert unix timestamp to datetime string
+    * with format yyyy-MM-dd HH:mm:ss
+    * If accept any null arguments, return null.
+    *
+    * @param unixtime unix timestamp.
+    * @return datetime string.
+    */
+  def fromUnixtime(unixtime: Decimal, tz: TimeZone): String = {
+    if (unixtime == null) {
+      return null
+    }
+    fromUnixtime(Decimal.castToLong(unixtime), "yyyy-MM-dd HH:mm:ss", tz)
   }
 
 

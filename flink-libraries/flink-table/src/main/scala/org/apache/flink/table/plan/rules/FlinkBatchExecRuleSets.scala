@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.rules
 
 import org.apache.calcite.rel.core.RelFactories
-import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalUnion}
+import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalMinus, LogicalUnion}
 import org.apache.calcite.rel.rules.{ReduceExpressionsRule, _}
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.table.plan.nodes.logical._
@@ -263,6 +263,8 @@ object FlinkBatchExecRuleSets {
             new CoerceInputsRule(classOf[LogicalUnion], false),
             //ensure intersect set operator have the same row type
             new CoerceInputsRule(classOf[LogicalIntersect], false),
+            //ensure except set operator have the same row type
+            new CoerceInputsRule(classOf[LogicalMinus], false),
             MergeMultiEqualsToInRule.INSTANCE,
             MergeMultiNotEqualsToNotInRule.INSTANCE
           )).asJava)

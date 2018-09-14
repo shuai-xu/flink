@@ -22,9 +22,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.{TableException, TableSchema}
 import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.sources.{BatchExecTableSource, DefinedFieldNullables}
+import org.apache.flink.table.sources.BatchExecTableSource
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 
@@ -32,8 +32,7 @@ class TestTableSourceWithFieldNullables(
     fieldNames: Array[String],
     fieldTypes: Array[TypeInformation[_]],
     fieldNullables: Array[Boolean])
-    extends BatchExecTableSource[Row]
-        with DefinedFieldNullables {
+    extends BatchExecTableSource[Row] {
 
   if (fieldNames.length != fieldTypes.length) {
     throw TableException("Number of field names and field types must be equal.")
@@ -50,6 +49,14 @@ class TestTableSourceWithFieldNullables(
 
   override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = null
 
-  /** Returns the nullable properties of the table fields. */
-  override def getFieldNullables: Array[Boolean] = fieldNullables
+  override def getTableSchema: TableSchema = {
+    val builder = TableSchema.builder()
+    fieldNames.zip(fieldTypes.map(DataTypes.internal)).zip(fieldNullables) foreach {
+      case ((name, tpe), nullable) => builder.field(name, tpe, nullable)
+    }
+    builder.build()
+  }
+
+  override def explainSource(): String = ""
+
 }

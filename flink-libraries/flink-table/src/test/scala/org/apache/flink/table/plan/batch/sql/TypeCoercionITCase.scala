@@ -53,7 +53,7 @@ class TypeCoercionITCase extends QueryTest {
       Seq(row(null, "abc d".getBytes, "123 4".getBytes,
         128L, 32768L, 2147483648L, new java.math.BigDecimal("9223372036854775808"),
         -129L, -32769L, -2147483649L, new java.math.BigDecimal("-9223372036854775809"),
-        1.1f, 1.1, UTCTimestamp("2018-06-08 00:00:00"), UTCDate("1996-11-10"))),
+        1.1, UTCTimestamp("2018-06-08 00:00:00"), UTCDate("1996-11-10"))),
       new RowTypeInfo(
         INT_TYPE_INFO,
         BYTE_PRIMITIVE_ARRAY_TYPE_INFO,
@@ -66,15 +66,13 @@ class TypeCoercionITCase extends QueryTest {
         LONG_TYPE_INFO,
         LONG_TYPE_INFO,
         BIG_DEC_TYPE_INFO,
-        FLOAT_TYPE_INFO,
         DOUBLE_TYPE_INFO,
         Types.SQL_TIMESTAMP,
         Types.SQL_DATE),
     "x,y,z," +
       "tinyintMax,smallintMax,intMax,bigintMax," +
-      "tinyintMin,smallintMin,intMin,bigintMin,f1,f,a,b",
-      Seq(true, true, true, true, true, true, true,
-        true, true, true, true, true, true, true, true)
+      "tinyintMin,smallintMin,intMin,bigintMin,f,a,b",
+      Seq(true, true, true, true, true, true, true, true, true, true, true, true, true, true)
     )
     registerCollection(
       "t6",
@@ -200,46 +198,6 @@ class TypeCoercionITCase extends QueryTest {
       """
         |select if(1>0, date '2018-06-08', timestamp '2018-06-07 17:00:00.0') from t4
       """.stripMargin, Seq(row("2018-06-08")))
-  }
-
-  @Test
-  def testIfFuncNumericArgs(): Unit = {
-    val numericTypes = Seq(
-      "tinyint",
-      "smallint",
-      "integer",
-      "bigint",
-      "decimal(5, 3)",
-      "float",
-      "double"
-    )
-
-    for (t1 <- numericTypes) {
-      for (t2 <- numericTypes) {
-        val result =
-          if (t1 == "float" || t1 == "double" || t2 == "float" || t2 == "double") "1.0"
-          else if (t1 == "decimal(5, 3)" || t2 == "decimal(5, 3)") "1.000"
-          else "1"
-        checkResult(s"select if(1 > 0, cast(1 as $t1), cast(0 as $t2)) from t4",
-          Seq(row(result)))
-      }
-    }
-  }
-
-  @Test
-  def testIfFuncDecimalArgs(): Unit = {
-    checkResult(
-      "select if(1 > 0, cast(111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
-      Seq(row("111.000")))
-    checkResult(
-      "select if(1 < 0, cast(111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
-      Seq(row("0.222")))
-    checkResult(
-      "select if(1 > 0, cast(-111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
-      Seq(row("-111.000")))
-    checkResult(
-      "select if(1 < 0, cast(111 as decimal(5, 2)), cast(-0.222 as decimal(3, 3))) from t4",
-      Seq(row("-0.222")))
   }
 
   @Test
@@ -609,11 +567,11 @@ class TypeCoercionITCase extends QueryTest {
         |SELECT CAST(CAST('123' AS BINARY) AS VARCHAR)
       """.stripMargin, Seq(row("123"))
     )
-    checkResult(
-      """
-        |SELECT CAST('123' AS BINARY) UNION SELECT '2'
-      """.stripMargin, Seq(row("123"), row("2"))
-    )
+//    checkResult(
+//      """
+//        |SELECT CAST('123' AS BINARY) UNION SELECT '2'
+//      """.stripMargin, Seq(row("123"), row("2"))
+//    )
   }
 
   @Test
@@ -1410,6 +1368,31 @@ class TypeCoercionITCase extends QueryTest {
   }
 
   @Test
+  def testExceptWithDifferentType(): Unit = {
+    checkResult(
+      """
+        |SELECT x FROM t4 EXCEPT
+        |SELECT m FROM t4
+      """.stripMargin,
+      Seq(row("1.000000000000000000"))
+    )
+    checkResult(
+      """
+        |SELECT x FROM t5 EXCEPT
+        |SELECT m FROM t4
+      """.stripMargin,
+      Seq(row(null))
+    )
+    checkResult(
+      """
+        |SELECT x FROM t4 EXCEPT
+        |SELECT x FROM t5
+      """.stripMargin,
+      Seq(row("1"))
+    )
+  }
+
+  @Test
   def testConcatImplicitCast(): Unit = {
     checkResult(
       """
@@ -1445,5 +1428,78 @@ class TypeCoercionITCase extends QueryTest {
        """.stripMargin,
       Seq(row(1, 2, 2.0, 2, 2, 2.0, 2.0))
     )
+  }
+
+  @Test
+  def testFloatToNumeric(): Unit = {
+    val list = List("tinyint", "smallint", "int", "bigint")
+    list.foreach { i =>
+      checkResult(
+        s"""
+          |SELECT CAST(CAST('1' AS FLOAT) AS $i) FROM t5
+        """.stripMargin, Seq(row(1))
+      )
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('1' AS DOUBLE) AS $i) FROM t5
+        """.stripMargin, Seq(row(1))
+      )
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('aa' AS FLOAT) AS $i) FROM t5
+         """.stripMargin, Seq(row(null))
+      )
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('aa' AS DOUBLE) AS $i) FROM t5
+         """.stripMargin, Seq(row(null))
+      )
+    }
+  }
+
+  @Test
+  def testNumericToFloat(): Unit = {
+    val list = List("tinyint", "smallint", "int", "bigint")
+    list.foreach { i =>
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('1' AS $i) AS FLOAT) FROM t5
+        """.stripMargin, Seq(row(1.0))
+      )
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('1' AS $i) AS DOUBLE) FROM t5
+        """.stripMargin, Seq(row(1.0))
+      )
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('aa' AS $i) AS FLOAT) FROM t5
+         """.stripMargin, Seq(row(null))
+      )
+      checkResult(
+        s"""
+           |SELECT CAST(CAST('aa' AS $i) AS DOUBLE) FROM t5
+         """.stripMargin, Seq(row(null))
+      )
+    }
+  }
+
+  @Test
+  def testNumericToNumeric(): Unit = {
+    val list = List("tinyint", "smallint", "int", "bigint")
+    list.foreach { i =>
+      list.foreach { j =>
+        checkResult(
+          s"""
+             |SELECT CAST(CAST('1' AS $i) AS $j) FROM t5
+        """.stripMargin, Seq(row(1))
+        )
+        checkResult(
+          s"""
+             |SELECT CAST(CAST('aa' AS $i) AS $j) FROM t5
+         """.stripMargin, Seq(row(null))
+        )
+      }
+    }
   }
 }

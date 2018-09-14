@@ -17,10 +17,7 @@
  */
 package org.apache.flink.table.codegen.calls
 
-import java.lang.{Long => JLong}
-import java.lang.{Byte => JByte}
-import java.lang.{Short => JShort}
-import java.lang.{Integer => JInteger}
+import java.lang.{Byte => JByte, Integer => JInteger, Long => JLong, Short => JShort}
 import java.util.{TimeZone, Date => JDate}
 import java.sql.Time
 
@@ -244,6 +241,12 @@ object BuiltInMethods {
   val FROM_UNIXTIME = Types.lookupMethod(
     classOf[DateTimeFunctions], "fromUnixtime", classOf[Long], classOf[TimeZone])
 
+  val FROM_UNIXTIME_AS_DOUBLE = Types.lookupMethod(
+    classOf[DateTimeFunctions], "fromUnixtime", classOf[Double], classOf[TimeZone])
+
+  val FROM_UNIXTIME_AS_DECIMAL = Types.lookupMethod(
+    classOf[DateTimeFunctions], "fromUnixtime", classOf[Decimal], classOf[TimeZone])
+
   val DATEDIFF_T_S = Types.lookupMethod(
     classOf[DateTimeFunctions], "dateDiff", classOf[Long], classOf[String], classOf[TimeZone])
 
@@ -395,6 +398,16 @@ object BuiltInMethods {
     classOf[DateTimeFunctions],
     "toTimestamp",
     classOf[Long])
+
+  val DOUBLE_TO_TIMESTAMP = Types.lookupMethod(
+    classOf[DateTimeFunctions],
+    "toTimestamp",
+    classOf[Double])
+
+  val DECIMAL_TO_TIMESTAMP = Types.lookupMethod(
+    classOf[DateTimeFunctions],
+    "toTimestamp",
+    classOf[Decimal])
 
   val STRING_TO_DATE_WITH_FORMAT = Types.lookupMethod(
     classOf[DateTimeFunctions],

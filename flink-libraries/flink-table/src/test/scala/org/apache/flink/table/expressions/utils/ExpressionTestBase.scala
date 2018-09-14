@@ -37,7 +37,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
-import org.apache.flink.table.expressions.{Expression, ExpressionParser}
+import org.apache.flink.table.expressions.{Expression, ExpressionParser, If, IsNull, Literal}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecScan}
@@ -72,6 +72,9 @@ abstract class ExpressionTestBase {
   private val logicalOptProgram = Programs.ofRules(
     FlinkBatchExecRuleSets.BATCH_EXEC_LOGICAL_OPT_RULES)
   private val dataSetOptProgram = Programs.ofRules(FlinkBatchExecRuleSets.BATCH_EXEC_OPT_RULES)
+
+  protected val nullable = "null"
+  protected val notNullable = "not null"
 
   private def hepPlanner = {
     val builder = new HepProgramBuilder
@@ -296,6 +299,10 @@ abstract class ExpressionTestBase {
     addTableApiTestExpr(expr, expected)
     addTableApiTestExpr(exprString, expected)
     addSqlTestExpr(sqlExpr, expected)
+    if (expected == nullable) {
+      testTableNullable(expr, exprString)
+      testSqlNullable(sqlExpr)
+    }
   }
 
   def testTableApi(
@@ -305,6 +312,9 @@ abstract class ExpressionTestBase {
     : Unit = {
     addTableApiTestExpr(expr, expected)
     addTableApiTestExpr(exprString, expected)
+    if (expected == nullable) {
+      testTableNullable(expr, exprString)
+    }
   }
 
   def testSqlApi(
@@ -312,6 +322,24 @@ abstract class ExpressionTestBase {
       expected: String)
     : Unit = {
     addSqlTestExpr(sqlExpr, expected)
+    if (expected == nullable) {
+      testSqlNullable(sqlExpr)
+    }
+  }
+
+  def testSqlNullable(nullUdf: String): Unit = {
+    addSqlTestExpr(
+      s"CASE WHEN ($nullUdf) is null THEN '$nullable' ELSE '$notNullable' END", nullable)
+  }
+
+  def testTableNullable(nullExpr: Expression, nullExprString: String): Unit = {
+    val retExpr = If(IsNull(nullExpr), Literal(nullable, DataTypes.STRING), Literal(notNullable,
+      DataTypes.STRING))
+    addTableApiTestExpr(retExpr, nullable)
+    val retStrExpr = If(IsNull(ExpressionParser.parseExpression(nullExprString)), Literal(nullable,
+      DataTypes.STRING), Literal(notNullable,
+      DataTypes.STRING))
+    addTableApiTestExpr(retStrExpr, nullable)
   }
 
   // ----------------------------------------------------------------------------------------------

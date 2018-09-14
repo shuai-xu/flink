@@ -17,6 +17,8 @@
  */
 package org.apache.flink.table.expressions
 
+import java.math.{BigDecimal => JBigDecimal}
+
 import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.{Types, ValidationException}
@@ -78,6 +80,8 @@ class BuiltinScalarFunctionTest extends ExpressionTestBase {
     testSqlApi(
       "STR_TO_MAP(f20)",
       "null")
+
+    testSqlNullable("STR_TO_MAP(f20)")
   }
 
   @Test // Will do implicit type coercion.
@@ -165,6 +169,60 @@ class BuiltinScalarFunctionTest extends ExpressionTestBase {
       "1996-11-10 06:55:44.333")
   }
 
+  @Test
+  def testToTimestampWithNumeric(): Unit = {
+    // Test integral and fractional numeric to timestamp.
+    testSqlApi(
+      "to_timestamp(f2)",
+      "1970-01-01 00:00:00.042")
+    testSqlApi(
+      "to_timestamp(f3)",
+      "1970-01-01 00:00:00.043")
+    testSqlApi(
+      "to_timestamp(f4)",
+      "1970-01-01 00:00:00.044")
+    testSqlApi(
+      "to_timestamp(f5)",
+      "1970-01-01 00:00:00.004")
+    testSqlApi(
+      "to_timestamp(f6)",
+      "1970-01-01 00:00:00.004")
+    testSqlApi(
+      "to_timestamp(f7)",
+      "1970-01-01 00:00:00.003")
+    // Test decimal to timestamp.
+    testSqlApi(
+      "to_timestamp(f15)",
+      "1969-12-31 23:59:58.769")
+  }
+
+  @Test
+  def testFromUnixTimeWithNumeric(): Unit = {
+    // Test integral and fractional numeric from_unixtime.
+    testSqlApi(
+      "from_unixtime(f2)",
+      "1970-01-01 00:00:42")
+    testSqlApi(
+      "from_unixtime(f3)",
+      "1970-01-01 00:00:43")
+    testSqlApi(
+      "from_unixtime(f4)",
+      "1970-01-01 00:00:44")
+    testSqlApi(
+      "from_unixtime(f5)",
+      "1970-01-01 00:00:04")
+    testSqlApi(
+      "from_unixtime(f6)",
+      "1970-01-01 00:00:04")
+    testSqlApi(
+      "from_unixtime(f7)",
+      "1970-01-01 00:00:03")
+    // Test decimal to from_unixtime.
+    testSqlApi(
+      "from_unixtime(f15)",
+      "1969-12-31 23:39:29")
+  }
+
 
   override def rowTestData: Row = {
     val testData = new Row(28)
@@ -183,14 +241,14 @@ class BuiltinScalarFunctionTest extends ExpressionTestBase {
     testData.setField(12, -4.5.toFloat)
     testData.setField(13, -4.6)
     testData.setField(14, -3)
-    testData.setField(15, BigDecimal("-1231.1231231321321321111").bigDecimal)
+    testData.setField(15, new JBigDecimal("-1231.1231231321321321111"))
     testData.setField(16, UTCDate("1996-11-10"))
     testData.setField(17, UTCTime("06:55:44"))
     testData.setField(18, UTCTimestamp("1996-11-10 06:55:44.333"))
     testData.setField(19, "test1=1,test2=2,test3=3")
     testData.setField(20, null)
     testData.setField(21, false)
-    testData.setField(22, BigDecimal("1345.1231231321321321111").bigDecimal)
+    testData.setField(22, new JBigDecimal("1345.1231231321321321111"))
     testData.setField(23, UTCDate("1997-11-11"))
     testData.setField(24, UTCTime("09:44:55"))
     testData.setField(25, UTCTimestamp("1997-11-11 09:44:55.333"))

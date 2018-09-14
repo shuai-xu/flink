@@ -28,7 +28,7 @@ class SqlConcatAggFunction extends SqlAggFunction(
   "CONCAT_AGG",
   null.asInstanceOf[SqlIdentifier],
   SqlKind.OTHER_FUNCTION,
-  ReturnTypes.explicit(SqlTypeName.VARCHAR),
+  ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR), SqlTypeTransforms.TO_NULLABLE),
   null.asInstanceOf[SqlOperandTypeInference],
   OperandTypes.or(OperandTypes.CHARACTER,
                   OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)),
