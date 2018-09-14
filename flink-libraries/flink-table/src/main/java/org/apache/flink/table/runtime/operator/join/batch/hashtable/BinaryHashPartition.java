@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.join.batch;
+package org.apache.flink.table.runtime.operator.join.batch.hashtable;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentSource;
@@ -29,11 +29,10 @@ import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
-import org.apache.flink.table.codegen.Projection;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.MemorySegmentPool;
+import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MathUtils;
 
 import java.io.EOFException;
@@ -95,8 +94,7 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	 */
 	BinaryHashPartition(BinaryHashBucketArea bucketArea, BinaryRowSerializer buildSideAccessors, BinaryRowSerializer probeSideAccessors,
 			int partitionNumber, int recursionLevel, MemorySegment initialBuffer,
-			MemorySegmentPool memPool,
-			int segmentSize) {
+			MemorySegmentPool memPool, int segmentSize) {
 		super(0);
 		this.bucketArea = bucketArea;
 		this.buildSideSerializer = buildSideAccessors;
@@ -121,8 +119,7 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	 * @param buildSideRecordCounter The number of records in the buffers.
 	 * @param segmentSize            The size of the memory segments.
 	 */
-	BinaryHashPartition(BinaryHashBucketArea area, BinaryRowSerializer buildSideAccessors,
-			BinaryRowSerializer probeSideAccessors,
+	BinaryHashPartition(BinaryHashBucketArea area, BinaryRowSerializer buildSideAccessors, BinaryRowSerializer probeSideAccessors,
 			int partitionNumber, int recursionLevel, List<MemorySegment> buffers,
 			long buildSideRecordCounter, int segmentSize, int lastSegmentLimit) {
 		super(0);
@@ -420,15 +417,15 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 		}
 	}
 
-	final PartitionIterator getPartitionIterator(
-			Projection<BaseRow, BinaryRow> projection) throws IOException {
-		return new PartitionIterator(projection);
+	final PartitionIterator newPartitionIterator() {
+		return new PartitionIterator();
 	}
 
 	final int getLastSegmentLimit() {
 		return this.finalBufferLimit;
 	}
 
+	@Override
 	public void setReadPosition(long pointer) {
 		final int bufferNum = (int) (pointer >>> this.segmentSizeBits);
 		final int offset = (int) (pointer & (this.memorySegmentSize - 1));
@@ -545,7 +542,7 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 			final MemorySegment current = getCurrentSegment();
 			if (current == null) {
 				throw new IllegalStateException("Illegal State in HashPartition: " +
-						"No current buffer when finilizing build side.");
+						"No current buffer when finalizing build side.");
 			}
 			clear();
 
@@ -568,23 +565,19 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 	 * store all the build side data.
 	 * (After bulk load to memory, see {@link BulkBlockChannelReader}).
 	 */
-	final class PartitionIterator {
-
-		private final Projection<BaseRow, BinaryRow> projection;
+	final class PartitionIterator implements RowIterator<BinaryRow> {
 
 		private long currentPointer;
 
-		private int currentHashCode;
-
 		private BinaryRow reuse;
 
-		private PartitionIterator(Projection<BaseRow, BinaryRow> projection) throws IOException {
-			this.projection = projection;
+		private PartitionIterator() {
 			this.reuse = buildSideSerializer.createInstance();
 			setReadPosition(0);
 		}
 
-		public final boolean hasNext() throws IOException {
+		@Override
+		public boolean advanceNext() {
 			final int pos = getCurrentPositionInSegment();
 			final int buffer = BinaryHashPartition.this.currentBufferNum;
 
@@ -592,10 +585,11 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 
 			try {
 				reuse = buildSideSerializer.mapFromPages(reuse, BinaryHashPartition.this);
-				this.currentHashCode = projection.apply(reuse).hashCode();
 				return true;
 			} catch (EOFException e) {
 				return false;
+			} catch (IOException e) {
+				throw new RuntimeException(e);
 			}
 		}
 
@@ -603,8 +597,9 @@ public class BinaryHashPartition extends AbstractPagedInputView implements Seeka
 			return this.currentPointer;
 		}
 
-		final int getCurrentHashCode() {
-			return this.currentHashCode;
+		@Override
+		public BinaryRow getRow() {
+			return this.reuse;
 		}
 	}
 }

@@ -161,6 +161,10 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 
 	private void serializeToPagesSlow(BinaryRow record, AbstractPagedOutputView out) throws IOException {
 		out.writeInt(record.getSizeInBytes());
+		serializeRowToPagesSlow(record, out);
+	}
+
+	public void serializeRowToPagesSlow(BinaryRow record, AbstractPagedOutputView out) throws IOException {
 		int remainSize = record.getSizeInBytes();
 		int posInSegOfRecord = record.getBaseOffset();
 		for (MemorySegment segOfRecord : record.getAllSegments()) {
@@ -211,8 +215,10 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 		checkArgument(source.getHeaderLength() == 0);
 
 		checkSkipRead(source);
+		pointTo(source.readInt(), row, source);
+	}
 
-		int length = source.readInt();
+	public void pointTo(int length, BinaryRow row, AbstractPagedInputView source) throws IOException {
 		if (length < 0) {
 			throw new IOException(String.format(
 					"Read unexpected bytes in source of positionInSegment[%d] and limitInSegment[%d]",
@@ -290,7 +296,11 @@ public class BinaryRowSerializer extends AbstractRowSerializer<BinaryRow> {
 	 * Return fixed part length to serialize one row.
 	 */
 	public int getSerializedRowFixedPartLength() {
-		return fixedLengthPartSize + LENGTH_SIZE_IN_BYTES;
+		return getFixedLengthPartSize() + LENGTH_SIZE_IN_BYTES;
+	}
+
+	public int getFixedLengthPartSize() {
+		return fixedLengthPartSize;
 	}
 
 	/**

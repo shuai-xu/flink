@@ -217,8 +217,10 @@ case class GeneratedRecordComparator(name: String, code: String)
   * @param name class name of the generated Projection.
   * @param code code of the generated Projection.
   * @param expr projection code and result term.
+  * @param inputMapping mapping to projection.
   */
-case class GeneratedProjection(name: String, code: String, expr: GeneratedExpression)
+case class GeneratedProjection(
+    name: String, code: String, expr: GeneratedExpression, inputMapping: Array[Int])
 
 /**
   * Describes the members of generated sort.

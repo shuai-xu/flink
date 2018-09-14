@@ -19,9 +19,7 @@
 package org.apache.flink.table.runtime.operator.join.batch;
 
 import org.apache.flink.configuration.ConfigConstants;
-import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
-import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
@@ -36,6 +34,8 @@ import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.JoinedRow;
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
+import org.apache.flink.table.runtime.operator.join.batch.hashtable.BinaryHashTable;
+import org.apache.flink.table.types.BaseRowType;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.Collector;
@@ -43,6 +43,8 @@ import org.apache.flink.util.Collector;
 import org.codehaus.commons.compiler.CompileException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -52,52 +54,31 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * hybrid-hash-join internally to match the records with equal key. The build side
  * of the hash is the first input of the match.
  */
-public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetrics<BaseRow>
+public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics<BaseRow>
 		implements TwoInputStreamOperator<BaseRow, BaseRow, BaseRow> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(HashJoinOperator.class);
 
-	private final long reservedMemorySize;
-	private final long preferredMemorySize;
-	private final long perRequestMemorySize;
+	private final HashJoinParameter parameter;
 	private final boolean reverseJoinFunction;
-	private final boolean[] filterNullKeys;
 	final HashJoinType type;
-	private final boolean tryDistinctBuildRow;
-	private final int buildRowSize;
-	private final long buildRowCount;
-
-	// generated code to cook
-	private GeneratedJoinConditionFunction condFuncCode;
-	private final GeneratedProjection buildProjectionCode;
-	private final GeneratedProjection probeProjectionCode;
 
 	// cooked classes
-	protected transient Class<JoinConditionFunction> condFuncClass;
-	protected transient Class<Projection<BaseRow, BinaryRow>> buildProjectionClass;
-	protected transient Class<Projection<BaseRow, BinaryRow>> probeProjectionClass;
+	transient Class<JoinConditionFunction> condFuncClass;
+	transient Class<Projection<BaseRow, BinaryRow>> buildProjectionClass;
+	transient Class<Projection<BaseRow, BinaryRow>> probeProjectionClass;
 
 	private transient BinaryHashTable table;
 	transient Collector<BaseRow> collector;
-	private transient MemoryManager memManager;
 
 	transient BaseRow buildSideNullRow;
 	transient BaseRow probeSideNullRow;
 	private transient JoinedRow joinedRow;
 
-	public HashJoinOperator(HashJoinParameter parameter) {
-		this.reservedMemorySize = parameter.reservedMemorySize;
-		this.preferredMemorySize = parameter.preferredMemorySize;
-		this.perRequestMemorySize = parameter.perRequestMemorySize;
+	HashJoinOperator(HashJoinParameter parameter) {
+		this.parameter = parameter;
 		this.type = parameter.type;
-		this.condFuncCode = parameter.condFuncCode;
 		this.reverseJoinFunction = parameter.reverseJoinFunction;
-		this.filterNullKeys = parameter.filterNullKeys;
-		this.buildProjectionCode = parameter.buildProjectionCode;
-		this.probeProjectionCode = parameter.probeProjectionCode;
-		this.tryDistinctBuildRow = parameter.tryDistinctBuildRow;
-		this.buildRowSize = parameter.buildRowSize;
-		this.buildRowCount = parameter.buildRowCount;
 	}
 
 	@Override
@@ -107,14 +88,10 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 		// code gen function and projection classes.
 		cookGeneratedClasses(getContainingTask().getUserCodeClassLoader());
 
-		this.memManager = getContainingTask().getEnvironment().getMemoryManager();
-		final IOManager ioManager = getContainingTask().getEnvironment().getIOManager();
+		IOManager ioManager = getContainingTask().getEnvironment().getIOManager();
 
-		// types
-		// Runtime will shuffle the rows, so let's use binaryRow.
 		final AbstractRowSerializer buildSerializer = (AbstractRowSerializer) getOperatorConfig()
 			.getTypeSerializerIn1(getUserCodeClassloader());
-
 		final AbstractRowSerializer probeSerializer = (AbstractRowSerializer) getOperatorConfig()
 			.getTypeSerializerIn2(getUserCodeClassloader());
 
@@ -129,14 +106,14 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 				getContainingTask(),
 				buildSerializer, probeSerializer,
 				buildProjectionClass.newInstance(), probeProjectionClass.newInstance(),
-				memManager,
-				reservedMemorySize,
-				preferredMemorySize,
-				perRequestMemorySize,
-				ioManager, buildRowSize, buildRowCount / parallel,
+				getContainingTask().getEnvironment().getMemoryManager(),
+				parameter.reservedMemorySize,
+				parameter.maxMemorySize,
+				parameter.perRequestMemorySize,
+				ioManager, parameter.buildRowSize, parameter.buildRowCount / parallel,
 				hashJoinUseBitMaps, type,
-				condFuncClass.newInstance(), reverseJoinFunction, filterNullKeys,
-				tryDistinctBuildRow);
+				condFuncClass.newInstance(), reverseJoinFunction, parameter.filterNullKeys,
+				parameter.tryDistinctBuildRow);
 
 		this.collector = new StreamRecordCollector<>(output);
 
@@ -144,36 +121,19 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 		this.probeSideNullRow = new GenericRow(probeSerializer.getNumFields());
 		this.joinedRow = new JoinedRow();
 
-		getMetricGroup().gauge("memoryUsedSizeInBytes", new Gauge<Long>() {
-			@Override
-			public Long getValue() {
-				return table.getUsedMemoryInBytes();
-			}
-		});
-
-		getMetricGroup().gauge("numSpillFiles", new Gauge<Long>() {
-			@Override
-			public Long getValue() {
-				return table.getNumSpillFiles();
-			}
-		});
-
-		getMetricGroup().gauge("spillInBytes", new Gauge<Long>() {
-			@Override
-			public Long getValue() {
-				return table.getSpillInBytes();
-			}
-		});
+		getMetricGroup().gauge("memoryUsedSizeInBytes", table::getUsedMemoryInBytes);
+		getMetricGroup().gauge("numSpillFiles", table::getNumSpillFiles);
+		getMetricGroup().gauge("spillInBytes", table::getSpillInBytes);
 	}
 
 	protected void cookGeneratedClasses(ClassLoader cl) throws CompileException {
 		long startTime = System.currentTimeMillis();
 		condFuncClass = CodeGenUtils.compile(
-				cl, condFuncCode.name(), condFuncCode.code());
+				cl, parameter.condFuncCode.name(), parameter.condFuncCode.code());
 		buildProjectionClass = CodeGenUtils.compile(
-				cl, buildProjectionCode.name(), buildProjectionCode.code());
+				cl, parameter.buildProjectionCode.name(), parameter.buildProjectionCode.code());
 		probeProjectionClass = CodeGenUtils.compile(
-				cl, probeProjectionCode.name(), probeProjectionCode.code());
+				cl, parameter.probeProjectionCode.name(), parameter.probeProjectionCode.code());
 		long endTime = System.currentTimeMillis();
 		LOG.info("Compiling generated codes, used time: " + (endTime - startTime) + "ms.");
 	}
@@ -245,10 +205,9 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 	public void close() throws Exception {
 		super.close();
 		if (this.table != null) {
-			// close the join
 			this.table.close();
-			// free the memory
 			this.table.free();
+			this.table = null;
 		}
 	}
 
@@ -263,10 +222,13 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 			GeneratedProjection buildProjectionCode,
 			GeneratedProjection probeProjectionCode,
 			boolean tryDistinctBuildRow,
-			int buildRowSize, long buildRowCount) {
+			int buildRowSize,
+			long buildRowCount,
+			long probeRowCount,
+			BaseRowType keyType) {
 		HashJoinParameter parameter = new HashJoinParameter(minMemorySize, maxMemorySize, eachRequestMemorySize,
 				type, condFuncCode, reverseJoinFunction, filterNullKeys, buildProjectionCode, probeProjectionCode,
-				tryDistinctBuildRow, buildRowSize, buildRowCount);
+				tryDistinctBuildRow, buildRowSize, buildRowCount, probeRowCount, keyType);
 		switch (type) {
 			case INNER:
 				return new InnerHashJoinOperator(parameter);
@@ -288,9 +250,9 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 		}
 	}
 
-	static class HashJoinParameter {
+	static class HashJoinParameter implements Serializable {
 		long reservedMemorySize;
-		long preferredMemorySize;
+		long maxMemorySize;
 		long perRequestMemorySize;
 		HashJoinType type;
 		GeneratedJoinConditionFunction condFuncCode;
@@ -301,16 +263,18 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 		boolean tryDistinctBuildRow;
 		int buildRowSize;
 		long buildRowCount;
+		long probeRowCount;
+		BaseRowType keyType;
 
 		HashJoinParameter(
-				long reservedMemorySize, long preferredMemorySize, long perRequestMemorySize, HashJoinType type,
+				long reservedMemorySize, long maxMemorySize, long perRequestMemorySize, HashJoinType type,
 				GeneratedJoinConditionFunction condFuncCode, boolean reverseJoinFunction,
 				boolean[] filterNullKeys,
 				GeneratedProjection buildProjectionCode,
 				GeneratedProjection probeProjectionCode, boolean tryDistinctBuildRow,
-				int buildRowSize, long buildRowCount) {
+				int buildRowSize, long buildRowCount, long probeRowCount, BaseRowType keyType) {
 			this.reservedMemorySize = reservedMemorySize;
-			this.preferredMemorySize = preferredMemorySize;
+			this.maxMemorySize = maxMemorySize;
 			this.perRequestMemorySize = perRequestMemorySize;
 			this.type = type;
 			this.condFuncCode = condFuncCode;
@@ -321,6 +285,8 @@ public abstract class  HashJoinOperator extends AbstractStreamOperatorWithMetric
 			this.tryDistinctBuildRow = tryDistinctBuildRow;
 			this.buildRowSize = buildRowSize;
 			this.buildRowCount = buildRowCount;
+			this.probeRowCount = probeRowCount;
+			this.keyType = keyType;
 		}
 	}
 

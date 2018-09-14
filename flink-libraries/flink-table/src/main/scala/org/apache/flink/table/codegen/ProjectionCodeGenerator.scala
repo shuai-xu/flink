@@ -63,9 +63,16 @@ object ProjectionCodeGenerator {
       outRow = outRecordTerm,
       outRowWriter = Option(outRecordWriterTerm),
       reusedOutRow = reusedOutRecord)
+
+    val outTerm = if (outType.getTypeClass == classOf[BinaryRow]) {
+      BINARY_ROW
+    }  else {
+      BASE_ROW
+    }
+
     val code =
       j"""
-      public class $className extends ${baseClass.getCanonicalName} {
+      public class $className extends ${baseClass.getCanonicalName}<$BASE_ROW, $outTerm> {
 
         ${ctx.reuseMemberCode()}
 
@@ -74,7 +81,7 @@ object ProjectionCodeGenerator {
         }
 
         @Override
-        public $BASE_ROW apply($BASE_ROW $inputTerm) {
+        public $outTerm apply($BASE_ROW $inputTerm) {
           ${ctx.reuseFieldCode()}
           ${expression.code}
           return ${expression.resultTerm};
@@ -82,7 +89,7 @@ object ProjectionCodeGenerator {
       }
     """.stripMargin
 
-    GeneratedProjection(className, code, expression)
+    GeneratedProjection(className, code, expression, inputMapping)
   }
 
   /**

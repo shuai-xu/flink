@@ -21,6 +21,7 @@ package org.apache.flink.table.util;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -31,6 +32,10 @@ public interface MemorySegmentPool extends MemorySegmentSource {
 	int pageSize();
 
 	void returnAll(List<MemorySegment> memory);
+
+	default void returnAll(MemorySegment[] memory) {
+		returnAll(Arrays.asList(memory));
+	}
 
 	void clear();
 

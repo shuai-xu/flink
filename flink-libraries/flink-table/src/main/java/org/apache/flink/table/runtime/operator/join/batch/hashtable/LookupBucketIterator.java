@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.join.batch;
+package org.apache.flink.table.runtime.operator.join.batch.hashtable;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MathUtils;
-
-import java.io.IOException;
 
 /**
  * Build iterator from bucket to match probe row.
@@ -106,7 +104,7 @@ public class LookupBucketIterator implements RowIterator<BinaryRow> {
 							this.instance = row;
 							return true;
 						}
-					} catch (IOException e) {
+					} catch (Exception e) {
 						throw new RuntimeException("Error deserializing key or value from the hashtable: " +
 								e.getMessage(), e);
 					}

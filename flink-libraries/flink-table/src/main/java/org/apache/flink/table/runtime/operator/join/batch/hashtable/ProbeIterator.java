@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.join.batch;
+package org.apache.flink.table.runtime.operator.join.batch.hashtable;
 
 import org.apache.flink.runtime.io.disk.ChannelReaderInputViewIterator;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -34,15 +34,15 @@ public final class ProbeIterator {
 	private BaseRow instance;
 	private BinaryRow reuse;
 
-	ProbeIterator(BinaryRow instance) {
+	public ProbeIterator(BinaryRow instance) {
 		this.instance = instance;
 	}
 
-	void set(ChannelReaderInputViewIterator<BinaryRow> source) {
+	public void set(ChannelReaderInputViewIterator<BinaryRow> source) {
 		this.source = source;
 	}
 
-	void setReuse(BinaryRow reuse) {
+	public void setReuse(BinaryRow reuse) {
 		this.reuse = reuse;
 	}
 
@@ -64,7 +64,7 @@ public final class ProbeIterator {
 		this.instance = instance;
 	}
 
-	boolean hasSource() {
+	public boolean hasSource() {
 		return source != null;
 	}
 }

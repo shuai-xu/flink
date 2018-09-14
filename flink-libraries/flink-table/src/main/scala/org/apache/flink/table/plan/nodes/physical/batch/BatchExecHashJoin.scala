@@ -27,13 +27,15 @@ import org.apache.flink.streaming.api.transformations.{StreamTransformation, Two
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
+import org.apache.flink.table.codegen.operator.LongHashJoinGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.{ExpressionFormat, FlinkConventions}
-import org.apache.flink.table.runtime.operator.join.batch.{BinaryHashBucketArea, HashJoinOperator, HashJoinType}
+import org.apache.flink.table.runtime.operator.join.batch.hashtable.BinaryHashBucketArea
+import org.apache.flink.table.runtime.operator.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.BatchExecResourceUtil
@@ -175,31 +177,56 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     val rProj = generateProjection(
       CodeGeneratorContext(config), "HashJoinRightProjection", rType, keyType, rightKeys.toArray)
 
-    val (build, probe, bProj, pProj, reverseJoin) =
+    val (build, probe, bProj, pProj, bType, pType, reverseJoin) =
       if (leftIsBuild) {
-        (lInput, rInput, lProj, rProj, false)
+        (lInput, rInput, lProj, rProj, lType, rType, false)
       } else {
-        (rInput, lInput, rProj, lProj, true)
+        (rInput, lInput, rProj, lProj, rType, lType, true)
       }
     val perRequestSize =
       BatchExecResourceUtil.getPerRequestManagedMemory(config) * BatchExecResourceUtil.SIZE_IN_MB
     val mq = getCluster.getMetadataQuery
+
+    val buildRowSize = Util.first(mq.getAverageRowSize(buildRel), 24).toInt
+    val buildRowCount = Util.first(mq.getRowCount(buildRel), 200000).toLong
+    val probeRowCount = Util.first(mq.getRowCount(probeRel), 200000).toLong
+
     // operator
-    val operator = HashJoinOperator.newHashJoinOperator(
-      managedMemorySize,
-      preferredMemorySize,
-      perRequestSize,
-      hashJoinType,
-      condFunc,
-      reverseJoin,
-      filterNulls,
-      bProj,
-      pProj,
-      tryDistinctBuildRow,
-      Util.first(mq.getAverageRowSize(buildRel), 24).toInt,
-      Util.first(mq.getRowCount(buildRel), 200000).toLong)
-    LOG.info(
-      this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
+    val operator = if (LongHashJoinGenerator.support(hashJoinType, keyType, filterNulls)) {
+      LongHashJoinGenerator.gen(
+        config,
+        hashJoinType,
+        keyType,
+        bType,
+        pType,
+        buildKeys.toArray,
+        probeKeys.toArray,
+        managedMemorySize,
+        preferredMemorySize,
+        perRequestSize,
+        buildRowSize,
+        buildRowCount,
+        reverseJoin,
+        condFunc)
+    } else {
+      HashJoinOperator.newHashJoinOperator(
+        managedMemorySize,
+        preferredMemorySize,
+        perRequestSize,
+        hashJoinType,
+        condFunc,
+        reverseJoin,
+        filterNulls,
+        bProj,
+        pProj,
+        tryDistinctBuildRow,
+        buildRowSize,
+        buildRowCount,
+        probeRowCount,
+        keyType
+      )
+    }
+
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       build,
       probe,
@@ -226,8 +253,8 @@ class BatchExecHashJoin(
     val isBroadcast: Boolean,
     val description: String,
     override var haveInsertRf: Boolean = false)
-  extends Join(cluster, traitSet, left, right, joinCondition, Set.empty[CorrelationId], joinType)
-  with BatchExecHashJoinBase {
+    extends Join(cluster, traitSet, left, right, joinCondition, Set.empty[CorrelationId], joinType)
+        with BatchExecHashJoinBase {
 
   override val tryDistinctBuildRow = false
 
@@ -265,8 +292,8 @@ class BatchExecHashSemiJoin(
     val tryDistinctBuildRow: Boolean,
     val description: String,
     override var haveInsertRf: Boolean = false)
-  extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
-  with BatchExecHashJoinBase {
+    extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
+        with BatchExecHashJoinBase {
 
   override def isBarrierNode: Boolean = if (leftIsBuild) true else false
 

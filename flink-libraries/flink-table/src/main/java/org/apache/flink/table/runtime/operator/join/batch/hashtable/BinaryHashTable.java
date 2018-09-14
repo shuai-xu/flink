@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.join.batch;
+package org.apache.flink.table.runtime.operator.join.batch.hashtable;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.memory.MemorySegment;
@@ -24,33 +24,28 @@ import org.apache.flink.runtime.io.disk.ChannelReaderInputViewIterator;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.BulkBlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
-import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
-import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.util.BitSet;
 import org.apache.flink.table.codegen.JoinConditionFunction;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.runtime.operator.join.batch.HashJoinType;
+import org.apache.flink.table.runtime.operator.join.batch.NullAwareJoinHelper;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryRowUtil;
-import org.apache.flink.table.util.MemUtil;
-import org.apache.flink.table.util.MemorySegmentPool;
 import org.apache.flink.table.util.PagedChannelReaderInputViewIterator;
 import org.apache.flink.table.util.RowIterator;
+import org.apache.flink.table.util.WrappedRowIterator;
 import org.apache.flink.util.MathUtils;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -64,31 +59,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * the implementation lacks features like dynamic role reversal, partition tuning, or histogram
  * guided partitioning.</p>
  */
-public class BinaryHashTable implements MemorySegmentPool {
-
-	private static final Logger LOG = LoggerFactory.getLogger(BinaryHashTable.class);
-
-	/**
-	 * The maximum number of partitions, which defines the spilling granularity. Each recursion,
-	 * the data is divided maximally into that many partitions, which are processed in one chuck.
-	 */
-	private static final int MAX_NUM_PARTITIONS = Byte.MAX_VALUE;
-
-	/**
-	 * The maximum number of recursive partitionings that the join does before giving up.
-	 */
-	private static final int MAX_RECURSION_DEPTH = 3;
-
-	/**
-	 * The minimum number of memory segments the hash join needs to be supplied with in order to
-	 * work.
-	 */
-	private static final int MIN_NUM_MEMORY_SEGMENTS = 33;
-
-	/**
-	 * The I/O manager used to instantiate writers for the spilled partitions.
-	 */
-	private final IOManager ioManager;
+public class BinaryHashTable extends BaseHybridHashTable {
 
 	/**
 	 * The utilities to serialize the build side data types.
@@ -113,28 +84,6 @@ public class BinaryHashTable implements MemorySegmentPool {
 	 * The utilities to hash and compare the probe side data types.
 	 */
 	private final Projection<BaseRow, BinaryRow> probeSideProjection;
-
-	/**
-	 * The free memory segments currently available to the hash join.
-	 */
-	final List<MemorySegment> availableMemory;
-
-	/**
-	 * The queue of buffers that can be used for write-behind. Any buffer that is written
-	 * asynchronously to disk is returned through this queue. hence, it may sometimes contain more
-	 */
-	private final LinkedBlockingQueue<MemorySegment> writeBehindBuffers;
-
-	/**
-	 * The size of the segments used by the hash join buckets. All segments must be of equal size to
-	 * ease offset computations.
-	 */
-	private final int segmentSize;
-
-	/**
-	 * The number of write-behind buffers used.
-	 */
-	private final int numWriteBehindBuffers = 6;
 
 	final int bucketsPerSegment;
 
@@ -195,43 +144,13 @@ public class BinaryHashTable implements MemorySegmentPool {
 	 * Iterator over the elements in the hash table.
 	 */
 	LookupBucketIterator bucketIterator;
+
 	/**
 	 * Iterator over the elements from the probe side.
 	 */
 	private ProbeIterator probeIterator;
-	/**
-	 * The channel enumerator that is used while processing the current partition to create
-	 * channels for the spill partitions it requires.
-	 */
-	private FileIOChannel.Enumerator currentEnumerator;
-
-	/**
-	 * The number of buffers in the write behind queue that are actually not write behind buffers,
-	 * but regular buffers that only have not yet returned. This is part of an optimization that the
-	 * spilling code needs not wait until the partition is completely spilled before proceeding.
-	 */
-	private int writeBehindBuffersAvailable;
-	/**
-	 * The recursion depth of the partition that is currently processed. The initial table
-	 * has a recursion depth of 0. Partitions spilled from a table that is built for a partition
-	 * with recursion depth <i>n</i> have a recursion depth of <i>n+1</i>.
-	 */
-	private int currentRecursionDepth;
-	/**
-	 * Flag indicating that the closing logic has been invoked.
-	 */
-	private AtomicBoolean closed = new AtomicBoolean();
 
 	final HashJoinType type;
-
-	/**
-	 * The reader for the spilled-file of the build partition that is currently read.
-	 */
-	private BlockChannelReader<MemorySegment> currentSpilledBuildSide;
-	/**
-	 * The reader for the spilled-file of the probe partition that is currently read.
-	 */
-	private BlockChannelReader<MemorySegment> currentSpilledProbeSide;
 
 	private RowIterator<BinaryRow> buildIterator;
 
@@ -239,44 +158,10 @@ public class BinaryHashTable implements MemorySegmentPool {
 
 	private boolean buildIterVisited = false;
 
-	/**
-	 * Try to make the buildSide rows distinct.
-	 */
-	boolean tryDistinctBuildRow = false;
-
 	private BinaryRow probeKey;
 	private BaseRow probeRow;
 
 	BinaryRow reuseBuildRow;
-
-	final int segmentSizeBits;
-
-	final int segmentSizeMask;
-	private final int avgRecordLen;
-	private final long buildRowCount;
-
-	/**
-	 * The total reserved number of memory segments available to the hash join.
-	 */
-	private final int reservedNumBuffers;
-	/**
-	 * The total preferred number of memory segments available to the hash join.
-	 */
-	private final int preferedNumBuffers;
-
-	/**
-	 * record number of the allocated segments from the floating pool.
-	 */
-	private int allocatedFloatingNum;
-	private final int perRequestNumBuffers;
-	private final MemoryManager memManager;
-	/**
-	 * The owner to associate with the memory segment.
-	 */
-	private final Object owner;
-
-	private transient long numSpillFiles;
-	private transient long spillInBytes;
 
 	public BinaryHashTable(
 			Object owner,
@@ -309,25 +194,8 @@ public class BinaryHashTable implements MemorySegmentPool {
 			boolean useBloomFilters, HashJoinType type,
 			JoinConditionFunction condFunc, boolean reverseJoin, boolean[] filterNulls,
 			boolean tryDistinctBuildRow) {
-		this.avgRecordLen = avgRecordLen;
-		this.buildRowCount = buildRowCount;
-		// some sanity checks first
-		this.owner = owner;
-		this.reservedNumBuffers = (int) (reservedMemorySize / memManager.getPageSize());
-		// some sanity checks first
-		checkArgument(reservedNumBuffers >= MIN_NUM_MEMORY_SEGMENTS);
-		this.preferedNumBuffers = (int) (preferredMemorySize / memManager.getPageSize());
-		this.perRequestNumBuffers = (int) (perRequestMemorySize / memManager.getPageSize());
-		this.availableMemory = new ArrayList<>(this.reservedNumBuffers);
-		try {
-			List<MemorySegment> allocates = memManager.allocatePages(owner, this.reservedNumBuffers);
-			this.availableMemory.addAll(allocates);
-			allocates.clear();
-		} catch (MemoryAllocationException e) {
-			LOG.error("Out of memory", e);
-			throw new RuntimeException(e);
-		}
-		this.memManager = memManager;
+		super(owner, memManager, reservedMemorySize, preferredMemorySize, perRequestMemorySize,
+				ioManager, avgRecordLen, buildRowCount, !type.buildLeftSemiOrAnti() && tryDistinctBuildRow);
 		// assign the members
 		this.originBuildSideSerializer = buildSideSerializer;
 		this.binaryBuildSideSerializer = new BinaryRowSerializer(
@@ -339,7 +207,6 @@ public class BinaryHashTable implements MemorySegmentPool {
 
 		this.buildSideProjection = buildSideProjection;
 		this.probeSideProjection = probeSideProjection;
-		this.ioManager = ioManager;
 		this.useBloomFilters = useBloomFilters;
 		this.type = type;
 		this.condFunc = condFunc;
@@ -347,36 +214,17 @@ public class BinaryHashTable implements MemorySegmentPool {
 		this.nullFilterKeys = NullAwareJoinHelper.getNullFilterKeys(filterNulls);
 		this.nullSafe = nullFilterKeys.length == 0;
 		this.filterAllNulls = nullFilterKeys.length == filterNulls.length;
-		this.tryDistinctBuildRow = !type.buildLeftSemiOrAnti() && tryDistinctBuildRow;
 
-		// check the size of the first buffer and record it. all further buffers must have the
-		// same size. the size must also be a power of 2
-		this.segmentSize = memManager.getPageSize();
-		checkArgument((this.segmentSize & this.segmentSize - 1) == 0,
-				"Hash Table requires buffers whose size is a power of 2.");
 		this.bucketsPerSegment = this.segmentSize >> BinaryHashBucketArea.BUCKET_SIZE_BITS;
 		checkArgument(bucketsPerSegment != 0,
 				"Hash Table requires buffers of at least " + BinaryHashBucketArea.BUCKET_SIZE + " bytes.");
 		this.bucketsPerSegmentMask = bucketsPerSegment - 1;
 		this.bucketsPerSegmentBits = MathUtils.log2strict(bucketsPerSegment);
 
-		// take away the write behind buffers
-		this.writeBehindBuffers = new LinkedBlockingQueue<>();
 		this.partitionsBeingBuilt = new ArrayList<>();
 		this.partitionsPending = new ArrayList<>();
 
-		this.segmentSizeBits = MathUtils.log2strict(segmentSize);
-		this.segmentSizeMask = segmentSize - 1;
-
-		// because we allow to open and close multiple times, the state is initially closed
-		this.closed.set(true);
-
-		LOG.info(String.format("Initialize hash table with %d memory segments, each size [%d], the reserved memory %d" +
-				" MB, the preferred memory %d MB, per allocate {} segments from floating memory pool.",
-				reservedNumBuffers, segmentSize, (long) reservedNumBuffers * segmentSize / 1024 / 1024,
-				(long) preferedNumBuffers * segmentSize / 1024 / 1024), perRequestNumBuffers);
-
-		initWrite();
+		createPartitions(initPartitionFanOut, 0);
 	}
 
 	// ========================== build phase public method ======================================
@@ -480,68 +328,6 @@ public class BinaryHashTable implements MemorySegmentPool {
 		return numIOBufs > 6 ? 6 : numIOBufs;
 	}
 
-	/**
-	 * Gets the number of partitions to be used for an initial hash-table.
-	 */
-	private int getPartitioningFanOutNoEstimates() {
-		return Math.max(11, findSmallerPrime((int) Math.min(buildRowCount * avgRecordLen / (10 * segmentSize),
-				MAX_NUM_PARTITIONS)));
-	}
-
-	/**
-	 * Let prime number be the numBuckets, to avoid partition hash and bucket hash congruences.
-	 */
-	private static int findSmallerPrime(int num) {
-		for (; num > 1; num--) {
-			if (isPrimeNumber(num)) {
-				return num;
-			}
-		}
-		return num;
-	}
-
-	private static boolean isPrimeNumber(int num){
-		if (num == 2) {
-			return true;
-		}
-		if (num < 2 || num % 2 == 0) {
-			return false;
-		}
-		for (int i = 3; i <= Math.sqrt(num); i += 2){
-			if (num % i == 0) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * The level parameter is needed so that we can have different hash functions when we
-	 * recursively apply the partitioning, so that the working set eventually fits into memory.
-	 */
-	private static int hash(int hashCode, int level) {
-		final int rotation = level * 11;
-		int code = Integer.rotateLeft(hashCode, rotation);
-		return code >= 0 ? code : -(code + 1);
-	}
-
-	private void initWrite() {
-
-		// grab the write behind buffers first
-		for (int i = this.numWriteBehindBuffers; i > 0; --i) {
-			this.writeBehindBuffers.add(getNextBuffer());
-		}
-		// open builds the initial table by consuming the build-side input
-		this.currentRecursionDepth = 0;
-
-		// create the partitions
-		final int partitionFanOut = Math.min(getPartitioningFanOutNoEstimates(), maxNumPartition());
-		createPartitions(partitionFanOut, 0);
-
-		// sanity checks
-		this.closed.set(false);
-	}
-
 	private boolean processProbeIter() throws IOException {
 
 		// the prober's source is null at the begging.
@@ -588,21 +374,6 @@ public class BinaryHashTable implements MemorySegmentPool {
 				this.partitionsBeingBuilt, probedSet, type.equals(HashJoinType.BUILD_LEFT_SEMI));
 		this.buildIterVisited = true;
 		return true;
-	}
-
-	private List<MemorySegment> getTwoBuffer() {
-		List<MemorySegment> memory = new ArrayList<>();
-		MemorySegment seg1 = getNextBuffer();
-		if (seg1 != null) {
-			memory.add(seg1);
-			MemorySegment seg2 = getNextBuffer();
-			if (seg2 != null) {
-				memory.add(seg2);
-			}
-		} else {
-			throw new IllegalStateException("Attempting to begin reading spilled partition without any memory available");
-		}
-		return memory;
 	}
 
 	private boolean prepareNextPartition() throws IOException {
@@ -679,88 +450,6 @@ public class BinaryHashTable implements MemorySegmentPool {
 		return nextMatching();
 	}
 
-	/**
-	 * Closes the hash table. This effectively releases all internal structures and closes all
-	 * open files and removes them. The call to this method is valid both as a cleanup after the
-	 * complete inputs were properly processed, and as an cancellation call, which cleans up
-	 * all resources that are currently held by the hash join.
-	 */
-	public void close() {
-		// make sure that we close only once
-		if (!this.closed.compareAndSet(false, true)) {
-			return;
-		}
-
-		// clear the iterators, so the next call to next() will notice
-		this.bucketIterator = null;
-		this.probeIterator = null;
-
-		// clear the memory in the partitions
-		clearPartitions();
-
-		// clear the current probe side channel, if there is one
-		if (this.currentSpilledProbeSide != null) {
-			try {
-				this.currentSpilledProbeSide.closeAndDelete();
-			} catch (Throwable t) {
-				LOG.warn("Could not close and delete the temp file for the current spilled partition probe side.", t);
-			}
-		}
-
-		// clear the partitions that are still to be done (that have files on disk)
-		for (final BinaryHashPartition p : this.partitionsPending) {
-			p.clearAllMemory(this.availableMemory);
-		}
-
-		// return the write-behind buffers
-		for (int i = 0; i < this.numWriteBehindBuffers + this.writeBehindBuffersAvailable; i++) {
-			try {
-				this.availableMemory.add(this.writeBehindBuffers.take());
-			} catch (InterruptedException iex) {
-				throw new RuntimeException("Hashtable closing was interrupted");
-			}
-		}
-		this.writeBehindBuffersAvailable = 0;
-	}
-
-	public void free() {
-		if (this.closed.get()) {
-			if (allocatedFloatingNum > 0) {
-				MemUtil.releaseSpecificNumFloatingSegments(memManager, availableMemory, allocatedFloatingNum);
-				allocatedFloatingNum = 0;
-			}
-			memManager.release(availableMemory);
-		} else {
-			throw new IllegalStateException("Cannot release memory until BinaryHashTable is closed!");
-		}
-	}
-
-	@VisibleForTesting
-	List<MemorySegment> getFreedMemory() {
-		return this.availableMemory;
-	}
-
-	public void free(MemorySegment segment) {
-		this.availableMemory.add(segment);
-	}
-
-	/**
-	 * Bucket area need at-least one and data need at-least one.
-	 * In the initialization phase, we can use (totalNumBuffers - numWriteBehindBuffers) Segments.
-	 * However, in the buildTableFromSpilledPartition phase, only (totalNumBuffers - numWriteBehindBuffers - 2)
-	 * can be used because two Buffers are needed to read the data.
-	 */
-	private int maxNumPartition() {
-		return (availableMemory.size() + writeBehindBuffersAvailable) / 2;
-	}
-
-	/**
-	 * Give up to one-sixth of the memory of the bucket area.
-	 */
-	int maxInitBufferOfBucketArea(int partitions) {
-		return Math.max(1, ((reservedNumBuffers - numWriteBehindBuffers - 2) / 6) / partitions);
-	}
-
 	private void buildTableFromSpilledPartition(
 			final BinaryHashPartition p) throws IOException {
 
@@ -821,19 +510,17 @@ public class BinaryHashTable implements MemorySegmentPool {
 			this.partitionsBeingBuilt.add(newPart);
 
 			// now, index the partition through a hash table
-			final BinaryHashPartition.PartitionIterator pIter = newPart.getPartitionIterator(this.buildSideProjection);
+			final BinaryHashPartition.PartitionIterator pIter = newPart.newPartitionIterator();
 
-			while (pIter.hasNext()) {
-				final int hashCode = hash(pIter.getCurrentHashCode(), nextRecursionLevel);
+			while (pIter.advanceNext()) {
+				final int hashCode = hash(buildSideProjection.apply(pIter.getRow()).hashCode(), nextRecursionLevel);
 				final int pointer = (int) pIter.getPointer();
 				area.insertToBucket(hashCode, pointer, false, true);
 			}
 		} else {
 			// go over the complete input and insert every element into the hash table
 			// first set up the reader with some memory.
-			final List<MemorySegment> segments = new ArrayList<>(2);
-			segments.add(getNotNullNextBuffer());
-			segments.add(getNotNullNextBuffer());
+			final List<MemorySegment> segments = getTwoBuffer();
 
 			// compute in how many splits, we'd need to partition the result
 			final int splits = (int) (totalBuffersNeeded / totalBuffersAvailable) + 1;
@@ -875,14 +562,6 @@ public class BinaryHashTable implements MemorySegmentPool {
 		}
 	}
 
-	private MemorySegment getNotNullNextBuffer() {
-		MemorySegment buffer = getNextBuffer();
-		if (buffer == null) {
-			throw new RuntimeException("Bug in HybridHashJoin: No memory became available.");
-		}
-		return buffer;
-	}
-
 	private void createPartitions(int numPartitions, int recursionLevel) {
 		// sanity check
 		ensureNumBuffersReturned(numPartitions);
@@ -908,7 +587,12 @@ public class BinaryHashTable implements MemorySegmentPool {
 	 *
 	 * <p>This method is intended for a hard cleanup in the case that the join is aborted.
 	 */
-	private void clearPartitions() {
+	@Override
+	public void clearPartitions() {
+		// clear the iterators, so the next call to next() will notice
+		this.bucketIterator = null;
+		this.probeIterator = null;
+
 		for (int i = this.partitionsBeingBuilt.size() - 1; i >= 0; --i) {
 			final BinaryHashPartition p = this.partitionsBeingBuilt.get(i);
 			try {
@@ -918,6 +602,11 @@ public class BinaryHashTable implements MemorySegmentPool {
 			}
 		}
 		this.partitionsBeingBuilt.clear();
+
+		// clear the partitions that are still to be done (that have files on disk)
+		for (final BinaryHashPartition p : this.partitionsPending) {
+			p.clearAllMemory(this.availableMemory);
+		}
 	}
 
 	/**
@@ -925,7 +614,8 @@ public class BinaryHashTable implements MemorySegmentPool {
 	 *
 	 * @return The number of the spilled partition.
 	 */
-	int spillPartition() throws IOException {
+	@Override
+	protected int spillPartition() throws IOException {
 		// find the largest partition
 		int largestNumBlocks = 0;
 		int largestPartNum = -1;
@@ -961,186 +651,19 @@ public class BinaryHashTable implements MemorySegmentPool {
 		return largestPartNum;
 	}
 
-	/**
-	 * This method makes sure that at least a certain number of memory segments is in the list of
-	 * free segments.
-	 * Free memory can be in the list of free segments, or in the return-queue where segments used
-	 * to write behind are
-	 * put. The number of segments that are in that return-queue, but are actually reclaimable is
-	 * tracked. This method
-	 * makes sure at least a certain number of buffers is reclaimed.
-	 *
-	 * @param minRequiredAvailable The minimum number of buffers that needs to be reclaimed.
-	 */
-	void ensureNumBuffersReturned(final int minRequiredAvailable) {
-		if (minRequiredAvailable > this.availableMemory.size() + this.writeBehindBuffersAvailable) {
-			throw new IllegalArgumentException("More buffers requested available than totally available.");
-		}
-
-		try {
-			while (this.availableMemory.size() < minRequiredAvailable) {
-				this.availableMemory.add(this.writeBehindBuffers.take());
-				this.writeBehindBuffersAvailable--;
-			}
-		} catch (InterruptedException iex) {
-			throw new RuntimeException("Hash Join was interrupted.");
-		}
-	}
-
-	/**
-	 * Gets the next buffer to be used with the hash-table, either for an in-memory partition, or
-	 * for the table buckets. This method returns <tt>null</tt>, if no more buffer is available.
-	 * Spilling a partition may free new buffers then.
-	 *
-	 * @return The next buffer to be used by the hash-table, or null, if no buffer remains.
-	 */
-	MemorySegment getNextBuffer() {
-		// check if the list directly offers memory
-		int s = this.availableMemory.size();
-		if (s > 0) {
-			return this.availableMemory.remove(s - 1);
-		}
-
-		// check if there are write behind buffers that actually are to be used for the hash table
-		if (this.writeBehindBuffersAvailable > 0) {
-			// grab at least one, no matter what
-			MemorySegment toReturn;
-			try {
-				toReturn = this.writeBehindBuffers.take();
-			} catch (InterruptedException iex) {
-				throw new RuntimeException("Hybrid Hash Join was interrupted while taking a buffer.");
-			}
-			this.writeBehindBuffersAvailable--;
-
-			// grab as many more buffers as are available directly
-			MemorySegment currBuff;
-			while (this.writeBehindBuffersAvailable > 0 && (currBuff = this.writeBehindBuffers.poll()) != null) {
-				this.availableMemory.add(currBuff);
-				this.writeBehindBuffersAvailable--;
-			}
-			return toReturn;
-		} else {
-			if (reservedNumBuffers + allocatedFloatingNum >= preferedNumBuffers) {
-				//no more memory.
-				return null;
-			} else {
-				int requestNum = Math.min(perRequestNumBuffers, preferedNumBuffers - reservedNumBuffers -
-						allocatedFloatingNum);
-				//apply for much more memory.
-				try {
-					List<MemorySegment> allocates = memManager.allocatePages(owner, requestNum, false);
-					this.availableMemory.addAll(allocates);
-					allocatedFloatingNum += allocates.size();
-					allocates.clear();
-					LOG.info("{} allocate {} floating segments successfully!", owner, requestNum);
-				} catch (MemoryAllocationException e) {
-					LOG.warn("BinaryHashMap can't allocate {} floating pages, and now used {} pages",
-							requestNum, reservedNumBuffers + allocatedFloatingNum, e);
-					//can't allocate much more memory.
-					return null;
-				}
-				if (this.availableMemory.size() > 0) {
-					return this.availableMemory.remove(this.availableMemory.size() - 1);
-				} else {
-					return null;
-				}
-			}
-		}
-	}
-
-	/**
-	 * Bulk memory acquisition.
-	 * NOTE: Failure to get memory will throw an exception.
-	 */
-	MemorySegment[] getNextBuffers(int bufferSize) {
-		MemorySegment[] memorySegments = new MemorySegment[bufferSize];
-		for (int i = 0; i < bufferSize; i++) {
-			MemorySegment nextBuffer = getNextBuffer();
-			if (nextBuffer == null) {
-				throw new RuntimeException("No enough buffers!");
-			}
-			memorySegments[i] = nextBuffer;
-		}
-		return memorySegments;
-	}
-
-	/**
-	 * This is the method called by the partitions to request memory to serialize records.
-	 * It automatically spills partitions, if memory runs out.
-	 *
-	 * @return The next available memory segment.
-	 */
-	@Override
-	public MemorySegment nextSegment() {
-		final MemorySegment seg = getNextBuffer();
-		if (seg != null) {
-			return seg;
-		} else {
-			try {
-				spillPartition();
-			} catch (IOException ioex) {
-				throw new RuntimeException("Error spilling Hash Join Partition" + (ioex.getMessage() == null ?
-						"." : ": " + ioex.getMessage()), ioex);
-			}
-
-			MemorySegment fromSpill = getNextBuffer();
-			if (fromSpill == null) {
-				throw new RuntimeException("BUG in Hybrid Hash Join: Spilling did not free a buffer.");
-			} else {
-				return fromSpill;
-			}
-		}
-	}
-
-	boolean applyCondition(BinaryRow candidate) {
+	boolean applyCondition(BinaryRow candidate) throws Exception {
 		BinaryRow buildKey = buildSideProjection.apply(candidate);
 		// They come from Projection, so we can make sure it is in byte[].
 		boolean equal = buildKey.getSizeInBytes() == probeKey.getSizeInBytes()
 				&& BinaryRowUtil.byteArrayEquals(
-					buildKey.getMemorySegment().getHeapMemory(),
-					probeKey.getMemorySegment().getHeapMemory(),
-					buildKey.getSizeInBytes());
+				buildKey.getMemorySegment().getHeapMemory(),
+				probeKey.getMemorySegment().getHeapMemory(),
+				buildKey.getSizeInBytes());
+		// TODO do null filter in advance?
 		if (!nullSafe) {
 			equal = equal && !(filterAllNulls ? buildKey.anyNull() : buildKey.anyNull(nullFilterKeys));
 		}
 		return condFunc == null ? equal : equal && (reverseJoin ? condFunc.apply(probeRow, candidate)
 				: condFunc.apply(candidate, probeRow));
-	}
-
-	@Override
-	public int pageSize() {
-		return segmentSize;
-	}
-
-	@Override
-	public void returnAll(List<MemorySegment> memory) {
-		for (MemorySegment segment : memory) {
-			if (segment != null) {
-				availableMemory.add(segment);
-			}
-		}
-	}
-
-	@Override
-	public void clear() {
-		throw new RuntimeException("Should not be invoked.");
-	}
-
-	@Override
-	public int remainBuffers() {
-		return availableMemory.size() + writeBehindBuffersAvailable;
-	}
-
-	public long getUsedMemoryInBytes() {
-		return (reservedNumBuffers + allocatedFloatingNum - availableMemory.size()) *
-				((long) memManager.getPageSize());
-	}
-
-	public long getNumSpillFiles() {
-		return numSpillFiles;
-	}
-
-	public long getSpillInBytes() {
-		return spillInBytes;
 	}
 }

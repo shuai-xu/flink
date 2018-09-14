@@ -29,6 +29,8 @@ import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.JoinedRow;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
+import org.apache.flink.table.types.BaseRowType;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MutableObjectIterator;
@@ -315,7 +317,8 @@ public class Int2HashJoinOperatorTest {
 				boolean reverseJoinFunction) {
 			super(new HashJoinParameter(memorySize, memorySize, 0, type, null,
 					reverseJoinFunction, new boolean[]{true}, null, null,
-					false, 20, 10000));
+					false, 20, 10000,
+					10000, new BaseRowType(DataTypes.STRING)));
 		}
 
 		@Override

@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.join.batch;
+package org.apache.flink.table.util;
 
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.IOException;
@@ -33,7 +32,7 @@ public class WrappedRowIterator<T extends BaseRow> implements RowIterator<T> {
 	private final T reuse;
 	private T instance;
 
-	WrappedRowIterator(MutableObjectIterator<T> iterator, T reuse) {
+	public WrappedRowIterator(MutableObjectIterator<T> iterator, T reuse) {
 		this.iterator = iterator;
 		this.reuse = reuse;
 	}

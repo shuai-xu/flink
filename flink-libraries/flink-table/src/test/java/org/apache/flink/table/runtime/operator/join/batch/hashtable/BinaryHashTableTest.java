@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.operator.join.batch;
+package org.apache.flink.table.runtime.operator.join.batch.hashtable;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -32,6 +32,7 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.UniformBinaryRowGenerator;
+import org.apache.flink.table.runtime.operator.join.batch.HashJoinType;
 import org.apache.flink.table.runtime.operator.join.batch.Int2HashJoinOperatorTest.MyProjection;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.RowIterator;
@@ -252,12 +253,12 @@ public class BinaryHashTableTest {
 		BinaryRow probeRow = probeSideSerializer.createInstance();
 		while ((probeRow = probeInput.next(probeRow)) != null) {
 			if (table.tryProbe(probeRow)){
-				testJoin(table, map, recordReuse);
+				testJoin(table, map);
 			}
 		}
 
 		while (table.nextMatching()){
-			testJoin(table, map, recordReuse);
+			testJoin(table, map);
 		}
 
 		table.close();
@@ -330,12 +331,12 @@ public class BinaryHashTableTest {
 		BinaryRow probeRow = probeSideSerializer.createInstance();
 		while ((probeRow = probeInput.next(probeRow)) != null) {
 			if (table.tryProbe(probeRow)){
-				testJoin(table, map, recordReuse);
+				testJoin(table, map);
 			}
 		}
 
 		while (table.nextMatching()){
-			testJoin(table, map, recordReuse);
+			testJoin(table, map);
 		}
 
 		table.close();
@@ -356,8 +357,7 @@ public class BinaryHashTableTest {
 		table.free();
 	}
 
-	private void testJoin(BinaryHashTable table, HashMap<Integer, Long> map,
-			BinaryRow recordReuse) throws IOException {
+	private void testJoin(BinaryHashTable table, HashMap<Integer, Long> map) throws IOException {
 		BinaryRow record;
 		int numBuildValues = 0;
 
@@ -446,12 +446,12 @@ public class BinaryHashTableTest {
 		BinaryRow probeRow = probeSideSerializer.createInstance();
 		while ((probeRow = probeInput.next(probeRow)) != null) {
 			if (table.tryProbe(probeRow)){
-				testJoin(table, map, recordReuse);
+				testJoin(table, map);
 			}
 		}
 
 		while (table.nextMatching()){
-			testJoin(table, map, recordReuse);
+			testJoin(table, map);
 		}
 
 		table.close();
@@ -824,7 +824,7 @@ public class BinaryHashTableTest {
 
 		private int numLeft;
 
-		ConstantsKeyValuePairsIterator(int key, int value, int count) {
+		public ConstantsKeyValuePairsIterator(int key, int value, int count) {
 			this.key = new IntValue(key);
 			this.value = new IntValue(value);
 			this.numLeft = count;

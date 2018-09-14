@@ -338,5 +338,6 @@ object FunctionCodeGenerator {
   * Condition Function for [[org.apache.calcite.rel.core.Join]].
   */
 abstract class JoinConditionFunction {
+  @throws[Exception]
   def apply(in1: BaseRow, in2: BaseRow): Boolean
 }
