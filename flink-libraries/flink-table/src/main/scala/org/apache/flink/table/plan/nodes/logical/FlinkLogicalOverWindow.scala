@@ -25,10 +25,15 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Window
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.calcite.rel.logical.LogicalWindow
 import org.apache.calcite.rex.RexLiteral
+import org.apache.calcite.sql.SqlRankFunction
+import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
+
+import scala.collection.JavaConversions._
 
 class FlinkLogicalOverWindow(
     cluster: RelOptCluster,
@@ -62,6 +67,15 @@ class FlinkLogicalOverWindowConverter
     val window = rel.asInstanceOf[LogicalWindow]
     val traitSet = FlinkRelMetadataQuery.traitSet(rel).replace(FlinkConventions.LOGICAL).simplify()
     val newInput = RelOptRule.convert(window.getInput, FlinkConventions.LOGICAL)
+
+    window.groups.foreach { group =>
+      val orderKeySize = group.orderKeys.getFieldCollations.size()
+      group.aggCalls.foreach { winAggCall =>
+        if (orderKeySize == 0 && winAggCall.op.isInstanceOf[SqlRankFunction]) {
+          throw ValidationException(TableErrors.INST.sqlOverRankWithoutOrderByInvalid())
+        }
+      }
+    }
 
     new FlinkLogicalOverWindow(
       rel.getCluster,

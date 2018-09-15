@@ -353,6 +353,14 @@ public interface TableErrorCode {
 	)
 	String sqlOverAggInvalidUseOfOverWindow(String subCase);
 
+	@ErrCode(
+		codeId = "SQL-00040002",
+		cause = "Over Agg: The window rank function without order by.",
+		details = "",
+		action = "please re-check the over window statement"
+	)
+	String sqlOverRankWithoutOrderByInvalid();
+
 	/** ----------------------------- join ----------------------------- .**/
 	@ErrCode(
 		codeId = "SQL-00050001",
