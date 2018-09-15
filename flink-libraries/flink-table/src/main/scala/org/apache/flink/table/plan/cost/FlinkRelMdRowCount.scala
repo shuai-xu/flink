@@ -30,7 +30,7 @@ import org.apache.calcite.util._
 import org.apache.flink.table.expressions.ExpressionUtils._
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.stats.ValueInterval
@@ -430,5 +430,4 @@ object FlinkRelMdRowCount extends MetadataHandler[BuiltInMetadata.RowCount] {
 
   def getRowCount(rel: Values, mq: RelMetadataQuery): Double = rel.estimateRowCount(mq)
 
-  def getRowCount(rel: SegmentTop, mq: RelMetadataQuery): Double = rel.estimateRowCount(mq)
 }

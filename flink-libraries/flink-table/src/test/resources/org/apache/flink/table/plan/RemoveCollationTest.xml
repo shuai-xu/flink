@@ -190,10 +190,10 @@ LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$1])
-+- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b])
    +- Sort(orderBy=[a ASC, b ASC])
       +- Exchange(distribution=[hash[a]])
-         +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[false])
+         +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[false], select=[a, b])
             +- Sort(orderBy=[a ASC, b ASC])
                +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>
@@ -222,10 +222,10 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[MAX($2)])
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], groupBy=[a, b], select=[a, b, MAX(c) AS EXPR$2])
-+- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, c])
    +- Sort(orderBy=[a ASC, b ASC])
       +- Exchange(distribution=[hash[a]])
-         +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[false])
+         +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[false], select=[a, b, c])
             +- Sort(orderBy=[a ASC, b ASC])
                +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
@@ -254,10 +254,10 @@ LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Sort(orderBy=[a ASC, b ASC])
-+- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, c, rk])
    +- Sort(orderBy=[a ASC, b ASC])
       +- Exchange(distribution=[hash[a]])
-         +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[false])
+         +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[false], select=[a, b, c])
             +- SortLimit(orderBy=[a ASC, b ASC], offset=[0], limit=[200], global=[true])
                +- Exchange(distribution=[single])
                   +- SortLimit(orderBy=[a ASC, b ASC], offset=[0], limit=[200], global=[false])
@@ -287,7 +287,7 @@ LogicalProject(a=[$0], c=[$1], rk=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[a ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, c, rk])
 +- SortAggregate(isMerge=[true], groupBy=[a], select=[a, Final_COUNT(count$0) AS c])
    +- Sort(orderBy=[a ASC])
       +- Exchange(distribution=[hash[a]])
@@ -320,10 +320,10 @@ LogicalAggregate(group=[{}], EXPR$0=[COUNT($0)], EXPR$1=[SUM($1)])
     <Resource name="planAfter">
       <![CDATA[
 SortAggregate(isMerge=[false], select=[COUNT(a) AS EXPR$0, SUM(b) AS EXPR$1])
-+- Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b])
    +- Sort(orderBy=[b ASC])
       +- Exchange(distribution=[single])
-         +- Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[false])
+         +- Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[false], select=[a, b])
             +- Sort(orderBy=[b ASC])
                +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
 ]]>

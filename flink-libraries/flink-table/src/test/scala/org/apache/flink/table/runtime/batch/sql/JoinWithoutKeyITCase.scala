@@ -35,8 +35,8 @@ class JoinWithoutKeyITCase extends QueryTest {
     registerCollection("Table5", data5, type5, "d, e, f, g, h", nullablesOfData5)
     registerCollection("NullTable3", nullData3, type3, "a, b, c", nullablesOfNullData3)
     registerCollection("NullTable5", nullData5, type5, "d, e, f, g, h", nullablesOfNullData5)
-    registerCollection("l", SUB_QUERY_3, INT_DOUBLE, "a, b", nullablesOfSubQuery3)
-    registerCollection("r", SUB_QUERY_2, INT_DOUBLE, "c, d")
+    registerCollection("l", data2_3, INT_DOUBLE, "a, b", nullablesOfData2_3)
+    registerCollection("r", data2_2, INT_DOUBLE, "c, d")
   }
 
   // single row join

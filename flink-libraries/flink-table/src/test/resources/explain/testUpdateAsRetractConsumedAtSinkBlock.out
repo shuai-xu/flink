@@ -14,7 +14,7 @@ StreamExecScan(table=[[_DataStreamTable_0]])
 StreamExecScan(retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecRank(orderBy=[c DESC], partitionBy=[b], rankStart=[1], rankEnd=[10], strategy=[AppendFastRank], rank=[ROW_NUMBER], select=[*, rowNum])
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
   StreamExecExchange(distribution=[hash[b]])
     StreamExecScan(table=[[_DataStreamTable_2]])
 StreamExecRank(retract=[true], accMode=[AccRetract])
@@ -36,7 +36,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
 		ship_strategy : FORWARD
 
 		 : Operator
-			content : AppendFastRank(orderBy: (c DESC), partitionBy: (b), *, rowNum, rankStart: 1, rankEnd: 10)
+			content : AppendFastRank(orderBy: (c DESC), partitionBy: (b), *, rowNum, rankStart=1, rankEnd=10)
 			ship_strategy : HASH
 
 			 : Operator

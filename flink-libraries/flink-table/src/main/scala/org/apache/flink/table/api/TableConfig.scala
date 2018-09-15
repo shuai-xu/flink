@@ -262,14 +262,6 @@ class TableConfig {
   }
 
   /**
-    * Returns percentage after a max/min grouping filter of self join.
-    */
-  def selectivityOfSegmentTop: Double = {
-    parameters.getDouble(SQL_CBO_SELECTIVITY_OF_SEGMENT_TOP,
-      SQL_CBO_SELECTIVITY_OF_SEGMENT_TOP_DEFAULT)
-  }
-
-  /**
     * Returns whether supports subsection optimization.
     */
   def getSubsectionOptimization: Boolean = subsectionOptimization
@@ -786,15 +778,7 @@ object TableConfig {
   val SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
 
 
-  /**
-    * Percentage of output records after filtered by Max/Min agg, mainly used for SegmentTop
-    * operator.
-    */
-  val SQL_CBO_SELECTIVITY_OF_SEGMENT_TOP = "sql.cbo.selectivity.of.segment-top"
-  val SQL_CBO_SELECTIVITY_OF_SEGMENT_TOP_DEFAULT: Double = 0.03D
-
   // =================================== Code Gen ===================================
-
 
   /**
     * generated code will be split if code length exceeds this limitation

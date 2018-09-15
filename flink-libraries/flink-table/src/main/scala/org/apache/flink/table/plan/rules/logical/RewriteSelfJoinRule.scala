@@ -25,9 +25,9 @@ import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.rel.RelFieldCollation.Direction
+import org.apache.calcite.rel._
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rel.core.JoinRelType
-import org.apache.calcite.rel.{RelFieldCollation, RelNode, RelShuttleImpl}
 import org.apache.calcite.rel.logical.{LogicalAggregate, LogicalFilter, LogicalProject}
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.rules.{LoptMultiJoin, MultiJoin}
@@ -35,11 +35,11 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.ImmutableBitSet
+import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import org.apache.calcite.util.mapping.Mappings
-import org.apache.calcite.util.Pair
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
-import org.apache.flink.table.plan.rules.logical.SegmentTopTransformRule.{SegmentTopInfo, SequenceTracer}
+import org.apache.flink.table.plan.rules.logical.RewriteSelfJoinRule.{RankInfo, SequenceTracer}
+import org.apache.flink.table.plan.util.ConstantRankRange
 import org.apache.flink.table.util.RelDigestWriterImpl
 
 import scala.collection.JavaConversions._
@@ -77,7 +77,7 @@ import scala.collection.mutable.ArrayBuffer
   * </pre>
   * While after this rule, it will promotes to:
   * <pre>
-  *          scan - segment- top - prj
+  *          scan - rank - prj
   * </pre>
   * In production, the <b>scan</b> may be more complex, e.g. it can be a join of multiple tables
   * or an agg from some original table.
@@ -87,10 +87,10 @@ import scala.collection.mutable.ArrayBuffer
   *
   * <p>This rule is only used for Hep planner.
   */
-abstract class SegmentTopTransformRule extends RelOptRule(
+abstract class RewriteSelfJoinRule extends RelOptRule(
   operand(classOf[MultiJoin], any),
   FlinkRelFactories.FLINK_REL_BUILDER,
-  "SegmentTopTransformRule") {
+  "RewriteSelfJoinRule") {
 
   protected def isNonInnerJoinOrSelfJoin(
     multiJoin: LoptMultiJoin,
@@ -121,7 +121,7 @@ abstract class SegmentTopTransformRule extends RelOptRule(
   protected def isMaxMinAggMatched(rel: RelNode): Boolean = {
     getRealFactor(rel) match {
       case agg: LogicalAggregate =>
-        // For segment-top, only cares about Max/Min agg correlate.
+        // For rank, only cares about Max/Min agg correlate.
         // For simple cases of two tables self join, we do not have nested multi-join
         // under agg.
         val aggCallKind = agg.getAggCallList.head.getAggregation.getKind
@@ -336,7 +336,7 @@ abstract class SegmentTopTransformRule extends RelOptRule(
       case SqlKind.MIN =>
         new RelFieldCollation(newAggOffset, Direction.ASCENDING)
       case _ =>
-        throw new RuntimeException(s"Unexpected agg kind: $aggCallKind for segment top.")
+        throw new RuntimeException(s"Unexpected agg kind: $aggCallKind.")
     }
   }
 
@@ -397,7 +397,7 @@ abstract class SegmentTopTransformRule extends RelOptRule(
   }
 
   /**
-    * Construct the final plan, will append the segment-top op to the rel tree,
+    * Construct the final plan, will append the rank op to the rel tree,
     * this requires the group correlate not empty.
     * <ol>
     * <li>Find the agg cor column in outer multi-join.</li>
@@ -423,7 +423,7 @@ abstract class SegmentTopTransformRule extends RelOptRule(
       multiJoinRel,
       multiJoin,
       aggFactorIdx)
-    val rel = SegmentTopTransformRule.buildTree(relBuilder,
+    val rel = RewriteSelfJoinRule.buildTree(relBuilder,
       mq,
       rebuiltTree,
       sequenceTracer)
@@ -447,17 +447,17 @@ abstract class SegmentTopTransformRule extends RelOptRule(
       ImmutableBitSet.of(newGroupOffset, newAggOffset),
       multiJoin.getJoinFactor(aggFactorIdx).getRowType)
 
-    val seg = relBuilder
-      .push(rel)
-      .asInstanceOf[FlinkRelBuilder]
-      .segmentTop(
+    val rank = relBuilder
+      .push(rel).asInstanceOf[FlinkRelBuilder]
+      .rank(
+        SqlStdOperatorTable.RANK,
         ImmutableBitSet.of(newGroupOffset),
-        fieldCollation,
-        ImmutableBitSet.of(newGroupOffset, newAggOffset))
+        RelCollations.of(fieldCollation),
+        ConstantRankRange(1, 1))
       // Are the agg always in the end ?
       .project(newInputRef)
       .build()
-    call.transformTo(seg)
+    call.transformTo(rank)
   }
 
   /**
@@ -611,7 +611,7 @@ abstract class SegmentTopTransformRule extends RelOptRule(
   * <pre>
   *   prj
   *   +- prj
-  *      +- segment-top
+  *      +- rank
   *         +- join
   *            :- join
   *            :  :- factor1
@@ -623,7 +623,7 @@ abstract class SegmentTopTransformRule extends RelOptRule(
   *               +- factor5
   * </pre>
   */
-class MultiJoinToSegmentTop extends SegmentTopTransformRule {
+class RewriteMultiJoinRule extends RewriteSelfJoinRule {
 
   /**
     * If the factor is matched with the specified condition.
@@ -792,7 +792,7 @@ class MultiJoinToSegmentTop extends SegmentTopTransformRule {
     }
 
     // 3. Push down these filters and tweak and shift the ref positions.
-    // 4. Add in the segment-top operator and tag it with the sort attr.
+    // 4. Add in the rank operator and tag it with the sort attr.
     constructFinalPlan(relBuilder, multiJoinRel, multiJoin, aggFactorIdx, mq,
       aggGroupCorFactorIndex, groupOffset, aggCorFactorIndex, aggOffset, aggCallKind, call)
   }
@@ -824,7 +824,7 @@ class MultiJoinToSegmentTop extends SegmentTopTransformRule {
   * <pre>
   *   prj
   *   +- prj
-  *      +- segment-top
+  *      +- rank
   *         +- join
   *            :- join
   *            :  :- factor1
@@ -834,7 +834,7 @@ class MultiJoinToSegmentTop extends SegmentTopTransformRule {
   *            +- factor4
   * </pre>
   */
-class SimpleToSegmentTop extends SegmentTopTransformRule {
+class RewriteSimpleJoinRule extends RewriteSelfJoinRule {
   override def matches(call: RelOptRuleCall): Boolean = {
     val multiJoinRel: MultiJoin = call.rel(0)
     val multiJoin = new LoptMultiJoin(multiJoinRel)
@@ -932,7 +932,7 @@ class SimpleToSegmentTop extends SegmentTopTransformRule {
         aggFilter,
         aggCorFactorIndex,
         aggFieldsStart)
-      // No group set, we push down the segment-top to the cor factor, which is same as
+      // No group set, we push down the rank to the cor factor, which is same as
       // aggCorFactorIndex here.
       val rebuiltTree = rebuildMultiJoin(
         relBuilder.getTypeFactory,
@@ -941,15 +941,14 @@ class SimpleToSegmentTop extends SegmentTopTransformRule {
         multiJoin,
         aggFactorIdx)
 
-      val segmentTopInfo =
-        SegmentTopInfo(aggCorFactorIndex, aggOffset, getAggCollation(aggCallKind, aggOffset))
+      val rankInfo = RankInfo(aggCorFactorIndex, aggOffset, getAggCollation(aggCallKind, aggOffset))
 
       val sequenceTracer = new SequenceTracer
-      val rel = SegmentTopTransformRule.buildTree(relBuilder,
+      val rel = RewriteSelfJoinRule.buildTree(relBuilder,
         mq,
         rebuiltTree,
         sequenceTracer,
-        segmentTopInfo = segmentTopInfo)
+        rankInfo = rankInfo)
       val newAggOffset = newFieldOffset(
         rebuiltTree,
         sequenceTracer.getFactors,
@@ -1010,16 +1009,16 @@ class SimpleToSegmentTop extends SegmentTopTransformRule {
   }
 }
 
-object SegmentTopTransformRule {
-  val COMPLEX = new MultiJoinToSegmentTop
-  val SIMPLE = new SimpleToSegmentTop
+object RewriteSelfJoinRule {
+  val COMPLEX = new RewriteMultiJoinRule
+  val SIMPLE = new RewriteSimpleJoinRule
 
 
   /**
     * Build a join tree from a [[LoptMultiJoin]], will try to build the join tree in order as it
     * originally is, see [[buildTree]] #chooseNextEdge for details.
     *
-    * <p>We also support push down the SegmentTop operator.
+    * <p>We also support push down the Rank operator.
     *
     * @param multiJoin      [[LoptMultiJoin]] instance.
     * @param sequenceTracer tracer to record the final join sequence.
@@ -1030,21 +1029,23 @@ object SegmentTopTransformRule {
     mq: RelMetadataQuery,
     multiJoin: LoptMultiJoin,
     sequenceTracer: SequenceTracer = null,
-    segmentTopInfo: SegmentTopInfo = null): RelNode = {
+    rankInfo: RankInfo = null): RelNode = {
     val vertexes = mutable.ArrayBuffer[Vertex]()
     var fieldOffset = 0
     val oriFactors = ImmutableBitSet.range(multiJoin.getNumJoinFactors)
     oriFactors.foreach {
       factorIdx =>
         var factorRel = multiJoin.getJoinFactor(factorIdx)
-        if (segmentTopInfo != null && segmentTopInfo.factorIdx == factorIdx) {
-          factorRel = relBuilder
-            .push(factorRel)
-            .asInstanceOf[FlinkRelBuilder]
-            .segmentTop(
+        if (rankInfo != null && rankInfo.factorIdx == factorIdx) {
+          relBuilder.push(factorRel)
+          val projects = relBuilder.fields()
+          factorRel = relBuilder.asInstanceOf[FlinkRelBuilder]
+            .rank(
+              SqlStdOperatorTable.RANK,
               ImmutableBitSet.of(),
-              segmentTopInfo.fieldCollation,
-              ImmutableBitSet.of(segmentTopInfo.aggOffset))
+              RelCollations.of(rankInfo.fieldCollation),
+              ConstantRankRange(1, 1))
+            .project(projects)
             .build()
         }
         vertexes += new LeafVertex(factorIdx, factorRel, fieldOffset)
@@ -1235,8 +1236,8 @@ object SegmentTopTransformRule {
     }
   }
 
-  /** Used for segment-top push down. */
-  case class SegmentTopInfo(factorIdx: Int, aggOffset: Int, fieldCollation: RelFieldCollation)
+  /** Used for Rank push down. */
+  case class RankInfo(factorIdx: Int, aggOffset: Int, fieldCollation: RelFieldCollation)
 
   /** Used for trace the new factors sequence. */
   class SequenceTracer {

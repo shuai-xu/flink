@@ -24,20 +24,19 @@ import java.util.{List => JList}
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
+import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexNode}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{BuiltInMethod, ImmutableNullableList, NlsString, Util}
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.util.FlinkRelOptUtil.checkAndSplitAggCalls
-import org.apache.flink.table.util.FlinkRelOptUtil.checkAndGetFullGroupSet
+import org.apache.flink.table.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -246,9 +245,6 @@ object FlinkRelMdSize extends MetadataHandler[BuiltInMetadata.Size] {
         s + averageTypeValueSize(t)
     }
   }
-
-  def averageColumnSizes(rel: SegmentTop, mq: RelMetadataQuery): JList[Double] =
-    mq.getAverageColumnSizes(rel.getInput)
 
   def averageColumnSizes(rel: Rank, mq: RelMetadataQuery): JList[Double] = {
     val inputColumnSizes = mq.getAverageColumnSizes(rel.getInput)

@@ -25,10 +25,11 @@ import java.util.Collections
 import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan._
 import org.apache.calcite.plan.volcano.VolcanoPlanner
-import org.apache.calcite.rel.RelFieldCollation
+import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.logical.LogicalAggregate
 import org.apache.calcite.rex.{RexBuilder, RexNode}
+import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.tools.RelBuilder.{AggCall, GroupKey}
 import org.apache.calcite.tools.{FrameworkConfig, RelBuilder, RelBuilderFactory}
 import org.apache.calcite.util.{ImmutableBitSet, Util}
@@ -37,7 +38,8 @@ import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkRelFactories.ExpandFactory
 import org.apache.flink.table.expressions.WindowProperty
 import org.apache.flink.table.plan.logical.LogicalWindow
-import org.apache.flink.table.plan.nodes.calcite.{LogicalSegmentTop, LogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate}
+import org.apache.flink.table.plan.util.RankRange
 
 /**
   * Flink specific [[RelBuilder]] that changes the default type factory to a [[FlinkTypeFactory]].
@@ -93,12 +95,14 @@ class FlinkRelBuilder(
     push(expand)
   }
 
-  def segmentTop(
-    groupKeys: ImmutableBitSet,
-    fieldCollation: RelFieldCollation,
-    withTies: ImmutableBitSet): RelBuilder = {
-    push(LogicalSegmentTop.create(build(), groupKeys, fieldCollation, withTies))
-    this
+  def rank(
+      rankFunction: SqlRankFunction,
+      partitionKey: ImmutableBitSet,
+      sortCollation: RelCollation,
+      rankRange: RankRange): RelBuilder = {
+    val input = build()
+    val rank = LogicalRank.create(input, rankFunction, partitionKey, sortCollation, rankRange)
+    push(rank)
   }
 }
 

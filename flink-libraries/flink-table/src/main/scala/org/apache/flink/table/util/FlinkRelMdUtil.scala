@@ -33,7 +33,7 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.plan.nodes.calcite.{LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
@@ -548,6 +548,7 @@ object FlinkRelMdUtil {
 
   def getRankFunColumnIndex(rank: Rank): Int = {
     rank match {
+      case r: LogicalRank => getRankFunColumnIndex(rank, outputRankFunColumn = true)
       case r: FlinkLogicalRank => getRankFunColumnIndex(rank, r.outputRankFunColumn)
       case r: BatchExecRank => getRankFunColumnIndex(rank, r.outputRankFunColumn)
       case r: StreamExecRank => getRankFunColumnIndex(rank, r.outputRankFunColumn)

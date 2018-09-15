@@ -37,6 +37,8 @@ class RankOperator(
 
   private var orderBySorter: RecordComparator = _
 
+  private var rowNum: Long = 0L
+
   // only supports RANK function now
   private var rank: Long = 0L
 
@@ -77,11 +79,17 @@ class RankOperator(
 
   override def processElement(element: StreamRecord[BaseRow]): Unit = {
     val input = element.getValue
+    // add 1 when meets a new row
+    rowNum += 1L
     if (lastInput == null || partitionBySorter.compare(lastInput, input) != 0) {
-      rank = 1L // reset rank value for new group
+      // reset rank value and row number value for new group
+      rank = 1L
+      rowNum = 1L
     } else if (orderBySorter.compare(lastInput, input) != 0) {
-      rank += 1 // add 1 if order-by value is change in a group
+      // set rank value as row number value if order-by value is change in a group
+      rank = rowNum
     }
+
     emitInternal(input)
     lastInput = input.copy()
   }

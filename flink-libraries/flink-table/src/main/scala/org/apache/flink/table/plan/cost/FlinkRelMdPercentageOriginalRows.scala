@@ -28,9 +28,8 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.{Aggregate, Join, SemiJoin, Union}
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.util.{BuiltInMethod, Util}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, Rank}
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecGroupAggregateBase
-import org.apache.flink.table.plan.nodes.calcite.{Expand, Rank, SegmentTop}
-import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._
 
@@ -129,10 +128,6 @@ object FlinkRelMdPercentageOriginalRows
 
   def getPercentageOriginalRows(rel: Expand, mq: RelMetadataQuery): Double = {
     mq.getPercentageOriginalRows(rel.getInput)
-  }
-
-  def getPercentageOriginalRows(rel: SegmentTop, mq: RelMetadataQuery): Double = {
-    FlinkRelOptUtil.getTableConfig(rel).selectivityOfSegmentTop
   }
 
   def getPercentageOriginalRows(rel: Rank, mq: RelMetadataQuery): Double = {

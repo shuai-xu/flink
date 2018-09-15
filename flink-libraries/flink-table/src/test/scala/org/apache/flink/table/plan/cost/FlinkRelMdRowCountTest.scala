@@ -30,12 +30,6 @@ class FlinkRelMdRowCountTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetRowCountOnSegmentTop(): Unit = {
-    assertEquals(25D, mq.getRowCount(segmentTopMin))
-    assertEquals(25D, mq.getRowCount(segmentTopMax))
-  }
-
-  @Test
   def testGetRowCountOnWindowAgg(): Unit = {
     assertEquals(50D, mq.getRowCount(logicalWindowAgg))
     assertEquals(50D, mq.getRowCount(flinkLogicalWindowAgg))

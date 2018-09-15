@@ -37,7 +37,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSegmentTop;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -170,11 +169,6 @@ public class BatchExecRelVisitorImpl<R> implements BatchExecRelVisitor<R> {
 	@Override
 	public R visit(BatchExecSortLimit sortLimit) {
 		return visitInputs(sortLimit);
-	}
-
-	@Override
-	public R visit(BatchExecSegmentTop segmentTop) {
-		return visitInputs(segmentTop);
 	}
 
 	@Override

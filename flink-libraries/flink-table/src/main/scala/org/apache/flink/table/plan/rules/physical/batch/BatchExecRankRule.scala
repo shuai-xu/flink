@@ -55,20 +55,11 @@ class BatchExecRankRule
     val cluster = rel.getCluster
     val emptyBatchExecTraits = cluster.getPlanner.emptyTraitSet()
       .replace(FlinkConventions.BATCHEXEC)
-    val rexBuilder = cluster.getRexBuilder
     val sortFieldCollations = rank.partitionKey.asList().map(RelFieldCollations.of(_)) ++
       rank.sortCollation.getFieldCollations
     val sortCollation = RelCollations.of(sortFieldCollations: _*)
     val localRequiredTraitSet = emptyBatchExecTraits.replace(sortCollation)
     val newLocalInput = RelOptRule.convert(rank.getInput, localRequiredTraitSet)
-    val localRowRelDataType = if (rank.outputRankFunColumn) {
-      // local rank does not need to output rank value
-      val typeBuilder = rexBuilder.getTypeFactory.builder()
-      rank.getRowType.getFieldList.dropRight(1).foreach(typeBuilder.add)
-      typeBuilder.build()
-    } else {
-      rank.getRowType
-    }
 
     // local rank
     val localRankRange = ConstantRankRange(1, rankEnd) // always start from 1
@@ -80,7 +71,6 @@ class BatchExecRankRule
       rank.partitionKey,
       rank.sortCollation,
       localRankRange,
-      localRowRelDataType,
       outputRankFunColumn = false,
       isGlobal = false
     )
@@ -105,7 +95,6 @@ class BatchExecRankRule
       rank.partitionKey,
       rank.sortCollation,
       rank.rankRange,
-      rank.getRowType,
       rank.outputRankFunColumn,
       isGlobal = true
     )

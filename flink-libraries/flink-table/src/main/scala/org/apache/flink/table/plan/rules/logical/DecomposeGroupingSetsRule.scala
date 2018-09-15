@@ -37,6 +37,7 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalExpand}
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
+import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -487,30 +488,20 @@ object DecomposeGroupingSetsRule {
     // 1. add original input fields
     val typeList = mutable.ListBuffer(inputType.getFieldList.map(_.getType): _*)
     val fieldNameList = mutable.ListBuffer(inputType.getFieldNames: _*)
-    val containedNames = mutable.Set[String](fieldNameList: _*)
-
-    def buildUniqueFieldName(base: String): String = {
-      var name: String = base
-      var i: Int = 0
-      while (containedNames.contains(name)) {
-        name = base + "_" + i
-        i += 1
-      }
-      containedNames.add(name)
-      name
-    }
+    val allFieldNames = mutable.Set[String](fieldNameList: _*)
 
     // 2. add expand_id('$e') field
     typeList += typeFactory.createTypeWithNullability(
       typeFactory.createSqlType(SqlTypeName.BIGINT), false)
-    var name: String = buildUniqueFieldName("$e")
-    fieldNameList += name
+    var expandIdFieldName = FlinkRelOptUtil.buildUniqueFieldName(allFieldNames, "$e")
+    fieldNameList += expandIdFieldName
 
     // 3. add duplicate fields
     duplicateFieldIndexes.foreach {
       duplicateFieldIdx =>
         typeList += inputType.getFieldList.get(duplicateFieldIdx).getType
-        fieldNameList += buildUniqueFieldName(inputType.getFieldNames.get(duplicateFieldIdx))
+        fieldNameList += FlinkRelOptUtil.buildUniqueFieldName(
+          allFieldNames, inputType.getFieldNames.get(duplicateFieldIdx))
     }
 
     typeFactory.createStructType(typeList, fieldNameList)

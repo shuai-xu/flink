@@ -189,16 +189,6 @@ class FlinkRelMdUniqueColumnsTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetUniqueColumnsOnSegmentTop(): Unit = {
-    assertEquals(ImmutableBitSet.of(0),
-      mq.getUniqueColumns(segmentTopMin, ImmutableBitSet.of(0, 1)))
-    assertEquals(ImmutableBitSet.of(1, 2),
-      mq.getUniqueColumns(segmentTopMin, ImmutableBitSet.of(1, 2)))
-    assertEquals(ImmutableBitSet.of(0),
-      mq.getUniqueColumns(segmentTopMin, ImmutableBitSet.of(0, 1, 2)))
-  }
-
-  @Test
   def testGetUniqueColumnsOnSort(): Unit = {
     assertEquals(ImmutableBitSet.of(0, 1), mq.getUniqueColumns(sort, ImmutableBitSet.of(0, 1)))
     assertEquals(ImmutableBitSet.of(0, 1),

@@ -184,7 +184,9 @@ object FlinkBatchExecRuleSets {
     // remove unnecessary sort rule
     SortRemoveRule.INSTANCE,
 
+    // rank rules
     FlinkLogicalRankRule.CONSTANT_RANK,
+    CalcRankMergeRule.INSTANCE,
 
     // calc rules
     FilterCalcMergeRule.INSTANCE,
@@ -234,7 +236,7 @@ object FlinkBatchExecRuleSets {
     FlinkLogicalNativeTableScan.CONVERTER,
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
-    FlinkLogicalSegmentTop.CONVERTER
+    FlinkLogicalRank.CONVERTER
   )
 
   /**
@@ -283,7 +285,7 @@ object FlinkBatchExecRuleSets {
 
   val BATCH_EXEC_JOIN_REORDER: RuleSet = RuleSets.ofList(
     // reorder join
-    FilterSimplifyExpressionsRule.INSTANCE, // for segment-top
+    FilterSimplifyExpressionsRule.INSTANCE,
     JoinPushExpressionsRule.INSTANCE,
     FlinkFilterJoinRule.FILTER_ON_JOIN,
     FilterAggregateTransposeRule.INSTANCE,
@@ -292,12 +294,12 @@ object FlinkBatchExecRuleSets {
     JoinToMultiJoinRule.INSTANCE,
     ProjectMultiJoinMergeRule.INSTANCE,
     FilterMultiJoinMergeRule.INSTANCE,
-    // we put segment-top together with join reorder cause there is no
-    // good way to recover the MultiJoin back to what it originally
-    // is if we match segment-top failed, will make a new program
-    // when we can do this.
-    SegmentTopTransformRule.COMPLEX,
-    SegmentTopTransformRule.SIMPLE,
+    // we put rewrite-self-join together with join reorder cause
+    // there is no good way to recover the MultiJoin back to
+    // what it originally is if we match rewrite-self-join failed,
+    // will make a new program when we can do this.
+    RewriteSelfJoinRule.COMPLEX,
+    RewriteSelfJoinRule.SIMPLE,
     RewriteMultiJoinConditionRule.INSTANCE,
     LoptOptimizeJoinRule.INSTANCE
   )
@@ -337,8 +339,6 @@ object FlinkBatchExecRuleSets {
     BatchExecUnionRule.INSTANCE,
     //expand
     BatchExecExpandRule.INSTANCE,
-    //segment-top
-    BatchExecSegmentTopRule.INSTANCE,
 
     BatchExecJoinTableRule.INSTANCE,
     // rank

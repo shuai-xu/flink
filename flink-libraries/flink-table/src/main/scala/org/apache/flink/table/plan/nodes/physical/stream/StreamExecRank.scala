@@ -29,11 +29,10 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.Rank
-import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.RankUtil._
-import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, RankUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{RankRange, RankUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.rank._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -58,9 +57,7 @@ class StreamExecRank(
     rankFunction,
     ImmutableBitSet.of(partitionKey: _*),
     sortCollation,
-    rankRange,
-    schema.relDataType)
-  with CommonSort
+    rankRange)
   with StreamExecRel {
 
   var strategy: RankStrategy = _
@@ -82,6 +79,8 @@ class StreamExecRank(
 
   override def needsUpdatesAsRetraction(input: RelNode): Boolean =
     getStrategy(forceRecompute = true) == RetractRank
+
+  override def deriveRowType(): RelDataType = schema.relDataType
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     val rank = new StreamExecRank(
@@ -113,7 +112,7 @@ class StreamExecRank(
 
   override def toString: String = {
     var result =
-      s"${getStrategy()}(orderBy: (${sortFieldsToString(sortCollation, schema.relDataType)})"
+      s"${getStrategy()}(orderBy: (${Rank.sortFieldsToString(sortCollation, schema.relDataType)})"
     if (partitionKey.nonEmpty) {
       result += s", partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
     }
@@ -124,14 +123,13 @@ class StreamExecRank(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-      .item("orderBy", sortFieldsToString(sortCollation, schema.relDataType))
+      .item("rankFunction", rankFunction.getKind)
       .itemIf("partitionBy",
         partitionFieldsToString(partitionKey, schema.relDataType),
         partitionKey.nonEmpty)
-
-    rankRange.explain(pw, inputSchema.fieldNames)
+      .item("orderBy", Rank.sortFieldsToString(sortCollation, schema.relDataType))
+      .item("rankRange", rankRange.toString(inputSchema.fieldNames))
       .item("strategy", getStrategy())
-      .item("rank", rankFunction.getKind)
       .item("select", selectToString)
   }
 

@@ -22,7 +22,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecCalc(select=[category, shopId, sum_num, max_num, w0$o0])
-  StreamExecRank(orderBy=[sum_num DESC, max_num ASC], partitionBy=[category], rankStart=[1], rankEnd=[2], strategy=[RetractRank], rank=[ROW_NUMBER], select=[*, rowNum])
+  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[sum_num DESC, max_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum])
     StreamExecExchange(distribution=[hash[category]])
       StreamExecScan(table=[[_DataStreamTable_2]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
@@ -32,7 +32,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecCalc(select=[category, shopId, avg_num, cnt_num, w0$o0])
-  StreamExecRank(orderBy=[avg_num DESC, cnt_num ASC], partitionBy=[category], rankStart=[1], rankEnd=[2], strategy=[RetractRank], rank=[ROW_NUMBER], select=[*, rowNum])
+  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[avg_num DESC, cnt_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum])
     StreamExecExchange(distribution=[hash[category]])
       StreamExecScan(table=[[_DataStreamTable_2]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
@@ -57,7 +57,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 				ship_strategy : FORWARD
 
 				 : Operator
-					content : RetractRank(orderBy: (sum_num DESC, max_num ASC), partitionBy: (category), *, rowNum, rankStart: 1, rankEnd: 2)
+					content : RetractRank(orderBy: (sum_num DESC, max_num ASC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 					ship_strategy : HASH
 
 					 : Operator
@@ -73,7 +73,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 								ship_strategy : FORWARD
 
 								 : Operator
-									content : RetractRank(orderBy: (avg_num DESC, cnt_num ASC), partitionBy: (category), *, rowNum, rankStart: 1, rankEnd: 2)
+									content : RetractRank(orderBy: (avg_num DESC, cnt_num ASC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 									ship_strategy : HASH
 
 									 : Operator

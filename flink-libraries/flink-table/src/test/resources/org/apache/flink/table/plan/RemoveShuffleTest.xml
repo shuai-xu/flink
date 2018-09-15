@@ -590,7 +590,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, rk])
 +- Sort(orderBy=[a ASC, b ASC])
    +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b])
       +- Exchange(distribution=[hash[a]])
@@ -623,10 +623,10 @@ LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
       <![CDATA[
 HashAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$1])
 +- Calc(select=[a, b])
-   +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+   +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, c])
       +- Sort(orderBy=[a ASC, c ASC, b ASC])
          +- Exchange(distribution=[hash[a]])
-            +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[false])
+            +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[false], select=[a, b, c])
                +- Sort(orderBy=[a ASC, c ASC, b ASC])
                   +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
@@ -653,7 +653,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, c, rk])
 +- Sort(orderBy=[a ASC, c ASC, b ASC])
    +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b, Final_COUNT(count$1) AS c])
       +- Exchange(distribution=[hash[a]])
@@ -683,7 +683,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, c, rk])
 +- Sort(orderBy=[a ASC, c ASC, b ASC])
    +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b, Final_COUNT(count$1) AS c])
       +- Exchange(distribution=[hash[a]])
@@ -714,7 +714,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, rk])
 +- Sort(orderBy=[b ASC])
    +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS a, Final_SUM(sum$1) AS b])
       +- Exchange(distribution=[single])
@@ -745,7 +745,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=10], global=[true], select=[a, b, rk])
 +- Sort(orderBy=[a ASC, b ASC])
    +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS a, Final_SUM(sum$1) AS b])
       +- Exchange(distribution=[hash])

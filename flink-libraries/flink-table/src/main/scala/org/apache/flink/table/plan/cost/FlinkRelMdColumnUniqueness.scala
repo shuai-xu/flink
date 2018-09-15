@@ -37,9 +37,9 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
-import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.nodes.FlinkRelNode
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
 import org.apache.flink.table.plan.nodes.physical.stream._
@@ -176,16 +176,8 @@ object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.Column
     }
   }
 
-  def areColumnsUnique(
-    rel: SegmentTop,
-    mq: RelMetadataQuery,
-    columns: ImmutableBitSet,
-    ignoreNulls: Boolean): JBool = mq.areColumnsUnique(rel.getInput, columns, ignoreNulls)
-
   /**
-    * Determines whether a specified set of columns from a Calc relational expression are
-    * unique.
-    * *
+    * Determines whether a specified set of columns from a Calc relational expression are unique.
     *
     * @param rel         the Calc relational expression
     * @param mq          metadata query instance
@@ -238,11 +230,11 @@ object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.Column
     var nullCount = 0
     for (rel2 <- rel.getRels) {
       rel2 match {
-        // NOTE: If add estimation uniqueness for new RelNode type e.g. SegmentTop / Expand,
+        // NOTE: If add estimation uniqueness for new RelNode type e.g. Rank / Expand,
         // add the RelNode to pattern matching in RelSubset.
         case _: Aggregate | _: Filter | _: Values | _: TableScan | _: Project | _: Correlate |
              _: Join | _: Exchange | _: Sort | _: SetOp | _: Calc | _: Converter | _: Window |
-             _: Expand | _: SegmentTop | _: Rank | _: FlinkRelNode =>
+             _: Expand | _: Rank | _: FlinkRelNode =>
           try {
             val unique = mq.areColumnsUnique(rel2, columns, ignoreNulls)
             if (unique != null) {

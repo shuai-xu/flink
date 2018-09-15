@@ -70,24 +70,6 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetSelectivityOnSegmentTop(): Unit = {
-    def getPredicate(rel: RelNode, fieldIdx: Int): RexNode = {
-      relBuilder.push(rel).call(
-        LESS_THAN_OR_EQUAL, relBuilder.field(fieldIdx), relBuilder.literal(2))
-    }
-
-    assertEquals((2.0D - 0.0D) / (10.0D - 0.0D),
-      mq.getSelectivity(segmentTopMin, getPredicate(segmentTopMin, 0)))
-    assertEquals((2.0D - 0.0D) / (10.0D - 0.0D),
-      mq.getSelectivity(segmentTopMax, getPredicate(segmentTopMax, 0)))
-    // filter: $2 <= 2
-    assertEquals((2.0D - 0.0D) / (46.0D - 0.0D),
-      mq.getSelectivity(segmentTopMin, getPredicate(segmentTopMin, 2)))
-    assertEquals((2.0D - 0.0D) / (46.0D - 0.0D),
-      mq.getSelectivity(segmentTopMax, getPredicate(segmentTopMin, 2)))
-  }
-
-  @Test
   def testGetSelectivityOnUnionBatchExec(): Unit = {
     val union = new BatchExecUnion(
       cluster,

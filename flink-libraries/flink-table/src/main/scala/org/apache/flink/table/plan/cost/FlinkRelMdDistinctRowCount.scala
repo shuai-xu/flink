@@ -28,15 +28,13 @@ import org.apache.calcite.rel.logical.LogicalCalc
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util._
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.plan.util.ConstantRankRange
 import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil, FlinkRexUtil}
 
 import scala.collection.JavaConversions._
@@ -478,49 +476,6 @@ object FlinkRelMdDistinctRowCount extends MetadataHandler[BuiltInMetadata.Distin
     } else {
       mq.getDistinctRowCount(rel.getInput, groupKey, newPredicate)
     }
-  }
-
-  def getDistinctRowCount(
-    rel: SegmentTop,
-    mq: RelMetadataQuery,
-    groupKey: ImmutableBitSet,
-    predicate: RexNode): Double = {
-    val inputNDV = mq.getDistinctRowCount(rel.getInput, groupKey, predicate)
-    val aggCollation = rel.getFieldCollation
-    val segmentTopGroupKeys = rel.getGroupKeys
-    // segmentTopGroupKeys may be null.
-    if (segmentTopGroupKeys.cardinality == 0) {
-      // only output the whole group max/min value.
-      if (inputNDV == null) {
-        return inputNDV
-      } else {
-        return Math.max(inputNDV * FlinkRelOptUtil.getTableConfig(rel)
-          .selectivityOfSegmentTop, 1D)
-      }
-    }
-
-    val containsSegGroupKey = groupKey.contains(segmentTopGroupKeys)
-    val containsFieldCollation = groupKey.get(aggCollation.getFieldIndex)
-    // Assume that the agg val of every group is distinct from each other.
-    if (groupKey.cardinality == 1 && containsFieldCollation) {
-      return mq.getDistinctRowCount(rel.getInput, segmentTopGroupKeys, predicate)
-    }
-    // If the groupKey contains only the segment-top (grouping keys + fieldCollation column),
-    // the NDV is computed on segment-top grouping keys with what we group by data set.
-    if (groupKey.cardinality == 1 + segmentTopGroupKeys.cardinality
-      && containsFieldCollation
-      && containsSegGroupKey) {
-      return mq.getDistinctRowCount(rel.getInput, segmentTopGroupKeys, predicate)
-    }
-    // If groupKey equals to segment-top group keys, just use the input NDV.
-    if (groupKey.equals(segmentTopGroupKeys)) {
-      return inputNDV
-    }
-    // If groupKey contains non seg-group keys, just compute composition NDV of these
-    // keys and multiply with agg filter percentage.
-    mq.getDistinctRowCount(rel.getInput,
-      groupKey.clear(aggCollation.getFieldIndex),
-      predicate)
   }
 
   def getDistinctRowCount(

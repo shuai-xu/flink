@@ -23,13 +23,15 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter, SingleRel}
 import org.apache.calcite.sql.SqlRankFunction
+import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, VariableRankRange}
 import org.apache.flink.table.runtime.aggregate.SortUtil
-import org.apache.flink.table.util.FlinkRelMdUtil
+import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 
 /**
@@ -39,13 +41,16 @@ import scala.collection.JavaConversions._
   * <p>NOTES: Different from [[org.apache.calcite.sql.fun.SqlStdOperatorTable.RANK]],
   * [[Rank]] is a Relational expression， not a window function.
   *
+  * <p>[[Rank]] will output rank function value as its last column.
+  *
   * <p>This RelNode only handles single rank function, is an optimization for some cases. e.g.
   * <ol>
   * <li>
   *   single rank function (on `OVER`) with filter in a SQL query statement
   * </li>
   * <li>
-  *   `ORDER BY` with `LIMIT` in a SQL query statement (equivalent to `ROW_NUMBER` with filter)
+  *   `ORDER BY` with `LIMIT` in a SQL query statement
+  *   (equivalent to `ROW_NUMBER` with filter and project)
   * </li>
   * </ol>
   *
@@ -57,7 +62,6 @@ import scala.collection.JavaConversions._
   * @param partitionKey   partition keys (may be empty)
   * @param sortCollation  order keys for rank function
   * @param rankRange      the expected range of rank function value
-  * @param rowRelDataType output row type
   */
 abstract class Rank(
     cluster: RelOptCluster,
@@ -66,8 +70,7 @@ abstract class Rank(
     val rankFunction: SqlRankFunction,
     val partitionKey: ImmutableBitSet,
     val sortCollation: RelCollation,
-    val rankRange: RankRange,
-    rowRelDataType: RelDataType)
+    val rankRange: RankRange)
   extends SingleRel(cluster, traitSet, input) {
 
   rankRange match {
@@ -88,15 +91,28 @@ abstract class Rank(
       }
   }
 
-  override def deriveRowType(): RelDataType = rowRelDataType
+  override def deriveRowType(): RelDataType = {
+    val typeFactory = cluster.getRexBuilder.getTypeFactory
+    val typeBuilder = typeFactory.builder()
+    input.getRowType.getFieldList.foreach(typeBuilder.add)
+    // rank function column is always the last column, and its type is BIGINT NOT NULL
+    val allFieldNames = mutable.Set[String](input.getRowType.getFieldNames: _*)
+    val rankFieldName = FlinkRelOptUtil.buildUniqueFieldName(allFieldNames, "rk")
+    val bigIntType = typeFactory.createSqlType(SqlTypeName.BIGINT)
+    typeBuilder.add(rankFieldName, typeFactory.createTypeWithNullability(bigIntType, false))
+    typeBuilder.build()
+  }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    val inputFieldNames = input.getRowType.getFieldNames
+    val select = getRowType.getFieldNames.zipWithIndex.map {
+      case (name, idx) => s"$name=$$$idx"
+    }.mkString(", ")
     super.explainTerms(pw)
       .item("rankFunction", rankFunction)
-      .item("partitionBy", partitionKey.map(inputFieldNames.get(_)).mkString(","))
-      .item("orderBy", sortFieldsToString(sortCollation, input.getRowType))
-      .item("rankRange", rankRange)
+      .item("partitionBy", partitionKey.map(i => s"$$$i").mkString(","))
+      .item("orderBy", Rank.sortFieldsToString(sortCollation))
+      .item("rankRange", rankRange.toString())
+      .item("select", select)
   }
 
   override def estimateRowCount(mq: RelMetadataQuery): Double = {
@@ -121,14 +137,25 @@ abstract class Rank(
     planner.getCostFactory.makeCost(rowCount, cpuCost, 0)
   }
 
-  private def sortFieldsToString(
-      collationSort: RelCollation,
-      rowRelDataType: RelDataType): String = {
+}
+
+object Rank {
+  def sortFieldsToString(collationSort: RelCollation): String = {
     val fieldCollations = collationSort.getFieldCollations
       .map(c => (c.getFieldIndex, SortUtil.directionToOrder(c.getDirection)))
 
-    fieldCollations
-      .map(col => s"${rowRelDataType.getFieldNames.get(col._1)} ${col._2.getShortName}")
-      .mkString(", ")
+    fieldCollations.map {
+      case (index, order) => s"$$$index ${order.getShortName}"
+    }.mkString(", ")
+  }
+
+  def sortFieldsToString(collationSort: RelCollation, inputType: RelDataType): String = {
+    val fieldCollations = collationSort.getFieldCollations
+      .map(c => (c.getFieldIndex, SortUtil.directionToOrder(c.getDirection)))
+    val inputFieldNames = inputType.getFieldNames
+
+    fieldCollations.map {
+      case (index, order) => s"${inputFieldNames.get(index)} ${order.getShortName}"
+    }.mkString(", ")
   }
 }

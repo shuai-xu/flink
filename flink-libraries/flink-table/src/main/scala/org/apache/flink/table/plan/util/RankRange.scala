@@ -17,39 +17,32 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.calcite.rel.RelWriter
-
 sealed trait RankRange extends Serializable {
   def toString(inputFieldNames: Seq[String]): String
-
-  def explain(pw: RelWriter, inputFieldNames: Seq[String]): RelWriter
 }
 
 // rankStart and rankEnd are inclusive, rankStart always start from one.
 case class ConstantRankRange(rankStart: Long, rankEnd: Long) extends RankRange {
 
-  override def toString(inputFieldNames: Seq[String]): String = {
+  override def toString(inputFieldNames: Seq[String]): String = this.toString
+
+  override def toString: String = {
     if (rankEnd != Long.MaxValue) {
-      s"rankStart: $rankStart, rankEnd: $rankEnd"
+      s"rankStart=$rankStart, rankEnd=$rankEnd"
     } else {
-      s"rankStart: $rankStart"
+      s"rankStart=$rankStart"
     }
   }
 
-  override def explain(pw: RelWriter, inputFieldNames: Seq[String]): RelWriter = {
-    pw.item("rankStart", rankStart).itemIf("rankEnd", rankEnd, rankEnd != Long.MaxValue)
-  }
 }
 
 // changing rank limit depends on input
 case class VariableRankRange(rankEndIndex: Int) extends RankRange {
   override def toString(inputFieldNames: Seq[String]): String = {
-    val limitFieldName = inputFieldNames(rankEndIndex)
-    s"rowNum: $limitFieldName"
+    s"rankEnd=${inputFieldNames(rankEndIndex)}"
   }
 
-  override def explain(pw: RelWriter, inputFieldNames: Seq[String]): RelWriter = {
-    val limitFieldName = inputFieldNames(rankEndIndex)
-    pw.item("rowNum", limitFieldName)
+  override def toString: String = {
+    s"rankEnd=$$$rankEndIndex"
   }
 }

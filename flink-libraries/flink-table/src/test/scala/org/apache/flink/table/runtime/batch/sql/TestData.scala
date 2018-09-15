@@ -265,7 +265,7 @@ object TestData {
   val INT_ONLY = new RowTypeInfo(INT_TYPE_INFO)
   val INT_INT = new RowTypeInfo(INT_TYPE_INFO, INT_TYPE_INFO)
 
-  lazy val SUB_QUERY_1 = Seq(
+  lazy val data2_1 = Seq(
     row(1, 2.0),
     row(1, 2.0),
     row(2, 1.0),
@@ -276,7 +276,7 @@ object TestData {
     row(6, null)
   )
 
-  lazy val SUB_QUERY_2 = Seq(
+  lazy val data2_2 = Seq(
     row(2, 3.0),
     row(2, 3.0),
     row(3, 2.0),
@@ -286,14 +286,14 @@ object TestData {
     row(6, null)
   )
 
-  lazy val SUB_QUERY_3 = Seq(
+  lazy val data2_3 = Seq(
     row(2, 3.0),
     row(2, 3.0),
     row(3, 2.0),
     row(4, 1.0)
   )
 
-  val nullablesOfSubQuery3 = Seq(false, false)
+  val nullablesOfData2_3 = Seq(false, false)
 
   lazy val intStringData: Seq[Row] = {
     (1 to 100).map(i => row(i, i.toString))

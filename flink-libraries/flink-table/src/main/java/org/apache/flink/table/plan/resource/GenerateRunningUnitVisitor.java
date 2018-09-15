@@ -40,7 +40,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSegmentTop;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -235,11 +234,6 @@ public class GenerateRunningUnitVisitor implements BatchExecRelVisitor<List<Shuf
 	@Override
 	public List<ShuffleStageInRunningUnit> visit(BatchExecSortLimit sortLimit) {
 		return visitTwoStageSingleRel(sortLimit);
-	}
-
-	@Override
-	public List<ShuffleStageInRunningUnit> visit(BatchExecSegmentTop segmentTop) {
-		return visitOneStageSingleRel(segmentTop);
 	}
 
 	@Override

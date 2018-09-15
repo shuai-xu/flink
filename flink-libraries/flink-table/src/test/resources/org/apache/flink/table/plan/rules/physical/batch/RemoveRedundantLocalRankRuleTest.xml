@@ -37,7 +37,7 @@ LogicalProject(a=[$0])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a])
-+- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[$f1 ASC], rankRange=[ConstantRankRange(1,5)], global=[true])
++- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[$f1 ASC], rankRange=[rankStart=1, rankEnd=5], global=[true], select=[a, $f1])
    +- Sort(orderBy=[a ASC, $f1 ASC])
       +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS $f1])
          +- Exchange(distribution=[hash[a]])
@@ -68,7 +68,7 @@ LogicalProject(a=[$0])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a])
-+- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[$f1 ASC], rankRange=[ConstantRankRange(2,5)], global=[true])
++- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[$f1 ASC], rankRange=[rankStart=2, rankEnd=5], global=[true], select=[a, $f1])
    +- Sort(orderBy=[a ASC, $f1 ASC])
       +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS $f1])
          +- Exchange(distribution=[hash[a]])
@@ -100,12 +100,12 @@ LogicalProject(a=[$0], b=[$1], rk=[$2], rk1=[$3])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,5)], global=[true])
+Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=5], global=[true], select=[a, b, w0$o0, rk])
 +- Calc(select=[a, b, w0$o0])
-   +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,5)], global=[true])
+   +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=5], global=[true], select=[a, b, c, rk])
       +- Sort(orderBy=[a ASC, b ASC])
          +- Exchange(distribution=[hash[a]])
-            +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,5)], global=[false])
+            +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=5], global=[false], select=[a, b, c])
                +- Sort(orderBy=[a ASC, b ASC])
                   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>

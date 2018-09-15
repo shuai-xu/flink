@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelDistribution.Type
-import org.apache.calcite.rel.RelDistribution.Type.{HASH_DISTRIBUTED, SINGLETON, ANY}
+import org.apache.calcite.rel.RelDistribution.Type.{HASH_DISTRIBUTED, SINGLETON}
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
@@ -55,7 +55,6 @@ class BatchExecRank(
     partitionKey: ImmutableBitSet,
     sortCollation: RelCollation,
     rankRange: RankRange,
-    rowRelDataType: RelDataType,
     val outputRankFunColumn: Boolean,
     val isGlobal: Boolean)
   extends Rank(
@@ -65,14 +64,21 @@ class BatchExecRank(
     rankFunction,
     partitionKey,
     sortCollation,
-    rankRange,
-    rowRelDataType)
+    rankRange)
   with RowBatchExecRel {
 
   require(rankFunction.kind == SqlKind.RANK, "Only RANK is supported now")
   val (rankStart, rankEnd) = rankRange match {
     case r: ConstantRankRange => (r.rankStart, r.rankEnd)
     case o => throw TableException(s"$o is not supported now")
+  }
+
+  override def deriveRowType(): RelDataType = {
+    if (outputRankFunColumn) {
+      super.deriveRowType()
+    } else {
+      input.getRowType
+    }
   }
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
@@ -84,7 +90,6 @@ class BatchExecRank(
       partitionKey,
       sortCollation,
       rankRange,
-      rowRelDataType,
       outputRankFunColumn,
       isGlobal
     ))
@@ -95,8 +100,14 @@ class BatchExecRank(
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
+    val inputFieldNames = input.getRowType.getFieldNames
+    pw.item("input", getInput)
+      .item("rankFunction", rankFunction)
+      .item("partitionBy", partitionKey.map(inputFieldNames.get(_)).mkString(","))
+      .item("orderBy", Rank.sortFieldsToString(sortCollation, input.getRowType))
+      .item("rankRange", rankRange.toString(inputFieldNames))
       .item("global", isGlobal)
+      .item("select", getRowType.getFieldNames.mkString(", "))
       .itemIf("reuse_id", getReuseId, isReused)
   }
 
@@ -227,7 +238,7 @@ class BatchExecRank(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
     val partitionBySortingKeys = partitionKey.toArray
-    // The collation for the grouping fields is inessential here, we only use the
+    // The collation for the partition-by fields is inessential here, we only use the
     // comparator to distinguish different groups.
     // (order[is_asc], null_is_last)
     val partitionBySortCollation = partitionBySortingKeys.map(_ => (true, true))
@@ -250,6 +261,9 @@ class BatchExecRank(
       partitionBySerializers,
       partitionByComparators)
 
+    // The collation for the order-by fields is inessential here, we only use the
+    // comparator to distinguish order-by fields change.
+    // (order[is_asc], null_is_last)
     val orderByCollation = sortCollation.getFieldCollations.map(_ => (true, true)).toArray
     val orderByKeys = sortCollation.getFieldCollations.map(_.getFieldIndex).toArray
 

@@ -109,21 +109,6 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetDistinctRowCountOnSegmentTop(): Unit = {
-    assertEquals(25D, mq.getDistinctRowCount(segmentTopMax, ImmutableBitSet.of(1), null))
-    assertEquals(25D, mq.getDistinctRowCount(segmentTopMax, ImmutableBitSet.of(2), null))
-    assertEquals(50D, mq.getDistinctRowCount(segmentTopMax, ImmutableBitSet.of(0, 1), null))
-    assertEquals(25D, mq.getDistinctRowCount(segmentTopMax, ImmutableBitSet.of(1, 2), null))
-    assertEquals(50D, mq.getDistinctRowCount(segmentTopMax, ImmutableBitSet.of(0, 1, 2), null))
-
-    assertEquals(25D, mq.getDistinctRowCount(segmentTopMin, ImmutableBitSet.of(1), null))
-    assertEquals(25D, mq.getDistinctRowCount(segmentTopMin, ImmutableBitSet.of(2), null))
-    assertEquals(50D, mq.getDistinctRowCount(segmentTopMin, ImmutableBitSet.of(0, 1), null))
-    assertEquals(25D, mq.getDistinctRowCount(segmentTopMin, ImmutableBitSet.of(1, 2), null))
-    assertEquals(50D, mq.getDistinctRowCount(segmentTopMin, ImmutableBitSet.of(0, 1, 2), null))
-  }
-
-  @Test
   def testGetDistinctRowCountOnUnionBatchExec(): Unit = {
     assertEquals(8D, mq.getDistinctRowCount(unionBatchExec, ImmutableBitSet.of(0), null))
     assertEquals(12D, mq.getDistinctRowCount(unionBatchExec, ImmutableBitSet.of(1), null))

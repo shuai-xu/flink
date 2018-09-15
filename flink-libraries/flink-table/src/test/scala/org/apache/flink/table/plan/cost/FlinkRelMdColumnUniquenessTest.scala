@@ -121,19 +121,6 @@ class FlinkRelMdColumnUniquenessTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testAreColumnsUniqueOnSegmentTop(): Unit = {
-    assertTrue(mq.areColumnsUnique(segmentTopMin, ImmutableBitSet.of(0, 1)))
-    assertTrue(mq.areColumnsUnique(segmentTopMin, ImmutableBitSet.of(0)))
-    assertFalse(mq.areColumnsUnique(segmentTopMin, ImmutableBitSet.of(1)))
-    assertFalse(mq.areColumnsUnique(segmentTopMin, ImmutableBitSet.of(2)))
-
-    assertTrue(mq.areColumnsUnique(segmentTopMax, ImmutableBitSet.of(0, 1)))
-    assertTrue(mq.areColumnsUnique(segmentTopMax, ImmutableBitSet.of(0)))
-    assertFalse(mq.areColumnsUnique(segmentTopMax, ImmutableBitSet.of(1)))
-    assertFalse(mq.areColumnsUnique(segmentTopMax, ImmutableBitSet.of(2)))
-  }
-
-  @Test
   def testAreColumnsUniqueOnValues(): Unit = {
     assertTrue(mq.areColumnsUnique(emptyValues, ImmutableBitSet.of(1)))
     assertTrue(mq.areColumnsUnique(values, ImmutableBitSet.of(0)))

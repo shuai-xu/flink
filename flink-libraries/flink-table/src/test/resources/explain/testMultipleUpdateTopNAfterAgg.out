@@ -20,7 +20,7 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
 
 [[Sink]]
 StreamExecCalc(select=[category, shopId, cnt_num, w0$o0])
-  StreamExecRank(orderBy=[cnt_num DESC], partitionBy=[category], rankStart=[1], rankEnd=[2], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rowNum])
+  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[cnt_num DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
     StreamExecExchange(distribution=[hash[category]])
       StreamExecScan(table=[[_DataStreamTable_2]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
@@ -30,7 +30,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecCalc(select=[category, shopId, max_num, w0$o0])
-  StreamExecRank(orderBy=[max_num DESC], partitionBy=[category], rankStart=[1], rankEnd=[2], strategy=[UpdateFastRank[0,1]], rank=[ROW_NUMBER], select=[*, rowNum])
+  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_num DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
     StreamExecExchange(distribution=[hash[category]])
       StreamExecScan(table=[[_DataStreamTable_2]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
@@ -51,7 +51,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 			ship_strategy : HASH
 
 			 : Operator
-				content : UpdateFastRank[0,1](orderBy: (cnt_num DESC), partitionBy: (category), *, rowNum, rankStart: 1, rankEnd: 2)
+				content : UpdateFastRank[0,1](orderBy: (cnt_num DESC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 				ship_strategy : HASH
 
 				 : Operator
@@ -67,7 +67,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 							ship_strategy : FORWARD
 
 							 : Operator
-								content : UpdateFastRank[0,1](orderBy: (max_num DESC), partitionBy: (category), *, rowNum, rankStart: 1, rankEnd: 2)
+								content : UpdateFastRank[0,1](orderBy: (max_num DESC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 								ship_strategy : HASH
 
 								 : Operator

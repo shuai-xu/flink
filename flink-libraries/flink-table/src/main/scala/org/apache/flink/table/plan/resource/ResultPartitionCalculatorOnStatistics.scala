@@ -168,6 +168,8 @@ class ResultPartitionCalculatorOnStatistics(
 
   override def visit(joinTable: BatchExecJoinTable): Unit = calculateSingle(joinTable)
 
+  override def visit(rank: BatchExecRank): Unit = calculateSingle(rank)
+
   override def visit(batchExec: BatchExecRel[_]): Unit = {
     throw new TableException("could not reach here. " + batchExec.getClass)
   }
@@ -178,7 +180,4 @@ class ResultPartitionCalculatorOnStatistics(
       child.asInstanceOf[RowBatchExecRel].accept(this))
   }
 
-  override def visit(segmentTop: BatchExecSegmentTop): Unit = calculateSingle(segmentTop)
-
-  override def visit(rank: BatchExecRank): Unit = calculateSingle(rank)
 }

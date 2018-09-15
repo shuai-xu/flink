@@ -16,6 +16,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
+  <TestCase name="testDuplicateRankFunctionColumnName">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM (SELECT a, b, RANK() OVER (PARTITION BY b ORDER BY a) rk FROM y) t WHERE rk < 10]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], rk=[$2])
++- LogicalFilter(condition=[<($2, 10)])
+   +- LogicalProject(a=[$0], b=[$1], rk=[RANK() OVER (PARTITION BY $1 ORDER BY $0 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalTableScan(table=[[y]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+FlinkLogicalCalc(select=[a, b, w0$o0 AS $2])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, rk, rk_0])
+   +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testMultiDiffRankFunctions">
     <Resource name="sql">
       <![CDATA[SELECT * FROM (SELECT a, b, RANK() OVER (PARTITION BY b ORDER BY a) rk, ROW_NUMBER() OVER (PARTITION BY b ORDER BY a) rn FROM x) t WHERE rk < 10]]>
@@ -71,7 +91,7 @@ LogicalProject(a=[$0], b=[$1], rk1=[$2], rk2=[$3])
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS rk1, w0$o0 AS rk2])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[ConstantRankRange(1,9)])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, c, rk])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -91,7 +111,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, 2 AS rk])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[ConstantRankRange(2,2)])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=2, rankEnd=2], select=[a, b, c])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -111,7 +131,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS $2])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[ConstantRankRange(3,9223372036854775807)])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=3], select=[a, b, c, rk])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -131,7 +151,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS $2])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b,c], orderBy=[a ASC], rankRange=[ConstantRankRange(-1,2)])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b,c], orderBy=[a ASC], rankRange=[rankStart=-1, rankEnd=2], select=[a, b, c, rk])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -151,7 +171,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS $2], where=[>(a, 10)])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[ConstantRankRange(1,2)])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=2], select=[a, b, c, rk])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -271,7 +291,7 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     <Resource name="planAfter">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS $2])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[], orderBy=[a ASC], rankRange=[ConstantRankRange(1,9)])
++- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, c, rk])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

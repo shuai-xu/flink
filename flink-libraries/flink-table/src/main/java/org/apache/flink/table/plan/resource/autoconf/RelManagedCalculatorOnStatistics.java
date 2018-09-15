@@ -42,7 +42,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel$;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSegmentTop;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -277,12 +276,6 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	@Override
 	public Void visit(BatchExecSortLimit sortLimit) {
 		calculateNoManagedMem(sortLimit);
-		return null;
-	}
-
-	@Override
-	public Void visit(BatchExecSegmentTop segmentTop) {
-		calculateNoManagedMem(segmentTop);
 		return null;
 	}
 

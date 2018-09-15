@@ -19,26 +19,26 @@
 package org.apache.flink.table.plan.cost
 
 import org.apache.calcite.plan.volcano.RelSubset
+import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{AbstractRelNode, RelNode, SingleRel}
-import org.apache.calcite.rel.core._
 import org.apache.calcite.rex._
-import org.apache.calcite.sql.{SqlBinaryOperator, SqlKind}
 import org.apache.calcite.sql.SqlKind._
 import org.apache.calcite.sql.`type`.SqlTypeName
+import org.apache.calcite.sql.{SqlBinaryOperator, SqlKind}
 import org.apache.calcite.util.Util
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnInterval
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecGroupWindowAggregate, StreamExecLocalGroupAggregate}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.util.Preconditions
 import org.apache.flink.table.plan.stats._
 import org.apache.flink.table.plan.util.{ConstantRankRange, VariableRankRange}
-import org.apache.flink.table.util.{ColumnIntervalUtil, FlinkRelMdUtil}
 import org.apache.flink.table.util.FlinkRelOptUtil._
+import org.apache.flink.table.util.{ColumnIntervalUtil, FlinkRelMdUtil}
+import org.apache.flink.util.Preconditions
 
 import scala.collection.JavaConversions._
 
@@ -576,22 +576,6 @@ object FlinkRelMdColumnInterval extends MetadataHandler[ColumnInterval] {
       val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
       fmq.getColumnInterval(expand.getInput, index)
     }
-  }
-
-  /**
-    * Gets intervals of the given column of SegmentTop.
-    *
-    * @param segmentTop  [[SegmentTop]] instance to analyze
-    * @param mq          RelMetadataQuery instance
-    * @param index       the index of the given column
-    * @return interval of the given column in batch SegmentTop
-    */
-  def getColumnInterval(
-    segmentTop: SegmentTop,
-    mq: RelMetadataQuery,
-    index: Int): ValueInterval = {
-    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
-    fmq.getColumnInterval(segmentTop.getInput, index)
   }
 
   /**

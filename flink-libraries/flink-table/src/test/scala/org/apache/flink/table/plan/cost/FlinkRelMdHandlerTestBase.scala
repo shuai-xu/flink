@@ -363,36 +363,6 @@ class FlinkRelMdHandlerTestBase {
   }
 
   // equivalent SQL is
-  // select * from student where student.score =
-  // select max(score) from student tt and tt.age = student.age
-  protected lazy val segmentTopMax: RelNode = {
-    val sort = relBuilder
-      .scan("student")
-      .sort(relBuilder.desc(relBuilder.field("score"))).build()
-    val groupKeys = ImmutableBitSet.of(2) // group by age which has index 2.
-    val fieldCollation = new RelFieldCollation(1, Direction.DESCENDING)
-    val withTies = ImmutableBitSet.of(1, 2)
-    relBuilder.push(sort)
-      .asInstanceOf[FlinkRelBuilder]
-      .segmentTop(groupKeys, fieldCollation, withTies).build()
-  }
-
-  // equivalent SQL is
-  // select * from student where student.score =
-  // select min(score) from student tt and tt.age = student.age
-  protected lazy val segmentTopMin: RelNode = {
-    val sort = relBuilder
-      .scan("student")
-      .sort(relBuilder.field("score")).build()
-    val groupKeys = ImmutableBitSet.of(2) // group by age which has index 2.
-    val fieldCollation = new RelFieldCollation(1, Direction.ASCENDING)
-    val withTies = ImmutableBitSet.of(1, 2)
-    relBuilder.push(sort)
-      .asInstanceOf[FlinkRelBuilder]
-      .segmentTop(groupKeys, fieldCollation, withTies).build()
-  }
-
-  // equivalent SQL is
   // select count(id) as c from t1 group by score
   protected lazy val (
     unSplittableLocalAgg,
@@ -1346,13 +1316,6 @@ class FlinkRelMdHandlerTestBase {
   protected lazy val flinkLogicalRank: FlinkLogicalRank = {
     val scan = relBuilder.scan("student").build()
 
-    val typeBuilder = rexBuilder.getTypeFactory.builder()
-    scan.getRowType.getFieldList.foreach(typeBuilder.add)
-    typeBuilder.add("rk", typeFactory.createTypeFromTypeInfo(
-      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
-    typeBuilder.build()
-    val rowTypeWithRankFunColumn = typeBuilder.build()
-
     new FlinkLogicalRank(
       cluster,
       logicalTraits,
@@ -1361,7 +1324,6 @@ class FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(2),
       RelCollations.of(1),
       ConstantRankRange(1, 5),
-      rowTypeWithRankFunColumn,
       outputRankFunColumn = true
     )
   }
@@ -1373,13 +1335,6 @@ class FlinkRelMdHandlerTestBase {
   protected lazy val flinkLogicalRankWithVariableRankRange: FlinkLogicalRank = {
     val scan = relBuilder.scan("student").build()
 
-    val typeBuilder = rexBuilder.getTypeFactory.builder()
-    scan.getRowType.getFieldList.foreach(typeBuilder.add)
-    typeBuilder.add("rk", typeFactory.createTypeFromTypeInfo(
-      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
-    typeBuilder.build()
-    val rowTypeWithRankFunColumn = typeBuilder.build()
-
     new FlinkLogicalRank(
       cluster,
       logicalTraits,
@@ -1388,7 +1343,6 @@ class FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(2),
       RelCollations.of(1),
       VariableRankRange(3),
-      rowTypeWithRankFunColumn,
       outputRankFunColumn = true
     )
   }
@@ -1405,7 +1359,6 @@ class FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(),
       RelCollations.of(1),
       ConstantRankRange(1, 3),
-      scan.getRowType,
       outputRankFunColumn = false
     )
   }
@@ -1417,13 +1370,6 @@ class FlinkRelMdHandlerTestBase {
   // ) t where rn <= 3
   protected lazy val flinkLogicalRowNumberWithOutput: FlinkLogicalRank = {
     val scan = relBuilder.scan("student").build()
-
-    val typeBuilder = rexBuilder.getTypeFactory.builder()
-    scan.getRowType.getFieldList.foreach(typeBuilder.add)
-    typeBuilder.add("rn", typeFactory.createTypeFromTypeInfo(
-      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
-    typeBuilder.build()
-    val rowTypeWithRankFunColumn = typeBuilder.build()
     new FlinkLogicalRank(
       cluster,
       logicalTraits,
@@ -1432,7 +1378,6 @@ class FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(2),
       RelCollations.of(1),
       ConstantRankRange(1, 3),
-      rowTypeWithRankFunColumn,
       outputRankFunColumn = true
     )
   }
@@ -1451,17 +1396,9 @@ class FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(2),
       RelCollations.of(1),
       ConstantRankRange(1, 5),
-      scan.getRowType,
       outputRankFunColumn = false,
       isGlobal = false
     )
-
-    val typeBuilder = rexBuilder.getTypeFactory.builder()
-    scan.getRowType.getFieldList.foreach(typeBuilder.add)
-    typeBuilder.add("rk", typeFactory.createTypeFromTypeInfo(
-      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
-    typeBuilder.build()
-    val rowTypeWithRankFunColumn = typeBuilder.build()
 
     val globalBatchExecRank = new BatchExecRank(
       cluster,
@@ -1471,7 +1408,6 @@ class FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(2),
       RelCollations.of(1),
       ConstantRankRange(3, 5),
-      rowTypeWithRankFunColumn,
       outputRankFunColumn = true,
       isGlobal = true
     )

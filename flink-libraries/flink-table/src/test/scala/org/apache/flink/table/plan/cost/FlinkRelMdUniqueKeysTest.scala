@@ -80,22 +80,6 @@ class FlinkRelMdUniqueKeysTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetUniqueKeysOnSegmentTop(): Unit = {
-    assertEquals(ImmutableBitSet.of(0),
-      mq.getUniqueColumns(segmentTopMax, ImmutableBitSet.of(0, 1)))
-    assertEquals(ImmutableBitSet.of(1, 2),
-      mq.getUniqueColumns(segmentTopMax, ImmutableBitSet.of(1, 2)))
-    assertEquals(ImmutableBitSet.of(0),
-      mq.getUniqueColumns(segmentTopMax, ImmutableBitSet.of(0, 1, 2)))
-    assertEquals(ImmutableBitSet.of(0),
-      mq.getUniqueColumns(segmentTopMin, ImmutableBitSet.of(0, 1)))
-    assertEquals(ImmutableBitSet.of(1, 2),
-      mq.getUniqueColumns(segmentTopMin, ImmutableBitSet.of(1, 2)))
-    assertEquals(ImmutableBitSet.of(0),
-      mq.getUniqueColumns(segmentTopMin, ImmutableBitSet.of(0, 1, 2)))
-  }
-
-  @Test
   def testGetUniqueKeysOnJoin(): Unit = {
     // left is t3, right student, join condition is t3.id = student.id
     val innerJoin = relBuilder.scan("t3").scan("student").join(JoinRelType.INNER,

@@ -27,7 +27,7 @@ import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexInputRef, RexLiteral}
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet, NumberUtil, Util}
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.util.FlinkRelMdUtil
@@ -61,11 +61,6 @@ object FlinkRelMdPopulationSize extends MetadataHandler[BuiltInMetadata.Populati
 
   def getPopulationSize(
       rel: Filter,
-      mq: RelMetadataQuery,
-      groupKey: ImmutableBitSet): Double = mq.getPopulationSize(rel.getInput, groupKey)
-
-  def getPopulationSize(
-      rel: SegmentTop,
       mq: RelMetadataQuery,
       groupKey: ImmutableBitSet): Double = mq.getPopulationSize(rel.getInput, groupKey)
 

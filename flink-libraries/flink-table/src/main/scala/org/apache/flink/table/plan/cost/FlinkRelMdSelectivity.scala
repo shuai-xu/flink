@@ -23,15 +23,15 @@ import java.util
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
+import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexNode, RexUtil}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet, Util}
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.util.FlinkRelMdUtil
 
 import scala.collection.JavaConversions._
@@ -48,9 +48,6 @@ object FlinkRelMdSelectivity extends MetadataHandler[BuiltInMetadata.Selectivity
     estimateSelectivity(rel, mq, predicate)
 
   def getSelectivity(rel: Exchange, mq: RelMetadataQuery, predicate: RexNode): Double =
-    mq.getSelectivity(rel.getInput, predicate)
-
-  def getSelectivity(rel: SegmentTop, mq: RelMetadataQuery, predicate: RexNode): Double =
     mq.getSelectivity(rel.getInput, predicate)
 
   def getSelectivity(rel: Rank, mq: RelMetadataQuery, predicate: RexNode): Double = {

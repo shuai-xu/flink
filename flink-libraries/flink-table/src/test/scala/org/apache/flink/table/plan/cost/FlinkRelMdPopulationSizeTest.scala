@@ -173,23 +173,6 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetPopulationSizeOnSegmentTop(): Unit = {
-    assertEquals(50D, mq.getPopulationSize(segmentTopMin, ImmutableBitSet.of(0)))
-    assertEquals(7D, mq.getPopulationSize(segmentTopMin, ImmutableBitSet.of(1)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMin, ImmutableBitSet.of(0, 1)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMin, ImmutableBitSet.of(0, 2)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMin, ImmutableBitSet.of(1, 2)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMin, ImmutableBitSet.of(0, 1, 2)))
-
-    assertEquals(50D, mq.getPopulationSize(segmentTopMax, ImmutableBitSet.of(0)))
-    assertEquals(7D, mq.getPopulationSize(segmentTopMax, ImmutableBitSet.of(1)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMax, ImmutableBitSet.of(0, 1)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMax, ImmutableBitSet.of(0, 2)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMax, ImmutableBitSet.of(1, 2)))
-    assertEquals(50D, mq.getPopulationSize(segmentTopMax, ImmutableBitSet.of(0, 1, 2)))
-  }
-
-  @Test
   def testGetPopulationSizeOnFlinkLogicalWindowAggregate(): Unit = {
     assertEquals(30D, mq.getPopulationSize(flinkLogicalWindowAgg, ImmutableBitSet.of(0)))
     assertEquals(5D, mq.getPopulationSize(flinkLogicalWindowAgg, ImmutableBitSet.of(1)))

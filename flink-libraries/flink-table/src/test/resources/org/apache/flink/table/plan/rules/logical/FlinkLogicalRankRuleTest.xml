@@ -38,7 +38,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0, w1$o0], where=[<(w0$o0, 10)])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0 AS rk1, w0$o0 AS rk2])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[ConstantRankRange(1,9)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -47,7 +47,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0 AS rk1, w0$o0 AS rk2])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, 2 AS rk])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[ConstantRankRange(2,2)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=2, rankEnd=2], select=[a, b, c])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -56,7 +56,7 @@ FlinkLogicalCalc(select=[a, b, 2 AS rk])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[ConstantRankRange(3,9223372036854775807)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=3], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -65,7 +65,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b,c], orderBy=[a ASC], rankRange=[ConstantRankRange(-1,2)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b,c], orderBy=[a ASC], rankRange=[rankStart=-1, rankEnd=2], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -74,7 +74,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(a, 10)])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[ConstantRankRange(1,2)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=2], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -83,7 +83,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(a, 10)])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[a ASC], rankRange=[ConstantRankRange(1,2)])
+  FlinkLogicalRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=2], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -92,7 +92,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[c ASC], rankRange=[VariableRankRange(0)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[c ASC], rankRange=[rankEnd=a], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -110,7 +110,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(w0$o0, a)])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(b, 5)])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[c ASC], rankRange=[VariableRankRange(0)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[c ASC], rankRange=[rankEnd=a], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -119,7 +119,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0], where=[>(b, 5)])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[a], orderBy=[c ASC], rankRange=[VariableRankRange(1)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[a], orderBy=[c ASC], rankRange=[rankEnd=b], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -128,7 +128,7 @@ FlinkLogicalCalc(select=[a, b, w0$o0])
     <Resource name="plan">
       <![CDATA[
 FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[], orderBy=[a ASC], rankRange=[ConstantRankRange(1,9)])
+  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[], orderBy=[a ASC], rankRange=[rankStart=1, rankEnd=9], select=[a, b, c, rk])
     FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

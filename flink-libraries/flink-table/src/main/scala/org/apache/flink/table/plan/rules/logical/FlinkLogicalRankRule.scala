@@ -129,7 +129,6 @@ class FlinkLogicalRankRule
       group.keys,
       group.orderKeys,
       rankRange.get,
-      rankRowType,
       outputRankFunColumn)
 
     if (RexUtil.isIdentity(exprList, rankRowType) && remainingPreds.isEmpty) {

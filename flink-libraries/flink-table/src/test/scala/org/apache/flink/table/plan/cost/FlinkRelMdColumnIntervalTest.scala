@@ -337,16 +337,6 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetColumnIntervalOnSegmentTop(): Unit = {
-    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(segmentTopMax, 0))
-    assertEquals(ValueInterval(0D, 5.1D), mq.getColumnInterval(segmentTopMax, 1))
-    assertEquals(ValueInterval(0, 46), mq.getColumnInterval(segmentTopMax, 2))
-    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(segmentTopMin, 0))
-    assertEquals(ValueInterval(0D, 5.1D), mq.getColumnInterval(segmentTopMin, 1))
-    assertEquals(ValueInterval(0, 46), mq.getColumnInterval(segmentTopMin, 2))
-  }
-
-  @Test
   def testGetColumnIntervalOnUnion(): Unit = {
     val ts1 = relBuilder.scan("t1").build()
     val ts2 = relBuilder.scan("t2").build()
@@ -444,6 +434,8 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
   @Test
   def testGetColumnIntervalOnRank(): Unit = {
     assertEquals(ValueInterval(0, 10), mq.getColumnInterval(flinkLogicalRank, 0))
+    assertEquals(ValueInterval(0D, 5.1D), mq.getColumnInterval(flinkLogicalRank, 1))
+    assertEquals(ValueInterval(0, 46), mq.getColumnInterval(flinkLogicalRank, 2))
     assertEquals(ValueInterval(1, 5), mq.getColumnInterval(flinkLogicalRank, 4))
 
     assertEquals(ValueInterval(161.0D, 172.1D),

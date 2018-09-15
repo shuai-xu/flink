@@ -30,7 +30,7 @@ import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Ignore, Test}
 import org.scalatest.prop.PropertyChecks
 
-class SegmentTopTransformRuleTest extends TableTestBatchExecBase with PropertyChecks {
+class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks {
   private val util = nullableBatchExecTestUtil(false)
   private val tEnv = util.tableEnv
 

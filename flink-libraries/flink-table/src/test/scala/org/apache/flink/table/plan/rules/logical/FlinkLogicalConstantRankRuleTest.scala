@@ -43,6 +43,7 @@ class FlinkLogicalConstantRankRuleTest extends TableTestBatchExecBase {
     }
 
     util.addTable[(Int, Long, String)]("x", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("y", 'a, 'b, 'rk)
   }
 
   @Test
@@ -161,6 +162,13 @@ class FlinkLogicalConstantRankRuleTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
+  @Test
+  def testDuplicateRankFunctionColumnName(): Unit = {
+    val sqlQuery = "SELECT * FROM (" +
+      "SELECT a, b, RANK() OVER (PARTITION BY b ORDER BY a) rk FROM y) t " +
+      "WHERE rk < 10"
+    util.verifyPlan(sqlQuery)
+  }
 }
 
 

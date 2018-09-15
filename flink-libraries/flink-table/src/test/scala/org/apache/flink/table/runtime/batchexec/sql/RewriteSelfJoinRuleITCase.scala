@@ -26,7 +26,7 @@ import org.apache.flink.table.runtime.batch.sql.TestData.{nullablesOfPersonData,
 import org.junit.{Before, Ignore, Test}
 import org.scalatest.prop.PropertyChecks
 
-class SegmentTopTransformRuleITCase extends QueryTest with PropertyChecks {
+class RewriteSelfJoinRuleITCase extends QueryTest with PropertyChecks {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)

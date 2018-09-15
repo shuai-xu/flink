@@ -18,29 +18,29 @@
 
 package org.apache.flink.table.plan.cost
 
-import java.util
 import java.lang.{Boolean => JBool}
+import java.util
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{JoinRelType, _}
 import org.apache.calcite.rel.logical.LogicalTemporalTableScan
 import org.apache.calcite.rel.metadata._
+import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{Bug, BuiltInMethod, ImmutableBitSet, Util}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.logical._
-import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
+import org.apache.flink.table.plan.nodes.logical._
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey, TableSource}
 import org.apache.flink.table.util.FlinkRelMdUtil
@@ -101,11 +101,6 @@ object FlinkRelMdUniqueKeys extends MetadataHandler[BuiltInMetadata.UniqueKeys] 
       rel: Filter,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = mq.getUniqueKeys(rel.getInput, ignoreNulls)
-
-  def getUniqueKeys(
-    rel: SegmentTop,
-    mq: RelMetadataQuery,
-    ignoreNulls: Boolean): util.Set[ImmutableBitSet] = mq.getUniqueKeys(rel.getInput, ignoreNulls)
 
   def getUniqueKeys(
       rel: Sort,

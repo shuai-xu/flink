@@ -68,6 +68,23 @@ object FlinkRelOptUtil {
   }
 
   /**
+    * Get unique field name based on existed `allFieldNames` collection.
+    * NOTES: the new unique field name will be added to existed `allFieldNames` collection.
+    */
+  def buildUniqueFieldName(
+      allFieldNames: mutable.Set[String],
+      toAddFieldName: String): String = {
+    var name: String = toAddFieldName
+    var i: Int = 0
+    while (allFieldNames.contains(name)) {
+      name = toAddFieldName + "_" + i
+      i += 1
+    }
+    allFieldNames.add(name)
+    name
+  }
+
+  /**
     * Check whether AUXILIARY_GROUP aggCalls is in the front of the given agg's aggCallList,
     * and whether aggCallList contain AUXILIARY_GROUP when the given agg's groupSet is empty
     * or the indicator is true.

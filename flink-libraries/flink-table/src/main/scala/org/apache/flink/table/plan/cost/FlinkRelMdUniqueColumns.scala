@@ -29,9 +29,9 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.{Bug, ImmutableBitSet, Util}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.cost.FlinkMetadata.UniqueColumns
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.util.FlinkRelMdUtil
 import org.apache.flink.table.util.FlinkRelMdUtil.splitColumnsIntoLeftAndRight
 import org.apache.flink.table.util.FlinkRelOptUtil.checkAndSplitAggCalls
@@ -91,14 +91,6 @@ object FlinkRelMdUniqueColumns extends MetadataHandler[UniqueColumns] {
     } else {
       inputUniqueCols
     }
-  }
-
-  def getUniqueColumns(
-    segmentTop: SegmentTop,
-    mq: RelMetadataQuery,
-    columns: ImmutableBitSet): ImmutableBitSet = {
-    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
-    fmq.getUniqueColumns(segmentTop.getInput, columns)
   }
 
   def getUniqueColumns(

@@ -176,18 +176,13 @@ class DefaultResultPartitionCalculator(
 
   override def visit(sortMergeJoin: BatchExecSortMergeJoinBase): Unit = calculate(sortMergeJoin)
 
-  override def visit(batchExec: BatchExecRel[_]): Unit = {
-    println(batchExec.getClass)
-    throw new TableException("could not reach here.")
-  }
-
   override def visit(joinTable: BatchExecJoinTable): Unit = calculate(joinTable)
-
-  override def visit(segmentTop: BatchExecSegmentTop): Unit = {
-    calculate(segmentTop)
-  }
 
   override def visit(rank: BatchExecRank): Unit = {
     calculate(rank)
+  }
+
+  override def visit(batchExec: BatchExecRel[_]): Unit = {
+    throw new TableException(s"could not reach here: ${batchExec.getClass}")
   }
 }
