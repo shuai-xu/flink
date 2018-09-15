@@ -33,7 +33,7 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{BuiltInMethod, ImmutableNullableList, NlsString, Util}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.util.FlinkRelOptUtil.checkAndSplitAggCalls
@@ -249,6 +249,17 @@ object FlinkRelMdSize extends MetadataHandler[BuiltInMetadata.Size] {
 
   def averageColumnSizes(rel: SegmentTop, mq: RelMetadataQuery): JList[Double] =
     mq.getAverageColumnSizes(rel.getInput)
+
+  def averageColumnSizes(rel: Rank, mq: RelMetadataQuery): JList[Double] = {
+    val inputColumnSizes = mq.getAverageColumnSizes(rel.getInput)
+    if (rel.getRowType.getFieldCount != rel.getInput.getRowType.getFieldCount) {
+      // if outputs rank function value, rank function column is the last one
+      val rankFunColumnSize = averageTypeValueSize(rel.getRowType.getFieldList.last.getType)
+      inputColumnSizes ++ List(rankFunColumnSize)
+    } else {
+      inputColumnSizes
+    }
+  }
 
   def averageColumnSizes(rel: Filter, mq: RelMetadataQuery): JList[Double] =
     mq.getAverageColumnSizes(rel.getInput)

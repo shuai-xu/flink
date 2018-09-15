@@ -29,7 +29,7 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalSort}
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.ConstantRankLimit
+import org.apache.flink.table.plan.util.ConstantRankRange
 import org.apache.flink.table.runtime.aggregate.SortUtil
 
 object StreamExecRankRules {
@@ -44,7 +44,7 @@ object StreamExecRankRules {
       "StreamExecRankFromSortRule") {
 
     override def matches(call: RelOptRuleCall): Boolean = {
-      val sort: FlinkLogicalSort = call.rel(0).asInstanceOf[FlinkLogicalSort]
+      val sort: FlinkLogicalSort = call.rel(0)
       val sortCollation = sort.collation
 
       if (sortCollation.getFieldCollations.isEmpty) {
@@ -55,12 +55,13 @@ object StreamExecRankRules {
     }
 
     override def convert(rel: RelNode): RelNode = {
-      val sort: FlinkLogicalSort = rel.asInstanceOf[FlinkLogicalSort]
+      val sort = rel.asInstanceOf[FlinkLogicalSort]
 
       val requiredDistribution = FlinkRelDistribution.SINGLETON
 
-      val requiredTraitSet = sort.getInput.getTraitSet.replace(
-        FlinkConventions.STREAMEXEC).replace(requiredDistribution)
+      val requiredTraitSet = sort.getInput.getTraitSet
+        .replace(FlinkConventions.STREAMEXEC)
+        .replace(requiredDistribution)
       val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
 
       val convInput: RelNode = RelOptRule.convert(sort.getInput(0), requiredTraitSet)
@@ -88,8 +89,8 @@ object StreamExecRankRules {
         SqlStdOperatorTable.ROW_NUMBER,
         Array(),
         sort.collation,
-        ConstantRankLimit(rankStart, rankEnd),
-        hasRowNumber = false)
+        ConstantRankRange(rankStart, rankEnd),
+        outputRankFunColumn = false)
     }
   }
 
@@ -101,15 +102,16 @@ object StreamExecRankRules {
       "StreamExecRankFromRankRule") {
 
     override def convert(rel: RelNode): RelNode = {
-      val rank: FlinkLogicalRank = rel.asInstanceOf[FlinkLogicalRank]
+      val rank = rel.asInstanceOf[FlinkLogicalRank]
 
       val requiredDistribution = if (!rank.partitionKey.isEmpty) {
         FlinkRelDistribution.hash(rank.partitionKey.asList())
       } else {
         FlinkRelDistribution.SINGLETON
       }
-      val requiredTraitSet = rank.getInput.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-                             .replace(requiredDistribution)
+      val requiredTraitSet = rank.getInput.getTraitSet
+        .replace(FlinkConventions.STREAMEXEC)
+        .replace(requiredDistribution)
       val providedTraitSet = rank.getTraitSet.replace(FlinkConventions.STREAMEXEC)
       val convInput: RelNode = RelOptRule.convert(rank.getInput, requiredTraitSet)
       val inputRowType = convInput.asInstanceOf[RelSubset].getOriginal.getRowType
@@ -123,8 +125,9 @@ object StreamExecRankRules {
         rank.rankFunction,
         rank.partitionKey.toArray,
         rank.sortCollation,
-        rank.rankLimit,
-        rank.hasRowNumber)
+        rank.rankRange,
+        rank.outputRankFunColumn)
     }
   }
+
 }

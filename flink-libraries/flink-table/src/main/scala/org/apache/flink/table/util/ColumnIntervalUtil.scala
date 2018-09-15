@@ -212,4 +212,38 @@ object ColumnIntervalUtil {
     case _ => None
   }
 
+  def convertStringToNumber(number: String, clazz: Class[_]): Option[Comparable[_]] = {
+    if (clazz == classOf[java.lang.Byte]) {
+      Some(java.lang.Byte.valueOf(number))
+    } else if (clazz == classOf[java.lang.Short]) {
+      Some(java.lang.Short.valueOf(number))
+    } else if (clazz == classOf[java.lang.Integer]) {
+      Some(java.lang.Integer.valueOf(number))
+    } else if (clazz == classOf[java.lang.Float]) {
+      Some(java.lang.Float.valueOf(number))
+    } else if (clazz == classOf[java.lang.Long]) {
+      Some(java.lang.Long.valueOf(number))
+    } else if (clazz == classOf[java.lang.Double]) {
+      Some(java.lang.Double.valueOf(number))
+    } else if (clazz == classOf[java.math.BigDecimal]) {
+      Some(new java.math.BigDecimal(number))
+    } else if (clazz == classOf[java.math.BigInteger]) {
+      Some(new java.math.BigInteger(number))
+    } else if (clazz == classOf[scala.Byte]) {
+      Some(number.toByte)
+    } else if (clazz == classOf[scala.Short]) {
+      Some(number.toShort)
+    } else if (clazz == classOf[scala.Int]) {
+      Some(number.toInt)
+    } else if (clazz == classOf[scala.Long]) {
+      Some(number.toLong)
+    } else if (clazz == classOf[scala.Float]) {
+      Some(number.toFloat)
+    } else if (clazz == classOf[scala.Double]) {
+      Some(number.toDouble)
+    } else {
+      None
+    }
+  }
+
 }

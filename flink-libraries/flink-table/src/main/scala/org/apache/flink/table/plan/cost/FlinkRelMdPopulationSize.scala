@@ -25,11 +25,11 @@ import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexInputRef, RexLiteral}
-import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet, Util}
+import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet, NumberUtil, Util}
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.util.FlinkRelMdUtil
 
 import scala.collection.JavaConversions._
@@ -65,9 +65,38 @@ object FlinkRelMdPopulationSize extends MetadataHandler[BuiltInMetadata.Populati
       groupKey: ImmutableBitSet): Double = mq.getPopulationSize(rel.getInput, groupKey)
 
   def getPopulationSize(
-    rel: SegmentTop,
-    mq: RelMetadataQuery,
-    groupKey: ImmutableBitSet): Double = mq.getPopulationSize(rel.getInput, groupKey)
+      rel: SegmentTop,
+      mq: RelMetadataQuery,
+      groupKey: ImmutableBitSet): Double = mq.getPopulationSize(rel.getInput, groupKey)
+
+  def getPopulationSize(
+      rel: Rank,
+      mq: RelMetadataQuery,
+      groupKey: ImmutableBitSet): Double = {
+    val rankFunColumnIndex = FlinkRelMdUtil.getRankFunColumnIndex(rel)
+    if (rankFunColumnIndex < 0 || !groupKey.toArray.contains(rankFunColumnIndex)) {
+      mq.getPopulationSize(rel.getInput, groupKey)
+    } else {
+      val rankFunNdv: Double = if (rankFunColumnIndex > 0 &&
+        groupKey.toArray.contains(rankFunColumnIndex)) {
+        FlinkRelMdUtil.getRankRangeNdv(rel.rankRange)
+      } else {
+        1D
+      }
+      val newGroupKey = groupKey.clear(rankFunColumnIndex)
+      val inputPopulationSize: Double = if (newGroupKey.isEmpty) {
+        1D
+      } else {
+        val size = mq.getPopulationSize(rel.getInput, newGroupKey)
+        if (size == null) {
+          return null
+        }
+        size
+      }
+      val populationSize = inputPopulationSize * rankFunNdv
+      NumberUtil.min(populationSize, mq.getRowCount(rel))
+    }
+  }
 
   def getPopulationSize(
       rel: Project,

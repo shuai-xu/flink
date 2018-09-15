@@ -44,19 +44,20 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{ProctimeAttribute, RowtimeAttribute, WindowReference, WindowStart}
 import org.apache.flink.table.codegen.expr
-import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
+import org.apache.flink.table.expressions.{ProctimeAttribute, RowtimeAttribute, WindowReference, WindowStart}
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.logical.{LogicalWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.logical._
+import org.apache.flink.table.plan.nodes.physical.batch._
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRank, StreamExecTableSourceScan}
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.plan.util.AggregateUtil
+import org.apache.flink.table.plan.schema.{BaseRowSchema, FlinkRelOptTable}
+import org.apache.flink.table.plan.util.{AggregateUtil, ConstantRankRange, VariableRankRange}
 import org.apache.flink.table.types.DataTypes
 import org.junit.{Before, BeforeClass}
 
@@ -104,6 +105,14 @@ class FlinkRelMdHandlerTestBase {
       catalogReader.getTable(tableNames).asInstanceOf[FlinkRelOptTable])
   }
 
+  protected def createTableSourceScanStreamExec(
+      tableNames: JList[String]): StreamExecTableSourceScan = {
+    new StreamExecTableSourceScan(
+      cluster,
+      batchExecTraits,
+      catalogReader.getTable(tableNames).asInstanceOf[FlinkRelOptTable])
+  }
+
   protected def createLogicalDimensionTableSourceScan(
       tableNames: JList[String]): FlinkLogicalDimensionTableSourceScan = {
     val table = catalogReader.getTable(tableNames).asInstanceOf[FlinkRelOptTable]
@@ -145,182 +154,199 @@ class FlinkRelMdHandlerTestBase {
     createTableSourceScanBatchExec(ImmutableList.of("bigT1"))
 
   // dimension table source with calc
-  protected lazy val dimensionTableSourceScanWithCalc =
+  protected lazy val dimensionTableSourceScanWithCalc: FlinkLogicalDimensionTableSourceScan =
     createLogicalDimensionTableSourceScan(ImmutableList.of("t1"))
 
   // SELECT * FROM t3 INTERSECT ALL SELECT id, score FROM student
-  protected lazy val intersectAll = relBuilder.scan("t3")
+  protected lazy val intersectAll: RelNode = relBuilder.scan("t3")
     .scan("student").project(relBuilder.field(0), relBuilder.field(1))
     .intersect(true).build()
 
   // SELECT * FROM t3 INTERSECT SELECT id, score FROM student
-  protected lazy val intersect = relBuilder.scan("t3")
+  protected lazy val intersect: RelNode = relBuilder.scan("t3")
     .scan("student").project(relBuilder.field(0), relBuilder.field(1))
     .intersect(false).build()
 
   // select * from t3 join student on t3.id = student.id
-  protected lazy val innerJoin = relBuilder.scan("t3").scan("student").join(JoinRelType.INNER,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val innerJoin: RelNode = relBuilder.scan("t3").scan("student")
+    .join(JoinRelType.INNER,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t2 join t1 on t2.id = t1.id
-  protected lazy val innerJoinOnNoneUniqueKeys = relBuilder.scan("t2").scan("t1")
+  protected lazy val innerJoinOnNoneUniqueKeys: RelNode = relBuilder.scan("t2").scan("t1")
     .join(JoinRelType.INNER,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t2 join student on t2.id = student.id
-  protected lazy val innerJoinOnOneSideUniqueKeys = relBuilder.scan("t2").scan("student")
+  protected lazy val innerJoinOnOneSideUniqueKeys: RelNode = relBuilder.scan("t2").scan("student")
     .join(JoinRelType.INNER,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 join student on t3.score = student.score
-  protected lazy val innerJoinOnScore = relBuilder.scan("t3").scan("student")
+  protected lazy val innerJoinOnScore: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.INNER,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 3)))
     .build
 
   // select * from t3 join t4 on t3.id = t4.id and t3.score > t4.score
-  protected lazy val innerJoinWithNonEquiCond = relBuilder.scan("t3").scan("t4")
+  protected lazy val innerJoinWithNonEquiCond: RelNode = relBuilder.scan("t3").scan("t4")
     .join(JoinRelType.INNER, relBuilder.call(AND,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)),
       relBuilder.call(GREATER_THAN, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 1)))
     ).build
 
   // select * from t3 join student on t3.id > student.id
-  protected lazy val innerJoinWithoutEquiCond = relBuilder.scan("t3").scan("student")
+  protected lazy val innerJoinWithoutEquiCond: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.INNER,
-      relBuilder.call(GREATER_THAN, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+      relBuilder.call(GREATER_THAN, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t5 join t6 on t5.id = t6.id
-  protected lazy val innerJoinDisjoint = relBuilder.scan("t5").scan("t6").join(JoinRelType.INNER,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val innerJoinDisjoint: RelNode = relBuilder.scan("t5").scan("t6")
+    .join(JoinRelType.INNER,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t3 full join student on t3.id = student.id
-  protected lazy val fullJoin = relBuilder.scan("t3").scan("student").join(JoinRelType.FULL,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val fullJoin: RelNode = relBuilder.scan("t3").scan("student").
+    join(JoinRelType.FULL,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t2 full join student on t2.id = student.id
-  protected lazy val fullJoinOnOneSideUniqueKeys = relBuilder.scan("t2").scan("student")
+  protected lazy val fullJoinOnOneSideUniqueKeys: RelNode = relBuilder.scan("t2").scan("student")
     .join(JoinRelType.FULL,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 full join student on t3.score = student.score
-  protected lazy val fullJoinOnScore = relBuilder.scan("t3").scan("student")
+  protected lazy val fullJoinOnScore: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.FULL,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 3)))
     .build
 
   // select * from t2 full join t1 on t2.id = t1.id
-  protected lazy val fullJoinOnNoneUniqueKeys = relBuilder.scan("t2").scan("t1")
+  protected lazy val fullJoinOnNoneUniqueKeys: RelNode = relBuilder.scan("t2").scan("t1")
     .join(JoinRelType.FULL,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 full join student
-  protected lazy val fullJoinWithoutEquiCond = relBuilder.scan("t3").scan("student")
+  protected lazy val fullJoinWithoutEquiCond: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.FULL, relBuilder.literal(true)).build
 
   // select * from t3 full join t4 on t3.id = t4.id and t3.score > t4.score
-  protected lazy val fullJoinWithNonEquiCond = relBuilder.scan("t3").scan("t4")
+  protected lazy val fullJoinWithNonEquiCond: RelNode = relBuilder.scan("t3").scan("t4")
     .join(JoinRelType.FULL, relBuilder.call(AND,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)),
       relBuilder.call(GREATER_THAN, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 1)))
     ).build
 
   // select * from t5 full join t6 on t5.id = t6.id
-  protected lazy val fullJoinDisjoint = relBuilder.scan("t5").scan("t6").join(JoinRelType.FULL,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val fullJoinDisjoint: RelNode = relBuilder.scan("t5").scan("t6")
+    .join(JoinRelType.FULL,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t3 left join student on t3.id = student.id
-  protected lazy val leftJoin = relBuilder.scan("t3").scan("student").join(JoinRelType.LEFT,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val leftJoin: RelNode = relBuilder.scan("t3").scan("student")
+    .join(JoinRelType.LEFT,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t2 left join student on t2.id = student.id
-  protected lazy val leftJoinOnRHSUniqueKeys = relBuilder.scan("t2").scan("student")
+  protected lazy val leftJoinOnRHSUniqueKeys: RelNode = relBuilder.scan("t2").scan("student")
     .join(JoinRelType.LEFT,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from student left join t2 on student.id = t2.id
-  protected lazy val leftJoinOnLHSUniqueKeys = relBuilder.scan("student").scan("t2")
+  protected lazy val leftJoinOnLHSUniqueKeys: RelNode = relBuilder.scan("student").scan("t2")
     .join(JoinRelType.LEFT,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 left join student on t3.score = student.score
-  protected lazy val leftJoinOnScore = relBuilder.scan("t3").scan("student")
+  protected lazy val leftJoinOnScore: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.LEFT,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 3)))
     .build
 
   // select * from 2 left join t1 on t2.id = t1.id
-  protected lazy val leftJoinOnNoneUniqueKeys = relBuilder.scan("t2").scan("t1")
+  protected lazy val leftJoinOnNoneUniqueKeys: RelNode = relBuilder.scan("t2").scan("t1")
     .join(JoinRelType.LEFT,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 left join student on t3.id >= student.id
-  protected lazy val leftJoinWithoutEquiCond = relBuilder.scan("t3").scan("student")
+  protected lazy val leftJoinWithoutEquiCond: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.LEFT,
       relBuilder.call(GREATER_THAN_OR_EQUAL, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 left join student on t3.id = t4.id and t3.score < t4.score
-  protected lazy val leftJoinWithNonEquiCond = relBuilder.scan("t3").scan("t4")
+  protected lazy val leftJoinWithNonEquiCond: RelNode = relBuilder.scan("t3").scan("t4")
     .join(JoinRelType.LEFT, relBuilder.call(AND,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)),
       relBuilder.call(LESS_THAN, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 1))
     )).build
 
   // select * from t5 left join t6 on t5.id = t6.id
-  protected lazy val leftJoinDisjoint = relBuilder.scan("t5").scan("t6").join(JoinRelType.LEFT,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val leftJoinDisjoint: RelNode = relBuilder.scan("t5").scan("t6")
+    .join(JoinRelType.LEFT,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t3 left join student on t3.id = student.id
-  protected lazy val rightJoin = relBuilder.scan("t3").scan("student").join(JoinRelType.RIGHT,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val rightJoin: RelNode = relBuilder.scan("t3").scan("student")
+    .join(JoinRelType.RIGHT,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t2 right join student on t2.id = student.id
-  protected lazy val rightJoinOnRHSUniqueKeys = relBuilder.scan("t2").scan("student")
+  protected lazy val rightJoinOnRHSUniqueKeys: RelNode = relBuilder.scan("t2").scan("student")
     .join(JoinRelType.RIGHT,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from student right join t2 on student.id = t2.id
-  protected lazy val rightJoinOnLHSUniqueKeys = relBuilder.scan("student").scan("t2")
+  protected lazy val rightJoinOnLHSUniqueKeys: RelNode = relBuilder.scan("student").scan("t2")
     .join(JoinRelType.RIGHT,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 right join student on t3.id < student.id
-  protected lazy val rightJoinWithoutEquiCond = relBuilder.scan("t3").scan("student")
+  protected lazy val rightJoinWithoutEquiCond: RelNode = relBuilder.scan("t3").scan("student")
     .join(JoinRelType.RIGHT,
       relBuilder.call(LESS_THAN_OR_EQUAL, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
     .build
 
   // select * from t3 right join t4 on t3.id = t4.id and t3.score < t4.score
-  protected lazy val rightJoinWithNonEquiCond = relBuilder.scan("t3").scan("t4")
+  protected lazy val rightJoinWithNonEquiCond: RelNode = relBuilder.scan("t3").scan("t4")
     .join(JoinRelType.RIGHT, relBuilder.call(AND,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)),
       relBuilder.call(LESS_THAN_OR_EQUAL, relBuilder.field(2, 0, 1), relBuilder.field(2, 1, 1))))
     .build
 
   // select * from t5 right join t6 on t5.id = t6.id
-  protected lazy val rightJoinDisjoint = relBuilder.scan("t5").scan("t6").join(JoinRelType.RIGHT,
-    relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
+  protected lazy val rightJoinDisjoint: RelNode = relBuilder.scan("t5").scan("t6")
+    .join(JoinRelType.RIGHT,
+      relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0)))
+    .build
 
   // select * from t3 where id in (select id from student)
-  protected lazy val semiJoin = relBuilder.scan("t3").scan("student").semiJoin(
+  protected lazy val semiJoin: RelNode = relBuilder.scan("t3").scan("student").semiJoin(
     relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
 
   // select * from t3 where id not in (select id from student)
-  protected lazy val antiJoin = relBuilder.scan("t3").scan("student").antiJoin(
+  protected lazy val antiJoin: RelNode = relBuilder.scan("t3").scan("student").antiJoin(
     relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 0))).build
 
   // select id == 1, id, score, true, 2.1, 2 from t1
-  protected lazy val project = {
+  protected lazy val project: RelNode = {
     val ts = relBuilder.scan("t1").build()
     relBuilder.push(ts)
     // projects: $0==1, $0, $1, true, 2.1, 2
@@ -329,17 +355,17 @@ class FlinkRelMdHandlerTestBase {
       relBuilder.field(0),
       relBuilder.field(1),
       relBuilder.literal(true),
-      relBuilder.getRexBuilder.makeLiteral(
-        2.1D, typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false), true),
-      relBuilder.getRexBuilder.makeLiteral(
-        2L, typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false), true))
+      relBuilder.getRexBuilder.makeLiteral(2.1D, typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false), true),
+      relBuilder.getRexBuilder.makeLiteral(2L, typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = false), true))
     relBuilder.project(projects).build()
   }
 
   // equivalent SQL is
   // select * from student where student.score =
   // select max(score) from student tt and tt.age = student.age
-  protected lazy val segmentTopMax = {
+  protected lazy val segmentTopMax: RelNode = {
     val sort = relBuilder
       .scan("student")
       .sort(relBuilder.desc(relBuilder.field("score"))).build()
@@ -354,7 +380,7 @@ class FlinkRelMdHandlerTestBase {
   // equivalent SQL is
   // select * from student where student.score =
   // select min(score) from student tt and tt.age = student.age
-  protected lazy val segmentTopMin = {
+  protected lazy val segmentTopMin: RelNode = {
     val sort = relBuilder
       .scan("student")
       .sort(relBuilder.field("score")).build()
@@ -378,12 +404,14 @@ class FlinkRelMdHandlerTestBase {
       false,
       ImmutableList.of(Integer.valueOf(0)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, isNullable = false),
       "c")
     // local aggregate: count(id) as c group by score
     val rowTypeOfAgg = typeFactory.builder
-      .add("score", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, true))
-      .add("c", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false)).build()
+      .add("score", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = true))
+      .add("c", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = false)).build()
     val grouping = Array(1)
     val aggCallToAggFunction = Seq((aggCall, new expr.CountAggFunction))
     val localAgg = new BatchExecLocalHashAggregate(
@@ -443,13 +471,16 @@ class FlinkRelMdHandlerTestBase {
       false,
       ImmutableList.of(Integer.valueOf(1)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false),
       "s")
     // local aggregate: count(id) as s group by id, age
     val rowTypeOfAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("age", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("s", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false)).build()
+      .add("id", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("age", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("s", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false)).build()
     val grouping = Array(0)
     val auxGrouping = Array(2)
     val aggCallToAggFunction = Seq((aggCall, new expr.DoubleMaxAggFunction))
@@ -510,12 +541,13 @@ class FlinkRelMdHandlerTestBase {
       false,
       ImmutableList.of(Integer.valueOf(2)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, isNullable = false),
       "min_age")
     // local aggregate: min(age) as min_age group by id
     val rowTypeOfAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, true))
-      .add("min_age", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
+      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, isNullable = true))
+      .add("min_age", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
       .build()
     val aggCallToAggFunction = Seq((minAgeAggCall, new expr.IntMinAggFunction))
     val localAgg = new BatchExecLocalHashAggregate(
@@ -576,12 +608,15 @@ class FlinkRelMdHandlerTestBase {
       false,
       ImmutableList.of(Integer.valueOf(1)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false),
       "avg_score")
     val rowTypeOfLocalAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("sum$0", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
-      .add("count$1", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("id", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("sum$0", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
+      .add("count$1", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .build()
     val grouping = Array(0)
     val aggCallToAggFunction = Seq((avgCall, new expr.DoubleAvgAggFunction))
@@ -603,8 +638,10 @@ class FlinkRelMdHandlerTestBase {
       localAgg,
       FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
     val rowTypeOfglobalAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("avg_score", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, true))
+      .add("id", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("avg_score", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = true))
       .build()
     // global aggregate: avg(id) as c group by score
     val globalAgg = new BatchExecHashAggregate(
@@ -644,13 +681,17 @@ class FlinkRelMdHandlerTestBase {
       false,
       ImmutableList.of(Integer.valueOf(1)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false),
       "avg_score")
     val rowTypeOfLocalAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("age", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("sum$0", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
-      .add("count$1", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("id", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("age", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("sum$0", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
+      .add("count$1", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .build()
     val grouping = Array(0)
     val auxGrouping = Array(2)
@@ -673,9 +714,12 @@ class FlinkRelMdHandlerTestBase {
       localAggWithAuxGrouping,
       FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
     val rowTypeOfglobalAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("age", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("avg_score", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, true))
+      .add("id", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("age", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("avg_score", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = true))
       .build()
     // global aggregate: avg(score) as avg_score group by id, age
     val globalAggWithAuxGrouping = new BatchExecHashAggregate(
@@ -706,18 +750,21 @@ class FlinkRelMdHandlerTestBase {
 
   // equivalent SQL is
   // select avg(score) as c from bigT1 group by id
-  protected lazy val localAggOnBigTable = {
+  protected lazy val localAggOnBigTable: BatchExecLocalHashAggregate = {
     val avgCall = AggregateCall.create(
       SqlStdOperatorTable.AVG,
       false,
       ImmutableList.of(Integer.valueOf(1)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false),
       "avg_score")
     val rowTypeOfLocalAgg = typeFactory.builder
-      .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, false))
-      .add("sum$0", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
-      .add("count$1", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("id", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
+      .add("sum$0", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
+      .add("count$1", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .build()
     val grouping = Array(0)
     val aggCallToAggFunction = Seq((avgCall, new expr.DoubleAvgAggFunction))
@@ -746,7 +793,7 @@ class FlinkRelMdHandlerTestBase {
         ImmutableList.of(
           new Window.RexWinAggCall(
             new SqlRankFunction(SqlKind.RANK, ReturnTypes.INTEGER, true),
-            typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false),
+            typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, isNullable = false),
             ImmutableList.of[RexNode](),
             0,
             false
@@ -762,7 +809,7 @@ class FlinkRelMdHandlerTestBase {
         ImmutableList.of(
           new Window.RexWinAggCall(
             new SqlMinMaxAggFunction(SqlKind.MAX),
-            typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, true),
+            typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = true),
             ImmutableList.of[RexNode](),
             1,
             false
@@ -783,35 +830,34 @@ class FlinkRelMdHandlerTestBase {
       false,
       ImmutableList.of(),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, isNullable = false),
       "score_rank")
     val maxAggCall = AggregateCall.create(
       SqlStdOperatorTable.MAX,
       false,
       ImmutableList.of(Integer.valueOf(3)),
       -1,
-      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, true),
+      typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = true),
       "max_height"
     )
     val (rowTypeOfInnerWindowAgg, rowTypeOfOuterWindowAgg) = {
-      val innerRowTypebuilder = typeFactory.builder
+      val innerRowTypeBuilder = typeFactory.builder
       val outerRowTypeBuilder = typeFactory.builder
       scan.getRowType.getFieldList.foreach { f =>
-        innerRowTypebuilder.add(f.getName, f.getType)
+        innerRowTypeBuilder.add(f.getName, f.getType)
         outerRowTypeBuilder.add(f.getName, f.getType)
       }
       val typeOfRankAggCall = typeFactory.createTypeFromTypeInfo(
-        BasicTypeInfo.LONG_TYPE_INFO,
-        false)
-      innerRowTypebuilder.add("score_rank", typeOfRankAggCall)
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = false)
+      innerRowTypeBuilder.add("score_rank", typeOfRankAggCall)
       outerRowTypeBuilder.add("score_rank", typeOfRankAggCall)
       outerRowTypeBuilder.add("max_height", typeOfRankAggCall)
-      (innerRowTypebuilder.build(), outerRowTypeBuilder.build())
+      (innerRowTypeBuilder.build(), outerRowTypeBuilder.build())
     }
 
     val overWindow = new FlinkLogicalOverWindow(
       cluster,
-      batchExecTraits,
+      logicalTraits,
       scan,
       ImmutableList.of(),
       rowTypeOfOuterWindowAgg,
@@ -849,7 +895,7 @@ class FlinkRelMdHandlerTestBase {
     (overWindow, overWindowAggBatchExec)
   }
 
-  protected lazy val sortCollation = sort.asInstanceOf[Sort].getCollation
+  protected lazy val sortCollation: RelCollation = sort.asInstanceOf[Sort].getCollation
 
   // equivalent SQL is
   // select * from t1 order by score desc, id
@@ -876,7 +922,7 @@ class FlinkRelMdHandlerTestBase {
       "")
   }
 
-  protected lazy val sort = relBuilder.scan("t1").sortLimit(
+  protected lazy val sort: RelNode = relBuilder.scan("t1").sortLimit(
     1,
     10,
     relBuilder.desc(relBuilder.nullsFirst(relBuilder.field("id"))),
@@ -902,10 +948,10 @@ class FlinkRelMdHandlerTestBase {
     true)
 
   // union all t1 and t2
-  protected lazy val unionAll = relBuilder.scan("t1").scan("t2").union(true).build()
+  protected lazy val unionAll: RelNode = relBuilder.scan("t1").scan("t2").union(true).build()
 
   // union t1 and t2
-  protected lazy val union = relBuilder.scan("t1").scan("t2").union(false).build()
+  protected lazy val union: RelNode = relBuilder.scan("t1").scan("t2").union(false).build()
 
   // select id, age, count(score) from student group by id, age
   protected lazy val aggWithAuxGroup: Aggregate = {
@@ -1009,7 +1055,7 @@ class FlinkRelMdHandlerTestBase {
       tublingGroupWindow,
       namedPropertiesOfWindowAgg,
       ts.getCluster,
-      ts.getTraitSet,
+      logicalTraits,
       project,
       false,
       ImmutableBitSet.of(0, 1),
@@ -1047,7 +1093,7 @@ class FlinkRelMdHandlerTestBase {
       tublingGroupWindow,
       namedPropertiesOfWindowAgg,
       ts.getCluster,
-      ts.getTraitSet,
+      logicalTraits,
       project,
       false,
       ImmutableBitSet.of(0),
@@ -1081,12 +1127,14 @@ class FlinkRelMdHandlerTestBase {
       AggregateUtil.transformToBatchAggregateFunctions(
         flinkLogicalWindowAgg.getAggCallList, calc.getRowType)
     val aggCallToAggFunction = flinkLogicalWindowAgg.getAggCallList.zip(aggregates)
-    val tsType = typeFactory.createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, false)
+    val tsType = typeFactory.createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, isNullable = false)
     val localAggRowType = typeFactory.builder
-      .add("a", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, true))
-      .add("b", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, true))
+      .add("a", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, isNullable = true))
+      .add("b", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.STRING_TYPE_INFO, isNullable = true))
       .add("assignedWindow$", tsType)
-      .add("count$0", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("count$0", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .build()
     val localAgg = new BatchExecLocalHashWindowAggregate(
       tublingGroupWindow,
@@ -1177,12 +1225,14 @@ class FlinkRelMdHandlerTestBase {
     val (_, _, aggregates) =
       AggregateUtil.transformToBatchAggregateFunctions(aggCallsWithoutAuxGroup, calc.getRowType)
     val aggCallToAggFunction = aggCallsWithoutAuxGroup.zip(aggregates)
-    val tsType = typeFactory.createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, false)
+    val tsType = typeFactory.createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, isNullable = false)
     val localAggRowType = typeFactory.builder
-      .add("a", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("a", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .add("assignedWindow$", tsType)
-      .add("c", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, true))
-      .add("count$0", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("c", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.INT_TYPE_INFO, isNullable = true))
+      .add("count$0", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .build()
     val localAggWithAuxGrouping = new BatchExecLocalHashWindowAggregate(
       tublingGroupWindow,
@@ -1245,7 +1295,7 @@ class FlinkRelMdHandlerTestBase {
     (localAggWithAuxGrouping, globalAggWithAuxGrouping, globalAggWithoutLocalWithAuxGrouping)
   }
 
-  protected lazy val logicalWindowAggOnBigTimeTable = {
+  protected lazy val logicalWindowAggOnBigTimeTable: BatchExecLocalHashWindowAggregate = {
     val scanOfBigTemporalTable: BatchExecTableSourceScan =
       createTableSourceScanBatchExec(ImmutableList.of("bigTemporalTable"))
     relBuilder.push(scanOfBigTemporalTable)
@@ -1264,12 +1314,14 @@ class FlinkRelMdHandlerTestBase {
       AggregateUtil.transformToBatchAggregateFunctions(
         flinkLogicalWindowAgg.getAggCallList, calc.getRowType)
     val aggCallToAggFunction = flinkLogicalWindowAgg.getAggCallList.zip(aggregates)
-    val tsType = typeFactory.createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, false)
+    val tsType = typeFactory.createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, isNullable = false)
     val localAggRowType = typeFactory.builder
-      .add("a", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, true))
-      .add("b", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.STRING_TYPE_INFO, true))
+      .add("a", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, isNullable = true))
+      .add("b", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.STRING_TYPE_INFO, isNullable = true))
       .add("assignedWindow$", tsType)
-      .add("count$0", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, true))
+      .add("count$0", typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = true))
       .build()
     new BatchExecLocalHashWindowAggregate(
       tublingGroupWindow,
@@ -1287,6 +1339,163 @@ class FlinkRelMdHandlerTestBase {
       Array())
   }
 
+  // equivalent SQL is
+  // select * from (
+  //  select id, score, age, height, RANK() over (partition by age order by score) rk from student
+  // ) t where rk <= 5
+  protected lazy val flinkLogicalRank: FlinkLogicalRank = {
+    val scan = relBuilder.scan("student").build()
+
+    val typeBuilder = rexBuilder.getTypeFactory.builder()
+    scan.getRowType.getFieldList.foreach(typeBuilder.add)
+    typeBuilder.add("rk", typeFactory.createTypeFromTypeInfo(
+      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
+    typeBuilder.build()
+    val rowTypeWithRankFunColumn = typeBuilder.build()
+
+    new FlinkLogicalRank(
+      cluster,
+      logicalTraits,
+      scan,
+      SqlStdOperatorTable.RANK,
+      ImmutableBitSet.of(2),
+      RelCollations.of(1),
+      ConstantRankRange(1, 5),
+      rowTypeWithRankFunColumn,
+      outputRankFunColumn = true
+    )
+  }
+
+  // equivalent SQL is
+  // select * from (
+  //  select id, score, age, height, RANK() over (partition by age order by score) rk from student
+  // ) t where rk <= height
+  protected lazy val flinkLogicalRankWithVariableRankRange: FlinkLogicalRank = {
+    val scan = relBuilder.scan("student").build()
+
+    val typeBuilder = rexBuilder.getTypeFactory.builder()
+    scan.getRowType.getFieldList.foreach(typeBuilder.add)
+    typeBuilder.add("rk", typeFactory.createTypeFromTypeInfo(
+      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
+    typeBuilder.build()
+    val rowTypeWithRankFunColumn = typeBuilder.build()
+
+    new FlinkLogicalRank(
+      cluster,
+      logicalTraits,
+      scan,
+      SqlStdOperatorTable.RANK,
+      ImmutableBitSet.of(2),
+      RelCollations.of(1),
+      VariableRankRange(3),
+      rowTypeWithRankFunColumn,
+      outputRankFunColumn = true
+    )
+  }
+
+  // equivalent SQL is
+  // select * from student order by score limit 3
+  protected lazy val flinkLogicalRowNumber: FlinkLogicalRank = {
+    val scan = relBuilder.scan("student").build()
+    new FlinkLogicalRank(
+      cluster,
+      logicalTraits,
+      scan,
+      SqlStdOperatorTable.ROW_NUMBER,
+      ImmutableBitSet.of(),
+      RelCollations.of(1),
+      ConstantRankRange(1, 3),
+      scan.getRowType,
+      outputRankFunColumn = false
+    )
+  }
+
+  // equivalent SQL is
+  // select * from (
+  //  select id, score, age, height,
+  //   ROW_NUMBER() over (partition by age order by score) rk from student
+  // ) t where rn <= 3
+  protected lazy val flinkLogicalRowNumberWithOutput: FlinkLogicalRank = {
+    val scan = relBuilder.scan("student").build()
+
+    val typeBuilder = rexBuilder.getTypeFactory.builder()
+    scan.getRowType.getFieldList.foreach(typeBuilder.add)
+    typeBuilder.add("rn", typeFactory.createTypeFromTypeInfo(
+      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
+    typeBuilder.build()
+    val rowTypeWithRankFunColumn = typeBuilder.build()
+    new FlinkLogicalRank(
+      cluster,
+      logicalTraits,
+      scan,
+      SqlStdOperatorTable.ROW_NUMBER,
+      ImmutableBitSet.of(2),
+      RelCollations.of(1),
+      ConstantRankRange(1, 3),
+      rowTypeWithRankFunColumn,
+      outputRankFunColumn = true
+    )
+  }
+
+  // equivalent SQL is
+  // select * from (
+  //  select id, score, age, height, RANK() over (partition by age order by score) rk from student
+  // ) t where rk <= 5 and rk >= 3
+  protected lazy val (globalBatchExecRank, localBatchExecRank) = {
+    val scan = createTableSourceScanBatchExec(ImmutableList.of("student"))
+    val localBatchExecRank = new BatchExecRank(
+      cluster,
+      batchExecTraits,
+      scan,
+      SqlStdOperatorTable.RANK,
+      ImmutableBitSet.of(2),
+      RelCollations.of(1),
+      ConstantRankRange(1, 5),
+      scan.getRowType,
+      outputRankFunColumn = false,
+      isGlobal = false
+    )
+
+    val typeBuilder = rexBuilder.getTypeFactory.builder()
+    scan.getRowType.getFieldList.foreach(typeBuilder.add)
+    typeBuilder.add("rk", typeFactory.createTypeFromTypeInfo(
+      BasicTypeInfo.LONG_TYPE_INFO, isNullable = false))
+    typeBuilder.build()
+    val rowTypeWithRankFunColumn = typeBuilder.build()
+
+    val globalBatchExecRank = new BatchExecRank(
+      cluster,
+      batchExecTraits,
+      scan,
+      SqlStdOperatorTable.RANK,
+      ImmutableBitSet.of(2),
+      RelCollations.of(1),
+      ConstantRankRange(3, 5),
+      rowTypeWithRankFunColumn,
+      outputRankFunColumn = true,
+      isGlobal = true
+    )
+    (globalBatchExecRank, localBatchExecRank)
+  }
+
+  // equivalent SQL is
+  // select * from student order by score limit 3
+  protected lazy val streamExecRowNumber: StreamExecRank = {
+    val scan = createTableSourceScanStreamExec(ImmutableList.of("student"))
+    new StreamExecRank(
+      cluster,
+      batchExecTraits,
+      scan,
+      new BaseRowSchema(scan.getRowType),
+      new BaseRowSchema(scan.getRowType),
+      SqlStdOperatorTable.ROW_NUMBER,
+      Array(),
+      RelCollations.of(1),
+      ConstantRankRange(1, 3),
+      outputRankFunColumn = false
+    )
+  }
+
   private lazy val valuesType = relBuilder.getTypeFactory.builder()
     .add("col1", SqlTypeName.BIGINT)
     .add("col2", SqlTypeName.BOOLEAN)
@@ -1297,12 +1506,12 @@ class FlinkRelMdHandlerTestBase {
     .add("col7", SqlTypeName.FLOAT)
     .build()
 
-  protected lazy val emptyValues = {
+  protected lazy val emptyValues: RelNode = {
     relBuilder.values(valuesType)
     relBuilder.build()
   }
 
-  protected lazy val values = {
+  protected lazy val values: RelNode = {
     relBuilder.values(
       List(
         List("1", "true", "2017-10-01", "10:00:00", "2017-10-01 00:00:00", "2.12", ""),

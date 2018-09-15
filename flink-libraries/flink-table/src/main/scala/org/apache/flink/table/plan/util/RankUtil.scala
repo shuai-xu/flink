@@ -39,7 +39,7 @@ import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.FlinkRexUtil
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 
 /**
   * An util class to optimize and generate TopN operators.
@@ -55,14 +55,13 @@ object RankUtil {
     * @param  rankFieldIndex      the index of rank field
     * @param  rexBuilder          RexBuilder
     * @param  config              TableConfig
-    *
-    * @return A Tuple2 of extracted TopN bounds and remaining predicates.
+    * @return A Tuple2 of extracted rank range and remaining predicates.
     */
-  def extractRankLimit(
+  def extractRankRange(
       predicate: RexNode,
       rankFieldIndex: Int,
       rexBuilder: RexBuilder,
-      config: TableConfig): (Option[RankLimit], Option[RexNode]) = {
+      config: TableConfig): (Option[RankRange], Option[RexNode]) = {
 
     // Converts the condition to conjunctive normal form (CNF)
     val cnfCondition = FlinkRexUtil.toCnf(rexBuilder, config.getMaxCnfNodeCount, predicate)
@@ -70,14 +69,15 @@ object RankUtil {
     // split the condition into sort limit condition and other condition
     val (limitPreds: Seq[LimitPredicate], otherPreds: Seq[RexNode]) = cnfCondition match {
       case c: RexCall if c.getKind == SqlKind.AND =>
-        c.getOperands.asScala
+        c.getOperands
           .map(identifyLimitPredicate(_, rankFieldIndex))
-          .foldLeft((Seq[LimitPredicate](), Seq[RexNode]()))((preds, analyzed) => {
-            analyzed match {
-              case Left(limitPred) => (preds._1 :+ limitPred, preds._2)
-              case Right(otherPred) => (preds._1, preds._2 :+ otherPred)
-            }
-          })
+          .foldLeft((Seq[LimitPredicate](), Seq[RexNode]())) {
+            (preds, analyzed) =>
+              analyzed match {
+                case Left(limitPred) => (preds._1 :+ limitPred, preds._2)
+                case Right(otherPred) => (preds._1, preds._2 :+ otherPred)
+              }
+          }
       case rex: RexNode =>
         identifyLimitPredicate(rex, rankFieldIndex) match {
           case Left(limitPred) => (Seq(limitPred), Seq())
@@ -93,22 +93,22 @@ object RankUtil {
     }
 
     val sortBounds = limitPreds.map(computeWindowBoundFromPredicate(_, rexBuilder, config))
-    val rankLimit = sortBounds match {
+    val rankRange = sortBounds match {
       case Seq(Some(LowerBoundary(x)), Some(UpperBoundary(y))) =>
-        ConstantRankLimit(x, y)
+        ConstantRankRange(x, y)
       case Seq(Some(UpperBoundary(x)), Some(LowerBoundary(y))) =>
-        ConstantRankLimit(y, x)
+        ConstantRankRange(y, x)
       case Seq(Some(LowerBoundary(x))) =>
         // only offset, use Long.MaxValue to indicate unlimited
-        ConstantRankLimit(x, Long.MaxValue)
+        ConstantRankRange(x, Long.MaxValue)
       case Seq(Some(UpperBoundary(x))) =>
         // rankStart starts from one
-        ConstantRankLimit(1, x)
+        ConstantRankRange(1, x)
       case Seq(Some(BothBoundary(x, y))) =>
         // nth rank
-        ConstantRankLimit(x, y)
+        ConstantRankRange(x, y)
       case Seq(Some(InputRefBoundary(x))) =>
-        VariableRankLimit(x)
+        VariableRankRange(x)
       case _ =>
         // TopN requires at least one rank comparison predicate
         return (None, Some(predicate))
@@ -121,7 +121,7 @@ object RankUtil {
         Some(otherPreds.reduceLeft((l, r) => RelOptUtil.andJoinFilters(rexBuilder, l, r)))
     }
 
-    (Some(rankLimit), remainCondition)
+    (Some(rankRange), remainCondition)
   }
 
   /**
@@ -149,8 +149,8 @@ object RankUtil {
              SqlKind.LESS_THAN_OR_EQUAL |
              SqlKind.EQUALS =>
 
-          val leftTerm = c.getOperands.get(0)
-          val rightTerm = c.getOperands.get(1)
+          val leftTerm = c.getOperands.head
+          val rightTerm = c.getOperands.last
 
           if (isRankFieldRef(leftTerm, rankFieldIndex) &&
             !accessesRankField(rightTerm, rankFieldIndex)) {
@@ -183,21 +183,26 @@ object RankUtil {
     */
   def accessesRankField(expr: RexNode, rankFieldIndex: Int): Boolean = expr match {
     case i: RexInputRef => i.getIndex == rankFieldIndex
-    case c: RexCall => c.operands.asScala.exists(accessesRankField(_, rankFieldIndex))
+    case c: RexCall => c.operands.exists(accessesRankField(_, rankFieldIndex))
     case _ => false
   }
 
 
   sealed trait Boundary
+
   case class LowerBoundary(lower: Long) extends Boundary
+
   case class UpperBoundary(upper: Long) extends Boundary
+
   case class BothBoundary(lower: Long, upper: Long) extends Boundary
+
   case class InputRefBoundary(inputFieldIndex: Int) extends Boundary
 
   sealed trait BoundDefine
-  object Lower extends BoundDefine  // defined lower bound
-  object Upper extends BoundDefine  // defined upper bound
-  object Both extends BoundDefine   // defined lower and uppper bound
+
+  object Lower extends BoundDefine // defined lower bound
+  object Upper extends BoundDefine // defined upper bound
+  object Both extends BoundDefine // defined lower and uppper bound
 
   /**
     * Computes the absolute bound on the left operand of a comparison expression and
@@ -230,7 +235,8 @@ object RankUtil {
     }
 
     (predExpression, bound) match {
-      case (r: RexInputRef, Upper) => Some(InputRefBoundary(r.getIndex))
+      case (r: RexInputRef, Upper | Both) => Some(InputRefBoundary(r.getIndex))
+      case (_: RexInputRef, Lower) => None
       case _ =>
         // reduce predicate to constants to compute bounds
         val literal = reduceComparisonPredicate(limitPred, rexBuilder, config)
@@ -251,7 +257,6 @@ object RankUtil {
             case _ =>
               tmpBoundary
           }
-
           bound match {
             case Lower => Some(LowerBoundary(boundary))
             case Upper => Some(UpperBoundary(boundary))
@@ -281,6 +286,10 @@ object RankUtil {
       limitPred.pred.operands.get(0)
     }
 
+    if (!RexUtil.isConstant(expression)) {
+      return None
+    }
+
     // reduce expression to literal
     val exprReducer = new ExpressionReducer(config)
     val originList = new util.ArrayList[RexNode]()
@@ -289,11 +298,9 @@ object RankUtil {
     exprReducer.reduce(rexBuilder, originList, reduceList)
 
     // extract bounds from reduced literal
-    val literals = reduceList.asScala.map {
-      case literal: RexLiteral =>
-        Some(literal.getValue2.asInstanceOf[Long])
-      case _ =>
-        None
+    val literals = reduceList.map {
+      case literal: RexLiteral => Some(literal.getValue2.asInstanceOf[Long])
+      case _ => None
     }
 
     literals.head
@@ -350,8 +357,8 @@ object RankUtil {
   }
 
   def getUnarySortKeyExtractor(
-    fieldCollations: Seq[RelFieldCollation],
-    inputSchema: BaseRowSchema): GeneratedFieldExtractor = {
+      fieldCollations: Seq[RelFieldCollation],
+      inputSchema: BaseRowSchema): GeneratedFieldExtractor = {
 
     val sortFields = fieldCollations.map(_.getFieldIndex).toArray
     if (sortFields.length != 1) {
@@ -368,8 +375,8 @@ object RankUtil {
   }
 
   def createRowKeyType(
-    primaryKeys: Array[Int],
-    inputSchema: BaseRowSchema): BaseRowTypeInfo[_] = {
+      primaryKeys: Array[Int],
+      inputSchema: BaseRowSchema): BaseRowTypeInfo[_] = {
 
     val fieldTypes = primaryKeys.map(inputSchema.fieldTypeInfos(_))
     new BaseRowTypeInfo(classOf[BaseRow], fieldTypes: _*)
@@ -390,7 +397,7 @@ object RankUtil {
       queryConfig: StreamQueryConfig,
       rankInput: RelNode,
       sortCollation: RelCollation): RankStrategy = {
-    val fieldCollations = sortCollation.getFieldCollations.asScala
+    val fieldCollations = sortCollation.getFieldCollations
 
     val mono = cluster.getMetadataQuery.asInstanceOf[FlinkRelMetadataQuery]
       .getRelModifiedMonotonicity(rankInput)

@@ -32,7 +32,7 @@ import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedSortedMapState}
 import org.apache.flink.table.api.dataview.Order
 import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.codegen.{CodeGenUtils, Compiler, FieldAccess, GeneratedFieldExtractor}
-import org.apache.flink.table.plan.util.RankLimit
+import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.runtime.sort.RecordComparator
@@ -76,13 +76,13 @@ class UnarySortUpdateRankFunction[K](
     order: Order,
     outputArity: Int,
     rankKind: SqlKind,
-    rankLimit: RankLimit,
+    rankRange: RankRange,
     cacheSize: Long,
     generateRetraction: Boolean,
     queryConfig: StreamQueryConfig)
   extends AbstractRankFunction(
     queryConfig,
-    rankLimit,
+    rankRange,
     inputRowType.getArity,
     outputArity,
     generateRetraction)

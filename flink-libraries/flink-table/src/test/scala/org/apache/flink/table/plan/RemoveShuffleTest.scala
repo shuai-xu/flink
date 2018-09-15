@@ -381,4 +381,98 @@ class RemoveShuffleTest extends TableTestBatchExecBase {
     util.verifyPlan(sqlQuery)
   }
 
+  @Test
+  def testRemoveHashShuffle_Rank(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, b, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM (
+        |   SELECT a, SUM(b) AS b FROM x GROUP BY a
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveHashShuffle_Rank_PartialKey1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    util.tableEnv.getConfig.setRankShuffleByPartialKeyEnabled(true)
+    val sqlQuery =
+      """
+        |SELECT a, SUM(b) FROM (
+        | SELECT * FROM (
+        |   SELECT a, b, c, RANK() OVER(PARTITION BY a, c ORDER BY b) rk FROM x)
+        | WHERE rk <= 10
+        |) GROUP BY a
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveHashShuffle_Rank_PartialKey2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    util.tableEnv.getConfig.setRankShuffleByPartialKeyEnabled(false)
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, b, c, RANK() OVER(PARTITION BY a, c ORDER BY b) rk FROM (
+        |   SELECT a, SUM(b) AS b, COUNT(c) AS c FROM x GROUP BY a
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveHashShuffle_Rank_PartialKey3(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    util.tableEnv.getConfig.setRankShuffleByPartialKeyEnabled(true)
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, b, c, RANK() OVER(PARTITION BY a, c ORDER BY b) rk FROM (
+        |   SELECT a, SUM(b) AS b, COUNT(c) AS c FROM x GROUP BY a
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+
+  @Test
+  def testRemoveHashShuffle_Rank_Singleton1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, b, RANK() OVER(ORDER BY b) rk FROM (
+        |   SELECT COUNT(a) AS a, SUM(b) AS b FROM x
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveHashShuffle_Rank_Singleton2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, b, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM (
+        |   SELECT COUNT(a) AS a, SUM(b) AS b FROM x
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
 }

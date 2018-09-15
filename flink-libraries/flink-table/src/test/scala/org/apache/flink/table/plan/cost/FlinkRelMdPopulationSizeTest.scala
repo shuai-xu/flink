@@ -294,4 +294,39 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
     assertEquals(null, mq.getPopulationSize(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(0, 1, 3)))
   }
+
+  @Test
+  def testGetPopulationSizeOnFlinkLogicalRank(): Unit = {
+    assertEquals(50D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(0)))
+    assertEquals(7D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(1)))
+    assertEquals(5D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(4)))
+    assertEquals(50D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(0, 1)))
+    assertEquals(50D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(0, 2)))
+    assertEquals(50D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(0, 4)))
+    assertEquals(35D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(1, 4)))
+    assertEquals(50D, mq.getPopulationSize(flinkLogicalRank, ImmutableBitSet.of(0, 1, 4)))
+  }
+
+  @Test
+  def testGetPopulationSizeOnBatchExecRank(): Unit = {
+    assertEquals(50D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(0)))
+    assertEquals(7D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(1)))
+    assertEquals(3D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(4)))
+    assertEquals(50D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(0, 1)))
+    assertEquals(50D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(0, 2)))
+    assertEquals(50D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(0, 4)))
+    assertEquals(21D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(1, 4)))
+    assertEquals(50D, mq.getPopulationSize(globalBatchExecRank, ImmutableBitSet.of(0, 1, 4)))
+
+    assertEquals(50D, mq.getPopulationSize(localBatchExecRank, ImmutableBitSet.of(0)))
+    assertEquals(7D, mq.getPopulationSize(localBatchExecRank, ImmutableBitSet.of(1)))
+    assertEquals(50D, mq.getPopulationSize(localBatchExecRank, ImmutableBitSet.of(0, 1)))
+  }
+
+  @Test
+  def testGetPopulationSizeOnStreamExecRank(): Unit = {
+    assertEquals(50D, mq.getPopulationSize(streamExecRowNumber, ImmutableBitSet.of(0)))
+    assertEquals(7D, mq.getPopulationSize(streamExecRowNumber, ImmutableBitSet.of(1)))
+    assertEquals(50D, mq.getPopulationSize(streamExecRowNumber, ImmutableBitSet.of(0, 1)))
+  }
 }

@@ -74,7 +74,7 @@ abstract class TableTestBase {
     val programs = builder.getStreamPrograms
     programs.getFlinkRuleSetProgram(phrase)
       .getOrElse(
-        throw new RuntimeException(s"${phrase} does not exist"))
+        throw new RuntimeException(s"$phrase does not exist"))
       .add(injectRuleSet)
     tEnv.getConfig.setCalciteConfig(builder.build())
   }
@@ -243,13 +243,29 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     val actualPlan = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
     val actualTrait = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
-    verifyPlan(test.name.getMethodName, actualPlan)
-    verifyTrait(test.name.getMethodName, actualTrait)
+    assertEqualsOrExpand("plan", actualPlan)
+    assertEqualsOrExpand("trait", actualTrait, expand = false)
   }
 
   def explainSql(query: String): String = {
     val relNode = tableEnv.sqlQuery(query).getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     RelOptUtil.toString(optimized)
+  }
+
+  private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {
+    val expected = s"$${$tag}"
+    if (!expand) {
+      diffRepository.assertEquals(test.name.getMethodName, tag, expected, actual)
+      return
+    }
+    val expanded = diffRepository.expand(test.name.getMethodName, tag, expected)
+    if (expanded != null && !expanded.equals(expected)) {
+      // expected does exist, check result
+      diffRepository.assertEquals(test.name.getMethodName, tag, expected, actual)
+    } else {
+      // expected does not exist, update
+      diffRepository.expand(test.name.getMethodName, tag, actual)
+    }
   }
 }

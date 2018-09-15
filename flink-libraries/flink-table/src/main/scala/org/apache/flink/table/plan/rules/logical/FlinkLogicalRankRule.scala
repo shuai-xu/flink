@@ -20,22 +20,26 @@ package org.apache.flink.table.plan.rules.logical
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rex.{RexProgramBuilder, RexUtil}
-import org.apache.calcite.sql.SqlRankFunction
+import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalOverWindow, FlinkLogicalRank}
-import org.apache.flink.table.plan.util.{InputRefVisitor, RankUtil}
+import org.apache.flink.table.plan.util.{ConstantRankRange, InputRefVisitor, RankUtil}
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 
+/**
+  * Planner rule that matches a [[FlinkLogicalCalc]] on a [[FlinkLogicalOverWindow]],
+  * and converts them into a [[FlinkLogicalRank]].
+  */
 class FlinkLogicalRankRule
   extends RelOptRule(
     operand(classOf[FlinkLogicalCalc],
-            operand(classOf[FlinkLogicalOverWindow], any())),
+      operand(classOf[FlinkLogicalOverWindow], any())),
     "FlinkLogicalRankRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val calc: FlinkLogicalCalc = call.rel[FlinkLogicalCalc](0)
-    val window: FlinkLogicalOverWindow = call.rel[FlinkLogicalOverWindow](1)
+    val calc: FlinkLogicalCalc = call.rel(0)
+    val window: FlinkLogicalOverWindow = call.rel(1)
 
     if (window.groups.size > 1) {
       // only accept one window
@@ -50,7 +54,7 @@ class FlinkLogicalRankRule
 
     val agg = group.aggCalls.get(0)
     if (!agg.getOperator.isInstanceOf[SqlRankFunction]) {
-      // only accept SqlRankFunction for TopN
+      // only accept SqlRankFunction for Rank
       return false
     }
 
@@ -58,9 +62,9 @@ class FlinkLogicalRankRule
       val condition = calc.getProgram.getCondition
       if (condition != null) {
         val predicate = calc.getProgram.expandLocalRef(condition)
-        // the rank aggregate is the last field of FlinkLogicalOverWindow
+        // the rank function is the last field of FlinkLogicalOverWindow
         val rankFieldIndex = window.getRowType.getFieldCount - 1
-        val (rankLimit, remainingPreds) = RankUtil.extractRankLimit(
+        val (rankRange, remainingPreds) = RankUtil.extractRankRange(
           predicate,
           rankFieldIndex,
           calc.getCluster.getRexBuilder,
@@ -70,71 +74,71 @@ class FlinkLogicalRankRule
         val remainingPredsAccessRank = remainingPreds.isDefined &&
           RankUtil.accessesRankField(remainingPreds.get, rankFieldIndex)
 
-        rankLimit.isDefined && !remainingPredsAccessRank
+        rankRange.isDefined && !remainingPredsAccessRank
       } else {
         false
       }
     } else {
       false
     }
-
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val calc: FlinkLogicalCalc = call.rel[FlinkLogicalCalc](0)
-    val window: FlinkLogicalOverWindow = call.rel[FlinkLogicalOverWindow](1)
+    val calc: FlinkLogicalCalc = call.rel(0)
+    val window: FlinkLogicalOverWindow = call.rel(1)
     val group = window.groups.get(0)
-    val rank = group.aggCalls.get(0).getOperator.asInstanceOf[SqlRankFunction]
+    val rankFun = group.aggCalls.get(0).getOperator.asInstanceOf[SqlRankFunction]
 
-    // the rank aggregate is the last field of LogicalWindow
+    // the rank function is the last field of LogicalWindow
     val rankFieldIndex = window.getRowType.getFieldCount - 1
     val condition = calc.getProgram.getCondition
     val predicate = calc.getProgram.expandLocalRef(condition)
 
-    val (rankLimit, remainingPreds) = RankUtil.extractRankLimit(
+    val (rankRange, remainingPreds) = RankUtil.extractRankRange(
       predicate,
       rankFieldIndex,
       calc.getCluster.getRexBuilder,
       TableConfig.DEFAULT)
+    require(rankRange.isDefined)
 
     val cluster = window.getCluster
     val rexBuilder = cluster.getRexBuilder
 
     val calcProgram = calc.getProgram
     val projectList = calcProgram.getProjectList
-    val exprList = projectList.asScala.map(calcProgram.expandLocalRef)
+    val exprList = projectList.map(calcProgram.expandLocalRef)
 
     val visitor = new InputRefVisitor
     exprList.foreach(_.accept(visitor))
     val inputFields = visitor.getFields
-    val hasRowNumber = inputFields.contains(rankFieldIndex)
+    val outputRankFunColumn = inputFields.contains(rankFieldIndex)
 
-    val topNRowType = if (hasRowNumber) {
+    val rankRowType = if (outputRankFunColumn) {
       window.getRowType
     } else {
       val typeBuilder = rexBuilder.getTypeFactory.builder()
-      window.getRowType.getFieldList.asScala.dropRight(1).foreach(typeBuilder.add)
+      window.getRowType.getFieldList.dropRight(1).foreach(typeBuilder.add)
       typeBuilder.build()
     }
 
-    val topN = new FlinkLogicalRank(
+    val rank = new FlinkLogicalRank(
       cluster,
       window.getTraitSet,
       window.getInput,
-      rank,
+      rankFun,
       group.keys,
       group.orderKeys,
-      rankLimit.get,
-      topNRowType,
-      hasRowNumber)
+      rankRange.get,
+      rankRowType,
+      outputRankFunColumn)
 
-    if (RexUtil.isIdentity(exprList.asJava, topNRowType) && remainingPreds.isEmpty) {
+    if (RexUtil.isIdentity(exprList, rankRowType) && remainingPreds.isEmpty) {
       // project is trivial and filter is empty, remove the Calc
-      call.transformTo(topN)
+      call.transformTo(rank)
     } else {
       val programBuilder = RexProgramBuilder.create(
         rexBuilder,
-        topNRowType,
+        rankRowType,
         calcProgram.getExprList,
         calcProgram.getProjectList,
         remainingPreds.orNull,
@@ -142,12 +146,65 @@ class FlinkLogicalRankRule
         true, // normalize
         null) // simplify
 
-      val newCalc = calc.copy(calc.getTraitSet, topN, programBuilder.getProgram)
+      val newCalc = calc.copy(calc.getTraitSet, rank, programBuilder.getProgram)
       call.transformTo(newCalc)
+    }
+  }
+}
+
+/**
+  * This rule only handles RANK function and constant rank range.
+  */
+class FlinkLogicalConstantRankRule extends FlinkLogicalRankRule {
+  override def matches(call: RelOptRuleCall): Boolean = {
+    val calc: FlinkLogicalCalc = call.rel(0)
+    val window: FlinkLogicalOverWindow = call.rel(1)
+
+    if (window.groups.size > 1) {
+      // only accept one window
+      return false
+    }
+
+    val group = window.groups.get(0)
+    if (group.aggCalls.size > 1) {
+      // only accept one agg call
+      return false
+    }
+
+    val agg = group.aggCalls.get(0)
+    if (agg.getOperator.kind != SqlKind.RANK) {
+      // only accept RANK function
+      return false
+    }
+
+    if (group.lowerBound.isUnbounded && group.upperBound.isCurrentRow) {
+      val condition = calc.getProgram.getCondition
+      if (condition != null) {
+        val predicate = calc.getProgram.expandLocalRef(condition)
+        // the rank function is the last field of FlinkLogicalOverWindow
+        val rankFieldIndex = window.getRowType.getFieldCount - 1
+        val (rankRange, remainingPreds) = RankUtil.extractRankRange(
+          predicate,
+          rankFieldIndex,
+          calc.getCluster.getRexBuilder,
+          TableConfig.DEFAULT)
+
+        // remaining predicate must not access rank field attributes
+        val remainingPredsAccessRank = remainingPreds.isDefined &&
+          RankUtil.accessesRankField(remainingPreds.get, rankFieldIndex)
+
+        // only support constant rank range
+        rankRange.exists(_.isInstanceOf[ConstantRankRange]) && !remainingPredsAccessRank
+      } else {
+        false
+      }
+    } else {
+      false
     }
   }
 }
 
 object FlinkLogicalRankRule {
   val INSTANCE = new FlinkLogicalRankRule
+  val CONSTANT_RANK = new FlinkLogicalConstantRankRule
 }

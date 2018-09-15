@@ -226,4 +226,44 @@ class FlinkRelMdColumnUniquenessTest extends FlinkRelMdHandlerTestBase {
     assertTrue(mq.areColumnsUnique(flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(0, 1, 4)))
     assertFalse(mq.areColumnsUnique(flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(1, 3)))
   }
+
+  @Test
+  def testAreColumnsUniqueOnFlinkLogicalRank(): Unit = {
+    assertTrue(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(1)))
+    assertTrue(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(0, 1)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(3)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(4)))
+    assertTrue(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(0, 4)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(2, 4)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRank, ImmutableBitSet.of(3, 4)))
+
+    assertTrue(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(2)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(3)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(4)))
+    assertTrue(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(0, 4)))
+    assertTrue(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(2, 4)))
+    assertFalse(mq.areColumnsUnique(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(3, 4)))
+  }
+
+  @Test
+  def testAreColumnsUniqueOnBatchExecRank(): Unit = {
+    assertTrue(mq.areColumnsUnique(globalBatchExecRank, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(globalBatchExecRank, ImmutableBitSet.of(2)))
+    assertFalse(mq.areColumnsUnique(globalBatchExecRank, ImmutableBitSet.of(4)))
+    assertTrue(mq.areColumnsUnique(globalBatchExecRank, ImmutableBitSet.of(0, 4)))
+    assertFalse(mq.areColumnsUnique(globalBatchExecRank, ImmutableBitSet.of(2, 4)))
+
+    assertTrue(mq.areColumnsUnique(localBatchExecRank, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(localBatchExecRank, ImmutableBitSet.of(2)))
+    assertTrue(mq.areColumnsUnique(localBatchExecRank, ImmutableBitSet.of(0, 2)))
+  }
+
+  @Test
+  def testAreColumnsUniqueOnStreamExecRank(): Unit = {
+    assertTrue(mq.areColumnsUnique(streamExecRowNumber, ImmutableBitSet.of(0)))
+    assertFalse(mq.areColumnsUnique(streamExecRowNumber, ImmutableBitSet.of(2)))
+    assertTrue(mq.areColumnsUnique(streamExecRowNumber, ImmutableBitSet.of(0, 2)))
+  }
 }

@@ -76,4 +76,17 @@ class FlinkRelMdRowCountTest extends FlinkRelMdHandlerTestBase {
     assertEquals(50.0, mq.getRowCount(localWindowAgg))
     assertEquals(512 * 512 * 512D, mq.getRowCount(logicalWindowAggOnBigTimeTable))
   }
+
+  @Test
+  def testGetRowCountOnRank(): Unit = {
+    assertEquals(50.0, mq.getRowCount(flinkLogicalRank))
+    assertEquals(50.0, mq.getRowCount(flinkLogicalRankWithVariableRankRange))
+    assertEquals(3.0, mq.getRowCount(flinkLogicalRowNumber))
+    assertEquals(50.0, mq.getRowCount(flinkLogicalRowNumberWithOutput))
+
+    assertEquals(50.0, mq.getRowCount(localBatchExecRank))
+    assertEquals(50.0, mq.getRowCount(globalBatchExecRank))
+
+    assertEquals(3.0, mq.getRowCount(streamExecRowNumber))
+  }
 }

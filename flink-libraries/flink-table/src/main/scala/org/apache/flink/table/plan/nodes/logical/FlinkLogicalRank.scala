@@ -21,26 +21,37 @@ import java.util
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelCollation, RelNode, SingleRel}
+import org.apache.calcite.rel.{RelCollation, RelNode}
 import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.plan.util.RankLimit
+import org.apache.flink.table.plan.nodes.calcite.Rank
+import org.apache.flink.table.plan.util.RankRange
 
 class FlinkLogicalRank(
-  cluster: RelOptCluster,
-  traitSet: RelTraitSet,
-  child: RelNode,
-  val rankFunction: SqlRankFunction,
-  val partitionKey: ImmutableBitSet,
-  val sortCollation: RelCollation,
-  val rankLimit: RankLimit,
-  rowType: RelDataType,
-  val hasRowNumber: Boolean)
-  extends SingleRel(cluster, traitSet, child)
-    with FlinkLogicalRel {
+    cluster: RelOptCluster,
+    traitSet: RelTraitSet,
+    input: RelNode,
+    rankFunction: SqlRankFunction,
+    partitionKey: ImmutableBitSet,
+    sortCollation: RelCollation,
+    rankRange: RankRange,
+    outputRowType: RelDataType,
+    val outputRankFunColumn: Boolean)
+  extends Rank(
+    cluster,
+    traitSet,
+    input,
+    rankFunction,
+    partitionKey,
+    sortCollation,
+    rankRange,
+    outputRowType)
+  with FlinkLogicalRel {
 
-  override def deriveRowType(): RelDataType = rowType
+  if (outputRankFunColumn) {
+    // rank function column is last column
+    require(outputRowType.getFieldCount == input.getRowType.getFieldCount + 1)
+  }
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new FlinkLogicalRank(
@@ -50,22 +61,8 @@ class FlinkLogicalRank(
       rankFunction,
       partitionKey,
       sortCollation,
-      rankLimit,
-      rowType,
-      hasRowNumber)
-  }
-
-  override def estimateRowCount(mq: RelMetadataQuery): Double = {
-    // compare to over window: one input at least one output(do not introduce retract amplification)
-    // rank functions generally filters most of the input, output few records
-    val inputRowCnt = mq.getRowCount(getInput)
-    inputRowCnt * 0.01
-  }
-
-  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
-    // by default, assume cost is proportional to number of rows
-    val rowCount: Double = estimateRowCount(mq)
-    val count = (rowType.getFieldCount - 1) * 1.0 / child.getRowType.getFieldCount
-    planner.getCostFactory.makeCost(rowCount, rowCount * count, 0)
+      rankRange,
+      outputRowType,
+      outputRankFunColumn)
   }
 }

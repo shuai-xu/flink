@@ -30,7 +30,7 @@ import org.apache.calcite.rex.{RexNode, RexUtil}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet, Util}
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.util.FlinkRelMdUtil
 
@@ -52,6 +52,23 @@ object FlinkRelMdSelectivity extends MetadataHandler[BuiltInMetadata.Selectivity
 
   def getSelectivity(rel: SegmentTop, mq: RelMetadataQuery, predicate: RexNode): Double =
     mq.getSelectivity(rel.getInput, predicate)
+
+  def getSelectivity(rel: Rank, mq: RelMetadataQuery, predicate: RexNode): Double = {
+    if (predicate == null || predicate.isAlwaysTrue) {
+      return 1D
+    }
+    val (nonRankPred, rankPred) = FlinkRelMdUtil.splitPredicateOnRank(rel, predicate)
+    val childSelectivity: Double = nonRankPred match {
+      case Some(p) => mq.getSelectivity(rel.getInput, p)
+      case _ => 1D
+    }
+
+    val rankSelectivity: Double = rankPred match {
+      case Some(p) => estimateSelectivity(rel, mq, p)
+      case _ => 1D
+    }
+    childSelectivity * rankSelectivity
+  }
 
   def getSelectivity(subset: RelSubset, mq: RelMetadataQuery, predicate: RexNode): Double =
     mq.getSelectivity(Util.first(subset.getBest, subset.getOriginal), predicate)

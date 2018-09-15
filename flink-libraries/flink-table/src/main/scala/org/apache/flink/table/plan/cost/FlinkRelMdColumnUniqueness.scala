@@ -37,7 +37,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.logical._
@@ -45,6 +45,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, Bat
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
+import org.apache.flink.table.util.FlinkRelMdUtil
 import org.apache.flink.table.util.FlinkRelMdUtil.splitColumnsIntoLeftAndRight
 
 import scala.collection.JavaConversions._
@@ -241,7 +242,7 @@ object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.Column
         // add the RelNode to pattern matching in RelSubset.
         case _: Aggregate | _: Filter | _: Values | _: TableScan | _: Project | _: Correlate |
              _: Join | _: Exchange | _: Sort | _: SetOp | _: Calc | _: Converter | _: Window |
-             _: Expand | _: SegmentTop | _: FlinkRelNode =>
+             _: Expand | _: SegmentTop | _: Rank | _: FlinkRelNode =>
           try {
             val unique = mq.areColumnsUnique(rel2, columns, ignoreNulls)
             if (unique != null) {
@@ -708,43 +709,25 @@ object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.Column
   }
 
   def areColumnsUnique(
-      rel: StreamExecRank,
+      rank: Rank,
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
-    areRankColumnsUnique(
-      rel.rankFunction.kind,
-      rel.partitionKey,
-      rel.getRowType,
-      rel.getInput,
-      columns,
-      mq,
-      ignoreNulls)
-  }
-
-  private def areRankColumnsUnique(
-      kind: SqlKind,
-      partitionKey: Array[Int],
-      outputType: RelDataType,
-      input: RelNode,
-      columns: ImmutableBitSet,
-      mq: RelMetadataQuery,
-      ignoreNulls: Boolean): JBool = {
-    if (input.getRowType.getFieldCount == outputType.getFieldCount) {
-      mq.areColumnsUnique(input, columns, ignoreNulls)
+    val rankFunColumnIndex = FlinkRelMdUtil.getRankFunColumnIndex(rank)
+    if (rankFunColumnIndex < 0) {
+      mq.areColumnsUnique(rank.getInput, columns, ignoreNulls)
     } else {
-      //rankIndex is at the end of the output fields.
-      val rankIndex = outputType.getFieldCount - 1
-      val fields = columns.toArray
-      val partitionKeys = partitionKey.indices.toArray
-      kind match {
-        case SqlKind.ROW_NUMBER => (partitionKeys :+ rankIndex).forall(fields.contains(_))
-        case _ =>
-          //continue judge by input
-          val keys = new JArrayList[Integer]()
-          // input node does contain rank index
-          fields.filter(index => index != rankIndex).foreach(keys.add(_))
-          mq.areColumnsUnique(input, ImmutableBitSet.of(keys), ignoreNulls)
+      val childColumns = columns.clear(rankFunColumnIndex)
+      val isChildColumnsUnique = mq.areColumnsUnique(rank.getInput, childColumns, ignoreNulls)
+      if (isChildColumnsUnique != null && isChildColumnsUnique) {
+        true
+      } else {
+        rank.rankFunction.getKind match {
+          case SqlKind.ROW_NUMBER =>
+            val fields = columns.toArray
+            (rank.partitionKey.toArray :+ rankFunColumnIndex).forall(fields.contains(_))
+          case _ => false
+        }
       }
     }
   }

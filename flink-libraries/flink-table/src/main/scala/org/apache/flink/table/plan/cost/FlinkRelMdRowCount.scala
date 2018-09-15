@@ -30,9 +30,9 @@ import org.apache.calcite.util._
 import org.apache.flink.table.expressions.ExpressionUtils._
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.stats.ValueInterval
 import org.apache.flink.table.plan.util.AggregateUtil._
 import org.apache.flink.table.util.FlinkRelMdUtil
@@ -48,6 +48,8 @@ object FlinkRelMdRowCount extends MetadataHandler[BuiltInMetadata.RowCount] {
   def getDef: MetadataDef[BuiltInMetadata.RowCount] = BuiltInMetadata.RowCount.DEF
 
   def getRowCount(rel: Expand, mq: RelMetadataQuery): Double = rel.estimateRowCount(mq)
+
+  def getRowCount(rel: Rank, mq: RelMetadataQuery): Double = rel.estimateRowCount(mq)
 
   def getRowCount(rel: Aggregate, mq: RelMetadataQuery): Double = {
     getRowCountOfAgg(rel, rel.getGroupSet, rel.getGroupSets.size(), mq)._1

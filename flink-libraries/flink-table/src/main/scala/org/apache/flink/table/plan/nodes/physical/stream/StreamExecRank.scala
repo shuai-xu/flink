@@ -19,20 +19,21 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import java.util
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
+import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.calcite.Rank
 import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.RankUtil._
-import org.apache.flink.table.plan.util.{ConstantRankLimit, RankLimit, RankUtil, StreamExecUtil}
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, RankUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.rank._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -45,19 +46,28 @@ class StreamExecRank(
     inputNode: RelNode,
     inputSchema: BaseRowSchema,
     schema: BaseRowSchema,
-    val rankFunction: SqlRankFunction,
-    val partitionKey: Array[Int],
-    val sortCollation: RelCollation,
-    rankLimit: RankLimit,
-    val hasRowNumber: Boolean)
-  extends SingleRel(cluster, traitSet, inputNode)
+    rankFunction: SqlRankFunction,
+    partitionKey: Array[Int],
+    sortCollation: RelCollation,
+    rankRange: RankRange,
+    val outputRankFunColumn: Boolean)
+  extends Rank(
+    cluster,
+    traitSet,
+    inputNode,
+    rankFunction,
+    ImmutableBitSet.of(partitionKey: _*),
+    sortCollation,
+    rankRange,
+    schema.relDataType)
   with CommonSort
   with StreamExecRel {
 
   var strategy: RankStrategy = _
 
-  def getStrategy(queryConfig: Option[StreamQueryConfig] = None, forceRecompute: Boolean = false)
-      : RankStrategy = {
+  def getStrategy(
+      queryConfig: Option[StreamQueryConfig] = None,
+      forceRecompute: Boolean = false): RankStrategy = {
     if (strategy == null || forceRecompute) {
       val qc: StreamQueryConfig = queryConfig.getOrElse(
         cluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig]))
@@ -65,22 +75,6 @@ class StreamExecRank(
     }
     strategy
   }
-
-  override def estimateRowCount(mq: RelMetadataQuery): Double = {
-    // compare to over window: one input at least one output(do not introduce retract amplification)
-    // rank functions generally filters most of the input, output few records
-    val inputRowCnt = mq.getRowCount(getInput)
-    inputRowCnt * 0.01
-  }
-
-  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
-    // by default, assume cost is proportional to number of rows
-    val rowCount: Double = estimateRowCount(mq)
-    val count = (getRowType.getFieldCount - 1) * 1.0 / inputNode.getRowType.getFieldCount
-    planner.getCostFactory.makeCost(rowCount, rowCount * count, 0)
-  }
-
-  override def deriveRowType(): RelDataType = schema.relDataType
 
   override def producesUpdates = true
 
@@ -99,8 +93,8 @@ class StreamExecRank(
       rankFunction,
       partitionKey,
       sortCollation,
-      rankLimit,
-      hasRowNumber)
+      rankRange,
+      outputRankFunColumn)
     rank.strategy = this.strategy
     rank
   }
@@ -113,7 +107,7 @@ class StreamExecRank(
     if (inputSchema.arity == schema.arity) {
       "*"
     } else {
-      "*, rownum"
+      "*, rowNum"
     }
   }
 
@@ -121,22 +115,21 @@ class StreamExecRank(
     var result =
       s"${getStrategy()}(orderBy: (${sortFieldsToString(sortCollation, schema.relDataType)})"
     if (partitionKey.nonEmpty) {
-      result += s"partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
+      result += s", partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
     }
     result += s", $selectToString"
-    result += s", ${rankLimit.toString(inputSchema.fieldNames)}"
+    result += s", ${rankRange.toString(inputSchema.fieldNames)})"
     result
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    pw
-      .input("input", getInput)
+    pw.input("input", getInput)
       .item("orderBy", sortFieldsToString(sortCollation, schema.relDataType))
       .itemIf("partitionBy",
         partitionFieldsToString(partitionKey, schema.relDataType),
         partitionKey.nonEmpty)
 
-    rankLimit.explain(pw, inputSchema.fieldNames)
+    rankRange.explain(pw, inputSchema.fieldNames)
       .item("strategy", getStrategy())
       .item("rank", rankFunction.getKind)
       .item("select", selectToString)
@@ -145,19 +138,6 @@ class StreamExecRank(
   override def translateToPlan(
     tableEnv: StreamTableEnvironment,
     queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
-
-    rankLimit match {
-      case r: ConstantRankLimit =>
-        if (r.rankEnd <= 0) {
-          throw TableException(s"Rank end can't smaller than zero. The rank end is ${r.rankEnd}")
-        }
-
-        if (r.rankStart > r.rankEnd) {
-          throw TableException(
-            s"Rank start '${r.rankStart}' can't greater than rank end '${r.rankEnd}'.")
-        }
-      case _ =>
-    }
 
     val rankKind = rankFunction.getKind match {
       case SqlKind.ROW_NUMBER => SqlKind.ROW_NUMBER
@@ -169,7 +149,7 @@ class StreamExecRank(
         throw TableException(s"Streaming tables do not support $k rank function.")
     }
 
-    val inputTransform = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
 
     val inputRowTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], inputSchema.fieldTypeInfos: _*)
     val fieldCollation = sortCollation.getFieldCollations.asScala
@@ -188,7 +168,7 @@ class StreamExecRank(
           sortKeySelector.asInstanceOf[KeySelector[BaseRow, BaseRow]],
           schema.arity,
           rankKind,
-          rankLimit,
+          rankRange,
           cacheSize,
           generateRetraction,
           queryConfig)
@@ -204,7 +184,7 @@ class StreamExecRank(
           sortKeySelector.asInstanceOf[KeySelector[BaseRow, BaseRow]],
           schema.arity,
           rankKind,
-          rankLimit,
+          rankRange,
           cacheSize,
           generateRetraction,
           queryConfig)
@@ -222,7 +202,7 @@ class StreamExecRank(
           sortKeySelector.asInstanceOf[KeySelector[BaseRow, BaseRow]],
           schema.arity,
           rankKind,
-          rankLimit,
+          rankRange,
           cacheSize,
           approxBufferMultiplier,
           approxBufferMinSize,
@@ -245,7 +225,7 @@ class StreamExecRank(
           getOrderFromFieldCollation(fieldCollation.head),
           schema.arity,
           rankKind,
-          rankLimit,
+          rankRange,
           cacheSize,
           generateRetraction,
           queryConfig)
@@ -258,7 +238,7 @@ class StreamExecRank(
           sortKeySelector.asInstanceOf[KeySelector[BaseRow, BaseRow]],
           schema.arity,
           rankKind,
-          rankLimit,
+          rankRange,
           generateRetraction,
           queryConfig)
     }

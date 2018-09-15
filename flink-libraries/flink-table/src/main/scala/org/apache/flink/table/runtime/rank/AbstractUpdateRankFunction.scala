@@ -32,7 +32,7 @@ import org.apache.flink.runtime.state.{FunctionInitializationContext, FunctionSn
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
-import org.apache.flink.table.plan.util.RankLimit
+import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.aggregate.CollectionBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
@@ -49,13 +49,13 @@ abstract class AbstractUpdateRankFunction(
     gSorter: GeneratedSorter,
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
-    rankLimit: RankLimit,
+    rankRange: RankRange,
     cacheSize: Long,
     generateRetraction: Boolean,
     queryConfig: StreamQueryConfig)
   extends AbstractRankFunction(
     queryConfig,
-    rankLimit,
+    rankRange,
     inputRowType.getArity,
     outputArity,
     generateRetraction)

@@ -75,6 +75,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
       relBuilder.push(rel).call(
         LESS_THAN_OR_EQUAL, relBuilder.field(fieldIdx), relBuilder.literal(2))
     }
+
     assertEquals((2.0D - 0.0D) / (10.0D - 0.0D),
       mq.getSelectivity(segmentTopMin, getPredicate(segmentTopMin, 0)))
     assertEquals((2.0D - 0.0D) / (10.0D - 0.0D),
@@ -374,6 +375,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetSelectivityOnExpand(): Unit = {
+    relBuilder.clear()
     relBuilder.push(aggWithExpand)
     val predicate1 = relBuilder
       .call(GREATER_THAN, relBuilder.field(0), relBuilder.literal(2))
@@ -409,6 +411,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetSelectivityOnOverWindowAggBatchExec(): Unit = {
+    relBuilder.clear()
     relBuilder.push(overWindowAgg)
     // filter: id <= 2
     val pred = relBuilder.call(
@@ -433,6 +436,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetSelectivityOnLogicalOverWindow(): Unit = {
+    relBuilder.clear()
     relBuilder.push(logicalOverWindow)
     // filter: id <= 2
     val pred = relBuilder.call(
@@ -458,6 +462,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetSelectivityOnFlinkLogicalWindowAggregate(): Unit = {
+    relBuilder.clear()
     relBuilder.push(flinkLogicalWindowAgg)
     // predicate without time fields and aggCall fields
     val predicate1 = relBuilder.call(GREATER_THAN, relBuilder.field(0), relBuilder.literal(15))
@@ -501,6 +506,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetSelectivityOnLogicalWindowAggregate(): Unit = {
+    relBuilder.clear()
     relBuilder.push(logicalWindowAgg)
     // predicate without time fields and aggCall fields
     // a > 15
@@ -545,6 +551,7 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
 
   @Test
   def testGetSelectivityOnWindowAggregateBatchExec(): Unit = {
+    relBuilder.clear()
     relBuilder.push(globalWindowAggWithLocalAgg)
     // predicate without time fields and aggCall fields
     // a > 15
@@ -589,5 +596,44 @@ class FlinkRelMdSelectivityTest extends FlinkRelMdHandlerTestBase {
     )
     assertEquals(0.8D * 0.7D * 0.15D * 0.01D,
       mq.getSelectivity(globalWindowAggWithoutLocalAggWithAuxGrouping, predicate6))
+  }
+
+  @Test
+  def testGetSelectivityOnFlinkLogicalRank(): Unit = {
+    relBuilder.clear()
+    relBuilder.push(flinkLogicalRank)
+    // age > 23
+    val pred1 = relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23))
+    // rk < 2
+    val pred2 = relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2))
+    // age > 23 and rk < 2
+    val pred3 = relBuilder.and(
+      relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)),
+      relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)))
+
+    assertEquals(0.5D, mq.getSelectivity(flinkLogicalRank, pred1))
+    assertEquals(0.25D, mq.getSelectivity(flinkLogicalRank, pred2))
+    assertEquals(0.5D * 0.25D, mq.getSelectivity(flinkLogicalRank, pred3))
+  }
+
+  @Test
+  def testGetSelectivityOnBatchExecRank(): Unit = {
+    relBuilder.clear()
+    relBuilder.push(globalBatchExecRank)
+    // age > 23
+    val pred1 = relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23))
+    // rk < 2
+    val pred2 = relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2))
+    // rk < 5
+    val pred3 = relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(5))
+    // age > 23 and rk < 2
+    val pred4 = relBuilder.and(
+      relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)),
+      relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)))
+
+    assertEquals(0.5D, mq.getSelectivity(globalBatchExecRank, pred1))
+    assertEquals(0.0D, mq.getSelectivity(globalBatchExecRank, pred2))
+    assertEquals(2.0D / 3.0D, mq.getSelectivity(globalBatchExecRank, pred3), 1e-6)
+    assertEquals(0.5D * 0.0D, mq.getSelectivity(globalBatchExecRank, pred4))
   }
 }

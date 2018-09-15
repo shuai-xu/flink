@@ -38,6 +38,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortAggreg
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortWindowAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel$;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
@@ -282,6 +283,12 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	@Override
 	public Void visit(BatchExecSegmentTop segmentTop) {
 		calculateNoManagedMem(segmentTop);
+		return null;
+	}
+
+	@Override
+	public Void visit(BatchExecRank rank) {
+		calculateNoManagedMem(rank);
 		return null;
 	}
 

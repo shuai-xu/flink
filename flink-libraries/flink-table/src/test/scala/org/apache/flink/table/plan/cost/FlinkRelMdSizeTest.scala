@@ -142,4 +142,12 @@ class FlinkRelMdSizeTest extends FlinkRelMdHandlerTestBase {
     assertEquals(Seq(4D, 8D), mq.getAverageColumnSizes(semiJoin).toSeq)
   }
 
+  @Test
+  def testAverageColumnSizeOnRank(): Unit = {
+    assertEquals(Seq(8D, 32D, 4D, 32D, 8D), mq.getAverageColumnSizes(flinkLogicalRank).toSeq)
+    assertEquals(Seq(8D, 32D, 4D, 32D, 8D), mq.getAverageColumnSizes(globalBatchExecRank).toSeq)
+    assertEquals(Seq(8D, 32D, 4D, 32D), mq.getAverageColumnSizes(localBatchExecRank).toSeq)
+    assertEquals(Seq(8D, 32D, 4D, 32D), mq.getAverageColumnSizes(streamExecRowNumber).toSeq)
+  }
+
 }

@@ -186,4 +186,8 @@ class DefaultResultPartitionCalculator(
   override def visit(segmentTop: BatchExecSegmentTop): Unit = {
     calculate(segmentTop)
   }
+
+  override def visit(rank: BatchExecRank): Unit = {
+    calculate(rank)
+  }
 }

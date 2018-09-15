@@ -21,9 +21,9 @@ package org.apache.flink.table.plan.cost
 import java.sql.{Date, Time, Timestamp}
 
 import com.google.common.collect.Lists
+import org.apache.calcite.rel._
 import org.apache.calcite.rel.core.{AggregateCall, JoinRelType}
 import org.apache.calcite.rel.logical.LogicalExchange
-import org.apache.calcite.rel._
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlCountAggFunction
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
@@ -132,10 +132,10 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
       relBuilder.field(0),
       relBuilder.field(1),
       relBuilder.literal(true),
-      relBuilder.getRexBuilder.makeLiteral(
-        2.1D, typeFactory.createTypeFromTypeInfo(BasicTypeInfo.DOUBLE_TYPE_INFO, false), true),
-      relBuilder.getRexBuilder.makeLiteral(
-        2L, typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, false), true))
+      relBuilder.getRexBuilder.makeLiteral(2.1D, typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.DOUBLE_TYPE_INFO, isNullable = false), true),
+      relBuilder.getRexBuilder.makeLiteral(2L, typeFactory.createTypeFromTypeInfo(
+        BasicTypeInfo.LONG_TYPE_INFO, isNullable = false), true))
     val outputRowType = relBuilder.project(projects).build().getRowType
     relBuilder.push(ts)
     val expr1 = relBuilder.call(LESS_THAN_OR_EQUAL, relBuilder.field(0), relBuilder.literal(2))
@@ -439,6 +439,28 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
       mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 1))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 2))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 3))
+  }
+
+  @Test
+  def testGetColumnIntervalOnRank(): Unit = {
+    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(flinkLogicalRank, 0))
+    assertEquals(ValueInterval(1, 5), mq.getColumnInterval(flinkLogicalRank, 4))
+
+    assertEquals(ValueInterval(161.0D, 172.1D),
+      mq.getColumnInterval(flinkLogicalRankWithVariableRankRange, 3))
+    assertEquals(ValueInterval(1D,172.1D),
+      mq.getColumnInterval(flinkLogicalRankWithVariableRankRange, 4))
+
+    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(flinkLogicalRowNumber, 0))
+    assertEquals(ValueInterval(0D, 5.1D), mq.getColumnInterval(flinkLogicalRowNumber, 1))
+
+    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(globalBatchExecRank, 0))
+    assertEquals(ValueInterval(3, 5), mq.getColumnInterval(globalBatchExecRank, 4))
+
+    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(localBatchExecRank, 0))
+
+    assertEquals(ValueInterval(0, 10), mq.getColumnInterval(streamExecRowNumber, 0))
+    assertEquals(ValueInterval(0D, 5.1D), mq.getColumnInterval(streamExecRowNumber, 1))
   }
 }
 

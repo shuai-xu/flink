@@ -39,10 +39,11 @@ import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCorrelate, BatchExecGroupAggregateBase, BatchExecOverAggregate, BatchExecWindowAggregateBase}
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey, TableSource}
+import org.apache.flink.table.util.FlinkRelMdUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -470,19 +471,6 @@ object FlinkRelMdUniqueKeys extends MetadataHandler[BuiltInMetadata.UniqueKeys] 
   }
 
   def getUniqueKeys(
-      rel: FlinkLogicalRank,
-      mq: RelMetadataQuery,
-      ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    getRankUniqueKeys(
-      rel.rankFunction.kind,
-      rel.partitionKey.toArray,
-      rel.getRowType,
-      rel.getInput,
-      mq,
-      ignoreNulls)
-  }
-
-  def getUniqueKeys(
       rel: FlinkLogicalLastRow,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
@@ -498,41 +486,23 @@ object FlinkRelMdUniqueKeys extends MetadataHandler[BuiltInMetadata.UniqueKeys] 
   }
 
   def getUniqueKeys(
-      rel: StreamExecRank,
+      rel: Rank,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    getRankUniqueKeys(
-      rel.rankFunction.kind,
-      rel.partitionKey,
-      rel.getRowType,
-      rel.getInput,
-      mq,
-      ignoreNulls)
-  }
-
-  private def getRankUniqueKeys(
-      kind: SqlKind,
-      partitionKey: Array[Int],
-      outputType: RelDataType,
-      input: RelNode,
-      mq: RelMetadataQuery,
-      ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    val partitionKeys = partitionKey.indices.toArray
-    val inputUniqueKeys = mq.getUniqueKeys(input, ignoreNulls)
-    if (input.getRowType.getFieldCount == outputType.getFieldCount) {
+    val inputUniqueKeys = mq.getUniqueKeys(rel.getInput, ignoreNulls)
+    val rankFunColumnIndex = FlinkRelMdUtil.getRankFunColumnIndex(rel)
+    if (rankFunColumnIndex < 0) {
       inputUniqueKeys
     } else {
       val retSet = new util.HashSet[ImmutableBitSet]
-      kind match {
+      rel.rankFunction.kind match {
         case SqlKind.ROW_NUMBER =>
-          //rankIndex is at the end of the output fields.
-          val rankIndex = outputType.getFieldCount - 1
-          retSet.addAll(toImmutableSet(partitionKeys :+ rankIndex))
-        case _ =>
+          retSet.add(rel.partitionKey.union(ImmutableBitSet.of(rankFunColumnIndex)))
+        case _ => // do nothing
       }
       if (inputUniqueKeys != null && inputUniqueKeys.nonEmpty) {
-        inputUniqueKeys.foreach { uniqueKey =>
-          retSet.add(uniqueKey)
+        inputUniqueKeys.foreach {
+          uniqueKey => retSet.add(uniqueKey)
         }
       }
       retSet
@@ -609,8 +579,8 @@ object FlinkRelMdUniqueKeys extends MetadataHandler[BuiltInMetadata.UniqueKeys] 
     }
   }
 
-  private def uniqueKeyToImmutableSet(indexes: util.Collection[IndexKey]): util
-  .Set[ImmutableBitSet] = {
+  private def uniqueKeyToImmutableSet(
+      indexes: util.Collection[IndexKey]): util.Set[ImmutableBitSet] = {
     if (null != indexes && indexes.nonEmpty) {
       val retSet = new util.HashSet[ImmutableBitSet]
       indexes.filter(_.isUnique).map(_.toArray).foreach { uk => retSet.addAll(toImmutableSet(uk)) }

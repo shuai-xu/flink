@@ -23,18 +23,20 @@ import java.util
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical.LogicalCalc
 import org.apache.calcite.rel.metadata._
+import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util._
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
+import org.apache.flink.table.plan.util.ConstantRankRange
 import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil, FlinkRexUtil}
 
 import scala.collection.JavaConversions._
@@ -521,6 +523,38 @@ object FlinkRelMdDistinctRowCount extends MetadataHandler[BuiltInMetadata.Distin
       predicate)
   }
 
+  def getDistinctRowCount(
+      rank: Rank,
+      mq: RelMetadataQuery,
+      groupKey: ImmutableBitSet,
+      predicate: RexNode): Double = {
+    val rankFunColumnIndex = FlinkRelMdUtil.getRankFunColumnIndex(rank)
+    val newGroupKey = groupKey.clearIf(rankFunColumnIndex, rankFunColumnIndex >= 0)
+    val (nonRankPred, rankPred) = FlinkRelMdUtil.splitPredicateOnRank(rank, predicate)
+    val inputNdv: Double = if (newGroupKey.nonEmpty) {
+      mq.getDistinctRowCount(rank.getInput, newGroupKey, nonRankPred.orNull)
+    } else {
+      1D
+    }
+    val rankSelectivity: Double = rankPred match {
+      case Some(p) => mq.getSelectivity(rank, p)
+      case _ => 1D
+    }
+
+    val rankFunNdv: Double = if (rankFunColumnIndex > 0 && groupKey.get(rankFunColumnIndex)) {
+      FlinkRelMdUtil.getRankRangeNdv(rank.rankRange)
+    } else {
+      1D // return 1D instead of null for computing directly
+    }
+
+    if (inputNdv == null) {
+      null
+    } else {
+      FlinkRelMdUtil.adaptNdvBasedOnSelectivity(
+        mq.getRowCount(rank), inputNdv * rankFunNdv, rankSelectivity)
+    }
+  }
+
   /**
     * Catch-all implementation for
     * [[BuiltInMetadata.DistinctRowCount#getDistinctRowCount(ImmutableBitSet, RexNode)]],
@@ -528,11 +562,6 @@ object FlinkRelMdDistinctRowCount extends MetadataHandler[BuiltInMetadata.Distin
     *
     * @see org.apache.calcite.rel.metadata.RelMetadataQuery#getDistinctRowCount(
     *      RelNode, ImmutableBitSet, RexNode)
-    * @param rel
-    * @param mq
-    * @param groupKey
-    * @param predicate
-    * @return
     */
   def getDistinctRowCount(
       rel: RelNode,

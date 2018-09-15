@@ -30,13 +30,14 @@ import org.apache.calcite.util.Util
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnInterval
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecGroupWindowAggregate, StreamExecLocalGroupAggregate}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.util.Preconditions
 import org.apache.flink.table.plan.stats._
-import org.apache.flink.table.util.ColumnIntervalUtil
+import org.apache.flink.table.plan.util.{ConstantRankRange, VariableRankRange}
+import org.apache.flink.table.util.{ColumnIntervalUtil, FlinkRelMdUtil}
 import org.apache.flink.table.util.FlinkRelOptUtil._
 
 import scala.collection.JavaConversions._
@@ -504,7 +505,7 @@ object FlinkRelMdColumnInterval extends MetadataHandler[ColumnInterval] {
       }
       if (aggregateCall != null) {
         aggregateCall.getAggregation.getKind match {
-          case SUM => {
+          case SUM =>
             val inputInterval: ValueInterval = fmq.getColumnInterval(
               aggregate.getInput,
               aggregateCall.getArgList.get(0))
@@ -527,7 +528,6 @@ object FlinkRelMdColumnInterval extends MetadataHandler[ColumnInterval] {
             } else {
               null
             }
-          }
           // todo add more built-in agg function
           case _ => null
         }
@@ -592,6 +592,41 @@ object FlinkRelMdColumnInterval extends MetadataHandler[ColumnInterval] {
     index: Int): ValueInterval = {
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     fmq.getColumnInterval(segmentTop.getInput, index)
+  }
+
+  /**
+    * Gets intervals of the given column of Rank.
+    *
+    * @param rank        [[Rank]] instance to analyze
+    * @param mq          RelMetadataQuery instance
+    * @param index       the index of the given column
+    * @return interval of the given column in batch Rank
+    */
+  def getColumnInterval(
+      rank: Rank,
+      mq: RelMetadataQuery,
+      index: Int): ValueInterval = {
+    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
+    val rankFunColumnIndex = FlinkRelMdUtil.getRankFunColumnIndex(rank)
+    if (index == rankFunColumnIndex) {
+      rank.rankRange match {
+        case r: ConstantRankRange => ValueInterval(r.rankStart, r.rankEnd)
+        case v: VariableRankRange =>
+          val interval = fmq.getColumnInterval(rank.getInput, v.rankEndIndex)
+          interval match {
+            case hasUpper: WithUpper =>
+              val lower = ColumnIntervalUtil.convertStringToNumber("1", hasUpper.upper.getClass)
+              lower match {
+                case Some(l) =>
+                  ValueInterval(l, hasUpper.upper, includeUpper = hasUpper.includeUpper)
+                case _ => null
+              }
+            case _ => null
+          }
+      }
+    } else {
+      fmq.getColumnInterval(rank.getInput, index)
+    }
   }
 
   /**

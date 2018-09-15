@@ -30,8 +30,9 @@ import org.apache.calcite.util.{Bug, ImmutableBitSet, Util}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.plan.cost.FlinkMetadata.UniqueColumns
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, SegmentTop}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank, SegmentTop}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.util.FlinkRelMdUtil
 import org.apache.flink.table.util.FlinkRelMdUtil.splitColumnsIntoLeftAndRight
 import org.apache.flink.table.util.FlinkRelOptUtil.checkAndSplitAggCalls
 
@@ -98,6 +99,26 @@ object FlinkRelMdUniqueColumns extends MetadataHandler[UniqueColumns] {
     columns: ImmutableBitSet): ImmutableBitSet = {
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     fmq.getUniqueColumns(segmentTop.getInput, columns)
+  }
+
+  def getUniqueColumns(
+      rank: Rank,
+      mq: RelMetadataQuery,
+      columns: ImmutableBitSet): ImmutableBitSet = {
+    val columnList = columns.toList
+    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
+    val rankFunColumnIndex = FlinkRelMdUtil.getRankFunColumnIndex(rank)
+    val columnSkipRankCol = columnList.filter(_ != rankFunColumnIndex)
+    if (columnSkipRankCol.isEmpty) {
+      return columns
+    }
+    val inputUniqueCols = fmq.getUniqueColumns(
+      rank.getInput, ImmutableBitSet.of(columnSkipRankCol))
+    if (columnList.contains(rankFunColumnIndex)) {
+      inputUniqueCols.union(ImmutableBitSet.of(rankFunColumnIndex))
+    } else {
+      inputUniqueCols
+    }
   }
 
   def getUniqueColumns(

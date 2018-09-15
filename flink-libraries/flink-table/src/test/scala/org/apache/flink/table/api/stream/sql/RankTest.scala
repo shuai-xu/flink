@@ -485,7 +485,6 @@ class RankTest extends TableTestBase {
 
     val source = readFromResource("testMultipleTopNAfterAgg.out")
     val expected = replaceString(source)
-    print(result)
     assertEquals(expected, result)
   }
 

@@ -206,7 +206,7 @@ object FlinkRelMdModifiedMonotonicity extends MetadataHandler[ModifiedMonotonici
     getRankMonotonicity(rel.getInput,
       rel,
       rel.partitionKey.toArray,
-      rel.hasRowNumber,
+      rel.outputRankFunColumn,
       rel.sortCollation,
       mq)
   }
@@ -309,8 +309,8 @@ object FlinkRelMdModifiedMonotonicity extends MetadataHandler[ModifiedMonotonici
     getRankMonotonicity(
       rel.getInput,
       rel,
-      rel.partitionKey,
-      rel.hasRowNumber,
+      rel.partitionKey.toArray,
+      rel.outputRankFunColumn,
       rel.sortCollation,
       mq)
   }

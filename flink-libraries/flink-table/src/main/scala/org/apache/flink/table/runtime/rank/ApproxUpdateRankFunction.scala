@@ -21,7 +21,7 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.codegen.GeneratedSorter
-import org.apache.flink.table.plan.util.RankLimit
+import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -35,7 +35,7 @@ class ApproxUpdateRankFunction(
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
     rankKind: SqlKind,
-    rankLimit: RankLimit,
+    rankRange: RankRange,
     cacheSize: Long,
     approxBufferMultiplier: Long,
     approxBufferMinSize: Long,
@@ -47,7 +47,7 @@ class ApproxUpdateRankFunction(
     gSorter,
     sortKeySelector,
     outputArity,
-    rankLimit,
+    rankRange,
     cacheSize,
     generateRetraction,
     queryConfig) {

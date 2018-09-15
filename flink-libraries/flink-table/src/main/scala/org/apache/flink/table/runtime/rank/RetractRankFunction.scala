@@ -30,7 +30,7 @@ import org.apache.flink.api.java.typeutils.{ListTypeInfo, SortedMapTypeInfo}
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
-import org.apache.flink.table.plan.util.RankLimit
+import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.aggregate.LazyBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
@@ -47,12 +47,12 @@ class RetractRankFunction(
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
     rankKind: SqlKind,
-    rankLimit: RankLimit,
+    rankRange: RankRange,
     generateRetraction: Boolean,
     queryConfig: StreamQueryConfig)
   extends AbstractRankFunction(
     queryConfig,
-    rankLimit,
+    rankRange,
     inputRowType.getArity,
     outputArity,
     generateRetraction)

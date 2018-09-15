@@ -35,6 +35,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortAggreg
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortWindowAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSegmentTop;
@@ -178,6 +179,11 @@ public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel
 	@Override
 	public BatchExecRel<?> visit(BatchExecSegmentTop segmentTop) {
 		return visitInputs(segmentTop);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecRank rank) {
+		return visitInputs(rank);
 	}
 
 	@Override

@@ -479,7 +479,7 @@ class FlinkRelMdUniqueColumnsTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetColumnIntervalOnLogicalWindowAggregate(): Unit = {
+  def testGetUniqueColumnsOnLogicalWindowAggregate(): Unit = {
     assertEquals(ImmutableBitSet.of(0, 1, 2, 3, 4, 5, 6),
       mq.getUniqueColumns(logicalWindowAgg, ImmutableBitSet.of(0, 1, 2, 3, 4, 5, 6)))
     assertEquals(ImmutableBitSet.of(3, 4, 5, 6),
@@ -502,7 +502,7 @@ class FlinkRelMdUniqueColumnsTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetColumnIntervalOnBatchExecWindowAggregate(): Unit = {
+  def testGetUniqueColumnsOnBatchExecWindowAggregate(): Unit = {
     assertEquals(ImmutableBitSet.of(0, 1, 2, 3),
       mq.getUniqueColumns(localWindowAgg, ImmutableBitSet.of(0, 1, 2, 3)))
     assertEquals(ImmutableBitSet.of(1, 2),
@@ -558,5 +558,44 @@ class FlinkRelMdUniqueColumnsTest extends FlinkRelMdHandlerTestBase {
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(0, 1, 2, 3)))
   }
 
+  @Test
+  def testGetUniqueColumnsOnRank(): Unit = {
+    assertEquals(ImmutableBitSet.of(0),
+      mq.getUniqueColumns(flinkLogicalRank, ImmutableBitSet.of(0, 1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3),
+      mq.getUniqueColumns(flinkLogicalRank, ImmutableBitSet.of(1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(0, 4),
+      mq.getUniqueColumns(flinkLogicalRank, ImmutableBitSet.of(0, 1, 2, 3, 4)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3, 4),
+      mq.getUniqueColumns(flinkLogicalRank, ImmutableBitSet.of(1, 2, 3, 4)))
+
+    assertEquals(ImmutableBitSet.of(0),
+      mq.getUniqueColumns(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(0, 1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3),
+      mq.getUniqueColumns(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(0, 4),
+      mq.getUniqueColumns(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(0, 1, 2, 3, 4)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3, 4),
+      mq.getUniqueColumns(flinkLogicalRowNumberWithOutput, ImmutableBitSet.of(1, 2, 3, 4)))
+
+    assertEquals(ImmutableBitSet.of(0),
+      mq.getUniqueColumns(globalBatchExecRank, ImmutableBitSet.of(0, 1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3),
+      mq.getUniqueColumns(globalBatchExecRank, ImmutableBitSet.of(1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(0, 4),
+      mq.getUniqueColumns(globalBatchExecRank, ImmutableBitSet.of(0, 1, 2, 3, 4)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3, 4),
+      mq.getUniqueColumns(globalBatchExecRank, ImmutableBitSet.of(1, 2, 3, 4)))
+
+    assertEquals(ImmutableBitSet.of(0),
+      mq.getUniqueColumns(localBatchExecRank, ImmutableBitSet.of(0, 1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3),
+      mq.getUniqueColumns(localBatchExecRank, ImmutableBitSet.of(1, 2, 3)))
+
+    assertEquals(ImmutableBitSet.of(0),
+      mq.getUniqueColumns(streamExecRowNumber, ImmutableBitSet.of(0, 1, 2, 3)))
+    assertEquals(ImmutableBitSet.of(1, 2, 3),
+      mq.getUniqueColumns(streamExecRowNumber, ImmutableBitSet.of(1, 2, 3)))
+  }
 }
 

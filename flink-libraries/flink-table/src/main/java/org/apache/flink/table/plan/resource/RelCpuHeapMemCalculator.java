@@ -39,6 +39,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortAggreg
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecLocalSortWindowAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinBase;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
@@ -244,6 +245,12 @@ public class RelCpuHeapMemCalculator implements BatchExecRelVisitor<Void> {
 	@Override
 	public Void visit(BatchExecSegmentTop segmentTop) {
 		calculateDefaultRel(segmentTop);
+		return null;
+	}
+
+	@Override
+	public Void visit(BatchExecRank rank) {
+		calculateDefaultRel(rank);
 		return null;
 	}
 

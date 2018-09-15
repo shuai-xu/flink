@@ -247,6 +247,21 @@ class TableConfig {
   }
 
   /**
+    * Returns whether rank shuffle by partial partition keys.
+    */
+  def rankShuffleByPartialKeyEnabled: Boolean = {
+    parameters.getBoolean(SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED,
+      SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT)
+  }
+
+  /**
+    * Sets rank shuffle by partial partition keys enabled.
+    */
+  def setRankShuffleByPartialKeyEnabled(shuffleByPartialKey: Boolean): Unit = {
+    parameters.setBoolean(SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED, shuffleByPartialKey)
+  }
+
+  /**
     * Returns percentage after a max/min grouping filter of self join.
     */
   def selectivityOfSegmentTop: Double = {
@@ -755,14 +770,21 @@ object TableConfig {
     * 2. L and R shuffle by c2
     * 3. L and R shuffle by c1 and c2
     */
-  val SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.join.shuffle.by.partial-key.enabled"
+  val SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.join.shuffle-by.partial-key.enabled"
   val SQL_CBO_JOIN_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
 
   /**
     * Enables aggregate shuffle by partial group keys.
     */
-  val SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.agg.shuffle.by.partial-key.enabled"
+  val SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.agg.shuffle-by.partial-key.enabled"
   val SQL_CBO_AGG_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
+
+  /**
+    * Enables rank shuffle by partial partition keys.
+    */
+  val SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED = "sql.cbo.rank.shuffle-by.partial-key.enabled"
+  val SQL_CBO_RANK_SHUFFLE_BY_PARTIALKEY_ENABLED_DEFAULT: Boolean = false
+
 
   /**
     * Percentage of output records after filtered by Max/Min agg, mainly used for SegmentTop

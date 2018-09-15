@@ -27,7 +27,7 @@ import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable.{AND, EQUALS, GREATER_THAN, LESS_THAN}
 import org.apache.flink.table.plan.cost.FlinkRelMdHandlerTestBase
 import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase}
 import org.apache.flink.table.util.FlinkRelMdUtil
 import org.junit.Assert.assertEquals
@@ -124,6 +124,39 @@ class FlinkRelMdUtilTest {
       namePropertiesSelectivityNode).toString, newPred1.toString)
   }
 
+  @Test
+  def testSplitPredicateOnRank(): Unit = {
+    val wrapper = new RelMdHandlerTestWrapper()
+    val relBuilder = wrapper.relBuilder
+    val rexBuilder = relBuilder.getRexBuilder
+    val rank = wrapper.getFlinkLogicalRank
+    relBuilder.push(rank)
+
+    // age > 23
+    val pred1 = relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23))
+    val (nonRankPred1, rankPred1) = FlinkRelMdUtil.splitPredicateOnRank(rank, pred1)
+    assertEquals(pred1.toString, nonRankPred1.get.toString)
+    assertEquals(None, rankPred1)
+
+    // rk < 2
+    val pred2 = relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2))
+    val (nonRankPred2, rankPred2) = FlinkRelMdUtil.splitPredicateOnRank(rank, pred2)
+    assertEquals(None, nonRankPred2)
+    assertEquals(pred2.toString, rankPred2.get.toString)
+
+    // age > 23 and rk < 2
+    val pred3 = relBuilder.and(
+        relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)),
+        relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)))
+    val (nonRankPred3, rankPred3) = FlinkRelMdUtil.splitPredicateOnRank(rank, pred3)
+    assertEquals(
+      relBuilder.call(GREATER_THAN, relBuilder.field(2), relBuilder.literal(23)).toString,
+      nonRankPred3.get.toString)
+    assertEquals(
+      relBuilder.call(LESS_THAN, relBuilder.field(4), relBuilder.literal(2)).toString,
+      rankPred3.get.toString)
+  }
+
   private class RelMdHandlerTestWrapper extends FlinkRelMdHandlerTestBase {
     super.setUp()
 
@@ -143,6 +176,8 @@ class FlinkRelMdUtilTest {
 
     def getGlobalWindowAggWithoutLocalAggWithAuxGrouping: BatchExecHashWindowAggregate =
       globalWindowAggWithoutLocalAggWithAuxGrouping
+
+    def getFlinkLogicalRank: FlinkLogicalRank = flinkLogicalRank
   }
 
 }

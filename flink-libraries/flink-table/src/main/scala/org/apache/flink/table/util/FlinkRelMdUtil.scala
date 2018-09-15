@@ -33,9 +33,11 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecGroupAggregateBase, BatchExecLocalHashWindowAggregate, BatchExecLocalSortWindowAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.physical.batch._
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
+import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange}
 import org.apache.flink.table.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
 
 import scala.collection.JavaConversions._
@@ -542,6 +544,58 @@ object FlinkRelMdUtil {
       Option(RexUtil.composeConjunction(rexBuilder, notPushable, true))
     }
     (childPred, restPred)
+  }
+
+  def getRankFunColumnIndex(rank: Rank): Int = {
+    rank match {
+      case r: FlinkLogicalRank => getRankFunColumnIndex(rank, r.outputRankFunColumn)
+      case r: BatchExecRank => getRankFunColumnIndex(rank, r.outputRankFunColumn)
+      case r: StreamExecRank => getRankFunColumnIndex(rank, r.outputRankFunColumn)
+    }
+  }
+
+  private def getRankFunColumnIndex(rank: Rank, outputRankFunColumn: Boolean): Int = {
+    if (outputRankFunColumn) {
+      require(rank.getRowType.getFieldCount == rank.getInput.getRowType.getFieldCount + 1)
+      rank.getRowType.getFieldCount - 1
+    } else {
+      require(rank.getRowType.getFieldCount == rank.getInput.getRowType.getFieldCount)
+      -1
+    }
+  }
+
+  def splitPredicateOnRank(
+      rank: Rank,
+      predicate: RexNode): (Option[RexNode], Option[RexNode]) = {
+    val rankFunColumnIndex = getRankFunColumnIndex(rank)
+    if (predicate == null || predicate.isAlwaysTrue || rankFunColumnIndex < 0) {
+      return (Some(predicate), None)
+    }
+
+    val rankNodes = new util.ArrayList[RexNode]
+    val nonRankNodes = new util.ArrayList[RexNode]
+    RelOptUtil.splitFilters(
+      ImmutableBitSet.range(0, rankFunColumnIndex),
+      predicate,
+      nonRankNodes,
+      rankNodes)
+    val rexBuilder = rank.getCluster.getRexBuilder
+    val nonRankPred = if (nonRankNodes.isEmpty) {
+      None
+    } else {
+      Option(RexUtil.composeConjunction(rexBuilder, nonRankNodes, true))
+    }
+    val rankPred = if (rankNodes.isEmpty) {
+      None
+    } else {
+      Option(RexUtil.composeConjunction(rexBuilder, rankNodes, true))
+    }
+    (nonRankPred, rankPred)
+  }
+
+  def getRankRangeNdv(rankRange: RankRange): Double = rankRange match {
+    case r: ConstantRankRange => (r.rankEnd - r.rankStart + 1).toDouble
+    case _ => 100D // default value now
   }
 
   /** Splits a column set between left and right sets. */

@@ -94,7 +94,9 @@ class BatchExecHashAggregate(
             null
           }
         } else if (Util.startsWith(shuffleKeys, groupKeysList)) {
-          // Hash [a] can satisfy Hash[a, b]
+          // If required distribution is not strict, Hash[a] can satisfy Hash[a, b].
+          // If partitionKeys satisfies shuffleKeys (the shuffle between this node and
+          // its output is not necessary), just push down partitionKeys into input.
           FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList)
         } else {
           val tableConfig = FlinkRelOptUtil.getTableConfig(this)

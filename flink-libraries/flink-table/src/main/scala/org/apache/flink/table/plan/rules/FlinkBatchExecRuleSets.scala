@@ -184,6 +184,8 @@ object FlinkBatchExecRuleSets {
     // remove unnecessary sort rule
     SortRemoveRule.INSTANCE,
 
+    FlinkLogicalRankRule.CONSTANT_RANK,
+
     // calc rules
     FilterCalcMergeRule.INSTANCE,
     ProjectCalcMergeRule.INSTANCE,
@@ -338,7 +340,10 @@ object FlinkBatchExecRuleSets {
     //segment-top
     BatchExecSegmentTopRule.INSTANCE,
 
-    BatchExecJoinTableRule.INSTANCE
+    BatchExecJoinTableRule.INSTANCE,
+    // rank
+    BatchExecRankRule.INSTANCE,
+    RemoveRedundantLocalRankRule.INSTANCE
   )
 
   val BATCH_EXEC_POST_PHYSICAL_RULES: RuleSet = RuleSets.ofList(

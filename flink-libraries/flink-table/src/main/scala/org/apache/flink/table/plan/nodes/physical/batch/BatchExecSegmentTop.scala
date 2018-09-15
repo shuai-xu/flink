@@ -91,8 +91,8 @@ class BatchExecSegmentTop(
   }
 
   private[flink] def orderingToString(
-    inputType: RelDataType,
-    orderFields: JList[RelFieldCollation]): String = {
+      inputType: RelDataType,
+      orderFields: JList[RelFieldCollation]): String = {
 
     val inFields = inputType.getFieldList
 
@@ -108,7 +108,7 @@ class BatchExecSegmentTop(
     * @param queryConfig The configuration for the query to generate.
     */
   override protected def translateToPlanInternal(
-    tableEnv: BatchTableEnvironment,
+      tableEnv: BatchTableEnvironment,
       queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])

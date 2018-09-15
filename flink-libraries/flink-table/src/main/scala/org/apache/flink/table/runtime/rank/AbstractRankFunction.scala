@@ -24,7 +24,7 @@ import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.metrics.{Counter, Gauge}
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
-import org.apache.flink.table.plan.util.{ConstantRankLimit, RankLimit, VariableRankLimit}
+import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, VariableRankRange}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.aggregate.ProcessFunctionWithCleanupState
 import org.apache.flink.table.runtime.functions.ExecutionContext
@@ -33,7 +33,7 @@ import org.apache.flink.util.Collector
 
 abstract class AbstractRankFunction(
     queryConfig: StreamQueryConfig,
-    rankLimit: RankLimit,
+    rankRange: RankRange,
     inputArity: Int,
     outputArity: Int,
     generateRetraction: Boolean)
@@ -43,7 +43,7 @@ abstract class AbstractRankFunction(
   protected var rankEnd: Long = -1
   protected var rankStart: Long = -1
 
-  private var limitField: Int = _
+  private var rankEndIndex: Int = _
   private var rankEndState: KeyedValueState[BaseRow, JLong] = _
   private var invalidCounter: Counter = _
 
@@ -61,14 +61,14 @@ abstract class AbstractRankFunction(
     outputRow = new JoinedRow()
 
     // variable rank limit
-    rankLimit match {
-      case c: ConstantRankLimit =>
+    rankRange match {
+      case c: ConstantRankRange =>
         isConstantRankEnd = true
         rankEnd = c.rankEnd
         rankStart = c.rankStart
-      case v: VariableRankLimit =>
+      case v: VariableRankRange =>
         isConstantRankEnd = false
-        limitField = v.limitField
+        rankEndIndex = v.rankEndIndex
         val rankStateDesc = new ValueStateDescriptor[JLong]("rankEnd", Types.LONG)
         rankEndState = ctx.getKeyedValueState(rankStateDesc)
     }
@@ -91,7 +91,7 @@ abstract class AbstractRankFunction(
     } else {
       val currentKey = executionContext.currentKey()
       val rankEndValue = rankEndState.get(currentKey)
-      val curRankEnd = row.getLong(limitField)
+      val curRankEnd = row.getLong(rankEndIndex)
       if (rankEndValue == null) {
         rankEnd = curRankEnd
         rankEndState.put(currentKey, rankEnd)

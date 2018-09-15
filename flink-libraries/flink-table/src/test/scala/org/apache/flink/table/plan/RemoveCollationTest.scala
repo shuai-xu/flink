@@ -18,14 +18,12 @@
 
 package org.apache.flink.table.plan
 
-import org.apache.calcite.rel.{RelCollation, RelDistribution}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
+import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
-import org.junit.{Before, Ignore, Test}
+import org.junit.{Before, Test}
 
 class RemoveCollationTest extends TableTestBatchExecBase {
 
@@ -101,6 +99,80 @@ class RemoveCollationTest extends TableTestBatchExecBase {
       """
         |WITH r AS (SELECT * FROM x ORDER BY a, b)
         |SELECT a, b, COUNT(c) AS cnt FROM r GROUP BY a, b
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Rank_1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    val sqlQuery =
+      """
+        |SELECT a, SUM(b) FROM (
+        | SELECT * FROM (
+        |   SELECT a, b, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM x)
+        | WHERE rk <= 10
+        |) GROUP BY a
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Rank_2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    val sqlQuery =
+      """
+        |SELECT a, b, MAX(c) FROM (
+        | SELECT * FROM (
+        |   SELECT a, b, c, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM x)
+        | WHERE rk <= 10
+        |) GROUP BY a, b
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Rank_3(): Unit = {
+    // TODO remove local rank for single distribution input
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, b, c, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM (
+        |   SELECT a, b, c FROM x ORDER BY a, b
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Rank_4(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    val sqlQuery =
+      """
+        |SELECT * FROM (
+        | SELECT a, c, RANK() OVER(PARTITION BY a ORDER BY a) rk FROM (
+        |   SELECT a, COUNT(c) AS c FROM x GROUP BY a
+        | )
+        |) WHERE rk <= 10
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_Rank_Singleton(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
+    val sqlQuery =
+      """
+        |SELECT COUNT(a), SUM(b) FROM (
+        | SELECT * FROM (
+        |   SELECT a, b, RANK() OVER(ORDER BY b) rk FROM x)
+        | WHERE rk <= 10
+        |)
       """.stripMargin
     util.verifyPlan(sqlQuery)
   }

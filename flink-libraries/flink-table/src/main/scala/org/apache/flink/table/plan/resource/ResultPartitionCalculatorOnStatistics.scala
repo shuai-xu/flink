@@ -179,4 +179,6 @@ class ResultPartitionCalculatorOnStatistics(
   }
 
   override def visit(segmentTop: BatchExecSegmentTop): Unit = calculateSingle(segmentTop)
+
+  override def visit(rank: BatchExecRank): Unit = calculateSingle(rank)
 }

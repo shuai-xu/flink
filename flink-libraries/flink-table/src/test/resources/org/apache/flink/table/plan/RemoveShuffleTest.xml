@@ -568,6 +568,192 @@ Calc(select=[sum_b, /(CAST(CASE(>(w0$o0, 0), CAST(w0$o1), null)), w0$o0) AS avg_
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testRemoveHashShuffle_Rank">
+    <Resource name="sql">
+      <![CDATA[
+SELECT * FROM (
+ SELECT a, b, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM (
+   SELECT a, SUM(b) AS b FROM x GROUP BY a
+ )
+) WHERE rk <= 10
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], rk=[$2])
++- LogicalFilter(condition=[<=($2, 10)])
+   +- LogicalProject(a=[$0], b=[$1], rk=[RANK() OVER (PARTITION BY $0 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalAggregate(group=[{0}], b=[SUM($1)])
+         +- LogicalProject(a=[$0], b=[$1])
+            +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Sort(orderBy=[a ASC, b ASC])
+   +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b])
+      +- Exchange(distribution=[hash[a]])
+         +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
+            +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveHashShuffle_Rank_PartialKey1">
+    <Resource name="sql">
+      <![CDATA[
+SELECT a, SUM(b) FROM (
+ SELECT * FROM (
+   SELECT a, b, c, RANK() OVER(PARTITION BY a, c ORDER BY b) rk FROM x)
+ WHERE rk <= 10
+) GROUP BY a
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
++- LogicalProject(a=[$0], b=[$1])
+   +- LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
+      +- LogicalFilter(condition=[<=($3, 10)])
+         +- LogicalProject(a=[$0], b=[$1], c=[$2], rk=[RANK() OVER (PARTITION BY $0, $2 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+            +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+HashAggregate(isMerge=[false], groupBy=[a], select=[a, SUM(b) AS EXPR$1])
++- Calc(select=[a, b])
+   +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
+      +- Sort(orderBy=[a ASC, c ASC, b ASC])
+         +- Exchange(distribution=[hash[a]])
+            +- Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[false])
+               +- Sort(orderBy=[a ASC, c ASC, b ASC])
+                  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveHashShuffle_Rank_PartialKey2">
+    <Resource name="sql">
+      <![CDATA[
+SELECT * FROM (
+ SELECT a, b, c, RANK() OVER(PARTITION BY a, c ORDER BY b) rk FROM (
+   SELECT a, SUM(b) AS b, COUNT(c) AS c FROM x GROUP BY a
+ )
+) WHERE rk <= 10
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
++- LogicalFilter(condition=[<=($3, 10)])
+   +- LogicalProject(a=[$0], b=[$1], c=[$2], rk=[RANK() OVER (PARTITION BY $0, $2 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[COUNT($2)])
+         +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Sort(orderBy=[a ASC, c ASC, b ASC])
+   +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b, Final_COUNT(count$1) AS c])
+      +- Exchange(distribution=[hash[a]])
+         +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0, Partial_COUNT(c) AS count$1])
+            +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveHashShuffle_Rank_PartialKey3">
+    <Resource name="sql">
+      <![CDATA[
+SELECT * FROM (
+ SELECT a, b, c, RANK() OVER(PARTITION BY a, c ORDER BY b) rk FROM (
+   SELECT a, SUM(b) AS b, COUNT(c) AS c FROM x GROUP BY a
+ )
+) WHERE rk <= 10
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], rk=[$3])
++- LogicalFilter(condition=[<=($3, 10)])
+   +- LogicalProject(a=[$0], b=[$1], c=[$2], rk=[RANK() OVER (PARTITION BY $0, $2 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalAggregate(group=[{0}], b=[SUM($1)], c=[COUNT($2)])
+         +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Rank(rankFunction=[RANK], partitionBy=[a,c], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Sort(orderBy=[a ASC, c ASC, b ASC])
+   +- HashAggregate(isMerge=[true], groupBy=[a], select=[a, Final_SUM(sum$0) AS b, Final_COUNT(count$1) AS c])
+      +- Exchange(distribution=[hash[a]])
+         +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0, Partial_COUNT(c) AS count$1])
+            +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveHashShuffle_Rank_Singleton1">
+    <Resource name="sql">
+      <![CDATA[
+SELECT * FROM (
+ SELECT a, b, RANK() OVER(ORDER BY b) rk FROM (
+   SELECT COUNT(a) AS a, SUM(b) AS b FROM x
+ )
+) WHERE rk <= 10
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], rk=[$2])
++- LogicalFilter(condition=[<=($2, 10)])
+   +- LogicalProject(a=[$0], b=[$1], rk=[RANK() OVER (ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalAggregate(group=[{}], a=[COUNT($0)], b=[SUM($1)])
+         +- LogicalProject(a=[$0], b=[$1])
+            +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Rank(rankFunction=[RANK], partitionBy=[], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Sort(orderBy=[b ASC])
+   +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS a, Final_SUM(sum$1) AS b])
+      +- Exchange(distribution=[single])
+         +- LocalHashAggregate(select=[Partial_COUNT(a) AS count$0, Partial_SUM(b) AS sum$1])
+            +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveHashShuffle_Rank_Singleton2">
+    <Resource name="sql">
+      <![CDATA[
+SELECT * FROM (
+ SELECT a, b, RANK() OVER(PARTITION BY a ORDER BY b) rk FROM (
+   SELECT COUNT(a) AS a, SUM(b) AS b FROM x
+ )
+) WHERE rk <= 10
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], rk=[$2])
++- LogicalFilter(condition=[<=($2, 10)])
+   +- LogicalProject(a=[$0], b=[$1], rk=[RANK() OVER (PARTITION BY $0 ORDER BY $1 NULLS FIRST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
+      +- LogicalAggregate(group=[{}], a=[COUNT($0)], b=[SUM($1)])
+         +- LogicalProject(a=[$0], b=[$1])
+            +- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[ConstantRankRange(1,10)], global=[true])
++- Sort(orderBy=[a ASC, b ASC])
+   +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS a, Final_SUM(sum$1) AS b])
+      +- Exchange(distribution=[hash])
+         +- LocalHashAggregate(select=[Partial_COUNT(a) AS count$0, Partial_SUM(b) AS sum$1])
+            +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testRemoveHashShuffle_SortAggregate">
     <Resource name="sql">
       <![CDATA[

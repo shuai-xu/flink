@@ -133,7 +133,7 @@ class FlinkRelMdUniqueKeysTest extends FlinkRelMdHandlerTestBase {
   }
 
   @Test
-  def testGetUniqueKeysOnOnWindowAggWithAuxGroup(): Unit = {
+  def testGetUniqueKeysOnWindowAggWithAuxGroup(): Unit = {
     assertEquals(ImmutableSet.of(ImmutableBitSet.of(0, 3), ImmutableBitSet.of(0, 4),
       ImmutableBitSet.of(0, 5), ImmutableBitSet.of(0, 6)),
       mq.getUniqueKeys(logicalWindowAggWithAuxGroup))
@@ -147,6 +147,18 @@ class FlinkRelMdUniqueKeysTest extends FlinkRelMdHandlerTestBase {
     assertEquals(ImmutableSet.of(ImmutableBitSet.of(0, 3), ImmutableBitSet.of(0, 4),
       ImmutableBitSet.of(0, 5), ImmutableBitSet.of(0, 6)),
       mq.getUniqueKeys(globalWindowAggWithoutLocalAggWithAuxGrouping))
+  }
+
+  @Test
+  def testGetUniqueKeysOnRank(): Unit = {
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0)), mq.getUniqueKeys(flinkLogicalRank))
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0)),
+      mq.getUniqueKeys(flinkLogicalRowNumber))
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0), ImmutableBitSet.of(2, 4)),
+      mq.getUniqueKeys(flinkLogicalRowNumberWithOutput))
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0)), mq.getUniqueKeys(globalBatchExecRank))
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0)), mq.getUniqueKeys(localBatchExecRank))
+    assertEquals(ImmutableSet.of(ImmutableBitSet.of(0)), mq.getUniqueKeys(streamExecRowNumber))
   }
 
 }
