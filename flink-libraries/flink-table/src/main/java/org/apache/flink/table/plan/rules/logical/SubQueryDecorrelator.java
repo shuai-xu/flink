@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.plan.rules.logical;
 
-import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.calcite.FlinkRelBuilder;
 import org.apache.flink.table.util.FlinkRelOptUtil;
 import org.apache.flink.table.util.FlinkRexUtil;
@@ -868,7 +867,8 @@ public class SubQueryDecorrelator extends RelShuttleImpl {
 		}
 
 		public Frame decorrelateRel(LogicalCorrelate rel) {
-			throw new UnsupportedOperationException("LogicalCorrelate should not exist in the plan.");
+			// does not allow correlation condition in its inputs now, so choose default behavior
+			return decorrelateRel((RelNode) rel);
 		}
 
 		/** Fallback if none of the other {@code decorrelateRel} methods match. */
@@ -972,7 +972,26 @@ public class SubQueryDecorrelator extends RelShuttleImpl {
 
 		@Override
 		public RelNode visit(LogicalCorrelate correlate) {
-			throw new TableException("LogicalCorrelate should not exist in the plan.");
+			// TODO does not allow correlation condition in its inputs now
+			// If correlation conditions in correlate inputs reference to correlate outputs variable,
+			// that should not be supported, e.g.
+			// SELECT * FROM outer_table l WHERE l.c IN (
+			//  SELECT f1 FROM (
+			//   SELECT * FROM inner_table r WHERE r.d IN (SELECT x.i FROM x WHERE x.j = l.b)) t,
+			//   LATERAL TABLE(table_func(t.f)) AS T(f1)
+			//  ))
+			// other cases should be supported, e.g.
+			// SELECT * FROM outer_table l WHERE l.c IN (
+			//  SELECT f1 FROM (
+			//   SELECT * FROM inner_table r WHERE r.d IN (SELECT x.i FROM x WHERE x.j = r.e)) t,
+			//   LATERAL TABLE(table_func(t.f)) AS T(f1)
+			//  ))
+			checkCorConditionOfInput(correlate.getLeft());
+			checkCorConditionOfInput(correlate.getRight());
+
+			visitChild(correlate, 0, correlate.getLeft());
+			visitChild(correlate, 1, correlate.getRight());
+			return correlate;
 		}
 
 		@Override

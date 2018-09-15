@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.rules.logical.SubQueryTestBase
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -325,6 +326,16 @@ class SubQueryAntiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
     val sqlQuery = "SELECT * FROM l WHERE " +
       "a NOT IN (SELECT c FROM r) OR b NOT IN (SELECT f FROM t WHERE f IS NOT NULL)"
     util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testNotInWithUncorrelatedOnLateralTable(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c NOT IN (" +
+      "SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifyPlan(sqlQuery)
   }
 
   @Test
@@ -635,6 +646,16 @@ class SubQueryAntiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
   }
 
   @Test
+  def testNotInWithCorrelatedOnLateralTable(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c NOT IN (" +
+      "SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
   def testNotExistsWithUncorrelatedOnWhere1(): Unit = {
     util.addTable[(Int, Long)]("l", 'a, 'b)
     util.addTable[(Int, Long)]("r", 'c, 'd)
@@ -737,6 +758,16 @@ class SubQueryAntiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
       "AND (NOT EXISTS (SELECT * FROM t t1 WHERE t1.k > 50) " +
       "OR NOT EXISTS (SELECT * FROM t t2 WHERE t2.j < 100))"
     util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testNotExistsWithUncorrelatedOnLateralTable(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE NOT EXISTS (" +
+      "SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifyPlan(sqlQuery)
   }
 
   @Test
@@ -963,6 +994,16 @@ class SubQueryAntiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
   }
 
   @Test
+  def testNotExistsWithCorrelatedOnLateralTable(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE NOT EXISTS (" +
+      "SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
   def testNotInNotExists1(): Unit = {
     util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
     util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
@@ -1040,3 +1081,4 @@ object SubQueryAntiJoinTest {
     java.util.Arrays.asList(true, false)
   }
 }
+

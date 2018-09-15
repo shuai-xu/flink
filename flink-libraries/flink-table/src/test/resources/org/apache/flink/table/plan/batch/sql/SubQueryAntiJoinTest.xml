@@ -611,6 +611,64 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testNotExistsWithCorrelatedOnLateralTable[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE NOT EXISTS (SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(EXISTS({
+LogicalFilter(condition=[=($cor1.a, $0)])
+  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+    LogicalTableScan(table=[[r]])
+    LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))], variablesSet=[[$cor1]])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject(d=[$0])
+      +- LogicalFilter(condition=[true])
+         +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+            :- LogicalTableScan(table=[[r]])
+            +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotExistsWithCorrelatedOnLateralTable[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE NOT EXISTS (SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(EXISTS({
+LogicalFilter(condition=[=($cor1.a, $0)])
+  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+    LogicalTableScan(table=[[r]])
+    LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))], variablesSet=[[$cor1]])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[=($0, $3)], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject(d=[$0])
+      +- LogicalFilter(condition=[true])
+         +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+            :- LogicalTableScan(table=[[r]])
+            +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testNotExistsWithCorrelatedOnWhere1[false]">
     <Resource name="sql">
       <![CDATA[SELECT * FROM l WHERE NOT EXISTS (SELECT * FROM r WHERE a = c)]]>
@@ -1027,6 +1085,64 @@ LogicalProject(a=[$0])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testNotExistsWithUncorrelatedOnLateralTable[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE NOT EXISTS (SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1))]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(EXISTS({
+LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+  LogicalTableScan(table=[[r]])
+  LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[$3], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject($f0=[IS NOT NULL($0)])
+      +- LogicalAggregate(group=[{}], m=[MIN($0)])
+         +- LogicalProject(i=[true])
+            +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+               :- LogicalTableScan(table=[[r]])
+               +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotExistsWithUncorrelatedOnLateralTable[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE NOT EXISTS (SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1))]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(EXISTS({
+LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+  LogicalTableScan(table=[[r]])
+  LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[$3], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject($f0=[IS NOT NULL($0)])
+      +- LogicalAggregate(group=[{}], m=[MIN($0)])
+         +- LogicalProject(i=[true])
+            +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+               :- LogicalTableScan(table=[[r]])
+               +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testNotExistsWithUncorrelatedOnWhere1[false]">
     <Resource name="sql">
       <![CDATA[SELECT * FROM l WHERE NOT EXISTS (SELECT * FROM r)]]>
@@ -1410,6 +1526,66 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
    +- LogicalProject(d=[$0])
       +- LogicalFilter(condition=[true])
          +- LogicalTableScan(table=[[r]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotInWithCorrelatedOnLateralTable[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE c NOT IN (SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(IN($2, {
+LogicalProject(f1=[$3])
+  LogicalFilter(condition=[=($cor1.a, $0)])
+    LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+      LogicalTableScan(table=[[r]])
+      LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))], variablesSet=[[$cor1]])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[AND(OR(=($2, $3), IS NULL(=($2, $3))), =($0, $4))], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject(f1=[$3], d=[$0])
+      +- LogicalFilter(condition=[true])
+         +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+            :- LogicalTableScan(table=[[r]])
+            +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotInWithCorrelatedOnLateralTable[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE c NOT IN (SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(IN($2, {
+LogicalProject(f1=[$3])
+  LogicalFilter(condition=[=($cor1.a, $0)])
+    LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+      LogicalTableScan(table=[[r]])
+      LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))], variablesSet=[[$cor1]])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[AND(OR(=($2, $3), IS NULL(=($2, $3))), =($0, $4))], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject(f1=[$3], d=[$0])
+      +- LogicalFilter(condition=[true])
+         +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+            :- LogicalTableScan(table=[[r]])
+            +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
   </TestCase>
@@ -2847,6 +3023,62 @@ LogicalProject(a=[$0], b=[$1])
          +- LogicalProject(f=[$1], e=[$0])
             +- LogicalFilter(condition=[true])
                +- LogicalTableScan(table=[[t]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotInWithUncorrelatedOnLateralTable[false]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE c NOT IN (SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1))]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(IN($2, {
+LogicalProject(f1=[$3])
+  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+    LogicalTableScan(table=[[r]])
+    LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[OR(=($2, $3), IS NULL(=($2, $3)))], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject(f1=[$3])
+      +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+         :- LogicalTableScan(table=[[r]])
+         +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotInWithUncorrelatedOnLateralTable[true]">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM l WHERE c NOT IN (SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1))]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- LogicalFilter(condition=[NOT(IN($2, {
+LogicalProject(f1=[$3])
+  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+    LogicalTableScan(table=[[r]])
+    LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+}))])
+   +- LogicalTableScan(table=[[l]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2])
++- SemiJoin(condition=[OR(=($2, $3), IS NULL(=($2, $3)))], joinType=[inner], isAnti=[true])
+   :- LogicalTableScan(table=[[l]])
+   +- LogicalProject(f1=[$3])
+      +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+         :- LogicalTableScan(table=[[r]])
+         +- LogicalTableFunctionScan(invocation=[table_func($cor0.f)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
   </TestCase>

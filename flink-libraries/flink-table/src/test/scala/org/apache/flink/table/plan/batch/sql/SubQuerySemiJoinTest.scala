@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.rules.logical.SubQueryTestBase
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -503,6 +504,49 @@ class SubQuerySemiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
     val sqlQuery = "SELECT * FROM l WHERE " +
       "a IN (SELECT c FROM r) OR b IN (SELECT e FROM t)"
     util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testInWithUncorrelatedOnLateralTable1(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testInWithUncorrelatedOnLateralTable2(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE d IN (SELECT i FROM x))"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testInWithUncorrelatedOnLateralTable3(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM (SELECT * FROM r WHERE d IN (" +
+      "SELECT i FROM x)) t, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testInWithUncorrelatedOnLateralTable4(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM (SELECT * FROM r LEFT JOIN LATERAL TABLE(table_func(f)) AS T(f1) ON TRUE))"
+    util.verifyPlan(sqlQuery)
   }
 
   @Test
@@ -1343,6 +1387,52 @@ class SubQuerySemiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
   }
 
   @Test
+  def testInWithCorrelatedOnLateralTable1(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testInWithCorrelatedOnLateralTable2(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM r, LATERAL TABLE(table_func(f)) AS T(f1) " +
+      "WHERE d IN (SELECT i FROM x WHERE l.b = x.j))"
+    util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testInWithCorrelatedOnLateralTable3(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM (SELECT * FROM r WHERE d IN (" +
+      "SELECT i FROM x WHERE x.j = l.b)) t, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testInWithCorrelatedOnLateralTable4(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE c IN (" +
+      "SELECT f1 FROM (SELECT * FROM r LEFT JOIN LATERAL TABLE(table_func(f)) AS T(f1) ON TRUE " +
+      "WHERE d IN (SELECT i FROM x WHERE l.b = x.j)))"
+    util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
   def testExistsWithUncorrelatedOnWhere1(): Unit = {
     util.addTable[(Int, Long)]("l", 'a, 'b)
     util.addTable[(Int, Long)]("r", 'c, 'd)
@@ -1515,6 +1605,49 @@ class SubQuerySemiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
       "AND (EXISTS (SELECT * FROM t t1 WHERE t1.k > 50) " +
       "OR EXISTS (SELECT * FROM t t2 WHERE t2.j < 100))"
     util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testExistsWithUncorrelatedOnLateralTable1(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testExistsWithUncorrelatedOnLateralTable2(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE EXISTS (SELECT * FROM x))"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testExistsWithUncorrelatedOnLateralTable3(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM (SELECT * FROM r WHERE EXISTS (" +
+      "SELECT * FROM x)) t, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testExistsWithUncorrelatedOnLateralTable4(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM (SELECT * FROM r LEFT JOIN LATERAL TABLE(table_func(f)) AS T(f1) ON TRUE))"
+    util.verifyPlan(sqlQuery)
   }
 
   @Test
@@ -2104,6 +2237,52 @@ class SubQuerySemiJoinTest(fieldsNullable: Boolean) extends SubQueryTestBase(fie
   }
 
   @Test
+  def testExistsWithCorrelatedOnLateralTable1(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1) WHERE a = d)"
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testExistsWithCorrelatedOnLateralTable2(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM r, LATERAL TABLE(table_func(f)) AS T(f1) " +
+      "WHERE EXISTS (SELECT * FROM x WHERE l.b = x.j))"
+    util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testExistsWithCorrelatedOnLateralTable3(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM (SELECT * FROM r WHERE EXISTS (" +
+      "SELECT * FROM x WHERE x.j = l.b)) t, LATERAL TABLE(table_func(f)) AS T(f1))"
+    util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
+  def testExistsWithCorrelatedOnLateralTable4(): Unit = {
+    util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
+    util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
+    util.addTable[(Int, Long, String)]("x", 'i, 'j, 'k)
+    util.addFunction("table_func", new TableFunc)
+    val sqlQuery = "SELECT * FROM l WHERE EXISTS (" +
+      "SELECT * FROM (SELECT * FROM r LEFT JOIN LATERAL TABLE(table_func(f)) AS T(f1) ON TRUE " +
+      "WHERE EXISTS (SELECT i FROM x WHERE l.b = x.j)))"
+    util.verifySqlNotExpected(sqlQuery, "SemiJoin")
+  }
+
+  @Test
   def testInExists1(): Unit = {
     util.addTable[(Int, Long, String)]("l", 'a, 'b, 'c)
     util.addTable[(Int, Long, String)]("r", 'd, 'e, 'f)
@@ -2148,5 +2327,13 @@ object SubQuerySemiJoinTest {
   @Parameterized.Parameters(name = "{0}")
   def parameters(): java.util.Collection[Boolean] = {
     java.util.Arrays.asList(true, false)
+  }
+}
+
+class TableFunc extends TableFunction[String] {
+  def eval(str: String): Unit = {
+    if (str.contains("#")){
+      str.split("#").foreach(collect)
+    }
   }
 }
