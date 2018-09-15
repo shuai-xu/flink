@@ -37,9 +37,9 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
   @Before
   def before(): Unit = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
-    // convert sub-queries before query decorrelation
+    // convert queries before query decorrelation
     programs.addLast(
-      SUBQUERY,
+      QUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
@@ -51,6 +51,11 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.TABLE_SUBQUERY_RULES)
           .build(), "sub-queries remove")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.REWRITE_RELNODE_RULES)
+          .build(), "relnode rewrite")
         .build()
     )
 

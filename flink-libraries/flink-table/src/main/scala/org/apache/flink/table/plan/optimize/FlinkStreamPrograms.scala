@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.rules.FlinkStreamExecRuleSets
   */
 object FlinkStreamPrograms {
   val SEMI_JOIN = "semi_join"
-  val SUBQUERY = "subquery"
+  val QUERY_REWRITE = "query_rewrite"
   val TABLE_REF = "table_ref"
   val DECORRELATE = "decorrelate"
   val TIME_INDICATOR = "time_indicator"
@@ -61,13 +61,20 @@ object FlinkStreamPrograms {
         .build()
     )
 
-    // convert sub-queries before query decorrelation
+    // convert queries before query decorrelation
     programs.addLast(
-      SUBQUERY,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.TABLE_SUBQUERY_RULES)
+      QUERY_REWRITE,
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkStreamExecRuleSets.TABLE_SUBQUERY_RULES)
+          .build(), "sub-queries remove")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkStreamExecRuleSets.REWRITE_RELNODE_RULES)
+          .build(), "relnode rewrite")
         .build())
 
     // convert table references
@@ -80,7 +87,13 @@ object FlinkStreamPrograms {
         .build())
 
     // decorrelate
-    programs.addLast(DECORRELATE, new FlinkDecorrelateProgram)
+    programs.addLast(
+      DECORRELATE,
+      FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(new FlinkDecorrelateProgram, "decorrelate")
+        .addProgram(new FlinkCorrelateVariablesValidationProgram, "correlate variables validation")
+        .build()
+    )
 
     // convert time indicators
     programs.addLast(TIME_INDICATOR, new FlinkRelTimeIndicatorProgram)

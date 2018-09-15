@@ -22,7 +22,7 @@ import java.util.Collections
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule._
-import org.apache.calcite.plan.volcano.RelSubset
+import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.rel.`type`.{RelDataTypeFieldImpl, RelRecordType, StructKind}
 import org.apache.calcite.rel.RelNode
@@ -35,6 +35,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.schema.{ArrayRelDataType, MultisetRelDataType}
 import org.apache.flink.table.plan.util.ExplodeFunctionUtil
 
+// This rule only supports hepplanner
 class LogicalUnnestRule(
     operand: RelOptRuleOperand,
     description: String)
@@ -43,16 +44,14 @@ class LogicalUnnestRule(
   override def matches(call: RelOptRuleCall): Boolean = {
 
     val join: LogicalCorrelate = call.rel(0).asInstanceOf[LogicalCorrelate]
-    val right = join.getRight.asInstanceOf[RelSubset].getOriginal
+    val right = join.getRight.asInstanceOf[HepRelVertex].getCurrentRel
 
     right match {
-      // a filter is pushed above the table function
-      case filter: LogicalFilter =>
-        filter.getInput.asInstanceOf[RelSubset].getOriginal match {
+      case project: LogicalProject =>
+        project.getInput.asInstanceOf[HepRelVertex].getCurrentRel match {
           case u: Uncollect => !u.withOrdinality
           case _ => false
         }
-      case u: Uncollect => !u.withOrdinality
       case _ => false
     }
   }
@@ -60,18 +59,18 @@ class LogicalUnnestRule(
   override def onMatch(call: RelOptRuleCall): Unit = {
     val correlate = call.rel(0).asInstanceOf[LogicalCorrelate]
 
-    val outer = correlate.getLeft.asInstanceOf[RelSubset].getOriginal
-    val array = correlate.getRight.asInstanceOf[RelSubset].getOriginal
+    val outer = correlate.getLeft.asInstanceOf[HepRelVertex].getCurrentRel
+    val array = correlate.getRight.asInstanceOf[HepRelVertex].getCurrentRel
 
     def convert(relNode: RelNode): RelNode = {
       relNode match {
-        case rs: RelSubset =>
-          convert(rs.getRelList.get(0))
+        case rs: HepRelVertex =>
+          convert(rs.getCurrentRel)
 
-        case f: LogicalFilter =>
+        case f: LogicalProject =>
           f.copy(
             f.getTraitSet,
-            ImmutableList.of(convert(f.getInput.asInstanceOf[RelSubset].getOriginal)))
+            ImmutableList.of(convert(f.getInput.asInstanceOf[HepRelVertex].getCurrentRel)))
 
         case uc: Uncollect =>
           // convert Uncollect into TableFunctionScan
@@ -97,8 +96,8 @@ class LogicalUnnestRule(
           // create table function call
           val rexCall = cluster.getRexBuilder.makeCall(
             explodeSqlFunc,
-            uc.getInput.asInstanceOf[RelSubset]
-              .getOriginal.asInstanceOf[LogicalProject].getChildExps
+            uc.getInput.asInstanceOf[HepRelVertex]
+              .getCurrentRel.asInstanceOf[LogicalProject].getChildExps
           )
 
           // determine rel data type of unnest

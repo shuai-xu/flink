@@ -47,6 +47,11 @@ object FlinkStreamExecRuleSets {
     SubQueryRemoveRule.PROJECT,
     SubQueryRemoveRule.JOIN)
 
+  val REWRITE_RELNODE_RULES: RuleSet = RuleSets.ofList(
+    // unnest rule
+    LogicalUnnestRule.INSTANCE
+  )
+
   /**
     * Convert table references before query decorrelation.
     */
@@ -186,9 +191,6 @@ object FlinkStreamExecRuleSets {
     // scan optimization
     PushProjectIntoTableSourceScanRule.INSTANCE,
     PushFilterIntoTableSourceScanRule.INSTANCE,
-
-    // unnest rule
-    LogicalUnnestRule.INSTANCE,
 
     // semi-join transpose rule
     FlinkSemiJoinJoinTransposeRule.INSTANCE,

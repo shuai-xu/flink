@@ -25,7 +25,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms.{DECORRELATE,
-  NORMALIZATION, SUBQUERY}
+  NORMALIZATION, QUERY_REWRITE}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -39,7 +39,7 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
     // add semiJoin rewrite
     programs.addLast(
-      SUBQUERY,
+      QUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
@@ -51,6 +51,11 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.TABLE_SUBQUERY_RULES)
           .build(), "sub-queries remove")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.REWRITE_RELNODE_RULES)
+          .build(), "relnode rewrite")
         .build()
     )
     // decorrelate
