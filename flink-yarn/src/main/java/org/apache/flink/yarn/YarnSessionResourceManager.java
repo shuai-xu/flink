@@ -79,8 +79,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import scala.concurrent.duration.FiniteDuration;
-
 /**
  * The yarn implementation of the resource manager. Used when the system is started
  * via the resource framework YARN.
@@ -543,11 +541,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				taskManagerParameters.taskManagerDirectMemoryLimitMB(),
 				container.getNodeHttpAddress());
 
-		long timeout = taskManagerConfiguration.getMaxRegistrationDuration().getSize();
-		FiniteDuration teRegistrationTimeout = new FiniteDuration(timeout,
-				taskManagerConfiguration.getMaxRegistrationDuration().getUnit());
 		final Configuration taskManagerConfig = BootstrapTools.generateTaskManagerConfiguration(
-				flinkConfig, "", 0, slotNumber, teRegistrationTimeout);
+				flinkConfig, "", 0, slotNumber, null);
 
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		ObjectOutputStream rpOutput = new ObjectOutputStream(output);

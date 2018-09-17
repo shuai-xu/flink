@@ -98,11 +98,6 @@
             <td>Whether to kill the TaskManager when the task thread throws an OutOfMemoryError.</td>
         </tr>
         <tr>
-            <td><h5>taskmanager.jvm.memory.cms.gc.ratio</h5></td>
-            <td style="word-wrap: break-word;">0.7</td>
-            <td>CMS occupy fraction for a task manager.</td>
-        </tr>
-        <tr>
             <td><h5>taskmanager.jvm.memory.dynamic.young.ratio</h5></td>
             <td style="word-wrap: break-word;">0.25</td>
             <td>Ratio of young generation for dynamic memory in task manager.</td>
@@ -173,14 +168,14 @@
             <td>Boolean flag to enable/disable more detailed metrics about inbound/outbound network queue lengths.</td>
         </tr>
         <tr>
-            <td><h5>taskmanager.network.memory.buffers-per-external-blocking-channel</h5></td>
-            <td style="word-wrap: break-word;">128</td>
-            <td></td>
-        </tr>
-        <tr>
             <td><h5>taskmanager.network.memory.buffers-per-channel</h5></td>
             <td style="word-wrap: break-word;">2</td>
             <td>Maximum number of network buffers to use for each outgoing/incoming channel (subpartition/input channel).In credit-based flow control mode, this indicates how many credits are exclusive in each input channel. It should be configured at least 2 for good performance. 1 buffer is for receiving in-flight data in the subpartition and 1 buffer is for parallel serialization.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.network.memory.buffers-per-external-blocking-channel</h5></td>
+            <td style="word-wrap: break-word;">128</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>taskmanager.network.memory.buffers-per-subpartition</h5></td>
@@ -226,6 +221,36 @@
             <td><h5>taskmanager.numberOfTaskSlots</h5></td>
             <td style="word-wrap: break-word;">1</td>
             <td>The number of parallel operator or user function instances that a single TaskManager can run. If this value is larger than 1, a single TaskManager takes multiple instances of a function or operator. That way, the TaskManager can utilize multiple CPU cores, but at the same time, the available memory is divided between the different operator or function instances. This value is typically proportional to the number of physical CPU cores that the TaskManager's machine has (e.g., equal to the number of cores, or half the number of cores).</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.output.hash.max-subpartitions</h5></td>
+            <td style="word-wrap: break-word;">200</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.output.local-disk.type</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.output.local-output-dirs</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.output.memory.mb</h5></td>
+            <td style="word-wrap: break-word;">200</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.output.merge.factor</h5></td>
+            <td style="word-wrap: break-word;">64</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.output.merge.max-data-files</h5></td>
+            <td style="word-wrap: break-word;">10</td>
+            <td></td>
         </tr>
         <tr>
             <td><h5>taskmanager.process.heap.memory.mb</h5></td>

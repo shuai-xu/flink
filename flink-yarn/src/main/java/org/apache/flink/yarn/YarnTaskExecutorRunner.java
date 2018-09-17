@@ -208,7 +208,7 @@ public class YarnTaskExecutorRunner {
 		Map<String, String> dirToDirTypes = ExternalBlockShuffleServiceConfiguration.parseDirToDiskType(shuffleLocalDir);
 		for (Map.Entry<String, String> entry : dirToDirTypes.entrySet()) {
 			if (expectedDiskType.isEmpty() || (entry.getValue().equalsIgnoreCase(expectedDiskType))) {
-				chosenDirs.add(entry.getKey().endsWith("/") ? entry.getKey() : entry.getKey() + "/" + relativeAppDir);
+				chosenDirs.add(entry.getKey().endsWith("/") ? entry.getKey() : entry.getKey() + "/" + relativeAppDir + "/");
 			}
 		}
 

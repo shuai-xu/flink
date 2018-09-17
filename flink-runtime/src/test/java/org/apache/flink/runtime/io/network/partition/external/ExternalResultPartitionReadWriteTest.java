@@ -204,7 +204,7 @@ public class ExternalResultPartitionReadWriteTest {
 
 		// add dirs
 		taskManagerConfig.setString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS,
-			outputLocalDir + YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(USER, APP_ID));
+			outputLocalDir + YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(USER, APP_ID) + "/");
 
 		return taskManagerConfig;
 	}

@@ -18,18 +18,22 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.runtime.io.network.partition.PartitionNotFoundException;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -53,21 +57,23 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	private final FileSystem fileSystem;
 
 	/** Only search result partitions in these applications' directories. */
-	private final ConcurrentHashMap<String, String > appIdToUser = new ConcurrentHashMap<>(
+	@VisibleForTesting
+	protected final ConcurrentHashMap<String, String> appIdToUser = new ConcurrentHashMap<>(
 		APP_ID_MAP_INITIAL_CAPACITY);
 
 	/** To accelerate the mapping from ResultPartitionID to its directory.
 	 *  Since this concurrent hash map is not guarded by any lock, don't use PUT operation
 	 *  in order to make sure that no information losses.
 	 */
-	private final ConcurrentHashMap<ResultPartitionID, ResultPartitionFileInfo>
+	@VisibleForTesting
+	protected final ConcurrentHashMap<ResultPartitionID, ResultPartitionFileInfo>
 		resultPartitionMap = new ConcurrentHashMap<>(RESULT_PARTITION_MAP_INITIAL_CAPACITY);
 
 	/**
 	 * The thread is designed to do expensive recursive directory deletion, only recycle result partition files
 	 *  in flink session mode since NodeManager can do the full recycle after stopApplication.
 	 */
-	private final ScheduledExecutorService diskScanner;
+	private final ScheduledExecutorService diskScannerExecutorService;
 
 	private long lastDiskScanTimestamp = -1L;
 
@@ -81,6 +87,18 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 */
 	private final String containerExecutorExecutablePath;
 
+	/**
+	 * True if linux-container-executor should limit itself to one user
+	 * when running in non-secure mode.
+	 */
+	private final Boolean containerLimitUsers;
+
+	/**
+	 * The UNIX user that containers will run as when Linux-container-executor
+	 * is used in nonsecure mode (a use case for this is using cgroups).
+	 */
+	private final String nonsecureLocalUser;
+
 	YarnLocalResultPartitionResolver(ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration) {
 		super(shuffleServiceConfiguration);
 
@@ -89,8 +107,18 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		this.containerExecutorExecutablePath = parseContainerExecutorExecutablePath(
 			shuffleServiceConfiguration, fileSystem);
 
-		diskScanner = Executors.newSingleThreadScheduledExecutor();
-		diskScanner.scheduleWithFixedDelay(
+		this.nonsecureLocalUser = shuffleServiceConfiguration.getConfiguration().getString(
+			YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY,
+			YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
+
+		// For compatibility, use raw string of YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS
+		// because this configuration is not supported in yarn 2.4 .
+		this.containerLimitUsers = shuffleServiceConfiguration.getConfiguration().getBoolean(
+			YarnConfiguration.NM_PREFIX + "linux-container-executor.nonsecure-mode.limit-users",
+			true);
+
+		this.diskScannerExecutorService = Executors.newSingleThreadScheduledExecutor();
+		this.diskScannerExecutorService.scheduleWithFixedDelay(
 			() -> doDiskScan(),
 			0,
 			shuffleServiceConfiguration.getDiskScanIntervalInMS(),
@@ -133,8 +161,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		// Cache miss, scan configured directories to search for the result partition's directory.
 		fileInfo = searchResultPartitionDir(resultPartitionID);
 		if (fileInfo == null) {
-			throw new IOException("Cannot find result partition's directory, result partition id: " +
-				resultPartitionID);
+			throw new PartitionNotFoundException(resultPartitionID);
 		}
 		return fileInfo.getRootDirAndPartitionDir();
 	}
@@ -151,7 +178,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	void stop() {
 		LOG.warn("stop YarnLocalResultPartitionResolver.");
 		try {
-			diskScanner.shutdownNow();
+			diskScannerExecutorService.shutdownNow();
 		} catch (Throwable e) {
 			LOG.error("Exception occurs when stopping YarnLocalResultPartitionResolver", e);
 		}
@@ -167,7 +194,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 * <p>See {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer}
 	 */
 	public static String generateRelativeLocalAppDir(String user, String appId) {
-		return "usercache/" + user + "/appcache/" + appId + "/";
+		return "usercache/" + user + "/appcache/" + appId;
 	}
 
 	/**
@@ -187,15 +214,15 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		try {
 			// Use finishedFile to get the partition ready time.
 			FileStatus fileStatus = fileSystem.getFileStatus(new Path(finishedFilePath));
-			if (fileStatus != null && !fileStatus.isDir()) {
+			if (fileStatus != null) {
 				fileInfo.setReadyToBeConsumed(fileStatus.getModificationTime());
 				return;
 			}
-		} catch (Exception e) {
+		} catch (FileNotFoundException e) {
+			// The result partition is still unfinished.
+			throw new PartitionNotFoundException(resultPartitionID);
 		}
-		// The result partition is still unfinished.
-		throw new IOException("Result partition is not ready to be consumed, result partition id: " +
-			resultPartitionID);
+		// Other IOExceptions will be thrown out.
 	}
 
 	/**
@@ -203,7 +230,9 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 * @param resultPartitionID
 	 * @return The information of this result partition's data files.
 	 */
-	private ResultPartitionFileInfo searchResultPartitionDir(ResultPartitionID resultPartitionID) {
+	private ResultPartitionFileInfo searchResultPartitionDir(
+		ResultPartitionID resultPartitionID) throws IOException {
+
 		// Search through all the running applications.
 		for (Map.Entry<String, String> appIdAndUser : appIdToUser.entrySet()) {
 			// Search through all the configured root directories.
@@ -217,31 +246,60 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 			for (String rootDir : shuffleServiceConfiguration.getDirToDiskType().keySet()) {
 				String partitionDir = rootDir + relativePartitionDir;
 				String finishedFilePath = ExternalBlockShuffleUtils.generateFinishedPath(partitionDir);
+				FileStatus partitionDirStatus;
 				try {
-					// Use finishedFile to get the partition ready time.
-					FileStatus fileStatus = fileSystem.getFileStatus(new Path(finishedFilePath));
-					if (fileStatus != null && !fileStatus.isDir()) {
-						ResultPartitionFileInfo fileInfo =
-							new ResultPartitionFileInfo(
-								appId,
-								new Tuple2<>(rootDir, partitionDir),
-								true,
-								true,
-								fileStatus.getModificationTime(),
-								System.currentTimeMillis());
-						ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
-							resultPartitionID, fileInfo);
-						if (prevFileInfo != null) {
-							if (!prevFileInfo.isReadyToBeConsumed()) {
-								prevFileInfo.setReadyToBeConsumed(fileStatus.getModificationTime());
-							}
-							prevFileInfo.updateOnConsumption();
-							fileInfo = prevFileInfo;
+					partitionDirStatus = fileSystem.getFileStatus(new Path(partitionDir));
+				} catch (IOException e) {
+					partitionDirStatus = null;
+				}
+				if (partitionDirStatus == null || !partitionDirStatus.isDir()) {
+					continue;
+				}
+				// Use finishedFile to get the partition ready time.
+				FileStatus fileStatus;
+				try {
+					fileStatus = fileSystem.getFileStatus(new Path(finishedFilePath));
+				} catch (FileNotFoundException e){
+					fileStatus = null;
+				} catch (IOException e) {
+					throw e;
+				}
+				if (fileStatus != null) {
+					ResultPartitionFileInfo fileInfo =
+						new ResultPartitionFileInfo(
+							appId,
+							new Tuple2<>(rootDir, partitionDir),
+							true,
+							true,
+							fileStatus.getModificationTime(),
+							System.currentTimeMillis());
+					ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
+						resultPartitionID, fileInfo);
+					if (prevFileInfo != null) {
+						if (!prevFileInfo.isReadyToBeConsumed()) {
+							prevFileInfo.setReadyToBeConsumed(fileStatus.getModificationTime());
 						}
-						return fileInfo;
+						prevFileInfo.updateOnConsumption();
+						fileInfo = prevFileInfo;
 					}
-				} catch (Exception e) {
-					// Do nothing.
+					return fileInfo;
+				} else {
+					ResultPartitionFileInfo fileInfo =
+						new ResultPartitionFileInfo(
+							appId,
+							new Tuple2<>(rootDir, partitionDir),
+							false,
+							false,
+							-1L,
+							System.currentTimeMillis());
+					ResultPartitionFileInfo prevFileInfo = resultPartitionMap.putIfAbsent(
+						resultPartitionID, fileInfo);
+					if (prevFileInfo != null && prevFileInfo.isReadyToBeConsumed()) {
+						prevFileInfo.updateOnConsumption();
+						return prevFileInfo;
+					} else {
+						throw new PartitionNotFoundException(resultPartitionID);
+					}
 				}
 			}
 		}
@@ -255,8 +313,12 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 * (3) Recycle result partitions which are unfinished but haven't been accessed for a period of time.
 	 * (4) Recycle consumed result partitions according to ExternalBlockResultPartitionManager's demand.
 	 */
-	private void doDiskScan() {
+	@VisibleForTesting
+	void doDiskScan() {
 		long currTime = System.currentTimeMillis();
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("Start to do disk scan, currTime: " + currTime);
+		}
 
 		// 1. Traverse all the result partition directories including unfinished result partitions.
 		// Traverse all the applications.
@@ -267,7 +329,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 			String relativeAppDir = generateRelativeLocalAppDir(user, appId);
 			// Traverse all the configured directories for this application.
 			for (String rootDir : rootDirs) {
-				String appDir = rootDir + relativeAppDir;
+				String appDir = rootDir + relativeAppDir + "/";
 				FileStatus[] appDirStatuses = null;
 				try {
 					appDirStatuses = fileSystem.listStatus(new Path(appDir));
@@ -310,6 +372,11 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 					"FETCHED_PARTITION_TTL_TIMEOUT",
 					-1,
 					false);
+			} else if (fileInfo.getFileInfoTimestamp() <= lastDiskScanTimestamp) {
+				// The partition's file no longer exists, just delete its file info.
+				needToRemoveFileInfo = true;
+			} else if (!fileInfo.isReadyToBeConsumed()) {
+				// Do nothing, has dealt with this case in previous step, see updateResultPartitionFileInfoByFileStatus.
 			} else if (!fileInfo.isConsumed()) {
 				long lastActiveTime = fileInfo.getPartitionReadyTime();
 				if (currTime - lastActiveTime > shuffleServiceConfiguration.getUnconsumedPartitionTTL()) {
@@ -319,9 +386,6 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 						lastActiveTime,
 						true);
 				}
-			} else if (fileInfo.getFileInfoTimestamp() <= lastDiskScanTimestamp) {
-				// The partition's file no longer exists, just delete its file info.
-				needToRemoveFileInfo = true;
 			}
 			if (needToRemoveFileInfo) {
 				partitionIterator.remove();
@@ -329,6 +393,9 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		}
 
 		// 3. Update disk scan timestamp.
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("Finish disk scan, cost " + (System.currentTimeMillis() - currTime) + " in ms.");
+		}
 		lastDiskScanTimestamp = currTime;
 	}
 
@@ -360,7 +427,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 			finishFileStatus = null;
 		}
 
-		if (finishFileStatus != null && !finishFileStatus.isDir()) {
+		if (finishFileStatus != null) {
 			if (fileInfo == null) {
 				fileInfo = new ResultPartitionFileInfo(
 					appId,
@@ -407,7 +474,8 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		}
 	}
 
-	private static String parseContainerExecutorExecutablePath(
+	@VisibleForTesting
+	static String parseContainerExecutorExecutablePath(
 		ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration,
 		FileSystem fileSystem) {
 		String yarnHomeEnvVar = System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
@@ -439,9 +507,10 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	 * @see YarnLocalResultPartitionResolver#generateRelativeLocalAppDir , the format of a partition directory is:
 	 * ${ConfiguredRootDir}/usercache/${user}/appcache/${appId}/partition_${producerId}_${partitionId} .
 	 */
-	private void removeResultPartition(Path partitionDir, String recycleReason, long lastActiveTime, boolean printLog) {
+	@VisibleForTesting
+	void removeResultPartition(Path partitionDir, String recycleReason, long lastActiveTime, boolean printLog) {
 		try {
-			String user = partitionDir.getParent().getParent().getParent().getName();
+			String user = getRunAsUser(partitionDir.getParent().getParent().getParent().getName());
 			Process process = Runtime.getRuntime().exec(new String[] {
 				containerExecutorExecutablePath,
 				user,
@@ -453,15 +522,16 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 			if (processExit) {
 				int exitCode = process.exitValue();
 				if (exitCode != 0) {
-					LOG.warn("Fail to delete partition's directory: {}, reason: {}, lastActiveTime: {}, exitCode: {}.",
-						partitionDir, recycleReason, lastActiveTime, exitCode);
+					LOG.warn("Fail to delete partition's directory: {}, user: {}, reason: {}, "
+							+ "lastActiveTime: {}, exitCode: {}.",
+						partitionDir, user, recycleReason, lastActiveTime, exitCode);
 				} else if (printLog) {
-					LOG.info("Delete partition's directory: {}, reason: {}, lastActiveTime: {}.",
-						partitionDir, recycleReason, lastActiveTime);
+					LOG.info("Delete partition's directory: {}, user: {}, reason: {}, lastActiveTime: {}.",
+						partitionDir, user, recycleReason, lastActiveTime);
 				}
 			} else {
-				LOG.warn("Delete partition's directory for more than 30 seconds: {}, reason: {}, "
-					+ "lastActiveTime: {}.", partitionDir, recycleReason, lastActiveTime);
+				LOG.warn("Delete partition's directory for more than 30 seconds: {}, user: {}, reason: {}, "
+					+ "lastActiveTime: {}.", partitionDir, user, recycleReason, lastActiveTime);
 			}
 		} catch (Exception e) {
 			LOG.warn("Fail to delete partition's directory: {}, exception:", partitionDir, e);
@@ -469,9 +539,25 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	}
 
 	/**
+	 * Get the user of the container process in Linux operating system.
+	 * @param user The submitter of the appliation.
+	 * @return The user of the container process.
+	 * @see org.apache.hadoop.yarn.server.nodemanager LinuxContainerExecutor#getRunAsUser
+	 */
+	private String getRunAsUser(String user) {
+		if (UserGroupInformation.isSecurityEnabled() ||
+			!containerLimitUsers) {
+			return user;
+		} else {
+			return nonsecureLocalUser;
+		}
+	}
+
+	/**
 	 * Hold the information of a result partition's files for searching and recycling.
 	 */
-	private static class ResultPartitionFileInfo {
+	@VisibleForTesting
+	static class ResultPartitionFileInfo {
 
 		/** The application id of this result partition's producer. */
 		private final String appId;
@@ -547,11 +633,11 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 		}
 
 		void markToDelete() {
-			updateFileInfoTimestamp(-1L);
+			this.fileInfoTimestamp = -1L;
 		}
 
 		void cancelDeletion() {
-			updateFileInfoTimestamp(System.currentTimeMillis());
+			this.fileInfoTimestamp = System.currentTimeMillis();
 		}
 
 		boolean needToDelete() {

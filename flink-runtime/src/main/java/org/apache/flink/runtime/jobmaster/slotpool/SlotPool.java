@@ -347,11 +347,20 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			boolean allowQueuedScheduling,
 			Time allocationTimeout) {
 
-		log.debug("Allocating slot with request {} for task execution {}", slotRequestId, task.getTaskToExecute());
-
 		final CoLocationConstraint coLocationConstraint = task.getCoLocationConstraint();
 		final SlotSharingGroupId slotSharingGroupId = (enableSharedSlot || coLocationConstraint != null) ?
 			task.getSlotSharingGroupId() : null;
+
+		if (log.isDebugEnabled()) {
+			log.debug("Allocating slot with request {} for task execution {}, CoLocationConstraint: {}, "
+					+ "EnableSharedSlot: {}, SlotSharingGroup: {}",
+				slotRequestId,
+				task.getTaskToExecute(),
+				coLocationConstraint,
+				enableSharedSlot,
+				task.getSlotSharingGroupId());
+		}
+
 
 		if (slotSharingGroupId != null) {
 			// allocate slot with slot sharing

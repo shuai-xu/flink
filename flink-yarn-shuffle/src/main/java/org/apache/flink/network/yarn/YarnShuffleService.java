@@ -45,7 +45,7 @@ import static org.apache.flink.yarn.Utils.YARN_SHUFFLE_SERVICE_NAME;
  */
 public class YarnShuffleService extends AuxiliaryService {
 
-	private static final Logger logger = LoggerFactory.getLogger(YarnShuffleService.class);
+	private static final Logger LOG = LoggerFactory.getLogger(YarnShuffleService.class);
 
 	/**
 	 * Configuration key to suggest whether to stop NodeManager if fails to
@@ -57,7 +57,7 @@ public class YarnShuffleService extends AuxiliaryService {
 
 	public YarnShuffleService() {
 		super(YARN_SHUFFLE_SERVICE_NAME);
-		logger.info("Initializing YARN shuffle service for flink");
+		LOG.info("Initializing YARN shuffle service for flink");
 	}
 
 	/**
@@ -72,7 +72,7 @@ public class YarnShuffleService extends AuxiliaryService {
 			shuffleServer = new ExternalBlockShuffleService(fromHadoopConfiguration(incomingConf));
 			shuffleServer.start();
 		} catch (Exception e) {
-			logger.error("Fails to start YARN shuffle service for flink");
+			LOG.error("Fails to start YARN shuffle service for flink");
 			if (stopOnFailure) {
 				throw e;
 			} else {
@@ -86,14 +86,14 @@ public class YarnShuffleService extends AuxiliaryService {
 		String user = context.getUser();
 		String appId = context.getApplicationId().toString();
 		shuffleServer.initializeApplication(user, appId);
-		logger.info("Initialize Application, user: {}, appId: {}", user, appId);
+		LOG.info("Initialize Application, user: {}, appId: {}", user, appId);
 	}
 
 	@Override
 	public void stopApplication(ApplicationTerminationContext context) {
 		String appId = context.getApplicationId().toString();
 		shuffleServer.stopApplication(appId);
-		logger.info("Stop Application for {}.", appId);
+		LOG.info("Stop Application for {}.", appId);
 	}
 
 	/**
@@ -104,7 +104,7 @@ public class YarnShuffleService extends AuxiliaryService {
 		if (shuffleServer != null) {
 			shuffleServer.stop();
 		}
-		logger.info("Stop YARN shuffle service for flink");
+		LOG.info("Stop YARN shuffle service for flink");
 	}
 
 	/** Currently this method is of no use. */
@@ -145,6 +145,13 @@ public class YarnShuffleService extends AuxiliaryService {
 		String flinkLocalDirs = hadoopConf.get(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "");
 		if (!nmLocalDirs.isEmpty() && flinkLocalDirs.isEmpty()) {
 			flinkConf.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), nmLocalDirs);
+		} else if (!nmLocalDirs.isEmpty() && !flinkLocalDirs.isEmpty() && !nmLocalDirs.equals(flinkLocalDirs)) {
+			// Warns in case of configuration conflict.
+			LOG.warn("Both {} and {} are configured and not equal, use {} instead, effective configuration is {}.",
+				YarnConfiguration.NM_LOCAL_DIRS,
+				ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(),
+				ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(),
+				flinkLocalDirs);
 		}
 
 		flinkConf.setString(ExternalBlockShuffleServiceOptions.LOCAL_RESULT_PARTITION_RESOLVER_CLASS.key(),

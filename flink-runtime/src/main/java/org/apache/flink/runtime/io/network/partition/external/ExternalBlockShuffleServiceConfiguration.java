@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.io.network.netty.NettyConfig;
@@ -43,7 +44,8 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 public class ExternalBlockShuffleServiceConfiguration {
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalBlockShuffleServiceConfiguration.class);
 
-	private static final String DEFAULT_DISK_TYPE = "default";
+	@VisibleForTesting
+	protected static final String DEFAULT_DISK_TYPE = "default";
 
 	private static final Pattern DISK_TYPE_REGEX = Pattern.compile("^(\\[(\\w*)\\])?(.+)$");
 
@@ -67,20 +69,20 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	private final Long waitCreditDelay;
 
-	/** TTL for consumed partitions, in milliseconds */
-	private final Integer consumedPartitionTTL;
+	/** TTL for consumed partitions, in milliseconds. */
+	private final Long consumedPartitionTTL;
 
-	/** TTL for partial consumed partitions, in milliseconds */
-	private final Integer partialConsumedPartitionTTL;
+	/** TTL for partial consumed partitions, in milliseconds. */
+	private final Long partialConsumedPartitionTTL;
 
-	/** TTL for unconsumed partitions, in milliseconds */
-	private final Integer unconsumedPartitionTTL;
+	/** TTL for unconsumed partitions, in milliseconds. */
+	private final Long unconsumedPartitionTTL;
 
-	/** TTL for unfinished partitions, in milliseconds */
-	private final Integer unfinishedPartitionTTL;
+	/** TTL for unfinished partitions, in milliseconds. */
+	private final Long unfinishedPartitionTTL;
 
-	/** The interval to do disk scan to generate partition info and do recycling. */
-	private final Integer diskScanIntervalInMS;
+	/** The interval to do disk scan to generate partition info and do recycling, in milliseconds. */
+	private final Long diskScanIntervalInMS;
 
 	/** The class of the comparator to sort subpartition requests, if null, use FIFO queue. */
 	private final Class<?> subpartitionViewComparatorClass;
@@ -93,11 +95,11 @@ public class ExternalBlockShuffleServiceConfiguration {
 		Integer bufferNumber,
 		Integer memorySizePerBufferInBytes,
 		Long waitCreditDelay,
-		Integer consumedPartitionTTL,
-		Integer partialConsumedPartitionTTL,
-		Integer unconsumedPartitionTTL,
-		Integer unfinishedPartitionTTL,
-		Integer diskScanIntervalInMS,
+		Long consumedPartitionTTL,
+		Long partialConsumedPartitionTTL,
+		Long unconsumedPartitionTTL,
+		Long unfinishedPartitionTTL,
+		Long diskScanIntervalInMS,
 		Class<?> subpartitionViewComparatorClass) {
 
 		this.configuration = configuration;
@@ -149,23 +151,23 @@ public class ExternalBlockShuffleServiceConfiguration {
 		return waitCreditDelay;
 	}
 
-	Integer getConsumedPartitionTTL() {
+	Long getConsumedPartitionTTL() {
 		return consumedPartitionTTL;
 	}
 
-	Integer getPartialConsumedPartitionTTL() {
+	Long getPartialConsumedPartitionTTL() {
 		return partialConsumedPartitionTTL;
 	}
 
-	Integer getUnconsumedPartitionTTL() {
+	Long getUnconsumedPartitionTTL() {
 		return unconsumedPartitionTTL;
 	}
 
-	Integer getUnfinishedPartitionTTL() {
+	Long getUnfinishedPartitionTTL() {
 		return unfinishedPartitionTTL;
 	}
 
-	Integer getDiskScanIntervalInMS() {
+	Long getDiskScanIntervalInMS() {
 		return diskScanIntervalInMS;
 	}
 
@@ -246,22 +248,22 @@ public class ExternalBlockShuffleServiceConfiguration {
 		LOG.info("Auto-configure " + NettyConfig.NUM_ARENAS.key() + " to " + arenasNum);
 
 		// 4. Parse and validate TTLs used for result partition recycling.
-		Integer consumedPartitionTTL = configuration.getInteger(
+		long consumedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.CONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
-		Integer partialConsumedPartitionTTL = configuration.getInteger(
+		long partialConsumedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.PARTIAL_CONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
-		Integer unconsumedPartitionTTL = configuration.getInteger(
+		long unconsumedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.UNCONSUMED_PARTITION_TTL_IN_SECONDS) * 1000;
-		Integer unfinishedPartitionTTL = configuration.getInteger(
+		long unfinishedPartitionTTL = configuration.getInteger(
 			ExternalBlockShuffleServiceOptions.UNFINISHED_PARTITION_TTL_IN_SECONDS) * 1000;
 		checkArgument(consumedPartitionTTL <= partialConsumedPartitionTTL,
 			"ConsumedPartitionTTL should be less than PartialConsumedPartitionTTL, ConsumedPartitionTTL: "
 				+ consumedPartitionTTL + " ms, PartialConsumedPartitionTTL: " + partialConsumedPartitionTTL + " ms.");
 
-		Integer diskScanIntervalInMS = Math.min(Math.min(
+		Long diskScanIntervalInMS = Math.min(Math.min(
 			Math.min(consumedPartitionTTL, partialConsumedPartitionTTL),
 			Math.min(unconsumedPartitionTTL, unfinishedPartitionTTL)),
-			configuration.getInteger(ExternalBlockShuffleServiceOptions.DISK_SCAN_INTERVAL_IN_MS));
+			configuration.getLong(ExternalBlockShuffleServiceOptions.DISK_SCAN_INTERVAL_IN_MS));
 
 		// 5. Get subpartition view comparator.
 		Class<?> subpartitionViewComparatorClass = null;
@@ -303,6 +305,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 			.append("MemorySizePerBufferInBytes: ").append(memorySizePerBufferInBytes).append(", ")
 			.append("NettyThreadNum: ").append(configuration.getInteger(NettyConfig.NUM_THREADS_SERVER)).append(", ")
 			.append("NettyArenasNum: ").append(configuration.getInteger(NettyConfig.NUM_ARENAS)).append(", ")
+			.append("WaitCreditDelay: ").append(waitCreditDelay).append(", ")
 			.append("ConsumedPartitionTTL: ").append(consumedPartitionTTL).append(", ")
 			.append("PartialConsumedPartitionTTL: ").append(partialConsumedPartitionTTL).append(", ")
 			.append("UnconsumedPartitionTTL: ").append(unconsumedPartitionTTL).append(", ")
@@ -319,7 +322,8 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	// ------------------------------ Internal methods -------------------------------
 
-	private static Map<String, Integer> parseDiskTypeToIOThreadNum(Configuration configuration) {
+	@VisibleForTesting
+	protected static Map<String, Integer> parseDiskTypeToIOThreadNum(Configuration configuration) {
 		Map<String, Integer> diskTypeToIOThread = new HashMap<>();
 
 		// Set default disk type configuration.
@@ -344,7 +348,8 @@ public class ExternalBlockShuffleServiceConfiguration {
 		return diskTypeToIOThread;
 	}
 
-	private static Map<String, String> parseDirToDiskType(Configuration configuration) {
+	@VisibleForTesting
+	protected static Map<String, String> parseDirToDiskType(Configuration configuration) {
 		String strConfig = configuration.getString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS);
 		return parseDirToDiskType(strConfig);
 	}
@@ -353,20 +358,19 @@ public class ExternalBlockShuffleServiceConfiguration {
 		Map<String, String> dirToDiskType = new HashMap<>();
 
 		String[] dirConfigList = strConfig.split(",");
-		if (dirConfigList != null && dirConfigList.length > 0) {
-			for (String strDirConfig : dirConfigList) {
-				if (strDirConfig != null && !strDirConfig.isEmpty()) {
-					Matcher matcher = DISK_TYPE_REGEX.matcher(strDirConfig);
-					if (matcher.matches()) {
-						String diskType = matcher.group(2);
-						String dir = matcher.group(3);
-						dir = (dir != null) ? dir.trim() : null;
-						if (dir != null && !dir.isEmpty()) {
-							// To make it easier in further processing, make sure configured directory ends up with "/".
-							dir = !dir.endsWith("/") ? dir.concat("/") : dir;
-							dirToDiskType.put(dir,
-								(diskType != null && !diskType.isEmpty()) ? diskType.trim() : DEFAULT_DISK_TYPE);
-						}
+		for (String strDirConfig : dirConfigList) {
+			strDirConfig = strDirConfig.trim();
+			if (!strDirConfig.isEmpty()) {
+				Matcher matcher = DISK_TYPE_REGEX.matcher(strDirConfig);
+				if (matcher.matches()) {
+					String diskType = matcher.group(2);
+					String dir = matcher.group(3);
+					dir = (dir != null) ? dir.trim() : null;
+					if (dir != null && !dir.isEmpty()) {
+						// To make it easier in further processing, make sure configured directory ends up with "/".
+						dir = !dir.endsWith("/") ? dir.concat("/") : dir;
+						dirToDiskType.put(dir,
+							(diskType != null && !diskType.isEmpty()) ? diskType.trim() : DEFAULT_DISK_TYPE);
 					}
 				}
 			}

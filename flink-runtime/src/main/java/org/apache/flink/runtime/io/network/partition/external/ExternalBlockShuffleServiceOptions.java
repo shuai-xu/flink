@@ -32,7 +32,7 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> FLINK_SHUFFLE_SERVICE_PORT_KEY =
 		key("flink.shuffle-service.port")
-		.defaultValue(13864);
+		.defaultValue(13572);
 
 	/**
 	 * Direct memory limit for flink shuffle service, in MB.
@@ -126,16 +126,16 @@ public class ExternalBlockShuffleServiceOptions {
 	/**
 	 * The interval to do self check periodically, in milliseconds.
 	 */
-	public static final ConfigOption<Integer> SELF_CHECK_INTERVAL_IN_MS =
+	public static final ConfigOption<Long> SELF_CHECK_INTERVAL_IN_MS =
 		key("flink.shuffle-service.self-check-interval-in-ms")
-		.defaultValue(15000);
+		.defaultValue(15000L);
 
 	/**
 	 * The interval to do disk scan periodically, in milliseconds.
 	 */
-	public static final ConfigOption<Integer> DISK_SCAN_INTERVAL_IN_MS =
+	public static final ConfigOption<Long> DISK_SCAN_INTERVAL_IN_MS =
 		key("flink.shuffle-service.disk-scan-interval-in-ms")
-		.defaultValue(15000);
+		.defaultValue(15000L);
 
 	/**
 	 * The duration to retain a partition's data after it has been fully consumed, in seconds.
@@ -158,7 +158,7 @@ public class ExternalBlockShuffleServiceOptions {
 	 */
 	public static final ConfigOption<Integer> UNCONSUMED_PARTITION_TTL_IN_SECONDS =
 		key("flink.shuffle-service.unconsumed-partition-ttl-in-seconds")
-		.defaultValue(60 * 60 * 24);
+		.defaultValue(60 * 60 * 12);
 
 	/**
 	 * The duration to retain a partition's data after its last modified time

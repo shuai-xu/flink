@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.io.network.partition.external;
 
-import org.apache.flink.api.common.time.Time;
 import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
@@ -47,7 +46,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.mockito.verification.Timeout;
 
 import java.io.File;
 import java.util.ArrayList;

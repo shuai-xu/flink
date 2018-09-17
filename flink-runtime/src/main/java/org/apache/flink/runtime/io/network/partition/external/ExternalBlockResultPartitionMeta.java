@@ -98,8 +98,6 @@ class ExternalBlockResultPartitionMeta {
 
 	private final AtomicReference<Long> lastActiveTimeInMs = new AtomicReference<>(-1L);
 
-	private final AtomicReference<Long> allSubpartitionsConsumedTimeInMs = new AtomicReference<>(-1L);
-
 	ExternalBlockResultPartitionMeta(
 		ResultPartitionID resultPartitionID,
 		FileSystem fileSystem,
@@ -174,16 +172,15 @@ class ExternalBlockResultPartitionMeta {
 		// As a result, its reference will reach zero even if some subpartitions are unconsumed.
 		// UnconsumedSubpartitionCount can be negative due to the same reason.
 		// Currently we rely on consumedPartitionTTL to try to avoid such bad cases.
+		long currTime = System.currentTimeMillis();
 		if (unconsumedSubpartitionCount.decrementAndGet() < 1) {
-			allSubpartitionsConsumedTimeInMs.set(System.currentTimeMillis());
 			if (LOG.isDebugEnabled()) {
-				LOG.debug("Partition {} 's reference count turn to zero at {}",
-					resultPartitionID.toString(), allSubpartitionsConsumedTimeInMs);
+				LOG.debug("Partition {} 's reference count turn to zero at {}", resultPartitionID, currTime);
 			}
 		}
 
 		// Decrease reference count.
-		lastActiveTimeInMs.set(System.currentTimeMillis());
+		lastActiveTimeInMs.set(currTime);
 		refCount.decrementAndGet();
 	}
 
@@ -199,10 +196,6 @@ class ExternalBlockResultPartitionMeta {
 
 	long getLastActiveTimeInMs() {
 		return lastActiveTimeInMs.get();
-	}
-
-	long getAllSubpartitionsConsumedTimeInMs() {
-		return allSubpartitionsConsumedTimeInMs.get();
 	}
 
 	@VisibleForTesting

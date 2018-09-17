@@ -47,7 +47,6 @@ import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
-import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * ExternalResultPartition is used when shuffling data through external shuffle service,
@@ -64,7 +63,7 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 	private PersistentFileWriter<T> fileWriter;
 
-	private boolean initialized;
+	private volatile boolean initialized;
 
 	public ExternalResultPartition(
 		Configuration taskManagerConfiguration,
@@ -211,6 +210,10 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	@Override
 	public void finish() throws IOException {
 		try {
+			if (!initialized) {
+				initialize();
+				LOG.warn("The result partition {} has no data before finish.", partitionId);
+			}
 			if (isReleased.get()) {
 				LOG.warn("The result partition {} has been released already before finish.", partitionId);
 				deletePartitionDirOnFailure();
@@ -268,9 +271,11 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 		boolean deleteSuccess = false;
 		try {
 			deleteSuccess = fileSystem.delete(new Path(partitionRootPath), true);
-			checkState(deleteSuccess, "Failed to delete dirty data.");
 		} catch (Throwable e) {
 			LOG.error("Exception occurred on deletePartitionDirOnFailure.", e);
+		}
+		if (!deleteSuccess) {
+			LOG.error("Failed to delete dirty data, directory path " + partitionRootPath);
 		}
 	}
 

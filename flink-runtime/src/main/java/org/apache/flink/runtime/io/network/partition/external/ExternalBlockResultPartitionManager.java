@@ -54,7 +54,8 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 	private final LocalResultPartitionResolver resultPartitionResolver;
 
 	/** Each directory has its group of threads to do disk IO operations. */
-	private final Map<String, ThreadPoolExecutor> dirToThreadPool = new HashMap<>();
+	@VisibleForTesting
+	final Map<String, ThreadPoolExecutor> dirToThreadPool = new HashMap<>();
 
 	/** Cache file meta for result partitions. */
 	@VisibleForTesting
@@ -62,10 +63,11 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 		resultPartitionMetaMap = new ConcurrentHashMap<>();
 
 	/** The buffer pool to read data into. */
-	private final FixedLengthBufferPool bufferPool;
+	@VisibleForTesting
+	final FixedLengthBufferPool bufferPool;
 
 	/** Periodically recycle result partitions. */
-	private final ScheduledExecutorService resultPartitionRecycler;
+	private final ScheduledExecutorService resultPartitionRecyclerExecutorService;
 
 	private final AtomicBoolean isStopped = new AtomicBoolean(false);
 
@@ -83,8 +85,8 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 
 		constructThreadPools();
 
-		this.resultPartitionRecycler = Executors.newSingleThreadScheduledExecutor();
-		resultPartitionRecycler.scheduleWithFixedDelay(
+		this.resultPartitionRecyclerExecutorService = Executors.newSingleThreadScheduledExecutor();
+		this.resultPartitionRecyclerExecutorService.scheduleWithFixedDelay(
 			() -> recycleResultPartitions(),
 			0,
 			shuffleServiceConfiguration.getDiskScanIntervalInMS(),
@@ -170,7 +172,7 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 				((ThreadPoolExecutor) entry.getValue()).shutdownNow();
 			}
 
-			resultPartitionRecycler.shutdownNow();
+			resultPartitionRecyclerExecutorService.shutdownNow();
 
 			resultPartitionResolver.stop();
 
@@ -202,7 +204,8 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 		});
 	}
 
-	private void recycleResultPartitions() {
+	@VisibleForTesting
+	void recycleResultPartitions() {
 		long currTime = System.currentTimeMillis();
 		HashMap<ResultPartitionID, ExternalBlockResultPartitionMeta> consumedPartitionsToRemove = new HashMap<>();
 		HashMap<ResultPartitionID, ExternalBlockResultPartitionMeta> partialConsumedPartitionsToRemove = new HashMap<>();
@@ -221,17 +224,16 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 			int unconsumedSubpartitionCount = resultPartitionMeta.getUnconsumedSubpartitionCount();
 			if (unconsumedSubpartitionCount <= 0) {
 				// It seems all the down streams have fetched their data from this result partition.
-				long allSubpartitionsConsumedTimeInMs = resultPartitionMeta.getAllSubpartitionsConsumedTimeInMs();
+				long lastActiveTimeInMs = resultPartitionMeta.getLastActiveTimeInMs();
 				// we may get -1L in a rare condition due to decreasing count and setting timestamp without lock
-				if ((allSubpartitionsConsumedTimeInMs > 0) && (currTime - allSubpartitionsConsumedTimeInMs
-						> shuffleServiceConfiguration.getConsumedPartitionTTL())) {
+				if ((currTime -lastActiveTimeInMs) > shuffleServiceConfiguration.getConsumedPartitionTTL()) {
 					consumedPartitionsToRemove.put(resultPartitionID, resultPartitionMeta);
 				}
 			} else {
 				// There are subpartitions left to be consumed. If this job fails, such partition
 				// will never be fully consumed.
 				long lastActiveTimeInMs = resultPartitionMeta.getLastActiveTimeInMs();
-				if (currTime - lastActiveTimeInMs > shuffleServiceConfiguration.getPartialConsumedPartitionTTL()) {
+				if ((currTime - lastActiveTimeInMs) > shuffleServiceConfiguration.getPartialConsumedPartitionTTL()) {
 					partialConsumedPartitionsToRemove.put(resultPartitionID, resultPartitionMeta);
 				}
 			}

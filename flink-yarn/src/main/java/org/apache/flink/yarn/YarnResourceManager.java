@@ -22,7 +22,6 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
@@ -75,10 +74,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import scala.concurrent.duration.FiniteDuration;
 
 /**
  * The yarn implementation of the resource manager. Used when the system is started
@@ -659,11 +655,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			taskManagerParameters.taskManagerDirectMemoryLimitMB(),
 			container.getNodeHttpAddress());
 
-		int timeout = flinkConfig.getInteger(ConfigConstants.TASK_MANAGER_MAX_REGISTRATION_DURATION,
-			DEFAULT_TASK_MANAGER_REGISTRATION_DURATION);
-		FiniteDuration teRegistrationTimeout = new FiniteDuration(timeout, TimeUnit.SECONDS);
 		final Configuration taskManagerConfig = BootstrapTools.generateTaskManagerConfiguration(
-			flinkConfig, "", 0, tmResource.getSlotNum(), teRegistrationTimeout);
+			flinkConfig, "", 0, tmResource.getSlotNum(), null);
 
 		//TODO: Add resource profile of slots to task executor config.
 		//For blink, all slots in a task executor have same resource profile.
