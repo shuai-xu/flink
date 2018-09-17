@@ -62,7 +62,7 @@ class SubqueryCorrelateVariablesValidationTest(fieldsNullable: Boolean)
     }
   }
 
-  @Test(expected = classOf[TableException])
+  @Test(expected = classOf[RuntimeException])
   def testWithProjectProjectCorrelate(): Unit = {
     val testSql =
       """
@@ -73,7 +73,7 @@ class SubqueryCorrelateVariablesValidationTest(fieldsNullable: Boolean)
     util.printSql(testSql)
   }
 
-  @Test(expected = classOf[TableException])
+  @Test(expected = classOf[RuntimeException])
   def testWithProjectFilterCorrelate(): Unit = {
     val testSql =
       """
@@ -85,7 +85,7 @@ class SubqueryCorrelateVariablesValidationTest(fieldsNullable: Boolean)
     util.printSql(testSql)
   }
 
-  @Test(expected = classOf[TableException])
+  @Test(expected = classOf[RuntimeException])
   def testWithProjectJoinCorrelate(): Unit = {
     val testSql =
       """
@@ -138,7 +138,7 @@ class SubqueryCorrelateVariablesValidationTest(fieldsNullable: Boolean)
     util.printSql(testSql)
   }
 
-  @Test(expected = classOf[TableException])
+  @Test(expected = classOf[RuntimeException])
   def testWithProjectCaseWhenCorrelate(): Unit = {
     val testSql =
       """

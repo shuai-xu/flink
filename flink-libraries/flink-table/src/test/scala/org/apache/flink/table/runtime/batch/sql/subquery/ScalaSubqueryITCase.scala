@@ -164,7 +164,7 @@ class ScalaSubqueryITCase extends QueryTest {
         row("val1e", null, 10, null)))
   }
 
-  @Test
+  @Test(expected = classOf[RuntimeException])
   def testTC203(): Unit = {
     checkResult(
       """
@@ -195,7 +195,7 @@ class ScalaSubqueryITCase extends QueryTest {
         row("val1e", 10)))
   }
 
-  @Test(expected = classOf[TableException])
+  @Test(expected = classOf[RuntimeException])
   def testTC201(): Unit = {
     checkResult(
       """
@@ -208,7 +208,7 @@ class ScalaSubqueryITCase extends QueryTest {
         row(19, "2017-05-04 01:01:00.0")))
   }
 
-  @Test(expected = classOf[TableException])
+  @Test(expected = classOf[RuntimeException])
   def testTC205(): Unit = {
     checkResult(
       """
