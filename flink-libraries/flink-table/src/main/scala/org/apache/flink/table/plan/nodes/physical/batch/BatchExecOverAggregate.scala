@@ -39,7 +39,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedBoundCompa
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.BatchExecRelVisitor
-import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
+import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.common.{CommonAggregate, CommonOverAggregate}
@@ -119,20 +119,41 @@ class BatchExecOverAggregate(
       logicWindow))
   }
 
+  private def inferProvidedTraitSet(): RelTraitSet = {
+    var selfProvidedTraitSet = getTraitSet
+    // provided distribution
+    val providedDistribution = if (grouping.nonEmpty) {
+      FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList)
+    } else {
+      FlinkRelDistribution.SINGLETON
+    }
+    selfProvidedTraitSet = selfProvidedTraitSet.replace(providedDistribution)
+    // provided collation
+    val firstGroup = windowGroupToAggCallToAggFunction.head._1
+    if (needCollationTrait(input, logicWindow, firstGroup)) {
+      val collation = createFlinkRelCollation(firstGroup)
+      if (!collation.equals(RelCollations.EMPTY)) {
+        selfProvidedTraitSet = selfProvidedTraitSet.replace(collation)
+      }
+    }
+    selfProvidedTraitSet
+  }
+
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
     val requiredDistribution = requiredTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
     val requiredCollation = requiredTraitSet.getTrait(RelCollationTraitDef.INSTANCE)
     if (requiredDistribution.getType == ANY && requiredCollation.getFieldCollations.isEmpty) {
       return null
     }
-    // If OverAgg provide empty traits or already provide collation traits which cannot satisfy
-    // required collations, cannot push down required collation and distribution (distribution
-    // destroy collation)
-    val providedCollation = getTraitSet.getTrait(RelCollationTraitDef.INSTANCE)
-    if (providedCollation.getFieldCollations.isEmpty ||
-      !providedCollation.satisfies(requiredCollation)) {
-      return null
+    val selfProvidedTraitSet = inferProvidedTraitSet()
+
+    if (selfProvidedTraitSet.satisfies(requiredTraitSet)) {
+      // Current node can satisfy the requiredTraitSet,return the current node with ProvidedTraitSet
+      return copy(selfProvidedTraitSet, Seq(getInput))
     }
+
+    val providedCollation = selfProvidedTraitSet.getTrait(RelCollationTraitDef.INSTANCE)
+
     val inputFieldCnt = getInput.getRowType.getFieldCount
     val canPushDownDistribution = if (requiredDistribution.getType == ANY) {
       true
@@ -167,26 +188,28 @@ class BatchExecOverAggregate(
     }
 
     var pushDownTraits = getInput.getTraitSet
-    var providedTraits = getTraitSet
+    var providedTraits = selfProvidedTraitSet
     if (!requiredDistribution.isTop) {
       pushDownTraits = pushDownTraits.replace(requiredDistribution)
       providedTraits = providedTraits.replace(requiredDistribution)
     }
-    if (requiredCollation.getFieldCollations.nonEmpty) {
-      if (providedCollation.getFieldCollations.nonEmpty) {
-        // If OverAgg provide collation itself and the provided collation can satisfy requirement,
-        // there is no need to push down new collation requirements into it's input
+
+    if (providedCollation.satisfies(requiredCollation)) {
+      // the providedCollation can satisfy the requirement,
+      // so don't push down the sort into it's input.
+    } else if (providedCollation.getFieldCollations.isEmpty &&
+        requiredCollation.getFieldCollations.nonEmpty) {
+      // If OverAgg cannot provide collation itself, try to push down collation requirements into
+      // it's input if collation fields all come from input node.
+      val canPushDownCollation = requiredCollation.getFieldCollations
+          .forall(_.getFieldIndex < inputFieldCnt)
+      if (canPushDownCollation) {
+        pushDownTraits = pushDownTraits.replace(requiredCollation)
         providedTraits = providedTraits.replace(requiredCollation)
-      } else {
-        // If OverAgg cannot provide collation itself, try to push down collation requirements into
-        // it's input if collation fields all come from input node.
-        val canPushDownCollation = requiredCollation.getFieldCollations
-            .forall(_.getFieldIndex < inputFieldCnt)
-        if (canPushDownCollation) {
-          pushDownTraits = pushDownTraits.replace(requiredCollation)
-          providedTraits = providedTraits.replace(requiredCollation)
-        }
       }
+    } else {
+      // Don't push down the sort into it's input,
+      // due to the provided collation will destroy the input's provided collation.
     }
     val newInput = RelOptRule.convert(getInput, pushDownTraits)
     copy(providedTraits, Seq(newInput))

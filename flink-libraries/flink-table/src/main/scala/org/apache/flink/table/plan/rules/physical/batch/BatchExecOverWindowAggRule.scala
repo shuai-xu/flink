@@ -17,11 +17,8 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import java.util.{ArrayList => JArrayList}
-
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelFieldCollation.{Direction, NullDirection}
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Window.Group
@@ -34,7 +31,7 @@ import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalOverWindow
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
-import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
+import org.apache.flink.table.runtime.aggregate.SortUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -146,54 +143,6 @@ class BatchExecOverWindowAggRule extends RelOptRule(
     call.transformTo(overWindowAgg)
   }
 
-  private def needCollationTrait(
-      input: RelNode,
-      overWindow: FlinkLogicalOverWindow,
-      group: Group): Boolean = {
-    if (group.lowerBound.isPreceding || group.upperBound.isFollowing || !group.isRows) {
-      true
-    } else {
-      //rows over window
-      val offsetLower = getBoundary(overWindow, group.lowerBound).asInstanceOf[Long]
-      val offsetUpper = getBoundary(overWindow, group.upperBound).asInstanceOf[Long]
-      if (offsetLower == 0L && offsetUpper == 0L && group.orderKeys.getFieldCollations.isEmpty) {
-        false
-      } else {
-        true
-      }
-    }
-  }
-
-  private def createFlinkRelCollation(group: Group) = {
-    val groupSet: Array[Int] = group.keys.toArray
-    val collections = group.orderKeys.getFieldCollations
-    val (orderKeyIdxs, _, _) = SortUtil.getKeysAndOrders(collections)
-    if (groupSet.nonEmpty || orderKeyIdxs.nonEmpty) {
-      val collectionIndexes = collections.map(_.getFieldIndex)
-      val intersectIds = orderKeyIdxs.intersect(groupSet)
-      val groupCollation = groupSet.map { idx =>
-        if (intersectIds.contains(idx)) {
-          val index = collectionIndexes.indexOf(idx)
-          (collections.get(index).getFieldIndex, collections.get(index).getDirection,
-              collections.get(index).nullDirection)
-        } else {
-          (idx, Direction.ASCENDING, NullDirection.FIRST)
-        }
-      }
-      //orderCollation should filter those order keys which are contained by groupSet.
-      val orderCollation = collections.filter(collection =>
-        !intersectIds.contains(collection.getFieldIndex)).map { collo =>
-        (collo.getFieldIndex, collo.getDirection, collo.nullDirection)
-      }
-      val fields = new JArrayList[RelFieldCollation]()
-      for (field <- groupCollation ++ orderCollation) {
-        fields.add(RelFieldCollations.of(field._1, field._2, field._3))
-      }
-      RelCollations.of(fields)
-    } else {
-      RelCollations.EMPTY
-    }
-  }
 
   private def inferOutputRowType(
       cluster: RelOptCluster,
