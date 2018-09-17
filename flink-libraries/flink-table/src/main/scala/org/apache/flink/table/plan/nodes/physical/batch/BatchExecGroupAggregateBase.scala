@@ -24,7 +24,6 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
@@ -33,12 +32,10 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
-import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
-import org.apache.flink.table.util.FlinkRelMdUtil._
 import org.apache.flink.table.util.FlinkRelOptUtil
 
 abstract class BatchExecGroupAggregateBase(
@@ -102,49 +99,6 @@ abstract class BatchExecGroupAggregateBase(
       .asInstanceOf[Map[UserDefinedAggregateFunction[_, _], String]]
 
   override def deriveRowType(): RelDataType = rowRelDataType
-
-  override def estimateRowCount(mq: RelMetadataQuery): Double = {
-    val globalAggRowCnt: Double = if (grouping.isEmpty) {
-      1.0
-    } else {
-      val groupKey = ImmutableBitSet.of(grouping: _*)
-      // rowCount is the cardinality of the group by columns
-      val distinctRowCount = mq.getDistinctRowCount(input, groupKey, null)
-      val childRowCount = mq.getRowCount(input)
-      if (distinctRowCount == null) {
-        if (isFinal && isMerge) {
-          // Avoid apply aggregation ratio twice when calculate row count of global agg
-          // which has local agg.
-          childRowCount
-        } else {
-          NumberUtil.multiply(childRowCount, getAggregationRatioIfNdvUnavailable(grouping.length))
-        }
-      } else {
-        NumberUtil.min(distinctRowCount, childRowCount)
-      }
-    }
-    if (isFinal) {
-      globalAggRowCnt
-    } else {
-      val childRowCount = mq.getRowCount(input)
-      val inputSize = mq.getAverageRowSize(input) * childRowCount
-      val nParallelism = Math.max(1,
-        (inputSize / SQL_DEFAULT_PARALLELISM_WORKER_PROCESS_SIZE).toInt)
-      if (nParallelism == 1) {
-        globalAggRowCnt
-      } else if (grouping.isEmpty) {
-        // output rowcount of local agg is parallelism for agg which has no group keys
-        nParallelism
-      } else {
-        val distinctRowCount = mq.getDistinctRowCount(input, ImmutableBitSet.of(grouping: _*), null)
-        if (distinctRowCount == null) {
-          globalAggRowCnt
-        } else {
-          getRowCountOfLocalAgg(nParallelism, childRowCount, globalAggRowCnt)
-        }
-      }
-    }
-  }
 
   def getGrouping: Array[Int] = grouping
 

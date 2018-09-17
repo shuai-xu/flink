@@ -62,7 +62,8 @@ class FlinkRelMdRowCountTest extends FlinkRelMdHandlerTestBase {
     assertEquals(5.0, mq.getRowCount(unSplittableLocalAgg))
     assertEquals(50.0, mq.getRowCount(unSplittableLocalAgg2))
     assertEquals(3.0, mq.getRowCount(splittableLocalAgg))
-    assertEquals((1 - Math.pow(0.8, 4)) * 5 * 512 * 512 * 128, mq.getRowCount(localAggOnBigTable))
+    assertEquals((1 - Math.pow(1 - 1.0 / 134, 4)) * 134 * 512 * 512 * 128,
+                 mq.getRowCount(localAggOnBigTable))
   }
 
   @Test

@@ -27,6 +27,7 @@ import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.calcite.util._
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.expressions.ExpressionUtils._
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
@@ -35,7 +36,8 @@ import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.stats.ValueInterval
 import org.apache.flink.table.plan.util.AggregateUtil._
-import org.apache.flink.table.util.FlinkRelMdUtil
+import org.apache.flink.table.util.FlinkRelMdUtil._
+import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelMdUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
 
@@ -88,6 +90,58 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
     }
   }
 
+  def getRowCount(rel: BatchExecGroupAggregateBase, mq: RelMetadataQuery): Double = {
+    getRowCountOfBatchExecAgg(rel, mq)
+  }
+
+  private def getRowCountOfBatchExecAgg(rel: SingleRel, mq: RelMetadataQuery): Double = {
+    val (grouping, isFinal, isMerge) = rel match {
+      case agg: BatchExecGroupAggregateBase =>
+        (ImmutableBitSet.of(agg.getGrouping: _*), agg.isFinal, agg.isMerge)
+      case windowAgg: BatchExecWindowAggregateBase =>
+        (ImmutableBitSet.of(windowAgg.getGrouping: _*), windowAgg.isFinal, windowAgg.isMerge)
+      case _ => throw new IllegalArgumentException(s"Unknown node type ${rel.getRelTypeName}!")
+    }
+    val ndvOfGroupKeysOnGlobalAgg: Double = if (grouping.isEmpty) {
+      1.0
+    } else {
+      // rowCount is the cardinality of the group by columns
+      val distinctRowCount = mq.getDistinctRowCount(rel.getInput, grouping, null)
+      val childRowCount = mq.getRowCount(rel.getInput)
+      if (distinctRowCount == null) {
+        if (isFinal && isMerge) {
+          // Avoid apply aggregation ratio twice when calculate row count of global agg
+          // which has local agg.
+          childRowCount
+        } else {
+          NumberUtil.multiply(childRowCount, getAggregationRatioIfNdvUnavailable(grouping.length))
+        }
+      } else {
+        NumberUtil.min(distinctRowCount, childRowCount)
+      }
+    }
+    if (isFinal) {
+      ndvOfGroupKeysOnGlobalAgg
+    } else {
+      val childRowCount = mq.getRowCount(rel.getInput)
+      val tableConfig = FlinkRelOptUtil.getTableConfig(rel)
+      val nParallelism = BatchExecResourceUtil.calOperatorParallelism(childRowCount, tableConfig)
+      if (nParallelism == 1) {
+        ndvOfGroupKeysOnGlobalAgg
+      } else if (grouping.isEmpty) {
+        // output rowcount of local agg is parallelism for agg which has no group keys
+        nParallelism.toDouble
+      } else {
+        val distinctRowCount = mq.getDistinctRowCount(rel.getInput, grouping, null)
+        if (distinctRowCount == null) {
+          ndvOfGroupKeysOnGlobalAgg
+        } else {
+          getRowCountOfLocalAgg(nParallelism, childRowCount, ndvOfGroupKeysOnGlobalAgg)
+        }
+      }
+    }
+  }
+
   def getRowCount(rel: FlinkLogicalWindowAggregate, mq: RelMetadataQuery): Double = {
     getRowCountOfWindowAgg(rel, rel.getWindow, rel.getGroupSet, mq)
   }
@@ -97,48 +151,9 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
   }
 
   def getRowCount(rel: BatchExecWindowAggregateBase, mq: RelMetadataQuery): Double = {
-    val grouping = ImmutableBitSet.of(rel.getGrouping: _ *)
-    val globalNdvOfGroupKeys: Double = if (grouping.isEmpty) {
-      1.0
-    } else {
-      val distinctRowCount = mq.getDistinctRowCount(rel.getInput, grouping, null)
-      val childRowCount = mq.getRowCount(rel.getInput)
-      if (distinctRowCount == null) {
-        if (rel.isFinal && rel.isMerge) {
-          // Avoid apply aggregation ratio twice when calculate row count of global agg
-          // which has local agg.
-          childRowCount
-        } else {
-          NumberUtil.multiply(childRowCount,
-            FlinkRelMdUtil.getAggregationRatioIfNdvUnavailable(grouping.length))
-        }
-      } else {
-        NumberUtil.min(distinctRowCount, childRowCount)
-      }
-    }
-    val ndvOfCurrentNode: Double = if (rel.isFinal) {
-      globalNdvOfGroupKeys
-    } else {
-      val childRowCount = mq.getRowCount(rel.getInput)
-      val inputSize = mq.getAverageRowSize(rel.getInput()) * childRowCount
-      val nParallelism = Math.max(1,
-        (inputSize / SQL_DEFAULT_PARALLELISM_WORKER_PROCESS_SIZE).toInt)
-      if (nParallelism == 1) {
-        globalNdvOfGroupKeys
-      } else if (grouping.isEmpty) {
-        // output rowcount of local agg is parallelism for agg which has no group keys
-        nParallelism.toDouble
-      } else {
-        val distinctRowCount = mq.getDistinctRowCount(rel.getInput, grouping, null)
-        if (distinctRowCount == null) {
-          globalNdvOfGroupKeys
-        } else {
-          FlinkRelMdUtil.getRowCountOfLocalAgg(nParallelism, childRowCount, globalNdvOfGroupKeys)
-        }
-      }
-    }
+    val ndvOfGroupKeys = getRowCountOfBatchExecAgg(rel, mq)
     val inputRowCount = mq.getRowCount(rel.getInput)
-    estimateRowCountOfWindowAgg(ndvOfCurrentNode, inputRowCount, rel.getWindow)
+    estimateRowCountOfWindowAgg(ndvOfGroupKeys, inputRowCount, rel.getWindow)
   }
 
   private def getRowCountOfWindowAgg(
@@ -181,9 +196,6 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
       }
     }
   }
-
-  def getRowCount(rel: BatchExecGroupAggregateBase, mq: RelMetadataQuery): Double =
-    rel.estimateRowCount(mq)
 
   def getRowCount(rel: BatchExecOverAggregate, mq: RelMetadataQuery): Double =
     getRowCountOfOverWindow(rel, mq)

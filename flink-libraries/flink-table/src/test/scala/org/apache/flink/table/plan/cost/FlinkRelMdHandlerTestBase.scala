@@ -505,21 +505,21 @@ class FlinkRelMdHandlerTestBase {
     unSplittableLocalAgg2,
     unSplittableGlobalAgg2WithLocalAgg,
     unSplittableGlobalAgg2WithoutLocalAgg) = {
-    // aggCall: min(age) as min_age
-    val minAgeAggCall = AggregateCall.create(
+    // aggCall: count(age) as min_age
+    val countAgeAggCall = AggregateCall.create(
       SqlStdOperatorTable.COUNT,
       false,
       ImmutableList.of(Integer.valueOf(2)),
       -1,
       typeFactory.createTypeFromTypeInfo(BasicTypeInfo.LONG_TYPE_INFO, isNullable = false),
       "min_age")
-    // local aggregate: min(age) as min_age group by id
+    // local aggregate: count(age) as min_age group by id
     val rowTypeOfAgg = typeFactory.builder
       .add("id", typeFactory.createTypeFromTypeInfo(BasicTypeInfo.INT_TYPE_INFO, isNullable = true))
       .add("min_age", typeFactory.createTypeFromTypeInfo(
         BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
       .build()
-    val aggCallToAggFunction = Seq((minAgeAggCall, new expr.IntMinAggFunction))
+    val aggCallToAggFunction = Seq((countAgeAggCall, new expr.Count1AggFunction))
     val localAgg = new BatchExecLocalHashAggregate(
       cluster,
       relBuilder,
@@ -539,7 +539,7 @@ class FlinkRelMdHandlerTestBase {
       localAgg,
       FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
 
-    // global aggregate: min(age) as min_age group by id, which has local aggregate
+    // global aggregate: count(age) as min_age group by id, which has local aggregate
     val globalAggWithLocalAgg = new BatchExecHashAggregate(
       cluster,
       relBuilder,
@@ -552,7 +552,7 @@ class FlinkRelMdHandlerTestBase {
       auxGrouping = Array(),
       true)
 
-    // global aggregate: min(age) as min_age group by id, which has no local aggregate
+    // global aggregate: count(age) as min_age group by id, which has no local aggregate
     val globalAggWithoutLocalAgg = new BatchExecHashAggregate(
       cluster,
       relBuilder,

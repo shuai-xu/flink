@@ -277,7 +277,7 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
++- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[c, a, b, CAST(a) AS a0])
    :  +- SortAggregate(isMerge=[false], groupBy=[c], select=[c, MyFirst(a) AS a, MyLast(b) AS b])
    :     +- Sort(orderBy=[c ASC], reuse_id=[1])
@@ -313,8 +313,8 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
-   :- Exchange(distribution=[any], exchange_mode=[BATCH])
++- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])
    :     +- SortAggregate(isMerge=[false], groupBy=[c], select=[c, MyFirst(a) AS a, MyLast(b) AS b], reuse_id=[1])
    :        +- Sort(orderBy=[c ASC])
@@ -895,8 +895,8 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
-   :- Exchange(distribution=[any], exchange_mode=[BATCH])
++- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])
    :     +- SortAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
    :        +- Sort(orderBy=[c ASC])
@@ -970,8 +970,8 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
-   :- Exchange(distribution=[any], exchange_mode=[BATCH])
++- HashJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+   :- Exchange(distribution=[hash[a0]], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])
    :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
    :        +- Exchange(distribution=[hash[c]])
