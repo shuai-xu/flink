@@ -28,6 +28,7 @@ import org.apache.calcite.rel.logical.LogicalCalc
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util._
 import org.apache.flink.table.api.TableException
@@ -66,7 +67,6 @@ class FlinkRelMdDistinctRowCount private extends MetadataHandler[BuiltInMetadata
     if (isUnique) {
       NumberUtil.multiply(mq.getRowCount(rel), selectivity)
     } else {
-      var isNullExists = false
       val distinctCount = groupKey.asList().foldLeft(1D) {
         (ndv, g) =>
           val fieldName = fields.get(g).getName
@@ -75,18 +75,11 @@ class FlinkRelMdDistinctRowCount private extends MetadataHandler[BuiltInMetadata
             // Never let ndv of a column go below 1, as it will result in incorrect calculations.
             ndv * Math.max(colStats.ndv.toDouble, 1D)
           } else {
-            isNullExists = true
-            -1D
+            return null
           }
       }
-      if (distinctCount > 0 && !isNullExists) {
-        val rowCount = mq.getRowCount(rel)
-        FlinkRelMdUtil.adaptNdvBasedOnSelectivity(rowCount, distinctCount, selectivity)
-      } else {
-        // TODO if predicate is not null and groupkey is not unique, use frequency histogram to
-        // estimate ndv
-        null
-      }
+      val rowCount = mq.getRowCount(rel)
+      FlinkRelMdUtil.adaptNdvBasedOnSelectivity(rowCount, distinctCount, selectivity)
     }
   }
 
@@ -122,81 +115,79 @@ class FlinkRelMdDistinctRowCount private extends MetadataHandler[BuiltInMetadata
   }
 
   private def getDistinctRowCountOfAggregate(
-      agg: SingleRel,
-      mq: RelMetadataQuery,
-      groupKey: ImmutableBitSet,
-      predicate: RexNode): Double = {
+    agg: SingleRel,
+    mq: RelMetadataQuery,
+    groupKey: ImmutableBitSet,
+    predicate: RexNode): Double = {
+    val (childPred, notPushablePred) = splitPredicateOnAggregate(agg, predicate)
+    val (childKey, aggCalls) = FlinkRelMdUtil.splitGroupKeysOnAggregate(agg, groupKey)
 
-    def removeAuxKey(
-        groupKey: ImmutableBitSet,
-        groupSet: Array[Int],
-        auxGroupSet: Array[Int]): ImmutableBitSet = {
-      if (groupKey.contains(ImmutableBitSet.of(groupSet: _*))) {
-        // remove auxGroupSet from groupKey if groupKey contain both full-groupSet
-        // and (partial-)auxGroupSet
-        groupKey.except(ImmutableBitSet.of(auxGroupSet: _*))
-      } else {
-        groupKey
-      }
+    val ndvOfColsInGroupKeys = mq.getDistinctRowCount(agg.getInput, childKey, childPred.orNull)
+    if (ndvOfColsInGroupKeys == null) {
+      return null
     }
-
-    val (childPred, notPushablePred, childKey, numOfKeyInAggCall) = agg match {
-      case rel: Aggregate =>
-        val (pushable, rest) = FlinkRelMdUtil.splitPredicateOnAggregate(rel, predicate)
-        val (auxGroupSet, _) = FlinkRelOptUtil.checkAndSplitAggCalls(rel)
-        // set the bits as they correspond to the child input
-        val (childKeys, keyInAggCallCnt) = FlinkRelMdUtil.setAggChildKeys(groupKey, rel)
-        val childKeys0 = removeAuxKey(childKeys, rel.getGroupSet.toArray, auxGroupSet)
-        (pushable, rest, childKeys0, keyInAggCallCnt)
-      case rel: BatchExecGroupAggregateBase =>
-        val (pushable, rest) = FlinkRelMdUtil.splitPredicateOnAggregate(rel, predicate)
-        // set the bits as they correspond to the child input
-        val (childKeys, keyInAggCallCnt) = FlinkRelMdUtil.setAggChildKeys(groupKey, rel)
-        val childKeys0 = removeAuxKey(childKeys, rel.getGrouping, rel.getAuxGrouping)
-        (pushable, rest, childKeys0, keyInAggCallCnt)
-      case rel: BatchExecWindowAggregateBase =>
-        val (pushable, rest) = FlinkRelMdUtil.splitPredicateOnAggregate(rel, predicate)
-        // set the bits as they correspond to the child input
-        val (childKeys, keyInAggCallCnt) = FlinkRelMdUtil.setAggChildKeys(groupKey, rel)
-        val childKeys0 = removeAuxKey(childKeys, rel.getGrouping, rel.getAuxGrouping)
-        (pushable, rest, childKeys0, keyInAggCallCnt)
-    }
-    var distinctRowCount = mq.getDistinctRowCount(
-      agg.getInput,
-      childKey,
-      childPred.orNull)
-    if (distinctRowCount == null) {
-      null
-    } else {
-      // Maximum ndv of aggregate functions result are ndv of current aggregate group keys.
-      // e.g. select cnt, count(*) from (
-      // select dept, count(emp) as cnt from book group by dept) group by cnt
-      // Maximum rowcount of outer aggregate, which is maximum ndv of cnt, are number of distinct
-      // value of dept.
-      if (numOfKeyInAggCall == groupKey.cardinality()) {
-        val aggregateRowCnt = mq.getRowCount(agg)
-        if (aggregateRowCnt != null) {
-          distinctRowCount = NumberUtil.min(distinctRowCount, aggregateRowCnt)
-        }
-      }
-      // distinctRowCount should be reduced when childKey contains key from aggCall
-      val factorOfKeyInAggCall = if (numOfKeyInAggCall > 0) 0.1 else 1.0
-      notPushablePred match {
-        case Some(p) =>
-          val aggCallEstimator = new AggCallSelectivityEstimator(
-            agg, FlinkRelMetadataQuery.reuseOrCreate(mq))
-          val restSelectivity = aggCallEstimator.evaluate(p) match {
-            case Some(s) => s
-            case _ => RelMdUtil.guessSelectivity(p)
+    val inputRowCount = mq.getRowCount(agg.getInput)
+    val factorOfKeyInAggCall = 0.1
+    val ndvOfColsInAggCalls = aggCalls.foldLeft(1D) {
+        (ndv, aggCall) =>
+          val ndvOfAggCall = aggCall.getAggregation.getKind match {
+            case SqlKind.COUNT =>
+              val inputRowCnt = inputRowCount
+              // Assume result of count(c) of each group bucket is different, start with 0, end with
+              // N -1 (N is max ndv of count).
+              // 0 + 1 + ... + (N - 1) <= rowCount => N ~= Sqrt(2 * rowCnt)
+              // Max ndv of count(col) is Sqrt(2 * rowCnt)
+              if (inputRowCnt != null) {
+                Math.sqrt(2D * inputRowCnt)
+              } else {
+                return null
+              }
+            case _ =>
+              val argList = aggCall.getArgList
+              if (argList.isEmpty) {
+                return null
+              }
+              val approximateNdv = mq.getDistinctRowCount(
+                agg.getInput,
+                ImmutableBitSet.of(argList),
+                childPred.orNull)
+              if (approximateNdv != null) {
+                approximateNdv * factorOfKeyInAggCall
+              } else {
+                return null
+              }
           }
-          val rowCount = mq.getRowCount(agg)
-          val newNdv = FlinkRelMdUtil.adaptNdvBasedOnSelectivity(rowCount, distinctRowCount,
-                                                                 restSelectivity)
-          NumberUtil.min(newNdv , mq.getRowCount(agg.getInput)) * factorOfKeyInAggCall
-        case _ =>
-          NumberUtil.min(distinctRowCount, mq.getRowCount(agg.getInput)) * factorOfKeyInAggCall
-      }
+          ndv * Math.max(ndvOfAggCall, 1D)
     }
+    val distinctRowCount = ndvOfColsInGroupKeys * ndvOfColsInAggCalls
+    notPushablePred match {
+      case Some(p) =>
+        val aggCallEstimator = new AggCallSelectivityEstimator(
+          agg, FlinkRelMetadataQuery.reuseOrCreate(mq))
+        val restSelectivity = aggCallEstimator.evaluate(p) match {
+          case Some(s) => s
+          case _ => RelMdUtil.guessSelectivity(p)
+        }
+        val rowCount = mq.getRowCount(agg)
+        val newNdv = FlinkRelMdUtil.adaptNdvBasedOnSelectivity(
+          rowCount,
+          distinctRowCount,
+          restSelectivity)
+        NumberUtil.min(newNdv, inputRowCount)
+      case _ =>
+        NumberUtil.min(distinctRowCount, inputRowCount)
+    }
+  }
+
+  private def splitPredicateOnAggregate(
+    agg: SingleRel,
+    predicate: RexNode): (Option[RexNode], Option[RexNode]) = agg match {
+    case rel: Aggregate =>
+      FlinkRelMdUtil.splitPredicateOnAggregate(rel, predicate)
+    case rel: BatchExecGroupAggregateBase =>
+      FlinkRelMdUtil.splitPredicateOnAggregate(rel, predicate)
+    case rel: BatchExecWindowAggregateBase =>
+      FlinkRelMdUtil.splitPredicateOnAggregate(rel, predicate)
   }
 
   def getDistinctRowCount(

@@ -25,6 +25,7 @@ import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex.{RexInputRef, RexLiteral}
+import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.{BuiltInMethod, ImmutableBitSet, NumberUtil, Util}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
@@ -196,9 +197,7 @@ class FlinkRelMdPopulationSize private extends MetadataHandler[BuiltInMetadata.P
       rel: Aggregate,
       mq: RelMetadataQuery,
       groupKey: ImmutableBitSet): Double = {
-    // set the bits as they correspond to the child input
-    val (childKey, _) = FlinkRelMdUtil.setAggChildKeys(groupKey, rel)
-    mq.getPopulationSize(rel.getInput, childKey)
+    getPopulationSizeOfAggregate(rel, mq, groupKey)
   }
 
   def getPopulationSize(
@@ -254,9 +253,7 @@ class FlinkRelMdPopulationSize private extends MetadataHandler[BuiltInMetadata.P
         return mq.getPopulationSize(rel.getInput, localWinAggGroupKey)
       }
     }
-    // set the bits as they correspond to the child input
-    val (childKey, _) = FlinkRelMdUtil.setAggChildKeys(groupKey, rel)
-    mq.getPopulationSize(rel.getInput, childKey)
+    getPopulationSizeOfAggregate(rel, mq, groupKey)
   }
 
   private def getPopulationSizeOfWindowAgg(
@@ -290,9 +287,49 @@ class FlinkRelMdPopulationSize private extends MetadataHandler[BuiltInMetadata.P
       return mq.getPopulationSize(rel.getInput, groupKey)
     }
 
-    // set the bits as they correspond to the child input
-    val (childKey, _) = FlinkRelMdUtil.setAggChildKeys(groupKey, rel)
-    mq.getPopulationSize(rel.getInput, childKey)
+    getPopulationSizeOfAggregate(rel, mq, groupKey)
+  }
+
+  private def getPopulationSizeOfAggregate(
+    agg: SingleRel,
+    mq: RelMetadataQuery,
+    groupKey: ImmutableBitSet): Double = {
+    val (childKey, aggCalls) = FlinkRelMdUtil.splitGroupKeysOnAggregate(agg, groupKey)
+    val popSizeOfColsInGroupKeys = mq.getPopulationSize(agg.getInput, childKey)
+    if (popSizeOfColsInGroupKeys == null) {
+      return null
+    }
+    val factorOfKeyInAggCall = 0.1
+    val popSizeOfColsInAggCalls = aggCalls.foldLeft(1D) {
+      (popSize, aggCall) =>
+        val popSizeOfAggCall = aggCall.getAggregation.getKind match {
+          case SqlKind.COUNT =>
+            val inputRowCnt = mq.getRowCount(agg.getInput)
+            // Assume result of count(c) of each group bucket is different, start with 0, end with
+            // N -1 (N is max ndv of count).
+            // 0 + 1 + ... + (N - 1) <= rowCount => N ~= Sqrt(2 * rowCnt)
+            if (inputRowCnt != null) {
+              Math.sqrt(2D * inputRowCnt)
+            } else {
+              return null
+            }
+          case _ =>
+            val argList = aggCall.getArgList
+            if (argList.isEmpty) {
+              return null
+            }
+            val approximatePopSize = mq.getPopulationSize(
+              agg.getInput,
+              ImmutableBitSet.of(argList))
+            if (approximatePopSize != null) {
+              approximatePopSize * factorOfKeyInAggCall
+            } else {
+              return null
+            }
+        }
+        popSize * Math.max(popSizeOfAggCall, 1D)
+    }
+    NumberUtil.min(popSizeOfColsInGroupKeys * popSizeOfColsInAggCalls, mq.getRowCount(agg.getInput))
   }
 
   def getPopulationSize(

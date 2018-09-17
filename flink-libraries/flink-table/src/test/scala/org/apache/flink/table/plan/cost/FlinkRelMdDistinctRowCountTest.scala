@@ -55,7 +55,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       "count_height")
     val agg = relBuilder.scan("student").aggregate(
       relBuilder.groupKey(0), Seq(minAgeAggCall, countHeightAggCall).toList).build()
-    assertEquals(5D, mq.getDistinctRowCount(agg, ImmutableBitSet.of(1, 2), null))
+    assertEquals(25D, mq.getDistinctRowCount(agg, ImmutableBitSet.of(1, 2), null))
   }
 
   @Test
@@ -161,9 +161,9 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
     val pred1 = relBuilder.call(LESS_THAN_OR_EQUAL, relBuilder.field(1), relBuilder.literal(20))
     assertEquals(5D * ((20.0 - 10.0) / (40.0 - 10.0)),
       mq.getDistinctRowCount(unSplittableGlobalAggWithLocalAgg, ImmutableBitSet.of(0), pred1), 1e-6)
-    assertEquals(2.5D,
+    assertEquals(10D,
       mq.getDistinctRowCount(unSplittableGlobalAgg2WithLocalAgg, ImmutableBitSet.of(1), null))
-    assertEquals(2.5D,
+    assertEquals(10D,
       mq.getDistinctRowCount(unSplittableGlobalAgg2WithoutLocalAgg, ImmutableBitSet.of(1), null))
 
     // id <= 1
@@ -196,9 +196,9 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(0, 1, 2), pred3))
     assertEquals(50D, mq.getDistinctRowCount(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(0, 1, 2), null))
-    assertEquals(2.5D, mq.getDistinctRowCount(
+    assertEquals(18.75D, mq.getDistinctRowCount(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(1, 2), pred3))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(25D, mq.getDistinctRowCount(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(1, 2), null))
 
     // id < 5 and max(score) < 3
@@ -296,7 +296,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
     assertEquals(2D, mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(1), null))
     assertEquals(7D, mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(2), null))
     assertEquals(25D, mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(3), null))
-    assertEquals(4.6D,
+    assertEquals(Math.sqrt(200),
       mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(4), null), 1e-6)
     assertEquals(50D,
       mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 2), null))
@@ -304,7 +304,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 3), pred))
     assertEquals(25D,
       mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 2, 3), pred))
-    assertEquals(2.5D,
+    assertEquals(100D,
       mq.getDistinctRowCount(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 3, 4), pred))
   }
 
@@ -313,7 +313,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
     assertEquals(30D, mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(0), null))
     assertEquals(5D, mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(0, 2), null))
+    assertEquals(50D, mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(0, 2), null))
     assertEquals(null, mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(3), null))
     assertEquals(null,
       mq.getDistinctRowCount(flinkLogicalWindowAgg, ImmutableBitSet.of(0, 3), null))
@@ -328,9 +328,9 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(0, 2), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(1, 2), null))
     assertEquals(null, mq.getDistinctRowCount(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(3), null))
@@ -366,7 +366,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
     assertEquals(30D, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(0), null))
     assertEquals(5D, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(0, 2), null))
+    assertEquals(50D, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(0, 2), null))
     assertEquals(null, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(3), null))
     assertEquals(null, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(0, 3), null))
     assertEquals(null, mq.getDistinctRowCount(logicalWindowAgg, ImmutableBitSet.of(1, 3), null))
@@ -378,9 +378,9 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       logicalWindowAggWithAuxGroup, ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(
       logicalWindowAggWithAuxGroup, ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       logicalWindowAggWithAuxGroup, ImmutableBitSet.of(0, 2), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       logicalWindowAggWithAuxGroup, ImmutableBitSet.of(1, 2), null))
     assertEquals(null, mq.getDistinctRowCount(
       logicalWindowAggWithAuxGroup, ImmutableBitSet.of(3), null))
@@ -419,7 +419,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(globalWindowAggWithLocalAgg,
       ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(globalWindowAggWithLocalAgg,
+    assertEquals(50D, mq.getDistinctRowCount(globalWindowAggWithLocalAgg,
       ImmutableBitSet.of(0, 2), null))
     assertEquals(null, mq.getDistinctRowCount(globalWindowAggWithLocalAgg,
       ImmutableBitSet.of(3), null))
@@ -436,7 +436,7 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(globalWindowAggWithoutLocalAgg,
       ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(globalWindowAggWithoutLocalAgg,
+    assertEquals(50D, mq.getDistinctRowCount(globalWindowAggWithoutLocalAgg,
       ImmutableBitSet.of(0, 2), null))
     assertEquals(null, mq.getDistinctRowCount(globalWindowAggWithoutLocalAgg,
       ImmutableBitSet.of(3), null))
@@ -453,9 +453,9 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(0, 2), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(1, 2), null))
     assertEquals(null, mq.getDistinctRowCount(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(3), null))
@@ -476,9 +476,9 @@ class FlinkRelMdDistinctRowCountTest extends FlinkRelMdHandlerTestBase {
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(1), null))
     assertEquals(50D, mq.getDistinctRowCount(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(0, 1), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(0, 2), null))
-    assertEquals(5D, mq.getDistinctRowCount(
+    assertEquals(50D, mq.getDistinctRowCount(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(1, 2), null))
     assertEquals(null, mq.getDistinctRowCount(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(3), null))

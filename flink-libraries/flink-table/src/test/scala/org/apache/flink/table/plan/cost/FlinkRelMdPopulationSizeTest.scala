@@ -71,20 +71,20 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
   @Test
   def testGetPopulationSizeOnAggregateBatchExec(): Unit = {
     assertEquals(5D, mq.getPopulationSize(unSplittableGlobalAggWithLocalAgg, ImmutableBitSet.of(0)))
-    assertEquals(25D,
+    assertEquals(10D,
       mq.getPopulationSize(unSplittableGlobalAgg2WithLocalAgg, ImmutableBitSet.of(1)))
-    assertEquals(25D,
+    assertEquals(10D,
       mq.getPopulationSize(unSplittableGlobalAgg2WithoutLocalAgg, ImmutableBitSet.of(1)))
 
     assertEquals(50D, mq.getPopulationSize(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(0)))
     assertEquals(25D, mq.getPopulationSize(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(1)))
-    assertEquals(7D, mq.getPopulationSize(
+    assertEquals(1D, mq.getPopulationSize(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(2)))
     assertEquals(50D, mq.getPopulationSize(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(0, 1)))
-    assertEquals(50D, mq.getPopulationSize(
+    assertEquals(25D, mq.getPopulationSize(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(1, 2)))
     assertEquals(50D, mq.getPopulationSize(
       unSplittableGlobalAggWithLocalAggAndAuxGrouping, ImmutableBitSet.of(0, 1, 2)))
@@ -164,11 +164,12 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
     assertEquals(2D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(1)))
     assertEquals(7D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(2)))
     assertEquals(25D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(3)))
-    assertEquals(46D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(4)))
+    assertEquals(Math.sqrt(200),
+                 mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(4)))
     assertEquals(50D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 2)))
     assertEquals(50D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 3)))
     assertEquals(50D, mq.getPopulationSize(aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 2, 3)))
-    assertEquals(50D, mq.getPopulationSize(
+    assertEquals(100D, mq.getPopulationSize(
       aggWithAuxGroupAndExpand, ImmutableBitSet.of(0, 2, 3, 4)))
   }
 
@@ -187,7 +188,7 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(0)))
     assertEquals(48D, mq.getPopulationSize(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(1)))
-    assertEquals(5D, mq.getPopulationSize(
+    assertEquals(10D, mq.getPopulationSize(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(2)))
     assertEquals(null, mq.getPopulationSize(
       flinkLogicalWindowAggWithAuxGroup, ImmutableBitSet.of(3)))
@@ -212,7 +213,7 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
 
     assertEquals(50D, mq.getPopulationSize(logicalWindowAggWithAuxGroup, ImmutableBitSet.of(0)))
     assertEquals(48D, mq.getPopulationSize(logicalWindowAggWithAuxGroup, ImmutableBitSet.of(1)))
-    assertEquals(5D, mq.getPopulationSize(logicalWindowAggWithAuxGroup, ImmutableBitSet.of(2)))
+    assertEquals(10D, mq.getPopulationSize(logicalWindowAggWithAuxGroup, ImmutableBitSet.of(2)))
     assertEquals(null, mq.getPopulationSize(logicalWindowAggWithAuxGroup, ImmutableBitSet.of(3)))
     assertEquals(50D, mq.getPopulationSize(logicalWindowAggWithAuxGroup, ImmutableBitSet.of(0, 1)))
     assertEquals(50D, mq.getPopulationSize(
@@ -251,7 +252,7 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(0)))
     assertEquals(48D, mq.getPopulationSize(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(1)))
-    assertEquals(5D, mq.getPopulationSize(
+    assertEquals(10D, mq.getPopulationSize(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(2)))
     assertEquals(null, mq.getPopulationSize(
       globalWindowAggWithoutLocalAggWithAuxGrouping, ImmutableBitSet.of(3)))
@@ -266,7 +267,7 @@ class FlinkRelMdPopulationSizeTest extends FlinkRelMdHandlerTestBase {
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(0)))
     assertEquals(48D, mq.getPopulationSize(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(1)))
-    assertEquals(5D, mq.getPopulationSize(
+    assertEquals(10D, mq.getPopulationSize(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(2)))
     assertEquals(null, mq.getPopulationSize(
       globalWindowAggWithLocalAggWithAuxGrouping, ImmutableBitSet.of(3)))

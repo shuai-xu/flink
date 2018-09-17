@@ -25,7 +25,7 @@ import java.util
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.avatica.util.TimeUnitRange._
 import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.rel.core.{Aggregate, Calc, JoinInfo, SemiJoin}
+import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.{RelMdUtil, RelMetadataQuery}
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rex._
@@ -41,6 +41,7 @@ import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange}
 import org.apache.flink.table.util.FlinkRelOptUtil.{checkAndGetFullGroupSet, checkAndSplitAggCalls}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 object FlinkRelMdUtil {
 
@@ -315,33 +316,32 @@ object FlinkRelMdUtil {
     * Takes a bitmap representing a set of input references and extracts the
     * ones that reference the group by columns in an aggregate.
     *
-    * Note: Borrowed from RelMdUtil.setAggChildKeys to fix calcite bug
     *
     * @param groupKey the original bitmap
     * @param aggRel   the aggregate
     */
   def setAggChildKeys(
-      groupKey: ImmutableBitSet,
-      aggRel: Aggregate): (ImmutableBitSet, Int) = {
+    groupKey: ImmutableBitSet,
+    aggRel: Aggregate): (ImmutableBitSet, Array[AggregateCall]) = {
     val childKeyBuilder = ImmutableBitSet.builder
+    val aggCalls = new mutable.ArrayBuffer[AggregateCall]()
     val groupSet = aggRel.getGroupSet.toArray
     val (auxGroupSet, otherAggCalls) = checkAndSplitAggCalls(aggRel)
     val fullGroupSet = groupSet ++ auxGroupSet
     // does not need to take keys in aggregate call into consideration if groupKey contains all
     // groupSet element in aggregate
     val containsAllAggGroupKeys = fullGroupSet.indices.forall(groupKey.get)
-    var numOfKeyInAggCall = 0
-    groupKey.foreach(bit =>
-      if (bit < fullGroupSet.length) {
-        childKeyBuilder.set(fullGroupSet(bit))
-      } else if (!containsAllAggGroupKeys) {
-        // getIndicatorCount return 0 if auxGroupSet is not empty
-        val agg = otherAggCalls.get(bit - (fullGroupSet.length + aggRel.getIndicatorCount))
-        agg.getArgList.foreach(arg => childKeyBuilder.set(arg))
-        numOfKeyInAggCall += 1
-      }
+    groupKey.foreach(
+      bit =>
+        if (bit < fullGroupSet.length) {
+          childKeyBuilder.set(fullGroupSet(bit))
+        } else if (!containsAllAggGroupKeys) {
+          // getIndicatorCount return 0 if auxGroupSet is not empty
+          val agg = otherAggCalls.get(bit - (fullGroupSet.length + aggRel.getIndicatorCount))
+          aggCalls += agg
+        }
     )
-    (childKeyBuilder.build(), numOfKeyInAggCall)
+    (childKeyBuilder.build(), aggCalls.toArray)
   }
 
   /**
@@ -352,8 +352,8 @@ object FlinkRelMdUtil {
     * @param aggRel   the aggregate
     */
   def setAggChildKeys(
-      groupKey: ImmutableBitSet,
-      aggRel: BatchExecGroupAggregateBase): (ImmutableBitSet, Int) = {
+    groupKey: ImmutableBitSet,
+    aggRel: BatchExecGroupAggregateBase): (ImmutableBitSet, Array[AggregateCall]) = {
     require(!aggRel.isFinal || !aggRel.isMerge, "Cannot handle global agg which has local agg!")
     setChildKeysOfAgg(groupKey, aggRel)
   }
@@ -366,15 +366,15 @@ object FlinkRelMdUtil {
     * @param aggRel   the aggregate
     */
   def setAggChildKeys(
-      groupKey: ImmutableBitSet,
-      aggRel: BatchExecWindowAggregateBase): (ImmutableBitSet, Int) = {
+    groupKey: ImmutableBitSet,
+    aggRel: BatchExecWindowAggregateBase): (ImmutableBitSet, Array[AggregateCall]) = {
     require(!aggRel.isFinal || !aggRel.isMerge, "Cannot handle global agg which has local agg!")
     setChildKeysOfAgg(groupKey, aggRel)
   }
 
   private def setChildKeysOfAgg(
-      groupKey: ImmutableBitSet,
-      aggRel: SingleRel): (ImmutableBitSet, Int) = {
+    groupKey: ImmutableBitSet,
+    aggRel: SingleRel): (ImmutableBitSet, Array[AggregateCall]) = {
     val (aggCalls, fullGroupSet) = aggRel match {
       case agg: BatchExecLocalSortWindowAggregate =>
         // grouping + assignTs + auxGrouping
@@ -393,18 +393,18 @@ object FlinkRelMdUtil {
     // does not need to take keys in aggregate call into consideration if groupKey contains all
     // groupSet element in aggregate
     val containsAllAggGroupKeys = fullGroupSet.indices.forall(groupKey.get)
-    var numOfKeyInAggCall = 0
     val childKeyBuilder = ImmutableBitSet.builder
-    groupKey.foreach(bit =>
-      if (bit < fullGroupSet.length) {
-        childKeyBuilder.set(fullGroupSet(bit))
-      } else if (!containsAllAggGroupKeys) {
-        val agg = aggCalls.get(bit - fullGroupSet.length)
-        agg.getArgList.foreach(arg => childKeyBuilder.set(arg))
-        numOfKeyInAggCall += 1
-      }
+    val aggs = new mutable.ArrayBuffer[AggregateCall]()
+    groupKey.foreach(
+      bit =>
+        if (bit < fullGroupSet.length) {
+          childKeyBuilder.set(fullGroupSet(bit))
+        } else if (!containsAllAggGroupKeys) {
+          val agg = aggCalls.get(bit - fullGroupSet.length)
+          aggs += agg
+        }
     )
-    (childKeyBuilder.build(), numOfKeyInAggCall)
+    (childKeyBuilder.build(), aggs.toArray)
   }
 
   /**
@@ -432,6 +432,50 @@ object FlinkRelMdUtil {
       }
     }
     childKeyBuilder.build()
+  }
+
+  /**
+    * Split groupKeys on Agregate/ BatchExecGroupAggregateBase/ BatchExecWindowAggregateBase
+    * into keys on aggregate's groupKey and aggregate's aggregateCalls.
+    *
+    * @param agg      the aggregate
+    * @param groupKey the original bitmap
+    */
+  private[flink] def splitGroupKeysOnAggregate(
+    agg: SingleRel,
+    groupKey: ImmutableBitSet): (ImmutableBitSet, Array[AggregateCall]) = {
+
+    def removeAuxKey(
+      groupKey: ImmutableBitSet,
+      groupSet: Array[Int],
+      auxGroupSet: Array[Int]): ImmutableBitSet = {
+      if (groupKey.contains(ImmutableBitSet.of(groupSet: _*))) {
+        // remove auxGroupSet from groupKey if groupKey contain both full-groupSet
+        // and (partial-)auxGroupSet
+        groupKey.except(ImmutableBitSet.of(auxGroupSet: _*))
+      } else {
+        groupKey
+      }
+    }
+
+    agg match {
+      case rel: Aggregate =>
+        val (auxGroupSet, _) = FlinkRelOptUtil.checkAndSplitAggCalls(rel)
+        val (childKeys, aggCalls) = setAggChildKeys(groupKey, rel)
+        val childKeyExcludeAuxKey = removeAuxKey(childKeys, rel.getGroupSet.toArray, auxGroupSet)
+        (childKeyExcludeAuxKey, aggCalls)
+      case rel: BatchExecGroupAggregateBase =>
+        // set the bits as they correspond to the child input
+        val (childKeys, aggCalls) = setAggChildKeys(groupKey, rel)
+        val childKeyExcludeAuxKey = removeAuxKey(childKeys, rel.getGrouping, rel.getAuxGrouping)
+        (childKeyExcludeAuxKey, aggCalls)
+      case rel: BatchExecWindowAggregateBase =>
+        val (childKeys, aggCalls) = setAggChildKeys(groupKey, rel)
+        val childKeyExcludeAuxKey = removeAuxKey(childKeys, rel.getGrouping, rel.getAuxGrouping)
+        (childKeyExcludeAuxKey, aggCalls)
+      case _ => throw new IllegalArgumentException(
+        s"Unknown aggregate type: ${agg.getRelTypeName}.")
+    }
   }
 
   /**
@@ -630,7 +674,7 @@ object FlinkRelMdUtil {
   /**
     * Estimates outputRowCount of local aggregate.
     *
-    * output rowcount of local agg is (1 - (1 - 1/x)^(n/m)) * m * x, based on two assumption:
+    * output rowcount of local agg is pow(1 - (1 - 1/x) , n/m)) * m * x, based on two assumption:
     * 1. even distribution of all distinct data
     * 2. even distribution of all data in each concurrent local agg worker
     *
