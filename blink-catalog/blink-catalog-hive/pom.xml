@@ -207,6 +207,12 @@
 		</dependency>
 
 		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-common</artifactId>
 			<version>2.6.5</version>
@@ -246,7 +252,7 @@
 				<artifactId>maven-shade-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>shade-hadoop</id>
+						<id>sql-client</id>
 						<phase>package</phase>
 						<goals>
 							<goal>shade</goal>
@@ -254,8 +260,88 @@
 						<configuration>
 							<relocations>
 								<relocation>
-									<pattern>org.apache.hadoop</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop</shadedPattern>
+									<pattern>org.apache.hadoop.HadoopIllegalArgumentException</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.HadoopIllegalArgumentException</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.conf</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.conf</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.crypto</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.crypto</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.fs</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.fs</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.ha</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.ha</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.http</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.http</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.io</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.io</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.ipc</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.ipc</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.jmx</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.jmx</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.log</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.log</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.metrics</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.metrics</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.metrics2</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.metrics2</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.net</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.net</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.net</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.net</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.record</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.record</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.security</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.security</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.service</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.service</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.tools</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.tools</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.tracing</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.tracing</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.hadoop.util</pattern>
+									<shadedPattern>org.flink.catalog.shaded.hadoop.util</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.google</pattern>
+									<shadedPattern>org.apache.flink.hive.shaded.com.google</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>

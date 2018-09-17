@@ -22,8 +22,10 @@ import org.apache.calcite.sql.`type`.OperandTypes
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.util.{ChainedSqlOperatorTable, ListSqlOperatorTable, ReflectiveSqlOperatorTable}
 import org.apache.calcite.sql.{fun, _}
+import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.catalog.CrudExternalCatalog
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
@@ -41,7 +43,7 @@ import _root_.scala.util.{Failure, Success, Try}
   * A catalog for looking up (user-defined) functions, used during validation phases
   * of both Table API and SQL API.
   */
-class FunctionCatalog {
+class FunctionCatalog(tableEnvironment: TableEnvironment) {
 
   private val functionBuilders = mutable.HashMap.empty[String, Class[_]]
   private val sqlFunctions = mutable.ListBuffer[SqlFunction]()
@@ -54,6 +56,10 @@ class FunctionCatalog {
     sqlFunctions += sqlFunction
   }
 
+  def getUserDefinedFunctions: Seq[String] = {
+    sqlFunctions.map(_.getName)
+  }
+
   def getSqlOperatorTable: SqlOperatorTable = {
     ChainedSqlOperatorTable.of(
       new ListSqlOperatorTable(sqlFunctions),
@@ -61,11 +67,80 @@ class FunctionCatalog {
     )
   }
 
+  def lookupFunction(name: String, children: Seq[Expression]): Expression = {
+    try {
+      lookupFunctionFromMemory(name, children)
+    } catch {
+      case e: ValidationException => {
+        if (null == tableEnvironment) {
+          throw e
+        }
+
+        val externalCatalog = try {
+          tableEnvironment.getExternalCatalog(null)
+        } catch {
+          case _: ExternalCatalogNotExistException => {
+            throw e
+          }
+        }
+
+        val externalFunc = externalCatalog.asInstanceOf[CrudExternalCatalog].getFunction(name)
+        val functionInstance = UserDefinedFunctionUtils.createUserDefinedFunction(
+          tableEnvironment.userClassLoader,
+          externalFunc.funcName,
+          externalFunc.className)
+
+        functionInstance match {
+          case _: ScalarFunction =>
+            val scalarSqlFunction = UserDefinedFunctionUtils.createScalarSqlFunction(
+              name,
+              name,
+              functionInstance.asInstanceOf[ScalarFunction],
+              tableEnvironment.typeFactory)
+              .asInstanceOf[ScalarSqlFunction]
+            ScalarFunctionCall(scalarSqlFunction.getScalarFunction, children)
+          case _: TableFunction[_] =>
+            val implicitResultType = tableEnvironment.getImplicitResultType(
+              functionInstance.asInstanceOf[TableFunction[_]])
+            val tableSqlFunction = UserDefinedFunctionUtils.createTableSqlFunction(
+              name,
+              name,
+              functionInstance.asInstanceOf[TableFunction[_]],
+              implicitResultType,
+              tableEnvironment.typeFactory
+            ).asInstanceOf[TableSqlFunction]
+            TableFunctionCall(
+              name,
+              functionInstance.asInstanceOf[TableFunction[_]],
+              children,
+              getResultTypeOfCTDFunction(
+                functionInstance.asInstanceOf[TableFunction[_]],
+                children.toArray, () => tableSqlFunction.getImplicitResultType))
+          case _: AggregateFunction[_, _] =>
+            val f = functionInstance.asInstanceOf[AggregateFunction[_, _]]
+            val implicitResultType = DataTypes.of(TypeExtractor
+              .createTypeInfo(f, classOf[AggregateFunction[_, _]], f.getClass, 0))
+            val implicitAccType = DataTypes.of(TypeExtractor
+              .createTypeInfo(f, classOf[AggregateFunction[_, _]], f.getClass, 1))
+            val externalResultType = UserDefinedFunctionUtils.getResultTypeOfAggregateFunction(
+              f, implicitResultType)
+            val externalAccType = UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction(
+              f, implicitAccType)
+            AggFunctionCall(
+              f,
+              externalResultType,
+              externalAccType,
+              children)
+        }
+      }
+    }
+  }
+
 
   /**
     * Lookup and create an expression if we find a match.
     */
-  def lookupFunction(name: String, children: Seq[Expression]): Expression = {
+  def lookupFunctionFromMemory(name: String, children: Seq[Expression]): Expression = {
     val funcClass = functionBuilders
       .getOrElse(name.toLowerCase, throw ValidationException(s"Undefined function: $name"))
 
@@ -318,8 +393,8 @@ object FunctionCatalog {
   /**
     * Create a new function catalog with built-in functions.
     */
-  def withBuiltIns: FunctionCatalog = {
-    val catalog = new FunctionCatalog()
+  def withBuiltIns(tabEnv: TableEnvironment): FunctionCatalog = {
+    val catalog = new FunctionCatalog(tabEnv)
     builtInFunctions.foreach { case (name, clazz) => catalog.registerFunction(name, clazz) }
     buildInTableFunctions.foreach { case (name, tableFunction) =>
       List(name, name.toUpperCase).foreach { regName =>

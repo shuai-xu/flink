@@ -20,12 +20,14 @@ package com.alibaba.blink.externalcatalog.hive;
 
 import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.api.CatalogNotExistException;
+import org.apache.flink.table.api.InvalidFunctionException;
 import org.apache.flink.table.api.PartitionAlreadyExistException;
 import org.apache.flink.table.api.PartitionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.catalog.CrudExternalCatalog;
 import org.apache.flink.table.catalog.ExternalCatalog;
+import org.apache.flink.table.catalog.ExternalCatalogFunction;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ExternalCatalogTablePartition;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -38,11 +40,13 @@ import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Function;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Partition;
+import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -63,7 +67,7 @@ import scala.Option;
 public class HiveExternalCatalog implements CrudExternalCatalog {
 
 	private static final Logger LOG = LoggerFactory.getLogger(HiveExternalCatalog.class);
-	private static final String DEFAULT = "default";
+	public static final String DEFAULT = "default";
 	private final HiveConf hiveConf;
 	private final String database;
 	private IMetaStoreClient metaStoreClient;
@@ -108,6 +112,46 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 			}
 		}
 		return metaStoreClient;
+	}
+
+	@Override
+	public void createFunction(
+			String functionName,
+			String className) {
+
+		LOG.info("create function, function name={}, class name={}", functionName, className);
+		Function func = new Function(
+			functionName,
+			database,
+			className,
+			"Flink", // TODO pass the user name
+			PrincipalType.USER,
+			(int) (System.currentTimeMillis() / 1000),
+			org.apache.hadoop.hive.metastore.api.FunctionType.JAVA,
+			null  // TODO pass the resources
+		);
+
+		try {
+			getMSC().createFunction(func);
+		} catch (TException e) {
+			throw new InvalidFunctionException(database, functionName, className, e);
+		}
+	}
+
+	@Override
+	public ExternalCatalogFunction getFunction(String functionName) {
+
+		try {
+			Function function = getMSC().getFunction(database, functionName);
+			return new ExternalCatalogFunction(
+				function.getDbName(),
+				function.getFunctionName(),
+				function.getClassName(),
+				function.getOwnerName(),
+				function.getCreateTime() * 1000L);
+		} catch (TException e) {
+			throw new InvalidFunctionException(database, functionName, "", e);
+		}
 	}
 
 	@Override

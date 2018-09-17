@@ -143,6 +143,24 @@ class TableSchema(private val columns: Array[Column]) {
     columns(columnIndex).name
   }
 
+  /**
+    * Converts a table schema into a schema that represents the result that would be written
+    * into a table sink or operator outside of the Table & SQL API. Time attributes are replaced
+    * by proper TIMESTAMP data types.
+    *
+    * @return a table schema with no time attributes
+    */
+  def withoutTimeAttributes: TableSchema = {
+    val converted = columns.map { t =>
+      if (FlinkTypeFactory.isTimeIndicatorType(t.internalType)) {
+        Column(t.name, t.index, TimestampType.TIMESTAMP)
+      } else {
+        t
+      }
+    }
+    new TableSchema(converted)
+  }
+
   override def toString: String = {
     val builder = new StringBuilder
     builder.append("root\n")

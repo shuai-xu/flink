@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.catalog
 
-import org.apache.flink.table.api._
+import org.apache.flink.table.api.{InvalidFunctionException, _}
 import org.apache.flink.table.catalog.ExternalCatalogTypes.PartitionSpec
 import org.apache.flink.table.plan.stats.TableStats
 
@@ -26,6 +26,21 @@ import org.apache.flink.table.plan.stats.TableStats
   * The CrudExternalCatalog provides methods to create, drop, and alter (sub-)catalogs or tables.
   */
 trait CrudExternalCatalog extends ExternalCatalog {
+
+  /**
+    * Add a function to this catalog.
+    * @param functionName The function name.
+    * @param className The class name of the function.
+    */
+  @throws[InvalidFunctionException]
+  def createFunction(functionName: String, className: String): Unit
+
+  /**
+    * Get the function from a external catalog.
+    * @param functionName The function name.
+    * @return The external catalog function.
+    */
+  def getFunction(functionName: String): ExternalCatalogFunction
 
   /**
     * Adds partition into an external Catalog table

@@ -78,7 +78,6 @@ under the License.
 		<module>flink-scala-shell</module>
 		<module>flink-quickstart</module>
 		<module>flink-contrib</module>
-		<module>flink-dist</module>
 		<module>flink-mesos</module>
 		<module>flink-metrics</module>
 		<module>flink-yarn</module>
@@ -90,6 +89,7 @@ under the License.
 		<module>blink-errcode</module>
 		<module>blink-sql-parser</module>
 		<module>blink-catalog</module>
+		<module>flink-dist</module>
 	</modules>
 
 	<properties>

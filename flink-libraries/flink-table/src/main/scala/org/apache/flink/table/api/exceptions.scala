@@ -140,6 +140,21 @@ case class TableNotExistException(
 }
 
 /**
+  * Exception for an invalid function.
+  * @param catalog catalog name
+  * @param functionName function name
+  * @param className class name
+  * @param cause the cause
+  */
+case class InvalidFunctionException(
+    catalog: String,
+    functionName: String,
+    className: String,
+    cause: Throwable)
+    extends RuntimeException(s"Function $functionName, class $className is invalid.", cause) {
+}
+
+/**
   * Exception for adding an already existent table
   *
   * @param catalog    catalog name

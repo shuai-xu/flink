@@ -232,4 +232,23 @@ class InMemoryExternalCatalog(name: String) extends CrudExternalCatalog {
     }
   }
 
+  /**
+    * Add a function to this catalog.
+    *
+    * @param functionName The function name.
+    * @param className    The class name of the function.
+    */
+  override def createFunction(functionName: String, className: String): Unit = {
+    // Do nothing
+  }
+
+  /**
+    * Get the function from a external catalog.
+    *
+    * @param functionName The function name.
+    * @return The external catalog function.
+    */
+  override def getFunction(functionName: String): ExternalCatalogFunction = {
+    throw new UnsupportedOperationException("Unsupported External Catalog")
+  }
 }

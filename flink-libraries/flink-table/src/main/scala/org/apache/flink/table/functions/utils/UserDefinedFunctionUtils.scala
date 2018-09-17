@@ -38,9 +38,14 @@ import org.apache.flink.table.functions._
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
 import org.apache.flink.table.dataformat.{BinaryString, Decimal}
+import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.hive.functions._
+import org.apache.flink.table.sqlgen.SqlGenUtil
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.util.InstantiationUtil
+import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
+import org.apache.hadoop.hive.ql.udf.generic.{GenericUDAFResolver2, GenericUDF, GenericUDTF}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -798,5 +803,62 @@ object UserDefinedFunctionUtils {
           builder.add(f._1, flinkTypeFactory.createTypeFromInternalType(f._2, isNullable = true))
         }
     builder.build
+  }
+
+  def createUserDefinedFunction(
+      classLoader: ClassLoader,
+      funcName: String,
+      functionDef: String): Any = {
+
+    var func: Any = Nil
+    val javaClass = functionDef.contains(".")
+    if (javaClass) {
+      try {
+        func = classLoader.loadClass(functionDef).newInstance()
+      } catch {
+        case e: Exception =>
+          throw new RuntimeException(
+            TableErrors.INST.sqlCreateUserDefinedFuncError(
+              funcName,
+              functionDef,
+              e.getClass().getCanonicalName() + " : " + e.getMessage()),
+            e)
+      }
+    } else {
+      try {
+        // try deserialize first
+        func = SqlGenUtil.deSerializeObject(SqlGenUtil.hexString2String(functionDef), classLoader)
+      } catch {
+        case e: Exception =>
+          try {
+            // It might be a java class without package name
+            func = classLoader.loadClass(functionDef).newInstance();
+          } catch {
+            case e: Exception =>
+              throw new RuntimeException(
+                TableErrors.INST.sqlCreateUserDefinedFuncError(
+                  funcName,
+                  functionDef,
+                  e.getClass().getCanonicalName() + " : " + e.getMessage()),
+                e)
+          }
+      }
+    }
+
+    // Check hive and covert to flink udf
+    func match {
+      case _: UDF =>
+        func = new HiveSimpleUDF(new HiveFunctionWrapper[UDF](functionDef))
+      case _: GenericUDF =>
+        func = new HiveGenericUDF(new HiveFunctionWrapper[GenericUDF](functionDef))
+      case _: UDAF =>
+        func = new HiveUDAFFunction(new HiveFunctionWrapper[UDAF](functionDef))
+      case _: GenericUDAFResolver2 =>
+        func = new HiveUDAFFunction(new HiveFunctionWrapper[GenericUDAFResolver2](functionDef))
+      case _: GenericUDTF =>
+        func = new HiveGenericUDTF(new HiveFunctionWrapper[GenericUDTF](functionDef))
+      case _ =>
+    }
+    func
   }
 }

@@ -49,7 +49,7 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv}
 import org.apache.flink.table.calcite._
-import org.apache.flink.table.catalog.{CrudExternalCatalog, ExternalCatalog, ExternalCatalogSchema}
+import org.apache.flink.table.catalog._
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
@@ -75,6 +75,7 @@ import org.apache.flink.types.Row
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
 
 /**
@@ -84,13 +85,23 @@ import _root_.scala.collection.mutable
   */
 abstract class TableEnvironment(val config: TableConfig) {
 
+  val DEFAULT_SCHEMA: String = "hive"
+
+  private[this] var _userClassLoader: ClassLoader = _
+
+  def userClassLoader: ClassLoader = _userClassLoader
+
+  def userClassLoader_=(value: ClassLoader): Unit = {
+    _userClassLoader = value
+  }
+
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
   private val internalSchema: CalciteSchema = CalciteSchema.createRootSchema(true, false)
   private val rootSchema: SchemaPlus = internalSchema.plus()
 
   // Table API/SQL function catalog
-  private[flink] val functionCatalog: FunctionCatalog = FunctionCatalog.withBuiltIns
+  private[flink] val functionCatalog: FunctionCatalog = FunctionCatalog.withBuiltIns(this)
 
   // the configuration to create a Calcite planner
   protected lazy val frameworkConfig: FrameworkConfig = Frameworks
@@ -111,7 +122,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   // the planner instance used to optimize queries of this TableEnvironment
   private lazy val planner: RelOptPlanner = relBuilder.getPlanner
 
-  private lazy val typeFactory: FlinkTypeFactory = relBuilder.getTypeFactory
+  lazy val typeFactory: FlinkTypeFactory = relBuilder.getTypeFactory
 
   // reuse flink planner
   private lazy val flinkPlanner = new FlinkPlannerImpl(
@@ -271,6 +282,18 @@ abstract class TableEnvironment(val config: TableConfig) {
     registerAggregateFunction(name, f, resultType, accType)
   }
 
+  def getImplicitResultType[T](tf: TableFunction[T]) = {
+    val implicitResultType = try {
+      DataTypes.of(TypeExtractor
+        .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
+    } catch {
+      case e: InvalidTypesException =>
+        // may be we should get type from getResultType
+        new GenericType(classOf[AnyRef])
+    }
+    implicitResultType
+  }
+
   /**
    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
    * Registered functions can be referenced in Table API and SQL queries.
@@ -280,14 +303,7 @@ abstract class TableEnvironment(val config: TableConfig) {
    * @tparam T The type of the output row.
    */
   def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
-    val implicitResultType = try {
-      DataTypes.of(TypeExtractor
-          .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
-    } catch {
-      case e: InvalidTypesException =>
-        // may be we should get type from getResultType
-        new GenericType(classOf[AnyRef])
-    }
+    val implicitResultType = getImplicitResultType(tf)
     registerTableFunction(name, tf, implicitResultType)
   }
 
@@ -644,6 +660,32 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
+    * Gets the names of all tables registered in this environment.
+    *
+    * @return A list of the names of all registered tables.
+    */
+  def listTables(): Array[String] = {
+    // TODO list from external meta
+    rootSchema.getTableNames.asScala.toArray
+  }
+
+  /**
+    * Gets the names of all functions registered in this environment.
+    */
+  def listUserDefinedFunctions(): Array[String] = {
+    // TODO list from external meta
+    functionCatalog.getUserDefinedFunctions.toArray
+  }
+
+  /**
+    * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
+    * the result of the given [[Table]].
+    *
+    * @param table The table for which the AST and execution plan will be returned.
+    */
+  def explain(table: Table): String
+
+  /**
     * Evaluates a SQL query or DML insert on registered tables and retrieves the result as a
     * [[Table]].
     *
@@ -949,6 +991,78 @@ abstract class TableEnvironment(val config: TableConfig) {
         null
       }
     }
+  }
+
+  private[flink] def getSinkTable(tablePath: String*): org.apache.calcite.schema.Table = {
+    require(tablePath != null && tablePath.nonEmpty, "tablePath must not be null or empty.")
+    if (tablePath.length == 1) {
+      // First, try to get the SINK table directly from the memory
+      var table = rootSchema.getTable(tablePath.head)
+
+      // Second, try to get the table from the external catalog
+      if (null == table) {
+        val externalCatalog = getRegisteredExternalCatalog(DEFAULT_SCHEMA)
+        val externalTable = externalCatalog.getTable(tablePath.head)
+        table = ExternalTableSinkUtil.convertExternalCatalogTableToSinkTable(
+          tablePath.head, externalTable)
+      }
+      table
+    } else {
+      // table in external catalog
+      val rootCatalog = getRegisteredExternalCatalog(tablePath.head)
+      val leafCatalog = tablePath.slice(1, tablePath.length - 1).foldLeft(rootCatalog) {
+        case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
+      }
+      if (leafCatalog != null) {
+        val tableName = tablePath(tablePath.length - 1)
+        val externalTable = leafCatalog.getTable(tableName)
+        ExternalTableSinkUtil.convertExternalCatalogTableToSinkTable(tableName, externalTable)
+      } else {
+        null
+      }
+    }
+  }
+
+  def getExternalCatalog(catalogPaths: Array[String]): ExternalCatalog = {
+    val externalCatalog = if (null == catalogPaths || catalogPaths.length == 0) {
+      getRegisteredExternalCatalog(DEFAULT_SCHEMA)
+    } else {
+      val rootCatalog = getRegisteredExternalCatalog(catalogPaths.head)
+      val leafCatalog = catalogPaths.slice(1, catalogPaths.length).foldLeft(rootCatalog) {
+        case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
+      }
+      leafCatalog
+    }
+    externalCatalog
+  }
+
+  def registerExternalTable(
+      catalogPaths: Array[String],
+      tableName: String,
+      externalTable: ExternalCatalogTable,
+      ignoreIfExists: Boolean) = {
+
+    val externalCatalog = getExternalCatalog(catalogPaths)
+    require(
+      externalCatalog.isInstanceOf[CrudExternalCatalog],
+      "Catalog is not allowed to create table")
+
+    externalCatalog.asInstanceOf[CrudExternalCatalog].createTable(
+      tableName, externalTable, ignoreIfExists)
+  }
+
+  def registerExternalFunction(
+      catalogPaths: Array[String],
+      functionName: String,
+      className: String) = {
+
+    val externalCatalog = getExternalCatalog(catalogPaths)
+    require(
+      externalCatalog.isInstanceOf[CrudExternalCatalog],
+      "Catalog is not allowed to create table")
+
+    externalCatalog.asInstanceOf[CrudExternalCatalog].createFunction(
+      functionName, className)
   }
 
   protected def getRowType(name: String): RelDataType = {

@@ -43,7 +43,7 @@ import scala.collection.JavaConverters._
 
 class RexNodeExtractorTest extends RexNodeTestBase {
 
-  private val functionCatalog: FunctionCatalog = FunctionCatalog.withBuiltIns
+  private val functionCatalog: FunctionCatalog = FunctionCatalog.withBuiltIns(null)
 
   @Test
   def testExtractRefInputFields(): Unit = {

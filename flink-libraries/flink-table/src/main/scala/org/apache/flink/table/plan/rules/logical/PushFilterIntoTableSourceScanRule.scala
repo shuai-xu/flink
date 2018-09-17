@@ -85,7 +85,7 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
       description: String): Unit = {
 
     val relBuilder = call.builder()
-    val functionCatalog = FunctionCatalog.withBuiltIns
+    val functionCatalog = FunctionCatalog.withBuiltIns(null)
     val maxCnfNodeCount = FlinkRelOptUtil.getMaxCnfNodeCount(scan)
     val (predicates, unconvertedRexNodes) =
       RexNodeExtractor.extractConjunctiveConditions(

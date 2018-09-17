@@ -28,7 +28,6 @@
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.apache.flink</groupId>
 	<artifactId>blink-catalog</artifactId>
 	<packaging>pom</packaging>
 
