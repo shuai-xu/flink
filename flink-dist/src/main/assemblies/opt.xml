@@ -28,6 +28,21 @@
 	<includeBaseDirectory>true</includeBaseDirectory>
 	<baseDirectory>flink-${project.version}</baseDirectory>
 
+	<dependencySets>
+		<dependencySet>
+			<outputDirectory>opt/sql-client</outputDirectory>
+			<useTransitiveDependencies>false</useTransitiveDependencies>
+			<useProjectArtifact>false</useProjectArtifact>
+			<scope>provided</scope>
+			<includes>
+				<include>org.datanucleus:datanucleus-api-jdo</include>
+				<include>org.datanucleus:datanucleus-core</include>
+				<include>org.datanucleus:datanucleus-rdbms</include>
+				<include>org.datanucleus:javax.jdo</include>
+			</includes>
+		</dependencySet>
+	</dependencySets>
+
 	<files>
 		<!-- CEP -->
 		<file>
@@ -68,12 +83,12 @@
 		</file>
 
 		<!-- SQL Client -->
-		<!--<file>-->
-			<!--<source>../flink-libraries/flink-sql-client/target/flink-sql-client-${project.version}.jar</source>-->
-			<!--<outputDirectory>opt/</outputDirectory>-->
-			<!--<destName>flink-sql-client-${project.version}.jar</destName>-->
-			<!--<fileMode>0644</fileMode>-->
-		<!--</file>-->
+		<file>
+			<source>../flink-libraries/flink-sql-client/target/flink-sql-client-${project.version}.jar</source>
+			<outputDirectory>opt/sql-client</outputDirectory>
+			<destName>flink-sql-client-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 
 		<!-- ML -->
 		<file>
