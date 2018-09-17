@@ -49,10 +49,7 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object FlinkRelMdUniqueKeys extends MetadataHandler[BuiltInMetadata.UniqueKeys] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    BuiltInMethod.UNIQUE_KEYS.method, this)
+class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.UniqueKeys] {
 
   def getDef: MetadataDef[BuiltInMetadata.UniqueKeys] = BuiltInMetadata.UniqueKeys.DEF
 
@@ -588,4 +585,13 @@ object FlinkRelMdUniqueKeys extends MetadataHandler[BuiltInMetadata.UniqueKeys] 
       null
     }
   }
+}
+
+object FlinkRelMdUniqueKeys {
+
+  private val INSTANCE = new FlinkRelMdUniqueKeys
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    BuiltInMethod.UNIQUE_KEYS.method, INSTANCE)
+
 }

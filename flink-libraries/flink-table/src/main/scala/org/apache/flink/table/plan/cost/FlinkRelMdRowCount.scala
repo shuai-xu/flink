@@ -39,11 +39,7 @@ import org.apache.flink.table.util.FlinkRelMdUtil
 
 import scala.collection.JavaConversions._
 
-object FlinkRelMdRowCount extends MetadataHandler[BuiltInMetadata.RowCount] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    BuiltInMethod.ROW_COUNT.method,
-    this)
+class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCount] {
 
   def getDef: MetadataDef[BuiltInMetadata.RowCount] = BuiltInMetadata.RowCount.DEF
 
@@ -429,5 +425,14 @@ object FlinkRelMdRowCount extends MetadataHandler[BuiltInMetadata.RowCount] {
   def getRowCount(rel: TableScan, mq: RelMetadataQuery): Double = rel.estimateRowCount(mq)
 
   def getRowCount(rel: Values, mq: RelMetadataQuery): Double = rel.estimateRowCount(mq)
+
+}
+
+object FlinkRelMdRowCount {
+
+  private val INSTANCE = new FlinkRelMdRowCount
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    BuiltInMethod.ROW_COUNT.method, INSTANCE)
 
 }

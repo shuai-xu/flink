@@ -32,6 +32,7 @@ import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexNode}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{BuiltInMethod, ImmutableNullableList, NlsString, Util}
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.plan.cost.FlinkRelMdSize._
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
@@ -45,15 +46,7 @@ import scala.collection.mutable
   * FlinkRelMdSize supplies a default implementation of
   * [[RelMetadataQuery#getAverageColumnSizes]] for the standard logical algebra.
   */
-object FlinkRelMdSize extends MetadataHandler[BuiltInMetadata.Size] {
-
-  // Bytes per character (2).
-  val BYTES_PER_CHARACTER: Int = Character.SIZE / java.lang.Byte.SIZE
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    this,
-    BuiltInMethod.AVERAGE_COLUMN_SIZES.method,
-    BuiltInMethod.AVERAGE_ROW_SIZE.method)
+class FlinkRelMdSize private extends MetadataHandler[BuiltInMetadata.Size] {
 
   def getDef: MetadataDef[BuiltInMetadata.Size] = BuiltInMetadata.Size.DEF
 
@@ -238,14 +231,6 @@ object FlinkRelMdSize extends MetadataHandler[BuiltInMetadata.Size] {
   def averageColumnSizes(subset: RelSubset, mq: RelMetadataQuery): JList[Double] =
     mq.getAverageColumnSizes(Util.first(subset.getBest, subset.getOriginal))
 
-  def estimateRowSize(rowType: RelDataType): Double = {
-    val fieldList = rowType.getFieldList
-    fieldList.map(_.getType).foldLeft(0.0) {
-      (s, t) =>
-        s + averageTypeValueSize(t)
-    }
-  }
-
   def averageColumnSizes(rel: Rank, mq: RelMetadataQuery): JList[Double] = {
     val inputColumnSizes = mq.getAverageColumnSizes(rel.getInput)
     if (rel.getRowType.getFieldCount != rel.getInput.getRowType.getFieldCount) {
@@ -348,41 +333,6 @@ object FlinkRelMdSize extends MetadataHandler[BuiltInMetadata.Size] {
     }
   }
 
-  def averageTypeValueSize(t: RelDataType): Double = t.getSqlTypeName match {
-    case SqlTypeName.ROW =>
-      estimateRowSize(t)
-    case SqlTypeName.ARRAY =>
-      // 16 is an arbitrary estimate
-      averageTypeValueSize(t.getComponentType) * 16
-    case SqlTypeName.MAP =>
-      // 16 is an arbitrary estimate
-      (averageTypeValueSize(t.getKeyType) + averageTypeValueSize(t.getValueType)) * 16
-    case SqlTypeName.MULTISET =>
-      // 16 is an arbitrary estimate
-      (averageTypeValueSize(t.getComponentType) + averageTypeValueSize(SqlTypeName.INTEGER)) * 16
-    case _ => averageTypeValueSize(t.getSqlTypeName)
-  }
-
-  private def averageTypeValueSize(sqlType: SqlTypeName): Double = sqlType match {
-    case SqlTypeName.TINYINT => 1D
-    case SqlTypeName.SMALLINT => 2D
-    case SqlTypeName.INTEGER => 4D
-    case SqlTypeName.BIGINT => 8D
-    case SqlTypeName.BOOLEAN => 1D
-    case SqlTypeName.FLOAT => 4D
-    case SqlTypeName.DOUBLE => 8D
-    case SqlTypeName.VARCHAR => 12D
-    case SqlTypeName.CHAR => 1D
-    case SqlTypeName.DECIMAL => 12D
-    case typeName if SqlTypeName.YEAR_INTERVAL_TYPES.contains(typeName) => 8D
-    case typeName if SqlTypeName.DAY_INTERVAL_TYPES.contains(typeName) => 4D
-    // TODO after time/date => int, timestamp => long, this estimate value should update
-    case SqlTypeName.TIME | SqlTypeName.TIMESTAMP | SqlTypeName.DATE => 12D
-    case SqlTypeName.ANY => 128D // 128 is an arbitrary estimate
-    case SqlTypeName.BINARY | SqlTypeName.VARBINARY => 16D // 16 is an arbitrary estimate
-    case _ => throw TableException(s"Unsupported data type encountered: $sqlType")
-  }
-
   /**
     * Estimates the average size (in bytes) of a value of a type.
     *
@@ -429,4 +379,61 @@ object FlinkRelMdSize extends MetadataHandler[BuiltInMetadata.Size] {
     }
     sizesBuilder.build()
   }
+}
+
+object FlinkRelMdSize {
+
+  private val INSTANCE = new FlinkRelMdSize
+
+  // Bytes per character (2).
+  val BYTES_PER_CHARACTER: Int = Character.SIZE / java.lang.Byte.SIZE
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    INSTANCE,
+    BuiltInMethod.AVERAGE_COLUMN_SIZES.method,
+    BuiltInMethod.AVERAGE_ROW_SIZE.method)
+
+  def averageTypeValueSize(t: RelDataType): Double = t.getSqlTypeName match {
+    case SqlTypeName.ROW =>
+      estimateRowSize(t)
+    case SqlTypeName.ARRAY =>
+      // 16 is an arbitrary estimate
+      averageTypeValueSize(t.getComponentType) * 16
+    case SqlTypeName.MAP =>
+      // 16 is an arbitrary estimate
+      (averageTypeValueSize(t.getKeyType) + averageTypeValueSize(t.getValueType)) * 16
+    case SqlTypeName.MULTISET =>
+      // 16 is an arbitrary estimate
+      (averageTypeValueSize(t.getComponentType) + averageTypeValueSize(SqlTypeName.INTEGER)) * 16
+    case _ => averageTypeValueSize(t.getSqlTypeName)
+  }
+
+  private def estimateRowSize(rowType: RelDataType): Double = {
+    val fieldList = rowType.getFieldList
+    fieldList.map(_.getType).foldLeft(0.0) {
+      (s, t) =>
+        s + averageTypeValueSize(t)
+    }
+  }
+
+  def averageTypeValueSize(sqlType: SqlTypeName): Double = sqlType match {
+    case SqlTypeName.TINYINT => 1D
+    case SqlTypeName.SMALLINT => 2D
+    case SqlTypeName.INTEGER => 4D
+    case SqlTypeName.BIGINT => 8D
+    case SqlTypeName.BOOLEAN => 1D
+    case SqlTypeName.FLOAT => 4D
+    case SqlTypeName.DOUBLE => 8D
+    case SqlTypeName.VARCHAR => 12D
+    case SqlTypeName.CHAR => 1D
+    case SqlTypeName.DECIMAL => 12D
+    case typeName if SqlTypeName.YEAR_INTERVAL_TYPES.contains(typeName) => 8D
+    case typeName if SqlTypeName.DAY_INTERVAL_TYPES.contains(typeName) => 4D
+    // TODO after time/date => int, timestamp => long, this estimate value should update
+    case SqlTypeName.TIME | SqlTypeName.TIMESTAMP | SqlTypeName.DATE => 12D
+    case SqlTypeName.ANY => 128D // 128 is an arbitrary estimate
+    case SqlTypeName.BINARY | SqlTypeName.VARBINARY => 16D // 16 is an arbitrary estimate
+    case _ => throw TableException(s"Unsupported data type encountered: $sqlType")
+  }
+
 }

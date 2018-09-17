@@ -28,39 +28,28 @@ import org.junit.runners.Parameterized
 
 import scala.collection.JavaConversions._
 
-@Ignore
 @RunWith(classOf[Parameterized])
-class TpcHBatchExecPlanTest10T(
+class TpcH1TBatchExecPlanTest(
     caseName: String,
     factor: Int,
     statsMode: STATS_MODE,
     explainLevel: SqlExplainLevel,
     joinReorderEnabled: Boolean,
     printOptimizedResult: Boolean)
-    extends TpcHBatchExecPlanTest(
-      caseName, factor, statsMode, explainLevel, joinReorderEnabled, printOptimizedResult)
+  extends TpcHBatchExecPlanTest(
+    caseName, factor, statsMode, explainLevel, joinReorderEnabled, printOptimizedResult)
 
-object TpcHBatchExecPlanTest10T {
+object TpcH1TBatchExecPlanTest {
   @Parameterized.Parameters(name = "caseName={0}, factor={1}, statsMode={2}, joinReorder={4}")
   def parameters(): util.Collection[Array[Any]] = {
-    val factor = 10240
-    val explainLevel = SqlExplainLevel.ALL_ATTRIBUTES
+    val factor = 1000
+    val explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES
     val joinReorderEnabled = true
     val printResult = false
     util.Arrays.asList(
-      "01", "02", "03", "04", "05", "06",
-      "07", // runtime_filter should push down
-      "08",
-      "09", // Rowcount estimated wrong, estimated at 200 million, in fact 3 billion.
-      "10", // 12E -> 6KW no localagg? calc no push down?
-      "11", "12",
-      "13", // group by count need do localAgg.(data skew)
-      "14", "15_1", "16",
-      "17",
-      "18", // totally wrong.. build side wrong.
-      "19", "20",
-      "21", // order join can reduce half data, why not push down. (join reorder)
-      "22"
+      "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+      "11", "12", "13", "14", "15_1", "16", "17", "18", "19", "20", "21", "22"
+      // 15 plan: VIEW is unsupported
     ).flatMap { s =>
       Seq(
         Array(s, factor, STATS_MODE.ROW_COUNT, explainLevel, joinReorderEnabled, printResult),

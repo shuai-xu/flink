@@ -46,11 +46,7 @@ import scala.collection.JavaConversions._
   * FlinkRelMdColumnInterval supplies a default implementation of
   * [[FlinkRelMetadataQuery.getColumnInterval]] for the standard logical algebra.
   */
-object FlinkRelMdColumnInterval extends MetadataHandler[ColumnInterval] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    FlinkMetadata.ColumnInterval.METHOD,
-    this)
+class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
 
   override def getDef: MetadataDef[ColumnInterval] = FlinkMetadata.ColumnInterval.DEF
 
@@ -711,5 +707,14 @@ object FlinkRelMdColumnInterval extends MetadataHandler[ColumnInterval] {
       }
     }
   }
+
+}
+
+object FlinkRelMdColumnInterval {
+
+  private val INSTANCE = new FlinkRelMdColumnInterval
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    FlinkMetadata.ColumnInterval.METHOD, INSTANCE)
 
 }

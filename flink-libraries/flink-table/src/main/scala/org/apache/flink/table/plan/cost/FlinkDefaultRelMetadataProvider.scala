@@ -26,6 +26,8 @@ object FlinkDefaultRelMetadataProvider {
   val INSTANCE: RelMetadataProvider = ChainedRelMetadataProvider.of(
     ImmutableList.of(
       FlinkRelMdPercentageOriginalRows.SOURCE,
+      FlinkRelMdNonCumulativeCost.SOURCE,
+      FlinkRelMdCumulativeCost.SOURCE,
       FlinkRelMdRowCount.SOURCE,
       FlinkRelMdSize.SOURCE,
       FlinkRelMdSelectivity.SOURCE,

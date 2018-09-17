@@ -53,11 +53,7 @@ import scala.collection.JavaConversions._
   * FlinkRelMdModifiedMonotonicity supplies a default implementation of
   * [[FlinkRelMetadataQuery.getRelModifiedMonotonicity]] for logical algebra.
   */
-object FlinkRelMdModifiedMonotonicity extends MetadataHandler[ModifiedMonotonicityMeta] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    FlinkMetadata.ModifiedMonotonicityMeta.METHOD,
-    this)
+class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMonotonicityMeta] {
 
   override def getDef: MetadataDef[ModifiedMonotonicityMeta] =
     FlinkMetadata.ModifiedMonotonicityMeta.DEF
@@ -645,5 +641,14 @@ object FlinkRelMdModifiedMonotonicity extends MetadataHandler[ModifiedMonotonici
         value.asInstanceOf[Comparable[Any]].compareTo(0.asInstanceOf[Comparable[Any]])
     }
   }
+
+}
+
+object FlinkRelMdModifiedMonotonicity {
+
+  private val INSTANCE = new FlinkRelMdModifiedMonotonicity
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    FlinkMetadata.ModifiedMonotonicityMeta.METHOD, INSTANCE)
 
 }

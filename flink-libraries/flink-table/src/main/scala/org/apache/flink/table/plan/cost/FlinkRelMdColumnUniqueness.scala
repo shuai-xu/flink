@@ -50,10 +50,7 @@ import org.apache.flink.table.util.FlinkRelMdUtil.splitColumnsIntoLeftAndRight
 
 import scala.collection.JavaConversions._
 
-object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.ColumnUniqueness] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    BuiltInMethod.COLUMN_UNIQUENESS.method, this)
+class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata.ColumnUniqueness] {
 
   def getDef: MetadataDef[BuiltInMetadata.ColumnUniqueness] = BuiltInMetadata.ColumnUniqueness.DEF
 
@@ -778,5 +775,14 @@ object FlinkRelMdColumnUniqueness extends MetadataHandler[BuiltInMetadata.Column
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = null
+
+}
+
+object FlinkRelMdColumnUniqueness {
+
+  private val INSTANCE = new FlinkRelMdColumnUniqueness
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    BuiltInMethod.COLUMN_UNIQUENESS.method, INSTANCE)
 
 }

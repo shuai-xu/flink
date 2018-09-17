@@ -113,9 +113,13 @@ abstract class TableTestBatchExecUtil {
 
   def verifyPlan(sql: String, explainLevel: SqlExplainLevel): Unit
 
+  def verifyPlan(sql: String, explainLevel: SqlExplainLevel, printPlanBefore: Boolean): Unit
+
   def verifyPlan(resultTable: Table): Unit
 
   def verifyPlan(resultTable: Table, explainLevel: SqlExplainLevel): Unit
+
+  def verifyPlan(resultTable: Table, explainLevel: SqlExplainLevel, printPlanBefore: Boolean): Unit
 
   def verifyResultPartitionCount(): Unit
 
@@ -250,9 +254,13 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
   }
 
   override def verifyPlan(sql: String, explainLevel: SqlExplainLevel): Unit = {
+    verifyPlan(sql, explainLevel, printPlanBefore = true)
+  }
+
+  def verifyPlan(sql: String, explainLevel: SqlExplainLevel, printPlanBefore: Boolean): Unit = {
     val resultTable = tableEnv.sqlQuery(sql)
     assertEqualsOrExpand("sql", sql)
-    verifyPlan(resultTable, explainLevel = explainLevel)
+    verifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
   }
 
   override def verifyPlan(resultTable: Table): Unit = {
@@ -261,6 +269,13 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
 
   override def verifyPlan(resultTable: Table, explainLevel: SqlExplainLevel): Unit = {
     doVerifyPlan(resultTable, explainLevel = explainLevel)
+  }
+
+  override def verifyPlan(
+    resultTable: Table,
+    explainLevel: SqlExplainLevel,
+    printPlanBefore: Boolean): Unit = {
+    doVerifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
   }
 
   override def verifyResultPartitionCount(): Unit = {

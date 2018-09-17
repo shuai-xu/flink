@@ -39,11 +39,7 @@ import org.apache.flink.table.util.FlinkRelOptUtil.checkAndSplitAggCalls
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-object FlinkRelMdUniqueColumns extends MetadataHandler[UniqueColumns] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    FlinkMetadata.UniqueColumns.METHOD,
-    this)
+class FlinkRelMdUniqueColumns private extends MetadataHandler[UniqueColumns] {
 
   override def getDef: MetadataDef[UniqueColumns] = FlinkMetadata.UniqueColumns.DEF
 
@@ -425,5 +421,14 @@ object FlinkRelMdUniqueColumns extends MetadataHandler[UniqueColumns] {
       throw new RuntimeException("CALCITE_1048 is fixed, so check this method again!")
     }
   }
+
+}
+
+object FlinkRelMdUniqueColumns {
+
+  private val INSTANCE = new FlinkRelMdUniqueColumns
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    FlinkMetadata.UniqueColumns.METHOD, INSTANCE)
 
 }

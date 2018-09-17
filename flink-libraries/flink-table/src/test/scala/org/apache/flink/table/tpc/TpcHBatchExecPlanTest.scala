@@ -113,7 +113,7 @@ abstract class TpcHBatchExecPlanTest(
       val result = FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
       println(s"caseName:$caseName, factor: $factor, statsMode:$statsMode\n$result")
     } else {
-      util.verifyPlan(sqlQuery)
+      util.verifyPlan(sqlQuery, explainLevel)
     }
   }
 }

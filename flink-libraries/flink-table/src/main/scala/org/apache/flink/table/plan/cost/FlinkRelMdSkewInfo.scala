@@ -38,10 +38,7 @@ import org.apache.flink.table.util.FlinkRelOptUtil.getLiteralValue
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-object FlinkRelMdSkewInfo extends MetadataHandler[SkewInfoMeta] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    SkewInfoMeta.METHOD, this)
+class FlinkRelMdSkewInfo private extends MetadataHandler[SkewInfoMeta] {
 
   override def getDef: MetadataDef[SkewInfoMeta] = SkewInfoMeta.DEF
 
@@ -250,5 +247,14 @@ object FlinkRelMdSkewInfo extends MetadataHandler[SkewInfoMeta] {
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     fmq.getSkewInfo(Util.first(subset.getBest, subset.getOriginal))
   }
+
+}
+
+object FlinkRelMdSkewInfo {
+
+  private val INSTANCE = new FlinkRelMdSkewInfo
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+  SkewInfoMeta.METHOD, INSTANCE)
 
 }

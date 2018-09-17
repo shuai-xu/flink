@@ -39,10 +39,7 @@ import scala.collection.mutable
   * [[FlinkRelMdPopulationSize]] supplies a implementation of
   * [[RelMetadataQuery#getPopulationSize]] for the standard logical algebra.
   */
-object FlinkRelMdPopulationSize extends MetadataHandler[BuiltInMetadata.PopulationSize] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    BuiltInMethod.POPULATION_SIZE.method, this)
+class FlinkRelMdPopulationSize private extends MetadataHandler[BuiltInMetadata.PopulationSize] {
 
   override def getDef: MetadataDef[BuiltInMetadata.PopulationSize] =
     BuiltInMetadata.PopulationSize.DEF
@@ -378,5 +375,14 @@ object FlinkRelMdPopulationSize extends MetadataHandler[BuiltInMetadata.Populati
       mq: RelMetadataQuery,
       groupKey: ImmutableBitSet): Double =
     mq.getPopulationSize(Util.first(subset.getBest, subset.getOriginal), groupKey)
+
+}
+
+object FlinkRelMdPopulationSize {
+
+  private val INSTANCE = new FlinkRelMdPopulationSize
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    BuiltInMethod.POPULATION_SIZE.method, INSTANCE)
 
 }

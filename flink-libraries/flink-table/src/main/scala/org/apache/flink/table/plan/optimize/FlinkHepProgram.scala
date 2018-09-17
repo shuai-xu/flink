@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.optimize
 import org.apache.calcite.plan.RelTrait
 import org.apache.calcite.plan.hep.{HepPlanner, HepProgram}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.cost.FlinkRelMdPercentageOriginalRows
+import org.apache.flink.table.plan.cost.FlinkRelMdNonCumulativeCost
 import org.apache.flink.util.Preconditions
 
 /**
@@ -42,7 +42,7 @@ class FlinkHepProgram[OC <: OptimizeContext] extends FlinkOptimizeProgram[OC] {
     Preconditions.checkNotNull(hepProgram)
     try {
       val planner = new HepPlanner(hepProgram, context.getContext)
-      FlinkRelMdPercentageOriginalRows.THREAD_PLANNER.set(planner)
+      FlinkRelMdNonCumulativeCost.THREAD_PLANNER.set(planner)
       planner.setRoot(input)
 
       if (targetTraits.nonEmpty) {
@@ -53,7 +53,7 @@ class FlinkHepProgram[OC <: OptimizeContext] extends FlinkOptimizeProgram[OC] {
       }
       planner.findBestExp
     } finally {
-      FlinkRelMdPercentageOriginalRows.THREAD_PLANNER.remove()
+      FlinkRelMdNonCumulativeCost.THREAD_PLANNER.remove()
     }
 
   }

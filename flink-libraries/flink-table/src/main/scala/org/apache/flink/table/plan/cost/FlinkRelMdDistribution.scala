@@ -34,11 +34,7 @@ import scala.collection.JavaConversions._
   * FlinkRelMdDistribution supplies a default implementation of
   * [[FlinkRelMetadataQuery.flinkDistribution]] for the standard logical algebra.
   */
-object FlinkRelMdDistribution extends MetadataHandler[FlinkDistribution] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    FlinkMetadata.FlinkDistribution.METHOD,
-    this)
+class FlinkRelMdDistribution private extends MetadataHandler[FlinkDistribution] {
 
   override def getDef: MetadataDef[FlinkDistribution] = FlinkDistribution.DEF
 
@@ -94,4 +90,13 @@ object FlinkRelMdDistribution extends MetadataHandler[FlinkDistribution] {
   private def getFlinkDistribution(relNode: RelNode): FlinkRelDistribution = {
     relNode.getTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
   }
+}
+
+object FlinkRelMdDistribution {
+
+  private val INSTANCE = new FlinkRelMdDistribution
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    FlinkMetadata.FlinkDistribution.METHOD, INSTANCE)
+
 }

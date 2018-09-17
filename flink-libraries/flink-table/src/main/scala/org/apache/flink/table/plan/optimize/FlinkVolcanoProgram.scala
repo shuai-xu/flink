@@ -25,7 +25,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.tools.{Programs, RuleSet}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.cost.FlinkRelMdPercentageOriginalRows
+import org.apache.flink.table.plan.cost.FlinkRelMdNonCumulativeCost
 import org.apache.flink.table.util.FlinkRelOptUtil
 import org.apache.flink.util.Preconditions
 
@@ -52,7 +52,7 @@ class FlinkVolcanoProgram[OC <: OptimizeContext] extends FlinkRuleSetProgram[OC]
     }
 
     try {
-      FlinkRelMdPercentageOriginalRows.THREAD_PLANNER.set(planner)
+      FlinkRelMdNonCumulativeCost.THREAD_PLANNER.set(planner)
       optProgram.run(
         planner,
         input,
@@ -79,7 +79,7 @@ class FlinkVolcanoProgram[OC <: OptimizeContext] extends FlinkRuleSetProgram[OC]
             FlinkRelOptUtil.toString(input),
             r.getCause.getMessage), r.getCause)
     } finally {
-      FlinkRelMdPercentageOriginalRows.THREAD_PLANNER.remove()
+      FlinkRelMdNonCumulativeCost.THREAD_PLANNER.remove()
     }
   }
 

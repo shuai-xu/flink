@@ -40,11 +40,7 @@ import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil, FlinkRexUti
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-object FlinkRelMdDistinctRowCount extends MetadataHandler[BuiltInMetadata.DistinctRowCount] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    BuiltInMethod.DISTINCT_ROW_COUNT.method,
-    this)
+class FlinkRelMdDistinctRowCount private extends MetadataHandler[BuiltInMetadata.DistinctRowCount] {
 
   def getDef: MetadataDef[BuiltInMetadata.DistinctRowCount] = BuiltInMetadata.DistinctRowCount.DEF
 
@@ -659,5 +655,14 @@ object FlinkRelMdDistinctRowCount extends MetadataHandler[BuiltInMetadata.Distin
     val equivCalc = LogicalCalc.create(input, program)
     getDistinctRowCount(equivCalc, mq, groupKey, predicate)
   }
+
+}
+
+object FlinkRelMdDistinctRowCount {
+
+  private val INSTANCE = new FlinkRelMdDistinctRowCount
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    BuiltInMethod.DISTINCT_ROW_COUNT.method, INSTANCE)
 
 }

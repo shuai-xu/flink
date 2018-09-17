@@ -32,11 +32,7 @@ import org.apache.flink.util.Preconditions
   * FlinkRelMdColumnNullCount supplies a default implementation of
   * [[FlinkRelMetadataQuery.getColumnNullCount]] for the standard logical algebra.
   */
-object FlinkRelMdColumnNullCount extends MetadataHandler[ColumnNullCount] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    FlinkMetadata.ColumnNullCount.METHOD,
-    this)
+class FlinkRelMdColumnNullCount private extends MetadataHandler[ColumnNullCount] {
 
   override def getDef: MetadataDef[ColumnNullCount] = FlinkMetadata.ColumnNullCount.DEF
 
@@ -84,5 +80,14 @@ object FlinkRelMdColumnNullCount extends MetadataHandler[ColumnNullCount] {
     * @return Always returns null
     */
   def getColumnNullCount(rel: RelNode, mq: RelMetadataQuery, index: Int): JDouble = null
+
+}
+
+object FlinkRelMdColumnNullCount {
+
+  private val INSTANCE = new FlinkRelMdColumnNullCount
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    FlinkMetadata.ColumnNullCount.METHOD, INSTANCE)
 
 }

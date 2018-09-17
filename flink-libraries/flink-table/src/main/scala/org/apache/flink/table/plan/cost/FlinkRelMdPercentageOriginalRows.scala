@@ -20,10 +20,7 @@ package org.apache.flink.table.plan.cost
 
 import java.lang.Double
 
-import com.google.common.collect.ImmutableList
-import org.apache.calcite.adapter.enumerable.EnumerableInterpreter
 import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.plan.{RelOptCost, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.{Aggregate, Join, SemiJoin, Union}
 import org.apache.calcite.rel.metadata._
@@ -33,19 +30,8 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecGroupAggregateB
 
 import scala.collection.JavaConversions._
 
-object FlinkRelMdPercentageOriginalRows
-    extends MetadataHandler[BuiltInMetadata.PercentageOriginalRows] {
-
-  val THREAD_PLANNER: ThreadLocal[RelOptPlanner] = new ThreadLocal[RelOptPlanner]()
-
-  val SOURCE: RelMetadataProvider = ChainedRelMetadataProvider.of(
-    ImmutableList.of(
-      ReflectiveRelMetadataProvider.reflectiveSource(
-        BuiltInMethod.PERCENTAGE_ORIGINAL_ROWS.method, this),
-      ReflectiveRelMetadataProvider.reflectiveSource(
-        BuiltInMethod.CUMULATIVE_COST.method, this),
-      ReflectiveRelMetadataProvider.reflectiveSource(
-        BuiltInMethod.NON_CUMULATIVE_COST.method, this)))
+class FlinkRelMdPercentageOriginalRows private
+  extends MetadataHandler[BuiltInMetadata.PercentageOriginalRows] {
 
   def getDef: MetadataDef[BuiltInMetadata.PercentageOriginalRows] =
     BuiltInMetadata.PercentageOriginalRows.DEF
@@ -88,16 +74,6 @@ object FlinkRelMdPercentageOriginalRows
     relPercentage * childPercentage
   }
 
-  def getCumulativeCost(rel: RelNode, mq: RelMetadataQuery): RelOptCost = {
-    rel.getInputs.foldLeft(mq.getNonCumulativeCost(rel))((acc, r) => {
-      acc.plus(mq.getCumulativeCost(r))
-    })
-  }
-
-  def getCumulativeCost(
-      rel: EnumerableInterpreter,
-      mq: RelMetadataQuery): RelOptCost = mq.getNonCumulativeCost(rel)
-
   def getPercentageOriginalRows(rel: Union, mq: RelMetadataQuery): Double = {
     var numerator: Double = 0.0
     var denominator: Double = 0.0
@@ -138,15 +114,6 @@ object FlinkRelMdPercentageOriginalRows
     mq.getPercentageOriginalRows(Util.first(subset.getBest, subset.getOriginal))
   }
 
-  def getNonCumulativeCost(rel: RelNode, mq: RelMetadataQuery): RelOptCost = {
-    val planner = if (THREAD_PLANNER.get() != null) {
-      THREAD_PLANNER.get()
-    } else {
-      rel.getCluster.getPlanner
-    }
-    rel.computeSelfCost(planner, mq)
-  }
-
   private def quotientForPercentage(numerator: Double, denominator: Double): Double = {
     if (numerator == null || denominator == null) {
       return null
@@ -159,4 +126,13 @@ object FlinkRelMdPercentageOriginalRows
       numerator / denominator
     }
   }
+}
+
+object FlinkRelMdPercentageOriginalRows {
+
+  private val INSTANCE = new FlinkRelMdPercentageOriginalRows
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+        BuiltInMethod.PERCENTAGE_ORIGINAL_ROWS.method, INSTANCE)
+
 }

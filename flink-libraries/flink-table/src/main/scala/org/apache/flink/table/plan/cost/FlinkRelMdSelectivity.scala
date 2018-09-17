@@ -36,11 +36,7 @@ import org.apache.flink.table.util.FlinkRelMdUtil
 
 import scala.collection.JavaConversions._
 
-object FlinkRelMdSelectivity extends MetadataHandler[BuiltInMetadata.Selectivity] {
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    BuiltInMethod.SELECTIVITY.method,
-    this)
+class FlinkRelMdSelectivity private extends MetadataHandler[BuiltInMetadata.Selectivity] {
 
   def getDef: MetadataDef[BuiltInMetadata.Selectivity] = BuiltInMetadata.Selectivity.DEF
 
@@ -305,5 +301,14 @@ object FlinkRelMdSelectivity extends MetadataHandler[BuiltInMetadata.Selectivity
       case _ => RelMdUtil.guessSelectivity(predicate)
     }
   }
+
+}
+
+object FlinkRelMdSelectivity {
+
+  private val INSTANCE = new FlinkRelMdSelectivity
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    BuiltInMethod.SELECTIVITY.method, INSTANCE)
 
 }
