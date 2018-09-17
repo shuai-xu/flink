@@ -152,7 +152,8 @@ class BatchExecExchange(
     requiredExchangeMode = Some(exchangeMode)
   }
 
-  private def getDataExchangeModeForDeadlockBreakup(tableConfig: TableConfig): DataExchangeMode = {
+  private[flink] def getDataExchangeModeForDeadlockBreakup(
+      tableConfig: TableConfig): DataExchangeMode = {
     requiredExchangeMode match {
       case Some(mode) if mode eq DataExchangeMode.BATCH => mode
       case _ => getDataExchangeModeForExternalShuffle(tableConfig)
@@ -274,6 +275,9 @@ class BatchExecExchange(
 
     val (keys, orders, nullsIsLast) = SortUtil.getKeysAndOrders(fieldCollations.asScala)
     val types = inputType.getFieldTypes
+
+    val reservedResSpec = resource.getReservedResourceSpec
+    val preferResSpec = resource.getPreferResourceSpec
 
     val sampleAndHistogram = reusedSampleAndHistogram match {
       case Some(transformation) if isReused => transformation

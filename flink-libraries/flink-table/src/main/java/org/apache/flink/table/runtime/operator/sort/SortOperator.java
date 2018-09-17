@@ -49,7 +49,7 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 		implements OneInputStreamOperator<BaseRow, BinaryRow> {
 
 	private final long reservedMemorySize;
-	private final long preferedMemorySize;
+	private final long maxMemorySize;
 	private final long perRequestMemorySize;
 	private final GeneratedSorter gSorter;
 	private static final Logger LOG = LoggerFactory.getLogger(SortOperator.class);
@@ -63,9 +63,9 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 	private transient BinaryRowSerializer binarySerializer;
 
 	public SortOperator(
-			long reservedMemorySize, long preferredMemorySize, long perRequestMemorySize, GeneratedSorter gSorter) {
+			long reservedMemorySize, long maxMemorySize, long perRequestMemorySize, GeneratedSorter gSorter) {
 		this.reservedMemorySize = reservedMemorySize;
-		this.preferedMemorySize = preferredMemorySize;
+		this.maxMemorySize = maxMemorySize;
 		this.perRequestMemorySize = perRequestMemorySize;
 		this.gSorter = gSorter;
 	}
@@ -89,7 +89,7 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 		computer.init(gSorter.serializers(), gSorter.comparators());
 		comparator.init(gSorter.serializers(), gSorter.comparators());
 		this.sorter = new BinaryExternalSorter(this.getContainingTask(), memManager, reservedMemorySize,
-				preferedMemorySize, perRequestMemorySize, ioManager, inputSerializer, binarySerializer,
+				maxMemorySize, perRequestMemorySize, ioManager, inputSerializer, binarySerializer,
 				computer, comparator);
 		this.sorter.startThreads();
 

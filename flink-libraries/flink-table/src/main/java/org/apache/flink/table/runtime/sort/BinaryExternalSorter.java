@@ -185,17 +185,17 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	private long spillInBytes;
 
 	public BinaryExternalSorter(
-			final Object owner, MemoryManager memoryManager, long reservedMemorySize, long preferredMemorySize,
+			final Object owner, MemoryManager memoryManager, long reservedMemorySize, long maxMemorySize,
 			long perRequestMemorySize, IOManager ioManager, TypeSerializer<BaseRow> inputSerializer,
 			BinaryRowSerializer serializer, NormalizedKeyComputer normalizedKeyComputer,
 			RecordComparator comparator) throws IOException {
-		this(owner, memoryManager, reservedMemorySize, preferredMemorySize, perRequestMemorySize, ioManager,
+		this(owner, memoryManager, reservedMemorySize, maxMemorySize, perRequestMemorySize, ioManager,
 				inputSerializer, serializer, normalizedKeyComputer, comparator,
 				ConfigConstants.DEFAULT_SPILLING_MAX_FAN, ConfigConstants.DEFAULT_SORT_SPILLING_THRESHOLD);
 	}
 
 	public BinaryExternalSorter(
-			final Object owner, MemoryManager memoryManager, long reservedMemorySize, long preferredMemorySize,
+			final Object owner, MemoryManager memoryManager, long reservedMemorySize, long maxMemorySize,
 			long perRequestMemorySize, IOManager ioManager, TypeSerializer<BaseRow> inputSerializer,
 			BinaryRowSerializer serializer,
 			NormalizedKeyComputer normalizedKeyComputer,
@@ -242,7 +242,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 		// decide how many sort buffers to use
 		int numSortBuffers = 1;
-		final long sortMaxMemSize = Math.max(preferredMemorySize, reservedMemorySize) -
+		final long sortMaxMemSize = Math.max(maxMemorySize, reservedMemorySize) -
 				numWriteBuffers * memoryManager.getPageSize();
 		if (sortMaxMemSize > 100 * 1024 * 1024L) {
 			numSortBuffers = 2;
@@ -269,12 +269,12 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		final Iterator<MemorySegment> segments = readMemory.iterator();
 		final int perRequestBuffersNum = (int) (perRequestMemorySize / memoryManager.getPageSize());
 		final int additionalLimitNumPages =
-				(int) ((preferredMemorySize - reservedMemorySize) / memoryManager.getPageSize());
+				(int) ((maxMemorySize - reservedMemorySize) / memoryManager.getPageSize());
 		final int eachBufferAdditionalLimitNumPages = (int) (additionalLimitNumPages / numSortBuffers);
 
 		LOG.info("BinaryExternalSorter with initial memory segments {},And the preferred memory {} segments, " +
 				"per request {} segments from floating memory pool.", numMinPagesTotal, (int)
-				(preferredMemorySize / memoryManager.getPageSize()), perRequestBuffersNum);
+				(maxMemorySize / memoryManager.getPageSize()), perRequestBuffersNum);
 
 		this.sortBuffers = new ArrayList<>();
 		for (int i = 0; i < numSortBuffers; i++) {

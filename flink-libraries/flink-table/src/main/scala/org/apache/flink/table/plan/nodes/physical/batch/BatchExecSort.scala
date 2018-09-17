@@ -99,17 +99,12 @@ class BatchExecSort(
     // sort code gen
     val (comparators, serializers, codeGen) = getSortInfo(tableEnv.getConfig)
 
-    val reservedMangedMemorySize =
-      BatchExecResourceUtil.getManagedMemory(reservedResSpec) * BatchExecResourceUtil.SIZE_IN_MB
+    val reservedMangedMemorySize = resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB
 
-    val preferMangedMemorySize =
-      BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB
+    val preferMangedMemorySize = resource.getMaxManagedMem * BatchExecResourceUtil.SIZE_IN_MB
     val perRequestSize =
       BatchExecResourceUtil.getPerRequestManagedMemory(
         tableEnv.getConfig)* BatchExecResourceUtil.SIZE_IN_MB
-
-    LOG.info(
-      this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
 
     val operator = new SortOperator(
       reservedMangedMemorySize,
@@ -128,9 +123,8 @@ class BatchExecSort(
       resultPartitionCount)
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-    tableEnv.getRUKeeper().setRelID(this, transformation.getId)
 
-    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
 

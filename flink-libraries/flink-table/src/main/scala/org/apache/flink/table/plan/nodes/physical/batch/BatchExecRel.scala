@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
@@ -33,6 +32,7 @@ import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery.reuseOrCreate
 import org.apache.flink.table.plan.nodes.FlinkRelNode
+import org.apache.flink.table.plan.resource.RelResource
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{FlinkRelOptUtil, Logging}
@@ -47,14 +47,9 @@ trait BatchExecRel[T] extends FlinkRelNode with Logging {
   private[flink] var resultPartitionCount = -1
 
   /**
-    * Defines reserve resource the rel needs.
+    * Defines how much resource the rel will take
     */
-  private[flink] var reservedResSpec: ResourceSpec = _
-
-  /**
-    * Defines prefer resource the rel needs.
-    */
-  private[flink] var preferResSpec: ResourceSpec = _
+  private[flink] var resource: RelResource = _
 
   /**
     * Defines an unique reuse id for reused node and
@@ -69,11 +64,10 @@ trait BatchExecRel[T] extends FlinkRelNode with Logging {
   }
 
   /**
-    * Sets reserve and prefer resourceSpec.
+    * Sets rel resource.
     */
-  def setResourceSpec(reserved: ResourceSpec, prefer: ResourceSpec): Unit = {
-    this.reservedResSpec = reserved
-    this.preferResSpec = prefer
+  def setResource(resource: RelResource): Unit = {
+    this.resource = resource
   }
 
   /**

@@ -21,10 +21,10 @@ package org.apache.flink.table.plan.resource.autoconf;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.plan.resource.RelResource;
 import org.apache.flink.table.plan.resource.RelRunningUnit;
-import org.apache.flink.table.plan.resource.ShuffleStage;
-import org.apache.flink.table.plan.resource.ShuffleStageInRunningUnit;
 
-import java.util.HashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -33,26 +33,33 @@ import java.util.Set;
  */
 public class RelReservedManagedMemAdjuster {
 
+	private static final Logger LOG = LoggerFactory.getLogger(RelReservedManagedMemAdjuster.class);
+
 	// total mem limit.
 	private final long totalMem;
 	// to get resource of rel.
 	private final Map<RowBatchExecRel, RelResource> relResourceMap;
 	// to get parallelism of rel.
-	private final Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap;
+	private final Map<RowBatchExecRel, Integer> relParallelismMap;
+
+	private final int minManagedMemory;
 
 	public RelReservedManagedMemAdjuster(long totalMem,
 			Map<RowBatchExecRel, RelResource> relResourceMap,
-			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+			Map<RowBatchExecRel, Integer> relParallelismMap,
+			int minManagedMemory) {
 		this.totalMem = totalMem;
 		this.relResourceMap = relResourceMap;
-		this.relShuffleStageMap = relShuffleStageMap;
+		this.relParallelismMap = relParallelismMap;
+		this.minManagedMemory = minManagedMemory;
 	}
 
 	public void adjust(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap) {
+
 		for (Map.Entry<RowBatchExecRel, Set<RelRunningUnit>> entry : relRunningUnitMap.entrySet()) {
 			RowBatchExecRel rel = entry.getKey();
 			RelResource resource = relResourceMap.get(rel);
-			if (resource.getReservedManagedMem() == 0 || resource.isFixedManagedMem()) {
+			if (resource.getReservedManagedMem() == 0 || resource.isReservedManagedFinal()) {
 				continue;
 			}
 			int managed = resource.getReservedManagedMem();
@@ -66,39 +73,42 @@ public class RelReservedManagedMemAdjuster {
 			if (managed == 0) {
 				throw new IllegalArgumentException("managed memory from positive to zero, total managed mem may be too little.");
 			}
-			resource.setManagedMem(managed, resource.getPreferManagedMem(), true);
+			resource.setManagedMem(managed, resource.getPreferManagedMem(), resource.getMaxManagedMem(), true);
 		}
 	}
 
 	private int calculateReservedManaged(RowBatchExecRel rel, RelRunningUnit runningUnit) {
 		long remain = totalMem;
 		long need = 0;
-		Set<RowBatchExecRel> relSet = new HashSet<>();
-		for (ShuffleStageInRunningUnit ss : runningUnit.getShuffleStagesInRunningUnit()) {
-			relSet.addAll(ss.getShuffleStage().getBatchExecRelSet());
-		}
-		for (RowBatchExecRel r : relSet) {
+		LOG.debug("before calculateReserved for a runningUnit：" + runningUnit.hashCode() + ", total: " + remain + ", rel: " + rel.hashCode());
+		for (RowBatchExecRel r : runningUnit.getRelSet()) {
 			RelResource resource = relResourceMap.get(r);
-			int parallelism = relShuffleStageMap.get(r).getResultParallelism();
+			int parallelism = relParallelismMap.get(r);
 			// minus heap mem of rel.
 			remain -= (long) resource.getHeapMem() * parallelism;
 			if (resource.getReservedManagedMem() == 0) {
 				continue;
 			}
-			if (resource.isFixedManagedMem()) {
+			if (resource.isReservedManagedFinal()) {
 				remain -= (long) resource.getReservedManagedMem() * parallelism;
+				LOG.debug(r + ", " + r.hashCode() + " , fixed memory: " + resource.getReservedManagedMem() + ", parallelism: " + parallelism + ", remain: " + remain);
 			} else {
-				need += (long) resource.getReservedManagedMem() * parallelism;
+				remain -= (long) minManagedMemory * parallelism;
+				LOG.debug(r + ", " + r.hashCode() + " , reserved memory: " + resource.getReservedManagedMem() +
+						", min memory:"  + minManagedMemory + ", parallelism: " + parallelism + ", remain: " + remain);
+				need += (long) (resource.getReservedManagedMem() - minManagedMemory) * parallelism;
 			}
 		}
-		if (remain <= 0) {
+		if (remain < 0) {
 			throw new IllegalArgumentException("total resource can not satisfy the runningUnit fixed managedMemory.");
 		}
+		LOG.debug("after calculateReserved for a runningUnit");
 		if (remain >= need) {
 			return relResourceMap.get(rel).getReservedManagedMem();
 		} else {
 			double ratio = (double) remain / need;
-			return (int) (relResourceMap.get(rel).getReservedManagedMem() * ratio);
+			return (int) ((relResourceMap.get(rel).getReservedManagedMem() - minManagedMemory) * ratio)
+					+ minManagedMemory;
 		}
 	}
 }

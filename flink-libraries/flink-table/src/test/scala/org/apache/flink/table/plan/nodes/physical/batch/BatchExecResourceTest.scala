@@ -30,7 +30,7 @@ import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction
 import org.apache.flink.streaming.api.operators.StreamSource
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecResourceTest.MockTableSource
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource, TableSource}
@@ -79,6 +79,14 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
   }
 
   @Test
+  def testConfigSourceParallelism(): Unit = {
+    util.getTableEnv.getConfig.getParameters.setInteger(
+      TableConfig.SQL_EXEC_SOURCE_PARALLELISM, 100)
+    val sqlQuery = "SELECT sum(a) as sum_a, c FROM SmallTable3 group by c order by c limit 2"
+    util.verifyResource(sqlQuery)
+  }
+
+  @Test
   def testRangePartition(): Unit ={
     util.getTableEnv.getConfig.getParameters.setBoolean(
       TableConfig.SQL_EXEC_SORT_ENABLE_RANGE,
@@ -89,8 +97,6 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBatchExecBase {
 
   @Test
   def testUnionQuery(): Unit = {
-    util.tableEnv.getConfig.getParameters.setString(
-      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "NestedLoopJoin, SortMergeJoin")
     val table3Schema = new Schema() {
       override def getFieldNames: Array[String] = {
         Array("a", "b", "c")
@@ -243,9 +249,9 @@ object BatchExecResourceTest {
       TableConfig.SQL_EXEC_INFER_RESOURCE_ROWS_PER_PARTITION,
       1000000
     )
-    tableConfig.getParameters.setInteger(
-      BatchExecResourceUtil.SQL_EXEC_INFER_RESERVE_RELATIVE_PREFER_MEM_RATIO,
-      2
+    tableConfig.getParameters.setDouble(
+      BatchExecResourceUtil.SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT,
+      0.5
     )
     tableConfig.getParameters.setInteger(
       TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB,
@@ -290,5 +296,10 @@ object BatchExecResourceTest {
       schema.getFieldTypes.asInstanceOf[Array[DataType]], schema.getFieldNames)
 
     override def getTableStats: TableStats = stats
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+
+    override def explainSource(): String = ""
   }
 }

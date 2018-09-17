@@ -20,32 +20,62 @@ package org.apache.flink.table.plan.resource;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
-import org.apache.flink.util.Preconditions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Describe which stage of a batchExecRel. Many batchExecRel run with several stages, some of what
- * begin after other finish.
- * e.g. BatchExecRel: HashJoin has two stages, when probe begins after build ends.
- * And output begins after input ends for hashAgg.
+ * Describe which stage of a batchExecRel.
+ * e.g. SortAggRel has two stages, the first stage process input data and the second stage
+ * output results. There is a pause between them and the second stage works after the first ends.
+ *
+ * <p>e.g. CalcRel has only a stage, it receives input data and output result in a stage.
+ *
+ * <p>BatchExecRelStage has three elements: batchExecRel, stageID, other relStages that the stage
+ * depends on.
+ * There are two depend type: DATA_TRIGGER, PRIORITY.
+ *
+ * <p>e.g. When the first stage of sortAggRel ends, the rel needs to output data, trigger the second
+ * stage to run. So its depend type is DATA_TRIGGER.
+ *
+ * <p>e.g. SortAggRel output data to a calcRel, but the exchangeMode between them is batch mode(spilling
+ * data to disk), so the calcRel stage depends on the second stage of sortAggRel. Depend type is DATA_TRIGGER.
+ *
+ * <p>e.g. HashJoinRel has two stages: build stage(receive build input and build hashTable) and
+ * probe stage(receive probe input and output result). The hashJoinRel prefers to read build input
+ * if its build and probe inputs are all ready. So the depend type is PRIORITY.
+ *
+ * <p>e.g. SortMergeJoinRel has three stages: two input stages and output stage. its two input stages
+ * are parallel. So the output stage depend on two input stages and depend type is DATA_TRIGGER.
  */
 public class BatchExecRelStage implements Serializable {
 
-	private final transient RowBatchExecRel batchExecRel;
-	private int stageID;
-	private final List<BatchExecRelStage> dependStageList = new ArrayList<>();
-	private final List<Integer> transformationIDList = new LinkedList<>();
-	private final String relName;
-
-	public void setRelID(Integer relID) {
-		this.relID = relID;
+	/**
+	 * Depend type.
+	 */
+	public enum DependType {
+		DATA_TRIGGER, PRIORITY
 	}
 
-	private Integer relID;
+	private final transient RowBatchExecRel batchExecRel;
+	private final Set<RelRunningUnit> runningUnitSet = new LinkedHashSet<>();
+	private int stageID;
+
+	// the rel stage may depend on many relStages, e.g. SortMergeJoinRel.
+	private final Map<DependType, List<BatchExecRelStage>> dependStagesMap = new LinkedHashMap<>();
+
+	/**
+	 * There may be more than one transformation in a BatchExecRel, like BatchExecScan.
+	 * But these transformations must chain in a jobVertex in runtime.
+	 */
+	private final List<Integer> transformationIDList = new LinkedList<>();
+	private final String relName;
 
 	public BatchExecRelStage(RowBatchExecRel batchExecRel, int stageID) {
 		this.batchExecRel = batchExecRel;
@@ -61,30 +91,36 @@ public class BatchExecRelStage implements Serializable {
 		return transformationIDList;
 	}
 
-	public Integer getRelID() {
-		return relID;
+	public List<BatchExecRelStage> getDependStageList(DependType type) {
+		return dependStagesMap.computeIfAbsent(type, k -> new LinkedList<>());
 	}
 
-	public void addDependStage(BatchExecRelStage stage) {
-		Preconditions.checkArgument(stage.getBatchExecRel() == batchExecRel);
-		this.dependStageList.add(stage);
+	public void removeDependStage(BatchExecRelStage toRemove) {
+		for (List<BatchExecRelStage> stageList : dependStagesMap.values()) {
+			stageList.remove(toRemove);
+		}
 	}
 
-	// to avoid schedule deadlock.
-	public void removeDependStage(BatchExecRelStage stage) {
-		this.dependStageList.remove(stage);
+	public void addDependStage(BatchExecRelStage relStage, DependType type) {
+		dependStagesMap.computeIfAbsent(type, k -> new LinkedList<>()).add(relStage);
 	}
 
 	public RowBatchExecRel getBatchExecRel() {
 		return batchExecRel;
 	}
 
-	public int getStageID() {
-		return stageID;
+	public Set<RelRunningUnit> getRunningUnitList() {
+		return runningUnitSet;
 	}
 
-	public List<BatchExecRelStage> getDependStageList() {
-		return dependStageList;
+	public void addRunningUnit(RelRunningUnit relRunningUnit) {
+		runningUnitSet.add(relRunningUnit);
+	}
+
+	public List<BatchExecRelStage> getAllDependStageList() {
+		List<BatchExecRelStage> allStageList = new ArrayList<>();
+		dependStagesMap.values().stream().map(allStageList::addAll);
+		return allStageList;
 	}
 
 	@Override
@@ -113,10 +149,17 @@ public class BatchExecRelStage implements Serializable {
 
 	@Override
 	public String toString() {
-		return "relStage（" +
-				"batchExecRel=" + relName +
-				", stageID=" + stageID +
-				", dependStageIDList=" + dependStageList +
-				')';
+		StringBuilder sb = new StringBuilder("relStage（");
+		sb.append("batchExecRel=").append(relName)
+				.append(", stageID=").append(stageID);
+		dependStagesMap.forEach((k, v) -> {
+			sb.append(", depend type: " + k + " =[");
+			for (BatchExecRelStage relStage : v) {
+				sb.append("batchExecRel=").append(relStage.relName)
+						.append(", stageID=").append(relStage.stageID).append(";");
+			}
+			sb.append("]");
+		});
+		return sb.toString();
 	}
 }

@@ -24,20 +24,20 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Forward rel cross runningUnit. There are no shuffle when transferring data in a relForward.
+ * There are no shuffle when transferring data in a shuffleStage.
  */
 public class ShuffleStage {
 
-	private final Set<ShuffleStageInRunningUnit> shuffleStageInRUSet = new LinkedHashSet<>();
 	private final Set<RowBatchExecRel> batchExecRelSet = new LinkedHashSet<>();
 	private int resultParallelism = -1;
-	private boolean hasFixedParallelism = false;
+	private boolean isParallelismFinal = false;
 
-	public void addShuffleStageInRus(Set<ShuffleStageInRunningUnit> shuffleStageInRUs) {
-		this.shuffleStageInRUSet.addAll(shuffleStageInRUs);
-		for (ShuffleStageInRunningUnit shuffleStageInRU: shuffleStageInRUs) {
-			batchExecRelSet.addAll(shuffleStageInRU.getRelSet());
-		}
+	public void addRel(RowBatchExecRel rowBatchExecRel) {
+		batchExecRelSet.add(rowBatchExecRel);
+	}
+
+	public void addRelSet(Set<RowBatchExecRel> rowBatchExecRelSet) {
+		batchExecRelSet.addAll(rowBatchExecRelSet);
 	}
 
 	public Set<RowBatchExecRel> getBatchExecRelSet() {
@@ -48,27 +48,23 @@ public class ShuffleStage {
 		return resultParallelism;
 	}
 
-	public void setResultParallelism(int resultParallelism, boolean fixedParallelism) {
-		if (this.hasFixedParallelism) {
-			if (fixedParallelism && this.resultParallelism != resultParallelism) {
+	public void setResultParallelism(int resultParallelism, boolean finalParallelism) {
+		if (this.isParallelismFinal) {
+			if (finalParallelism && this.resultParallelism != resultParallelism) {
 				throw new IllegalArgumentException("both fixed parallelism are not equal, old: " + this.resultParallelism + ", new: " + resultParallelism);
 			}
 		} else {
-			if (fixedParallelism) {
+			if (finalParallelism) {
 				this.resultParallelism = resultParallelism;
-				this.hasFixedParallelism = true;
+				this.isParallelismFinal = true;
 			} else {
 				this.resultParallelism = Math.max(this.resultParallelism, resultParallelism);
 			}
 		}
 	}
 
-	public boolean isParallelismFixed() {
-		return hasFixedParallelism;
-	}
-
-	public Set<ShuffleStageInRunningUnit> getShuffleStageInRUSet() {
-		return this.shuffleStageInRUSet;
+	public boolean isParallelismFinal() {
+		return isParallelismFinal;
 	}
 
 }

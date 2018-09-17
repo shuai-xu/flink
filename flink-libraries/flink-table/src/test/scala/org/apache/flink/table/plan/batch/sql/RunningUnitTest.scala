@@ -106,4 +106,14 @@ class RunningUnitTest extends TableTestBatchExecBase {
         "GROUP BY c"
     util.verifyPlanWithRunningUnit(sqlQuery)
   }
+
+  @Test
+  def testUnionAllWithExternalShuffle(): Unit = {
+    util.tableEnv.config.enableBatchExternalShuffle
+    util.addTable("z", CommonTestData.get3Source(Array("a", "b", "c")))
+    val sqlQuery = "SELECT sum(a) FROM (" +
+        "SELECT a, c FROM x UNION ALL (SELECT a, c FROM z))" +
+        "GROUP BY c"
+    util.verifyPlanWithRunningUnit(sqlQuery)
+  }
 }

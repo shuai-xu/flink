@@ -102,7 +102,7 @@ public class StreamingJobGraphGenerator {
 	/**
 	 * Maps job vertex id to stream node ids.
 	 */
-	private static final String JOB_VERTEX_TO_STREAM_NODE_MAP = "jobVertexToStreamNodeMap";
+	public static final String JOB_VERTEX_TO_STREAM_NODE_MAP = "jobVertexToStreamNodeMap";
 
 	// ------------------------------------------------------------------------
 

@@ -19,8 +19,8 @@
 package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.TableConfig;
 
 /**
@@ -48,17 +48,27 @@ public class BatchExecResourceUtil {
 	 * Sets min parallelism for operators.
 	 */
 	public static final String SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM = "sql.exec.infer-resource.operator.min-parallelism";
+	public static final int SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM_DEFAULT = 1;
 
 	/**
 	 * Maybe the infer's reserved manager mem is too small, so this setting is lower limit for
 	 * the infer's manager mem.
 	 */
 	public static final String SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB = "sql.exec.infer-resource.operator.min-memory-mb";
+	public static final int SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB_DEFAULT = 32;
 
 	/**
-	 * Sets reserve-relative-prefer mem ratio.
+	 * Sets reserve mem discount.
 	 */
-	public static final String SQL_EXEC_INFER_RESERVE_RELATIVE_PREFER_MEM_RATIO = "sql.exec.infer.reserve-relative-prefer.mem.ratio";
+	public static final String SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT = "sql.exec.infer-resource.reserve-mem.discount";
+	public static final double SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT_DEFAULT = 1;
+
+	/**
+	 * Sets the number of per-requested buffers when the operator allocates much more segments
+	 * from the floating memory pool.
+	 */
+	public static final String SQL_EXEC_PER_REQUEST_MEM = "sql.exec.per-request.mem-mb";
+	public static final int SQL_EXEC_PER_REQUEST_MEM_DEFAULT = 32;
 
 
 	/**
@@ -114,7 +124,7 @@ public class BatchExecResourceUtil {
 	public static int getDefaultHeapMem(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
 				TableConfig.SQL_EXEC_DEFAULT_MEM(),
-				64);
+				TableConfig.SQL_EXEC_DEFAULT_MEM_DEFAULT());
 	}
 
 	/**
@@ -162,6 +172,18 @@ public class BatchExecResourceUtil {
 	}
 
 	/**
+	 * Gets the config parallelism for source.
+	 * @param tConfig TableConfig.
+	 * @return the config parallelism for source.
+	 */
+	public static int getSourceParallelism(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_SOURCE_PARALLELISM(),
+				getOperatorDefaultParallelism(tConfig)
+		);
+	}
+
+	/**
 	 * Gets the config memory for sink.
 	 * @param tConfig TableConfig.
 	 * @return the config memory for sink.
@@ -193,7 +215,6 @@ public class BatchExecResourceUtil {
 				TableConfig.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE(),
 				TableConfig.SQL_EXEC_WINDOW_AGG_BUFFER_LIMIT_SIZE_DEFAULT());
 	}
-
 
 	/**
 	 * Gets the config row count that one partition processes.
@@ -251,8 +272,21 @@ public class BatchExecResourceUtil {
 	public static int getOperatorMinParallelism(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
 				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM,
-				1
+				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_PARALLELISM_DEFAULT
 		);
+	}
+
+	/**
+	 * Calculates operator parallelism based on rowcount of the operator.
+	 * @param rowCount rowCount of the operator
+	 * @param tConfig TableConfig.
+	 * @return the result of operator parallelism.
+	 */
+	public static int calOperatorParallelism(double rowCount, TableConfig tConfig) {
+		int maxParallelism = getOperatorMaxParallelism(tConfig);
+		int minParallelism = getOperatorMinParallelism(tConfig);
+		int resultParallelism = (int) (rowCount / getRelCountPerPartition(tConfig));
+		return Math.max(Math.min(resultParallelism, maxParallelism), minParallelism);
 	}
 
 	/**
@@ -289,32 +323,42 @@ public class BatchExecResourceUtil {
 	}
 
 	/**
-	 * get the reserved and preferred mem by the infer mem. And they should be between the maximum
+	 * Gets the min managedMemory.
+	 * @param tConfig TableConfig.
+	 * @return the min managedMemory.
+	 */
+	public static int getOperatorMinManagedMem(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
+				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB_DEFAULT);
+	}
+
+	/**
+	 * get the reserved, preferred and max managed mem by the inferred mem. And they should be between the maximum
 	 * and the minimum mem.
 	 *
 	 * @param tConfig TableConfig.
 	 * @param memCostInMB the infer mem of per partition.
 	 */
-	public static Tuple2<Integer, Integer> reviseAndGetInferManagedMem(TableConfig tConfig, int memCostInMB) {
-		double relativeRatio = tConfig.getParameters().getDouble(
-				SQL_EXEC_INFER_RESERVE_RELATIVE_PREFER_MEM_RATIO,
-				2.0);
+	public static Tuple3<Integer, Integer, Integer> reviseAndGetInferManagedMem(TableConfig tConfig, int memCostInMB) {
+		double reservedDiscount = tConfig.getParameters().getDouble(
+				SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT,
+				SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT_DEFAULT);
+		if (reservedDiscount > 1 || reservedDiscount <= 0) {
+			throw new IllegalArgumentException(SQL_EXEC_INFER_RESERVED_MEM_DISCOUNT + " should be > 0 and <= 1");
+		}
 
 		int maxMem = tConfig.getParameters().getInteger(
 				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB(),
 				TableConfig.SQL_EXEC_INFER_RESOURCE_OPERATOR_MAX_MEMORY_MB_DEFAULT());
 
-		int minMem = tConfig.getParameters().getInteger(
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB,
-				32);
+		int minMem = getOperatorMinManagedMem(tConfig);
 
-		int preferMemCostInMB = (int) (memCostInMB * relativeRatio);
+		int preferMem = Math.max(Math.min(maxMem, memCostInMB), minMem);
 
-		int reservedMem = Math.max(Math.min(maxMem, memCostInMB), minMem);
+		int reservedMem = Math.max(Math.min(maxMem, (int) (memCostInMB * reservedDiscount)), minMem);
 
-		int preferredMem = Math.max(Math.min(maxMem, preferMemCostInMB), reservedMem);
-
-		return new Tuple2<>(reservedMem, preferredMem);
+		return new Tuple3<>(reservedMem, preferMem, maxMem);
 	}
 
 	/**
@@ -322,8 +366,8 @@ public class BatchExecResourceUtil {
 	 */
 	public static int getPerRequestManagedMemory(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_PER_REQUEST_MEM(),
-				TableConfig.SQL_EXEC_PER_REQUEST_MEM_DEFAULT());
+				SQL_EXEC_PER_REQUEST_MEM,
+				SQL_EXEC_PER_REQUEST_MEM_DEFAULT);
 	}
 
 	/**
@@ -373,20 +417,6 @@ public class BatchExecResourceUtil {
 			return InferMode.valueOf(config);
 		} catch (IllegalArgumentException ex) {
 			throw new IllegalArgumentException("Infer mode can only be set: NONE, SOURCE or ALL.");
-		}
-	}
-
-	public static int getManagedMemory(ResourceSpec resourceSpec) {
-		Object managedMemory = resourceSpec.getExtendedResources().get(ResourceSpec.MANAGED_MEMORY_NAME);
-		if (managedMemory == null) {
-			return 0;
-		}
-		managedMemory = ((Resource) managedMemory).getValue();
-		try {
-			// we need a int value here, cast to double first in order to accept double config val.
-			return  ((Double) managedMemory).intValue();
-		} catch (ClassCastException ex) {
-			return 0;
 		}
 	}
 }

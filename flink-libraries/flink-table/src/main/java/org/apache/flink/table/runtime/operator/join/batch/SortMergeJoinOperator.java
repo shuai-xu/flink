@@ -260,10 +260,6 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 		}
 	}
 
-	public int getExternalBufferNum() {
-		return type.equals(FlinkJoinRelType.FULL) ? 2 : 1;
-	}
-
 	private void doSortMergeJoin() throws Exception {
 
 		Projection projection1 = classes.projectionClass1.newInstance();

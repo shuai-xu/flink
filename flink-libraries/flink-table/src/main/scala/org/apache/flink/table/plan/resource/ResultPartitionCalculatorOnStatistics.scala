@@ -37,7 +37,7 @@ class ResultPartitionCalculatorOnStatistics(
     extends BatchExecRelVisitor[Unit] with Logging {
 
   private def setResultParallelism(
-      rel: BatchExecRel[_], parallelism: Int, fixed: JBool): Unit = {
+      rel: RowBatchExecRel, parallelism: Int, fixed: JBool): Unit = {
     runningUnitKeeper.getRelShuffleStage(rel).setResultParallelism(parallelism, fixed)
   }
 

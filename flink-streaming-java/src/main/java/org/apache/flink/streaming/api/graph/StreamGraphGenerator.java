@@ -722,7 +722,7 @@ public class StreamGraphGenerator {
 		private ScheduleMode scheduleMode;
 		private long bufferTimeout;
 		private ResultPartitionType pipelineResultPartitionType;
-		private Configuration configuration;
+		private Configuration configuration = new Configuration();
 
 		public static Context buildStreamProperties(StreamExecutionEnvironment env) {
 			Context context = new Context();

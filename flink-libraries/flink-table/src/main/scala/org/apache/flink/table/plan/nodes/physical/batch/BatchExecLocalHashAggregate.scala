@@ -137,12 +137,11 @@ class BatchExecLocalHashAggregate(
       codegenWithoutKeys(isMerge = false, isFinal = false, ctx, tableEnv,
         inputType, outputRowType, "NoGrouping")
     } else {
-      val managedMem = BatchExecResourceUtil.getManagedMemory(reservedResSpec) *
+      val managedMem = resource.getReservedManagedMem *
           BatchExecResourceUtil.SIZE_IN_MB
-      val preferredManagedMem =
-        BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB
+      val maxManagedMem = resource.getMaxManagedMem * BatchExecResourceUtil.SIZE_IN_MB
       codegenWithKeys(ctx, tableEnv, inputType, outputRowType, managedMem,
-        preferredManagedMem)
+        maxManagedMem)
     }
     val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       generatedOperator.name,
@@ -154,13 +153,10 @@ class BatchExecLocalHashAggregate(
       operator,
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    LOG.info(
-      this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-    tableEnv.getRUKeeper().setRelID(this, transformation.getId)
 
-    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
 

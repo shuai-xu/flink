@@ -160,15 +160,10 @@ class RelTreeWriterImpl(
   private def addResourceToPrint(
       rowBatchExec: RowBatchExecRel,
       printValues: JArrayList[Pair[String, AnyRef]]): Unit = {
-    if (rowBatchExec.reservedResSpec != null) {
+    if (rowBatchExec.resource != null) {
       printValues.add(Pair.of(
-        "reserveRes",
-        resourceSpecToString(rowBatchExec.reservedResSpec)))
-    }
-    if (rowBatchExec.preferResSpec != null) {
-      printValues.add(Pair.of(
-        "preferRes",
-        resourceSpecToString(rowBatchExec.preferResSpec)))
+        "resource",
+        rowBatchExec.resource.toString))
     }
   }
 

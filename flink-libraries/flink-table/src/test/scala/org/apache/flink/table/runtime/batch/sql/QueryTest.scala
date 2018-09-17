@@ -36,7 +36,7 @@ import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
-import org.apache.flink.table.util.{DiffRepository, FlinkRelOptUtil}
+import org.apache.flink.table.util.{BatchExecResourceUtil, DiffRepository, FlinkRelOptUtil}
 import org.apache.flink.types.Row
 import org.junit.{Assert, Rule}
 import org.junit.Assert._
@@ -404,7 +404,7 @@ object QueryTest {
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_MEM, 1)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM, 2)
     //dynamic allocate memory.
-    conf.getParameters.setInteger(TableConfig.SQL_EXEC_PER_REQUEST_MEM, 1)
+    conf.getParameters.setInteger(BatchExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 1)
     conf
   }
 

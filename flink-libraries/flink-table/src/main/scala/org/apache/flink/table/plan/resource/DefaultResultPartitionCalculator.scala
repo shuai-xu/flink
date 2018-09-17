@@ -63,7 +63,7 @@ class DefaultResultPartitionCalculator(
           1).toInt)
     } else {
       scanBatchExec.resultPartitionCount = BatchExecResourceUtil
-          .getOperatorDefaultParallelism(tConfig)
+          .getSourceParallelism(tConfig)
     }
   }
 

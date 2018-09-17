@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.resource.autoconf;
 
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.BatchExecRelVisitor;
@@ -54,11 +54,15 @@ import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.plan.resource.RelResource;
 import org.apache.flink.table.plan.resource.RunningUnitKeeper;
 import org.apache.flink.table.util.BatchExecResourceUtil;
+import org.apache.flink.util.Preconditions;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
 import java.util.Map;
+
+import static org.apache.flink.table.runtime.sort.BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM;
+import static org.apache.flink.table.util.BatchExecResourceUtil.SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB;
 
 /**
  * Managed memory calculator on statistics for relNode.
@@ -87,7 +91,7 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 
 	private void calculateNoManagedMem(RowBatchExecRel batchExecRel) {
 		visitChildren(batchExecRel);
-		relResMap.get(batchExecRel).setManagedMem(0, 0);
+		relResMap.get(batchExecRel).setManagedMem(0, 0, 0);
 	}
 
 	@Override
@@ -141,9 +145,9 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	private void calculateHashAgg(RowBatchExecRel hashAgg) {
 		visitChildren(hashAgg);
 		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(hashAgg);
-		Tuple2<Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
+		Tuple3<Integer, Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
 				tConfig, (int) (memoryInBytes / BatchExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(hashAgg)));
-		relResMap.get(hashAgg).setManagedMem(managedMem.f0, managedMem.f1);
+		relResMap.get(hashAgg).setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 	}
 
 	@Override
@@ -164,9 +168,9 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 		int shuffleCount = hashJoin.shuffleBuildCount(mq);
 		int memCostInMb = (int) (BatchExecRel$.MODULE$.getBatchExecMemCost(hashJoin) /
 				shuffleCount / BatchExecResourceUtil.SIZE_IN_MB);
-		Tuple2<Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
+		Tuple3<Integer, Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
 				tConfig, memCostInMb / getResultPartitionCount(hashJoin));
-		relResMap.get(hashJoin).setManagedMem(managedMem.f0, managedMem.f1);
+		relResMap.get(hashJoin).setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 		return null;
 	}
 
@@ -176,12 +180,20 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 		int externalBufferMemoryMb = BatchExecResourceUtil.getExternalBufferManagedMemory(
 				tConfig) * sortMergeJoin.getExternalBufferNum();
 		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(sortMergeJoin);
-		Tuple2<Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
-						tConfig,
+		Tuple3<Integer, Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
+				tConfig,
 				(int) (memoryInBytes / BatchExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(sortMergeJoin)));
 		int reservedMemory = managedMem.f0 + externalBufferMemoryMb;
 		int preferMemory = managedMem.f1 + externalBufferMemoryMb;
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory);
+		int configMinMemory = BatchExecResourceUtil.getOperatorMinManagedMem(tConfig);
+		int minSortMemory = (int) (SORTER_MIN_NUM_SORT_MEM * 2 / BatchExecResourceUtil.SIZE_IN_MB) + 1;
+		Preconditions.checkArgument(configMinMemory >= externalBufferMemoryMb + minSortMemory,
+				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB +
+						" should >= externalBufferMemoryMb(" +
+						externalBufferMemoryMb +
+						"), minSortMemory(" +
+						minSortMemory + ").");
+		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, managedMem.f2);
 		return null;
 	}
 
@@ -194,9 +206,9 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 			int shuffleCount = nestedLoopJoin.shuffleBuildCount(mq);
 			double memCostInMb = BatchExecRel$.MODULE$.getBatchExecMemCost(nestedLoopJoin) /
 					shuffleCount / BatchExecResourceUtil.SIZE_IN_MB;
-			Tuple2<Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
+			Tuple3<Integer, Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
 					tConfig, (int) (memCostInMb / getResultPartitionCount(nestedLoopJoin)));
-			relResMap.get(nestedLoopJoin).setManagedMem(managedMem.f0, managedMem.f1);
+			relResMap.get(nestedLoopJoin).setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 		}
 		return null;
 	}
@@ -252,7 +264,7 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 		} else {
 			visitChildren(overWindowAgg);
 			int externalBufferMemory = BatchExecResourceUtil.getExternalBufferManagedMemory(tConfig);
-			relResMap.get(overWindowAgg).setManagedMem(externalBufferMemory, externalBufferMemory, true);
+			relResMap.get(overWindowAgg).setManagedMem(externalBufferMemory, externalBufferMemory, externalBufferMemory, true);
 		}
 		return null;
 	}
@@ -267,9 +279,9 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	public Void visit(BatchExecSort sort) {
 		visitChildren(sort);
 		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(sort);
-		Tuple2<Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
+		Tuple3<Integer, Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
 				tConfig, (int) (memoryInBytes / BatchExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(sort)));
-		relResMap.get(sort).setManagedMem(managedMem.f0, managedMem.f1);
+		relResMap.get(sort).setManagedMem(managedMem.f0, managedMem.f1, managedMem.f2);
 		return null;
 	}
 

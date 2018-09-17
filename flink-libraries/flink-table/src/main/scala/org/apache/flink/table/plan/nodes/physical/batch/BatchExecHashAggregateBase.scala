@@ -109,7 +109,7 @@ abstract class BatchExecHashAggregateBase(
       inputType: BaseRowType,
       outputType: BaseRowType,
       reservedManagedMemory: Long,
-      preferredManagedMemory: Long): GeneratedOperator = {
+      maxManagedMemory: Long): GeneratedOperator = {
     val config = tableEnv.config
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val className = if (isFinal) "HashAggregateWithKeys" else "LocalHashAggregateWithKeys"
@@ -141,7 +141,7 @@ abstract class BatchExecHashAggregateBase(
       ctx,
       config,
       reservedManagedMemory,
-      preferredManagedMemory,
+      maxManagedMemory,
       groupKeyTypesTerm,
       aggBufferTypesTerm,
       aggregateMapTerm)

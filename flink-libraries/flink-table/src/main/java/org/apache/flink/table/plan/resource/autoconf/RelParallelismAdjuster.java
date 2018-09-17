@@ -22,10 +22,11 @@ import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.plan.resource.RelResource;
 import org.apache.flink.table.plan.resource.RelRunningUnit;
 import org.apache.flink.table.plan.resource.ShuffleStage;
-import org.apache.flink.table.plan.resource.ShuffleStageInRunningUnit;
 
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Adjust parallelism according to total cpu limit.
@@ -34,21 +35,32 @@ public class RelParallelismAdjuster {
 
 	private final double totalCpu;
 	private final Map<RowBatchExecRel, RelResource> relResourceMap;
+	private Map<ShuffleStage, Set<RelRunningUnit>> overlapRunningUnits = new LinkedHashMap<>();
+	private Map<RelRunningUnit, Set<ShuffleStage>> overlapShuffleStages = new LinkedHashMap<>();
 
-	public RelParallelismAdjuster(double totalCpu, Map<RowBatchExecRel, RelResource> relResourceMap) {
+	public static void adjustParallelism(double totalCpu,
+			Map<RowBatchExecRel, RelResource> relResourceMap,
+			Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap,
+			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+		new RelParallelismAdjuster(totalCpu, relResourceMap).adjust(relRunningUnitMap, relShuffleStageMap);
+	}
+
+	private RelParallelismAdjuster(double totalCpu, Map<RowBatchExecRel, RelResource> relResourceMap) {
 		this.totalCpu = totalCpu;
 		this.relResourceMap = relResourceMap;
 	}
 
-	public void adjust(Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+	private void adjust(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap, Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+		buildOverlap(relRunningUnitMap, relShuffleStageMap);
+
 		for (ShuffleStage shuffleStage : relShuffleStageMap.values()) {
-			if (shuffleStage.isParallelismFixed()) {
+			if (shuffleStage.isParallelismFinal()) {
 				continue;
 			}
 
 			int parallelism = shuffleStage.getResultParallelism();
-			for (ShuffleStageInRunningUnit shuffleStageInRU : shuffleStage.getShuffleStageInRUSet()) {
-				int result = calculateParallelism(shuffleStageInRU);
+			for (RelRunningUnit runningUnit : overlapRunningUnits.get(shuffleStage)) {
+				int result = calculateParallelism(overlapShuffleStages.get(runningUnit), shuffleStage.getResultParallelism());
 				if (result < parallelism) {
 					parallelism = result;
 				}
@@ -57,33 +69,54 @@ public class RelParallelismAdjuster {
 		}
 	}
 
-	private int calculateParallelism(ShuffleStageInRunningUnit shuffleStageInRU) {
-		RelRunningUnit runningUnit = shuffleStageInRU.getRelRunningUnit();
-		List<ShuffleStageInRunningUnit> shuffleStageInRUs = runningUnit.getShuffleStagesInRunningUnit();
+	private void buildOverlap(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap, Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+		for (ShuffleStage shuffleStage : relShuffleStageMap.values()) {
+			Set<RelRunningUnit> runningUnitSet = new LinkedHashSet<>();
+			for (RowBatchExecRel rel : shuffleStage.getBatchExecRelSet()) {
+				runningUnitSet.addAll(relRunningUnitMap.get(rel));
+			}
+			overlapRunningUnits.put(shuffleStage, runningUnitSet);
+		}
+
+		for (Set<RelRunningUnit> runningUnitSet : relRunningUnitMap.values()) {
+			for (RelRunningUnit runningUnit : runningUnitSet) {
+				if (overlapShuffleStages.containsKey(runningUnit)) {
+					continue;
+				}
+				Set<ShuffleStage> shuffleStageSet = new LinkedHashSet<>();
+				for (RowBatchExecRel rel : runningUnit.getRelSet()) {
+					shuffleStageSet.add(relShuffleStageMap.get(rel));
+				}
+				overlapShuffleStages.put(runningUnit, shuffleStageSet);
+			}
+		}
+	}
+
+	private int calculateParallelism(Set<ShuffleStage> shuffleStages, int parallelism) {
 		double remain = totalCpu;
 		double need = 0d;
-		for (ShuffleStageInRunningUnit ss : shuffleStageInRUs) {
-			if (ss.getShuffleStage().isParallelismFixed()) {
-				remain -= getCpu(ss, ss.getShuffleStage().getResultParallelism());
+		for (ShuffleStage shuffleStage : shuffleStages) {
+			if (shuffleStage.isParallelismFinal()) {
+				remain -= getCpu(shuffleStage, shuffleStage.getResultParallelism());
 			} else {
-				remain -= getCpu(ss, 1);
-				need += getCpu(ss, ss.getShuffleStage().getResultParallelism() - 1);
+				remain -= getCpu(shuffleStage, 1);
+				need += getCpu(shuffleStage, shuffleStage.getResultParallelism() - 1);
 			}
 		}
 		if (remain < 0) {
 			throw new IllegalArgumentException("adjust parallelism error, fixed resource > remain resource.");
 		}
 		if (remain > need) {
-			return shuffleStageInRU.getShuffleStage().getResultParallelism();
+			return parallelism;
 		} else {
 			double ratio = remain / need;
-			return (int) ((shuffleStageInRU.getShuffleStage().getResultParallelism() - 1) * ratio) + 1;
+			return (int) ((parallelism - 1) * ratio) + 1;
 		}
 	}
 
-	private double getCpu(ShuffleStageInRunningUnit shuffleStageInRU, int parallelism) {
+	private double getCpu(ShuffleStage shuffleStage, int parallelism) {
 		double totalCpu = 0;
-		for (RowBatchExecRel rel : shuffleStageInRU.getRelSet()) {
+		for (RowBatchExecRel rel : shuffleStage.getBatchExecRelSet()) {
 			totalCpu = Math.max(totalCpu, relResourceMap.get(rel).getCpu());
 		}
 		totalCpu *= parallelism;

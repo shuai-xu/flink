@@ -109,7 +109,7 @@ class BatchExecExpand(
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
     transformation.setParallelismLocked(true)
-    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
 }

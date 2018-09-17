@@ -150,18 +150,19 @@ class BatchTableEnvironment(
   private def execute(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
       jobName: Option[String]): JobExecutionResult = {
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv);
+    ruKeeper.setScheduleConfig(context)
     jobName match {
       case Some(jn) => context.setJobName(jn)
       case None => context.setJobName(DEFAULT_JOB_NAME)
     }
     val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
 
-    ruKeeper.setScheduleConfig(streamEnv, streamGraph)
     setQueryPlan()
 
     setOperatorMetricCollectToStreamEnv()
     val result = streamEnv.execute(streamGraph)
     dumpPlanWithMetricsIfNeed(streamGraph, result)
+    ruKeeper.clear()
     result
   }
 

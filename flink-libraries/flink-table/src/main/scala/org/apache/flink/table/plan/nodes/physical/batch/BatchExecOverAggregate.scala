@@ -294,26 +294,23 @@ class BatchExecOverAggregate(
         generator.withConstants(constants).generateAggsHandler(
           "BoundedOverAggregateHelper", aggInfoList)
       }.toArray
-      LOG.info(
-        this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
       val operator = new OverWindowOperator(aggHandlers, needResets, generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
         outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
       tableEnv.getRUKeeper().addTransformation(this, transformation)
-      transformation.setResources(reservedResSpec, preferResSpec)
+      transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
       transformation
     } else {
       val windowFrames = createOverWindowFrames(tableEnv, inputRowType)
       val operator = new BufferDataOverWindowOperator(
-        (BatchExecResourceUtil.getManagedMemory(reservedResSpec) *
-            BatchExecResourceUtil.SIZE_IN_MB).toInt,
+        (resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB).toInt,
         windowFrames,
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
         outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]], resultPartitionCount)
       transformation.setParallelismLocked(true)
       tableEnv.getRUKeeper().addTransformation(this, transformation)
-      transformation.setResources(reservedResSpec, preferResSpec)
+      transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
       transformation
     }
   }

@@ -118,9 +118,8 @@ class BatchExecLocalHashWindowAggregate(
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val generatedOperator = codegen(ctx, tableEnv,
       DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType], outputRowType,
-      groupBufferLimitSize,
-      BatchExecResourceUtil.getManagedMemory(reservedResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
-      BatchExecResourceUtil.getManagedMemory(preferResSpec) * BatchExecResourceUtil.SIZE_IN_MB,
+      groupBufferLimitSize, resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB,
+      resource.getMaxManagedMem * BatchExecResourceUtil.SIZE_IN_MB,
       windowStart, windowSize, slideSize)
 
     val operator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
@@ -133,11 +132,9 @@ class BatchExecLocalHashWindowAggregate(
       operator,
       DataTypes.toTypeInfo(outputRowType).asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)
-    LOG.info(
-      this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
 

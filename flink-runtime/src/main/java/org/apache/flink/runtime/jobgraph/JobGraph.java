@@ -433,6 +433,14 @@ public class JobGraph implements Serializable {
 		return consumerVertices;
 	}
 
+	public JobVertexID getResultProducerID(IntermediateDataSetID resultID) {
+		IntermediateDataSet result = results.get(resultID);
+		if (result == null) {
+			throw new IllegalArgumentException("Cannot find the given result " + resultID + " in job graph");
+		}
+		return result.getProducer().getID();
+	}
+
 	// --------------------------------------------------------------------------------------------
 	//  Topological Graph Access
 	// --------------------------------------------------------------------------------------------

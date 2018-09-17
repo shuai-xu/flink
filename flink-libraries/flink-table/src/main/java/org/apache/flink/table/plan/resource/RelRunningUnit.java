@@ -18,46 +18,43 @@
 
 package org.apache.flink.table.plan.resource;
 
+import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
- * RelRunningUnit contains some batchExecRel that run at the same time.
+ * RelRunningUnit contains some batchExecRelStages that run at the same time. It can be considered
+ * as schedule unit.
  */
 public class RelRunningUnit implements Serializable {
-	private final List<ShuffleStageInRunningUnit> shuffleStageInRUs = new ArrayList<>();
 
-	public ShuffleStageInRunningUnit newShuffleStageInRU() {
-		ShuffleStageInRunningUnit shuffleStageInRU = new ShuffleStageInRunningUnit(this);
-		shuffleStageInRUs.add(shuffleStageInRU);
-		return shuffleStageInRU;
+	private final List<BatchExecRelStage> relStageList = new LinkedList<>();
+	private transient Set<RowBatchExecRel> relSet = new LinkedHashSet<>();
+
+	public void addRelStage(BatchExecRelStage relStage) {
+		this.relStageList.add(relStage);
+		this.relSet.add(relStage.getBatchExecRel());
 	}
 
-	public List<ShuffleStageInRunningUnit> getShuffleStagesInRunningUnit() {
-		return shuffleStageInRUs;
-	}
-
-	public List<BatchExecRelStage> getAllRelStages() {
-		List<BatchExecRelStage> stages = new LinkedList<>();
-		for (ShuffleStageInRunningUnit shuffleStageInRU : shuffleStageInRUs) {
-			stages.addAll(shuffleStageInRU.getRelStages());
-		}
-		return stages;
+	public Set<RowBatchExecRel> getRelSet() {
+		return relSet;
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("RelRunningUnit{");
-		for (ShuffleStageInRunningUnit shuffleStageInRU : shuffleStageInRUs) {
-			sb.append("\n\t").append("shuffleStage:[");
-			for (BatchExecRelStage stage : shuffleStageInRU.getRelStages()) {
-				sb.append("\n\t\t").append(stage);
-			}
-			sb.append("\n\t]");
+		for (BatchExecRelStage relStage : relStageList) {
+			sb.append("\n\t").append(relStage);
 		}
 		sb.append("\n}");
 		return sb.toString();
+	}
+
+	public List<BatchExecRelStage> getAllRelStages() {
+		return relStageList;
 	}
 }

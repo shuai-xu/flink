@@ -43,7 +43,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
   @Test
   def testAdjustAccordingToFewCPU(): Unit = {
     setAdjustResource(util, 100, Long.MaxValue)
-      testResource(util)
+    testResource(util)
   }
 
   @Test
@@ -54,7 +54,7 @@ class BatchExecResourceAdjustTest extends TableTestBatchExecBase {
 
   @Test
   def testAdjustAccordingToFewMem(): Unit = {
-    setAdjustResource(util, 100, 60000)
+    setAdjustResource(util, 100, 80000)
     testResource(util)
   }
 

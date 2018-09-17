@@ -23,33 +23,21 @@ limitations under the License.
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=0, dependStageIDList=[])])
-		relStage（batchExecRel=Calc(select: (b)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildRight), stageID=1, depend type: PRIORITY =[batchExecRel=HashJoin(where: (a = d), buildRight), stageID=0;]
+	relStage（batchExecRel=Calc(select: (b)), stageID=0
+	relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=1, dependStageIDList=[relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0;]
+	relStage（batchExecRel=GlobalSortAggregate, stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=GlobalSortAggregate, stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])])
-	]
+	relStage（batchExecRel=GlobalSortAggregate, stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalSortAggregate, stageID=0;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -75,27 +63,19 @@ WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1),), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0
+	relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1),), stageID=0
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0, dependStageIDList=[])])
-		relStage（batchExecRel=Calc(where: (a > 1), select: (c, a, b)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=Calc(select: (c, a, b, CAST(a) AS a0)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=1, dependStageIDList=[relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0, dependStageIDList=[])])
-		relStage（batchExecRel=Calc(select: (c, a, b, c0, a1, b0)), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0;]
+	relStage（batchExecRel=Calc(where: (a > 1), select: (c, a, b)), stageID=0
+	relStage（batchExecRel=Calc(select: (c, a, b, CAST(a) AS a0)), stageID=0
+	relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0
+}
+RelRunningUnit{
+	relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=1, depend type: PRIORITY =[batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0;], depend type: DATA_TRIGGER =[batchExecRel=Calc(select: (c, a, b, CAST(a) AS a0)), stageID=0;]
+	relStage（batchExecRel=Calc(select: (c, a, b, c0, a1, b0)), stageID=0
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -121,25 +101,15 @@ Calc(select=[c, a, b, c0, a1, b0])
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])
-	]
+	relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, depend type: PRIORITY =[batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0;]
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=2, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])])
-	]
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=2, depend type: DATA_TRIGGER =[batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -162,34 +132,20 @@ SELECT t1.*, t2.* FROM t t1, t t2 WHERE t1.b = t2.e AND t1.a < 10 AND t2.a > 5
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=Calc(where: (a < 10), select: (a, b)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=Calc(where: (a > 5), select: (a, b)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0
+	relStage（batchExecRel=Calc(where: (a < 10), select: (a, b)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0
+	relStage（batchExecRel=Calc(where: (a > 5), select: (a, b)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d, e]]], fields:(d, e)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0, dependStageIDList=[])])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=1, dependStageIDList=[relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=0, dependStageIDList=[])])
-	]
+	relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d, e]]], fields:(d, e)), stageID=0
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, depend type: PRIORITY =[batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0;]
+	relStage（batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1, depend type: PRIORITY =[batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=0;]
+	relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=0
+}
+RelRunningUnit{
+	relStage（batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=1, depend type: PRIORITY =[batchExecRel=HashJoin(where: (b = e0), buildLeft), stageID=0;], depend type: DATA_TRIGGER =[batchExecRel=HashJoin(where: (a = d), buildLeft), stageID=1;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -218,40 +174,24 @@ HashJoin(where=[=(b, e0)], join=[a, b, d, e, a0, b0, d0, e0], joinType=[InnerJoi
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b]]], fields:(a, b)), stageID=0
+	relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=1, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[y, source: [selectedFields=[d]]], fields:(d)), stageID=0
+	relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=1
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=2, dependStageIDList=[relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=0, dependStageIDList=[]), relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=1, dependStageIDList=[])])
-		relStage（batchExecRel=Calc(select: (b)), stageID=0, dependStageIDList=[])
-		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=SortMergeJoin(where: (a = d)), stageID=2, depend type: DATA_TRIGGER =[batchExecRel=SortMergeJoin(where: (a = d)), stageID=0;batchExecRel=SortMergeJoin(where: (a = d)), stageID=1;]
+	relStage（batchExecRel=Calc(select: (b)), stageID=0
+	relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=1, dependStageIDList=[relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0, dependStageIDList=[])])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=LocalSortAggregate(select:(Partial_SUM(b) AS sum$0),), stageID=0;]
+	relStage（batchExecRel=GlobalSortAggregate, stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=GlobalSortAggregate, stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalSortAggregate, stageID=0, dependStageIDList=[])])
-	]
+	relStage（batchExecRel=GlobalSortAggregate, stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalSortAggregate, stageID=0;]
 }]]>
     </Resource>
     <Resource name="planAfter">
@@ -268,6 +208,39 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testUnionAllWithExternalShuffle">
+    <Resource name="sql">
+      <![CDATA[SELECT sum(a) FROM (SELECT a, c FROM x UNION ALL (SELECT a, c FROM z))GROUP BY c]]>
+    </Resource>
+    <Resource name="runningUnit">
+      <![CDATA[
+RelRunningUnit{
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0
+	relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0
+}
+RelRunningUnit{
+	relStage（batchExecRel=Scan(table:[z, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0
+	relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0
+}
+RelRunningUnit{
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0;]
+	relStage（batchExecRel=Calc(select: (EXPR$0)), stageID=0
+}]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[EXPR$0])
++- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS EXPR$0])
+   +- Exchange(distribution=[hash[c]])
+      +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
+         +- Union(all=[true], union=[a, c])
+            :- TableSourceScan(table=[[x, source: [selectedFields=[a, c]]]], fields=[a, c])
+            +- TableSourceScan(table=[[z, source: [selectedFields=[a, c]]]], fields=[a, c])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testUnionAll">
     <Resource name="sql">
       <![CDATA[SELECT sum(a) FROM (SELECT a, c FROM x UNION ALL (SELECT a, c FROM z))GROUP BY c]]>
@@ -275,32 +248,18 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
     <Resource name="runningUnit">
       <![CDATA[
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0
+	relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=Scan(table:[z, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0, dependStageIDList=[])
-	]
-	shuffleStage:[
-		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=Scan(table:[z, source: [selectedFields=[a, c]]], fields:(a, c)), stageID=0
+	relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0),), stageID=0
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0
 }
 RelRunningUnit{
-	shuffleStage:[
-		relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=1, dependStageIDList=[relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0, dependStageIDList=[])])
-		relStage（batchExecRel=Calc(select: (EXPR$0)), stageID=0, dependStageIDList=[])
-	]
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS EXPR$0),), stageID=0;]
+	relStage（batchExecRel=Calc(select: (EXPR$0)), stageID=0
 }]]>
     </Resource>
     <Resource name="planAfter">

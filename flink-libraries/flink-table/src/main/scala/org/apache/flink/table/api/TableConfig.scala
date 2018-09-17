@@ -495,6 +495,12 @@ object TableConfig {
   val SQL_EXEC_SOURCE_MEM = "sql.exec.source.default-memory-mb"
   val SQL_EXEC_SOURCE_MEM_DEFAULT = 128
 
+  /**
+    * Sets source parallelism if [[SQL_EXEC_INFER_RESOURCE_MODE]] is NONE. If it is not set,
+    * use [[SQL_EXEC_DEFAULT_PARALLELISM]] to set source parallelism.
+    */
+  val SQL_EXEC_SOURCE_PARALLELISM = "sql.exec.source.parallelism"
+
   // =================================== resource ================================
 
   /**
@@ -506,8 +512,6 @@ object TableConfig {
     */
   val SQL_EXEC_INFER_RESOURCE_MODE= "sql.exec.infer-resource.mode"
   val SQL_EXEC_INFER_RESOURCE_MODE_DEFAULT = "NONE"
-
-  // NONE infer mode
 
   /**
     * Default parallelism of the job. If any node do not have special
@@ -527,6 +531,7 @@ object TableConfig {
     * Default heap memory size for each operator.
     */
   val SQL_EXEC_DEFAULT_MEM = "sql.exec.default-memory-mb"
+  val SQL_EXEC_DEFAULT_MEM_DEFAULT = 64
 
   // infer parallelism and memory
 
@@ -862,13 +867,6 @@ object TableConfig {
   val SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO =
     "sql.runtime-filter.builder.push-down.max.ratio"
   val SQL_RUNTIME_FILTER_BUILDER_PUSH_DOWN_MAX_RATIO_DEFAULT = 1.2
-
-  /**
-   * Sets the number of per-requested buffers when the operator allocates much more segments
-   * from the floating memory pool.
-   */
-  val SQL_EXEC_PER_REQUEST_MEM = "sql.exec.per-request.mem-mb"
-  val SQL_EXEC_PER_REQUEST_MEM_DEFAULT = 32
 
   /**
     * Parquet block size in bytes, this value would be set as parquet.block.size and dfs.blocksize

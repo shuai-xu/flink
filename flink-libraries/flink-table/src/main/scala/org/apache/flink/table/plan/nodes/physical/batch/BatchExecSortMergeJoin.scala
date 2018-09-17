@@ -182,21 +182,21 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       0.5d
     }
 
-    val totalReservedSortMemory = (BatchExecResourceUtil.getManagedMemory(reservedResSpec) -
-        externalBufferMemory * getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
+    val totalReservedSortMemory = (resource.getReservedManagedMem - externalBufferMemory *
+        getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
 
-    val totalPreferSortMemory = (BatchExecResourceUtil.getManagedMemory(preferResSpec) -
-        externalBufferMemory * getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
+    val totalMaxSortMemory = (resource.getMaxManagedMem - externalBufferMemory *
+        getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
 
     val sortReservedMemorySize1 = calcSortMemory(leftRatio, totalReservedSortMemory)
 
-    val preferManagedMemorySize1 = calcSortMemory(leftRatio, totalPreferSortMemory)
+    val preferManagedMemorySize1 = calcSortMemory(leftRatio, totalMaxSortMemory)
 
     // sort code gen
     val operator = new SortMergeJoinOperator(
       sortReservedMemorySize1, preferManagedMemorySize1,
       totalReservedSortMemory - sortReservedMemorySize1,
-      totalPreferSortMemory - preferManagedMemorySize1,
+      totalMaxSortMemory - preferManagedMemorySize1,
       perRequestSize, externalBufferMemorySize,
       flinkJoinType, getRelNodeSize(getLeft) < getRelNodeSize(getRight), condFunc,
       ProjectionCodeGenerator.generateProjection(
@@ -208,9 +208,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       newGeneratedSorter(leftAllKey.indices.toArray, keyType),
       filterNulls)
 
-    LOG.info(
-      this + " the reserved: " + reservedResSpec + ", and the preferred: " + preferResSpec + ".")
-
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftInput,
       rightInput,
@@ -220,8 +217,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       resultPartitionCount)
     transformation.setParallelismLocked(true)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-    tableEnv.getRUKeeper().setRelID(this, transformation.getId)
-    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
 

@@ -294,7 +294,7 @@ class BatchExecRank(
       outputType.asInstanceOf[TypeInformation[BaseRow]],
       resultPartitionCount)
     tableEnv.getRUKeeper().addTransformation(this, transformation)
-    transformation.setResources(reservedResSpec, preferResSpec)
+    transformation.setResources(resource.getReservedResourceSpec, resource.getPreferResourceSpec)
     transformation
   }
 

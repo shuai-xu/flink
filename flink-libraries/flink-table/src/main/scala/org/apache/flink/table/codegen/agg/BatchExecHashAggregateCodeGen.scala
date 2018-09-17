@@ -61,7 +61,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       ctx: CodeGeneratorContext,
       config: TableConfig,
       reservedManagedMemory: Long,
-      preferredManagedMemory: Long,
+      maxManagedMemory: Long,
       groupKeyTypesTerm: String,
       aggBufferTypesTerm: String,
       aggregateMapTerm: String): Unit = {
@@ -77,7 +77,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
         s"this.getContainingTask()," +
         s"this.getContainingTask().getEnvironment().getMemoryManager()," +
         s"${reservedManagedMemory}L," +
-        s"${preferredManagedMemory}L," +
+        s"${maxManagedMemory}L," +
         s"${perRequestSize}L," +
         s" $groupKeyTypesTerm," +
         s" $aggBufferTypesTerm);")

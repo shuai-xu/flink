@@ -72,7 +72,7 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 
 	private void calculateNoManagedMem(RowBatchExecRel batchExecRel) {
 		visitChildren(batchExecRel);
-		relResMap.get(batchExecRel).setManagedMem(0, 0);
+		relResMap.get(batchExecRel).setManagedMem(0, 0, 0);
 	}
 
 	@Override
@@ -131,14 +131,14 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		visitChildren(hashAgg);
 		int	reservedMem = BatchExecResourceUtil.getHashAggManagedMemory(tConfig);
 		int	preferMem = BatchExecResourceUtil.getHashAggManagedPreferredMemory(tConfig);
-		relResMap.get(hashAgg).setManagedMem(reservedMem, preferMem);
+		relResMap.get(hashAgg).setManagedMem(reservedMem, preferMem, preferMem);
 	}
 
 	private void calculateHashWindowAgg(BatchExecHashWindowAggregateBase hashWindowAgg) {
 		visitChildren(hashWindowAgg);
 		int reservedMem = BatchExecResourceUtil.getHashAggManagedMemory(tConfig);
 		int preferMem = BatchExecResourceUtil.getHashAggManagedPreferredMemory(tConfig);
-		relResMap.get(hashWindowAgg).setManagedMem(reservedMem, preferMem);
+		relResMap.get(hashWindowAgg).setManagedMem(reservedMem, preferMem, preferMem);
 	}
 
 	@Override
@@ -158,7 +158,7 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		visitChildren(hashJoin);
 		int reservedMem = BatchExecResourceUtil.getHashJoinTableManagedMemory(tConfig);
 		int preferMem = BatchExecResourceUtil.getHashJoinTableManagedPreferredMemory(tConfig);
-		relResMap.get(hashJoin).setManagedMem(reservedMem, preferMem);
+		relResMap.get(hashJoin).setManagedMem(reservedMem, preferMem, preferMem);
 		return null;
 	}
 
@@ -172,7 +172,7 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		int preferSortMemory = BatchExecResourceUtil.getSortBufferManagedPreferredMemory(
 				tConfig);
 		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory);
+		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, preferMemory);
 		return null;
 	}
 
@@ -183,7 +183,7 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		} else {
 			visitChildren(nestedLoopJoin);
 			int externalBufferMemoryMb = BatchExecResourceUtil.getExternalBufferManagedMemory(tConfig);
-			relResMap.get(nestedLoopJoin).setManagedMem(externalBufferMemoryMb, externalBufferMemoryMb);
+			relResMap.get(nestedLoopJoin).setManagedMem(externalBufferMemoryMb, externalBufferMemoryMb, externalBufferMemoryMb);
 		}
 		return null;
 	}
@@ -239,7 +239,7 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		} else {
 			visitChildren(overWindowAgg);
 			int externalBufferMemory = BatchExecResourceUtil.getExternalBufferManagedMemory(tConfig);
-			relResMap.get(overWindowAgg).setManagedMem(externalBufferMemory, externalBufferMemory);
+			relResMap.get(overWindowAgg).setManagedMem(externalBufferMemory, externalBufferMemory, externalBufferMemory);
 		}
 		return null;
 	}
@@ -255,7 +255,7 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		visitChildren(sort);
 		int reservedMemory = BatchExecResourceUtil.getSortBufferManagedMemory(tConfig);
 		int preferMemory = BatchExecResourceUtil.getSortBufferManagedPreferredMemory(tConfig);
-		relResMap.get(sort).setManagedMem(reservedMemory, preferMemory);
+		relResMap.get(sort).setManagedMem(reservedMemory, preferMemory, preferMemory);
 		return null;
 	}
 
