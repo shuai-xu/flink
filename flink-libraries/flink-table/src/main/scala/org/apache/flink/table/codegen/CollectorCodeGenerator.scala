@@ -186,9 +186,9 @@ object CollectorCodeGenerator {
         }
 
         @Override
-        public void collect(java.util.Collection records) throws Exception {
+        public void complete(java.util.Collection records) throws Exception {
           if (records == null || records.size() == 0) {
-            getCollector().collect(java.util.Collections.emptyList());
+            getCollector().complete(java.util.Collections.emptyList());
             return;
           }
           try {
@@ -198,7 +198,7 @@ object CollectorCodeGenerator {
             ${unboxingCodeSplit.callings.mkString("\n")}
             $bodyCode
           } catch (Exception e) {
-            getCollector().collect(e);
+            getCollector().completeExceptionally(e);
           }
         }
 

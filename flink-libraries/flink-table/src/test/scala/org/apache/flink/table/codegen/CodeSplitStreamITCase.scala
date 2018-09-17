@@ -18,14 +18,25 @@
 
 package org.apache.flink.table.codegen
 
+
+import java.util
+import java.util.Collections
+
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.expressions.utils.{Func18, RichFunc2}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
+import org.apache.flink.table.runtime.stream.sql.{TestAsyncDoubleKeyFetcher, TestAsyncSingleKeyFetcher, TestDoubleKeyFetcher, TestSingleKeyFetcher}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, WeightedAvg}
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamTestSink, TestingAppendSink, UserDefinedFunctionTestUtils}
+import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{PojoTableFunc, TableFunc0}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
@@ -219,4 +230,86 @@ class CodeSplitStreamITCase {
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+  @Test
+  def testAsyncLeftJoinTemporalTable(): Unit = {
+    val data = List(
+      (1, 12, "Julian"),
+      (2, 15, "Hello"),
+      (3, 15, "Fabian"),
+      (8, 11, "Hello world"),
+      (9, 12, "Hello world!"))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new AsyncDimensionTableSource
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, D.name, D.age FROM T LEFT JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian,11",
+      "2,15,Jark,22",
+      "3,15,Fabian,33",
+      "8,11,null,null",
+      "9,12,null,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+}
+
+class AsyncDimensionTableSource extends DimensionTableSource[BaseRow] {
+  var fetcher: TestDoubleKeyFetcher = null
+  var asyncFetcher: TestAsyncDoubleKeyFetcher = null
+
+  override def getReturnType: DataType =
+    DataTypes.internal(
+      new BaseRowTypeInfo(
+        classOf[GenericRow],
+        Array(Types.INT, Types.INT, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],
+        Array( "age", "id", "name")))
+
+  override def getLookupFunction(index: IndexKey): TestDoubleKeyFetcher = {
+    fetcher = new TestSingleKeyFetcher(0)
+    fetcher
+  }
+
+  override def isTemporal: Boolean = true
+
+  override def isAsync: Boolean = true
+
+  override def getAsyncConfig: AsyncConfig = {
+    val conf = new AsyncConfig
+    conf.setTimeoutMs(10000)
+    conf
+  }
+
+  override def getAsyncLookupFunction(index: IndexKey): TestAsyncDoubleKeyFetcher = {
+    asyncFetcher = new TestAsyncSingleKeyFetcher(0)
+    asyncFetcher
+  }
+
+  override def getIndexes: util.Collection[IndexKey] = {
+    Collections.singleton(IndexKey.of(true, 1)) // primary key(id)
+  }
+
+  def getFetcherResourceCount(): Int = {
+    if (isAsync && null != asyncFetcher) {
+      asyncFetcher.resourceCounter
+    } else if (null != fetcher) {
+      fetcher.resourceCounter
+    } else {
+      0
+    }
+  }
 }
