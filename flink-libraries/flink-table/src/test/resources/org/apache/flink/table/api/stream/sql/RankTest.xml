@@ -203,24 +203,22 @@ StreamExecCalc(retract=[false], accMode=[Acc])
   <TestCase name="testTopNForVariableSize">
     <Resource name="plan">
       <![CDATA[
-StreamExecCalc(select=[a, b, $2 AS c, w0$o0 AS rank_num])
-  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$2 DESC], rankRange=[rankEnd=a], strategy=[UpdateFastRank[0]], select=[*, rowNum])
-    StreamExecExchange(distribution=[hash[b]])
-      StreamExecCalc(select=[b, a, add(max_c) AS $2])
-        StreamExecGroupAggregate(groupBy=[b], select=[b, MAX(a) AS a, MAX(c) AS max_c])
-          StreamExecExchange(distribution=[hash[b]])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankEnd=a], strategy=[UpdateFastRank[1]], select=[*, rowNum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecCalc(select=[a, b, add(max_c) AS c])
+      StreamExecGroupAggregate(groupBy=[b], select=[b, MAX(a) AS a, MAX(c) AS max_c])
+        StreamExecExchange(distribution=[hash[b]])
+          StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
       <![CDATA[
-StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecRank(retract=[false], accMode=[Acc])
-    StreamExecExchange(retract=[false], accMode=[Acc])
-      StreamExecCalc(retract=[false], accMode=[Acc])
-        StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-          StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecCalc(retract=[false], accMode=[Acc])
+      StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+        StreamExecExchange(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

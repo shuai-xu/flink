@@ -253,6 +253,9 @@ object FlinkStreamExecRuleSets {
         REDUCE_EXPRESSION_RULES.asScala ++
         List(
           StreamExecLogicalWindowAggregateRule.INSTANCE,
+          // slices a project into sections which contain window agg functions
+          // and sections which do not.
+          ProjectToWindowRule.PROJECT,
           WindowPropertiesRule.INSTANCE,
           WindowPropertiesHavingRule.INSTANCE,
           //ensure union set operator have the same row type
@@ -264,8 +267,6 @@ object FlinkStreamExecRuleSets {
       ).asJava)
 
   val STREAM_EXEC_WINDOW_RULES: RuleSet = RuleSets.ofList(
-    // slices a project into sections which contain window agg functions and sections which do not.
-    ProjectToWindowRule.PROJECT,
     // Transform window to LogicalWindowAggregate
     WindowPropertiesRule.INSTANCE,
     WindowPropertiesHavingRule.INSTANCE

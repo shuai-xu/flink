@@ -317,46 +317,6 @@ class RankTest extends TableTestBase {
 
   @Test
   def testTopNForVariableSize(): Unit = {
-    /**
-      * TODO optimize in future(current plan has one more StreamExecCalc after StreamExecRank though
-      * it's a coincidence result in old optimization planner).
-      * ProjectToWindowRule.PROJECT will convert a LogicalProject(which contains over aggregate) to
-      * several new proper RelNodes and the new possible top LogicalProject's RowType follows to its
-      * previous input ordinals.
-      *
-      * RelNode tree transformation details see below:
-      *
-      * ==== currently using FlinkStreamExecRuleSets ====
-      * ------ stage: before window -----
-      * LogicalFilter(condition[<=($3, $0)])
-      * +- LogicalProject(a=[$1], b=[$0], c=[add($2)], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0
-      *     ORDER BY add($2) DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      *    +- LogicalAggregate(group=[{0}], a=[MAX($1)], max_c=[MAX($2)])
-      *       +- LogicalProject(b=[$1], a=[$0], c=[$2])
-      *          +- LogicalTableScan(table=[_DataStreamTable_0])
-      *
-      * --- stage: window ------
-      * LogicalFilter(condition=[<=($3, $0)])
-      * +- LogicalProject(a=[$1], b=[$0], c=[$2], rank_num=[$3])
-      *    +- LogicalWindow(window#0=[window(partition {0} order by [2 DESC] rows between UNBOUNDED
-      *         PRECEDING and CURRENT ROW aggs [ROW_NUMBER()])])
-      *       +- LogicalProject(b=[$0], a=[$1], $2=[add($2)])
-      *          +- LogicalAggregate(group=[{0}], a=[MAX($1)], max_c=[MAX($2)])
-      *             +- LogicalProject(b=[$1], a=[$0], c=[$2])
-      *                +- LogicalTableScan(table=[_DataStreamTable_0])
-      *
-      * ==== previously using FlinkRuleSets ====
-      * --- state: before normalize (without project merge rules) ---
-      * LogicalProject(a[$0], b=[$1], c=[$2], rank_num=[$3])
-      * +- LogicalFilter(condition=[<=($3, $0)])
-      *    +- LogicalProject(a=[$0], b=[$1], c=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $1
-      *         ORDER BY $2 DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      *       +- LogicalProject(a=[$0], b=[$1], c=[add($2)])
-      *          +- LogicalProject(a=[$1], b=[$0], max_c=[$2])
-      *             +- LogicalAggregate(group=[{0}], a=[MAX($1)], max_c=[MAX($2)])
-      *                +- LogicalProject(b=[$1], a=[$0], c=[$2])
-      *           +- LogicalTableScan(table=[_DataStreamTable_0])
-      */
     val subquery =
       """
         |SELECT a, b, add(max_c) as c
