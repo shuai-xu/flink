@@ -356,4 +356,15 @@ class CorrelateTest extends TableTestBase {
       "MyTable), LATERAL TABLE(parser(a)) AS T(name, len)"
     util.verifyPlan(sqlQuery)
   }
+
+  @Test
+  def testCountStarOnCorrelate(): Unit = {
+    val util = streamTestUtil()
+    util.addTable[(Array[Byte])]("MyTable", 'a)
+    val function = new TableFunc5
+    util.addFunction("parser", function)
+
+    val sqlQuery = "SELECT count(*) FROM MyTable, LATERAL TABLE(parser(a)) AS T(name, len)"
+    util.verifyPlan(sqlQuery)
+  }
 }

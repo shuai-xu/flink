@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.sources;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.table.types.DataType;
 
@@ -105,7 +106,19 @@ public class IndexKey implements Comparable<IndexKey>, Serializable {
 	}
 
 	/**
-	 * Returns column indexes list in defined order.
+	 * Returns column indexes(zero-based) in defined order of Index clause NOT column list.
+	 * For example: a table Person has an Index(FirstName, LastName)
+	 * <pre>
+	 * CREATE TABLE Person (
+	 *  ID bigint,
+	 *  LastName varchar,
+	 *  FirstName varchar,
+	 *  Nick varchar,
+	 *  Age int,
+	 *  INDEX(FirstName, LastName)
+	 *  )
+	 * </pre>
+	 * Then this method will return List(2, 1)
 	 */
 	public List<Integer> getDefinedColumns() {
 		return definedColumns;
@@ -124,6 +137,7 @@ public class IndexKey implements Comparable<IndexKey>, Serializable {
 	 *
 	 * @return Array of unique key
 	 */
+	@Internal
 	public int[] toArray() {
 		final int[] integers = new int[columnSet.cardinality()];
 		int j = 0;

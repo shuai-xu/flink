@@ -231,4 +231,15 @@ StreamExecCalc(select=[_1 AS name, _2 AS len, b])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testCountStarOnCorrelate">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGroupAggregate(select=[COUNT(*) AS EXPR$0])
+  StreamExecExchange(distribution=[single])
+    StreamExecCalc(select=[0 AS $f0])
+      StreamExecCorrelate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_2], rowType=[RecordType(INTEGER _2)], joinType=[INNER])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
 </Root>

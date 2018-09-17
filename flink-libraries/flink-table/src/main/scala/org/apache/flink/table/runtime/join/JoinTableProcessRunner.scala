@@ -107,9 +107,13 @@ class JoinTableProcessRunner(
 
     def fillKeyRow(in: BaseRow): Unit = {
       for (i <- inRowSrcIdx.indices) {
-        keysRow.update(
-          keysRowTargetIdx(i),
-          in.get(inRowSrcIdx(i), leftKeyTypes(i)))
+        val srcIdx = inRowSrcIdx(i)
+        val key = if (in.isNullAt(srcIdx)) {
+          null
+        } else {
+          in.get(srcIdx, leftKeyTypes(i))
+        }
+        keysRow.update(keysRowTargetIdx(i), key)
       }
     }
     // fill left keys to keyRow

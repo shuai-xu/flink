@@ -105,9 +105,13 @@ class JoinTableAsyncRunner(
 
     def fillKeyRow(in: BaseRow, keyRow: GenericRow): Unit = {
       for (i <- inRowSrcIdx.indices) {
-        keyRow.update(
-          keysRowTargetIdx(i),
-          in.get(inRowSrcIdx(i), leftKeyTypes(i)))
+        val srcIdx = inRowSrcIdx(i)
+        val key = if (in.isNullAt(srcIdx)) {
+          null
+        } else {
+          in.get(srcIdx, leftKeyTypes(i))
+        }
+        keyRow.update(keysRowTargetIdx(i), key)
       }
     }
     // fill left keys to new keyRow instance because reuse it is not definitely safe here

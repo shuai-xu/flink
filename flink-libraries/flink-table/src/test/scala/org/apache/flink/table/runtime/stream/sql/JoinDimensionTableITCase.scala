@@ -17,13 +17,15 @@
  */
 package org.apache.flink.table.runtime.stream.sql
 
+import java.lang.{Integer => JInt}
 import java.util
 import java.util.Collections
 import java.util.concurrent.{CompletableFuture, ExecutorService, Executors}
 import java.util.function.{Consumer, Supplier}
 
 import org.apache.flink.api.common.functions.RichFlatMapFunction
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
@@ -51,6 +53,12 @@ class JoinDimensionTableITCase extends AbstractTestBase {
     (8, 11, "Hello world"),
     (9, 12, "Hello world!"))
 
+  val dataWithNull = List(
+    Row.of(null, new JInt(15), "Hello"),
+    Row.of(new JInt(3), new JInt(15), "Fabian"),
+    Row.of(null, new JInt(11), "Hello world"),
+    Row.of(new JInt(9), new JInt(12), "Hello world!"))
+
   @Test
   def testJoinTemporalTable(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -74,6 +82,35 @@ class JoinDimensionTableITCase extends AbstractTestBase {
       "1,12,Julian,Julian",
       "2,15,Hello,Jark",
       "3,15,Fabian,Fabian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testJoinTemporalTableOnNullableKey(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.STRING_TYPE_INFO)
+    val stream = env.fromCollection(dataWithNull)
+
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, D.name FROM T JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id"
+
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, dim.getFetcherResourceCount())
   }
@@ -345,6 +382,37 @@ class JoinDimensionTableITCase extends AbstractTestBase {
     assertEquals(0, dim.getFetcherResourceCount())
   }
 
+  @Test
+  def testLeftJoinTemporalTableOnNullableKey(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.STRING_TYPE_INFO)
+    val stream = env.fromCollection(dataWithNull)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, D.name FROM T LEFT OUTER JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id"
+
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "null,15,null",
+      "3,15,Fabian",
+      "null,11,null",
+      "9,12,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
   @Test
   def testLeftJoinTemporalTableOnMultKeyFields(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -704,10 +772,12 @@ object TestMod extends ScalarFunction {
 class TestSingleKeyFetcher(idIndex: Int) extends TestDoubleKeyFetcher(idIndex, 1) {
 
   override def flatMap(keysRow: BaseRow, collector: Collector[BaseRow]): Unit = {
-    val key = keysRow.getInt(idIndex)
-    val value = TestTable.singleKeyTable.get(key)
-    if (value.isDefined) {
-      collect(value.get._1, value.get._2, value.get._3, collector)
+    if (!keysRow.isNullAt(idIndex)) {
+      val key = keysRow.getInt(idIndex)
+      val value = TestTable.singleKeyTable.get(key)
+      if (value.isDefined) {
+        collect(value.get._1, value.get._2, value.get._3, collector)
+      }
     }
     //else null
   }
@@ -731,10 +801,12 @@ class TestDoubleKeyFetcher(idIndex: Int, nameIndex: Int)
   }
 
   override def flatMap(keysRow: BaseRow, collector: Collector[BaseRow]): Unit = {
-    val key = (keysRow.getInt(idIndex), keysRow.getString(nameIndex))
-    val value = TestTable.doubleKeyTable.get(key)
-    if (value.isDefined) {
-      collect(value.get._1, value.get._2, value.get._3, collector)
+    if (!keysRow.isNullAt(idIndex) && !keysRow.isNullAt(nameIndex)) {
+      val key: (Int, String) = (keysRow.getInt(idIndex), keysRow.getString(nameIndex))
+      val value = TestTable.doubleKeyTable.get(key)
+      if (value.isDefined) {
+        collect(value.get._1, value.get._2, value.get._3, collector)
+      }
     }
     //else null
   }
@@ -765,10 +837,14 @@ class TestAsyncSingleKeyFetcher(leftKeyIdx: Int) extends TestAsyncDoubleKeyFetch
 
   class RowSupplier(val keysRow: BaseRow) extends Supplier[BaseRow] {
     override def get(): BaseRow = {
-      val key = keysRow.getInt(leftKeyIdx)
-      val value = TestTable.singleKeyTable.get(key)
-      if (value.isDefined) {
-        collect(value.get._1, value.get._2, value.get._3)
+      if (!keysRow.isNullAt(leftKeyIdx)) {
+       val key: Int =  keysRow.getInt(leftKeyIdx)
+        val value = TestTable.singleKeyTable.get(key)
+        if (value.isDefined) {
+          collect(value.get._1, value.get._2, value.get._3)
+        } else {
+          null
+        }
       } else {
         null
       }
@@ -825,10 +901,14 @@ class TestAsyncDoubleKeyFetcher(leftKeyIdx: Int, nameKeyIdx: Int)
 
   class RowSupplier(val keysRow: BaseRow) extends Supplier[BaseRow] {
     override def get(): BaseRow = {
-      val key = (keysRow.getInt(leftKeyIdx), keysRow.getString(nameKeyIdx))
-      val value = TestTable.doubleKeyTable.get(key)
-      if (value.isDefined) {
-        collect(value.get._1, value.get._2, value.get._3)
+      if (!keysRow.isNullAt(leftKeyIdx) && !keysRow.isNullAt(nameKeyIdx)) {
+        val key: (Int, String) = (keysRow.getInt(leftKeyIdx), keysRow.getString(nameKeyIdx))
+        val value = TestTable.doubleKeyTable.get(key)
+        if (value.isDefined) {
+          collect(value.get._1, value.get._2, value.get._3)
+        } else {
+          null
+        }
       } else {
         null
       }

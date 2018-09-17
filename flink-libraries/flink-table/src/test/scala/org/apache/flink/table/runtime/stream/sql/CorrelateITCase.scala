@@ -22,7 +22,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.runtime.functions.tablefunctions.StringSplit
-import org.apache.flink.table.runtime.utils.{TestingAppendSink, TestingAppendTableSink}
+import org.apache.flink.table.runtime.utils.{TestingAppendSink, TestingAppendTableSink, TestingUpsertSink, TestingUpsertTableSink}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -302,5 +302,51 @@ class CorrelateITCase {
 
     val expected = List("2,null", "3,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testCountStarOnCorrelate(): Unit = {
+    val data = List(
+      (1, 2, "3018-06-10|2018-06-03"),
+      (1, 2, "2018-06-01"),
+      (1, 2, "2018-06-02"))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("T1", t1)
+
+    val sql = "SELECT count(*) FROM T1, lateral table(STRING_SPLIT(c, '|')) as T(v)"
+
+    val sink = new TestingUpsertTableSink(Array(0))
+    tEnv.sqlQuery(sql).writeToSink(sink)
+    env.execute()
+
+    val expected = List("1", "2", "3", "4")
+    assertEquals(expected.sorted, sink.getUpsertResults.sorted)
+  }
+
+  @Test
+  def testCountStarOnLeftCorrelate(): Unit = {
+    val data = List(
+      (1, 2, ""),
+      (1, 3, ""))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("T1", t1)
+
+    val sql = "SELECT count(*) FROM T1 left join lateral table(STRING_SPLIT(c, '|')) as T(v) on " +
+      "true"
+
+    val sink = new TestingUpsertTableSink(Array(0))
+    tEnv.sqlQuery(sql).writeToSink(sink)
+    env.execute()
+
+    val expected = List("1", "2")
+    assertEquals(expected.sorted, sink.getUpsertResults.sorted)
   }
 }

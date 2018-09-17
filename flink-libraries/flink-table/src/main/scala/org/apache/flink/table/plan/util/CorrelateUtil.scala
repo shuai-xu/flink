@@ -58,7 +58,7 @@ object CorrelateUtil {
 
   def projectCorrelateOutputType(
       originalType: RelDataType,
-      projectableFieldSet: Set[Int]) = {
+      projectableFieldSet: Set[Int]): (RelDataType, ListBuffer[Int]) = {
     val selects =  new ListBuffer[Int]
     // generate new output type that removed unused column(s) for Correlate
     val typeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
@@ -75,7 +75,18 @@ object CorrelateUtil {
           newIdx, // shift to new index
           f.getType)
     }
-    typeBuilder.addAll(reserveFieldTypes)
+    if (reserveFieldTypes.size == 0) {
+      // downside operator only cares records number, so we must output at least one column.
+      // typical case: 'select count(*)' be pushed down here (count(0), count(1) ... as well)
+      // we choose the last column to output(columns from left input more likely to be bigger).
+      val reservedFieldIdx = originalType.getFieldCount - 1
+      selects += reservedFieldIdx
+      typeBuilder.add(
+        originalType.getFieldNames.get(reservedFieldIdx),
+        originalType.getFieldList.get(reservedFieldIdx).getType)
+    } else {
+      typeBuilder.addAll(reserveFieldTypes)
+    }
     (typeBuilder.build(), selects)
   }
 

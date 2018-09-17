@@ -251,4 +251,15 @@ class CorrelateTest extends TableTestBatchExecBase {
     val sqlQuery = "SELECT name, len, b FROM MyTable, LATERAL TABLE(parser(a)) AS T(name, len)"
     util.verifyPlan(sqlQuery)
   }
+
+  @Test
+  def testCountStarOnCorrelate(): Unit = {
+    val util = batchTestUtil()
+    util.addTable[(String, Int, Array[Byte])]("MyTable", 'a, 'b, 'c)
+    val function = new TableFunc5
+    util.addFunction("parser", function)
+
+    val sqlQuery = "SELECT count(*) FROM MyTable, LATERAL TABLE(parser(a)) AS T(name, len)"
+    util.verifyPlan(sqlQuery)
+  }
 }

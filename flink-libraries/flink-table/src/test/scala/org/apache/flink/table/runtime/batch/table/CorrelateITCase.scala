@@ -310,6 +310,34 @@ class CorrelateITCase extends QueryTest {
     assertTrue(results0.isEmpty)
   }
 
+  @Test
+  def testCountStarOnCorrelate(): Unit = {
+    val in = testData.as('a, 'b, 'c)
+    val func0 = new TableFunc0
+
+    val result = in
+      .join(func0('c) as ('name, 'age))
+      .select(0.count)
+
+    val results = result.collect()
+    val expected = "3"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+  @Test
+  def testCountStarOnLeftCorrelate(): Unit = {
+    val in = testData.as('a, 'b, 'c)
+    val func0 = new TableFunc0
+
+    val result = in
+      .leftOuterJoin(func0('c) as ('name, 'age))
+      .select(0.count)
+
+    val results = result.collect()
+    val expected = "4"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
   private def testData: Table = {
 
     val data = new mutable.MutableList[(Int, Long, String)]
