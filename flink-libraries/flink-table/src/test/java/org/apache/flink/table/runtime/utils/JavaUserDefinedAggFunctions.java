@@ -24,6 +24,7 @@ import org.apache.flink.table.api.dataview.MapView;
 import org.apache.flink.table.api.dataview.Order;
 import org.apache.flink.table.api.dataview.SortedMapView;
 import org.apache.flink.table.functions.AggregateFunction;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
 
 import java.util.Iterator;
@@ -517,6 +518,36 @@ public class JavaUserDefinedAggFunctions {
 		@Override
 		public Long getValue(VarSumAcc accumulator) {
 			return accumulator.sum;
+		}
+	}
+
+	/**
+	 * Only used for test.
+	 * The difference between the class and VarSumAggFunction is accumulator type.
+	 */
+	public static class VarSum1AggFunction extends AggregateFunction<Long, VarSumAcc> {
+
+		@Override
+		public VarSumAcc createAccumulator() {
+			return new VarSumAcc();
+		}
+
+		public void accumulate(VarSumAcc acc, Integer ...args) {
+			for (Integer x : args) {
+				if (x != null) {
+					acc.sum += x.longValue();
+				}
+			}
+		}
+
+		@Override
+		public Long getValue(VarSumAcc accumulator) {
+			return accumulator.sum;
+		}
+
+		@Override
+		public DataType getAccumulatorType() {
+			return DataTypes.LONG;
 		}
 	}
 }

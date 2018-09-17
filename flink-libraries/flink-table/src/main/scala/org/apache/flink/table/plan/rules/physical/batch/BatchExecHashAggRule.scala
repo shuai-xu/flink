@@ -58,8 +58,7 @@ class BatchExecHashAggRule
     val aggCallToAggFunction = aggCallsWithoutAuxGroupCalls.zip(aggregates)
     val groupSet = agg.getGroupSet.toArray
     val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    val isSupportMerge = doAllSupportMerge(aggregates)
-    if (isSupportMerge) {
+    if (isTwoPhaseAggWorkable(aggregates, call)) {
       //localHashAgg
       val localAggRelType = inferLocalAggType(
         input.getRowType, agg, groupSet, auxGroupSet, aggregates,
@@ -106,8 +105,7 @@ class BatchExecHashAggRule
         call.transformTo(globalHashAgg)
       }
     }
-    // disable one-phase agg if prefer two-phase agg
-    if (!isSupportMerge || !isPreferTwoPhaseAgg(call)) {
+    if (isOnePhaseAggWorkable(agg, aggregates, call)) {
       val requiredDistributions = if (agg.getGroupCount != 0) {
         val distributionFields = groupSet.map(Integer.valueOf).toList
         Seq(

@@ -124,8 +124,7 @@ class AggregateReduceGroupingITCase extends QueryTest {
   @Test
   def testSingleAggOnTable_HashAgg_WithLocalAgg(): Unit = {
     tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    tEnv.getConfig.getParameters.setBoolean(
-      TableConfig.SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED, true)
+    tEnv.getConfig.getParameters.setString(TableConfig.SQL_CBO_AGG_PHASE_ENFORCER, "TWO_PHASE")
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
     testSingleAggOnTable()
   }
@@ -133,8 +132,7 @@ class AggregateReduceGroupingITCase extends QueryTest {
   @Test
   def testSingleAggOnTable_HashAgg_WithoutLocalAgg(): Unit = {
     tEnv.getConfig.getParameters.setString(TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "SortAgg")
-    tEnv.getConfig.getParameters.setBoolean(
-      TableConfig.SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED, false)
+    tEnv.getConfig.getParameters.setString(TableConfig.SQL_CBO_AGG_PHASE_ENFORCER, "ONE_PHASE")
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 2) // 1M
     testSingleAggOnTable()
   }

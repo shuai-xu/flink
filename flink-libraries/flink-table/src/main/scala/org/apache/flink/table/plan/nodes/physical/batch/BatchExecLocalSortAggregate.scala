@@ -95,6 +95,10 @@ class BatchExecLocalSortAggregate(
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
+    // Does not to try to satisfy requirement by localAgg's input if enforce to use two-stage agg.
+    if (isEnforceTwoStageAgg) {
+      return null
+    }
     val requiredDistribution = requiredTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
     requiredDistribution.getType match {
       case Type.HASH_DISTRIBUTED | Type.RANGE_DISTRIBUTED =>

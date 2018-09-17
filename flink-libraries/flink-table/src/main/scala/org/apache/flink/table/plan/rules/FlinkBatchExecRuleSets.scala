@@ -333,6 +333,9 @@ object FlinkBatchExecRuleSets {
     // group agg
     BatchExecSortAggRule.INSTANCE,
     BatchExecHashAggRule.INSTANCE,
+    RemoveRedundantLocalSortAggRule.WITHOUT_SORT,
+    RemoveRedundantLocalSortAggRule.WITH_SORT,
+    RemoveRedundantLocalHashAggRule.INSTANCE,
     // over window agg
     BatchExecOverWindowAggRule.INSTANCE,
     // group window agg

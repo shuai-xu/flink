@@ -25,6 +25,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableException}
+import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
+import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
@@ -105,6 +107,8 @@ abstract class BatchExecGroupAggregateBase(
   def getAuxGrouping: Array[Int] = auxGrouping
 
   def getAggCallList: Seq[AggregateCall] = aggCallToAggFunction.map(_._1)
+
+  def getAggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)] = aggCallToAggFunction
 
   def getOutputRowType: BaseRowType
 
@@ -226,5 +230,13 @@ abstract class BatchExecGroupAggregateBase(
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
     tableConfig.getParameters.getInteger(TableConfig.SQL_CBO_SKEW_PUNISH_FACTOR,
                                         TableConfig.SQL_CBO_SKEW_PUNISH_FACTOR_DEFAULT)
+  }
+
+  protected def isEnforceTwoStageAgg(): Boolean = {
+    val tableConfig = FlinkRelOptUtil.getTableConfig(this)
+    val aggConfig = tableConfig.getParameters.getString(
+      TableConfig.SQL_CBO_AGG_PHASE_ENFORCER,
+      TableConfig.SQL_CBO_AGG_PHASE_ENFORCER_DEFAULT)
+    AggPhaseEnforcer.TWO_PHASE.toString.equalsIgnoreCase(aggConfig)
   }
 }

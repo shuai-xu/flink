@@ -133,7 +133,7 @@ class BatchExecWindowAggregateRule
     // local-agg output order: groupset | assignTs | aucGroupSet | aggCalls
     val newInputTimestampIndexFromLocal = groupSet.length
 
-    if (supportLocalAgg) {
+    if (!isEnforceOnePhaseAgg(call) && supportLocalAgg) {
       val windowType = if (isDate) IntType.INSTANCE else LongType.INSTANCE
       // local
       var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
@@ -248,7 +248,7 @@ class BatchExecWindowAggregateRule
       call.transformTo(globalAgg)
     }
     // disable one-phase agg if prefer two-phase agg
-    if (!supportLocalAgg || !isPreferTwoPhaseAgg(call)) {
+    if (!isEnforceTwoPhaseAgg(call) || !supportLocalAgg) {
       var requiredTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
       // distribute by grouping keys
       requiredTraitSet = if (agg.getGroupCount != 0) {

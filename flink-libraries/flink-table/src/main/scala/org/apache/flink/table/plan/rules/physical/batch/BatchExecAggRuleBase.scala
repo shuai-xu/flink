@@ -23,7 +23,8 @@ import org.apache.calcite.plan.RelOptRuleCall
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Aggregate
 import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.AggPhaseEnforcer.AggPhaseEnforcer
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
@@ -137,6 +138,35 @@ trait BatchExecAggRuleBase {
     typeFactory.createStructType(localAggFieldTypes.asJava, localAggFieldNames.asJava)
   }
 
+  protected def isTwoPhaseAggWorkable(
+    aggregateList: Array[UserDefinedFunction],
+    call: RelOptRuleCall): Boolean = {
+    getAggEnforceStrategy(call) match {
+      case AggPhaseEnforcer.ONE_PHASE => false
+      case _ => doAllSupportMerge(aggregateList)
+    }
+  }
+
+  protected def isOnePhaseAggWorkable(
+    agg: Aggregate,
+    aggregateList: Array[UserDefinedFunction],
+    call: RelOptRuleCall): Boolean = {
+    getAggEnforceStrategy(call) match {
+      case AggPhaseEnforcer.ONE_PHASE => true
+      case AggPhaseEnforcer.TWO_PHASE => !doAllSupportMerge(aggregateList)
+      case AggPhaseEnforcer.NONE =>
+        if (!doAllSupportMerge(aggregateList)) {
+          true
+        } else {
+          // if ndv of group key in aggregate is Unknown and all aggFunctions are splittable,
+          // use two-phase agg.
+          // else whether choose one-phase agg or two-phase agg depends on CBO.
+          val mq = agg.getCluster.getMetadataQuery
+          mq.getDistinctRowCount(agg.getInput, agg.getGroupSet, null) != null
+        }
+    }
+  }
+
   protected def doAllSupportMerge(
       aggregateList: Array[UserDefinedFunction]): Boolean = {
     val supportLocalAgg = aggregateList.forall {
@@ -147,12 +177,20 @@ trait BatchExecAggRuleBase {
     aggregateList.isEmpty || supportLocalAgg
   }
 
-  protected def isPreferTwoPhaseAgg(
-      call: RelOptRuleCall): Boolean = {
+  protected def isEnforceOnePhaseAgg(call: RelOptRuleCall): Boolean =
+    getAggEnforceStrategy(call) == AggPhaseEnforcer.ONE_PHASE
+
+  protected def isEnforceTwoPhaseAgg(call: RelOptRuleCall): Boolean =
+    getAggEnforceStrategy(call) == AggPhaseEnforcer.TWO_PHASE
+
+  protected def getAggEnforceStrategy(call: RelOptRuleCall): AggPhaseEnforcer.Value = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    tableConfig.getParameters.getBoolean(
-      TableConfig.SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED,
-      TableConfig.SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED_DEFAULT)
+    val aggPrefConfig = tableConfig.getParameters.getString(
+      TableConfig.SQL_CBO_AGG_PHASE_ENFORCER,
+      TableConfig.SQL_CBO_AGG_PHASE_ENFORCER_DEFAULT)
+    AggPhaseEnforcer.values.find(_.toString.equalsIgnoreCase(aggPrefConfig)).getOrElse(
+      throw new IllegalArgumentException(
+        "Agg phase enforcer can only set to be: NONE, ONE_PHASE, TWO_PHASE!"))
   }
 
   protected def isAggBufferFixedLength(call: RelOptRuleCall): Boolean = {

@@ -58,9 +58,8 @@ class BatchExecSortAggRule
     val aggCallToAggFunction = aggCallsWithoutAuxGroupCalls.zip(aggregates)
     // TODO aggregate include projection now, so do not provide new trait will be safe
     val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    val isSupportMerge = doAllSupportMerge(aggregates)
 
-    if (isSupportMerge) {
+    if (isTwoPhaseAggWorkable(aggregates, call)) {
       val localAggRelType = inferLocalAggType(
         input.getRowType, agg, groupSet, auxGroupSet, aggregates,
         aggBufferTypes.map(_.map(DataTypes.internal)))
@@ -115,8 +114,7 @@ class BatchExecSortAggRule
         call.transformTo(globalSortAgg)
       }
     }
-    // disable one-phase agg if prefer two-phase agg
-    if (!isSupportMerge || !isPreferTwoPhaseAgg(call)) {
+    if (isOnePhaseAggWorkable(agg, aggregates, call)) {
       val requiredDistributions = if (agg.getGroupCount != 0) {
         val distributionFields = groupSet.map(Integer.valueOf).toList
         Seq(

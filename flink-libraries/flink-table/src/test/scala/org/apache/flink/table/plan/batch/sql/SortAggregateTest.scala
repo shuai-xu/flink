@@ -18,21 +18,31 @@
 
 package org.apache.flink.table.plan.batch.sql
 
+import java.util
+
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.AggPhaseEnforcer.AggPhaseEnforcer
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.api.{AggPhaseEnforcer, OperatorType, TableConfig}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.VarSum1AggFunction
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Test}
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
 import scala.collection.JavaConversions._
 
 /**
   * Test for testing aggregate plans.
   */
-class SortAggregateTest extends TableTestBatchExecBase {
+@RunWith(classOf[Parameterized])
+class SortAggregateTest(
+    aggStrategy: AggPhaseEnforcer,
+    withNdv: Boolean)
+  extends TableTestBatchExecBase {
 
   private val util = batchExecTestUtil()
 
@@ -40,12 +50,19 @@ class SortAggregateTest extends TableTestBatchExecBase {
   def before(): Unit = {
     util.tableEnv.getConfig.getParameters.setString(
       TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, OperatorType.HashAgg.toString)
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_CBO_AGG_PHASE_ENFORCER, aggStrategy.toString)
     util.addTable("MyTable", CommonTestData.get3Source(Array("a", "b", "c")))
-    util.tableEnv.alterTableStats("MyTable", Some(TableStats(100000000L, Map[String, ColumnStats](
-      "a" -> ColumnStats(2L, null, null, null, null, null),
-      "b" -> ColumnStats(3L, null, null, null, null, null),
-      "c" -> ColumnStats(3L, null, null, null, null, null)
-    ))))
+    val tableStats = if (withNdv) {
+      TableStats(100000000L, Map[String, ColumnStats](
+        "a" -> ColumnStats(100000000L, null, null, null, null, null),
+        "b" -> ColumnStats(3L, null, null, null, null, null),
+        "c" -> ColumnStats(3L, null, null, null, null, null)
+      ))
+    } else {
+      TableStats(100000000L)
+    }
+    util.tableEnv.alterTableStats("MyTable", Some(tableStats))
   }
 
   @Test
@@ -112,5 +129,26 @@ class SortAggregateTest extends TableTestBatchExecBase {
     util.tableEnv.registerFunction("countFun", new CountAggFunction())
     val sqlQuery = "SELECT countFun(a), countFun(b), countFun(c) FROM MyTable"
     util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testAggNotSupportMerge(): Unit = {
+    util.tableEnv.registerFunction("var_sum", new VarSum1AggFunction)
+    val sqlQuery = "SELECT b, var_sum(a) from MyTable group by b"
+    util.verifyPlan(sqlQuery)
+  }
+}
+
+object SortAggregateTest {
+
+  @Parameterized.Parameters(name = "aggStrategy={0}, withNdv={1}")
+  def parameters(): util.Collection[Array[Any]] = {
+    Seq[Array[Any]](
+      Array(AggPhaseEnforcer.NONE, true),
+      Array(AggPhaseEnforcer.NONE, false),
+      Array(AggPhaseEnforcer.ONE_PHASE, true),
+      Array(AggPhaseEnforcer.ONE_PHASE, false),
+      Array(AggPhaseEnforcer.TWO_PHASE, true),
+      Array(AggPhaseEnforcer.TWO_PHASE, false))
   }
 }

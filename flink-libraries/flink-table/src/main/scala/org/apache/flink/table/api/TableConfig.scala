@@ -406,6 +406,11 @@ object OperatorType extends Enumeration {
   val NestedLoopJoin, ShuffleHashJoin, BroadcastHashJoin, SortMergeJoin, HashAgg, SortAgg = Value
 }
 
+object AggPhaseEnforcer extends Enumeration {
+  type AggPhaseEnforcer = Value
+  val NONE, ONE_PHASE, TWO_PHASE = Value
+}
+
 object TableConfig {
   def DEFAULT = new TableConfig()
 
@@ -704,10 +709,17 @@ object TableConfig {
   val SQL_CBO_JOIN_REORDER_ENABLED_DEFAULT: Boolean = false
 
   /**
-    * Enables preference for two_phase_agg which has local agg in CBO. Default is disabled.
+    * Strategy for agg phase. Only NONE, TWO_PHASE or ONE_PHASE can be set.
+    * NONE: No special enforcer for aggregate stage. Whether to choose two stage aggregate or one
+    * stage aggregate depends on cost.
+    * TWO_PHASE: Enforce to use two stage aggregate which has localAggregate and globalAggregate.
+    * NOTE:
+    * 1. If aggregate call does not support split into two phase, still use one stage aggregate.
+    * ONE_PHASE: Enforce to use one stage aggregate which only has CompleteGlobalAggregate.
+    * Default is NONE.
     */
-  val SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED = "sql.cbo.agg.two-phase.preference.enabled"
-  val SQL_CBO_AGG_TWO_PHASE_PREFERENCE_ENABLED_DEFAULT: Boolean = false
+  val SQL_CBO_AGG_PHASE_ENFORCER = "sql.cbo.agg.phase.enforcer"
+  val SQL_CBO_AGG_PHASE_ENFORCER_DEFAULT = "NONE"
 
   /**
     * Factor to punish operator which is processing skew data. Default is 100.
