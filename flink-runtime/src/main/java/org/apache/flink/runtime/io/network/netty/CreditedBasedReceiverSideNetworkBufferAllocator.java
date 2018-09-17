@@ -18,39 +18,43 @@
 
 package org.apache.flink.runtime.io.network.netty;
 
+import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.runtime.event.task.IntegerTaskEvent;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.FreeingBufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannelID;
-import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+import org.apache.flink.runtime.io.network.partition.consumer.RemoteInputChannel;
 
-import org.apache.flink.shaded.netty4.io.netty.buffer.ByteBuf;
-import org.apache.flink.shaded.netty4.io.netty.channel.embedded.EmbeddedChannel;
-
-import org.junit.Test;
-
-import java.util.Random;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Tests for the serialization and deserialization of the various {@link NettyMessage} sub-classes with
- * the non-zero-copy netty handlers.
+ * A buffer allocator used for the receiver side of netty handlers.
  */
-public class NettyMessageSerializationTest extends NettyMessageSerializationTestBase {
-	private final EmbeddedChannel channel = new EmbeddedChannel(
-			new NettyMessage.NettyMessageEncoder(), // outbound messages
-			NettyMessage.NettyMessageEncoder.createFrameLengthDecoder(), // inbound messages
-			new NettyMessage.NettyMessageDecoder()); // inbound messages
+public class CreditedBasedReceiverSideNetworkBufferAllocator implements NetworkBufferAllocator {
+	private final CreditBasedPartitionRequestClientHandler partitionRequestClientHandler;
+
+	CreditedBasedReceiverSideNetworkBufferAllocator(CreditBasedPartitionRequestClientHandler partitionRequestClientHandler) {
+		this.partitionRequestClientHandler = checkNotNull(partitionRequestClientHandler);
+	}
 
 	@Override
-	public EmbeddedChannel getChannel() {
-		return channel;
+	public Buffer allocatePooledNetworkBuffer(InputChannelID receiverId, int size) {
+		Buffer buffer = null;
+
+		RemoteInputChannel inputChannel = partitionRequestClientHandler.getInputChannel(receiverId);
+		if (inputChannel != null) {
+			buffer = inputChannel.requestBuffer();
+		}
+
+		return buffer;
+	}
+
+	@Override
+	public Buffer allocateUnPooledNetworkBuffer(int size) {
+		byte[] byteArray = new byte[size];
+		MemorySegment memSeg = MemorySegmentFactory.wrap(byteArray);
+
+		return new NetworkBuffer(memSeg, FreeingBufferRecycler.INSTANCE, false);
 	}
 }

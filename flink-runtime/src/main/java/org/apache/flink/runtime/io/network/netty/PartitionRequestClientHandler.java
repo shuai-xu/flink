@@ -286,7 +286,7 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 		boolean releaseNettyBuffer = true;
 
 		try {
-			ByteBuf nettyBuffer = bufferOrEvent.getNettyBuffer();
+			ByteBuf nettyBuffer = bufferOrEvent.getBuffer();
 			final int receivedSize = nettyBuffer.readableBytes();
 			if (bufferOrEvent.isBuffer()) {
 				// ---- Buffer ------------------------------------------------
@@ -460,7 +460,7 @@ class PartitionRequestClientHandler extends ChannelInboundHandlerAdapter impleme
 					throw new IllegalStateException("Running buffer availability task w/o a buffer.");
 				}
 
-				ByteBuf nettyBuffer = stagedBufferResponse.getNettyBuffer();
+				ByteBuf nettyBuffer = stagedBufferResponse.getBuffer();
 				nettyBuffer.readBytes(buffer.asByteBuf(), nettyBuffer.readableBytes());
 				stagedBufferResponse.releaseBuffer();
 

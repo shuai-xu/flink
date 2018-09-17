@@ -134,7 +134,8 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	 * Assigns exclusive buffers to this input channel, and this method should be called only once
 	 * after this input channel is created.
 	 */
-	void assignExclusiveSegments(List<MemorySegment> segments) {
+	@VisibleForTesting
+	public void assignExclusiveSegments(List<MemorySegment> segments) {
 		checkState(this.initialCredit == 0, "Bug in input channel setup logic: exclusive buffers have " +
 			"already been set for this input channel.");
 

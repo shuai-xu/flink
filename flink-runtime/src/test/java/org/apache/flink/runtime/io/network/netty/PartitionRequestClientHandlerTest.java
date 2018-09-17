@@ -286,7 +286,7 @@ public class PartitionRequestClientHandlerTest {
 	/**
 	 * Returns a deserialized buffer message as it would be received during runtime.
 	 */
-	static BufferResponse createBufferResponse(
+	private BufferResponse createBufferResponse(
 			Buffer buffer,
 			int sequenceNumber,
 			InputChannelID receivingChannelId,

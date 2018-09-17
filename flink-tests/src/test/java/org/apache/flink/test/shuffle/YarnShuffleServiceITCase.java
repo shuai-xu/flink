@@ -344,6 +344,7 @@ public class YarnShuffleServiceITCase extends TestLogger {
 			hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "[test]" + externalDir);
 			hadoopConf.setInt(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), port);
 			hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE.key(), "test: " + threadNum);
+			hadoopConf.setInt(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER.key(), 20);
 		}
 
 		public int getPort() {

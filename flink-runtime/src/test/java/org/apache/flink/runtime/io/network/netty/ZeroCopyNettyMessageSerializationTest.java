@@ -26,31 +26,49 @@ import org.apache.flink.runtime.io.network.buffer.FreeingBufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannelID;
+import org.apache.flink.runtime.io.network.partition.consumer.RemoteInputChannel;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
-
 import org.apache.flink.shaded.netty4.io.netty.buffer.ByteBuf;
 import org.apache.flink.shaded.netty4.io.netty.channel.embedded.EmbeddedChannel;
-
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Tests for the serialization and deserialization of the various {@link NettyMessage} sub-classes with
- * the non-zero-copy netty handlers.
+ * the zero-copy netty handlers.
  */
-public class NettyMessageSerializationTest extends NettyMessageSerializationTestBase {
+public class ZeroCopyNettyMessageSerializationTest extends NettyMessageSerializationTestBase {
 	private final EmbeddedChannel channel = new EmbeddedChannel(
 			new NettyMessage.NettyMessageEncoder(), // outbound messages
-			NettyMessage.NettyMessageEncoder.createFrameLengthDecoder(), // inbound messages
-			new NettyMessage.NettyMessageDecoder()); // inbound messages
+			new ZeroCopyNettyMessageDecoder(new CreditedBasedReceiverSideNetworkBufferAllocator(createPartitionRequestClientHandler())));
 
 	@Override
 	public EmbeddedChannel getChannel() {
 		return channel;
+	}
+
+	private CreditBasedPartitionRequestClientHandler createPartitionRequestClientHandler() {
+		CreditBasedPartitionRequestClientHandler handler = mock(CreditBasedPartitionRequestClientHandler.class);
+
+		RemoteInputChannel inputChannel = mock(RemoteInputChannel.class);
+		when(inputChannel.requestBuffer()).thenAnswer(new Answer<Buffer>() {
+			@Override
+			public Buffer answer(InvocationOnMock invocationOnMock) throws Throwable {
+				return new NetworkBuffer(MemorySegmentFactory.allocateUnpooledSegment(1024), FreeingBufferRecycler.INSTANCE);
+			}
+		});
+		when(handler.getInputChannel(any(InputChannelID.class))).thenReturn(inputChannel);
+
+		return handler;
 	}
 }

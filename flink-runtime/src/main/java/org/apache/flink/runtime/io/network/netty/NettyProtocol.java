@@ -64,13 +64,10 @@ public class NettyProtocol {
 	 * |    +----------+----------+                        |               |
 	 * |              /|\                                  |               |
 	 * |               |                                   |               |
-	 * |    +----------+----------+                        |               |
-	 * |    | Message decoder     |                        |               |
-	 * |    +----------+----------+                        |               |
-	 * |              /|\                                  |               |
 	 * |               |                                   |               |
 	 * |    +----------+----------+                        |               |
-	 * |    | Frame decoder       |                        |               |
+	 * |    |   Frame & Message   |                        |               |
+	 * |    |      decoder        |                        |               |
 	 * |    +----------+----------+                        |               |
 	 * |              /|\                                  |               |
 	 * +---------------+-----------------------------------+---------------+
@@ -92,8 +89,8 @@ public class NettyProtocol {
 
 		return new ChannelHandler[] {
 			messageEncoder,
-			createFrameLengthDecoder(),
-			messageDecoder,
+			// TODO unify all the buffer allocation including the header buffer and the sender-side message header into NetworkBufferAllocator.
+			new ZeroCopyNettyMessageDecoder(null),
 			serverHandler,
 			queueOfPartitionQueues
 		};
@@ -134,17 +131,27 @@ public class NettyProtocol {
 	 * +-------------------------------------------------------------------+
 	 * </pre>
 	 *
+	 * for the credit case, the frame decoder and message decoder is merged into a single zero-copy netty handler.
+	 *
 	 * @return channel handlers
 	 */
 	public ChannelHandler[] getClientChannelHandlers() {
-		NetworkClientHandler networkClientHandler =
-			creditBasedEnabled ? new CreditBasedPartitionRequestClientHandler() :
-				new PartitionRequestClientHandler();
-		return new ChannelHandler[] {
-			messageEncoder,
-			createFrameLengthDecoder(),
-			messageDecoder,
-			networkClientHandler};
-	}
+		if (creditBasedEnabled) {
+			CreditBasedPartitionRequestClientHandler networkClientHandler = new CreditBasedPartitionRequestClientHandler();
+			NetworkBufferAllocator networkBufferAllocator = new CreditedBasedReceiverSideNetworkBufferAllocator(networkClientHandler);
+			ZeroCopyNettyMessageDecoder zeroCopyMessageDecoder = new ZeroCopyNettyMessageDecoder(networkBufferAllocator);
 
+			return new ChannelHandler[] {
+				messageEncoder,
+				zeroCopyMessageDecoder,
+				networkClientHandler};
+		} else {
+			NetworkClientHandler networkClientHandler = new PartitionRequestClientHandler();
+			return new ChannelHandler[] {
+				messageEncoder,
+				createFrameLengthDecoder(),
+				messageDecoder,
+				networkClientHandler};
+		}
+	}
 }

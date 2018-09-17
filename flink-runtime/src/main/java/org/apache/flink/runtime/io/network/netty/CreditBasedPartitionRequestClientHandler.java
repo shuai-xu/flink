@@ -18,12 +18,8 @@
 
 package org.apache.flink.runtime.io.network.netty;
 
-import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.network.NetworkClientHandler;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
-import org.apache.flink.runtime.io.network.buffer.FreeingBufferRecycler;
-import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.netty.exception.LocalTransportException;
 import org.apache.flink.runtime.io.network.netty.exception.RemoteTransportException;
 import org.apache.flink.runtime.io.network.netty.exception.TransportException;
@@ -48,6 +44,8 @@ import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * Channel handler to read the messages of buffer response or error response from the
@@ -108,6 +106,10 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
 		if (cancelled.putIfAbsent(inputChannelId, inputChannelId) == null) {
 			ctx.writeAndFlush(new NettyMessage.CancelPartitionRequest(inputChannelId));
 		}
+	}
+
+	RemoteInputChannel getInputChannel(InputChannelID inputChannelId) {
+		return inputChannels.get(inputChannelId);
 	}
 
 	@Override
@@ -295,43 +297,24 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
 	}
 
 	private void decodeBufferOrEvent(RemoteInputChannel inputChannel, NettyMessage.BufferResponse bufferOrEvent) throws Throwable {
-		try {
-			ByteBuf nettyBuffer = bufferOrEvent.getNettyBuffer();
-			final int receivedSize = nettyBuffer.readableBytes();
-			if (bufferOrEvent.isBuffer()) {
-				// ---- Buffer ------------------------------------------------
+		checkState(bufferOrEvent.getBuffer() == null || bufferOrEvent.getBuffer() instanceof Buffer,
+			"The data buffer should be an instance of Buffer.");
 
-				// Early return for empty buffers. Otherwise Netty's readBytes() throws an
-				// IndexOutOfBoundsException.
-				if (receivedSize == 0) {
-					inputChannel.onEmptyBuffer(bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
-					return;
-				}
+		// Early return for empty buffers.
+		if (bufferOrEvent.isBuffer() && bufferOrEvent.dataBufferSize == 0) {
+			inputChannel.onEmptyBuffer(bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
+			return;
+		}
 
-				Buffer buffer = inputChannel.requestBuffer();
-				if (buffer != null) {
-					nettyBuffer.readBytes(buffer.asByteBuf(), receivedSize);
+		ByteBuf dataBuffer = bufferOrEvent.getBuffer();
 
-					inputChannel.onBuffer(buffer, bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
-				} else if (inputChannel.isReleased()) {
-					cancelRequestFor(bufferOrEvent.receiverId);
-				} else {
-					throw new IllegalStateException("No buffer available in credit-based input channel.");
-				}
-			} else {
-				// ---- Event -------------------------------------------------
-				// TODO We can just keep the serialized data in the Netty buffer and release it later at the reader
-				byte[] byteArray = new byte[receivedSize];
-				nettyBuffer.readBytes(byteArray);
-
-				MemorySegment memSeg = MemorySegmentFactory.wrap(byteArray);
-				Buffer buffer = new NetworkBuffer(memSeg, FreeingBufferRecycler.INSTANCE, false);
-				buffer.setSize(receivedSize);
-
-				inputChannel.onBuffer(buffer, bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
-			}
-		} finally {
-			bufferOrEvent.releaseBuffer();
+		if (dataBuffer != null) {
+			checkState(dataBuffer instanceof Buffer, "The data buffer should be an instance of Buffer.");
+			inputChannel.onBuffer((Buffer) dataBuffer, bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
+		} else if (inputChannel.isReleased()) {
+			cancelRequestFor(bufferOrEvent.receiverId);
+		} else {
+			throw new IllegalStateException("The read buffer is null in credit-based input channel.");
 		}
 	}
 
