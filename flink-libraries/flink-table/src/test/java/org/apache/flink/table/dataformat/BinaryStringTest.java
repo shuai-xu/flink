@@ -19,11 +19,14 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
+import org.apache.flink.table.util.StringUtf8Utils;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -569,5 +572,23 @@ public class BinaryStringTest {
 
 		assertTrue(BinaryString.EMPTY_UTF8.equals(str3));
 		assertTrue(str3.equals(BinaryString.EMPTY_UTF8));
+	}
+
+	@Test
+	public void testEncodeWithIllegalCharacter() throws UnsupportedEncodingException {
+
+		// Tis char array has some illegal character, such as 55357
+		// the jdk ignores theses character and cast them to '?'
+		// which StringUtf8Utils'encodeUTF8 should follow
+		char []chars = new char[] { 20122, 40635, 124, 38271, 34966,
+			124, 36830, 34915, 35033, 124, 55357, 124, 56407 };
+
+		String str = new String(chars);
+
+		Assert.assertArrayEquals(
+			str.getBytes("UTF-8"),
+			StringUtf8Utils.encodeUTF8(str)
+		);
+
 	}
 }

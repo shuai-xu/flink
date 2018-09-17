@@ -19,7 +19,7 @@ package org.apache.flink.table.util;
 
 import org.apache.flink.core.memory.MemorySegment;
 
-import java.nio.charset.MalformedInputException;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
 /**
@@ -68,6 +68,9 @@ public class StringUtf8Utils {
 		return bytes;
 	}
 
+	/**
+	 * This method must have the same result with JDK's String.getBytes.
+	 */
 	public static byte[] encodeUTF8(String str) {
 		byte[] bytes = allocateBytes(str.length() * MAX_BYTES_PER_CHAR);
 		int len = encodeUTF8(str, bytes);
@@ -106,14 +109,18 @@ public class StringUtf8Utils {
 						if (Character.isLowSurrogate(d)) {
 							uc = Character.toCodePoint(c, d);
 						} else {
-							throw new RuntimeException("encodeUTF8 error",
-									new MalformedInputException(1));
+							// for some illegal character
+							// the jdk will ignore the origin character and cast it to '?'
+							// this acts the same with jdk
+							return defaultEncodeUTF8(str, bytes);
 						}
 					}
 				} else {
 					if (Character.isLowSurrogate(c)) {
-						throw new RuntimeException("encodeUTF8 error",
-								new MalformedInputException(1));
+						// for some illegal character
+						// the jdk will ignore the origin character and cast it to '?'
+						// this acts the same with jdk
+						return defaultEncodeUTF8(str, bytes);
 					} else {
 						uc = c;
 					}
@@ -136,6 +143,16 @@ public class StringUtf8Utils {
 			}
 		}
 		return dp;
+	}
+
+	public static int defaultEncodeUTF8(String str, byte[] bytes) {
+		try {
+			byte[] buffer = str.getBytes("UTF-8");
+			System.arraycopy(buffer, 0, bytes, 0, buffer.length);
+			return buffer.length;
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException("encodeUTF8 error", e);
+		}
 	}
 
 	public static String decodeUTF8(byte[] input, int offset, int byteLen) {
