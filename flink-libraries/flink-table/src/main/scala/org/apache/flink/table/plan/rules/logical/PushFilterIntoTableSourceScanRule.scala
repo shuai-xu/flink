@@ -29,6 +29,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.RexNodeExtractor
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.orc.OrcTableSink
 import org.apache.flink.table.sources.FilterableTableSource
 import org.apache.flink.table.sources.orc.OrcTableSource
@@ -124,12 +125,21 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
       predicates: util.List[Expression],
       relOptTable: FlinkRelOptTable,
       relBuilder: RelBuilder): FlinkRelOptTable = {
-
+    val originPredicatesSize = predicates.size()
     val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable[_]])
     val filterableSource = tableSourceTable.tableSource.asInstanceOf[FilterableTableSource]
     filterableSource.setRelBuilder(relBuilder)
     val newTableSource = filterableSource.applyPredicate(predicates)
-    val newTableSourceTable = new TableSourceTable(newTableSource)
+    val updatedPredicatesSize = predicates.size()
+    val statistics = if (originPredicatesSize == updatedPredicatesSize) {
+      // Keep all Statistics if no predicates can be pushed down
+      relOptTable.getFlinkStatistic
+    } else {
+      // Only keep uniqueKeys and modified monotonicity properties after predicates pushed down
+      FlinkStatistic.of(relOptTable.getFlinkStatistic.getUniqueKeys,
+                        relOptTable.getFlinkStatistic.getRelModifiedMonotonicity)
+    }
+    val newTableSourceTable = new TableSourceTable(newTableSource, statistics)
     relOptTable.copy(newTableSourceTable, relOptTable.getRowType)
   }
 
