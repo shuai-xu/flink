@@ -68,6 +68,8 @@ for jar in `find "$FLINK_OPT_DIR/sql-client" -name *.jar`; do
         FLINK_SQL_CLIENT_JARS="$FLINK_SQL_CLIENT_JARS":"$jar"
     fi
 done
+FLINK_TABLE_JAR=$(find "$FLINK_OPT_DIR" -regex ".*flink-table.*.jar")
+FLINK_SQL_CLIENT_JARS="$FLINK_SQL_CLIENT_JARS":"$FLINK_TABLE_JAR"
 FLINK_SQL_CLIENT_JAR=$(find "$FLINK_OPT_DIR/sql-client" -regex ".*flink-sql-client.*.jar")
 
 # check if SQL client jar is in /opt

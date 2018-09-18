@@ -148,7 +148,6 @@
 			<groupId>org.apache.hive</groupId>
 			<artifactId>hive-exec</artifactId>
 			<version>${hive.version}</version>
-			<scope>test</scope>
 			<exclusions>
 				<exclusion>
 					<groupId>org.apache.hbase</groupId>
@@ -169,6 +168,46 @@
 				<exclusion>
 					<groupId>org.antlr</groupId>
 					<artifactId>antlr-runtime</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.calcite</groupId>
+					<artifactId>calcite-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.calcite</groupId>
+					<artifactId>calcite-druid</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.calcite.avatica</groupId>
+					<artifactId>avatica</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.logging.log4j</groupId>
+					<artifactId>log4j-1.2-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.logging.log4j</groupId>
+					<artifactId>log4j-slf4j-impl</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.datanucleus</groupId>
+					<artifactId>datanucleus-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.zookeeper</groupId>
+					<artifactId>zookeeper</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.curator</groupId>
+					<artifactId>curator-framework</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.curator</groupId>
+					<artifactId>apache-curator</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
@@ -212,37 +251,13 @@
 			<version>${guava.version}</version>
 		</dependency>
 
+		<!-- Hive Meta needs this -->
 		<dependency>
-			<groupId>org.apache.hadoop</groupId>
-			<artifactId>hadoop-common</artifactId>
-			<version>2.6.5</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.google.guava</groupId>
-					<artifactId>guava</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>commons-beanutils</groupId>
-					<artifactId>commons-beanutils</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jackson</groupId>
-					<artifactId>jackson-mapper-asl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jackson</groupId>
-					<artifactId>jackson-core-asl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.curator</groupId>
-					<artifactId>curator-framework</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.curator</groupId>
-					<artifactId>curator-client</artifactId>
-				</exclusion>
-			</exclusions>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>2.8.1</version>
 		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -258,90 +273,24 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
 							<relocations>
-								<relocation>
-									<pattern>org.apache.hadoop.HadoopIllegalArgumentException</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.HadoopIllegalArgumentException</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.conf</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.conf</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.crypto</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.crypto</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.fs</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.fs</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.ha</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.ha</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.http</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.http</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.io</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.io</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.ipc</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.ipc</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.jmx</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.jmx</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.log</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.log</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.metrics</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.metrics</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.metrics2</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.metrics2</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.net</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.net</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.net</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.net</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.record</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.record</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.security</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.security</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.service</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.service</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.tools</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.tools</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.tracing</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.tracing</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.hadoop.util</pattern>
-									<shadedPattern>org.flink.catalog.shaded.hadoop.util</shadedPattern>
-								</relocation>
 								<relocation>
 									<pattern>com.google</pattern>
 									<shadedPattern>org.apache.flink.hive.shaded.com.google</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.fasterxml.jackson.core</pattern>
+									<shadedPattern>org.apache.flink.hive.shaded.com.fasterxml.jackson.core</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>
@@ -350,6 +299,5 @@
 			</plugin>
 		</plugins>
 	</build>
-
 
 </project>
