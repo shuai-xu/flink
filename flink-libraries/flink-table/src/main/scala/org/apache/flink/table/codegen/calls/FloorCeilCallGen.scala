@@ -46,7 +46,7 @@ class FloorCeilCallGen(
         case DataTypes.FLOAT | DataTypes.DOUBLE =>
           super.generate(ctx, operands, returnType, nullCheck)
         case dt: DecimalType =>
-          generateCallIfArgsNotNull(nullCheck, returnType, operands) {
+          generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands) {
             (operandResultTerms) =>
               s"${qualifyMethod(arithmeticMethod)}(${operandResultTerms.mkString(", ")})"
           }
@@ -60,7 +60,7 @@ class FloorCeilCallGen(
       val unit = getEnum(operands(1)).asInstanceOf[TimeUnitRange]
       val internalType = primitiveTypeTermForType(operand.resultType)
 
-      generateCallIfArgsNotNull(nullCheck, operand.resultType, operands) {
+      generateCallIfArgsNotNull(ctx, nullCheck, operand.resultType, operands) {
         (terms) =>
           unit match {
             // for Timestamp with timezone info

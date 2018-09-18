@@ -58,7 +58,7 @@ class LikeCallGen extends CallGenerator {
       returnType: InternalType,
       nullCheck: Boolean): GeneratedExpression = {
     if (operands.size == 2 && operands(1).literal) {
-      generateCallIfArgsNotNull(nullCheck, returnType, operands) {
+      generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands) {
         (terms) =>
           val pattern = operands(1).literalValue.toString
           val noneMatcher = NONE_PATTERN.matcher(pattern)
@@ -108,7 +108,7 @@ class LikeCallGen extends CallGenerator {
       ctx: CodeGeneratorContext,
       operands: Seq[GeneratedExpression],
       nullCheck: Boolean): GeneratedExpression = {
-    generateCallIfArgsNotNull(nullCheck, DataTypes.BOOLEAN, operands) {
+    generateCallIfArgsNotNull(ctx, nullCheck, DataTypes.BOOLEAN, operands) {
       (terms) =>
         val str1 = s"${terms.head}.toString()"
         val str2 = s"${terms(1)}.toString()"

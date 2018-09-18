@@ -35,6 +35,6 @@ class HashCodeCallGen extends CallGenerator {
     val binaryUtil = classOf[BinaryRowUtil].getCanonicalName
     val code = s"$binaryUtil.hash${hashNameInBinaryUtil(inputType)}($inputTerm)"
 
-    generateCallIfArgsNullable(nullCheck, returnType, operands) { _ => code }
+    generateCallIfArgsNullable(ctx, nullCheck, returnType, operands) { _ => code }
   }
 }

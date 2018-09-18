@@ -42,35 +42,38 @@ object CallGenerator {
       primitiveNullable: Boolean = false)
   (expr: String => String)
     : GeneratedExpression = {
-    generateCallIfArgsNotNull(nullCheck, returnType, Seq(operand), primitiveNullable) {
+    generateCallIfArgsNotNull(ctx, nullCheck, returnType, Seq(operand), primitiveNullable) {
       args => expr(args.head)
     }
   }
 
   def generateOperatorIfNotNull(
+      ctx: CodeGeneratorContext,
       nullCheck: Boolean,
       returnType: InternalType,
       left: GeneratedExpression,
       right: GeneratedExpression)
       (expr: (String, String) => String)
     : GeneratedExpression = {
-    generateCallIfArgsNotNull(nullCheck, returnType, Seq(left, right)) {
+    generateCallIfArgsNotNull(ctx, nullCheck, returnType, Seq(left, right)) {
       args => expr(args.head, args(1))
     }
   }
 
   def generateReturnStringCallIfArgsNotNull(
+      ctx: CodeGeneratorContext,
       operands: Seq[GeneratedExpression])
       (call: Seq[String] => String): GeneratedExpression = {
-    generateCallIfArgsNotNull(nullCheck = true, DataTypes.STRING, operands) {
+    generateCallIfArgsNotNull(ctx, nullCheck = true, DataTypes.STRING, operands) {
       args => s"$BINARY_STRING.fromString(${call(args)})"
     }
   }
 
   def generateReturnStringCallWithStmtIfArgsNotNull(
+      ctx: CodeGeneratorContext,
       operands: Seq[GeneratedExpression])
       (call: Seq[String] => (String, String)): GeneratedExpression = {
-    generateCallWithStmtIfArgsNotNull(nullCheck = true, DataTypes.STRING, operands) {
+    generateCallWithStmtIfArgsNotNull(ctx, nullCheck = true, DataTypes.STRING, operands) {
       args =>
         val (stmt, result) = call(args)
         (stmt, s"$BINARY_STRING.fromString($result)")
@@ -78,24 +81,24 @@ object CallGenerator {
   }
 
   def generateCallIfArgsNotNull(
+      ctx: CodeGeneratorContext,
       nullCheck: Boolean,
       returnType: InternalType,
       operands: Seq[GeneratedExpression],
       primitiveNullable: Boolean = false)
       (call: Seq[String] => String): GeneratedExpression = {
-    generateCallWithStmtIfArgsNotNull(nullCheck, returnType, operands, primitiveNullable) {
+    generateCallWithStmtIfArgsNotNull(ctx, nullCheck, returnType, operands, primitiveNullable) {
       args => ("", call(args))
     }
   }
 
   def generateCallWithStmtIfArgsNotNull(
+      ctx: CodeGeneratorContext,
       nullCheck: Boolean,
       returnType: InternalType,
       operands: Seq[GeneratedExpression],
       primitiveNullable: Boolean = false)
       (call: Seq[String] => (String, String)): GeneratedExpression = {
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
     val resultTypeTerm =
       if (primitiveNullable) {
         boxedTypeTermForType(returnType)
@@ -103,6 +106,8 @@ object CallGenerator {
       else {
         primitiveTypeTermForType(returnType)
       }
+    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
     val defaultValue = primitiveDefaultValue(returnType)
     val nullResultCode = if (nullCheck
       && isReference(returnType)
@@ -124,8 +129,8 @@ object CallGenerator {
     val resultCode = if (nullCheck && operands.nonEmpty) {
       s"""
          |${operands.map(_.code).mkString("\n")}
-         |boolean $nullTerm = ${operands.map(_.nullTerm).mkString(" || ")};
-         |$resultTypeTerm $resultTerm = $defaultValue;
+         |$nullTerm = ${operands.map(_.nullTerm).mkString(" || ")};
+         |$resultTerm = $defaultValue;
          |if (!$nullTerm) {
          |  $stmt
          |  $resultTerm = $result;
@@ -135,16 +140,16 @@ object CallGenerator {
     } else if (nullCheck && operands.isEmpty) {
       s"""
          |${operands.map(_.code).mkString("\n")}
-         |boolean $nullTerm = false;
+         |$nullTerm = false;
          |$stmt
-         |$resultTypeTerm $resultTerm = $result;
+         |$resultTerm = $result;
          |""".stripMargin
     } else{
       s"""
-         |boolean $nullTerm = false;
+         |$nullTerm = false;
          |${operands.map(_.code).mkString("\n")}
          |$stmt
-         |$resultTypeTerm $resultTerm = $result;
+         |$resultTerm = $result;
          |""".stripMargin
     }
 
@@ -152,19 +157,21 @@ object CallGenerator {
   }
 
   def generateCallIfArgsNullable(
+      ctx: CodeGeneratorContext,
       nullCheck: Boolean,
       returnType: InternalType,
       operands: Seq[GeneratedExpression])
       (call: Seq[String] => String): GeneratedExpression = {
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+
     val resultTypeTerm = primitiveTypeTermForType(returnType)
     val defaultValue = primitiveDefaultValue(returnType)
 
+    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
     val nullCode = if (nullCheck && isReference(returnType)) {
-      s"boolean $nullTerm = $resultTerm == null;"
+      s"$nullTerm = $resultTerm == null;"
     } else {
-      s"boolean $nullTerm = false;"
+      s"$nullTerm = false;"
     }
 
     val parameters = operands.map(x =>
@@ -174,10 +181,11 @@ object CallGenerator {
         x.resultTerm
       })
 
+
     val resultCode = if (nullCheck) {
       s"""
          |${operands.map(_.code).mkString("\n")}
-         |$resultTypeTerm $resultTerm = ${call(parameters)};
+         |$resultTerm = ${call(parameters)};
          |$nullCode
          |if ($nullTerm) {
          |  $resultTerm = $defaultValue;
@@ -186,7 +194,7 @@ object CallGenerator {
     } else {
       s"""
          |${operands.map(_.code).mkString("\n")}
-         |$resultTypeTerm $resultTerm = ${call(parameters)};
+         |$resultTerm = ${call(parameters)};
          |$nullCode
        """.stripMargin
     }

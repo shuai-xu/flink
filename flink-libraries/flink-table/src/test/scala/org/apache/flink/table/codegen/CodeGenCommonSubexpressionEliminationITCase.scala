@@ -194,6 +194,44 @@ class CodeGenCommonSubexpressionEliminationITCase {
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+  @Test
+  def testSubexpressionEliminationWithCodeSplit(): Unit = {
+    val configs = Array(new TableConfig(), new TableConfig)
+
+    configs(0).setMaxGeneratedCodeLength(1)
+
+    configs.foreach( tableConfig => {
+      val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
+
+      val t1 = env.fromCollection(sourceData)
+        .toTable(tEnv)
+        .as('id, 'band)
+
+      tEnv.registerTable("T1", t1)
+
+      val sqlQuery =
+        """
+          | SELECT
+          |   id, UPPER(band), Lower(UPPER(band))
+          | FROM T1
+        """.stripMargin
+
+      val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+      val sink = new TestingAppendSink
+      result.addSink(sink)
+      env.execute()
+
+      val expected = List(
+        "1,PINK FLOYD,pink floyd",
+        "2,DEAD CAN DANCE,dead can dance",
+        "3,THE DOORS,the doors",
+        "4,DOU WEI,dou wei",
+        "5,CUI JIAN,cui jian"
+      )
+      assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    })
+  }
+
 }
 
 class UpperUdf extends ScalarFunction {

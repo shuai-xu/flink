@@ -530,56 +530,56 @@ object CodeGenUtils {
         val right = operands(1)
         requireNumeric(left, operator.getName)
         requireNumeric(right, operator.getName)
-        generateArithmeticOperator("+", nullCheck, resultType, left, right)
+        generateArithmeticOperator(ctx, "+", nullCheck, resultType, left, right)
 
       case PLUS | DATETIME_PLUS if isTemporal(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireTemporal(left, operator.getName)
         requireTemporal(right, operator.getName)
-        generateTemporalPlusMinus(plus = true, nullCheck, left, right)
+        generateTemporalPlusMinus(ctx, plus = true, nullCheck, left, right)
 
       case MINUS if isNumeric(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireNumeric(left, operator.getName)
         requireNumeric(right, operator.getName)
-        generateArithmeticOperator("-", nullCheck, resultType, left, right)
+        generateArithmeticOperator(ctx, "-", nullCheck, resultType, left, right)
 
       case MINUS | MINUS_DATE if isTemporal(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireTemporal(left, operator.getName)
         requireTemporal(right, operator.getName)
-        generateTemporalPlusMinus(plus = false, nullCheck, left, right)
+        generateTemporalPlusMinus(ctx, plus = false, nullCheck, left, right)
 
       case MULTIPLY if isNumeric(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireNumeric(left, operator.getName)
         requireNumeric(right, operator.getName)
-        generateArithmeticOperator("*", nullCheck, resultType, left, right)
+        generateArithmeticOperator(ctx, "*", nullCheck, resultType, left, right)
 
       case MULTIPLY if isTimeInterval(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireTimeInterval(left, operator.getName)
         requireNumeric(right, operator.getName)
-        generateArithmeticOperator("*", nullCheck, resultType, left, right)
+        generateArithmeticOperator(ctx, "*", nullCheck, resultType, left, right)
 
       case ScalarSqlFunctions.DIVIDE | DIVIDE_INTEGER if isNumeric(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireNumeric(left, operator.getName)
         requireNumeric(right, operator.getName)
-        generateArithmeticOperator("/", nullCheck, resultType, left, right)
+        generateArithmeticOperator(ctx, "/", nullCheck, resultType, left, right)
 
       case MOD if isNumeric(resultType) =>
         val left = operands.head
         val right = operands(1)
         requireNumeric(left, operator.getName)
         requireNumeric(right, operator.getName)
-        generateArithmeticOperator("%", nullCheck, resultType, left, right)
+        generateArithmeticOperator(ctx, "%", nullCheck, resultType, left, right)
 
       case UNARY_MINUS if isNumeric(resultType) =>
         val operand = operands.head
@@ -610,35 +610,35 @@ object CodeGenUtils {
       case NOT_EQUALS =>
         val left = operands.head
         val right = operands(1)
-        generateNotEquals(nullCheck, left, right)
+        generateNotEquals(ctx, nullCheck, left, right)
 
       case GREATER_THAN =>
         val left = operands.head
         val right = operands(1)
         requireComparable(left, operator.getName)
         requireComparable(right, operator.getName)
-        generateComparison(">", nullCheck, left, right)
+        generateComparison(ctx, ">", nullCheck, left, right)
 
       case GREATER_THAN_OR_EQUAL =>
         val left = operands.head
         val right = operands(1)
         requireComparable(left, operator.getName)
         requireComparable(right, operator.getName)
-        generateComparison(">=", nullCheck, left, right)
+        generateComparison(ctx, ">=", nullCheck, left, right)
 
       case LESS_THAN =>
         val left = operands.head
         val right = operands(1)
         requireComparable(left, operator.getName)
         requireComparable(right, operator.getName)
-        generateComparison("<", nullCheck, left, right)
+        generateComparison(ctx, "<", nullCheck, left, right)
 
       case LESS_THAN_OR_EQUAL =>
         val left = operands.head
         val right = operands(1)
         requireComparable(left, operator.getName)
         requireComparable(right, operator.getName)
-        generateComparison("<=", nullCheck, left, right)
+        generateComparison(ctx, "<=", nullCheck, left, right)
 
       case IS_NULL =>
         val operand = operands.head

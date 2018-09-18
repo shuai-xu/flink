@@ -71,9 +71,9 @@ class MethodCallGen(
     }
 
     if (argNotNull) {
-      generateCallIfArgsNotNull(nullCheck, returnType, operands)(resultCall)
+      generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands)(resultCall)
     } else {
-      generateCallIfArgsNullable(nullCheck, returnType, operands)(resultCall)
+      generateCallIfArgsNullable(ctx, nullCheck, returnType, operands)(resultCall)
     }
   }
 }

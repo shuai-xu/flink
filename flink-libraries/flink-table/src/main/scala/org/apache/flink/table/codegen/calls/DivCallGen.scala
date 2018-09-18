@@ -64,6 +64,6 @@ class DivCallGen extends CallGenerator {
         throw new AssertionError(s"Unexpected types ($type1, $type2)")
     }
 
-    generateCallIfArgsNotNull(nullCheck, returnType, operands) { _ => code }
+    generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands) { _ => code }
   }
 }

@@ -52,6 +52,7 @@ class BinaryStringCallGenTest {
           |
           | @Override
           | public Object apply() {
+          |   ${ctx.reuseFieldCode()}
           |   ${expr.code}
           |   if (${expr.nullTerm}) {
           |     return null;
