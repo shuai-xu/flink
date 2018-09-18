@@ -891,19 +891,14 @@ object ScalarOperators {
           generateUnaryOperatorIfNotNull(ctx, nullCheck, targetType, operand) {
             operandTerm => s"$operandTerm.toDecimal(${dt.precision}, ${dt.scale})"
           }
-        case DataTypes.FLOAT | DataTypes.DOUBLE =>
-          // Because of the preciseness problem, we currently use Double.valueOf or Float.valueOf
-          // to be consistent with Java.
-          val wrapperClass = boxedTypeTermForType(targetType)
-          generateUnaryOperatorIfNotNull(ctx, nullCheck, targetType, operand) {
-            operandTerm => s"$wrapperClass.valueOf($operandTerm.toString())"
-          }
         case _ =>
           val methodName = targetType match {
             case DataTypes.BYTE => "toByte"
             case DataTypes.SHORT => "toShort"
             case DataTypes.INT => "toInt"
             case DataTypes.LONG => "toLong"
+            case DataTypes.DOUBLE => "toDouble"
+            case DataTypes.FLOAT => "toFloat"
             case _ => null
           }
           assert(methodName != null, "Unexpected data type.")

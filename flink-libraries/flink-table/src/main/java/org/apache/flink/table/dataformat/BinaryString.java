@@ -1412,6 +1412,22 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		return null;
 	}
 
+	public Double toDouble() {
+		try {
+			return Double.valueOf(toString());
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	public Float toFloat() {
+		try {
+			return Float.valueOf(toString());
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
 	/**
 	 * Parses this BinaryString to Decimal.
 	 *
