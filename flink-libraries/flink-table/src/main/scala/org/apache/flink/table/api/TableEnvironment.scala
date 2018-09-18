@@ -251,7 +251,6 @@ abstract class TableEnvironment(val config: TableConfig) {
     checkForInstantiation(function.getClass)
 
     // register in Table API
-
     functionCatalog.registerFunction(name, function.getClass)
 
     // register in SQL API
@@ -881,7 +880,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       throw TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
     }
 
-    getTable(sinkTableName) match {
+    getSinkTable(sinkTableName) match {
       case s: TableSinkTable[_] =>
         val tableSink = s.tableSink
         // validate schema of source table and table sink
@@ -974,13 +973,32 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @return true, if a table is registered under the name, false otherwise.
     */
   protected[flink] def isRegistered(name: String): Boolean = {
-    rootSchema.getTableNames.contains(name)
+    val memContains: Boolean = rootSchema.getTableNames.contains(name)
+    if (!memContains) {
+      val schemaPaths = Array(DEFAULT_SCHEMA)
+      val schema = getSchema(schemaPaths)
+      if (schema != null) {
+        return schema.getTable(name) != null
+      }
+    }
+    memContains
   }
 
   private[flink] def getTable(tablePath: String*): org.apache.calcite.schema.Table = {
     require(tablePath != null && tablePath.nonEmpty, "tablePath must not be null or empty.")
     if (tablePath.length == 1) {
-      rootSchema.getTable(tablePath.head)
+      // First, try to get the table from the memory
+      var table = rootSchema.getTable(tablePath.head)
+
+      // Second, try to get the table from the external catalog
+      if (null == table) {
+        val schemaPaths = Array(DEFAULT_SCHEMA)
+        val schema = getSchema(schemaPaths)
+        if (schema != null) {
+          table = schema.getTable(tablePath.head)
+        }
+      }
+      table
     } else {
       val schemaPaths = tablePath.slice(0, tablePath.length - 1)
       val schema = getSchema(schemaPaths.toArray)

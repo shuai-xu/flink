@@ -637,6 +637,7 @@ under the License.
 									<include>org.reflections:*</include>
 									<include>org.codehaus.janino:*</include>
 									<include>com.google.guava:guava</include>
+									<include>com.alibaba.blink:*</include>
                                 </includes>
 							</artifactSet>
 							<relocations>
