@@ -17,16 +17,22 @@
 
 package org.apache.flink.streaming.connectors.rabbitmq;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.metrics.Meter;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.streaming.connectors.rabbitmq.common.RMQConnectionConfig;
+import org.apache.flink.util.Preconditions;
 
+import com.alibaba.blink.connectors.MetricUtils;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
@@ -40,22 +46,77 @@ public class RMQSink<IN> extends RichSinkFunction<IN> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(RMQSink.class);
 
+	@Nullable
 	protected final String queueName;
+
 	private final RMQConnectionConfig rmqConnectionConfig;
 	protected transient Connection connection;
 	protected transient Channel channel;
 	protected SerializationSchema<IN> schema;
 	private boolean logFailuresOnly = false;
 
+	@Nullable
+	private final RMQSinkPublishOptions<IN> publishOptions;
+
+	@Nullable
+	private final SerializableReturnListener returnListener;
+
+	private Meter bps;
+	private Meter tps;
+
+	/**
+	 * @param rmqConnectionConfig The RabbitMQ connection configuration {@link RMQConnectionConfig}.
+	 * @param queueName The queue to publish messages to.
+	 * @param schema A {@link SerializationSchema} for turning the Java objects received into bytes
+	 * @param publishOptions A {@link RMQSinkPublishOptions} for providing message's routing key and/or properties
+	 * @param returnListener A SerializableReturnListener implementation object to handle returned message event
+     */
+	private RMQSink(
+			RMQConnectionConfig rmqConnectionConfig,
+			@Nullable String queueName,
+			SerializationSchema<IN> schema,
+			@Nullable RMQSinkPublishOptions<IN> publishOptions,
+			@Nullable SerializableReturnListener returnListener) {
+		this.rmqConnectionConfig = rmqConnectionConfig;
+		this.queueName = queueName;
+		this.schema = schema;
+		this.publishOptions = publishOptions;
+		this.returnListener = returnListener;
+	}
+
 	/**
 	 * @param rmqConnectionConfig The RabbitMQ connection configuration {@link RMQConnectionConfig}.
 	 * @param queueName The queue to publish messages to.
 	 * @param schema A {@link SerializationSchema} for turning the Java objects received into bytes
      */
+	@PublicEvolving
 	public RMQSink(RMQConnectionConfig rmqConnectionConfig, String queueName, SerializationSchema<IN> schema) {
-		this.rmqConnectionConfig = rmqConnectionConfig;
-		this.queueName = queueName;
-		this.schema = schema;
+		this(rmqConnectionConfig, queueName, schema, null, null);
+	}
+
+	/**
+	 * @param rmqConnectionConfig The RabbitMQ connection configuration {@link RMQConnectionConfig}.
+	 * @param schema A {@link SerializationSchema} for turning the Java objects received into bytes
+	 * @param publishOptions A {@link RMQSinkPublishOptions} for providing message's routing key and/or properties
+	 * In this case the computeMandatoy or computeImmediate MUST return false otherwise an
+	 * IllegalStateException is raised during runtime.
+     */
+	@PublicEvolving
+	public RMQSink(RMQConnectionConfig rmqConnectionConfig, SerializationSchema<IN> schema,
+			RMQSinkPublishOptions<IN> publishOptions) {
+		this(rmqConnectionConfig, null, schema, publishOptions, null);
+	}
+
+	/**
+	 * @param rmqConnectionConfig The RabbitMQ connection configuration {@link RMQConnectionConfig}.
+	 * @param schema A {@link SerializationSchema} for turning the Java objects received into bytes
+	 * @param publishOptions A {@link RMQSinkPublishOptions} for providing message's routing key and/or properties
+	 * @param returnListener A SerializableReturnListener implementation object to handle returned message event
+     */
+	@PublicEvolving
+	public RMQSink(RMQConnectionConfig rmqConnectionConfig, SerializationSchema<IN> schema,
+			RMQSinkPublishOptions<IN> publishOptions, SerializableReturnListener returnListener) {
+		this(rmqConnectionConfig, null, schema, publishOptions, returnListener);
 	}
 
 	/**
@@ -63,8 +124,10 @@ public class RMQSink<IN> extends RichSinkFunction<IN> {
 	 * this method to have a custom setup for the queue (i.e. binding the queue to an exchange or
 	 * defining custom queue parameters)
 	 */
-	protected void setupQueue() throws IOException {
-		channel.queueDeclare(queueName, false, false, false, null);
+	protected void setupQueue(String queueName) throws IOException {
+		if (queueName != null) {
+			channel.queueDeclare(queueName, false, false, false, null);
+		}
 	}
 
 	/**
@@ -88,7 +151,12 @@ public class RMQSink<IN> extends RichSinkFunction<IN> {
 			if (channel == null) {
 				throw new RuntimeException("None of RabbitMQ channels are available");
 			}
-			setupQueue();
+			setupQueue(queueName);
+			if (returnListener != null) {
+				channel.addReturnListener(returnListener);
+			}
+			bps = MetricUtils.registerOutBps(getRuntimeContext(), "rmq");
+			tps = MetricUtils.registerOutTps(getRuntimeContext());
 		} catch (IOException e) {
 			throw new RuntimeException("Error while creating the channel", e);
 		}
@@ -104,8 +172,23 @@ public class RMQSink<IN> extends RichSinkFunction<IN> {
 	public void invoke(IN value) {
 		try {
 			byte[] msg = schema.serialize(value);
+			tps.markEvent();
+			bps.markEvent();
 
-			channel.basicPublish("", queueName, null, msg);
+			if (publishOptions == null) {
+				channel.basicPublish("", queueName, null, msg);
+			} else {
+				boolean mandatory = publishOptions.computeMandatory(value);
+				boolean immediate = publishOptions.computeImmediate(value);
+
+				Preconditions.checkState(!(returnListener == null && (mandatory || immediate)),
+					"Setting mandatory and/or immediate flags to true requires a ReturnListener.");
+
+				String rk = publishOptions.computeRoutingKey(value);
+				String exchange = publishOptions.computeExchange(value);
+				channel.basicPublish(exchange, rk, mandatory, immediate,
+					publishOptions.computeProperties(value), msg);
+			}
 		} catch (IOException e) {
 			if (logFailuresOnly) {
 				LOG.error("Cannot send RMQ message {} at {}", queueName, rmqConnectionConfig.getHost(), e);
