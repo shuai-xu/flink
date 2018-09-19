@@ -141,6 +141,10 @@
 					<groupId>org.apache.logging.log4j</groupId>
 					<artifactId>log4j-slf4j-impl</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
@@ -257,6 +261,11 @@
 			<artifactId>jackson-core</artifactId>
 			<version>2.8.1</version>
 		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.8.1</version>
+		</dependency>
 
 	</dependencies>
 
@@ -291,6 +300,10 @@
 								<relocation>
 									<pattern>com.fasterxml.jackson.core</pattern>
 									<shadedPattern>org.apache.flink.hive.shaded.com.fasterxml.jackson.core</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.fasterxml.jackson.databind</pattern>
+									<shadedPattern>org.apache.flink.hive.shaded.com.fasterxml.jackson.databind</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>
