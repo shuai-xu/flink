@@ -20,6 +20,7 @@ package org.apache.flink.configuration;
 
 import org.apache.flink.annotation.Public;
 
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -52,6 +53,10 @@ public class UnmodifiableConfiguration extends Configuration {
 
 	@Override
 	public final void addAll(Configuration other) {
+		error();
+	}
+
+	public void addAll(Map<String, String> other) {
 		error();
 	}
 
