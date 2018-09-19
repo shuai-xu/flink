@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.schema
 
 import java.util
 
-import org.apache.calcite.schema.Statistic
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource

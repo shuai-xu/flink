@@ -24,6 +24,12 @@ import org.apache.flink.table.plan.stats.FlinkStatistic
 abstract class FlinkTable extends AbstractTable {
 
   /**
+   * Restrict return type of statistic to FlinkStatistic.
+   * @return
+   */
+  override def getStatistic: FlinkStatistic = ???
+
+  /**
     * Creates a copy of this table, changing statistic.
     *
     * @param statistic A new FlinkStatistic.

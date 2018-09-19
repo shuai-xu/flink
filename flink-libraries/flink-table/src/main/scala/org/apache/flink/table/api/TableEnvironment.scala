@@ -426,7 +426,7 @@ abstract class TableEnvironment(val config: TableConfig) {
           if (t.getStatistic == null) {
             None
           } else {
-            Option(t.getStatistic.asInstanceOf[FlinkStatistic].getTableStats)
+            Option(t.getStatistic.getTableStats)
           }
         case _ => None
       }
@@ -496,19 +496,21 @@ abstract class TableEnvironment(val config: TableConfig) {
     val tableName = tablePath.last
     if (tablePath.length == 1) {
       // table in calcite root schema
-      val newTable = table match {
-        case t: FlinkTable if t.getStatistic.isInstanceOf[FlinkStatistic] =>
-          // call statistic instead of getStatistics of FlinkTable to fetch the original statistics.
-          val statistic = t.getStatistic.asInstanceOf[FlinkStatistic]
-          val (uniqueKeys, skewInfo) = if (statistic == null)  {
-            (null, null)
-          } else {
-            (statistic.getUniqueKeys, statistic.getSkewInfo)
-          }
-          t.copy(FlinkStatistic.of(tableStats.orNull, uniqueKeys, skewInfo))
+      val statistic = table match {
+        // call statistic instead of getStatistics of TableSourceTable
+        // to fetch the original statistics.
+        case t: TableSourceTable => t.statistic
+        case t: FlinkTable => t.getStatistic
         case _ => throw new TableException(
           s"alter TableStats operation is not supported for ${table.getClass}.")
       }
+      val (uniqueKeys, skewInfo) = if (statistic == null)  {
+        (null, null)
+      } else {
+        (statistic.getUniqueKeys, statistic.getSkewInfo)
+      }
+      val newTable = table.asInstanceOf[FlinkTable]
+          .copy(FlinkStatistic.of(tableStats.orNull, uniqueKeys, skewInfo))
       replaceRegisteredTable(tableName, newTable)
     } else {
       // table in external catalog
@@ -548,19 +550,23 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     val tableName = tablePath.last
     if (tablePath.length == 1) {
-      val newTable = table match {
-        case t: FlinkTable =>
-          val (tableStats, uniqueKeys) = if (t.getStatistic == null)  {
-            (null, null)
-          } else {
-            (
-                t.getStatistic.asInstanceOf[FlinkStatistic].getTableStats,
-                t.getStatistic.asInstanceOf[FlinkStatistic].getUniqueKeys)
-          }
-          t.copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
+      // table in calcite root schema
+      val statistic = table match {
+        // call statistic instead of getStatistics of TableSourceTable
+        // to fetch the original statistics.
+        case t: TableSourceTable => t.statistic
+        case t: FlinkTable => t.getStatistic
         case _ => throw new TableException(
-          s"alterSkewInfo operation is not supported for ${table.getClass}.")
+          s"alter SkewInfo operation is not supported for ${table.getClass}.")
       }
+
+      val (uniqueKeys, tableStats) = if (statistic == null)  {
+        (null, null)
+      } else {
+        (statistic.getUniqueKeys, statistic.getTableStats)
+      }
+      val newTable =  table.asInstanceOf[FlinkTable]
+          .copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
       replaceRegisteredTable(tableName, newTable)
     } else {
       throw new TableException("alterSkewInfo operation is not supported for external catalog.")
@@ -577,19 +583,23 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     val tableName = tablePath.last
     if (tablePath.length == 1) {
-      val newTable = table match {
-        case t: FlinkTable =>
-          val (tableStats, skewInfo) = if (t.getStatistic == null)  {
-            (null, null)
-          } else {
-            (
-                t.getStatistic.asInstanceOf[FlinkStatistic].getTableStats,
-                t.getStatistic.asInstanceOf[FlinkStatistic].getSkewInfo)
-          }
-          t.copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
+      // table in calcite root schema
+      val statistic = table match {
+        // call statistic instead of getStatistics of TableSourceTable
+        // to fetch the original statistics.
+        case t: TableSourceTable => t.statistic
+        case t: FlinkTable => t.getStatistic
         case _ => throw new TableException(
-          s"alter unique keys operation is not supported for ${table.getClass}.")
+          s"alter UniqueKeys operation is not supported for ${table.getClass}.")
       }
+
+      val (skewInfo, tableStats) = if (statistic == null)  {
+        (null, null)
+      } else {
+        (statistic.getSkewInfo, statistic.getTableStats)
+      }
+      val newTable = table.asInstanceOf[FlinkTable]
+          .copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
       replaceRegisteredTable(tableName, newTable)
     } else {
       throw new TableException("alter unique keys operation is not supported for external catalog.")

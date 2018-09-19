@@ -132,11 +132,11 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
     val updatedPredicatesSize = predicates.size()
     val statistics = if (originPredicatesSize == updatedPredicatesSize) {
       // Keep all Statistics if no predicates can be pushed down
-      relOptTable.getFlinkStatistic
+      tableSourceTable.statistic
     } else {
       // Only keep uniqueKeys and modified monotonicity properties after predicates pushed down
-      FlinkStatistic.of(relOptTable.getFlinkStatistic.getUniqueKeys,
-                        relOptTable.getFlinkStatistic.getRelModifiedMonotonicity)
+      FlinkStatistic.of(tableSourceTable.statistic.getUniqueKeys,
+                        tableSourceTable.statistic.getRelModifiedMonotonicity)
     }
     val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(statistics)
     relOptTable.copy(newTableSourceTable, relOptTable.getRowType)

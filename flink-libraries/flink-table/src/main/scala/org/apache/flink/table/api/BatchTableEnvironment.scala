@@ -671,9 +671,11 @@ class BatchTableEnvironment(
         registerTableInternal(name, tableSourceTable)
       case dimensionTableSource: DimensionTableSource[_] =>
         if (dimensionTableSource.isTemporal) {
-          registerTableInternal(name, new TemporalDimensionTableSourceTable(dimensionTableSource))
+          registerTableInternal(
+            name, new TemporalDimensionTableSourceTable(dimensionTableSource, statistic))
         } else {
-          registerTableInternal(name, new DimensionTableSourceTable(dimensionTableSource))
+          registerTableInternal(
+            name, new DimensionTableSourceTable(dimensionTableSource, statistic))
         }
       case _ =>
         throw new TableException("Only BatchExecTableSource/DimensionTableSource " +
