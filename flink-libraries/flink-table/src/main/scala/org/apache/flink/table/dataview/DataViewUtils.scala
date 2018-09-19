@@ -169,7 +169,6 @@ object DataViewUtils {
           spec = Some(MapViewSpec(
             "agg" + aggIndex + "$" + fieldName,
             fieldIndex, // dataview field index in pojo
-            fieldName,
             newTypeInfo))
         }
         newTypeInfo
@@ -209,7 +208,6 @@ object DataViewUtils {
           spec = Some(SortedMapViewSpec(
             "agg" + aggIndex + "$" + fieldName,
             fieldIndex, // dataview field index in pojo
-            fieldName,
             newTypeInfo))
         }
         newTypeInfo
@@ -233,7 +231,6 @@ object DataViewUtils {
           spec = Some(ListViewSpec(
             "agg" + aggIndex + "$" + fieldName,
             fieldIndex, // dataview field index in pojo
-            fieldName,
             newTypeInfo))
         }
         newTypeInfo

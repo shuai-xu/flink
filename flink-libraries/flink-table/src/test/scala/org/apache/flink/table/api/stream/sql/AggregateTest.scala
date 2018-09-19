@@ -29,7 +29,7 @@ import org.apache.flink.table.types.{DataType, DataTypes, TypeInfoWrappedType}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
-import org.junit.{Ignore, Test}
+import org.junit.Test
 
 class AggregateTest extends TableTestBase {
 
@@ -38,8 +38,8 @@ class AggregateTest extends TableTestBase {
     "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
 
   @Test
-  def testCannotCountDistinctOnMultiFields(): Unit = {
-    val sql = "SELECT b, count(distinct a, c) FROM MyTable GROUP BY b"
+  def testCannotCountOnMultiFields(): Unit = {
+    val sql = "SELECT b, count(a, c) FROM MyTable GROUP BY b"
     thrown.expect(classOf[TableException])
     thrown.expectMessage("We now only support the count of one field")
     streamUtil.explainSql(sql)
@@ -79,27 +79,6 @@ class AggregateTest extends TableTestBase {
   @Test
   def testGroupbyWithoutWindow(): Unit = {
     val sql = "SELECT COUNT(a) FROM MyTable GROUP BY b"
-    streamUtil.verifyPlan(sql)
-  }
-
-  @Test
-  def testDistinct(): Unit = {
-    val sql = "SELECT DISTINCT a, b, c FROM MyTable"
-    streamUtil.verifyPlan(sql)
-  }
-
-  // TODO: this query should be optimized to only have a single StreamExecGroupAggregate
-  // TODO: reopen this until FLINK-7144 fixed
-  @Ignore
-  @Test
-  def testDistinctAfterAggregate(): Unit = {
-    val sql = "SELECT DISTINCT a FROM MyTable GROUP BY a, b, c"
-    streamUtil.verifyPlan(sql)
-  }
-
-  @Test
-  def testCountDistinct(): Unit = {
-    val sql = "SELECT a, b, count(distinct c) FROM MyTable GROUP BY a, b"
     streamUtil.verifyPlan(sql)
   }
 

@@ -25,10 +25,11 @@ import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
-import org.apache.flink.table.plan.util.AggregateInfo
+import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.plan.util.AggregateUtil._
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 trait CommonAggregate {
 
@@ -121,7 +122,8 @@ trait CommonAggregate {
       aggCalls: Seq[AggregateCall],
       aggFunctions: Seq[UserDefinedFunction],
       isMerge: Boolean,
-      isGlobal: Boolean): String = {
+      isGlobal: Boolean,
+      distincts: Seq[DistinctInfo] = Seq()): String = {
 
     val prefix = if (isMerge) {
       "Final_"
@@ -135,9 +137,31 @@ trait CommonAggregate {
     val outFields = rowType.getFieldNames.asScala
     val fullGrouping = grouping ++ auxGrouping
 
+    val distinctFieldNames = distincts.indices.map(index => s"distinct$$$index")
+    val distinctStrings = if (isMerge) {
+      // not output distinct fields in global merge
+      Seq()
+    } else {
+      distincts.map { distinct =>
+        val argListNames = distinct.argIndexes.map(inFields).mkString(",")
+        if (distinct.filterArg >= 0 && distinct.filterArg < inFields.size) {
+          s"DISTINCT($argListNames) FILTER ${inFields(distinct.filterArg)}"
+        } else {
+          s"DISTINCT($argListNames)"
+        }
+      }
+    }
+
+    val aggToDistinctMapping = mutable.HashMap.empty[Int, String]
+    distincts.zipWithIndex.foreach { case (distinct, index) =>
+      distinct.aggIndexes.foreach { aggIndex =>
+        aggToDistinctMapping += (aggIndex -> distinctFieldNames(index))
+      }
+    }
+
     //agg
     var offset = fullGrouping.length
-    val aggStrings = aggCalls.zip(aggFunctions).map { case (aggCall, udf) =>
+    val aggStrings = aggCalls.zip(aggFunctions).zipWithIndex.map { case ((aggCall, udf), index) =>
       val distinct = if (aggCall.isDistinct) {
         if (aggCall.getArgList.size() == 0) {
           "DISTINCT"
@@ -145,7 +169,11 @@ trait CommonAggregate {
           "DISTINCT "
         }
       } else {
-        ""
+        if (isMerge && aggToDistinctMapping.contains(index)) {
+          "DISTINCT "
+        } else {
+          ""
+        }
       }
       var newArgList = aggCall.getArgList.asScala.map(_.toInt).toList
       if (isMerge) {
@@ -160,11 +188,14 @@ trait CommonAggregate {
             argList
         }
       }
-      val argListNames = if (newArgList.nonEmpty) {
+      val argListNames = if (aggToDistinctMapping.contains(index)) {
+        aggToDistinctMapping(index)
+      } else if (newArgList.nonEmpty) {
         newArgList.map(inFields(_)).mkString(", ")
       } else {
         "*"
       }
+
       if (aggCall.filterArg >= 0 && aggCall.filterArg < inFields.size) {
         s"${aggCall.getAggregation}($distinct$argListNames) FILTER ${inFields(aggCall.filterArg)}"
       } else {
@@ -195,8 +226,8 @@ trait CommonAggregate {
       outFieldName
     }
 
-    (fullGrouping.map(inFields(_)) ++ aggStrings).zip(
-      fullGrouping.indices.map(outFields(_)) ++ outFieldNames).map {
+    (fullGrouping.map(inFields(_)) ++ aggStrings ++ distinctStrings).zip(
+      fullGrouping.indices.map(outFields(_)) ++ outFieldNames ++ distinctFieldNames).map {
       case (f, o) => if (f == o) {
         f
       } else {

@@ -104,24 +104,28 @@ class StreamExecGlobalGroupAggregate(
       aggregationToString(
         inputNode.getRowType,
         groupings,
+        Array.empty[Int],
         getRowType,
         globalAggInfoList.getActualAggregateCalls,
         globalAggInfoList.getActualFunctions,
         isMerge = true,
-        isGlobal = true)}))"
+        isGlobal = true,
+        globalAggInfoList.distinctInfos)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputNode.getRowType, groupings), !groupings.isEmpty)
       .item("select", aggregationToString(
-        inputNode.getRowType,
+          inputNode.getRowType,
           groupings,
+          Array.empty[Int],
           getRowType,
           globalAggInfoList.getActualAggregateCalls,
           globalAggInfoList.getActualFunctions,
           isMerge = true,
-          isGlobal = true))
+          isGlobal = true,
+          globalAggInfoList.distinctInfos))
   }
 
   @VisibleForTesting
@@ -131,11 +135,13 @@ class StreamExecGlobalGroupAggregate(
     values.add(Pair.of("select", aggregationToString(
       inputNode.getRowType,
       groupings,
+      Array.empty[Int],
       getRowType,
       globalAggInfoList.getActualAggregateCalls,
       globalAggInfoList.getActualFunctions,
       isMerge = true,
-      isGlobal = true)))
+      isGlobal = true,
+      globalAggInfoList.distinctInfos)))
     values.add(Pair.of("aggs", globalAggInfoList
       .aggInfos
       .map(e => e.function.toString)
@@ -161,11 +167,13 @@ class StreamExecGlobalGroupAggregate(
     val aggString = aggregationToString(
       inputNode.getRowType,
       groupings,
+      Array.empty[Int],
       getRowType,
       globalAggInfoList.getActualAggregateCalls,
       globalAggInfoList.getActualFunctions,
       isMerge = true,
-      isGlobal = true)
+      isGlobal = true,
+      globalAggInfoList.distinctInfos)
 
     val opName = if (groupings.nonEmpty) {
       s"groupBy: (${groupingToString(inputNode.getRowType, groupings)}), " +

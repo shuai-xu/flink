@@ -20,14 +20,16 @@ package org.apache.flink.table.codegen.agg
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.dataview.{ListView, MapView}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregateFunction}
-import org.apache.flink.table.plan.util.{AggregateInfo, AggregateInfoList}
+import org.apache.flink.table.plan.util.AggregateInfoList
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext, SubKeyedAggsHandleFunction}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -43,8 +45,6 @@ class AggsHandlerCodeGenerator(
     needMerge: Boolean,
     nullCheck: Boolean) {
 
-  private val INPUT_NOT_NULL = false
-
   private val inputType = new BaseRowType(classOf[BaseRow], inputFieldTypes: _*)
 
   /** constant expressions that act like a second input in the parameter indices. */
@@ -58,13 +58,56 @@ class AggsHandlerCodeGenerator(
   /** Aggregates informations */
   private var accTypeInfo: BaseRowType = _
   private var aggBufferSize: Int = _
-  private var aggCodeGens: Array[AggCodeGen] = _
 
   private var mergedAccExternalTypes: Array[DataType] = _
   private var mergedAccOffset: Int = 0
   private var mergedAccOnHeap: Boolean = false
 
-  private var ignoreAggValue: Option[Int] = None
+  private var ignoreAggValues: Array[Int] = Array()
+
+  /**
+    * The [[aggBufferCodeGens]] and [[aggActionCodeGens]] will be both created when code generate
+    * an [[AggsHandleFunction]] or [[SubKeyedAggsHandleFunction]]. They both contain all the
+    * same AggCodeGens, but are different in the organizational form. The [[aggBufferCodeGens]]
+    * flatten all the AggCodeGens in a flat format. The [[aggActionCodeGens]] organize all the
+    * AggCodeGens in a tree format. If there is no distinct aggregate, the [[aggBufferCodeGens]]
+    * and [[aggActionCodeGens]] are totally the same.
+    */
+
+  /**
+    * The aggBufferCodeGens is organized according to the agg buffer order, which is in a flat
+    * format, and is only used to generate the methods relative to accumulators, Such as
+    * [[genCreateAccumulators()]], [[genGetAccumulators()]], [[genSetAccumulators()]].
+    *
+    * For example if we have :
+    * count(*), count(distinct a), sum(a), sum(distinct a), max(distinct c)
+    *
+    * then the members of aggBufferCodeGens are organized looks like this:
+    * +----------+-----------+--------+---------+---------+----------------+----------------+
+    * | count(*) | count(a') | sum(a) | sum(a') | max(c') | distinct(a) a' | distinct(c) c' |
+    * +----------+-----------+--------+---------+---------+----------------+----------------+
+    * */
+  private var aggBufferCodeGens: Array[AggCodeGen] = _
+
+  /**
+    * The aggActionCodeGens is organized according to the aggregate calling order, which is in
+    * a tree format. Such as the aggregates distinct on the same fields should be accumulated
+    * together when distinct is satisfied. And this is only used to generate the methods relative
+    * to aggregate action. Such as [[genAccumulate()]], [[genRetract()]], [[genMerge()]].
+    *
+    * For example if we have :
+    * count(*), count(distinct a), sum(a), sum(distinct a), max(distinct c)
+    *
+    * then the members of aggActionCodeGens are organized looks like this:
+    *
+    * +-------------------------------------------------------+
+    * | count(*) | sum(a) | distinct(a) a'  | distinct(c) c'  |
+    * |          |        |   |-- count(a') |   |-- max(c')   |
+    * |          |        |   |-- sum(a')   |                 |
+    * +-------------------------------------------------------+
+    */
+  private var aggActionCodeGens: Array[AggCodeGen] = _
+
 
   /**
     * Adds constant expressions that act like a second input in the parameter indices.
@@ -121,13 +164,18 @@ class AggsHandlerCodeGenerator(
       mergedAccExternalTypes = aggInfoList.getAccTypes
     }
 
-    this.aggCodeGens = aggInfoList.aggInfos.map { aggInfo =>
+    val aggCodeGens = aggInfoList.aggInfos.map { aggInfo =>
+      val filterExpr = createFilterExpression(
+        aggInfo.agg.filterArg,
+        aggInfo.aggIndex,
+        aggInfo.agg.name)
+
       val codegen = aggInfo.function match {
         case _: DeclarativeAggregateFunction =>
           new DeclarativeAggCodeGen(
             ctx,
             aggInfo,
-            createFilterExpression(aggInfo),
+            filterExpr,
             mergedAccOffset,
             aggBufferOffset,
             aggBufferSize,
@@ -138,7 +186,7 @@ class AggsHandlerCodeGenerator(
           new ImperativeAggCodeGen(
             ctx,
             aggInfo,
-            createFilterExpression(aggInfo),
+            filterExpr,
             mergedAccOffset,
             aggBufferOffset,
             aggBufferSize,
@@ -153,24 +201,63 @@ class AggsHandlerCodeGenerator(
       codegen
     }
 
+    val distinctCodeGens = aggInfoList.distinctInfos.zipWithIndex.map {
+      case (distinctInfo, index) =>
+        val innerCodeGens = distinctInfo.aggIndexes.map(aggCodeGens(_)).toArray
+        val filterExpr = createFilterExpression(
+          distinctInfo.filterArg,
+          index + aggCodeGens.length,
+          "distinct aggregate")
+        val codegen = new DistinctAggCodeGen(
+          ctx,
+          distinctInfo,
+          index,
+          innerCodeGens,
+          filterExpr,
+          mergedAccOffset,
+          aggBufferOffset,
+          aggBufferSize,
+          hasNamespace,
+          mergedAccOnHeap,
+          distinctInfo.consumeRetraction,
+          relBuilder)
+        // distinct agg buffer occupies only one field
+        aggBufferOffset += 1
+        codegen
+    }
+
+    val distinctAggIndexes = aggInfoList.distinctInfos.flatMap(_.aggIndexes)
+    val nonDistinctAggIndexes = aggCodeGens.indices.filter(!distinctAggIndexes.contains(_)).toArray
+
+    this.aggBufferCodeGens = aggCodeGens ++ distinctCodeGens
+    this.aggActionCodeGens = nonDistinctAggIndexes.map(aggCodeGens(_)) ++ distinctCodeGens
+
     // when input contains retractions, we inserted a count1 agg in the agg list
     // the count1 agg value shouldn't be in the aggregate result
     if (aggInfoList.count1AggIndex.nonEmpty && aggInfoList.count1AggInserted) {
-      ignoreAggValue = Some(aggInfoList.count1AggIndex.get)
+      ignoreAggValues ++= Array(aggInfoList.count1AggIndex.get)
+    }
+
+    // the distinct value shouldn't be in the aggregate result
+    if (aggInfoList.distinctInfos.nonEmpty) {
+      ignoreAggValues ++= distinctCodeGens.indices.map(_ + aggCodeGens.length)
     }
   }
 
   /**
     * Creates filter argument access expression, none if no filter
     */
-  private def createFilterExpression(aggInfo: AggregateInfo): Option[Expression] = {
-    val filterArg = aggInfo.agg.filterArg
+  private def createFilterExpression(
+      filterArg: Int,
+      aggIndex: Int,
+      aggName: String): Option[Expression] = {
+
     if (filterArg > 0) {
-      val name = s"agg_${aggInfo.aggIndex}_filter"
+      val name = s"agg_${aggIndex}_filter"
       val filterType = inputFieldTypes(filterArg)
       if (filterType != DataTypes.BOOLEAN) {
-        throw new TableException(s"filter arg must be boolean, but is $filterArg, " +
-                                   s"the aggregate is ${aggInfo.agg.toString}.")
+        throw new TableException(s"filter arg must be boolean, but is $filterType, " +
+                                   s"the aggregate is $aggName.")
       }
       Some(ResolvedAggInputReference(name, filterArg, inputFieldTypes(filterArg)))
     } else {
@@ -370,7 +457,7 @@ class AggsHandlerCodeGenerator(
 
     // not need to bind input for ExprCodeGenerator
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
-    val initAccExprs = aggCodeGens.flatMap(_.createAccumulator(exprGenerator))
+    val initAccExprs = aggBufferCodeGens.flatMap(_.createAccumulator(exprGenerator))
     val accTerm = newName("acc")
     val resultExpr = exprGenerator.generateResultExpression(
       initAccExprs,
@@ -391,7 +478,7 @@ class AggsHandlerCodeGenerator(
 
     // no need to bind input
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
-    val accExprs = aggCodeGens.flatMap(_.getAccumulator(exprGenerator))
+    val accExprs = aggBufferCodeGens.flatMap(_.getAccumulator(exprGenerator))
     val accTerm = newName("acc")
     // always create a new accumulator row
     val resultExpr = exprGenerator.generateResultExpression(
@@ -414,7 +501,7 @@ class AggsHandlerCodeGenerator(
     // bind input1 as accumulators
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
       .bindInput(accTypeInfo, inputTerm = ACC_TERM)
-    val body = aggCodeGens.map(_.setAccumulator(exprGenerator)).mkString("\n")
+    val body = aggBufferCodeGens.map(_.setAccumulator(exprGenerator)).mkString("\n")
 
     s"""
       |${ctx.reuseFieldCode(methodName)}
@@ -433,7 +520,7 @@ class AggsHandlerCodeGenerator(
     // bind input1 as inputRow
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
       .bindInput(inputType, inputTerm = ACCUMULATE_INPUT_TERM)
-    val body = aggCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
+    val body = aggActionCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
     s"""
        |${ctx.reuseFieldCode(methodName)}
        |${ctx.reuseInputUnboxingCode(Set(ACCUMULATE_INPUT_TERM))}
@@ -452,7 +539,7 @@ class AggsHandlerCodeGenerator(
       // bind input1 as inputRow
       val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
         .bindInput(inputType, inputTerm = RETRACT_INPUT_TERM)
-      val body = aggCodeGens.map(_.retract(exprGenerator)).mkString("\n")
+      val body = aggActionCodeGens.map(_.retract(exprGenerator)).mkString("\n")
       s"""
          |${ctx.reuseFieldCode(methodName)}
          |${ctx.reuseInputUnboxingCode(Set(RETRACT_INPUT_TERM))}
@@ -486,7 +573,7 @@ class AggsHandlerCodeGenerator(
       // bind input1 as otherAcc
       val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
         .bindInput(mergedAccType, inputTerm = MERGED_ACC_TERM)
-      val body = aggCodeGens.map(_.merge(exprGenerator)).mkString("\n")
+      val body = aggActionCodeGens.map(_.merge(exprGenerator)).mkString("\n")
       s"""
          |${ctx.reuseFieldCode(methodName)}
          |${ctx.reuseInputUnboxingCode(Set(MERGED_ACC_TERM))}
@@ -506,9 +593,9 @@ class AggsHandlerCodeGenerator(
     // no need to bind input
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
 
-    var valueExprs = aggCodeGens.zipWithIndex.filter { case (_, index) =>
-      // filter the count1 agg codegen
-      ignoreAggValue.isEmpty || ignoreAggValue.get != index
+    var valueExprs = aggBufferCodeGens.zipWithIndex.filter { case (_, index) =>
+      // ignore the count1 agg codegen and distinct agg codegen
+      ignoreAggValues.isEmpty || !ignoreAggValues.contains(index)
     }.map { case (codegen, _) =>
       codegen.getValue(exprGenerator)
     }
@@ -559,7 +646,8 @@ class AggsHandlerCodeGenerator(
       needMerge: Boolean = false,
       needReset: Boolean = false): Unit = {
     // check and validate the needed methods
-    aggCodeGens.foreach(_.checkNeededMethods(needAccumulate, needRetract, needMerge, needReset))
+    aggBufferCodeGens
+      .foreach(_.checkNeededMethods(needAccumulate, needRetract, needMerge, needReset))
   }
 
   private def genThrowException(msg: String): String = {
@@ -582,8 +670,70 @@ object AggsHandlerCodeGenerator {
   val MERGED_ACC_TERM = "otherAcc"
   val ACCUMULATE_INPUT_TERM = "accInput"
   val RETRACT_INPUT_TERM = "retractInput"
+  val DISTINCT_KEY_TERM = "distinctKey"
 
   val NAMESPACE_TERM = "namespace"
   val CONTEXT_TERM = "ctx"
   val CURRENT_KEY = "currentKey"
+
+  val INPUT_NOT_NULL = false
+
+  /**
+    * Create DataView term, for example, acc1_map_dataview.
+    *
+    * @return term to access [[MapView]] or [[ListView]]
+    */
+  def createDataViewTerm(spec: DataViewSpec): String = {
+    s"${spec.stateId}_dataview"
+  }
+
+  /**
+    * Create DataView backup term, for example, acc1_map_dataview_backup.
+    * The backup dataview term is used for merging two statebackend
+    * dataviews, e.g. session window.
+    *
+    * @return term to access backup [[MapView]] or [[ListView]]
+    */
+  def createDataViewBackupTerm(spec: DataViewSpec): String = {
+    s"${spec.stateId}_dataview_backup"
+  }
+
+  def addReusableStateDataViews(
+      ctx: CodeGeneratorContext,
+      hasNamespace: Boolean,
+      viewSpecs: Array[DataViewSpec]): Unit = {
+    // add reusable dataviews to context
+    viewSpecs.foreach { spec =>
+      val viewFieldTerm = createDataViewTerm(spec)
+      val backupViewTerm = createDataViewBackupTerm(spec)
+      val viewTypeTerm = spec.getStateDataViewClass(hasNamespace).getCanonicalName
+      ctx.addReusableMember(s"private $viewTypeTerm $viewFieldTerm;")
+      // always create backup dataview
+      ctx.addReusableMember(s"private $viewTypeTerm $backupViewTerm;")
+
+      val descTerm = ctx.addReusableObject(spec.toStateDescriptor, "desc")
+      val createStateCall = spec.getCreateStateCall(hasNamespace)
+
+      val openCode =
+        s"""
+           |$viewFieldTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+           |$backupViewTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+         """.stripMargin
+      ctx.addReusableOpenStatement(openCode)
+
+      // only cleanup dataview term, do not cleanup backup
+      val cleanupCode = if (hasNamespace) {
+        s"""
+           |$viewFieldTerm.setKeyNamespace($CURRENT_KEY, $NAMESPACE_TERM);
+           |$viewFieldTerm.clear();
+        """.stripMargin
+      } else {
+        s"""
+           |$viewFieldTerm.setKey($CURRENT_KEY);
+           |$viewFieldTerm.clear();
+        """.stripMargin
+      }
+      ctx.addReusableCleanupStatement(cleanupCode)
+    }
+  }
 }

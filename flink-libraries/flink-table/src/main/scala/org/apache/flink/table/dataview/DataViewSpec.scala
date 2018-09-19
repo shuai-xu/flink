@@ -27,7 +27,6 @@ import org.apache.flink.table.typeutils.{ListViewTypeInfo, MapViewTypeInfo, Sort
 trait DataViewSpec {
   def stateId: String
   def fieldIndex: Int
-  def fieldName: String
   def toStateDescriptor: StateDescriptor[_ <: State, _]
   def getStateDataViewClass(hasNamespace: Boolean): Class[_]
   def getCreateStateCall(hasNamespace: Boolean): String
@@ -36,7 +35,6 @@ trait DataViewSpec {
 case class ListViewSpec[T](
     stateId: String,
     fieldIndex: Int,
-    fieldName: String,
     listViewTypeInfo: ListViewTypeInfo[T])
   extends DataViewSpec {
 
@@ -63,7 +61,6 @@ case class ListViewSpec[T](
 case class MapViewSpec[K, V](
     stateId: String,
     fieldIndex: Int,
-    fieldName: String,
     mapViewTypeInfo: MapViewTypeInfo[K, V])
   extends DataViewSpec {
 
@@ -90,7 +87,6 @@ case class MapViewSpec[K, V](
 case class SortedMapViewSpec[K, V](
     stateId: String,
     fieldIndex: Int,
-    fieldName: String,
     sortedMapViewTypeInfo: SortedMapViewTypeInfo[K, V])
   extends DataViewSpec {
 

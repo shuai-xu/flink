@@ -21,7 +21,6 @@ package org.apache.flink.table.plan.rules.physical.stream
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.sql.fun.SqlCountAggFunction
 import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowtimeAttribute
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
@@ -44,20 +43,13 @@ class StreamExecGroupWindowAggregateRule
   override def matches(call: RelOptRuleCall): Boolean = {
     val agg: FlinkLogicalWindowAggregate = call.rel(0).asInstanceOf[FlinkLogicalWindowAggregate]
 
-    // check if we have distinct aggregates
-    val distinctAggs = agg.getAggCallList.exists(call =>
-      call.isDistinct && !call.getAggregation.isInstanceOf[SqlCountAggFunction])
-    if (distinctAggs) {
-      throw TableException("DISTINCT aggregates are currently not supported.")
-    }
-
     // check if we have grouping sets
     val groupSets = agg.getGroupSets.size() != 1 || agg.getGroupSets.get(0) != agg.getGroupSet
     if (groupSets || agg.indicator) {
       throw TableException("GROUPING SETS are currently not supported.")
     }
 
-    !distinctAggs && !groupSets && !agg.indicator
+    !groupSets && !agg.indicator
   }
 
   override def convert(rel: RelNode): RelNode = {

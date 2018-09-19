@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.api.java.tuple.Tuple1
+import org.apache.flink.api.java.tuple.{Tuple1, Tuple2}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeProcessOperator
 import org.apache.flink.table.api.StreamQueryConfig
@@ -856,6 +856,176 @@ class OverWindowITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
     )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
+
+
+  @Test
+  def testProcTimeDistinctBoundedPartitionedRowsOver(): Unit = {
+    val t = failingDataSource(StreamTestData.get5TupleData)
+            .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
+    tEnv.registerTable("MyTable", t)
+
+    val sqlQuery = "SELECT a, " +
+      "  SUM(DISTINCT e) OVER (" +
+      "    PARTITION BY a ORDER BY proctime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW), " +
+      "  MIN(DISTINCT e) OVER (" +
+      "    PARTITION BY a ORDER BY proctime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW), " +
+      "  COLLECT(DISTINCT e) OVER (" +
+      "    PARTITION BY a ORDER BY proctime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) " +
+      "FROM MyTable"
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "1,1,1,{1=1}",
+      "2,2,2,{2=1}",
+      "2,3,1,{1=1, 2=1}",
+      "3,2,2,{2=1}",
+      "3,2,2,{2=1}",
+      "3,5,2,{2=1, 3=1}",
+      "4,2,2,{2=1}",
+      "4,3,1,{1=1, 2=1}",
+      "4,3,1,{1=1, 2=1}",
+      "4,3,1,{1=1, 2=1}",
+      "5,1,1,{1=1}",
+      "5,4,1,{1=1, 3=1}",
+      "5,4,1,{1=1, 3=1}",
+      "5,6,1,{1=1, 2=1, 3=1}",
+      "5,5,2,{2=1, 3=1}")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testProcTimeDistinctUnboundedPartitionedRowsOver(): Unit = {
+    val t = failingDataSource(StreamTestData.get5TupleData)
+            .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
+    tEnv.registerTable("MyTable", t)
+
+    val sqlQuery = "SELECT a, " +
+      "  COUNT(e) OVER (" +
+      "    PARTITION BY a ORDER BY proctime RANGE UNBOUNDED preceding), " +
+      "  SUM(DISTINCT e) OVER (" +
+      "    PARTITION BY a ORDER BY proctime RANGE UNBOUNDED preceding), " +
+      "  MIN(DISTINCT e) OVER (" +
+      "    PARTITION BY a ORDER BY proctime RANGE UNBOUNDED preceding) " +
+      "FROM MyTable"
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "1,1,1,1",
+      "2,1,2,2",
+      "2,2,3,1",
+      "3,1,2,2",
+      "3,2,2,2",
+      "3,3,5,2",
+      "4,1,2,2",
+      "4,2,3,1",
+      "4,3,3,1",
+      "4,4,3,1",
+      "5,1,1,1",
+      "5,2,4,1",
+      "5,3,4,1",
+      "5,4,6,1",
+      "5,5,6,1")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testProcTimeDistinctUnboundedPartitionedRangeOverWithNullValues(): Unit = {
+    val data = List(
+      (1L, 1, null),
+      (2L, 1, null),
+      (3L, 2, null),
+      (4L, 1, "Hello"),
+      (5L, 1, "Hello"),
+      (6L, 2, "Hello"),
+      (7L, 1, "Hello World"),
+      (8L, 2, "Hello World"),
+      (9L, 2, "Hello World"),
+      (10L, 1, null))
+
+    // for sum aggregation ensure that every time the order of each element is consistent
+    env.setParallelism(1)
+
+    val table = failingDataSource(data)
+      .assignAscendingTimestamps(_._1)
+      .toTable(tEnv, 'a, 'b, 'c, 'rtime.rowtime)
+
+    tEnv.registerTable("MyTable", table)
+    tEnv.registerFunction("CntNullNonNull", new CountNullNonNull)
+
+    val sqlQuery = "SELECT " +
+      "  c, " +
+      "  b, " +
+      "  COUNT(DISTINCT c) " +
+      "    OVER (PARTITION BY b ORDER BY rtime RANGE UNBOUNDED preceding), " +
+      "  CntNullNonNull(DISTINCT c) " +
+      "    OVER (PARTITION BY b ORDER BY rtime RANGE UNBOUNDED preceding)" +
+      "FROM " +
+      "  MyTable"
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "null,1,0,0|1", "null,1,0,0|1", "null,2,0,0|1", "null,1,2,2|1",
+      "Hello,1,1,1|1", "Hello,1,1,1|1", "Hello,2,1,1|1",
+      "Hello World,1,2,2|1", "Hello World,2,2,2|1", "Hello World,2,2,2|1")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testProcTimeDistinctPairWithNulls(): Unit = {
+
+    val data = List(
+      ("A", null),
+      ("A", null),
+      ("B", null),
+      (null, "Hello"),
+      ("A", "Hello"),
+      ("A", "Hello"),
+      (null, "Hello World"),
+      (null, "Hello World"),
+      ("A", "Hello World"),
+      ("B", "Hello World"))
+
+    env.setParallelism(1)
+
+    val table = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'proctime.proctime)
+    tEnv.registerTable("MyTable", table)
+    tEnv.registerFunction("PairCount", new CountPairs)
+
+    val sqlQuery = "SELECT a, b, " +
+      "  PairCount(a, b) OVER (ORDER BY proctime RANGE UNBOUNDED preceding), " +
+      "  PairCount(DISTINCT a, b) OVER (ORDER BY proctime RANGE UNBOUNDED preceding) " +
+      "FROM MyTable"
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "A,null,1,1",
+      "A,null,2,1",
+      "B,null,3,2",
+      "null,Hello,4,3",
+      "A,Hello,5,4",
+      "A,Hello,6,4",
+      "null,Hello World,7,5",
+      "null,Hello World,8,5",
+      "A,Hello World,9,6",
+      "B,Hello World,10,7")
+    assertEquals(expected, sink.getAppendResults)
+  }
 }
 
 /** Counts how often the first argument was larger than the second argument. */
@@ -867,6 +1037,44 @@ class LargerThanCount extends AggregateFunction[Long, Tuple1[Long]] {
 
   def retract(acc: Tuple1[Long], a: Long, b: Long): Unit = {
     if (a > b) acc.f0 -= 1
+  }
+
+  override def createAccumulator(): Tuple1[Long] = Tuple1.of(0L)
+
+  override def getValue(acc: Tuple1[Long]): Long = acc.f0
+}
+
+class CountNullNonNull extends AggregateFunction[String, Tuple2[Long, Long]] {
+
+  override def createAccumulator(): Tuple2[Long, Long] = Tuple2.of(0L, 0L)
+
+  override def getValue(acc: Tuple2[Long, Long]): String = s"${acc.f0}|${acc.f1}"
+
+  def accumulate(acc: Tuple2[Long, Long], v: String): Unit = {
+    if (v == null) {
+      acc.f1 += 1
+    } else {
+      acc.f0 += 1
+    }
+  }
+
+  def retract(acc: Tuple2[Long, Long], v: String): Unit = {
+    if (v == null) {
+      acc.f1 -= 1
+    } else {
+      acc.f0 -= 1
+    }
+  }
+}
+
+class CountPairs extends AggregateFunction[Long, Tuple1[Long]] {
+
+  def accumulate(acc: Tuple1[Long], a: String, b: String): Unit = {
+    acc.f0 += 1
+  }
+
+  def retract(acc: Tuple1[Long], a: String, b: String): Unit = {
+    acc.f0 -= 1
   }
 
   override def createAccumulator(): Tuple1[Long] = Tuple1.of(0L)

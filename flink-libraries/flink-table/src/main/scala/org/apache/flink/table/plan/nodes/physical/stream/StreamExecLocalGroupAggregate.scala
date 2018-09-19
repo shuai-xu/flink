@@ -34,6 +34,7 @@ import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.BundleOperator
 import org.apache.flink.table.types.DataTypes
@@ -98,11 +99,13 @@ class StreamExecLocalGroupAggregate(
       aggregationToString(
         inputRelDataType,
         groupings,
+        Array.empty[Int],
         getRowType,
         aggInfoList.aggInfos.map(_.agg),
         aggInfoList.aggInfos.map(_.function),
         isMerge = false,
-        isGlobal = false)}))"
+        isGlobal = false,
+        aggInfoList.distinctInfos)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
@@ -112,11 +115,13 @@ class StreamExecLocalGroupAggregate(
         "select", aggregationToString(
           inputRelDataType,
           groupings,
+          Array.empty[Int],
           getRowType,
           aggInfoList.aggInfos.map(_.agg),
           aggInfoList.aggInfos.map(_.function),
           isMerge = false,
-          isGlobal = false))
+          isGlobal = false,
+          aggInfoList.distinctInfos))
   }
 
   @VisibleForTesting
@@ -126,11 +131,13 @@ class StreamExecLocalGroupAggregate(
     values.add(Pair.of("select", aggregationToString(
       inputRelDataType,
       groupings,
+      Array.empty[Int],
       getRowType,
       aggInfoList.aggInfos.map(_.agg),
       aggInfoList.aggInfos.map(_.function),
       isMerge = false,
-      isGlobal = false)))
+      isGlobal = false,
+      aggInfoList.distinctInfos)))
     values.add(Pair.of("aggs", aggInfoList
       .aggInfos
       .map(e => e.function.toString)
@@ -150,11 +157,13 @@ class StreamExecLocalGroupAggregate(
     val aggString = aggregationToString(
       inputRelDataType,
       groupings,
+      Array.empty[Int],
       getRowType,
       aggInfoList.aggInfos.map(_.agg),
       aggInfoList.aggInfos.map(_.function),
       isMerge = false,
-      isGlobal = false)
+      isGlobal = false,
+      aggInfoList.distinctInfos)
 
     val opName = if (groupings.nonEmpty) {
       s"groupBy: (${groupingToString(inputRelDataType, groupings)}), " +

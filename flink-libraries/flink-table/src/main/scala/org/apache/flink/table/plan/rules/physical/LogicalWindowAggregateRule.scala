@@ -23,7 +23,6 @@ import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.logical.{LogicalAggregate, LogicalProject}
 import org.apache.calcite.rex._
-import org.apache.calcite.sql.fun.SqlCountAggFunction
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -41,8 +40,6 @@ abstract class LogicalWindowAggregateRule(ruleName: String)
   override def matches(call: RelOptRuleCall): Boolean = {
     val agg = call.rel(0).asInstanceOf[LogicalAggregate]
 
-    val distinctAggs = agg.getAggCallList.exists(call =>
-      call.isDistinct && !call.getAggregation.isInstanceOf[SqlCountAggFunction])
     val groupSets = agg.getGroupSets.size() != 1 || agg.getGroupSets.get(0) != agg.getGroupSet
 
     val windowExpressions = getWindowExpressions(agg)
@@ -50,7 +47,7 @@ abstract class LogicalWindowAggregateRule(ruleName: String)
       throw new TableException("Only a single window group function may be used in GROUP BY")
     }
 
-    !distinctAggs && !groupSets && !agg.indicator && windowExpressions.nonEmpty
+    !groupSets && !agg.indicator && windowExpressions.nonEmpty
   }
 
   /**

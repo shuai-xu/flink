@@ -42,9 +42,9 @@ import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.nodes.common.{CommonAggregate, CommonOverAggregate}
+import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
-import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToAggregateInfoList}
+import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
 import org.apache.flink.table.runtime.operator.overagg._
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
@@ -72,7 +72,6 @@ class BatchExecOverAggregate(
     logicWindow: Window)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with CommonAggregate
   with RowBatchExecRel
   with CommonOverAggregate {
 
@@ -297,14 +296,11 @@ class BatchExecOverAggregate(
           .buildLogicalRowType(inputTypeNamesWithConstants, inputTypesWithConstants)
 
       val aggHandlers = modeToGroupToAggCallToAggFunction.map { case (_, _, aggCallToAggFunction) =>
-        val aggInfoList = transformToAggregateInfoList(
+        val aggInfoList = transformToBatchAggregateInfoList(
           aggCallToAggFunction.map(_._1),
           // use aggInputType which considers constants as input instead of inputSchema.relDataType
           inputTypeWithConstants,
-          orderKeyIdxs,
-          Array.fill(aggregateCalls.size)(false),
-          needInputCount = false,
-          isStateBackedDataViews = false)
+          orderKeyIdxs)
         val codeGenCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
         val generator = new AggsHandlerCodeGenerator(
           codeGenCtx,
@@ -357,13 +353,11 @@ class BatchExecOverAggregate(
           //lies on the offset of the window frame.
           val needRetraction = true
           aggCallToAggFunction.map { case (aggCall, _) =>
-            val aggInfoList = transformToAggregateInfoList(
+            val aggInfoList = transformToBatchAggregateInfoList(
               Seq(aggCall),
               inputTypeWithConstants,
               orderKeyIdxs,
-              Array(needRetraction),
-              needInputCount = false,
-              isStateBackedDataViews = false)
+              Array(needRetraction))
             val codeGenCtx = CodeGeneratorContext(config, supportReference = true)
             val generator = new AggsHandlerCodeGenerator(
               codeGenCtx,
@@ -387,14 +381,11 @@ class BatchExecOverAggregate(
           }
 
         case _ =>
-          val aggInfoList = transformToAggregateInfoList(
+          val aggInfoList = transformToBatchAggregateInfoList(
             aggCallToAggFunction.map(_._1),
             //use aggInputType which considers constants as input instead of inputSchema.relDataType
             inputTypeWithConstants,
-            orderKeyIdxs,
-            Array.fill(aggCallToAggFunction.size)(false),
-            needInputCount = false,
-            isStateBackedDataViews = false)
+            orderKeyIdxs)
           val codeGenCtx = CodeGeneratorContext(config, supportReference = true)
           val generator = new AggsHandlerCodeGenerator(
             codeGenCtx,

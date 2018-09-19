@@ -2096,7 +2096,7 @@ COUNT(value [, value]* )
 {% endhighlight %}
       </td>
       <td>
-        <p>Returns the number of input rows for which <i>value</i> is not null.</p>
+        <p>Returns the number of input rows for which <i>value</i> is not null. Use <code>COUNT(DISTINCT value)</code> for the number of unique values in the column or expression.</p>
       </td>
     </tr>
 
@@ -2474,7 +2474,6 @@ The following functions are not supported yet:
 
 - Binary string operators and functions
 - System functions
-- Distinct aggregate functions like COUNT DISTINCT
 
 {% top %}
 

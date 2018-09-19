@@ -85,13 +85,13 @@ StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c])
 	<TestCase name="testLocalGlobalAggAfterUnion">
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS EXPR$1, Final_COUNT(DISTINCT EXPR$2) AS EXPR$2])
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS EXPR$1, Final_COUNT(DISTINCT distinct$0) AS EXPR$2])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecUnion(union all=[a, sum$0, EXPR$2])
-      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(c) AS sum$0, Partial_COUNT(DISTINCT b) AS EXPR$2])
+    StreamExecUnion(union all=[a, sum$0, count$1, distinct$0])
+      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(c) AS sum$0, Partial_COUNT(distinct$0) AS count$1, Partial_DISTINCT(b) AS distinct$0])
         StreamExecCalc(select=[a, c, b])
           StreamExecScan(table=[[_DataStreamTable_1]])
-      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(c) AS sum$0, Partial_COUNT(DISTINCT b) AS EXPR$2])
+      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(c) AS sum$0, Partial_COUNT(distinct$0) AS count$1, Partial_DISTINCT(b) AS distinct$0])
         StreamExecCalc(select=[a, c, b])
           StreamExecScan(table=[[_DataStreamTable_2]])
 ]]>

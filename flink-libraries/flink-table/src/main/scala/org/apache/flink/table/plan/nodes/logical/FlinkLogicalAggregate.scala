@@ -27,7 +27,6 @@ import org.apache.calcite.rel.core.{Aggregate, AggregateCall}
 import org.apache.calcite.rel.logical.LogicalAggregate
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.fun.SqlCountAggFunction
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
@@ -123,16 +122,10 @@ private class FlinkLogicalAggregateStreamConverter
 
     // we do not support these functions natively
     // they have to be converted using the FlinkAggregateReduceFunctionsRule
-    val supported = agg.getAggCallList.map(_.getAggregation.getKind).forall {
+    agg.getAggCallList.map(_.getAggregation.getKind).forall {
       case SqlKind.STDDEV_POP | SqlKind.STDDEV_SAMP | SqlKind.VAR_POP | SqlKind.VAR_SAMP => false
       case _ => true
     }
-
-    // check if we have distinct aggregates
-    val distinctAggs = agg.getAggCallList.exists(call =>
-      call.isDistinct && !call.getAggregation.isInstanceOf[SqlCountAggFunction])
-
-    !distinctAggs && supported
   }
 
   override def convert(rel: RelNode): RelNode = {

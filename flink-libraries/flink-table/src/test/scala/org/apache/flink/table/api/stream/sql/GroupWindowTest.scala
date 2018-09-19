@@ -180,7 +180,7 @@ class GroupWindowTest extends TableTestBase {
   }
 
   @Test
-  def testExpressionOnWindowHavingFunction() = {
+  def testExpressionOnWindowHavingFunction(): Unit = {
     val sql =
       "SELECT " +
         "  COUNT(*), " +

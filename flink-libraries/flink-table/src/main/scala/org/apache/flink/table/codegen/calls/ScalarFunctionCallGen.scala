@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.codegen.calls
 
-import org.apache.avro.generic.GenericData
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.calls.ScalarFunctionCallGen.prepareUDFArgs
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}

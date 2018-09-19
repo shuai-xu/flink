@@ -87,15 +87,6 @@ object GeneratedExpression {
 }
 
 /**
-  *
-  */
-case class GeneratedAggExpressions(
-    genInitialValues: Seq[Seq[GeneratedExpression]],
-    genAccumulate: Option[Seq[Seq[GeneratedExpression]]],
-    genMerge: Option[Seq[Seq[GeneratedExpression]]],
-    genGetValue: Seq[GeneratedExpression])
-
-/**
   * Describes a generated [[functions.Function]]
   *
   * @param name class name of the generated Function.

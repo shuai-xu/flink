@@ -122,6 +122,35 @@ class AggregateITCase(
   }
 
   @Test
+  def testDistinctGroupBy(): Unit = {
+
+    val sqlQuery =
+      "SELECT b, " +
+        "  SUM(DISTINCT (a * 3)), " +
+        "  COUNT(DISTINCT SUBSTRING(c FROM 1 FOR 2))," +
+        "  COUNT(DISTINCT c) " +
+        "FROM MyTable " +
+        "GROUP BY b"
+
+    val t = failingDataSource(StreamTestData.get3TupleData).toTable(tEnv).as('a, 'b, 'c)
+    tEnv.registerTable("MyTable", t)
+
+    val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
+    val sink = new TestingRetractSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "1,3,1,1",
+      "2,15,1,2",
+      "3,45,3,3",
+      "4,102,1,4",
+      "5,195,1,5",
+      "6,333,1,6")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
   def testCountDistinct(): Unit = {
     val data = new mutable.MutableList[(Int, Long, String)]
     data.+=((1, 1L, "A"))
@@ -150,7 +179,7 @@ class AggregateITCase(
   }
 
   @Test
-  def testCountDistinctWithRetract(): Unit = {
+  def testDistinctWithRetract(): Unit = {
     val data = new mutable.MutableList[(Int, Long, String)]
     data.+=((1, 1L, "A"))
     data.+=((1, 1L, "A"))
@@ -172,7 +201,12 @@ class AggregateITCase(
 
     val sql =
       """
-        |SELECT count(distinct c)
+        |SELECT
+        |  count(distinct c),
+        |  sum(distinct c),
+        |  max(distinct c),
+        |  min(distinct c),
+        |  avg(distinct c)
         |FROM (
         | SELECT b, count(a) as c
         | FROM T
@@ -184,7 +218,7 @@ class AggregateITCase(
     t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
-    val expected = List("3")
+    val expected = List("3,9,4,2,3.0")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 

@@ -22,11 +22,10 @@ import java.lang.{Iterable => JIterable}
 
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.runtime.util.SingleElementIterator
-import org.apache.flink.table.api.dataview._
 import org.apache.flink.table.codegen.CodeGenUtils._
-import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator.{BASE_ROW, CONTEXT_TERM, CURRENT_KEY, GENERIC_ROW, NAMESPACE_TERM}
+import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
-import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
+import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference, ResolvedAggLocalReference}
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.AggregateInfo
@@ -35,7 +34,6 @@ import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.{genToExternal, genToInternal}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.TypeUtils
-
 
 /**
   * It is for code generate aggregation functions that are specified in terms of
@@ -106,63 +104,7 @@ class ImperativeAggCodeGen(
 
   val viewSpecs: Array[DataViewSpec] = aggInfo.viewSpecs
   // add reusable dataviews to context
-  addReusableDataViews(viewSpecs)
-
-  /**
-    * Create DataView term, for example, acc1_map_dataview.
-    *
-    * @return term to access [[MapView]] or [[ListView]]
-    */
-  private def createDataViewTerm(spec: DataViewSpec): String = {
-    s"${spec.stateId}_dataview"
-  }
-
-  /**
-    * Create DataView backup term, for example, acc1_map_dataview_backup.
-    * The backup dataview term is used for merging two statebackend
-    * dataviews, e.g. session window.
-    *
-    * @return term to access backup [[MapView]] or [[ListView]]
-    */
-  private def createDataViewBackupTerm(spec: DataViewSpec): String = {
-    s"${spec.stateId}_dataview_backup"
-  }
-
-  private def addReusableDataViews(viewSpecs: Array[DataViewSpec]): Unit = {
-    // add reusable dataviews to context
-    viewSpecs.foreach { spec =>
-      val viewFieldTerm = createDataViewTerm(spec)
-      val backupViewTerm = createDataViewBackupTerm(spec)
-      val viewTypeTerm = spec.getStateDataViewClass(hasNamespace).getCanonicalName
-      ctx.addReusableMember(s"private $viewTypeTerm $viewFieldTerm;")
-      // always create backup dataview
-      ctx.addReusableMember(s"private $viewTypeTerm $backupViewTerm;")
-
-      val descTerm = ctx.addReusableObject(spec.toStateDescriptor, "desc")
-      val createStateCall = spec.getCreateStateCall(hasNamespace)
-
-      val openCode =
-        s"""
-           |$viewFieldTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
-           |$backupViewTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
-         """.stripMargin
-      ctx.addReusableOpenStatement(openCode)
-
-      // only cleanup dataview term, do not cleanup backup
-      val cleanupCode = if (hasNamespace) {
-        s"""
-           |$viewFieldTerm.setKeyNamespace($CURRENT_KEY, $NAMESPACE_TERM);
-           |$viewFieldTerm.clear();
-        """.stripMargin
-      } else {
-        s"""
-           |$viewFieldTerm.setKey($CURRENT_KEY);
-           |$viewFieldTerm.clear();
-        """.stripMargin
-      }
-      ctx.addReusableCleanupStatement(cleanupCode)
-    }
-  }
+  addReusableStateDataViews(ctx, hasNamespace, viewSpecs)
 
   def createAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
     // do not set dataview into the acc in createAccumulator
@@ -309,7 +251,19 @@ class ImperativeAggCodeGen(
           genToExternal(ctx, externalUDITypes(index), expr.resultTerm)}"
       } else {
         // index to input field
-        val inputRef = ResolvedAggInputReference(f.toString, f, inputTypes(f))
+        val inputRef = if (DISTINCT_KEY_TERM == generator.input1Term) {
+          if (argTypes.length == 1) {
+            // called from distinct merge and the inputTerm is the only argument
+            ResolvedAggLocalReference(generator.input1Term, "false", generator.input1Type)
+          } else {
+            // called from distinct merge call and the inputTerm is BaseRow type
+            ResolvedAggInputReference(f.toString, index, inputTypes(f))
+          }
+        } else {
+          // called from accumulate
+          ResolvedAggInputReference(f.toString, f, inputTypes(f))
+        }
+
         val inputExpr = generator.generateExpression(inputRef.toRexNode(relBuilder))
         var term = s"${genToExternal(ctx, externalUDITypes(index), inputExpr.resultTerm)}"
         if (needCloneRefForDataType(externalUDITypes(index))) {

@@ -125,12 +125,13 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     val needRetractionArray = AggregateUtil.getNeedRetractions(
       agg.getGroupings.length, needRetraction, modifiedMono, agg.aggCalls)
 
-    lazy val aggInfoList = transformToStreamAggregateInfoList(
+    val aggInfoList = transformToStreamAggregateInfoList(
       agg.aggCalls,
       agg.getInput.getRowType,
       needRetractionArray,
       needInputCount = false,
-      isStateBackendDataViews = true)
+      isStateBackendDataViews = true,
+      needDistinctInfo = false)
 
     call.rels(1).isInstanceOf[StreamExecExchange] == inputIsExchange &&
       queryConfig.isMiniBatchEnabled &&
@@ -154,7 +155,8 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
       originalAggregate.getInput.getRowType,
       needRetractionArray,
       needInputCount = false,
-      isStateBackendDataViews = true).aggInfos
+      isStateBackendDataViews = true,
+      needDistinctInfo = false).aggInfos
 
     val cluster = originalAggregate.getCluster
     val relBuilder = call.builder().asInstanceOf[FlinkRelBuilder]

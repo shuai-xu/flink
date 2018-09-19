@@ -20,6 +20,7 @@ package org.apache.flink.table.codegen.agg
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.codegen.CodeGenUtils.primitiveTypeTermForType
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.plan.util.AggregateInfo
@@ -105,8 +106,17 @@ class DeclarativeAggCodeGen(
   }
 
   def accumulate(generator: ExprCodeGenerator): String = {
-    val exprs = function.accumulateExpressions
-      .map(_.postOrderTransform(resolveReference())) // resolved expressions
+    val resolvedExprs = if (DISTINCT_KEY_TERM == generator.input1Term) {
+      // called from distinct merge
+      function.accumulateExpressions
+        .map(_.postOrderTransform(resolveReference(isDistinctMerge = true)))
+    } else {
+      // called from accumulate
+      function.accumulateExpressions
+        .map(_.postOrderTransform(resolveReference()))
+    }
+
+    val exprs = resolvedExprs
       .map(_.toRexNode(relBuilder)) // rex nodes
       .map(generator.generateExpression) // generated expressions
 
@@ -132,8 +142,17 @@ class DeclarativeAggCodeGen(
   }
 
   def retract(generator: ExprCodeGenerator): String = {
-    val exprs = function.retractExpressions
-      .map(_.postOrderTransform(resolveReference())) // resolved expressions
+    val resolvedExprs = if (DISTINCT_KEY_TERM == generator.input1Term) {
+      // called from distinct merge
+      function.retractExpressions
+        .map(_.postOrderTransform(resolveReference(isDistinctMerge = true)))
+    } else {
+      // called from retract
+      function.retractExpressions
+        .map(_.postOrderTransform(resolveReference()))
+    }
+
+    val exprs = resolvedExprs
       .map(_.toRexNode(relBuilder)) // rex nodes
       .map(generator.generateExpression) // generated expressions
 
@@ -181,7 +200,13 @@ class DeclarativeAggCodeGen(
     generator.generateExpression(resolvedGetValueExpression.toRexNode(relBuilder))
   }
 
-  private def resolveReference(isMerge: Boolean = false)
+  /**
+    * Resolves the given expression to a [[NamedExpression]].
+    *
+    * @param isMerge this is called from merge() method
+    * @param isDistinctMerge this is called from distinct merge method
+    */
+  private def resolveReference(isMerge: Boolean = false, isDistinctMerge: Boolean = false)
   : PartialFunction[Expression, Expression] = {
     case input: UnresolvedFieldReference =>
       // We always use UnresolvedFieldReference to represent reference of input field.
@@ -206,8 +231,18 @@ class DeclarativeAggCodeGen(
           // constant is reused as member variable
           ResolvedAggLocalReference(constantTerm, nullTerm, constantType)
         } else {
-          // the input1 is inputRow
-          ResolvedAggInputReference(input.name, argIndexes(localIndex), argTypes(localIndex))
+          if (isDistinctMerge) {  // this is called from distinct merge
+            if (function.inputCount == 1) {
+              // the operand is just the distinct key
+              ResolvedAggLocalReference(DISTINCT_KEY_TERM, "false", argTypes(0))
+            } else {
+              // the distinct key is a BaseRow
+              ResolvedAggInputReference(input.name, localIndex, argTypes(localIndex))
+            }
+          } else {
+            // the input is the inputRow
+            ResolvedAggInputReference(input.name, argIndexes(localIndex), argTypes(localIndex))
+          }
         }
       }
 
