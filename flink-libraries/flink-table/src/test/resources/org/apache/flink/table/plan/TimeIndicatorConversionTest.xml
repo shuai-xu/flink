@@ -117,6 +117,17 @@ StreamExecCalc(select=[EXPR$0, long])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testWindowWithAggregationOnRowtimeWithHaving">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[EXPR$0, long], where=[=(EXTRACT(FLAG(QUARTER), CAST(w$end)), 1)])
+  StreamExecGroupWindowAggregate(groupBy=[long], window=[TumblingGroupWindow('w$, 'rowtime, 1000.millis)], select=[long, MIN(rowtime0) AS EXPR$0, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+    StreamExecExchange(distribution=[hash[long]])
+      StreamExecCalc(select=[long, rowtime, CAST(rowtime) AS rowtime0])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testUnion">
     <Resource name="plan">
       <![CDATA[

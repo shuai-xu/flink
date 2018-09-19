@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.logical.{LogicalFilter, LogicalProject}
 import org.apache.calcite.rex.{RexCall, RexNode}
@@ -33,24 +33,66 @@ import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
 
-abstract class WindowPropertiesBaseRule(rulePredicate: RelOptRuleOperand, ruleName: String)
-  extends RelOptRule(rulePredicate, ruleName) {
+class WindowPropertiesRule extends RelOptRule(
+  RelOptRule.operand(classOf[LogicalProject],
+      RelOptRule.operand(classOf[LogicalProject],
+        RelOptRule.operand(classOf[LogicalWindowAggregate], RelOptRule.none()))),
+    "WindowPropertiesRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val project = call.rel(0).asInstanceOf[LogicalProject]
     // project includes at least on group auxiliary function
-
-    def hasGroupAuxiliaries(node: RexNode): Boolean = {
-      node match {
-        case c: RexCall if c.getOperator.isGroupAuxiliary => true
-        case c: RexCall =>
-          c.operands.exists(hasGroupAuxiliaries)
-        case _ => false
-      }
-    }
-
-    project.getProjects.exists(hasGroupAuxiliaries)
+    project.getProjects.exists(WindowPropertiesRules.hasGroupAuxiliaries)
   }
+
+  override def onMatch(call: RelOptRuleCall): Unit = {
+
+      val project = call.rel(0).asInstanceOf[LogicalProject]
+      val innerProject = call.rel(1).asInstanceOf[LogicalProject]
+      val agg = call.rel(2).asInstanceOf[LogicalWindowAggregate]
+
+      val converted = WindowPropertiesRules.convertWindowNodes(
+        call.builder(), project, None, innerProject, agg)
+
+      call.transformTo(converted)
+    }
+}
+
+class WindowPropertiesHavingRule extends RelOptRule(
+  RelOptRule.operand(classOf[LogicalProject],
+    RelOptRule.operand(classOf[LogicalFilter],
+      RelOptRule.operand(classOf[LogicalProject],
+        RelOptRule.operand(classOf[LogicalWindowAggregate], RelOptRule.none())))),
+  "WindowPropertiesHavingRule") {
+
+  override def matches(call: RelOptRuleCall): Boolean = {
+    val project = call.rel(0).asInstanceOf[LogicalProject]
+    val filter = call.rel(1).asInstanceOf[LogicalFilter]
+
+    project.getProjects.exists(WindowPropertiesRules.hasGroupAuxiliaries) ||
+        WindowPropertiesRules.hasGroupAuxiliaries(filter.getCondition)
+  }
+
+  override def onMatch(call: RelOptRuleCall): Unit = {
+
+    val project = call.rel(0).asInstanceOf[LogicalProject]
+    val filter = call.rel(1).asInstanceOf[LogicalFilter]
+    val innerProject = call.rel(2).asInstanceOf[LogicalProject]
+    val agg = call.rel(3).asInstanceOf[LogicalWindowAggregate]
+
+    val converted = WindowPropertiesRules.convertWindowNodes(
+      call.builder(), project, Some(filter), innerProject, agg)
+
+    call.transformTo(converted)
+  }
+}
+
+
+object WindowPropertiesRules {
+
+  val WINDOW_PROPERTIES_HAVING_RULE = new WindowPropertiesHavingRule
+
+  val WINDOW_PROPERTIES_RULE = new WindowPropertiesRule
 
   def convertWindowNodes(
       builder: RelBuilder,
@@ -231,49 +273,15 @@ abstract class WindowPropertiesBaseRule(rulePredicate: RelOptRuleOperand, ruleNa
       case _ => false
     }
   }
-}
 
-object WindowPropertiesRule {
-
-  val INSTANCE = new WindowPropertiesBaseRule(
-    RelOptRule.operand(classOf[LogicalProject],
-      RelOptRule.operand(classOf[LogicalProject],
-        RelOptRule.operand(classOf[LogicalWindowAggregate], RelOptRule.none()))),
-    "WindowPropertiesRule") {
-
-    override def onMatch(call: RelOptRuleCall): Unit = {
-
-      val project = call.rel(0).asInstanceOf[LogicalProject]
-      val innerProject = call.rel(1).asInstanceOf[LogicalProject]
-      val agg = call.rel(2).asInstanceOf[LogicalWindowAggregate]
-
-      val converted = convertWindowNodes(call.builder(), project, None, innerProject, agg)
-
-      call.transformTo(converted)
+  def hasGroupAuxiliaries(node: RexNode): Boolean = {
+    node match {
+      case c: RexCall if c.getOperator.isGroupAuxiliary => true
+      case c: RexCall =>
+        c.operands.exists(hasGroupAuxiliaries)
+      case _ => false
     }
   }
-}
 
-object WindowPropertiesHavingRule {
-
-  val INSTANCE = new WindowPropertiesBaseRule(
-    RelOptRule.operand(classOf[LogicalProject],
-      RelOptRule.operand(classOf[LogicalFilter],
-        RelOptRule.operand(classOf[LogicalProject],
-          RelOptRule.operand(classOf[LogicalWindowAggregate], RelOptRule.none())))),
-    "WindowPropertiesHavingRule") {
-
-    override def onMatch(call: RelOptRuleCall): Unit = {
-
-      val project = call.rel(0).asInstanceOf[LogicalProject]
-      val filter = call.rel(1).asInstanceOf[LogicalFilter]
-      val innerProject = call.rel(2).asInstanceOf[LogicalProject]
-      val agg = call.rel(3).asInstanceOf[LogicalWindowAggregate]
-
-      val converted = convertWindowNodes(call.builder(), project, Some(filter), innerProject, agg)
-
-      call.transformTo(converted)
-    }
-  }
 }
 

@@ -256,8 +256,8 @@ object FlinkStreamExecRuleSets {
           // slices a project into sections which contain window agg functions
           // and sections which do not.
           ProjectToWindowRule.PROJECT,
-          WindowPropertiesRule.INSTANCE,
-          WindowPropertiesHavingRule.INSTANCE,
+          WindowPropertiesRules.WINDOW_PROPERTIES_RULE,
+          WindowPropertiesRules.WINDOW_PROPERTIES_HAVING_RULE,
           //ensure union set operator have the same row type
           new CoerceInputsRule(classOf[LogicalUnion], false),
           //ensure intersect set operator have the same row type
@@ -268,8 +268,8 @@ object FlinkStreamExecRuleSets {
 
   val STREAM_EXEC_WINDOW_RULES: RuleSet = RuleSets.ofList(
     // Transform window to LogicalWindowAggregate
-    WindowPropertiesRule.INSTANCE,
-    WindowPropertiesHavingRule.INSTANCE
+    WindowPropertiesRules.WINDOW_PROPERTIES_RULE,
+    WindowPropertiesRules.WINDOW_PROPERTIES_HAVING_RULE
   )
 
   val STREAM_EXEC_JOIN_REORDER: RuleSet = RuleSets.ofList(

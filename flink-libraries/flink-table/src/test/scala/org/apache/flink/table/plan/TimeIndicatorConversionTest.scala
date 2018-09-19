@@ -26,7 +26,7 @@ import org.apache.flink.table.expressions.TimeIntervalUnit
 import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc
 import org.apache.flink.table.util.TableTestBase
-import org.junit.{Ignore, Test}
+import org.junit.Test
 
 /**
   * Tests for [[org.apache.flink.table.calcite.RelTimeIndicatorConverter]].
@@ -182,6 +182,19 @@ class TimeIndicatorConversionTest extends TableTestBase {
 
     val result = util.tableEnv.sqlQuery("SELECT MIN(rowtime), long FROM MyTable " +
       "GROUP BY long, TUMBLE(rowtime, INTERVAL '0.1' SECOND)")
+
+    util.verifyPlan(result)
+  }
+
+  @Test
+  def testWindowWithAggregationOnRowtimeWithHaving(): Unit = {
+    val util = streamTestUtil()
+    util.addTable[(Long, Long, Int)]("MyTable", 'rowtime.rowtime, 'long, 'int)
+
+    val result = util.tableEnv.sqlQuery(
+      "SELECT MIN(rowtime), long FROM MyTable " +
+      "GROUP BY long, TUMBLE(rowtime, INTERVAL '1' SECOND) " +
+        "HAVING QUARTER(TUMBLE_END(rowtime, INTERVAL '1' SECOND))=1")
 
     util.verifyPlan(result)
   }

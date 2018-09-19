@@ -263,8 +263,8 @@ object FlinkBatchExecRuleSets {
           List(
             // Transform window to LogicalWindowAggregate
             BatchExecLogicalWindowAggregateRule.INSTANCE,
-            WindowPropertiesRule.INSTANCE,
-            WindowPropertiesHavingRule.INSTANCE,
+            WindowPropertiesRules.WINDOW_PROPERTIES_RULE,
+            WindowPropertiesRules.WINDOW_PROPERTIES_HAVING_RULE,
             //ensure union set operator have the same row type
             new CoerceInputsRule(classOf[LogicalUnion], false),
             //ensure intersect set operator have the same row type
@@ -281,8 +281,8 @@ object FlinkBatchExecRuleSets {
     //adjust the sequence of window's groups.
     ExchangeWindowGroupRule.INSTANCE,
     // Transform window to LogicalWindowAggregate
-    WindowPropertiesRule.INSTANCE,
-    WindowPropertiesHavingRule.INSTANCE
+    WindowPropertiesRules.WINDOW_PROPERTIES_RULE,
+    WindowPropertiesRules.WINDOW_PROPERTIES_HAVING_RULE
   )
 
   val BATCH_EXEC_JOIN_REORDER: RuleSet = RuleSets.ofList(
