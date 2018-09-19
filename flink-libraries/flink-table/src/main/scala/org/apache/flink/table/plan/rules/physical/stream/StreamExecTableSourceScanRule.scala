@@ -39,9 +39,9 @@ class StreamExecTableSourceScanRule
   /** Rule must only match if TableScan targets a [[StreamTableSource]] */
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan: TableScan = call.rel(0).asInstanceOf[TableScan]
-    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable])
     tableSourceTable match {
-      case tst: TableSourceTable[_] =>
+      case tst: TableSourceTable =>
         tst.tableSource match {
           case _: StreamTableSource[_] =>
             true

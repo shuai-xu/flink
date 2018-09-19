@@ -21,9 +21,15 @@ package org.apache.flink.table.tpc
 import java.util
 
 import com.google.common.collect.ImmutableSet
-import org.apache.flink.table.api.Column
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
+case class Column(
+    name: String,
+    index: Int,
+    internalType: InternalType,
+    isNullable: Boolean = true,
+    isPrimaryKey: Boolean = false
+)
 
 trait TpcDsSchema extends Schema {
 

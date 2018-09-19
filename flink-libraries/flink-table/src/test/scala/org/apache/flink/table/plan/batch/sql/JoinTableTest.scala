@@ -316,6 +316,11 @@ class JoinTableTest extends TableTestBatchExecBase {
      * Returns config that defines the runtime behavior of async join table
      */
     override def getAsyncConfig: AsyncConfig = new AsyncConfig
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+
+    override def explainSource(): String = ""
   }
 
 }

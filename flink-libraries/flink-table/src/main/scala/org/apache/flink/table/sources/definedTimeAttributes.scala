@@ -20,61 +20,27 @@ package org.apache.flink.table.sources
 
 import java.util
 import java.util.Objects
+import javax.annotation.Nullable
 
-import org.apache.flink.table.api.{TableSchema, Types}
+import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.sources.tsextractors.TimestampExtractor
 import org.apache.flink.table.sources.wmstrategies.WatermarkStrategy
 
 /**
-  * Defines a logical event-time attribute for a [[TableSource]].
-  * The event-time attribute can be used for indicating, accessing, and working with Flink's
-  * event-time.
-  *
-  * A [[TableSource]] that implements this interface defines the name of
-  * the event-time attribute. The attribute must be present in the schema of the [[TableSource]]
-  * and must be of type [[Long]] or [[java.sql.Timestamp]].
-  */
-trait DefinedRowtimeAttribute {
-
-  /**
-    * Defines a name of the event-time attribute that represents Flink's event-time, i.e., an
-    * attribute that is aligned with the watermarks of the
-    * [[org.apache.flink.streaming.api.datastream.DataStream]] returned by
-    * [[StreamTableSource.getDataStream()]].
-    *
-    * An attribute with the given name must be present in the schema of the [[TableSource]].
-    * The attribute must be of type [[Long]] or [[java.sql.Timestamp]].
-    *
-    * The method should return null if no rowtime attribute is defined.
-    *
-    * @return The name of the field that represents the event-time field and which is aligned
-    *         with the watermarks of the [[org.apache.flink.streaming.api.datastream.DataStream]]
-    *         returned by [[StreamTableSource.getDataStream()]].
-    *         The field must be present in the schema of the [[TableSource]] and be of type [[Long]]
-    *         or [[java.sql.Timestamp]].
-    */
-  def getRowtimeAttribute: String
-}
-
-/**
-  * Defines a logical processing-time attribute for a [[TableSource]].
-  * The processing-time attribute can be used for indicating, accessing, and working with Flink's
-  * processing-time.
-  *
-  * A [[TableSource]] that implements this interface defines the name of
-  * the processing-time attribute. The attribute will be added to the schema of the
-  * [[org.apache.flink.table.api.Table]] produced by the [[TableSource]].
+  * Extends a [[TableSource]] to specify a processing time attribute.
   */
 trait DefinedProctimeAttribute {
 
   /**
-    * Defines a name of the processing-time attribute that represents Flink's
-    * processing-time. Null if no rowtime should be available.
+    * Returns the name of a processing time attribute or null if no processing time attribute is
+    * present.
     *
-    * The field will be appended to the schema provided by the [[TableSource]].
+    * The referenced attribute must be present in the [[TableSchema]] of the [[TableSource]] and of
+    * type [[Types.SQL_TIMESTAMP]].
     */
+  @Nullable
   def getProctimeAttribute: String
-
 }
 
 /**
@@ -117,7 +83,7 @@ class RowtimeAttributeDescriptor(
 
   override def equals(other: Any): Boolean = other match {
     case that: RowtimeAttributeDescriptor =>
-      Objects.equals(attributeName, that.attributeName) &&
+        Objects.equals(attributeName, that.attributeName) &&
         Objects.equals(timestampExtractor, that.timestampExtractor) &&
         Objects.equals(watermarkStrategy, that.watermarkStrategy)
     case _ => false

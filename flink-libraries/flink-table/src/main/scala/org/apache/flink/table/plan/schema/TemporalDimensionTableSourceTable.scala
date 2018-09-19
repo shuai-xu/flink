@@ -19,19 +19,25 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.schema.TemporalTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
 
 /**
   * Table which is a temporal table
   */
-class TemporalTableSourceTable[T](
-    override val tableSource: TableSource,
+class TemporalDimensionTableSourceTable[T](
+    override val tableSource: DimensionTableSource[T],
     override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends StreamTableSourceTable[T](tableSource, statistic)
+  extends DimensionTableSourceTable(tableSource, statistic)
   with TemporalTable {
 
   override def getSysStartFieldName: String = "sys_start"
 
   override def getSysEndFieldName: String = "sys_end"
 
+  override def copy(statistic: FlinkStatistic): DimensionTableSourceTable[T] =
+    new TemporalDimensionTableSourceTable(tableSource, statistic)
+
+  override def replaceTableSource(tableSource: TableSource) =
+    new TemporalDimensionTableSourceTable(
+      tableSource.asInstanceOf[DimensionTableSource[_]], statistic)
 }

@@ -559,8 +559,8 @@ object StreamExecRelFactories {
     */
   class TableScanFactoryImpl extends TableScanFactory {
     def createScan(cluster: RelOptCluster, relOptTable: RelOptTable): RelNode = {
-      relOptTable.unwrap(classOf[TableSourceTable[_]]) match {
-        case tst: TableSourceTable[_] =>
+      relOptTable.unwrap(classOf[TableSourceTable]) match {
+        case tst: TableSourceTable =>
           val traitSet = cluster.traitSetOf(FlinkConventions.STREAMEXEC).replaceIfs(
             RelCollationTraitDef.INSTANCE, new Supplier[util.List[RelCollation]]() {
               def get: util.List[RelCollation] = {

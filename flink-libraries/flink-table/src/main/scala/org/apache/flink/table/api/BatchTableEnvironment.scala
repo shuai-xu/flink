@@ -349,7 +349,9 @@ class BatchTableEnvironment(
    */
   protected def registerBoundedStreamInternal[T](
       name: String, boundedStream: DataStream[T]): Unit = {
-    val boundedStreamTable = new DataStreamTable[T](boundedStream)
+    val (fieldNames, fieldIdxs) = getFieldInfo(
+      DataTypes.of(boundedStream.getTransformation.getOutputType))
+    val boundedStreamTable = new DataStreamTable[T](boundedStream, fieldIdxs, fieldNames)
     registerTableInternal(name, boundedStreamTable)
   }
 
@@ -366,11 +368,13 @@ class BatchTableEnvironment(
       name: String,
       boundedStream: DataStream[T],
       fieldNullables: Array[Boolean]): Unit = {
-    val tableSchema =
-      TableSchema.fromTypeInfo(
-        boundedStream.getTransformation.getOutputType,
-        Some(fieldNullables))
-    val boundedStreamTable = new DataStreamTable[T](boundedStream, tableSchema)
+    val dataType =
+      DataTypes.of(boundedStream.getTransformation.getOutputType)
+    val (fieldNames, fieldIndexes) = getFieldInfo(dataType)
+    val fieldTypes = TableEnvironment.getFieldTypes(dataType)
+    val relDataType = getTypeFactory.buildRelDataType(fieldNames, fieldTypes, fieldNullables)
+    val boundedStreamTable = new IntermediateBoundedStreamTable[T](
+      relDataType, boundedStream, fieldIndexes, fieldNames)
     registerTableInternal(name, boundedStreamTable)
   }
 
@@ -391,11 +395,9 @@ class BatchTableEnvironment(
         ".rowtime and .proctime time indicators are not allowed in a batch exec environment.")
     }
 
-    val tableSchema = TableSchema.fromTypeInfo(
-      boundedStream.getTransformation.getOutputType,
-      fields)
-
-    val boundedStreamTable = new DataStreamTable[T](boundedStream, tableSchema)
+    val dataType = DataTypes.of(boundedStream.getTransformation.getOutputType)
+    val (fieldNames, fieldIndexes) = getFieldInfo[T](dataType, fields)
+    val boundedStreamTable = new DataStreamTable[T](boundedStream, fieldIndexes, fieldNames)
     registerTableInternal(name, boundedStreamTable)
   }
 
@@ -419,11 +421,13 @@ class BatchTableEnvironment(
       throw new ValidationException(
         ".rowtime and .proctime time indicators are not allowed in a batch exec environment.")
     }
-    val tableSchema = TableSchema.fromTypeInfo(
-      boundedStream.getTransformation.getOutputType,
-      fields,
-      Some(fieldNullables))
-    val boundedStreamTable = new DataStreamTable[T](boundedStream, tableSchema)
+    val dataType = DataTypes.of(boundedStream.getTransformation.getOutputType)
+    val (fieldNames, fieldIndexes) = getFieldInfo(dataType, fields)
+    val physicalFieldTypes = TableEnvironment.getFieldTypes(dataType)
+    val fieldTypes = fieldIndexes.map(physicalFieldTypes.apply(_))
+    val relDataType = getTypeFactory.buildRelDataType(fieldNames, fieldTypes, fieldNullables)
+    val boundedStreamTable = new IntermediateBoundedStreamTable[T](
+      relDataType, boundedStream, fieldIndexes, fieldNames)
     registerTableInternal(name, boundedStreamTable)
   }
 
@@ -436,7 +440,8 @@ class BatchTableEnvironment(
     val boundedStreamTable = new IntermediateBoundedStreamTable[T](
       rowType,
       boundedStream,
-      tableSchema)
+      tableSchema.getColumnNames.map(tableSchema.columnNameToIndex.get(_).get),
+      tableSchema.getColumnNames)
     registerTableInternal(name, boundedStreamTable)
   }
 
@@ -603,12 +608,12 @@ class BatchTableEnvironment(
 
     tableSource match {
       case execTableSource: BatchExecTableSource[_] =>
-        registerTableInternal(name, new TableSourceTable(execTableSource))
+        registerTableInternal(name, new BatchTableSourceTable(execTableSource))
       case dimensionTableSource: DimensionTableSource[_] =>
         if (dimensionTableSource.isTemporal) {
-          registerTableInternal(name, new TemporalTableSourceTable(dimensionTableSource))
+          registerTableInternal(name, new TemporalDimensionTableSourceTable(dimensionTableSource))
         } else {
-          registerTableInternal(name, new TableSourceTable(dimensionTableSource))
+          registerTableInternal(name, new DimensionTableSourceTable(dimensionTableSource))
         }
       case _ =>
         throw new TableException("Only BatchExecTableSource/DimensionTableSource " +
@@ -662,13 +667,13 @@ class BatchTableEnvironment(
     tableSource match {
       case execTableSource: BatchExecTableSource[_] =>
         val tableSourceTable =
-          new TableSourceTable(execTableSource, statistic)
+          new BatchTableSourceTable(execTableSource, statistic)
         registerTableInternal(name, tableSourceTable)
       case dimensionTableSource: DimensionTableSource[_] =>
         if (dimensionTableSource.isTemporal) {
-          registerTableInternal(name, new TemporalTableSourceTable(dimensionTableSource, statistic))
+          registerTableInternal(name, new TemporalDimensionTableSourceTable(dimensionTableSource))
         } else {
-          registerTableInternal(name, new TableSourceTable(dimensionTableSource, statistic))
+          registerTableInternal(name, new DimensionTableSourceTable(dimensionTableSource))
         }
       case _ =>
         throw new TableException("Only BatchExecTableSource/DimensionTableSource " +

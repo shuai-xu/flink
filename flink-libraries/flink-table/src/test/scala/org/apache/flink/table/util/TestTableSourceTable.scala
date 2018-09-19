@@ -16,38 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.schema
+package org.apache.flink.table.util
 
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.schema.TableSourceTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sources.{StreamTableSource, TableSource, TableSourceUtil}
+import org.apache.flink.table.sources.TableSource
 
-class StreamTableSourceTable[T](
-    tableSource: StreamTableSource[T],
-    statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends TableSourceTable(
-    tableSource,
-    statistic) {
-
-  TableSourceUtil.validateTableSource(tableSource)
-
-  override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
-    TableSourceUtil.getRelDataType(
-      tableSource,
-      None,
-      streaming = true,
-      typeFactory.asInstanceOf[FlinkTypeFactory])
-  }
-
+/**
+ * Test class for TableSourceTable.
+ * @param tableSource
+ * @param statistic
+ */
+class TestTableSourceTable(
+    override val tableSource: TableSource,
+    override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
+  extends TableSourceTable(tableSource, statistic) {
   /**
    * replace table source with the given one, and create a new table source table.
    *
    * @param tableSource tableSource to replace.
    * @return new TableSourceTable
    */
-  override def replaceTableSource(tableSource: TableSource) =
-    new StreamTableSourceTable(tableSource.asInstanceOf[StreamTableSource[_]], statistic)
+  override def replaceTableSource(tableSource: TableSource) = ???
 
   /**
    * Creates a copy of this table, changing statistic.
@@ -55,6 +47,9 @@ class StreamTableSourceTable[T](
    * @param statistic A new FlinkStatistic.
    * @return Copy of this table, substituting statistic.
    */
-  override def copy(statistic: FlinkStatistic) =
-    new StreamTableSourceTable(tableSource.asInstanceOf[StreamTableSource[_]], statistic)
+  override def copy(statistic: FlinkStatistic) = new TestTableSourceTable(tableSource, statistic)
+
+  override def getRowType(relDataTypeFactory: RelDataTypeFactory) =
+    relDataTypeFactory.asInstanceOf[FlinkTypeFactory]
+        .buildLogicalRowType(tableSource.getTableSchema)
 }

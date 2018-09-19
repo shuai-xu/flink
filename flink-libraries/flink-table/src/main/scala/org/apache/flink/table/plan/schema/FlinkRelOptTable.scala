@@ -110,7 +110,7 @@ class FlinkRelOptTable protected(
     */
   override def getQualifiedName: JList[String] = {
     table match {
-      case tst: TableSourceTable[_] =>
+      case tst: TableSourceTable =>
         val ts = tst.tableSource
         val tsDigest = ts.explainSource()
         if (tsDigest.nonEmpty) {

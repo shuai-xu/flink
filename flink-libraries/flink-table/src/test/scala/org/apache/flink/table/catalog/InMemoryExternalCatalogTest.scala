@@ -236,7 +236,7 @@ class InMemoryExternalCatalogTest {
     val table = createTableInstance()
     catalog.createTable(tableName, table, ignoreIfExists = false)
     assertEquals(catalog.getTable(tableName), table)
-    val newTable = createTableInstance()
+    val newTable = createOtherTableInstance()
     catalog.alterTable(tableName, newTable, ignoreIfNotExists = false)
     val currentTable = catalog.getTable(tableName)
     // validate the table is really replaced after alter table
@@ -333,6 +333,17 @@ class InMemoryExternalCatalogTest {
       Array(
         DataTypes.STRING,
         DataTypes.INT
+      )
+    )
+    ExternalCatalogTable("csv", schema)
+  }
+
+  private def createOtherTableInstance(): ExternalCatalogTable = {
+    val schema = new TableSchema(
+      Array("first", "second"),
+      Array(
+        DataTypes.STRING,
+        DataTypes.STRING  // different from create table instance.
       )
     )
     ExternalCatalogTable("csv", schema)

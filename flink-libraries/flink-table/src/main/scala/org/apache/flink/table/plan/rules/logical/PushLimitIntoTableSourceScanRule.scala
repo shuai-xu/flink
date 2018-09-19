@@ -46,9 +46,9 @@ class PushLimitIntoTableSourceScanRule extends RelOptRule(
     var supportPushDown = false
     if (onlyLimit) {
       val tableSource = call.rel(1).asInstanceOf[TableScan]
-          .getTable.unwrap(classOf[TableSourceTable[_]])
+          .getTable.unwrap(classOf[TableSourceTable])
       supportPushDown = tableSource match {
-        case table: TableSourceTable[_] =>
+        case table: TableSourceTable =>
           table.tableSource match {
             case source: LimitableTableSource => !source.isLimitPushedDown
             case _ => false
@@ -74,7 +74,7 @@ class PushLimitIntoTableSourceScanRule extends RelOptRule(
       limit: Long,
       relOptTable: FlinkRelOptTable,
       relBuilder: RelBuilder): FlinkRelOptTable = {
-    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable])
     val limitedSource = tableSourceTable.tableSource.asInstanceOf[LimitableTableSource]
     val newTableSource = limitedSource.applyLimit(limit)
 
@@ -86,7 +86,7 @@ class PushLimitIntoTableSourceScanRule extends RelOptRule(
     } else {
       flinkStatistic
     }
-    val newTableSourceTable = new TableSourceTable(newTableSource, newStatistic)
+    val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(newStatistic)
     relOptTable.copy(newTableSourceTable, relOptTable.getRowType)
   }
 }

@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.runtime.batch.table;
 
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
@@ -25,6 +27,7 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.runtime.batch.sql.QueryTest;
 import org.apache.flink.table.runtime.batch.sql.TestData;
+import org.apache.flink.types.Either;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -116,7 +119,7 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 	}
 
 	@Test
-	public void testAsFromTuple() throws Exception {
+	public void testAsFromTupleByPosition() throws Exception {
 
 		registerCollection("T", TestData.data3(), TestData.type3(), "a, b, c");
 
@@ -130,6 +133,22 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 			"14,5,Comment#8\n" + "15,5,Comment#9\n" + "16,6,Comment#10\n" +
 			"17,6,Comment#11\n" + "18,6,Comment#12\n" + "19,6,Comment#13\n" +
 			"20,6,Comment#14\n" + "21,6,Comment#15\n";
+		compareResultAsText(getResult(table), expected);
+	}
+
+	@Test
+	public void testAsFromTupleByName() throws Exception {
+		registerCollection("T", TestData.data3(), TestData.type3(), "f2");
+		Table table = tEnv().scan("T")
+				.select("f2");
+
+		String expected = "Hi\n" + "Hello\n" + "Hello world\n" +
+			"Hello world, how are you?\n" + "I am fine.\n" + "Luke Skywalker\n" +
+			"Comment#1\n" + "Comment#2\n" + "Comment#3\n" + "Comment#4\n" +
+			"Comment#5\n" + "Comment#6\n" + "Comment#7\n" +
+			"Comment#8\n" + "Comment#9\n" + "Comment#10\n" +
+			"Comment#11\n" + "Comment#12\n" + "Comment#13\n" +
+			"Comment#14\n" + "Comment#15\n";
 		compareResultAsText(getResult(table), expected);
 	}
 
@@ -169,6 +188,43 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 			"Sales,28,4000.0,Peter,[42]\n" +
 			"Engineering,56,10000.0,Anna,[]\n" +
 			"HR,42,6000.0,Lucy,[1, 2, 3]\n";
+		compareResultAsText(getResult(table), expected);
+	}
+
+	@Test
+	public void testFromNonAtomicAndNonComposite() throws Exception {
+
+		List<Either<String, Integer>> data = new ArrayList<>();
+		data.add(new Either.Left<>("Hello"));
+		data.add(new Either.Right<>(42));
+		data.add(new Either.Left<>("World"));
+
+		TypeInformation<Either<String, Integer>> typeInfo =
+				TypeInformation.of(new TypeHint<Either<String, Integer>>() { });
+		Table table = tEnv().fromJavaCollection(data, typeInfo, "either").select("either");
+
+		String expected =
+			"Left(Hello)\n" +
+			"Left(World)\n" +
+			"Right(42)\n";
+		compareResultAsText(getResult(table), expected);
+	}
+
+	@Test
+	public void testAsFromPojoProjected() throws Exception {
+
+		List<SmallPojo> data = new ArrayList<>();
+		data.add(new SmallPojo("Peter", 28, 4000.00, "Sales", new Integer[] {42}));
+		data.add(new SmallPojo("Anna", 56, 10000.00, "Engineering", new Integer[] {}));
+		data.add(new SmallPojo("Lucy", 42, 6000.00, "HR", new Integer[] {1, 2, 3}));
+
+		Table table = tEnv().fromJavaCollection(data, "name as d")
+			.select("d");
+
+		String expected =
+			"Peter\n" +
+			"Anna\n" +
+			"Lucy\n";
 		compareResultAsText(getResult(table), expected);
 	}
 

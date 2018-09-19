@@ -18,24 +18,24 @@
 
 package org.apache.flink.table.util
 
-import java.util
+import java.util.{Set => JSet}
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.sources._
 import org.apache.flink.table.types.{DataType, DataTypes}
 
+import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 class TestTableSourceWithUniqueKeys[T](
     rows: Seq[T],
     fieldNames: Array[String],
     fieldIndices: Array[Int],
-    uniqueKeySet: util.Set[util.Set[String]])(implicit rowType: TypeInformation[T])
-  extends StreamTableSource[T]
-  with DefinedFieldNames
-  with DefinedUniqueKeys {
+    uniqueKeySet: JSet[JSet[String]])(implicit rowType: TypeInformation[T])
+  extends StreamTableSource[T] with DefinedFieldMapping {
 
   override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[T] = {
 
@@ -47,12 +47,30 @@ class TestTableSourceWithUniqueKeys[T](
 
   override def getReturnType: DataType = DataTypes.of(rowType)
 
-  /** Returns the names of the table fields. */
-  override def getFieldNames: Array[String] = fieldNames
+  override def getTableSchema: TableSchema = {
+    val builder = TableSchema.builder()
+    val physicalSchema = TableSchema.fromDataType(getReturnType)
+    fieldNames.zipWithIndex.foreach {
+      case (name, idx) => builder.field(name, physicalSchema.getType(fieldIndices.apply(idx)))
+    }
 
-  /** Returns the indices of the table fields. */
-  override def getFieldIndices: Array[Int] = fieldIndices
+    if (uniqueKeySet != null) {
+      uniqueKeySet.foreach {
+        case uniqueKey: JSet[String] =>
+          builder.uniqueKey(uniqueKey.toArray(new Array[String](0)):_*)
+      }
+    }
+    builder.build()
+  }
 
-  /** Define unique keys. */
-  override def getUniqueKeys(): util.Set[util.Set[String]] = uniqueKeySet
+  override def explainSource(): String = ""
+
+  override def getFieldMapping = {
+    val physicalSchema = TableSchema.fromDataType(getReturnType)
+    val mapping = new java.util.HashMap[String, String]()
+    fieldNames.zipWithIndex.foreach {
+      case (name, idx) => mapping.put(name, physicalSchema.getColumnName(fieldIndices.apply(idx)))
+    }
+    mapping
+  }
 }

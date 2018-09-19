@@ -29,6 +29,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.io.{GenericInputSplit, InputSplit, InputSplitAssigner}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
@@ -142,6 +143,9 @@ class TestPartitionableTableSource(
     }
     TableStats(rowCount = partitions.foldLeft(0L)((sum, d) => sum + d._2.size))
   }
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema = TableSchema.fromDataType(getReturnType)
 }
 
 class TestPartition(partition: String) extends Partition {

@@ -25,7 +25,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.rel.rules.ProjectRemoveRule
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.plan.util._
-import org.apache.flink.table.sources.{DefinedProctimeAttribute, DefinedRowtimeAttribute, NestedFieldsProjectableTableSource, ProjectableTableSource}
+import org.apache.flink.table.sources._
 
 class PushProjectIntoTableSourceScanRule extends RelOptRule(
   operand(classOf[Project],
@@ -34,11 +34,11 @@ class PushProjectIntoTableSourceScanRule extends RelOptRule(
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan: LogicalTableScan = call.rel(1).asInstanceOf[LogicalTableScan]
-    scan.getTable.unwrap(classOf[TableSourceTable[_]]) match {
-      case table: TableSourceTable[_] =>
+    scan.getTable.unwrap(classOf[TableSourceTable]) match {
+      case table: TableSourceTable =>
         table.tableSource match {
           // projection pushdown is not supported for sources that provide time indicators
-          case r: DefinedRowtimeAttribute if r.getRowtimeAttribute != null => false
+          case r: DefinedRowtimeAttributes if r.getRowtimeAttributeDescriptors != null => false
           case p: DefinedProctimeAttribute if p.getProctimeAttribute != null => false
           case _: ProjectableTableSource => true
           case _ => false
@@ -54,7 +54,7 @@ class PushProjectIntoTableSourceScanRule extends RelOptRule(
     val usedFields = RexNodeExtractor.extractRefInputFields(project.getProjects)
 
     val table = scan.getTable.asInstanceOf[FlinkRelOptTable]
-    val tableSourceTable = table.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = table.unwrap(classOf[TableSourceTable])
     val source = tableSourceTable.tableSource
     // if no fields can be projected, we keep the original plan.
     if (scan.getRowType.getFieldCount != usedFields.length) {
@@ -67,7 +67,7 @@ class PushProjectIntoTableSourceScanRule extends RelOptRule(
           projecting.projectFields(usedFields)
       }
       // project push down does not change the statistic, we can reuse origin statistic
-      val newTableSoureTable = new TableSourceTable(newTableSource, tableSourceTable.statistic)
+      val newTableSoureTable = tableSourceTable.replaceTableSource(newTableSource)
       // row type is changed after project push down
       val newRowType = newTableSoureTable.getRowType(scan.getCluster.getTypeFactory)
       val newRelOptTable = table.copy(newTableSoureTable, newRowType)

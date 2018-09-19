@@ -34,14 +34,14 @@ abstract class PhysicalTableSourceScan(
     relOptTable: FlinkRelOptTable)
   extends TableScan(cluster, traitSet, relOptTable) {
 
-  protected val tableSourceTable: TableSourceTable[_] =
-    relOptTable.unwrap(classOf[TableSourceTable[_]])
+  protected val tableSourceTable: TableSourceTable =
+    relOptTable.unwrap(classOf[TableSourceTable])
 
   protected[flink] val tableSource: TableSource = tableSourceTable.tableSource
 
   override def deriveRowType(): RelDataType = {
     val flinkTypeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema)
+    tableSourceTable.getRowType(flinkTypeFactory)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {

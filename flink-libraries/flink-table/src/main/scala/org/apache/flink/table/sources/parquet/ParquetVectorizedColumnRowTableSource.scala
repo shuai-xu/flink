@@ -18,16 +18,19 @@
 
 package org.apache.flink.table.sources.parquet
 
-import java.util
+import java.util.{Set => JSet}
 
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.sources.vector.VectorizedColumnBatch
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import _root_.scala.collection.JavaConversions._
 
 /**
   * Creates a TableSource to scan an Parquet table based
@@ -42,7 +45,7 @@ class ParquetVectorizedColumnRowTableSource(
     enumerateNestedFiles: Boolean,
     numTimes: Int = 1,
     sourceName: String = "",
-    uniqueKeySet: util.Set[util.Set[String]] = null)
+    uniqueKeySet: JSet[JSet[String]] = null)
   extends ParquetTableSource[ColumnarRow](
     filePath,
     fieldTypes,
@@ -114,5 +117,19 @@ class ParquetVectorizedColumnRowTableSource(
     execEnv.createInput(inputFormat, getPhysicalType, sourceName).setParallelism(numTimes)
   }
 
-  override def getUniqueKeys(): util.Set[util.Set[String]] = uniqueKeySet
+  override def getTableSchema: TableSchema = {
+    val builder = TableSchema.builder()
+    fieldNames.zip(fieldTypes).zip(fieldNullables).foreach {
+      case ((name:String, tpe:InternalType), nullable:Boolean) =>
+        builder.field(name, tpe.asInstanceOf[InternalType], nullable)
+    }
+    if (uniqueKeySet != null) {
+      uniqueKeySet.foreach {
+        case uniqueKey: JSet[String] =>
+          builder.uniqueKey(uniqueKey.toArray(new Array[String](0)):_*)
+      }
+    }
+    builder.build()
+  }
+
 }

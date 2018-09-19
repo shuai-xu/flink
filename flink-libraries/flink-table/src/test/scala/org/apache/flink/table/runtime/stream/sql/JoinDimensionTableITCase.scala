@@ -31,7 +31,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, Types}
+import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.utils.{TestingAppendSink, TestingRetractSink}
@@ -749,6 +749,9 @@ class JoinDimensionTableITCase extends AbstractTestBase {
         0
       }
     }
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
   }
 }
 

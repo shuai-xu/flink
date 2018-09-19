@@ -323,7 +323,18 @@ class SimpleTimeAttrTableSource(
     DataTypes.of(new RowTypeInfo(fieldTypes, fieldNames))
   }
 
+  override def getTableSchema: TableSchema = {
+    val builder = TableSchema.builder()
+    fieldNames.zip(fieldTypes).foreach {
+      case (fieldName, fieldType) => builder.field(fieldName, DataTypes.internal(fieldType))
+    }
+    builder.field(proctimeAttr, DataTypes.TIMESTAMP)
+    builder.build()
+  }
+
   override def getProctimeAttribute: String = proctimeAttr
+
+  override def explainSource(): String = ""
 
   override def getSourceBuilder: SourceBuilder = new SourceBuilder {
     override def getProperties: util.Map[String, AnyRef] = Map[String, AnyRef](
@@ -434,4 +445,7 @@ class HBaseDimensionTableSource(fields: Array[String]) extends StreamTableSource
     )
 
   override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = ???
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema = TableSchema.fromDataType(getReturnType)
 }

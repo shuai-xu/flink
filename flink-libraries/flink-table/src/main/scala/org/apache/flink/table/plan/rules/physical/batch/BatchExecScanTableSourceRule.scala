@@ -38,9 +38,9 @@ class BatchExecScanTableSourceRule
   /** Rule must only match if TableScan targets a [[BatchExecTableSource]] */
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan: TableScan = call.rel(0).asInstanceOf[TableScan]
-    val batchTable = scan.getTable.unwrap(classOf[TableSourceTable[_]])
-    batchTable match {
-      case tst: TableSourceTable[_] =>
+    val dataSetTable = scan.getTable.unwrap(classOf[TableSourceTable])
+    dataSetTable match {
+      case tst: TableSourceTable =>
         tst.tableSource match {
           case _: BatchExecTableSource[_] => true
           case _ => false

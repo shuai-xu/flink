@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.types.DataTypes
 
@@ -27,30 +26,27 @@ class DataStreamTable[T](
     val dataStream: DataStream[T],
     val producesUpdates: Boolean,
     val isAccRetract: Boolean,
-    tableSchema: TableSchema,
+    override val fieldIndexes: Array[Int],
+    override val fieldNames: Array[String],
     statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends FlinkTable(DataTypes.of(dataStream.getType), tableSchema, statistic) {
-
-  def this(source: DataStream[T], producesUpdates: Boolean, isAccRetract: Boolean) {
-    this(source, producesUpdates, isAccRetract, TableSchema.fromTypeInfo(source.getType))
-  }
+  extends InlineTable(DataTypes.of(dataStream.getType), fieldIndexes, fieldNames, statistic) {
 
   // This is only used for boundedStream now, we supply default statistic.
-  def this(boundedStream: DataStream[T]) {
-    this(boundedStream, false, false, TableSchema.fromTypeInfo(boundedStream.getType),
+  def this(
+      stream: DataStream[T],
+      fieldIndexes: Array[Int],
+      fieldNames: Array[String]) {
+    this(stream, false, false, fieldIndexes, fieldNames,
       FlinkStatistic.of(TableStats(1000L)))
   }
 
-  // This is only used for boundedStream now, we supply default statistic.
-  def this(boundedStream: DataStream[T], tableSchema: TableSchema) {
-    this(boundedStream, false, false, tableSchema, FlinkStatistic.of(TableStats(1000L)))
-  }
-
-  def this(source: DataStream[T], tableSchema: TableSchema, statistic: FlinkStatistic) {
-    this(source, false, false, tableSchema, statistic)
-  }
-
-  override def copy(statistic: FlinkStatistic): FlinkTable = {
-    new DataStreamTable[T](dataStream, producesUpdates, isAccRetract, tableSchema, statistic)
-  }
+  /**
+   * Creates a copy of this table, changing statistic.
+   *
+   * @param statistic A new FlinkStatistic.
+   * @return Copy of this table, substituting statistic.
+   */
+  override def copy(statistic: FlinkStatistic): FlinkTable =
+    new DataStreamTable(
+      dataStream, producesUpdates, isAccRetract, fieldIndexes, fieldNames, statistic)
 }

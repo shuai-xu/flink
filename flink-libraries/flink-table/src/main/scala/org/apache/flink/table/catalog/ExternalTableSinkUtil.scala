@@ -37,7 +37,7 @@ object ExternalTableSinkUtil {
     val colNullables = tableSchema.getNullables
     val richTableSchema = new RichTableSchema(
       colNames, colTypes, colNullables)
-    val primaryKeys = tableSchema.getPrimaryKeys.map { _.name }
+    val primaryKeys = tableSchema.getPrimaryKeys
     richTableSchema.setPrimaryKey(primaryKeys: _*)
     // TODO unique keys of RichTableSchema
     // TODO indexes of RichTableSchema

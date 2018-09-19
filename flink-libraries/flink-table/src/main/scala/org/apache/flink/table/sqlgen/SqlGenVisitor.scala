@@ -216,7 +216,7 @@ class SqlGenVisitor(tableEnv: TableEnvironment)
   override def visit(catalog: CatalogNode) = {
     val source = tableEnv.getTable(catalog.tablePath.head)
     val tableSource = source match {
-      case tableSourceTable: TableSourceTable[_] => tableSourceTable.tableSource
+      case tableSourceTable: TableSourceTable => tableSourceTable.tableSource
       case _ => throw new TableException("can't find table source")
     }
 

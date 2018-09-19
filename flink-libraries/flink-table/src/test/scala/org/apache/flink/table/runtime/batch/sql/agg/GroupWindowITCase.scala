@@ -77,6 +77,9 @@ class GroupWindowITCase extends QueryTest {
             type3WithTimestamp.createSerializer(env.getConfig)),
           type3WithTimestamp, "Table3WithTimestamp1")
       }
+
+      /** Returns the table schema of the table source */
+      override def getTableSchema = TableSchema.fromDataType(getReturnType)
     }
     tEnv.registerTableSource("Table3WithTimestamp1", table)
     tEnv.getConfig.getParameters

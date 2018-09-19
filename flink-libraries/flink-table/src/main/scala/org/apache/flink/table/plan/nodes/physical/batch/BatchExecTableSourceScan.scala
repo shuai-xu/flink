@@ -22,16 +22,18 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableException}
 import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource}
+import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource, TableSourceUtil}
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.typeutils.TypeUtils
 
 /**
   * Flink RelNode to read data from an external source defined by a [[BatchExecTableSource]].
@@ -42,11 +44,6 @@ class BatchExecTableSourceScan(
     relOptTable: FlinkRelOptTable)
   extends PhysicalTableSourceScan(cluster, traitSet, relOptTable)
   with BatchExecScan {
-
-  override def deriveRowType(): RelDataType = {
-    val flinkTypeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema)
-  }
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val rowCnt = mq.getRowCount(this)
@@ -82,15 +79,43 @@ class BatchExecTableSourceScan(
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment,
       queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+
+    val fieldIndexes = TableSourceUtil.computeIndexMapping(
+      tableSource,
+      isStreamTable = false,
+      None)
+
     val config = tableEnv.getConfig
     val input = getSourceTransformation(tableEnv.streamEnv).asInstanceOf[StreamTransformation[Any]]
     assignSourceResourceAndParallelism(tableEnv, input)
-    convertToInternalRow(
-      tableEnv, input, getRowType, new TableSourceTable(tableSource), config)
+
+    // check that declared and actual type of table source DataSet are identical
+    if (input.getOutputType != TypeUtils.createTypeInfoFromDataType(tableSource.getReturnType)) {
+      throw new TableException(s"TableSource of type ${tableSource.getClass.getCanonicalName} " +
+          s"returned a DataSet of type ${input.getOutputType} that does not match with the " +
+          s"type ${tableSource.getReturnType} declared by the TableSource.getReturnType() " +
+          s"method. Please validate the implementation of the TableSource.")
+    }
+
+    // get expression to extract rowtime attribute
+    val rowtimeExpression: Option[RexNode] = TableSourceUtil.getRowtimeExtractionExpression(
+      tableSource,
+      None,
+      cluster,
+      tableEnv.getRelBuilder,
+      DataTypes.TIMESTAMP
+    )
+
+    convertToInternalRow(tableEnv, input, fieldIndexes,
+      getRowType, tableSource.getReturnType, config, rowtimeExpression)
   }
 
-  override def needInternalConversion: Boolean = {
-    needsConversion(new TableSourceTable(tableSource).dataType)
+  override def needInternalConversion = {
+    val fieldIndexes = TableSourceUtil.computeIndexMapping(
+      tableSource,
+      isStreamTable = false,
+      None)
+    hasTimeAttributeField(fieldIndexes) || needsConversion(tableSource.getReturnType)
   }
 
   private def getSourceTransformation(streamEnv: StreamExecutionEnvironment):

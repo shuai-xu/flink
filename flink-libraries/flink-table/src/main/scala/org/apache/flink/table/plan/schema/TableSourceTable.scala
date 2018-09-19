@@ -18,19 +18,20 @@
 
 package org.apache.flink.table.plan.schema
 
+import java.util
+
 import org.apache.calcite.schema.Statistic
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource
 
+import scala.collection.mutable.ArrayBuffer
+
 /** Table which defines an external table via a [[TableSource]] */
-class TableSourceTable[T](
+abstract class TableSourceTable(
     val tableSource: TableSource,
-    override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends FlinkTable (
-    tableSource.getReturnType,
-    tableSource.getTableSchema,
-    statistic) {
+    val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
+  extends FlinkTable {
 
   /**
     * Returns statistics of current table.
@@ -39,7 +40,7 @@ class TableSourceTable[T](
     *
     * @return statistics of current table
     */
-  override def getStatistic: Statistic = {
+  override def getStatistic: FlinkStatistic = {
     // Currently, we could get more exact TableStats by AnalyzeStatistic#generateTableStats
     // and update it by TableEnvironment#alterTableStats.
     // So the default statistic should be prior to the stats from TableSource.
@@ -52,17 +53,28 @@ class TableSourceTable[T](
       }
     } else {
       val stats = tableSource.getTableStats
-      val primaryKeys = tableSchema.getPrimaryKeys.map(_.name)
-      if (primaryKeys.isEmpty) {
+      val primaryKeys = tableSource.getTableSchema.getPrimaryKeys
+      val uniqueKeys = tableSource.getTableSchema.getUniqueKeys
+      if (primaryKeys.isEmpty && uniqueKeys.isEmpty) {
         FlinkStatistic.of(stats)
       } else {
-        val uniqueKeys = ImmutableSet.of(ImmutableSet.copyOf(primaryKeys))
-        FlinkStatistic.of(stats, uniqueKeys, null)
+        var keyBuffer = new ArrayBuffer[util.Set[String]]()
+        if (!primaryKeys.isEmpty) {
+          keyBuffer.append(ImmutableSet.copyOf(primaryKeys))
+        }
+        uniqueKeys.foreach {
+          case uniqueKey: Array[String] => keyBuffer.append(ImmutableSet.copyOf(uniqueKey))
+        }
+
+        FlinkStatistic.of(stats, ImmutableSet.copyOf(keyBuffer.toArray), null)
       }
     }
   }
 
-  override def copy(statistic: FlinkStatistic): FlinkTable = {
-    new TableSourceTable[T](tableSource, statistic)
-  }
+  /**
+   * replace table source with the given one, and create a new table source table.
+   * @param tableSource tableSource to replace.
+   * @return new TableSourceTable
+   */
+  def replaceTableSource(tableSource: TableSource): TableSourceTable
 }

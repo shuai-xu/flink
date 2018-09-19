@@ -30,7 +30,6 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.RexNodeExtractor
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sinks.orc.OrcTableSink
 import org.apache.flink.table.sources.FilterableTableSource
 import org.apache.flink.table.sources.orc.OrcTableSource
 import org.apache.flink.table.sources.parquet.ParquetTableSource
@@ -49,8 +48,8 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
     val filter: Filter = call.rel(0).asInstanceOf[Filter]
     if (filter.getCondition == null) return false
     val scan: LogicalTableScan = call.rel(1).asInstanceOf[LogicalTableScan]
-    scan.getTable.unwrap(classOf[TableSourceTable[_]]) match {
-      case table: TableSourceTable[_] =>
+    scan.getTable.unwrap(classOf[TableSourceTable]) match {
+      case table: TableSourceTable =>
         table.tableSource match {
           case source: ParquetTableSource[_] if !source.isFilterPushedDown  =>
             //FIXME This is not a very elegant solution.
@@ -126,7 +125,7 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
       relOptTable: FlinkRelOptTable,
       relBuilder: RelBuilder): FlinkRelOptTable = {
     val originPredicatesSize = predicates.size()
-    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable])
     val filterableSource = tableSourceTable.tableSource.asInstanceOf[FilterableTableSource]
     filterableSource.setRelBuilder(relBuilder)
     val newTableSource = filterableSource.applyPredicate(predicates)
@@ -139,7 +138,7 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
       FlinkStatistic.of(relOptTable.getFlinkStatistic.getUniqueKeys,
                         relOptTable.getFlinkStatistic.getRelModifiedMonotonicity)
     }
-    val newTableSourceTable = new TableSourceTable(newTableSource, statistics)
+    val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(statistics)
     relOptTable.copy(newTableSourceTable, relOptTable.getRowType)
   }
 

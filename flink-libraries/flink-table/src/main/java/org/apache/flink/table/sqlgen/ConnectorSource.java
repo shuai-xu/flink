@@ -23,6 +23,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.sources.StreamTableSource;
 
+import scala.Option;
+
 /**
  * specify a TableSource for SqlGen.
  * @param <T>
@@ -37,6 +39,6 @@ public interface ConnectorSource<T> extends StreamTableSource<T> {
 
 	@Override
 	default TableSchema getTableSchema() {
-		return TableSchema.fromTableSource(this);
+		return TableSchema.fromDataType(getReturnType(), Option.empty());
 	}
 }

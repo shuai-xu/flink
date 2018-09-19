@@ -23,7 +23,7 @@ import java.lang.{Integer => JInt, Long => JLong}
 import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
 import org.apache.calcite.tools.RuleSets
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.util.{TestFlinkLogicalLastRowRule, TestTableSourceWithRowTime, TestTableSourceWithUniqueKeys}
+import org.apache.flink.table.util.{TestFlinkLogicalLastRowRule, TestTableSourceWithTime, TestTableSourceWithUniqueKeys}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
@@ -31,11 +31,12 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, Types}
+import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 import org.junit.Test
 import org.junit.Assert.assertEquals
@@ -126,18 +127,21 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
       Row.of(toTimestamp(4L), new JLong(3L), "Helloworld, how are you?", new JInt(4))
     )
 
+
     val rowType = new RowTypeInfo(
       Array(Types.SQL_TIMESTAMP, Types.LONG, Types.STRING, Types.INT)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
 
-    tEnv.registerTableSource(tableName, new TestTableSourceWithRowTime(
+    val schema = TableSchema.builder().fromDataType(DataTypes.of(rowType))
+          .primaryKey("pk").build()
+
+    tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
+      schema,
+      rowType,
       data,
-      Array("a", "pk", "c", "d"),
-      Array(0, 1, 2, 3),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk"))),
       "a"
-    )(rowType))
+    ))
 
     val sink = new TestingRetractSink
     tEnv.scan(tableName)
@@ -177,14 +181,16 @@ class LastRowITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
       Array(Types.SQL_TIMESTAMP, Types.LONG, Types.STRING, Types.INT)
         .asInstanceOf[Array[TypeInformation[_]]],
       Array("a", "pk", "c", "d"))
+    val schema = TableSchema.builder().fromDataType(DataTypes.of(rowType))
+          .primaryKey("pk").build()
 
-    tEnv.registerTableSource(tableName, new TestTableSourceWithRowTime(
+    tEnv.registerTableSource(tableName, new TestTableSourceWithTime(
+      schema,
+      rowType,
       data,
-      Array("a", "pk", "c", "d"),
-      Array(0, 1, 2, 3),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk"))),
       "a"
-    )(rowType))
+    ))
+
 
     val sink = new TestingUpsertTableSink(Array(0))
     tEnv.scan(tableName)

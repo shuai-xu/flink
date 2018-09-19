@@ -18,34 +18,10 @@
 
 package org.apache.flink.table.plan.schema
 
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.calcite.schema.Statistic
 import org.apache.calcite.schema.impl.AbstractTable
-import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.types.DataType
 
-abstract class FlinkTable(
-    val dataType: DataType,
-    val tableSchema: TableSchema,
-    val statistic: FlinkStatistic)
-  extends AbstractTable {
-
-  override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
-    val flinkTypeFactory = typeFactory.asInstanceOf[FlinkTypeFactory]
-    flinkTypeFactory.buildLogicalRowType(tableSchema)
-  }
-
-  /**
-    * Returns detailed statistics of current table. Default value is original statistics.
-    * Note: If expect to fetch the original statistics which has been passed as constructor
-    * parameter value, call statistic instead of this method because sub class has chance to
-    * override default behavior.
-    *
-    * @return statistics of current table
-    */
-  override def getStatistic: Statistic = statistic
+abstract class FlinkTable extends AbstractTable {
 
   /**
     * Creates a copy of this table, changing statistic.
@@ -54,4 +30,5 @@ abstract class FlinkTable(
     * @return Copy of this table, substituting statistic.
     */
   def copy(statistic: FlinkStatistic): FlinkTable
+
 }

@@ -18,42 +18,232 @@
 
 package org.apache.flink.table.api.stream.table.validation
 
+import java.util
+import java.util.Collections
+
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{TableException, Types}
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.stream.table.{TestProctimeSource, TestRowtimeSource}
-import org.apache.flink.table.util.TableTestBase
+import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.streaming.api.TimeCharacteristic
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types, ValidationException}
+import org.apache.flink.table.sources._
+import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.sources.tsextractors.ExistingField
+import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.util.TestTableSourceWithTime
+import org.apache.flink.types.Row
 import org.junit.Test
 
-class TableSourceValidationTest extends TableTestBase {
+class TableSourceValidationTest {
 
-  @Test(expected = classOf[TableException])
-  def testRowtimeTableSourceWithEmptyName(): Unit = {
+  @Test(expected = classOf[ValidationException])
+  def testUnresolvedSchemaField(): Unit = {
 
-    val tableSource = new TestRowtimeSource(
-      Array("id", "rowtime", "val", "name"),
-      Array(Types.INT, Types.LONG, Types.LONG, Types.STRING)
-        .asInstanceOf[Array[TypeInformation[_]]],
-      "rowtime"
-    )
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
 
-    val util = streamTestUtil()
-    util.tableEnv.registerTableSource("rowTime", tableSource)
+    val schema = new TableSchema(
+      Array("id", "name", "amount", "value"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.INT, DataTypes.DOUBLE))
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
+      Array("id", "name", "amount"))
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row]())
 
-    val t = util.tableEnv.scan("rowTimeT")
-            .select('id)
-
-    util.tableEnv.optimize(t.getRelNode, updatesAsRetraction = false)
+    // should fail because schema field "value" cannot be resolved in result type
+    tEnv.registerTableSource("testTable", ts)
   }
 
-  @Test(expected = classOf[TableException])
-  def testProctimeTableSourceWithEmptyName(): Unit = {
-    val util = streamTestUtil()
-    util.tableEnv.registerTableSource("procTimeT", new TestProctimeSource(" "))
+  @Test(expected = classOf[ValidationException])
+  def testNonMatchingFieldTypes(): Unit = {
 
-    val t = util.tableEnv.scan("procTimeT")
-            .select('id)
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
 
-    util.tableEnv.optimize(t.getRelNode, updatesAsRetraction = false)
+    val schema = new TableSchema(
+      Array("id", "name", "amount"),
+      Array(DataTypes.LONG, DataTypes.INT, DataTypes.INT))
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
+      Array("id", "name", "amount"))
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row]())
+
+    // should fail because types of "name" fields are different
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testMappingToUnknownField(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val schema = new TableSchema(
+      Array("id", "name", "amount"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.DOUBLE))
+    val rowType = new RowTypeInfo(Types.LONG, Types.STRING, Types.DOUBLE)
+    val mapping = Map("id" -> "f3", "name" -> "f1", "amount" -> "f2")
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row](), mapping = mapping)
+
+    // should fail because mapping maps field "id" to unknown field
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testMappingWithInvalidFieldType(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val schema = new TableSchema(
+      Array("id", "name", "amount"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.DOUBLE))
+    val rowType = new RowTypeInfo(Types.LONG, Types.STRING, Types.INT)
+    val mapping = Map("id" -> "f0", "name" -> "f1", "amount" -> "f2")
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row](), mapping = mapping)
+
+    // should fail because mapping maps fields with different types
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testNonTimestampProctimeField(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val schema = new TableSchema(
+      Array("id", "name", "amount", "ptime"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.INT, DataTypes.LONG))
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
+      Array("id", "name", "amount"))
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row](), proctime = "ptime")
+
+    // should fail because processing time field has invalid type
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testNonTimestampRowtimeField(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val schema = new TableSchema(
+      Array("id", "name", "amount", "rtime"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.INT, DataTypes.LONG))
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.LONG, Types.INT)
+        .asInstanceOf[Array[TypeInformation[_]]],
+      Array("id", "name", "rtime", "amount"))
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row](), rowtime = "rtime")
+
+    // should fail because rowtime field has invalid type
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testFieldRowtimeAndProctime(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val schema = new TableSchema(
+      Array("id", "name", "amount", "time"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.INT, DataTypes.TIMESTAMP))
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.LONG, Types.INT)
+        .asInstanceOf[Array[TypeInformation[_]]],
+      Array("id", "name", "time", "amount"))
+    val ts =
+      new TestTableSourceWithTime(schema, rowType, Seq[Row](), rowtime = "time", proctime = "time")
+
+    // should fail because rowtime field has invalid type
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testUnknownTimestampExtractorArgField(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val schema = new TableSchema(
+      Array("id", "name", "amount", "rtime"),
+      Array(DataTypes.LONG, DataTypes.STRING, DataTypes.INT, DataTypes.TIMESTAMP))
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.LONG, Types.INT)
+        .asInstanceOf[Array[TypeInformation[_]]],
+      Array("id", "name", "rtime", "amount"))
+    val ts =
+      new TestTableSourceWithTime(schema, rowType, Seq[Row]()) {
+
+        override def getRowtimeAttributeDescriptors: util.List[RowtimeAttributeDescriptor] = {
+          Collections.singletonList(new RowtimeAttributeDescriptor(
+            "rtime",
+            new ExistingField("doesNotExist"),
+            new AscendingTimestamps))
+        }
+    }
+
+    // should fail because timestamp extractor argument field does not exist
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testFailingTimestampExtractorValidation(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val fieldNames = Array("id", "name", "amount")
+    val rowType = new RowTypeInfo(
+      Array(Types.LONG, Types.STRING, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
+      fieldNames)
+    val schema = new TableSchema(
+      fieldNames,
+      Array(DataTypes.LONG, DataTypes.TIMESTAMP, DataTypes.INT))
+    val ts = new TestTableSourceWithTime(schema, rowType, Seq[Row](), rowtime = "amount")
+
+    // should fail because configured rowtime field is not of type Long or Timestamp
+    tEnv.registerTableSource("testTable", ts)
+  }
+
+  // CsvTableSource Tests
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testCsvTableSourceBuilderWithNullPath(): Unit = {
+    CsvTableSource.builder()
+      .field("myfield", DataTypes.STRING)
+      // should fail, path is not defined
+      .build()
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testCsvTableSourceBuilderWithDuplicateFieldName(): Unit = {
+    CsvTableSource.builder()
+      .path("/path/to/csv")
+      .field("myfield", DataTypes.STRING)
+      // should fail, field name must no be duplicate
+      .field("myfield", DataTypes.INT)
+  }
+
+  @Test(expected = classOf[IllegalArgumentException])
+  def testCsvTableSourceBuilderWithEmptyField(): Unit = {
+    CsvTableSource.builder()
+      .path("/path/to/csv")
+      // should fail, field can be empty
+      .build()
   }
 }

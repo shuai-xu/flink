@@ -35,7 +35,7 @@ import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.GeneratedExpression.NEVER_NULL
 import org.apache.flink.table.codegen.calls.ScalarOperators._
-import org.apache.flink.table.codegen.calls.{BinaryStringCallGen, BuiltInMethods, FunctionGenerator}
+import org.apache.flink.table.codegen.calls.{BinaryStringCallGen, BuiltInMethods, CurrentTimePointCallGen, FunctionGenerator}
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
@@ -352,6 +352,11 @@ object CodeGenUtils {
          |$resultTerm = $contextTerm.timerService().currentProcessingTime();
          |""".stripMargin.trim
     GeneratedExpression(resultTerm, NEVER_NULL, resultCode, DataTypes.TIMESTAMP)
+  }
+
+  def generateCurrentTimestamp(
+      ctx: CodeGeneratorContext): GeneratedExpression = {
+    new CurrentTimePointCallGen(false).generate(ctx, Seq(), DataTypes.TIMESTAMP, false)
   }
 
   def generateRowtimeAccess(

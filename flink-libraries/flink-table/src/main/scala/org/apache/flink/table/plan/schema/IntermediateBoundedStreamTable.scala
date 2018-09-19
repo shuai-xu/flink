@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 
 /**
@@ -28,22 +27,18 @@ import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
   */
 class IntermediateBoundedStreamTable[T](
     val rowType: RelDataType,
-    source: DataStream[T],
-    tableSchema: TableSchema,
+    dataStream: DataStream[T],
+    fieldIndexes: Array[Int],
+    fieldNames: Array[String],
     statistic: FlinkStatistic = FlinkStatistic.of(TableStats(1000L)))
-  extends DataStreamTable[T](source, tableSchema, statistic) {
-
-  override def copy(statistic: FlinkStatistic): FlinkTable = {
-    new IntermediateBoundedStreamTable[T](
-      rowType,
-      source,
-      tableSchema,
-      statistic)
-  }
+  extends DataStreamTable[T](dataStream, false, false, fieldIndexes, fieldNames, statistic) {
 
   override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
     // the row type of intermediate bounded stream should keep the same as logical plan
     // eg: Varchar(2000) -> String will lose type information.
     rowType
   }
+
+  override def copy(statistic: FlinkStatistic): DataStreamTable[T] =
+    new IntermediateBoundedStreamTable(rowType, dataStream, fieldIndexes, fieldNames, statistic)
 }

@@ -123,7 +123,7 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
-    val sourceTable = rel.getTable.unwrap(classOf[TableSourceTable[_]])
+    val sourceTable = rel.getTable.unwrap(classOf[TableSourceTable])
     val tableSource = if (sourceTable != null) sourceTable.tableSource else null
     areTableColumnsUnique(rel, tableSource, rel.getTable, columns)
   }

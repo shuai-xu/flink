@@ -76,9 +76,9 @@ class ExternalCatalogSchemaTest {
   def testGetTable(): Unit = {
     val relOptTable = calciteCatalogReader.getTable(Lists.newArrayList(schemaName, db, tb))
     assertNotNull(relOptTable)
-    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable])
     tableSourceTable match {
-      case tst: TableSourceTable[_] =>
+      case tst: TableSourceTable =>
         assertTrue(tst.tableSource.isInstanceOf[CsvTableSource])
       case _ =>
         fail("unexpected table type!")

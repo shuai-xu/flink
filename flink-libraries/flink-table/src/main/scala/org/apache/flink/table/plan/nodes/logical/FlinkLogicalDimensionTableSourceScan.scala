@@ -40,7 +40,7 @@ class FlinkLogicalDimensionTableSourceScan(
   with FlinkLogicalRel {
 
   override val tableSource: TableSource =
-    relOptTable.unwrap(classOf[TableSourceTable[_]]).tableSource
+    relOptTable.unwrap(classOf[TableSourceTable]).tableSource
 
   override def copy(
       traitSet: RelTraitSet,

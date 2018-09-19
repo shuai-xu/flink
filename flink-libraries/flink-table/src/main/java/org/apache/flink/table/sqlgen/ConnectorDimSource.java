@@ -21,6 +21,8 @@ package org.apache.flink.table.sqlgen;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.sources.DimensionTableSource;
 
+import scala.Option;
+
 /**
  * specify a DimTableSource for SqlGen.
  * @param <T>
@@ -30,6 +32,6 @@ public interface ConnectorDimSource<T> extends DimensionTableSource<T> {
 
 	@Override
 	default TableSchema getTableSchema() {
-		return  TableSchema.fromTableSource(this);
+		return  TableSchema.fromDataType(getReturnType(), Option.empty());
 	}
 }

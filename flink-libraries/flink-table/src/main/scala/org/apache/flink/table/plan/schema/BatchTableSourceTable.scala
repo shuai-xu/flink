@@ -15,36 +15,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
+import org.apache.flink.table.sources.{BatchExecTableSource, TableSource, TableSourceUtil}
 
-class IntermediateDataStreamTable[T](
-    val rowType: RelDataType,
-    dataStream: DataStream[T],
-    producesUpdates: Boolean,
-    isAccRetract: Boolean,
-    fieldIndexes: Array[Int],
-    fieldNames: Array[String],
+class BatchTableSourceTable[T](
+    tableSource: BatchExecTableSource[T],
     statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends DataStreamTable[T](
-    dataStream,
-    producesUpdates,
-    isAccRetract,
-    fieldIndexes,
-    fieldNames,
-    statistic){
+  extends TableSourceTable(
+    tableSource,
+    statistic) {
+
+  TableSourceUtil.validateTableSource(tableSource)
 
   override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
-    // the row type of intermediate data stream should keep the same as optimized plan
-    rowType
+    TableSourceUtil.getRelDataType(
+      tableSource,
+      None,
+      streaming = false,
+      typeFactory.asInstanceOf[FlinkTypeFactory])
   }
 
-  override def copy(statistic: FlinkStatistic): FlinkTable = {
-    new IntermediateDataStreamTable[T](
-      rowType, dataStream, producesUpdates, isAccRetract, fieldIndexes, fieldNames, statistic)
-  }
+  /**
+   * Creates a copy of this table, changing statistic.
+   *
+   * @param statistic A new FlinkStatistic.
+   * @return Copy of this table, substituting statistic.
+   */
+  override def copy(statistic: FlinkStatistic) =
+    new BatchTableSourceTable(tableSource, statistic)
+
+  /**
+   * replace table source with the given one, and create a new table source table.
+   *
+   * @param tableSource tableSource to replace.
+   * @return new TableSourceTable
+   */
+  override def replaceTableSource(tableSource: TableSource) =
+    new BatchTableSourceTable(tableSource.asInstanceOf[BatchExecTableSource[_]], statistic)
 }
+

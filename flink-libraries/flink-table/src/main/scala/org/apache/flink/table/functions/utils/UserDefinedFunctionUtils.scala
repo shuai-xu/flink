@@ -31,7 +31,7 @@ import org.apache.calcite.sql.{SqlFunction, SqlOperatorBinding}
 import org.apache.commons.codec.binary.Base64
 import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.java.typeutils._
-import org.apache.flink.table.api.{TableEnvironment, TableException, TableSchema, ValidationException}
+import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions._
@@ -583,8 +583,10 @@ object UserDefinedFunctionUtils {
     */
   def getFieldInfo(inputType: DataType)
     : (Array[String], Array[Int], Array[InternalType]) = {
-    val schema = TableSchema.fromDataType(inputType)
-    (schema.getColumnNames, schema.getPhysicalIndices, schema.getTypes)
+    (
+        TableEnvironment.getFieldNames(inputType),
+        TableEnvironment.getFieldIndices(inputType),
+        TableEnvironment.getFieldTypes(inputType))
   }
 
   /**

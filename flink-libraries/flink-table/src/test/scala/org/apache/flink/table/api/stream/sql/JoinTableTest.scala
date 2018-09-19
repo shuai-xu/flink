@@ -23,7 +23,7 @@ import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.async.AsyncFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{SqlParserException, TableException, ValidationException}
+import org.apache.flink.table.api.{SqlParserException, TableException, TableSchema, ValidationException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
@@ -262,6 +262,11 @@ class JoinTableTest extends TableTestBase {
     }
 
     override def getAsyncConfig: AsyncConfig = new AsyncConfig
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
+
+    override def explainSource(): String = ""
   }
 
 }

@@ -22,6 +22,7 @@ import java.util
 
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.core.fs.Path
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
@@ -49,8 +50,6 @@ abstract class OrcTableSource[T](
   extends BatchExecTableSource[T]
   with StreamTableSource[T]
   with FilterableTableSource
-  with DefinedFieldNames
-  with DefinedFieldNullables
   with ProjectableTableSource
   with Logging {
 
@@ -90,12 +89,6 @@ abstract class OrcTableSource[T](
     this.filterPushedDown = filterPushedDown
   }
 
-  override def getFieldNames: Array[String] = fieldNames
-
-  override def getFieldIndices: Array[Int] = fieldNames.indices.toArray
-
-  override def getFieldNullables: Array[Boolean] = fieldNullables
-
   override def projectFields(fields: Array[Int]): TableSource = {
     val (newFieldNames, newFieldTypes, newFieldNullables) = if (fields.nonEmpty) {
       (fields.map(fieldNames(_)), fields.map(fieldTypes(_)), fields.map(fieldNullables(_)))
@@ -115,6 +108,15 @@ abstract class OrcTableSource[T](
   }
 
   override def setRelBuilder(relBuilder: RelBuilder): Unit = {
+  }
+
+  override def getTableSchema: TableSchema = {
+    val builder = TableSchema.builder()
+    fieldNames.zip(fieldTypes).zip(fieldNullables).foreach {
+      case ((name:String, tpe:InternalType), nullable:Boolean) =>
+        builder.field(name, tpe, nullable)
+    }
+    builder.build()
   }
 
   override def getTableStats: TableStats = {

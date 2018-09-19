@@ -286,6 +286,9 @@ class JoinDimensionTableITCase extends QueryTest {
       asyncFetcher = new TestAsyncDoubleKeyFetcher(0, 1) // new idx mapping to keysRow
       asyncFetcher
     }
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
   }
 
   class TestDimensionTableSource(
@@ -333,6 +336,9 @@ class JoinDimensionTableITCase extends QueryTest {
         0
       }
     }
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
   }
 
   class TestDimensionTableSourceCombinedWithBatchTableSource(
@@ -403,6 +409,9 @@ class JoinDimensionTableITCase extends QueryTest {
 
     override def getTableStats: TableStats = new TableStats(
       rowCount, new util.HashMap[String, ColumnStats]())
+
+    /** Returns the table schema of the table source */
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
   }
 }
 

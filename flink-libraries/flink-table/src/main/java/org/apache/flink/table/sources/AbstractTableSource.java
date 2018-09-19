@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.sources;
 
-import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.plan.stats.TableStats;
 
 /**
@@ -35,8 +34,4 @@ public abstract class AbstractTableSource implements TableSource {
 		return TableSource$class.getTableStats(this);
 	}
 
-	@Override
-	public TableSchema getTableSchema() {
-		return TableSource$class.getTableSchema(this);
-	}
 }

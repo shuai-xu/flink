@@ -63,6 +63,9 @@ class MockTableSourceConverter extends TableSourceConverter[StreamTableSource[Ro
           schema.getTypes.asInstanceOf[Array[DataType]],
           schema.getColumnNames)
       }
+
+      /** Returns the table schema of the table source */
+      override def getTableSchema = TableSchema.fromDataType(getReturnType)
     }
   }
 }

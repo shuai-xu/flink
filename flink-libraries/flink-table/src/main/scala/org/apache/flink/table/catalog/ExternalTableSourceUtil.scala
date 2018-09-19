@@ -20,15 +20,13 @@ package org.apache.flink.table.catalog
 
 import java.net.URL
 
-import org.apache.commons.configuration.{ConfigurationException, ConversionException,
-PropertiesConfiguration}
+import org.apache.commons.configuration.{ConfigurationException, ConversionException, PropertiesConfiguration}
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.table.annotation.TableType
-import org.apache.flink.table.api.{AmbiguousTableSourceConverterException,
-NoMatchedTableSourceConverterException}
-import org.apache.flink.table.plan.schema.{StreamTableSourceTable, TableSourceTable}
+import org.apache.flink.table.api.{AmbiguousTableSourceConverterException, NoMatchedTableSourceConverterException}
+import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sources.{StreamTableSource, TableSource}
+import org.apache.flink.table.sources.{BatchExecTableSource, DimensionTableSource, StreamTableSource, TableSource}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.InstantiationUtil
 import org.reflections.Reflections
@@ -96,7 +94,7 @@ object ExternalTableSourceUtil extends Logging {
     * @param externalCatalogTable the [[ExternalCatalogTable]] instance which to convert
     * @return converted [[TableSourceTable]] instance from the input catalog table
     */
-  def fromExternalCatalogTable(externalCatalogTable: ExternalCatalogTable): TableSourceTable[_] = {
+  def fromExternalCatalogTable(externalCatalogTable: ExternalCatalogTable): TableSourceTable = {
     val tableType = externalCatalogTable.tableType
     val propertyKeys = externalCatalogTable.properties.keySet()
     tableTypeToTableSourceConvertersClazz.get(tableType) match {
@@ -122,19 +120,22 @@ object ExternalTableSourceUtil extends Logging {
             .fromExternalCatalogTable(externalCatalogTable)
             .asInstanceOf[TableSource]
           // TODO introduce uniqueKeys information
+          val flinkStatistic: FlinkStatistic =
           if (externalCatalogTable.isPartitioned) {
-            new TableSourceTable(convertedTableSource, FlinkStatistic.UNKNOWN)
-          } else {
-            val flinkStatistic = if (externalCatalogTable.stats != null) {
+            FlinkStatistic.UNKNOWN
+          } else if (externalCatalogTable.stats != null) {
               FlinkStatistic.of(externalCatalogTable.stats)
-            } else {
+          } else {
               FlinkStatistic.UNKNOWN
-            }
+          }
 
-            convertedTableSource match {
-              case s: StreamTableSource[_] => new StreamTableSourceTable(s, flinkStatistic)
-              case _ => new TableSourceTable(convertedTableSource, flinkStatistic)
-            }
+          convertedTableSource match {
+            case s: StreamTableSource[_] => new StreamTableSourceTable(s, flinkStatistic)
+            case s: BatchExecTableSource[_] => new BatchTableSourceTable(s, flinkStatistic)
+            case s: DimensionTableSource[_] if s.isTemporal =>
+              new TemporalDimensionTableSourceTable(s, flinkStatistic)
+            case s: DimensionTableSource[_] if !s.isTemporal =>
+              new DimensionTableSourceTable(s, flinkStatistic)
           }
         }
       case None =>

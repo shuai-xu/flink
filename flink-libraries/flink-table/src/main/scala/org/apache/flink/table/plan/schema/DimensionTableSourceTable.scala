@@ -15,39 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sources.{StreamTableSource, TableSource, TableSourceUtil}
+import org.apache.flink.table.sources.{DimensionTableSource, TableSource, TableSourceUtil}
 
-class StreamTableSourceTable[T](
-    tableSource: StreamTableSource[T],
-    statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends TableSourceTable(
-    tableSource,
-    statistic) {
+/**
+  * Table which is a temporal table
+  */
+class DimensionTableSourceTable[T](
+    override val tableSource: DimensionTableSource[T],
+    override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
+  extends TableSourceTable(tableSource, statistic) {
 
   TableSourceUtil.validateTableSource(tableSource)
 
-  override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
+  def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
     TableSourceUtil.getRelDataType(
       tableSource,
       None,
-      streaming = true,
+      streaming = false,
       typeFactory.asInstanceOf[FlinkTypeFactory])
   }
-
-  /**
-   * replace table source with the given one, and create a new table source table.
-   *
-   * @param tableSource tableSource to replace.
-   * @return new TableSourceTable
-   */
-  override def replaceTableSource(tableSource: TableSource) =
-    new StreamTableSourceTable(tableSource.asInstanceOf[StreamTableSource[_]], statistic)
 
   /**
    * Creates a copy of this table, changing statistic.
@@ -56,5 +47,14 @@ class StreamTableSourceTable[T](
    * @return Copy of this table, substituting statistic.
    */
   override def copy(statistic: FlinkStatistic) =
-    new StreamTableSourceTable(tableSource.asInstanceOf[StreamTableSource[_]], statistic)
+    new DimensionTableSourceTable(tableSource, statistic)
+
+  /**
+   * replace table source with the given one, and create a new table source table.
+   *
+   * @param tableSource tableSource to replace.
+   * @return new TableSourceTable
+   */
+  override def replaceTableSource(tableSource: TableSource) =
+    new DimensionTableSourceTable(tableSource.asInstanceOf[DimensionTableSource[_]], statistic)
 }

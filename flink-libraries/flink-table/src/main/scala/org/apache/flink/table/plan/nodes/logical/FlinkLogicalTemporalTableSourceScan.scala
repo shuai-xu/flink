@@ -39,7 +39,7 @@ class FlinkLogicalTemporalTableSourceScan(
   with FlinkLogicalRel {
 
   override val tableSource: TableSource =
-    relOptTable.unwrap(classOf[TableSourceTable[_]]).tableSource
+    relOptTable.unwrap(classOf[TableSourceTable]).tableSource
 
   override def copy(
       traitSet: RelTraitSet,
@@ -77,9 +77,9 @@ class FlinkLogicalTemporalTableSourceScanConverter
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan = call.rel[TableScan](0)
-    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable])
     tableSourceTable match {
-      case _: TableSourceTable[_] => true
+      case _: TableSourceTable => true
       case _ => false
     }
   }

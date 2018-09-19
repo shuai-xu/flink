@@ -23,7 +23,7 @@ import java.sql.{Date, Time, Timestamp}
 import java.util
 
 import org.apache.calcite.plan.{AbstractRelOptPlanner, Context, Contexts, RelOptCluster}
-import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.metadata.{JaninoRelMetadataProvider, RelMetadataQuery}
 import org.apache.calcite.rex.{RexBuilder, RexInputRef, RexLiteral, RexNode}
@@ -33,7 +33,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.ScalarFunction
@@ -101,12 +101,36 @@ class SelectivityEstimatorTest {
     when(tableScan, "getRowType").thenReturn(relDataType)
     val innerTable = if (isPartitionableTableSource && isFilterPushedDown) {
       // partitionableTableSource which filter already pushed down
-      new TableSourceTable[Row](new TestPartitionableTableSource(true))
+      new TableSourceTable(new TestPartitionableTableSource(true)) {
+        /**
+         * Creates a copy of this table, changing statistic.
+         *
+         * @param statistic A new FlinkStatistic.
+         * @return Copy of this table, substituting statistic.
+         */
+        override def copy(statistic: FlinkStatistic) = ???
+
+        override def getRowType(relDataTypeFactory: RelDataTypeFactory) = relDataType
+
+        override def replaceTableSource(tableSource: TableSource) = ???
+      }
     } else if (isPartitionableTableSource) {
       // partitionableTableSource which filter is not push down
-      new TableSourceTable[Row](new TestPartitionableTableSource(false))
+      new TableSourceTable(new TestPartitionableTableSource(false)) {
+        /**
+         * Creates a copy of this table, changing statistic.
+         *
+         * @param statistic A new FlinkStatistic.
+         * @return Copy of this table, substituting statistic.
+         */
+        override def copy(statistic: FlinkStatistic) = ???
+
+        override def getRowType(relDataTypeFactory: RelDataTypeFactory) = relDataType
+
+        override def replaceTableSource(tableSource: TableSource) = ???
+      }
     } else {
-      mock(classOf[TableSourceTable[_]])
+      mock(classOf[TableSourceTable])
     }
     val flinkTable = mock(classOf[FlinkRelOptTable])
     when(flinkTable, "unwrap", classOf[FlinkTable]).thenReturn(innerTable)
@@ -1244,9 +1268,11 @@ class SelectivityEstimatorTest {
       predicates: util.List[Expression]): TableSource = ???
 
     override def getReturnType: DataType =
-      DataTypes.of(new RowSchema(relDataType).typeInfo)
+      new RowSchema(relDataType).dataType
 
     override def isFilterPushedDown: Boolean = filterPushedDown
+
+    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
   }
 
 }

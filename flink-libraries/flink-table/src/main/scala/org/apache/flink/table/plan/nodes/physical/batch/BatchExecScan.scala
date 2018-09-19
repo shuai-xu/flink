@@ -19,6 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
@@ -26,6 +27,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.plan.schema.FlinkTable
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.Logging
 
 trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logging {
@@ -50,8 +52,6 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
   // get resourceSpec set on source transformation.
   private[flink] def getTableSourceResource(tableEnv: BatchTableEnvironment): ResourceSpec
 
-  private[flink] def needInternalConversion: Boolean
-
    /**
     * Assign source for transformation.
     *
@@ -65,17 +65,20 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
     tableEnv.getRUKeeper().addTransformation(this, input)
   }
 
+  def needInternalConversion: Boolean
+
   def convertToInternalRow(
       tableEnv: BatchTableEnvironment,
       input: StreamTransformation[Any],
+      fieldIdxs: Array[Int],
       outRowType: RelDataType,
-      flinkTable: FlinkTable,
-      config: TableConfig): StreamTransformation[BaseRow] = {
+      dataType: DataType,
+      config: TableConfig,
+      rowtimeExpr: Option[RexNode]): StreamTransformation[BaseRow] = {
     if (needInternalConversion) {
       val ctx = CodeGeneratorContext(config, supportReference = true)
       val convertTransform = convertToInternalRow(
-        ctx, input, flinkTable.tableSchema.getPhysicalIndices, flinkTable.dataType, outRowType,
-        getTable.getQualifiedName, config)
+        ctx, input, fieldIdxs, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
       convertTransform.setParallelismLocked(true)
       convertTransform.setResources(conversionResSpec, conversionResSpec)
       tableEnv.getRUKeeper().addTransformation(this, convertTransform)

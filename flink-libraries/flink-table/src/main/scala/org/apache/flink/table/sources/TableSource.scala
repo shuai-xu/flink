@@ -21,6 +21,7 @@ package org.apache.flink.table.sources
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.types.DataType
+import org.apache.flink.table.util.TableConnectorUtil
 
 /** Defines an external table by providing schema information and used to produce a
   * [[org.apache.flink.api.scala.DataSet]] or [[org.apache.flink.streaming.api.scala.DataStream]].
@@ -31,12 +32,15 @@ import org.apache.flink.table.types.DataType
   * field names and field indices are derived from the returned type.
   *
   * In case if custom field names are required one need to additionally implement
-  * the [[DefinedFieldNames]] trait.
+  * the [[DefinedFieldMapping]] trait.
   */
 trait TableSource {
 
   /** Returns the [[DataType]] for the return type of the [[TableSource]]. */
   def getReturnType: DataType
+
+  /** Returns the table schema of the table source */
+  def getTableSchema: TableSchema
 
   /** Describes the table source, it will be used for computing qualified names of
     * [[org.apache.flink.table.plan.schema.FlinkRelOptTable]].
@@ -49,14 +53,10 @@ trait TableSource {
     * should be different with the original one.
     *
     *  */
-  def explainSource(): String = ""
+  def explainSource(): String =
+    TableConnectorUtil.generateRuntimeName(getClass, getTableSchema.getColumnNames)
 
   /** Returns the statistics of the table. */
   def getTableStats: TableStats = null
-
-  /** Returns the table schema of the table source */
-  def getTableSchema: TableSchema = {
-    TableSchema.fromTableSource(this)
-  }
 
 }

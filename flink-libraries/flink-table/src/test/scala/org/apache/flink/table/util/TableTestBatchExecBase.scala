@@ -39,6 +39,7 @@ import org.apache.flink.table.plan.LogicalNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
 import org.apache.flink.table.plan.resource.RunningUnitKeeper
 import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.types.DataTypes
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
@@ -219,14 +220,16 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
       uniqueKeys: Set[Set[String]],
       fields: Expression*): Table = {
     val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
-    val fieldTypes = typeInfo match {
-      case tt: TupleTypeInfo[_] => tt.getGenericParameters.values().asScala.toArray
-      case ct: CaseClassTypeInfo[_] => ct.getGenericParameters.values().asScala.toArray
-      case bt: AtomicType[_] => Array[TypeInformation[_]](bt)
-      case _ => throw new TableException(s"Unsupported type info: $typeInfo")
-    }
-    val (fieldNames, _) = TableSchema.getFieldInfo(typeInfo, fields.toArray)
-    val ts = new TestTableSource(name, fieldNames, fieldTypes)
+    val physicalSchema = TableSchema.fromDataType(DataTypes.of(typeInfo))
+    val (fieldNames, fieldIdxs) =
+      tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
+    val fieldTypes = fieldIdxs.map(physicalSchema.getType)
+    val tableSchema = new TableSchema(fieldNames, fieldTypes)
+    val mapping = fieldNames.zipWithIndex.map {
+      case (name:String, idx:Int) =>
+        (name, physicalSchema.getColumnName(fieldIdxs.apply(idx)))
+    }.toMap
+    val ts = new TestTableSourceWithTime(tableSchema, typeInfo, Seq(), mapping = mapping)
     tableEnv.registerTableSource(name, ts, uniqueKeys.map(_.asJava).asJava)
     tableEnv.scan(name)
   }
@@ -444,7 +447,7 @@ class NullableBatchExecTableTestUtil(fieldsNullable: Boolean, test: TableTestBat
       case _ => throw new TableException(s"Unsupported type info: $typeInfo")
     }
     val fieldNullables = Array.fill(fields.size)(fieldsNullable)
-    val (fieldNames, _) = TableSchema.getFieldInfo(typeInfo, fields.toArray)
+    val (fieldNames, _) = tableEnv.getFieldInfo(DataTypes.of(typeInfo), fields.toArray)
     val ts = new TestTableSourceWithFieldNullables(fieldNames, fieldTypes, fieldNullables)
     tableEnv.registerTableSource(name, ts)
     tableEnv.scan(name)

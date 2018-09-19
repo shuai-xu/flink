@@ -19,27 +19,31 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.plan.nodes.common.CommonScan
-import org.apache.flink.table.plan.schema.FlinkTable
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+import org.apache.flink.table.types.DataType
 
 trait StreamScan extends CommonScan[BaseRow] with StreamExecRel {
 
   def convertToInternalRow(
       input: StreamTransformation[Any],
+      fieldIdx: Array[Int],
       outRowType: RelDataType,
-      flinkTable: FlinkTable,
-      config: TableConfig): StreamTransformation[BaseRow] = {
+      dataType: DataType,
+      config: TableConfig,
+      rowtimeExpr: Option[RexNode]
+  ): StreamTransformation[BaseRow] = {
     val ctx = CodeGeneratorContext(config, true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
-    if (needsConversion(flinkTable.dataType)) {
+
+    if (hasTimeAttributeField(fieldIdx) || needsConversion(dataType)) {
       convertToInternalRow(
-        ctx, input, flinkTable.tableSchema.getPhysicalIndices, flinkTable.dataType, outRowType,
-        getTable.getQualifiedName, config)
+        ctx, input, fieldIdx, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
     } else {
       input.asInstanceOf[StreamTransformation[BaseRow]]
     }

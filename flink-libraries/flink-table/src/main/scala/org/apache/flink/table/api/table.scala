@@ -24,7 +24,7 @@ import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionPar
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.logical.{Minus, _}
-import org.apache.flink.table.plan.schema.FlinkTable
+import org.apache.flink.table.plan.schema.TableSourceTable
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink, TableSink}
 import org.apache.flink.table.types._
 import org.apache.flink.types.Row
@@ -86,8 +86,9 @@ class Table(
 
   private lazy val tableSchema: TableSchema = logicalPlan match {
     case CatalogNode(tablePath, _) if tableEnv.getTable(tablePath.toArray : _*)
-        .isInstanceOf[FlinkTable] =>
-      tableEnv.getTable(tablePath.toArray : _*).asInstanceOf[FlinkTable].tableSchema
+        .isInstanceOf[TableSourceTable] =>
+      tableEnv.getTable(tablePath.toArray : _*).asInstanceOf[TableSourceTable].tableSource
+          .getTableSchema
     case _ =>
       new TableSchema(
         logicalPlan.output.map(_.name).toArray,

@@ -22,6 +22,7 @@ import java.util
 import java.util.{ArrayList => JArrayList}
 
 import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.commons.lang3.SystemUtils
@@ -30,13 +31,14 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JStreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnvironment}
-import org.apache.flink.table.api.{Table, TableEnvironment}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.util.{DiffRepository, RelTraitUtil}
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -112,6 +114,13 @@ abstract class TableTestUtil {
   def verifyPlanAndTrait(table: Table): Unit
 
   def explainSql(query: String): String
+
+  def verifySchema(resultTable: Table, fields: Seq[(String, InternalType)]): Unit = {
+    val actual = resultTable.getSchema
+    val expected = new TableSchema(fields.map(_._1).toArray, fields.map(_._2).toArray)
+    assertEquals(expected, actual)
+  }
+
 }
 
 case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {

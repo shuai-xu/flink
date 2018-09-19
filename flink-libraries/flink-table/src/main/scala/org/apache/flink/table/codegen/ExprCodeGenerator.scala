@@ -27,12 +27,14 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
-import org.apache.flink.table.functions.sql.ProctimeSqlFunction
+import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, StreamRecordTimestampSqlFunction}
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.types._
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.apache.flink.util.Preconditions.checkArgument
 
 import scala.collection.JavaConversions._
@@ -137,21 +139,28 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       outRecordTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM,
       outRecordWriterTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM,
       reusedOutRow: Boolean = true,
-      objReuse: Boolean = true)
+      objReuse: Boolean = true,
+      rowtimeExpression: Option[RexNode] = None)
     : GeneratedExpression = {
     val input1AccessExprs = input1Mapping.map {
-      case DataTypes.ROWTIME_MARKER =>
-        // attribute is a rowtime indicator. Access event-time timestamp in StreamRecord.
-        generateRowtimeAccess(contextTerm, ctx)
-      case DataTypes.PROCTIME_MARKER =>
+      case DataTypes.ROWTIME_STREAM_MARKER |
+           DataTypes.ROWTIME_BATCH_MARKER if rowtimeExpression.isDefined =>
+        // generate rowtime attribute from expression
+        generateExpression(rowtimeExpression.get)
+      case DataTypes.ROWTIME_STREAM_MARKER |
+           DataTypes.ROWTIME_BATCH_MARKER =>
+        throw TableException("Rowtime extraction expression missing. Please report a bug.")
+      case DataTypes.PROCTIME_STREAM_MARKER =>
         // attribute is proctime indicator.
         // we use a null literal and generate a timestamp when we need it.
         generateNullLiteral(DataTypes.PROCTIME_INDICATOR, nullCheck)
+      case DataTypes.PROCTIME_BATCH_MARKER =>
+        // attribute is proctime field in a batch query.
+        // it is initialized with the current time.
+        generateCurrentTimestamp(ctx)
       case idx =>
         // get type of result field
-        val outIdx = input1Mapping.indexOf(idx)
-        val outType = returnType.getTypeAt(outIdx)
-        val inputAccess = generateInputAccess(
+        generateInputAccess(
           ctx,
           input1Type,
           input1Term,
@@ -159,21 +168,6 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
           nullableInput,
           nullCheck,
           objReuse)
-        // Change output type to rowtime indicator
-        if (outType == DataTypes.ROWTIME_INDICATOR &&
-          (inputAccess.resultType == DataTypes.LONG ||
-            inputAccess.resultType.isInstanceOf[TimestampType])) {
-          // This case is required for TableSources that implement DefinedRowtimeAttribute.
-          // Hard cast possible because LONG, TIMESTAMP, and ROWTIME_INDICATOR are internally
-          // represented as Long.
-          GeneratedExpression(
-            inputAccess.resultTerm,
-            inputAccess.nullTerm,
-            inputAccess.code,
-            DataTypes.ROWTIME_INDICATOR)
-        } else {
-          inputAccess
-        }
     }
 
     val input2AccessExprs = input2Type match {
@@ -650,6 +644,10 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
     // special case: time materialization
     if (call.getOperator == ProctimeSqlFunction) {
       return generateProctimeTimestamp(contextTerm, ctx)
+    }
+
+    if (call.getOperator == StreamRecordTimestampSqlFunction) {
+      return generateRowtimeAccess(contextTerm, ctx)
     }
 
     val isIdempotent = call.getOperator.isDeterministic && (!call.getOperator.isDynamicFunction)

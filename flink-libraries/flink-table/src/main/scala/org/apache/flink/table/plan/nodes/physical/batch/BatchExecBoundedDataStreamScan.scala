@@ -81,13 +81,11 @@ class BatchExecBoundedDataStreamScan(
     convertToInternalRow(
       tableEnv,
       batchTransform,
+      boundedStreamTable.fieldIndexes,
       getRowType,
-      boundedStreamTable,
-      config)
-  }
-
-  override def needInternalConversion: Boolean = {
-    needsConversion(boundedStreamTable.dataType)
+      boundedStreamTable.dataType,
+      config,
+      None)
   }
 
   override private[flink] def getTableSourceResultPartitionNum(
@@ -100,4 +98,10 @@ class BatchExecBoundedDataStreamScan(
     tableEnv: BatchTableEnvironment): ResourceSpec = {
     boundedStreamTable.dataStream.getTransformation.getMinResources
   }
+
+  override def needInternalConversion = {
+    hasTimeAttributeField(boundedStreamTable.fieldIndexes) ||
+        needsConversion(boundedStreamTable.dataType)
+  }
+
 }

@@ -19,7 +19,7 @@ package org.apache.flink.table.expressions
 
 import org.apache.calcite.rex.{RexInputRef, RexNode}
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.{Table, TableException, UnresolvedException, ValidationException}
+import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory.isTimeIndicatorType
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}

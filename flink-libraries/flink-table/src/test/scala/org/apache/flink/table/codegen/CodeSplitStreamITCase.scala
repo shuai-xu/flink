@@ -26,7 +26,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.expressions.utils.{Func18, RichFunc2}
@@ -312,4 +312,7 @@ class AsyncDimensionTableSource extends DimensionTableSource[BaseRow] {
       0
     }
   }
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema = TableSchema.fromDataType(getReturnType)
 }

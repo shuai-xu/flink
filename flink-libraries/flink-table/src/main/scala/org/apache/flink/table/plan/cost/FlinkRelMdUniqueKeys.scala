@@ -77,7 +77,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
       rel: LogicalTemporalTableScan,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    val sourceTable = rel.getTable.unwrap(classOf[TableSourceTable[_]])
+    val sourceTable = rel.getTable.unwrap(classOf[TableSourceTable])
     val tableSource = if (sourceTable != null) sourceTable.tableSource else null
     getTableUniqueKeys(tableSource, rel.getTable)
   }

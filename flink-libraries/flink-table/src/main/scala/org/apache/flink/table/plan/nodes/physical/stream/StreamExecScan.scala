@@ -22,11 +22,16 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.plan.schema.DataStreamTable
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.expressions.Cast
+import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 
 /**
   * Flink RelNode which matches along with DataStreamSource.
@@ -74,10 +79,27 @@ class StreamExecScan(
 
     val config = tableEnv.getConfig
     val inputDataStream: DataStream[Any] = dataStreamTable.dataStream
+
+    val fieldIdxs = dataStreamTable.fieldIndexes
+
+    // get expression to extract timestamp
+    val rowtimeExpr: Option[RexNode] =
+      if (fieldIdxs.contains(DataTypes.ROWTIME_STREAM_MARKER)) {
+        // extract timestamp from StreamRecord
+        Some(
+          Cast(
+            org.apache.flink.table.expressions.StreamRecordTimestamp(),
+            DataTypes.ROWTIME_INDICATOR)
+              .toRexNode(tableEnv.getRelBuilder))
+      } else {
+        None
+      }
     convertToInternalRow(
       inputDataStream.getTransformation,
+      fieldIdxs,
       getRowType,
-      dataStreamTable,
-      config)
+      dataStreamTable.dataType,
+      config,
+      rowtimeExpr)
   }
 }

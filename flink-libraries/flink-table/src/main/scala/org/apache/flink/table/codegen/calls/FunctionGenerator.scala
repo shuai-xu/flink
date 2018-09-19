@@ -25,7 +25,7 @@ import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions._
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+import org.apache.flink.table.functions.sql.{ScalarSqlFunctions, StreamRecordTimestampSqlFunction}
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
 import org.apache.flink.table.types._
 

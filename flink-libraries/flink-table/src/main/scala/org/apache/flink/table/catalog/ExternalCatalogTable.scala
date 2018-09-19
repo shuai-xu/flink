@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.catalog
 
-import java.util.{HashMap => JHashMap, Map => JMap, LinkedHashSet => JLinkedHashSet}
+import java.util.{HashMap => JHashMap, LinkedHashSet => JLinkedHashSet, Map => JMap}
 import java.lang.{Long => JLong}
 
 import org.apache.flink.table.api.TableSchema

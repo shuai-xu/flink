@@ -62,6 +62,7 @@ import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRel
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.sinks._
@@ -422,10 +423,10 @@ abstract class TableEnvironment(val config: TableConfig) {
       table match {
         case t: FlinkTable =>
           // call statistic instead of getStatistics of FlinkTable to fetch the original statistics.
-          if (t.statistic == null) {
+          if (t.getStatistic == null) {
             None
           } else {
-            Option(t.statistic.getTableStats)
+            Option(t.getStatistic.asInstanceOf[FlinkStatistic].getTableStats)
           }
         case _ => None
       }
@@ -496,16 +497,17 @@ abstract class TableEnvironment(val config: TableConfig) {
     if (tablePath.length == 1) {
       // table in calcite root schema
       val newTable = table match {
-        case t: FlinkTable =>
+        case t: FlinkTable if t.getStatistic.isInstanceOf[FlinkStatistic] =>
           // call statistic instead of getStatistics of FlinkTable to fetch the original statistics.
-          val (uniqueKeys, skewInfo) = if (t.statistic == null)  {
+          val statistic = t.getStatistic.asInstanceOf[FlinkStatistic]
+          val (uniqueKeys, skewInfo) = if (statistic == null)  {
             (null, null)
           } else {
-            (t.statistic.getUniqueKeys, t.statistic.getSkewInfo)
+            (statistic.getUniqueKeys, statistic.getSkewInfo)
           }
           t.copy(FlinkStatistic.of(tableStats.orNull, uniqueKeys, skewInfo))
         case _ => throw new TableException(
-          s"alterTableStats operation is not supported for ${table.getClass}.")
+          s"alter TableStats operation is not supported for ${table.getClass}.")
       }
       replaceRegisteredTable(tableName, newTable)
     } else {
@@ -548,10 +550,12 @@ abstract class TableEnvironment(val config: TableConfig) {
     if (tablePath.length == 1) {
       val newTable = table match {
         case t: FlinkTable =>
-          val (tableStats, uniqueKeys) = if (t.statistic == null)  {
+          val (tableStats, uniqueKeys) = if (t.getStatistic == null)  {
             (null, null)
           } else {
-            (t.statistic.getTableStats, t.statistic.getUniqueKeys)
+            (
+                t.getStatistic.asInstanceOf[FlinkStatistic].getTableStats,
+                t.getStatistic.asInstanceOf[FlinkStatistic].getUniqueKeys)
           }
           t.copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
         case _ => throw new TableException(
@@ -560,6 +564,35 @@ abstract class TableEnvironment(val config: TableConfig) {
       replaceRegisteredTable(tableName, newTable)
     } else {
       throw new TableException("alterSkewInfo operation is not supported for external catalog.")
+    }
+  }
+
+  def alterUniqueKeys(
+      tablePath: Array[String],
+      uniqueKeys: util.Set[util.Set[String]]): Unit = {
+    val table = getTable(tablePath: _*)
+    if (table == null) {
+      throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
+    }
+
+    val tableName = tablePath.last
+    if (tablePath.length == 1) {
+      val newTable = table match {
+        case t: FlinkTable =>
+          val (tableStats, skewInfo) = if (t.getStatistic == null)  {
+            (null, null)
+          } else {
+            (
+                t.getStatistic.asInstanceOf[FlinkStatistic].getTableStats,
+                t.getStatistic.asInstanceOf[FlinkStatistic].getSkewInfo)
+          }
+          t.copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
+        case _ => throw new TableException(
+          s"alter unique keys operation is not supported for ${table.getClass}.")
+      }
+      replaceRegisteredTable(tableName, newTable)
+    } else {
+      throw new TableException("alter unique keys operation is not supported for external catalog.")
     }
   }
 
@@ -1366,6 +1399,126 @@ abstract class TableEnvironment(val config: TableConfig) {
       case _ => input
     }
   }
+
+   /**
+    * Reference input fields by name:
+    * All fields in the schema definition are referenced by name
+    * (and possibly renamed using an alias (as). In this mode, fields can be reordered and
+    * projected out. Moreover, we can define proctime and rowtime attributes at arbitrary
+    * positions using arbitrary names (except those that exist in the result schema). This mode
+    * can be used for any input type, including POJOs.
+    *
+    * Reference input fields by position:
+    * In this mode, fields are simply renamed. Event-time attributes can
+    * replace the field on their position in the input data (if it is of correct type) or be
+    * appended at the end. Proctime attributes must be appended at the end. This mode can only be
+    * used if the input type has a defined field order (tuple, case class, Row) and no of fields
+    * references a field of the input type.
+    */
+  protected def isReferenceByPosition(ct: BaseRowType, fields: Array[Expression]): Boolean = {
+
+    val inputNames = ct.getFieldNames
+
+    // Use the by-position mode if no of the fields exists in the input.
+    // This prevents confusing cases like ('f2, 'f0, 'myName) for a Tuple3 where fields are renamed
+    // by position but the user might assume reordering instead of renaming.
+    fields.forall {
+      case UnresolvedFieldReference(name) => !inputNames.contains(name)
+      case Alias(_, _, _) => false
+      case _ => true
+    }
+  }
+
+  /**
+    * Returns field names and field positions for a given [[TypeInformation]].
+    *
+    * @param inputType The DataType extract the field names and positions from.
+    * @return A tuple of two arrays holding the field names and corresponding field positions.
+    */
+  protected[flink] def getFieldInfo(inputType: DataType):
+  (Array[String], Array[Int]) = {
+
+    (TableEnvironment.getFieldNames(inputType), TableEnvironment.getFieldIndices(inputType))
+  }
+
+  /**
+    * Returns field names and field positions for a given [[TypeInformation]] and [[Array]] of
+    * [[Expression]]. It does not handle time attributes but considers them in indices.
+    *
+    * @param inputType The [[DataType]] against which the [[Expression]]s are evaluated.
+    * @param exprs     The expressions that define the field names.
+    * @return A tuple of two arrays holding the field names and corresponding field positions.
+    */
+  protected[flink] def getFieldInfo[A](
+      inputType: DataType,
+      exprs: Array[Expression])
+    : (Array[String], Array[Int]) = {
+
+    TableEnvironment.validateType(inputType)
+
+    def referenceByName(name: String, ct: BaseRowType): Option[Int] = {
+      val inputIdx = ct.getFieldIndex(name)
+      if (inputIdx < 0) {
+        throw new TableException(s"$name is not a field of type $ct. " +
+                s"Expected: ${ct.getFieldNames.mkString(", ")}. " +
+            s"Make sure there is no field in physical data type referred " +
+            s"if you want to refer field by position.")
+      } else {
+        Some(inputIdx)
+      }
+    }
+
+    val indexedNames: Array[(Int, String)] = DataTypes.internal(inputType) match {
+
+      case t: BaseRowType =>
+
+        val isRefByPos = isReferenceByPosition(t, exprs)
+        exprs.zipWithIndex flatMap {
+          case (UnresolvedFieldReference(name: String), idx) =>
+            if (isRefByPos) {
+              Some((idx, name))
+            } else {
+              referenceByName(name, t).map((_, name))
+            }
+          case (Alias(UnresolvedFieldReference(origName), name: String, _), _) =>
+            if (isRefByPos) {
+              throw new TableException(
+                s"Alias '$name' is not allowed if other fields are referenced by position.")
+            } else {
+              referenceByName(origName, t).map((_, name))
+            }
+          case (_: TimeAttribute, _) =>
+            None
+          case _ => throw new TableException(
+            "Field reference expression or alias on field expression expected.")
+        }
+
+      case _: InternalType => // atomic or other custom type information
+        var referenced = false
+        exprs flatMap {
+          case _: TimeAttribute =>
+            None
+          case UnresolvedFieldReference(_) if referenced =>
+            // only accept the first field for an atomic type
+            throw new TableException("Only the first field can reference an atomic type.")
+          case UnresolvedFieldReference(name: String) =>
+            referenced = true
+            // first field reference is mapped to atomic type
+            Some((0, name))
+          case _ => throw new TableException(
+            "Field reference expression expected.")
+        }
+    }
+
+    val (fieldIndexes, fieldNames) = indexedNames.unzip
+
+    if (fieldNames.contains("*")) {
+      throw new TableException("Field name can not be '*'.")
+    }
+
+    (fieldNames, fieldIndexes)
+  }
+
 }
 
 /**
@@ -1498,4 +1651,51 @@ object TableEnvironment {
       case _ => tableSink.getOutputType
     }
   }
+
+   /**
+    * Returns field names for a given [[TypeInformation]].
+    *
+    * @param inputType The DataType extract the field names.
+    * @return An array holding the field names
+    */
+  def getFieldNames(inputType: DataType): Array[String] = {
+    validateType(inputType)
+
+    val fieldNames: Array[String] = DataTypes.internal(inputType) match {
+      case t: BaseRowType => t.getFieldNames
+      case _: InternalType => Array("f0")
+    }
+
+    if (fieldNames.contains("*")) {
+      throw new TableException("Field name can not be '*'.")
+    }
+
+    fieldNames
+  }
+
+  /**
+    * Returns field indexes for a given [[TypeInformation]].
+    *
+    * @param inputType The DataType extract the field positions from.
+    * @return An array holding the field positions
+    */
+  def getFieldIndices(inputType: DataType): Array[Int] = {
+    getFieldNames(inputType).indices.toArray
+  }
+
+  /**
+    * Returns field types for a given [[TypeInformation]].
+    *
+    * @param inputType The DataType to extract field types from.
+    * @return An array holding the field types.
+    */
+  def getFieldTypes(inputType: DataType): Array[InternalType] = {
+    validateType(inputType)
+
+    DataTypes.internal(inputType) match {
+      case ct: BaseRowType => 0.until(ct.getArity).map(i => ct.getTypeAt(i)).toArray
+      case t: InternalType => Array(t)
+    }
+  }
+
 }

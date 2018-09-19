@@ -89,12 +89,22 @@ public class DataTypes {
 	/**
 	 * The special field index indicates that this is a row time field.
 	 */
-	public static final int ROWTIME_MARKER = -1;
+	public static final int ROWTIME_STREAM_MARKER = -1;
 
 	/**
 	 * The special field index indicates that this is a proc time field.
 	 */
-	public static final int PROCTIME_MARKER = -2;
+	public static final int PROCTIME_STREAM_MARKER = -2;
+
+	/**
+	 * The special field index indicates that this is a row time field.
+	 */
+	public static final int ROWTIME_BATCH_MARKER = -3;
+
+	/**
+	 * The special field index indicates that this is a proc time field.
+	 */
+	public static final int PROCTIME_BATCH_MARKER = -4;
 
 	public static ArrayType createArrayType(InternalType elementType) {
 		return new ArrayType(elementType);

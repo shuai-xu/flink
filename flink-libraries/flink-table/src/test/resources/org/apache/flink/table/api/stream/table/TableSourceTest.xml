@@ -20,9 +20,9 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[id, name, w0$o0 AS valSum], where=[>(w0$o0, 100)])
-  StreamExecOverAggregate(partitionBy=[id], orderBy=[pTime ASC], window=[ RANG BETWEEN 7200000 PRECEDING AND CURRENT ROW], select=[id, val, name, pTime, SUM(val) AS w0$o0])
+  StreamExecOverAggregate(partitionBy=[id], orderBy=[pTime ASC], window=[ RANG BETWEEN 7200000 PRECEDING AND CURRENT ROW], select=[id, pTime, val, name, SUM(val) AS w0$o0])
     StreamExecExchange(distribution=[hash[id]])
-      StreamExecTableSourceScan(table=[[procTimeT]], fields=[id, val, name, pTime])
+      StreamExecTableSourceScan(table=[[procTimeT]], fields=[id, pTime, val, name])
 ]]>
     </Resource>
   </TestCase>
@@ -30,7 +30,7 @@ StreamExecCalc(select=[id, name, w0$o0 AS valSum], where=[>(w0$o0, 100)])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[PROCTIME(pTime) AS pTime, id, name, val])
-  StreamExecTableSourceScan(table=[[procTimeT]], fields=[id, val, name, pTime])
+  StreamExecTableSourceScan(table=[[procTimeT]], fields=[id, pTime, val, name])
 ]]>
     </Resource>
   </TestCase>
@@ -108,6 +108,40 @@ StreamExecCalc(select=[rowtime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
+
+  <TestCase name="testNestedProject">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[id, deepNested.nested1.name AS nestedName, nested.value AS nestedValue, deepNested.nested2.flag AS nestedFlag, deepNested.nested2.num AS nestedNum])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(read nested fields: id.*, deepNested.*, nested.*, name.*)]]], fields=[id, deepNested, nested, name])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testProjectWithoutRowtime">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[PROCTIME(ptime) AS ptime, name, val, id])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: id, name, val, rtime)]]], fields=[id, rtime, val, ptime, name])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testProjectWithMapping">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[name, rtime, val])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: p-rtime, p-id, p-name, p-val)]]], fields=[id, rtime, val, ptime, name])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testProjectWithRowtimeProctime">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[name, val, id])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: id, name, val, rtime)]]], fields=[id, rtime, val, ptime, name])
+]]>
+    </Resource>
+  </TestCase>
+
   <TestCase name="testTableSourceWithLongRowTimeField">
     <Resource name="plan">
       <![CDATA[
@@ -116,6 +150,7 @@ StreamExecCalc(select=[rowtime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
+
     <TestCase name="testWithPkMultiRowUpdateTransposWithCalc">
         <Resource name="plan">
             <![CDATA[

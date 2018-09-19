@@ -55,8 +55,8 @@ import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
 import org.apache.flink.table.sqlgen.SqlGenVisitor
-import org.apache.flink.table.types.DataType
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
 import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, WatermarkUtils}
 import org.apache.flink.util.Preconditions
 
@@ -209,8 +209,7 @@ abstract class StreamTableEnvironment(
 
     // check if event-time is enabled
     tableSource match {
-      case dra: DefinedRowtimeAttribute if dra.getRowtimeAttribute != null &&
-      dra.getRowtimeAttribute != null && !dra.getRowtimeAttribute.isEmpty &&
+      case tableSource: TableSource if TableSourceUtil.hasRowtimeAttribute(tableSource) &&
           execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime =>
 
         throw TableException(
@@ -219,22 +218,15 @@ abstract class StreamTableEnvironment(
       case _ => // ok
     }
 
-    val uniqueKeys = tableSource match {
-      case duk: DefinedUniqueKeys => duk.getUniqueKeys()
-      case _=> null
-    }
-
     tableSource match {
       case streamTableSource: StreamTableSource[_] =>
         registerTableInternal(name,
-          new StreamTableSourceTable(streamTableSource, FlinkStatistic.of(uniqueKeys)))
+          new StreamTableSourceTable(streamTableSource))
       case dimensionTableSource: DimensionTableSource[_] =>
         if (dimensionTableSource.isTemporal) {
-          registerTableInternal(name,
-            new TemporalTableSourceTable(dimensionTableSource, FlinkStatistic.of(uniqueKeys)))
+          registerTableInternal(name, new TemporalDimensionTableSourceTable(dimensionTableSource))
         } else {
-          registerTableInternal(name,
-            new StreamTableSourceTable(dimensionTableSource, FlinkStatistic.of(uniqueKeys)))
+          registerTableInternal(name, new DimensionTableSourceTable(dimensionTableSource))
         }
       case _ =>
         throw new TableException("Only StreamTableSource can be registered in " +
@@ -389,7 +381,12 @@ abstract class StreamTableEnvironment(
   protected def registerDataStreamInternal[T](
     name: String,
     dataStream: DataStream[T]): Unit = {
-    val dataStreamTable = new DataStreamTable[T](dataStream, false, false)
+
+    val streamType = DataTypes.of(dataStream.getType)
+    // get field names and types for all non-replaced fields
+    val (fieldNames, fieldIndexes) = getFieldInfo(streamType)
+
+    val dataStreamTable = new DataStreamTable[T](dataStream, false, false, fieldIndexes, fieldNames)
     registerTableInternal(name, dataStreamTable)
   }
 
@@ -414,7 +411,7 @@ abstract class StreamTableEnvironment(
       uniqueKeys: util.Set[_ <: util.Set[String]],
       monotonicity: RelModifiedMonotonicity): Unit = {
 
-    val streamType = dataStream.getType
+    val streamType = DataTypes.of(dataStream.getType)
 
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
@@ -423,16 +420,32 @@ abstract class StreamTableEnvironment(
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
 
-    val tableSchema = TableSchema.fromTypeInfo(streamType, fields)
+
+    val (fieldNames, fieldIndexes) = getFieldInfo(streamType, fields)
+
+    // validate and extract time attributes
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
+
+    // check if event-time is enabled
+    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+      throw TableException(
+        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+          s"But is: ${execEnv.getStreamTimeCharacteristic}")
+    }
+
+    // adjust field indexes and field names
+    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
+    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
 
     val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
 
     val dataStreamTable = new IntermediateDataStreamTable(
       rowType,
       dataStream,
-      tableSchema,
       producesUpdates,
       isAccRetract,
+      indexesWithIndicatorFields,
+      namesWithIndicatorFields,
       statistic)
     registerTableInternal(name, dataStreamTable)
   }
@@ -457,26 +470,32 @@ abstract class StreamTableEnvironment(
 
     val inputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(rowType, classOf[BaseRow])
 
-    if (fields.exists(_.isInstanceOf[RowtimeAttribute])
-        && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+    // validate and extract time attributes
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(DataTypes.of(inputType), fields)
+    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
 
+
+    val (fieldNames, fieldIndexes) = getFieldInfo(DataTypes.of(inputType), fields)
+    // adjust field indexes and field names
+    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
+    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
+
     // a dummy source with baseRow type
     val dummySource = new DataStreamSource[BaseRow](execEnv, inputType, null, false, "")
-
-    val tableSchema = TableSchema.fromTypeInfo(inputType, fields)
 
     val statistic = FlinkStatistic.of(uniqueKeys, monotonicity)
 
     val dataStreamTable = new IntermediateDataStreamTable(
       rowType,
       dummySource,
-      tableSchema,
       produceUpdates,
       isAccRetract,
+      indexesWithIndicatorFields,
+      namesWithIndicatorFields,
       statistic)
     registerTableInternal(name, dataStreamTable)
   }
@@ -496,23 +515,239 @@ abstract class StreamTableEnvironment(
       fields: Array[Expression])
     : Unit = {
 
+
+    val streamType = DataTypes.of(dataStream.getType)
+
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
-          s"But is: ${execEnv.getStreamTimeCharacteristic}")
+            s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
 
-    val streamType = dataStream.getType
 
-    val tableSchema = TableSchema.fromTypeInfo(streamType, fields)
+    val (fieldNames, fieldIndexes) = getFieldInfo(streamType, fields)
 
-    val dataStreamTable = new DataStreamTable[T](
+    // validate and extract time attributes
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
+
+    // check if event-time is enabled
+    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+      throw TableException(
+        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+            s"But is: ${execEnv.getStreamTimeCharacteristic}")
+    }
+
+    // adjust field indexes and field names
+    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
+    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
+
+
+    val dataStreamTable = new DataStreamTable(
       dataStream,
       false,
       false,
-      tableSchema)
+      indexesWithIndicatorFields,
+      namesWithIndicatorFields)
     registerTableInternal(name, dataStreamTable)
+
+  }
+
+  /**
+    * Checks for at most one rowtime and proctime attribute.
+    * Returns the time attributes.
+    *
+    * @return rowtime attribute and proctime attribute
+    */
+  private def validateAndExtractTimeAttributes(
+    streamType: DataType,
+    exprs: Array[Expression])
+  : (Option[(Int, String)], Option[(Int, String)]) = {
+
+    val (isRefByPos, fieldTypes) = DataTypes.internal(streamType) match {
+      case c: BaseRowType =>
+        // determine schema definition mode (by position or by name)
+        (isReferenceByPosition(c, exprs), (0 until c.getArity).map(i => c.getTypeAt(i)).toArray)
+      case t: InternalType =>
+        (false, Array(t))
+    }
+
+    var fieldNames: List[String] = Nil
+    var rowtime: Option[(Int, String)] = None
+    var proctime: Option[(Int, String)] = None
+
+    def checkRowtimeType(t: InternalType): Unit = {
+      if (!(t.equals(DataTypes.LONG) || TypeCheckUtils.isTimePoint(t))) {
+        throw new TableException(
+          s"The rowtime attribute can only replace a field with a valid time type, " +
+          s"such as Timestamp or Long. But was: $t")
+      }
+    }
+
+    def extractRowtime(idx: Int, name: String, origName: Option[String]): Unit = {
+      if (rowtime.isDefined) {
+        throw new TableException(
+          "The rowtime attribute can only be defined once in a table schema.")
+      } else {
+        // if the fields are referenced by position,
+        // it is possible to replace an existing field or append the time attribute at the end
+        if (isRefByPos) {
+          // aliases are not permitted
+          if (origName.isDefined) {
+            throw new TableException(
+              s"Invalid alias '${origName.get}' because fields are referenced by position.")
+          }
+          // check type of field that is replaced
+          if (idx < fieldTypes.length) {
+            checkRowtimeType(fieldTypes(idx))
+          }
+        }
+        // check reference-by-name
+        else {
+          val aliasOrName = origName.getOrElse(name)
+          DataTypes.internal(streamType) match {
+            // both alias and reference must have a valid type if they replace a field
+            case ct: BaseRowType if ct.getFieldIndex(aliasOrName) >= 0 =>
+              val t = ct.getTypeAt(ct.getFieldIndex(aliasOrName))
+              checkRowtimeType(t)
+            // alias could not be found
+            case _ if origName.isDefined =>
+              throw new TableException(s"Alias '${origName.get}' must reference an existing field.")
+            case _ => // ok
+          }
+        }
+
+        rowtime = Some(idx, name)
+      }
+    }
+
+    def extractProctime(idx: Int, name: String): Unit = {
+      if (proctime.isDefined) {
+          throw new TableException(
+            "The proctime attribute can only be defined once in a table schema.")
+      } else {
+        // if the fields are referenced by position,
+        // it is only possible to append the time attribute at the end
+        if (isRefByPos) {
+
+          // check that proctime is only appended
+          if (idx < fieldTypes.length) {
+            throw new TableException(
+              "The proctime attribute can only be appended to the table schema and not replace " +
+                s"an existing field. Please move '$name' to the end of the schema.")
+          }
+        }
+        // check reference-by-name
+        else {
+          DataTypes.internal(streamType) match {
+            case ct: BaseRowType if
+            ct.getFieldIndex(name) < 0 =>
+            case ct: BaseRowType if
+              ct.getTypeAt(ct.getFieldIndex(name)).equals(DataTypes.PROCTIME_INDICATOR) =>
+            // proctime attribute must not replace a field
+            case ct: BaseRowType if ct.getFieldIndex(name) >= 0 =>
+              throw new TableException(
+                s"The proctime attribute '$name' must not replace an existing field.")
+            case _ => // ok
+          }
+        }
+        proctime = Some(idx, name)
+      }
+    }
+
+    exprs.zipWithIndex.foreach {
+      case (RowtimeAttribute(UnresolvedFieldReference(name)), idx) =>
+        extractRowtime(idx, name, None)
+
+      case (RowtimeAttribute(Alias(UnresolvedFieldReference(origName), name, _)), idx) =>
+        extractRowtime(idx, name, Some(origName))
+
+      case (ProctimeAttribute(UnresolvedFieldReference(name)), idx) =>
+        extractProctime(idx, name)
+
+      case (UnresolvedFieldReference(name), _) => fieldNames = name :: fieldNames
+
+      case (Alias(UnresolvedFieldReference(_), name, _), _) => fieldNames = name :: fieldNames
+
+      case (e, _) =>
+        throw new TableException(s"Time attributes can only be defined on field references or " +
+          s"aliases of valid field references. Rowtime attributes can replace existing fields, " +
+          s"proctime attributes can not. " +
+          s"But was: $e")
+    }
+
+    if (rowtime.isDefined && fieldNames.contains(rowtime.get._2)) {
+      throw new TableException(
+        "The rowtime attribute may not have the same name as an another field.")
+    }
+
+    if (proctime.isDefined && fieldNames.contains(proctime.get._2)) {
+      throw new TableException(
+        "The proctime attribute may not have the same name as an another field.")
+    }
+
+    (rowtime, proctime)
+  }
+
+  /**
+   * Injects markers for time indicator fields into the field indexes.
+   *
+   * @param fieldIndexes The field indexes into which the time indicators markers are injected.
+   * @param rowtime An optional rowtime indicator
+   * @param proctime An optional proctime indicator
+   * @return An adjusted array of field indexes.
+   */
+  private def adjustFieldIndexes(
+      fieldIndexes: Array[Int],
+      rowtime: Option[(Int, String)],
+      proctime: Option[(Int, String)]): Array[Int] = {
+
+    // inject rowtime field
+    val withRowtime = rowtime match {
+      case Some(rt) =>
+        fieldIndexes.patch(rt._1, Seq(DataTypes.ROWTIME_STREAM_MARKER), 0)
+      case _ =>
+        fieldIndexes
+    }
+
+    // inject proctime field
+    val withProctime = proctime match {
+      case Some(pt) =>
+        withRowtime.patch(pt._1, Seq(DataTypes.PROCTIME_STREAM_MARKER), 0)
+      case _ =>
+        withRowtime
+    }
+
+    withProctime
+  }
+
+  /**
+   * Injects names of time indicator fields into the list of field names.
+   *
+   * @param fieldNames The array of field names into which the time indicator field names are
+   *                   injected.
+   * @param rowtime An optional rowtime indicator
+   * @param proctime An optional proctime indicator
+   * @return An adjusted array of field names.
+   */
+  private def adjustFieldNames(
+      fieldNames: Array[String],
+      rowtime: Option[(Int, String)],
+      proctime: Option[(Int, String)]): Array[String] = {
+
+    // inject rowtime field
+    val withRowtime = rowtime match {
+      case Some(rt) => fieldNames.patch(rt._1, Seq(rowtime.get._2), 0)
+      case _ => fieldNames
+    }
+
+    // inject proctime field
+    val withProctime = proctime match {
+      case Some(pt) => withRowtime.patch(pt._1, Seq(proctime.get._2), 0)
+      case _ => withRowtime
+    }
+
+    withProctime
   }
 
 
@@ -799,13 +1034,15 @@ abstract class StreamTableEnvironment(
 
     for ((name, index) <- table.getSchema.getColumnNames.zipWithIndex) yield {
       val relType = rowType.getFieldList.get(index).asInstanceOf[RelDataTypeFieldImpl].getValue
-      val expression = UnresolvedFieldReference(name)
+      val relName = rowType.getFieldNames.get(index)
+      val expression = UnresolvedFieldReference(relName)
 
       relType match {
         case _ if FlinkTypeFactory.isProctimeIndicatorType(relType) =>
           new ProctimeAttribute(expression)
         case _ if FlinkTypeFactory.isRowtimeIndicatorType(relType) =>
           new RowtimeAttribute(expression)
+        case _ if !relName.equals(name) => Alias(expression, name)
         case _ => expression
       }
     }

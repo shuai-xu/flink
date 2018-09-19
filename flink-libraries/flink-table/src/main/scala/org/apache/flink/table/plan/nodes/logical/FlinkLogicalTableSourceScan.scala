@@ -46,7 +46,7 @@ class FlinkLogicalTableSourceScan(
   extends TableScan(cluster, traitSet, relOptTable)
   with FlinkLogicalRel {
 
-  val tableSource: TableSource = relOptTable.unwrap(classOf[TableSourceTable[_]]).tableSource
+  val tableSource: TableSource = relOptTable.unwrap(classOf[TableSourceTable]).tableSource
 
   def copy(
       traitSet: RelTraitSet,
@@ -63,7 +63,7 @@ class FlinkLogicalTableSourceScan(
 
     tableSource match {
       case s: StreamTableSource[_] =>
-        StreamTableSourceTable.deriveRowTypeOfTableSource(s, flinkTypeFactory)
+        TableSourceUtil.getRelDataType(s, None, true, flinkTypeFactory)
       case _: BatchExecTableSource[_] | _: DimensionTableSource[_]=>
         flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema)
       case _ => throw new TableException("Unknown TableSource type.")
@@ -111,9 +111,9 @@ object FlinkLogicalTableSourceScan {
   val CONVERTER = new FlinkLogicalTableSourceScanConverter
 
   def isLogicalTableSourceScan(scan: TableScan): Boolean = {
-    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable[_]])
+    val tableSourceTable = scan.getTable.unwrap(classOf[TableSourceTable])
     tableSourceTable match {
-      case _: TableSourceTable[_] => true
+      case _: TableSourceTable => true
       case _ => false
     }
   }

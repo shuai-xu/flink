@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.nodes.common
 import java.util.{List => JList}
 
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -56,8 +57,11 @@ trait CommonScan[T] {
     s"SourceConversion($s)"
   }
 
-  private def hasEventTimeField(indexes: Array[Int]) =
-    indexes.contains(DataTypes.ROWTIME_MARKER)
+  private[flink] def hasTimeAttributeField(indexes: Array[Int]) =
+    indexes.contains(DataTypes.ROWTIME_STREAM_MARKER)||
+      indexes.contains(DataTypes.ROWTIME_BATCH_MARKER)||
+      indexes.contains(DataTypes.PROCTIME_STREAM_MARKER)||
+      indexes.contains(DataTypes.PROCTIME_BATCH_MARKER)
 
   private[flink] def convertToInternalRow(
       ctx: CodeGeneratorContext,
@@ -66,7 +70,8 @@ trait CommonScan[T] {
       inputType: DataType,
       outRowType: RelDataType,
       qualifiedName: JList[String],
-      config: TableConfig): StreamTransformation[BaseRow] = {
+      config: TableConfig,
+      rowtimeExpr: Option[RexNode] = None): StreamTransformation[BaseRow] = {
 
     val outputRowType = FlinkTypeFactory.toInternalBaseRowType(outRowType, classOf[GenericRow])
 
@@ -99,7 +104,7 @@ trait CommonScan[T] {
 
     val processCode =
       if ((inputFieldTypes sameElements
-          outputRowType.getFieldTypes) && !hasEventTimeField(fieldIndexes)) {
+          outputRowType.getFieldTypes) && !hasTimeAttributeField(fieldIndexes)) {
         s"${generatorCollect(inputTerm)}"
       } else {
 
@@ -112,7 +117,8 @@ trait CommonScan[T] {
 
         val inputTypeTerm = boxedTypeTermForType(DataTypes.internal(internalInputType))
 
-        val conversion = resultGenerator.generateConverterResultExpression(outputRowType)
+        val conversion = resultGenerator.generateConverterResultExpression(
+          outputRowType, rowtimeExpression = rowtimeExpr)
 
         codeSplit = CodeGenUtils.generateSplitFunctionCalls(
           conversion.codeBuffer,
@@ -132,7 +138,7 @@ trait CommonScan[T] {
 
         // extract time if the index is -1 or -2.
         val (extractElement, resetElement) =
-          if (hasEventTimeField(fieldIndexes)) {
+          if (hasTimeAttributeField(fieldIndexes)) {
             (s"ctx.$ELEMENT = $ELEMENT;", s"ctx.$ELEMENT = null;")
           }
           else {

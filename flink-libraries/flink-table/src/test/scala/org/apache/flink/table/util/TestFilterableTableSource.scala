@@ -28,6 +28,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala.getCallLocationName
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.Types._
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.stats.TableStats
@@ -164,5 +165,8 @@ class TestFilterableTableSource(
         throw new RuntimeException(expr + " not supported!")
     }
   }
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema = TableSchema.fromDataType(getReturnType)
 }
 

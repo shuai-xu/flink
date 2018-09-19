@@ -123,7 +123,7 @@ class SelectivityEstimator(rel: RelNode, mq: FlinkRelMetadataQuery)
   private def getPartitionFieldNames(scan: TableScan): Option[Array[String]] = {
     val table = scan.getTable.unwrap(classOf[FlinkTable])
     table match {
-      case t: TableSourceTable[_] =>
+      case t: TableSourceTable =>
         t.tableSource match {
           case p: PartitionableTableSource =>
             Some(p.getPartitionFieldNames)
@@ -519,7 +519,7 @@ class SelectivityEstimator(rel: RelNode, mq: FlinkRelMetadataQuery)
     assert(this.rel.isInstanceOf[TableScan])
     val table = rel.asInstanceOf[TableScan].getTable.unwrap(classOf[FlinkTable])
     val partitionableTableSource = table match {
-      case t: TableSourceTable[_] =>
+      case t: TableSourceTable =>
         t.tableSource match {
           case p: PartitionableTableSource => p
           case _ => throw new RuntimeException("This should not happen.")
