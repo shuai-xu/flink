@@ -2278,6 +2278,25 @@ class OverWindowAggITCase extends QueryTest {
           row(3, -9.77, 3.0),
           row(3, 0.0, 3.0),
           row(3, 0.08, -9.77)))
+
+    checkResult(
+      "SELECT a-2, b, lead(b, a-2, 3.0) over (partition by a order by b) FROM Table6",
+      Seq(
+        row(-1, 1.1, 3.0),
+        row(3, -5.9, 2.71),
+        row(3, -2.8, 3.9),
+        row(3, 0.7, 3.0),
+        row(3, 2.71, 3.0),
+        row(3, 3.9, 3.0),
+        row(2, 3.14, 3.15),
+        row(2, 3.14, 3.16),
+        row(2, 3.15, 3.0),
+        row(2, 3.16, 3.0),
+        row(0, -2.4, -2.4),
+        row(0, 2.5, 2.5),
+        row(1, -9.77, 0.0),
+        row(1, 0.0, 0.08),
+        row(1, 0.08, 3.0)))
   }
 
   @Test
@@ -2338,6 +2357,44 @@ class OverWindowAggITCase extends QueryTest {
         row(3, -9.77, 0.08),
         row(3, 0.0, 0.0),
         row(3, 0.08, 0.08)))
+
+    checkResult(
+      "SELECT a, b, lag(b, a, 3) over (partition by a order by b) FROM Table6",
+      Seq(
+        row(1, 1.1, 3.0),
+        row(5, -5.9, 3.0),
+        row(5, -2.8, 3.0),
+        row(5, 0.7, 3.0),
+        row(5, 2.71, 3.0),
+        row(5, 3.9, 3.0),
+        row(4, 3.14, 3.0),
+        row(4, 3.14, 3.0),
+        row(4, 3.15, 3.0),
+        row(4, 3.16, 3.0),
+        row(2, -2.4, 3.0),
+        row(2, 2.5, 3.0),
+        row(3, -9.77, 3.0),
+        row(3, 0.0, 3.0),
+        row(3, 0.08, 3.0)))
+
+    checkResult(
+      "SELECT a-1, b, lag(b, a-1, 3) over (partition by a order by b) FROM Table6",
+      Seq(
+        row(0, 1.1, 1.1),
+        row(4, -5.9, 3.0),
+        row(4, -2.8, 3.0),
+        row(4, 0.7, 3.0),
+        row(4, 2.71, 3.0),
+        row(4, 3.9, -5.9),
+        row(3, 3.14, 3.0),
+        row(3, 3.14, 3.0),
+        row(3, 3.15, 3.0),
+        row(3, 3.16, 3.14),
+        row(1, -2.4, 3.0),
+        row(1, 2.5, -2.4),
+        row(2, -9.77, 3.0),
+        row(2, 0.0, 3.0),
+        row(2, 0.08, -9.77)))
   }
 
   @Test

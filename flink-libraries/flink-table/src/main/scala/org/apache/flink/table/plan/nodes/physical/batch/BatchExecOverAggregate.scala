@@ -35,7 +35,7 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, Tabl
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAggregateCodeGen}
-import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedBoundComparator, GeneratedSorter, SortCodeGenerator}
+import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.BatchExecRelVisitor
@@ -46,7 +46,7 @@ import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
 import org.apache.flink.table.runtime.operator.overagg._
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelOptUtil}
 
@@ -371,13 +371,26 @@ class BatchExecOverAggregate(
                 .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
             // The second arg mean the offset for leag/lag function, and the default value is 1L.
             val flag = if (aggCall.getAggregation.kind == SqlKind.LEAD) 1 else -1
-            val offset = if (aggCall.getArgList.length >= 2) {
-              val offsetIndex = aggCall.getArgList.get(1) - calcOriginInputRows(logicWindow)
-              logicWindow.constants.get(offsetIndex).getValueAs(classOf[java.lang.Long]) * flag
+            val (offset, calcOffsetFunc) = if (aggCall.getArgList.length >= 2) {
+              val constantIndex = aggCall.getArgList.get(1) - calcOriginInputRows(logicWindow)
+              if (constantIndex < 0) {
+                val rowIndex = aggCall.getArgList.get(1)
+                val func = inType.getTypeAt(rowIndex) match {
+                  case _: LongType => (value: BaseRow) => value.getLong(rowIndex) * flag
+                  case _: IntType => (value: BaseRow) => value.getInt(rowIndex).toLong * flag
+                  case _: ShortType => (value: BaseRow) => value.getShort(rowIndex).toLong * flag
+                  case _ => throw new RuntimeException("The column type must be in long/int/short.")
+                }
+                (rowIndex * 1L, func)
+              } else {
+                val constantOffset = logicWindow.constants.get(
+                  constantIndex).getValueAs(classOf[java.lang.Long]) * flag
+                (constantOffset, null)
+              }
             } else {
-              1L * flag
+              (1L * flag, null)
             }
-           new OffsetOverWindowFrame(genAggsHandler, offset)
+           new OffsetOverWindowFrame(genAggsHandler, offset, calcOffsetFunc)
           }
 
         case _ =>

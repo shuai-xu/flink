@@ -348,16 +348,23 @@ class InsensitiveWindowFrame(
 /**
  * The offset window frame calculates frames containing LEAD/LAG statements.
  * @param aggsHandleFunction the aggregate function
- * @param offset by which rows get moved within a partition.
+ * @param offset it means the offset within a partition if calcOffsetFunc is null.
+ * @param calcOffsetFunc calculate the real offset when the function is not null.
  */
 class OffsetOverWindowFrame(
-    aggsHandleFunction: GeneratedAggsHandleFunction, offset: Long)
+    aggsHandleFunction: GeneratedAggsHandleFunction,
+    offset: Long,
+    calcOffsetFunc: (BaseRow) => Long)
   extends OverWindowFrame(aggsHandleFunction) {
 
   private[this] var processor: AggsHandleFunction = _
-  private[this] var inputIterator: ResettableExternalBuffer#BufferIterator = _
 
+  //inputIterator and inputIndex are need when calcOffsetFunc is null.
+  private[this] var inputIterator: ResettableExternalBuffer#BufferIterator = _
   private[this] var inputIndex = 0L
+
+  //externalBuffer is need when calcOffsetFunc is not null.
+  private[this] var externalBuffer: ResettableExternalBuffer = _
 
   private[this] var currentBufferLength = 0L
   override def open(ctx: ExecutionContext): Unit = {
@@ -370,24 +377,42 @@ class OffsetOverWindowFrame(
     processor.setAccumulators(processor.createAccumulators())
     currentBufferLength = rows.size()
     inputIndex = offset
-    if (inputIterator != null) {
-      inputIterator.close()
-    }
-    if (offset >= 0) {
-      inputIterator = rows.newIterator(offset.toInt)
+    if (calcOffsetFunc == null) {
+      if (inputIterator != null) {
+        inputIterator.close()
+      }
+      if (offset >= 0) {
+        inputIterator = rows.newIterator(offset.toInt)
+      } else {
+        inputIterator = rows.newIterator()
+      }
     } else {
-      inputIterator = rows.newIterator()
+      externalBuffer = rows
     }
   }
 
   override def write(index: Int, current: BaseRow): BaseRow = {
-    if (inputIndex >= 0 && inputIndex < currentBufferLength) {
-      processor.accumulate(OverWindowFrame.getNextOrNull(inputIterator))
+
+    if (calcOffsetFunc != null) {
+      //poor performance here
+      val realIndex = calcOffsetFunc(current) + index
+      if (realIndex >= 0 && realIndex < currentBufferLength) {
+        val tempIterator = externalBuffer.newIterator(realIndex.toInt)
+        processor.accumulate(OverWindowFrame.getNextOrNull(tempIterator))
+        tempIterator.close()
+      } else {
+        //reset the default based current row
+        processor.retract(current)
+      }
     } else {
-      //reset the default based current row
-      processor.retract(current)
+      if (inputIndex >= 0 && inputIndex < currentBufferLength) {
+        processor.accumulate(OverWindowFrame.getNextOrNull(inputIterator))
+      } else {
+        //reset the default based current row
+        processor.retract(current)
+      }
+      inputIndex += 1
     }
-    inputIndex += 1
     processor.getValue
   }
 }
