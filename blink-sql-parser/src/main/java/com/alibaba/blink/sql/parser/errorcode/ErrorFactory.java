@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.alibaba.blink.errcode;
+package com.alibaba.blink.sql.parser.errorcode;
 
 import org.apache.commons.lang3.StringUtils;
 

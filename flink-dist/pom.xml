@@ -34,14 +34,6 @@ under the License.
 	<packaging>jar</packaging>
 
 	<dependencies>
-
-		<!-- Blink binaries -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>blink-errcode</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>blink-sql-parser</artifactId>

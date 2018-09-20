@@ -18,8 +18,6 @@
 
 package com.alibaba.blink.sql.parser.errorcode;
 
-import com.alibaba.blink.errcode.ErrorFactory;
-
 /**
  * wrapper class for parser error code instance.
  */

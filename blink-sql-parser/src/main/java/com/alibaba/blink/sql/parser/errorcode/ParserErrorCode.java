@@ -18,8 +18,6 @@
 
 package com.alibaba.blink.sql.parser.errorcode;
 
-import com.alibaba.blink.errcode.ErrorFactory.ErrCode;
-
 /**
  * error codes in flink table, and associated methods for call in corresponding scenario
  * Please note that a proxy instances is created for unnamed
@@ -110,7 +108,7 @@ import com.alibaba.blink.errcode.ErrorFactory.ErrCode;
  */
 public interface ParserErrorCode {
 
-	@ErrCode(
+	@ErrorFactory.ErrCode(
 		codeId = "PAR-00000001",
 		cause = "sql parse context error:\n" +
 			"{0}",

@@ -18,7 +18,7 @@
 
 package com.alibaba.blink.sql.parser;
 
-import com.alibaba.blink.errcode.ErrorFactory;
+import com.alibaba.blink.sql.parser.errorcode.ErrorFactory;
 import com.alibaba.blink.sql.parser.errorcode.ParserErrorCode;
 import com.alibaba.blink.sql.parser.errorcode.ParserErrors;
 import org.junit.Test;
