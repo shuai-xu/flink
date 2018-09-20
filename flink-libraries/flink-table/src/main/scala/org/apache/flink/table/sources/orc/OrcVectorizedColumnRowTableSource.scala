@@ -82,6 +82,7 @@ class OrcVectorizedColumnRowTableSource(
       filePath, fieldTypes, fieldNames, fieldNullables, enumerateNestedFiles, copyToFlink)
     tableSource.setFilterPredicate(filterPredicate)
     tableSource.setFilterPushedDown(filterPushedDown)
+    tableSource.setSchemaFields(schemaFieldNames)
     tableSource
   }
 
@@ -94,6 +95,7 @@ class OrcVectorizedColumnRowTableSource(
       case e: Exception => throw new RuntimeException(e)
     }
     inputFormat.setNestedFileEnumeration(enumerateNestedFiles)
+    inputFormat.setSchemaFields(schemaFieldNames)
     streamEnv.createInput(inputFormat, getPhysicalType,
       s"OrcVectorizedColumnRowTableSource: ${filePath.getName}")
   }
@@ -123,6 +125,7 @@ class OrcVectorizedColumnRowTableSource(
     s"OrcVectorizedColumnRowTableSource ->" +
       s"selectedFields=[${fieldNames.mkString(", ")}];" +
         s"filterPredicates=[${predicate}];" +
-          s"copyToFlink=[${copyToFlink}]"
+          s"copyToFlink=[${copyToFlink}];" +
+            s"path=[${filePath}]"
   }
 }

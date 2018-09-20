@@ -38,12 +38,12 @@ public class OrcVectorizedColumnRowReader extends OrcVectorizedReader {
 
 	private ColumnarRow columnarRow = new ColumnarRow();
 
-	public OrcVectorizedColumnRowReader(InternalType[] fieldTypes, String[] fieldNames) {
-		this(fieldTypes, fieldNames, false);
+	public OrcVectorizedColumnRowReader(InternalType[] fieldTypes, String[] fieldNames, String[] schemaFieldNames) {
+		this(fieldTypes, fieldNames, schemaFieldNames, false);
 	}
 
-	public OrcVectorizedColumnRowReader(InternalType[] fieldTypes, String[] fieldNames, boolean copyToFlink) {
-		super(fieldTypes, fieldNames, copyToFlink, true);
+	public OrcVectorizedColumnRowReader(InternalType[] fieldTypes, String[] fieldNames, String[] schemaFieldNames, boolean copyToFlink) {
+		super(fieldTypes, fieldNames, schemaFieldNames, copyToFlink, true);
 		this.batchSize = 0;
 		this.rowIdx = -1;
 	}

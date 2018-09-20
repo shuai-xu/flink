@@ -60,7 +60,7 @@ public class VectorizedColumnRowInputOrcFormat extends OrcInputFormat<ColumnarRo
 
 	@Override
 	protected RecordReader createReader(FileInputSplit fileSplit, TaskAttemptContext taskAttemptContext) throws IOException {
-		return new OrcVectorizedColumnRowReader(fieldTypes, fieldNames, copyToFlink);
+		return new OrcVectorizedColumnRowReader(fieldTypes, fieldNames, schemaFieldNames, copyToFlink);
 	}
 
 	@Override

@@ -98,6 +98,7 @@ public class OrcVectorizedReader extends RecordReader<Void, Object> {
 
 	protected InternalType[] fieldTypes;
 	protected String[] fieldNames;
+	protected String[] schemaFieldNames;
 
 	// Whether or not to copy the ORC columnar batch to flink columnar batch.
 	// TODO: make this configurable.
@@ -105,13 +106,14 @@ public class OrcVectorizedReader extends RecordReader<Void, Object> {
 
 	private boolean caseSensitive = true;
 
-	public OrcVectorizedReader(InternalType[] fieldTypes, String[] fieldNames) {
-		this(fieldTypes, fieldNames, false, true);
+	public OrcVectorizedReader(InternalType[] fieldTypes, String[] fieldNames, String[] schemaFieldNames) {
+		this(fieldTypes, fieldNames, schemaFieldNames, false, true);
 	}
 
 	public OrcVectorizedReader(
 			InternalType[] fieldTypes,
 			String[] fieldNames,
+			String[] schemaFieldNames,
 			boolean copyToFlink,
 			boolean caseSensitive) {
 		super();
@@ -119,6 +121,7 @@ public class OrcVectorizedReader extends RecordReader<Void, Object> {
 		Preconditions.checkArgument(fieldNames != null && fieldNames.length == fieldTypes.length);
 		this.fieldTypes = fieldTypes;
 		this.fieldNames = fieldNames;
+		this.schemaFieldNames = schemaFieldNames;
 		this.copyToFlink = copyToFlink;
 		this.caseSensitive = caseSensitive;
 	}
@@ -137,7 +140,7 @@ public class OrcVectorizedReader extends RecordReader<Void, Object> {
 			OrcInputFormat.buildOptions(conf, reader, fileSplit.getStart(), fileSplit.getLength());
 		recordReader = reader.rows(options);
 		orcSchema = reader.getSchema();
-		requestedColumnIds = OrcUtils.requestedColumnIds(caseSensitive, fieldNames, reader);
+		requestedColumnIds = OrcUtils.requestedColumnIds(caseSensitive, fieldNames, schemaFieldNames, reader);
 
 		initBatch();
 	}

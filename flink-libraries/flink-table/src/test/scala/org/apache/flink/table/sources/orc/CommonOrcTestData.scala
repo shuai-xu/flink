@@ -83,6 +83,25 @@ object CommonOrcTestData {
     )
   }
 
+  def getOrcVectorizedColumnRowTableSourceFromPeopleFile(copyToFlink: Boolean):
+      OrcVectorizedColumnRowTableSource = {
+    val names = Array("age", "name")
+    val types: Array[InternalType] = Array(
+      IntType.INSTANCE,
+      StringType.INSTANCE
+    )
+
+    val filePath = getClass.getClassLoader.getResource("test-data.orc/people.orc").getPath
+    val tableSource = new OrcVectorizedColumnRowTableSource(
+      new Path(filePath),
+      types,
+      names,
+      true,
+      copyToFlink
+    )
+    tableSource
+  }
+
   private def writeToTempFile(
       contents: Seq[GenericRow],
       fieldTypes: Array[InternalType],

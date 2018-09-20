@@ -95,6 +95,36 @@ class OrcTableSourceITCase(configMode: TableConfigMode, copyToFlink: CopyMode)
       vectorColumnRowTableName, vectorColumnRowSql, expected)
   }
 
+  @Test
+  def testBatchExecHiveOrc(): Unit = {
+    val expected = Seq(
+      "Justin"
+    ).mkString("\n")
+
+    val vectorColumnRowTable =
+      CommonOrcTestData.getOrcVectorizedColumnRowTableSourceFromPeopleFile(copyToFlink.copyMode)
+    val vectorColumnRowTableName = "vectorColumnRowTable"
+    val sql = "SELECT name FROM vectorColumnRowTable WHERE age BETWEEN 13 AND 19"
+    checkBatchExecOrcSource(vectorColumnRowTable,
+      vectorColumnRowTableName, sql, expected)
+  }
+
+  @Test
+  def testBatchExecHiveOrcPushDownProject(): Unit = {
+    val expected = Seq(
+      "Michael",
+      "Andy",
+      "Justin"
+    ).mkString("\n")
+
+    val vectorColumnRowTable =
+      CommonOrcTestData.getOrcVectorizedColumnRowTableSourceFromPeopleFile(copyToFlink.copyMode)
+    val vectorColumnRowTableName = "vectorColumnRowTable"
+    val sql = "SELECT name FROM vectorColumnRowTable"
+    checkBatchExecOrcSource(vectorColumnRowTable,
+      vectorColumnRowTableName, sql, expected)
+  }
+
   private def checkBatchExecOrcSource(
       table: OrcTableSource[_],
       name: String,

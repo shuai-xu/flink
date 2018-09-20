@@ -69,6 +69,8 @@ public abstract class OrcInputFormat<T, R> extends FileInputFormat<T> {
 
 	private boolean isCaseSensitive = true;
 
+	protected String[] schemaFieldNames;
+
 	protected int[] columnIds;
 
 	protected transient RecordReaderIterator<R> readerIterator;
@@ -94,6 +96,10 @@ public abstract class OrcInputFormat<T, R> extends FileInputFormat<T> {
 		} else {
 			filterBytes = null;
 		}
+	}
+
+	public void setSchemaFields(String[] schemaFieldNames) {
+		this.schemaFieldNames = schemaFieldNames;
 	}
 
 	private SearchArgument getFilterPredicate() {
@@ -134,7 +140,7 @@ public abstract class OrcInputFormat<T, R> extends FileInputFormat<T> {
 		Reader reader = OrcFile.createReader(filePath,
 			OrcFile.readerOptions(hadoopConf).maxLength(OrcConf.MAX_FILE_LENGTH.getLong(hadoopConf)));
 
-		columnIds = OrcUtils.requestedColumnIds(isCaseSensitive, fieldNames, reader);
+		columnIds = OrcUtils.requestedColumnIds(isCaseSensitive, fieldNames, schemaFieldNames, reader);
 
 		if (columnIds != null) {
 			String includeColumns =

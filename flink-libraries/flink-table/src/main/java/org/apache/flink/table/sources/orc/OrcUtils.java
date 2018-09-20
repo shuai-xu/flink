@@ -31,6 +31,7 @@ public class OrcUtils {
 	public static int[] requestedColumnIds(
 			boolean isCaseSensitive,
 			String[] requiredFieldNames,
+			String[] schemaFieldNames,
 			Reader reader) {
 		String[] orcFieldNames = reader.getSchema().getFieldNames().toArray(new String[0]);
 		if (orcFieldNames.length == 0) {
@@ -42,11 +43,15 @@ public class OrcUtils {
 			if (isHiveOrcFile) {
 				// This is a ORC file written by Hive.
 				// assume the required field names are the physical field names.
-			}
-
-			for (String field : requiredFieldNames) {
-				int index = fieldIndex(field, orcFieldNames, isCaseSensitive);
-				ret.add(index);
+				for (String field : requiredFieldNames) {
+					int index = fieldIndex(field, schemaFieldNames, isCaseSensitive);
+					ret.add(index);
+				}
+			} else {
+				for (String field : requiredFieldNames) {
+					int index = fieldIndex(field, orcFieldNames, isCaseSensitive);
+					ret.add(index);
+				}
 			}
 
 			return ret.stream().mapToInt(i -> i).toArray();

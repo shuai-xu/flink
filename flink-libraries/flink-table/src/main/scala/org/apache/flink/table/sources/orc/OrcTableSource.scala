@@ -60,10 +60,16 @@ abstract class OrcTableSource[T](
 
   private var cachedStats: Option[TableStats] = None
 
+  protected var schemaFieldNames: Array[String] = fieldNames
+
   protected def createTableSource(
     fieldTypes: Array[InternalType],
     fieldNames: Array[String],
     fieldNullables: Array[Boolean]): OrcTableSource[T]
+
+  protected def setSchemaFields(schemaFieldNames: Array[String]): Unit = {
+    this.schemaFieldNames = schemaFieldNames
+  }
 
   protected def setFilterPredicate(filterPredicate: SearchArgument): Unit = {
     this.filterPredicate = filterPredicate
@@ -77,6 +83,7 @@ abstract class OrcTableSource[T](
       val orcTableSource = createTableSource(fieldTypes, fieldNames, fieldNullables)
       orcTableSource.setFilterPredicate(filterPredicate.get)
       orcTableSource.setFilterPushedDown(true)
+      orcTableSource.setSchemaFields(schemaFieldNames)
       orcTableSource
     } else {
       this
@@ -104,6 +111,7 @@ abstract class OrcTableSource[T](
     // projectFields does not change the TableStats, we can reuse origin cachedStats
     val newTableSource = createTableSource(newFieldTypes, newFieldNames, newFieldNullables)
     newTableSource.cachedStats = cachedStats
+    newTableSource.setSchemaFields(schemaFieldNames)
     newTableSource
   }
 
