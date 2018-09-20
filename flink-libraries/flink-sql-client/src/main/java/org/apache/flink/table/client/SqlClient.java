@@ -23,6 +23,7 @@ import org.apache.flink.table.client.cli.CliOptions;
 import org.apache.flink.table.client.cli.CliOptionsParser;
 import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.table.client.gateway.CliMode;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.SessionContext;
 import org.apache.flink.table.client.gateway.local.LocalExecutor;
@@ -117,13 +118,15 @@ public class SqlClient {
 		final CliClient cli = new CliClient(context, executor);
 		if (options.getSqlFile() != null) {
 			// Non-interactive mode from a file
+			context.setCliMode(CliMode.NON_INTERACTIVE);
 			cli.submitSQLFile(options.getSqlFile());
 		} else if (options.getUpdateStatement() == null) {
-			// interactive CLI mode
+			// Interactive CLI mode
+			context.setCliMode(CliMode.INTERACTIVE);
 			cli.open();
-		}
-		// execute single update statement
-		else {
+		} else {
+			// Execute Single Update Statement
+			context.setCliMode(CliMode.SINGLE_STATEMENT);
 			final boolean success = cli.submitUpdate(options.getUpdateStatement());
 			if (!success) {
 				throw new SqlClientException("Could not submit given SQL update statement to cluster.");

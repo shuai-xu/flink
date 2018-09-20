@@ -21,6 +21,7 @@ package org.apache.flink.table.client.cli;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.cli.SqlCommandParser.SqlCommandCall;
+import org.apache.flink.table.client.gateway.CliMode;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
@@ -462,7 +463,12 @@ public class CliClient {
 		terminal.flush();
 
 		try {
-			final ProgramTargetDescriptor programTarget = executor.executeUpdate(context, cmdCall.operands[0]);
+			ProgramTargetDescriptor programTarget = executor.executeUpdate(context, cmdCall.operands[0]);
+			if (null == programTarget && context.getCliMode().equals(CliMode.INTERACTIVE)) {
+				// If it is an interactive mode
+				ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(this.context);
+				programTarget = executor.submitJob(executionContext);
+			}
 			if (null != programTarget) {
 				terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_STATEMENT_SUBMITTED).toAnsi());
 				terminal.writer().println(programTarget.toString());

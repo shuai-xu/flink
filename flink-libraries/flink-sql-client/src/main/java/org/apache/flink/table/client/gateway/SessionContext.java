@@ -32,6 +32,7 @@ public class SessionContext {
 	private final String name;
 	private final Environment defaultEnvironment;
 	private final Map<String, String> sessionProperties;
+	private CliMode cliMode;
 
 	public SessionContext(String name, Environment defaultEnvironment) {
 		this.name = name;
@@ -79,5 +80,13 @@ public class SessionContext {
 	@Override
 	public int hashCode() {
 		return Objects.hash(name, defaultEnvironment, sessionProperties);
+	}
+
+	public CliMode getCliMode() {
+		return cliMode;
+	}
+
+	public void setCliMode(CliMode cliMode) {
+		this.cliMode = cliMode;
 	}
 }
