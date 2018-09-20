@@ -102,7 +102,7 @@ public final class CliStrings {
 			"   | |    | | | | | |   <   ____) | |__| | |____  | |____| | |  __/ | | | |_ \n" +
 			"   |_|    |_|_|_| |_|_|\\_\\ |_____/ \\___\\_\\______|  \\_____|_|_|\\___|_| |_|\\__|\n" +
 			"          \n" +
-			"        Welcome! Enter HELP to list all available commands. QUIT to exit.\n\n";
+			"        Welcome! Enter 'HELP;' to list all available commands. 'QUIT;' to exit.\n\n";
 	}
 
 	public static final String MESSAGE_QUIT = "Exiting " + CliStrings.CLI_NAME + "...";
