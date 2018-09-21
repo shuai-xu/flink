@@ -74,6 +74,7 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	private TypeSerializer<L> lTypeSerializer;
 	private TypeSerializer<R> rTypeSerializer;
+	private transient volatile boolean isInFinishingBundle = false;
 
 	public KeyedCoBundleOperator(CoBundleTrigger<L, R> coBundleTrigger) {
 		Preconditions.checkNotNull(coBundleTrigger, "coBundleTrigger is null");
@@ -83,6 +84,9 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 	@SuppressWarnings("unchecked")
 	@Override
 	public void processElement1(StreamRecord<L> element) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		K key = (K) getCurrentKey();
 		L row = element.getValue();
 		List<L> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
@@ -93,6 +97,9 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 	@SuppressWarnings("unchecked")
 	@Override
 	public void processElement2(StreamRecord<R> element) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		K key = (K) getCurrentKey();
 		R row = element.getValue();
 		List<R> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
@@ -102,6 +109,9 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@Override
 	public void processWatermark1(Watermark mark) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		input1Watermark = mark.getTimestamp();
 		long newMin = Math.min(input1Watermark, input2Watermark);
 		if (newMin > currentWatermark) {
@@ -113,6 +123,9 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@Override
 	public void processWatermark2(Watermark mark) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		input2Watermark = mark.getTimestamp();
 		long newMin = Math.min(input1Watermark, input2Watermark);
 		if (newMin > currentWatermark) {
@@ -124,23 +137,36 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@Override
 	public void endInput1() throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		finishBundle();
 	}
 
 	@Override
 	public void endInput2() throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		finishBundle();
 	}
 
 	@Override
 	public void finishBundle() throws Exception {
 		synchronized (checkpointingLock) {
+			while (isInFinishingBundle) {
+				checkpointingLock.wait();
+			}
+			isInFinishingBundle = true;
 			if (!leftBuffer.isEmpty() || !rightBuffer.isEmpty()) {
 				this.processBundles(leftBuffer, rightBuffer, collector);
 				leftBuffer.clear();
 				rightBuffer.clear();
 			}
 			coBundleTrigger.reset();
+
+			checkpointingLock.notifyAll();
+			isInFinishingBundle = false;
 		}
 	}
 
@@ -204,6 +230,10 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@Override
 	public void close() throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
+
 		try {
 			finishBundle();
 
@@ -228,6 +258,9 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 
 	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		super.snapshotState(context);
 
 		// clear state first

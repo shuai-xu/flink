@@ -97,6 +97,8 @@ public class BundleOperator<K, V, IN, OUT>
 
 	private transient int numOfElements = 0;
 
+	private transient volatile boolean isInFinishingBundle = false;
+
 	public BundleOperator(
 		BundleFunction<K, V, IN, OUT> function,
 		BundleTrigger<IN> bundleTrigger,
@@ -165,6 +167,9 @@ public class BundleOperator<K, V, IN, OUT>
 
 	@Override
 	public void processElement(StreamRecord<IN> element) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		K key = keySelector.getKey(element.getValue());
 		V value = buffer.get(key);  // maybe null
 		// accumulate to value
@@ -179,6 +184,10 @@ public class BundleOperator<K, V, IN, OUT>
 	@Override
 	public void finishBundle() throws Exception {
 		assert(Thread.holdsLock(checkpointingLock));
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
+		isInFinishingBundle = true;
 		if (!buffer.isEmpty()) {
 			numOfElements = 0;
 			function.finishBundle(buffer, collector);
@@ -186,10 +195,15 @@ public class BundleOperator<K, V, IN, OUT>
 		}
 		// reset trigger
 		bundleTrigger.reset();
+		checkpointingLock.notifyAll();
+		isInFinishingBundle = false;
 	}
 
 	@Override
 	public void processWatermark(Watermark mark) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		// bundle operator only used in unbounded group by which not need to handle watermark
 		finishBundle();
 		super.processWatermark(mark);
@@ -211,6 +225,9 @@ public class BundleOperator<K, V, IN, OUT>
 
 	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		super.snapshotState(context);
 		TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);
 		ListState<Tuple2<K, V>> bufferState = getOperatorStateBackend()
@@ -235,6 +252,9 @@ public class BundleOperator<K, V, IN, OUT>
 	@Override
 	public void close() throws Exception {
 		assert(Thread.holdsLock(checkpointingLock));
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		try {
 			finishBundle();
 

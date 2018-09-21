@@ -82,6 +82,8 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 
 	private transient int numOfElements = 0;
 
+	private transient volatile boolean isInFinishingBundle = false;
+
 	public KeyedBundleOperator(
 		BundleFunction<K, V, IN, OUT> function,
 		BundleTrigger<IN> bundleTrigger,
@@ -143,6 +145,9 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@Override
 	public void processElement(StreamRecord<IN> element) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		K key = (K) getCurrentKey();
 		V value = buffer.get(key);  // maybe null
 		V newValue = function.addInput(value, element.getValue());
@@ -155,6 +160,10 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	@Override
 	public void finishBundle() throws Exception {
 		assert(Thread.holdsLock(checkpointingLock));
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
+		isInFinishingBundle = true;
 		if (!buffer.isEmpty()) {
 			numOfElements = 0;
 			function.finishBundle(buffer, collector);
@@ -162,24 +171,26 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 		}
 		// reset trigger
 		bundleTrigger.reset();
+		checkpointingLock.notifyAll();
+		isInFinishingBundle = false;
 	}
 
 	@Override
 	public void processWatermark(Watermark mark) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		// bundle operator only used in unbounded group by which not need to handle watermark
 		finishBundle();
 		super.processWatermark(mark);
 	}
 
-	@Override
-	public void endInput() throws Exception {
-		finishBundle();
-		function.endInput(collector);
-	}
-
 	@SuppressWarnings("unchecked")
 	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		super.snapshotState(context);
 		// clear state first
 		bufferState.removeAll();
@@ -191,9 +202,12 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	@Override
 	public void close() throws Exception {
 		assert(Thread.holdsLock(checkpointingLock));
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		try {
 			finishBundle();
-
+			function.endInput(collector);
 		} finally {
 			Exception exception = null;
 

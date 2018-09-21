@@ -37,14 +37,7 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.operators.testutils.MockEnvironment;
 import org.apache.flink.runtime.operators.testutils.MockEnvironmentBuilder;
 import org.apache.flink.runtime.operators.testutils.MockInputSplitProvider;
-import org.apache.flink.runtime.state.CheckpointStorage;
-import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
-import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.KeyedStateHandle;
-import org.apache.flink.runtime.state.OperatorStateHandle;
-import org.apache.flink.runtime.state.StateBackend;
-import org.apache.flink.runtime.state.StatePartitionSnapshot;
-import org.apache.flink.runtime.state.TestTaskStateManager;
+import org.apache.flink.runtime.state.*;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.graph.StreamConfig;
@@ -523,7 +516,7 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 	}
 
 	/**
-	 * Calls {@link StreamOperator#snapshotState(long, long, CheckpointOptions)}.
+	 * Calls {@link StreamOperator#snapshotState(long, long, CheckpointOptions, CheckpointStreamFactory)}.
 	 */
 	public OperatorSnapshotFinalizer snapshotWithLocalState(long checkpointId, long timestamp) throws Exception {
 
@@ -547,10 +540,13 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 	 * Calls close and dispose on the operator.
 	 */
 	public void close() throws Exception {
-		operator.close();
-		operator.dispose();
-		if (processingTimeService != null) {
-			processingTimeService.shutdownService();
+		synchronized (checkpointLock){
+			operator.close();
+			operator.dispose();
+			if (processingTimeService != null) {
+				processingTimeService.shutdownService();
+			}
+			setupCalled = false;
 		}
 		setupCalled = false;
 
@@ -558,7 +554,9 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 	}
 
 	public void setProcessingTime(long time) throws Exception {
-		processingTimeService.setCurrentTime(time);
+		synchronized (checkpointLock) {
+			processingTimeService.setCurrentTime(time);
+		}
 	}
 
 	public long getProcessingTime() {

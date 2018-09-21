@@ -31,7 +31,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableSchema, Types}
+import org.apache.flink.table.api.{StreamQueryConfig, TableSchema, Types}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -615,6 +615,43 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
   }
 
   @Test
+  def testMinibatchAggAndAsyncLeftJoinTemporalTable(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    val queryConfig = new StreamQueryConfig()
+    queryConfig.enableMiniBatch
+    queryConfig.withMiniBatchTriggerSize(1)
+    queryConfig.withMiniBatchTriggerTime(1)
+    tEnv.setQueryConfig(queryConfig)
+    tEnv.registerTable("T", streamTable)
+
+    val asyncConfig = new AsyncConfig
+    asyncConfig.setBufferCapacity(1)
+    asyncConfig.setTimeoutMs(5000L)
+    val dim = new TestDimensionTableSource(true, asyncConfig, delayedReturn = 1000L)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql1 = "SELECT max(id) as id from T group by len"
+
+    val table1 = tEnv.sqlQuery(sql1)
+    tEnv.registerTable("t1", table1)
+
+    val sql2 = "SELECT t1.id, D.name, D.age FROM t1 LEFT JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON t1.id = D.id"
+
+    val sink = new TestingRetractSink
+    tEnv.sql(sql2).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "3,Fabian,33",
+      "8,null,null",
+      "9,null,null")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+
+  @Test
   def testAsyncLeftJoinTemporalTable(): Unit = {
     val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
@@ -679,7 +716,10 @@ class TestDimensionTableSource2(async: Boolean = false)
   }
 }
 
-class TestDimensionTableSource(async: Boolean = false) extends DimensionTableSource[BaseRow] {
+class TestDimensionTableSource(
+  async: Boolean = false,
+  conf: AsyncConfig = null,
+  delayedReturn: Long = 0L) extends DimensionTableSource[BaseRow] {
   var fetcher: TestDoubleKeyFetcher = null
   var asyncFetcher: TestAsyncDoubleKeyFetcher = null
 
@@ -700,9 +740,13 @@ class TestDimensionTableSource(async: Boolean = false) extends DimensionTableSou
   override def isAsync: Boolean = async
 
   override def getAsyncConfig: AsyncConfig = {
-    val conf = new AsyncConfig
-    conf.setTimeoutMs(10000)
-    conf
+    if (conf == null) {
+      val config = new AsyncConfig
+      config.setTimeoutMs(10000)
+      config
+    } else {
+      conf
+    }
   }
 
   override def getAsyncLookupFunction(index: IndexKey): TestAsyncDoubleKeyFetcher = {
@@ -787,6 +831,9 @@ class TestAsyncSingleKeyFetcher(leftKeyIdx: Int)
       .supplyAsync(new RowSupplier(keysRow), executor)
       .thenAccept(new Consumer[BaseRow] {
         override def accept(t: BaseRow): Unit = {
+          if (delayedReturn > 0L) {
+            Thread.sleep(delayedReturn)
+          }
           if (t == null) {
             asyncCollector.complete(Collections.emptyList[BaseRow]())
           } else {
@@ -829,6 +876,12 @@ class TestAsyncDoubleKeyFetcher(leftKeyIdx: Int, nameKeyIdx: Int)
     throw new RuntimeException("Must join on primary keys")
   }
 
+  var delayedReturn: Long = 0L
+
+  def setDelayedReturn(delayedReturn: Long): Unit = {
+    this.delayedReturn = delayedReturn
+  }
+
   @transient
   var executor: ExecutorService = _
 
@@ -851,6 +904,9 @@ class TestAsyncDoubleKeyFetcher(leftKeyIdx: Int, nameKeyIdx: Int)
       .supplyAsync(new RowSupplier(keysRow), executor)
       .thenAccept(new Consumer[BaseRow] {
         override def accept(t: BaseRow): Unit = {
+          if (delayedReturn > 0L) {
+            Thread.sleep(delayedReturn)
+          }
           if (t == null) {
             asyncCollector.complete(Collections.emptyList[BaseRow]())
           } else {
