@@ -57,7 +57,7 @@ import org.apache.flink.table.sources._
 import org.apache.flink.table.sqlgen.SqlGenVisitor
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
-import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, WatermarkUtils}
+import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, StateUtil, WatermarkUtils}
 import org.apache.flink.util.Preconditions
 
 import _root_.scala.collection.JavaConversions._
@@ -972,7 +972,9 @@ abstract class StreamTableEnvironment(
           kv => parameters.setString(kv._1, kv._2)
         }
       }
-
+      parameters.setBoolean(
+        StateUtil.STATE_BACKEND_ON_HEAP,
+        StateUtil.isHeapState(execEnv.getStateBackend))
       execEnv.getConfig.setGlobalJobParameters(parameters)
       isConfigMerged = true
     }

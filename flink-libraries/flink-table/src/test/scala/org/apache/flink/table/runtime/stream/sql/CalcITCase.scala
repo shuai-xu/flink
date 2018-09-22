@@ -18,30 +18,21 @@
 
 package org.apache.flink.table.runtime.stream.sql
 
-import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendBaseRowSink, TestingAppendRowSink, TestingAppendSink}
+import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase, TestingAppendBaseRowSink, TestingAppendRowSink, TestingAppendSink}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._
 
-import scala.collection.mutable
-
-class CalcITCase {
+class CalcITCase extends StreamingTestBase {
 
   @Test
   def testGenericRowAndBaseRow(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTableRow"
 
     val rowData: GenericRow = new GenericRow(3)
@@ -80,9 +71,6 @@ class CalcITCase {
 
   @Test
   def testRowAndBaseRow(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTableRow WHERE c < 3"
 
     val data = List(
@@ -117,9 +105,6 @@ class CalcITCase {
 
   @Test
   def testGenericRowAndRow(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTableRow"
 
     val rowData: GenericRow = new GenericRow(3)
@@ -152,9 +137,6 @@ class CalcITCase {
 
   @Test
   def testRowAndRow(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTableRow WHERE c < 3"
 
     val data = List(
@@ -182,64 +164,42 @@ class CalcITCase {
   }
 
   @Test
-  def testMapType(): Unit = {
-    def testPrimitiveType(): Unit = {
-      val env = StreamExecutionEnvironment.getExecutionEnvironment
-      val tEnv = TableEnvironment.getTableEnvironment(env)
+  def testPrimitiveMapType(): Unit = {
+    val sqlQuery = "SELECT MAP[b, 30, 10, a] FROM MyTableRow"
 
-      val sqlQuery = "SELECT MAP[b, 30, 10, a] FROM MyTableRow"
+    val t = env.fromCollection(StreamTestData.getSmall3TupleData)
+            .toTable(tEnv).as('a, 'b, 'c)
+    tEnv.registerTable("MyTableRow", t)
 
-      val t = env.fromCollection(StreamTestData.getSmall3TupleData)
-        .toTable(tEnv).as('a, 'b, 'c)
-      tEnv.registerTable("MyTableRow", t)
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
 
-      val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
-      val sink = new TestingAppendSink
-      result.addSink(sink)
-      env.execute()
-
-      val expected = List(
-        "{1=30, 10=1}",
-        "{2=30, 10=2}",
-        "{2=30, 10=3}")
-      assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    }
-
-    def testNonPrimitiveType(): Unit = {
-      val env = StreamExecutionEnvironment.getExecutionEnvironment
-      val tEnv = TableEnvironment.getTableEnvironment(env)
-
-      val sqlQuery = "SELECT MAP[a, c] FROM MyTableRow"
-
-      val t = env.fromCollection(StreamTestData.getSmall3TupleData)
-        .toTable(tEnv).as('a, 'b, 'c)
-      tEnv.registerTable("MyTableRow", t)
-
-      val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
-      val sink = new TestingAppendSink
-      result.addSink(sink)
-      env.execute()
-
-      val expected = List(
-        "{1=Hi}",
-        "{2=Hello}",
-        "{3=Hello world}")
-      assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    }
-
-    testPrimitiveType()
-    testNonPrimitiveType()
+    val expected = List(
+      "{1=30, 10=1}",
+      "{2=30, 10=2}",
+      "{2=30, 10=3}")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
-  def baseRowToGenericRowResults(
-      testBaseRowResults: mutable.MutableList[BaseRow],
-      rowTypeInfo: BaseRowTypeInfo[_]): mutable.MutableList[BaseRow] = {
-    val config = new ExecutionConfig
-    val fieldTypes = rowTypeInfo.getFieldTypes
-    val fieldSerializers = fieldTypes.map(_.createSerializer(config))
-    testBaseRowResults.map { r =>
-      BaseRowUtil.toGenericRow(r, fieldTypes, fieldSerializers)
-    }
+  def testNonPrimitiveMapType(): Unit = {
+    val sqlQuery = "SELECT MAP[a, c] FROM MyTableRow"
+
+    val t = env.fromCollection(StreamTestData.getSmall3TupleData)
+            .toTable(tEnv).as('a, 'b, 'c)
+    tEnv.registerTable("MyTableRow", t)
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "{1=Hi}",
+      "{2=Hello}",
+      "{3=Hello world}")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -247,8 +207,6 @@ class CalcITCase {
 
     val sqlQuery = "SELECT * FROM MyTable"
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val table = tEnv.fromDataStream(env.fromCollection(Seq(
       ((0, 0), "0"),
       ((1, 1), "1"),

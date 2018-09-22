@@ -26,7 +26,7 @@ import org.apache.flink.table.runtime.stream.sql.SplitAggregateITCase.PartialAgg
 import org.apache.flink.table.runtime.utils.{StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchOn
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, NIAGARA_BACKEND, StateBackendMode}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
@@ -253,19 +253,10 @@ object SplitAggregateITCase {
 
   @Parameterized.Parameters(name = "PartialAgg={0}, LocalGlobal={1}, StateBackend={2}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    val isLinuxAliOS = System.getProperty("os.name").startsWith("Linux") &&
-      System.getProperty("os.version").contains("alios7")
-
-    if (isLinuxAliOS) {
-      Seq[Array[AnyRef]](
-        Array(PartialAggOn, LocalGlobalOff, HEAP_BACKEND),
-        Array(PartialAggOn, LocalGlobalOn, HEAP_BACKEND),
-        Array(PartialAggOn, LocalGlobalOff, NIAGARA_BACKEND),
-        Array(PartialAggOn, LocalGlobalOn, NIAGARA_BACKEND))
-    } else {
-      Seq[Array[AnyRef]](
-        Array(PartialAggOn, LocalGlobalOff, HEAP_BACKEND),
-        Array(PartialAggOn, LocalGlobalOn, HEAP_BACKEND))
-    }
+    Seq[Array[AnyRef]](
+      Array(PartialAggOn, LocalGlobalOff, HEAP_BACKEND),
+      Array(PartialAggOn, LocalGlobalOn, HEAP_BACKEND),
+      Array(PartialAggOn, LocalGlobalOff, ROCKSDB_BACKEND),
+      Array(PartialAggOn, LocalGlobalOn, ROCKSDB_BACKEND))
   }
 }

@@ -22,21 +22,17 @@ import java.lang.{Boolean => JBoolean}
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, Types, ValidationException}
+import org.apache.flink.table.api.{Types, ValidationException}
 import org.apache.flink.table.expressions.utils.{Func18, RichFunc2}
 import org.apache.flink.table.runtime.utils.{StreamTestData, _}
 import org.apache.flink.table.util._
-import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.Test
 
 import scala.collection.mutable
 
-class CorrelateITCase extends AbstractTestBase {
-
-  val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-  val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
+class CorrelateITCase extends StreamingTestBase {
 
   @Test
   def testCrossJoin(): Unit = {

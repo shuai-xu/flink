@@ -22,9 +22,12 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.SortedMapSerializer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.dataview.SortedMapView;
+import org.apache.flink.table.util.StateUtil;
 
 import org.apache.flink.shaded.guava18.com.google.common.primitives.UnsignedBytes;
 
@@ -85,26 +88,27 @@ public class SortedMapViewTypeInfo<K, V> extends TypeInformation<SortedMapView<K
 
 	@Override
 	public TypeSerializer<SortedMapView<K, V>> createSerializer(ExecutionConfig config) {
-
 		if (nullSerializer) {
 			return (TypeSerializer) new NullSerializer();
+		}
+
+		Comparator<K> keyComparaotr = comparator != null ? comparator : new SortedMapViewTypeInfo.ComparableComparator();
+		if (config.getGlobalJobParameters() != null) {
+			Configuration parameters = new Configuration();
+			parameters.addAll(config.getGlobalJobParameters().toMap());
+			if (!parameters.getBoolean(StateUtil.STATE_BACKEND_ON_HEAP, true)) {
+				keyComparaotr = (Comparator<K>) BytewiseComparator.BYTE_INSTANCE;
+			}
 		}
 
 		TypeSerializer<K> keySer = keyType.createSerializer(config);
 
 		TypeSerializer<V> valueSer = valueType.createSerializer(config);
 
-		if (comparator != null) {
-			return new SortedMapViewSerializer<K, V>(new SortedMapSerializer<K, V>(
-					comparator,
-					keySer,
-					valueSer));
-		} else {
-			return new SortedMapViewSerializer<K, V>(new SortedMapSerializer<K, V>(
-					new SortedMapViewTypeInfo.ComparableComparator(),
-					keySer,
-					valueSer));
-		}
+		return new SortedMapViewSerializer<K, V>(new SortedMapSerializer<K, V>(
+			keyComparaotr,
+			keySer,
+			valueSer));
 	}
 
 	@Override

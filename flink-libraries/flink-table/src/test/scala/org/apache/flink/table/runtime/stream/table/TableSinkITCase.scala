@@ -23,29 +23,22 @@ import java.util.TimeZone
 
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.StreamTestData
+import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSinkUtil
-import org.apache.flink.test.util.{AbstractTestBase, TestBaseUtils}
+import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class TableSinkITCase extends AbstractTestBase {
+class TableSinkITCase extends StreamingTestBase {
 
   TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
   @Test
   def testInsertIntoRegisteredTableSink(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     MemoryTableSinkUtil.clear
 
     val input = StreamTestData.get3TupleDataStream(env)
@@ -76,12 +69,6 @@ class TableSinkITCase extends AbstractTestBase {
     val tmpFile = File.createTempFile("flink-table-sink-test", ".tmp")
     tmpFile.deleteOnExit()
     val path = tmpFile.toURI.toString
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-    env.setParallelism(4)
 
     val input = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._2)

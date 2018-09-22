@@ -33,7 +33,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.ScalarFunction
-import org.apache.flink.table.runtime.utils.TestingAppendSink
+import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink}
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.FlinkRelOptUtil
 import org.apache.flink.table.util.MemoryTableSinkUtil
@@ -46,13 +46,15 @@ import scala.collection.mutable
 /**
   * Just for blink
   */
-class BuiltinScalarFunctionITCase {
+class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
   val tab: String = org.apache.commons.lang3.StringEscapeUtils.unescapeJava("\t")
 
   var origTimeZone = TimeZone.getDefault
+
   @Before
-  def before(): Unit = {
+  override def before(): Unit = {
+    super.before()
     origTimeZone = TimeZone.getDefault
     TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
   }
@@ -79,10 +81,6 @@ class BuiltinScalarFunctionITCase {
     data.+=((4, "[10, 20, [30, 40]]", null))
     data.+=((5, null, "$[2][*]"))
     data.+=((6, "{xx]", "$[2][*]"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val sqlQuery = "SELECT id, json_value(json, path) FROM T1"
 
@@ -111,11 +109,6 @@ class BuiltinScalarFunctionITCase {
     data.+=((1, 10, 100))
     data.+=((2, 2, 8))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT id, log(base, x), log(2), log(10.0, 100.0) FROM T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'id, 'base, 'x, 'proctime.proctime)
@@ -137,11 +130,6 @@ class BuiltinScalarFunctionITCase {
     data.+=((1, 10, 100))
     data.+=((2, 2, 8))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT id, ln(x), ln(e()) FROM T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'id, 'base, 'x, 'proctime.proctime)
@@ -162,11 +150,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Int, Int)]
     data.+=((1, 100))
     data.+=((2, 10))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT id, log10(x) FROM T1"
 
@@ -190,11 +173,6 @@ class BuiltinScalarFunctionITCase {
     data.+=((1, 8))
     data.+=((2, 2))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT id, log2(x) FROM T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'id, 'x, 'proctime.proctime)
@@ -214,11 +192,6 @@ class BuiltinScalarFunctionITCase {
   def testE(): Unit = {
     val data = new mutable.MutableList[(Int, Int)]
     data.+=((1, 8))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT id, e(), E() FROM T1"
 
@@ -240,11 +213,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Int, Int)]
     data.+=((1, 8))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT id, PI() FROM T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'id, 'x, 'proctime.proctime)
@@ -264,10 +232,6 @@ class BuiltinScalarFunctionITCase {
   def testRand(): Unit = {
     val data = new mutable.MutableList[(Int, Int)]
     data.+=((1, 8))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val random1 = new java.util.Random(1)
     val random3 = new java.util.Random(3)
@@ -291,12 +255,7 @@ class BuiltinScalarFunctionITCase {
   def testRound(): Unit = {
     val data = new mutable.MutableList[(Double, Int)]
     data.+=((0.5, 1))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     val a: String = ""
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "round(125.315), " +
       "round(-125.315, 2), " +
@@ -323,11 +282,6 @@ class BuiltinScalarFunctionITCase {
       String, String, String, String)]
     data.+=(("1", "123", "2", "11.4445", "3", "asd", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT IS_DECIMAL(a),IS_DECIMAL(b),IS_DECIMAL(c)," +
       "IS_DECIMAL(d),IS_DECIMAL(e),IS_DECIMAL(f),IS_DECIMAL(g) from T1"
 
@@ -350,11 +304,6 @@ class BuiltinScalarFunctionITCase {
       String, String, String, String)]
     data.+=(("1", "123", "2", "11.4445", "3", "asd", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT IS_DIGIT(a),IS_DIGIT(b),IS_DIGIT(c)," +
       "IS_DIGIT(d),IS_DIGIT(e),IS_DIGIT(f),IS_DIGIT(g) from T1"
 
@@ -376,11 +325,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String, String,
       String, String, String, String)]
     data.+=(("1", "123", "2", "11.4445", "3", "asd", null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT IS_ALPHA(a),IS_ALPHA(b),IS_ALPHA(c)," +
       "IS_ALPHA(d),IS_ALPHA(e),IS_ALPHA(f),IS_ALPHA(g) from T1"
@@ -405,11 +349,6 @@ class BuiltinScalarFunctionITCase {
     data.+=((1, 2, "Jack", null)) //"Jack"
     data.+=((1, 2, null, "Harry")) //null
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT IF(int1 < int2, str1, str2) from T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'int1, 'int2, 'str1, 'str2, 'proctime.proctime)
@@ -429,11 +368,6 @@ class BuiltinScalarFunctionITCase {
   def testPower(): Unit = {
     val data = new mutable.MutableList[(Double, Int, Long)]
     data.+=((3.51, 2, 3))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "power(double1, double1), " +
@@ -462,12 +396,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("Hello", "My", "World")) //"HelloMyWorld"
     data.+=(("Hello", null, "World")) //"HelloWorld"
     data.+=((null, null, "World")) //"World"
-
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT CONCAT(str1, str2, str3) from T1"
 
@@ -516,11 +444,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("Hello", null, "World"))
     data.+=((null, null, "World"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT CONCAT(str1, str2, str3) from T1"
 
     tEnv.registerFunction("CONCAT", Concat)
@@ -546,12 +469,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("|", "Jack", null, null))//"Jack"
     data.+=((null, "Jack", "Harry", "John"))//"JackHarryJohn"
     data.+=(("|", "Jack", "Harry", "John"))//"Jack|Harry|John"
-
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT CONCAT_WS(sep , str1, str2, str3) from T1"
 
@@ -604,11 +521,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Int, Int, Byte, Short, Long)]
     data.+= ((333, 255, 97.toByte, 65.toShort, 66L))//"ÿ","a","A", "B"
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT CHR(int1), CHR(int2),CHR(byte1),CHR(short1),CHR(long1) from T1"
 
     val t1 = env.fromCollection(data).toTable(
@@ -638,11 +550,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("asd", 4, ""))
     data.+=(("c", 2, null))
     data.+=((null, 2, "C"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT str,len,pad,LPAD(str, len, pad) as `result` from T1"
 
@@ -685,11 +592,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("c", 2, null))
     data.+=((null, 2, "C"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT str,len,pad,RPAD(str, len, pad) as `result` from T1"
 
     val t1 = env.fromCollection(data)
@@ -725,11 +627,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("J", 9))//"JJJJJJJJJ"
     data.+=((null, 9))//null
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT REPEAT(str,n) from T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'str, 'n, 'proctime.proctime)
@@ -750,11 +647,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String, String, String)]
     data.+=(("iPhoneX", "Alibaba", "World", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT REVERSE(str1),REVERSE(str2),REVERSE(str3),REVERSE(str4) from T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'str1, 'str2, 'str3, 'str4, 'proctime.proctime)
@@ -774,11 +666,6 @@ class BuiltinScalarFunctionITCase {
   def testReplace(): Unit = {
     val data = new mutable.MutableList[(String, String, String, String)]
     data.+=(("hello", "hello world", ".World", null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT REPLACE(str1, 'e', 'o'), " +
       "REPLACE(str2, ' ', 'X')," +
@@ -806,11 +693,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("Jack,John,Mary", null, 0))//null
     data.+=((null, ",", 0))//null
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT SPLIT_INDEX(str, sep, index) from T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'str, 'sep, 'index, 'proctime.proctime)
@@ -836,11 +718,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("2014-03-13","-", null))
     data.+=(("2014-03-13",null, ""))
     data.+=((null,"-", ""))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT str1, pattern1, replace1, " +
       "REGEXP_REPLACE(str1, pattern1, replace1) as `result` from T1"
@@ -878,11 +755,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("foothebar", null, 2))
     data.+=((null, "foo(.*?)(bar)", 2))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "str1, pattern1, index1, " +
       "REGEXP_EXTRACT(str1, pattern1, index1) as `result` from T1"
@@ -919,12 +791,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("k1=v1;k2=v2", ";", "=", "k2"))
     data.+=((null, "|", ":", "k3"))
 
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT str,split1,split2,key1," +
       "KEYVALUE(str, split1, split2, key1) as `result` from T1"
 
@@ -954,11 +820,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String, String, String)]
     data.+=(("k1:v1|k2:v2", null, ":", "k3"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT str,split1,split2,key1," +
       "case when keyvalue('' , ',' , '=' , 'spm-cnt') = '0.0.0.0' then 'xx' end " +
       " from T1"
@@ -986,11 +847,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("k1=v1;k2=v2", "k1:v1,k2:v2", null, true, 1, 2, 3L, 4.0f, 5.0,
       BigDecimal(1).bigDecimal, SqlDate.valueOf("2017-11-10"), SqlTime.valueOf("22:23:24"),
       SqlTimestamp.valueOf("2017-10-15 00:00:00"), "hello world".getBytes))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery =
       s"""
@@ -1026,11 +882,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=(("k1=v1;k2=v2", "k1:v1,k2:v2", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT MD5(str1), MD5(str2, 'utf8')," +
       "MD5(nullstr, 'utf8'),MD5(str2, nullstr) from T1"
 
@@ -1057,11 +908,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("k1=v1;k2=v2", "k2*"))
     data.+=((null, "k3"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT str1,pattern1," +
       "REGEXP(str1, pattern1) as `result` from T1"
 
@@ -1087,12 +933,7 @@ class BuiltinScalarFunctionITCase {
   @Test
   def testParseUrl(): Unit = {
     val data = new mutable.MutableList[(String, String)]
-    data.+=(
-      ("http://facebook.com/path/p1.php?query=1", null))
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
+    data.+=(("http://facebook.com/path/p1.php?query=1", null))
 
     val sqlQuery = "SELECT " +
       "PARSE_URL(url1, 'QUERY', 'query'), " +
@@ -1141,9 +982,7 @@ class BuiltinScalarFunctionITCase {
       2, 0.toLong, "你好".getBytes,
       0, SqlDate.valueOf("2017-11-10"), SqlTimestamp.valueOf("2017-10-15 00:00:00")))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'str1, 'byte1, 'short1, 'int1,
       'long1, 'byteArray1, 'double1, 'date1, 'timestamp1, 'proctime.proctime)
@@ -1215,11 +1054,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((2000, null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT NOW(), NOW(a) from T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'nullstr, 'proctime.proctime)
@@ -1242,11 +1076,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("2017-09-15",
               SqlDate.valueOf("2017-11-10"),
               SqlTimestamp.valueOf("2017-10-15 00:00:00")))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "WEEK(TIMESTAMP '2017-09-15 00:00:00'), " +
@@ -1272,11 +1101,6 @@ class BuiltinScalarFunctionITCase {
   def testDateFormat(): Unit = {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=(("0915-2017", "2017-09-15 1:00:00", null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "DATE_FORMAT(TIMESTAMP '2017-09-15 23:00:00', 'yyMMdd HH:mm:ss'), " +
@@ -1307,11 +1131,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=(("0915-2017", "2017-09-15 00:00:00", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "UNIX_TIMESTAMP(datetime1)," +
       "UNIX_TIMESTAMP(nullstr)," +
@@ -1341,10 +1160,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=(("0915-2017", "2017-09-15 00:00:00", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT " +
       "UNIX_TIMESTAMP()," +
       "date1" +
@@ -1371,11 +1186,6 @@ class BuiltinScalarFunctionITCase {
   def testFromUnixTime(): Unit = {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1505404000, null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "FROM_UNIXTIME(unixtime1), " +
@@ -1410,11 +1220,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(
       ("2017-10-15 00:00:00", "2017-09-15 00:00:00", null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "DATEDIFF(datetime1, datetime2), " +
       "DATEDIFF(TIMESTAMP '2017-10-15 23:00:00',datetime2), " +
@@ -1448,12 +1253,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(String, String)]
     data.+=(("2017-10-15", null))
 
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "DATE_SUB(date1, 30), " +
       "DATE_SUB(TIMESTAMP '2017-10-15 23:00:00',30), " +
@@ -1479,11 +1278,6 @@ class BuiltinScalarFunctionITCase {
   def testDateAdd(): Unit = {
     val data = new mutable.MutableList[(String, String)]
     data.+=(("2017-09-15 00:00:00", null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "DATE_ADD(datetime1, 30), " +
@@ -1513,11 +1307,6 @@ class BuiltinScalarFunctionITCase {
         SqlDate.valueOf("2017-11-10"),
         SqlTimestamp.valueOf("2017-10-15 00:00:00"))
     )
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "YEAR(TIMESTAMP '2016-09-15 00:00:00'), " +
@@ -1552,11 +1341,6 @@ class BuiltinScalarFunctionITCase {
         SqlTimestamp.valueOf("2017-10-15 00:00:00"))
     )
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "MONTH(TIMESTAMP '2016-09-15 00:00:00'), " +
       "MONTH(DATE '2017-09-22'), " +
@@ -1590,11 +1374,6 @@ class BuiltinScalarFunctionITCase {
         SqlTimestamp.valueOf("2017-10-15 00:00:00"))
     )
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "DAYOFMONTH(TIMESTAMP '2016-09-15 00:00:00'), " +
       "DAYOFMONTH(DATE '2017-09-22'), " +
@@ -1625,11 +1404,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("2017-10-15 11:12:13", "22:23:24", null,
       SqlTime.valueOf("22:23:24"),
       SqlTimestamp.valueOf("2017-10-15 11:12:13")))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "HOUR(TIMESTAMP '2016-09-20 23:33:33')," +
@@ -1662,11 +1436,6 @@ class BuiltinScalarFunctionITCase {
       SqlTime.valueOf("22:23:24"),
       SqlTimestamp.valueOf("2017-10-15 11:12:13")))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "MINUTE(TIMESTAMP '2016-09-20 23:33:33')," +
       "MINUTE(TIME '23:30:33'), " +
@@ -1697,11 +1466,6 @@ class BuiltinScalarFunctionITCase {
     data.+=(("2017-10-15 11:12:13", "22:23:24", null,
       SqlTime.valueOf("22:23:24"),
       SqlTimestamp.valueOf("2017-10-15 11:12:13")))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "SECOND(TIMESTAMP '2016-09-20 23:33:33')," +
@@ -1734,11 +1498,6 @@ class BuiltinScalarFunctionITCase {
     data.+=((3, 0L))
     data.+=((4, 10000000000L))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT id, bin(x) FROM T1"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'id, 'x, 'proctime.proctime)
@@ -1758,11 +1517,6 @@ class BuiltinScalarFunctionITCase {
   def testBitOperator(): Unit = {
     val data = new mutable.MutableList[(Int, Int, Long, Long)]
     data.+=((1, 1, 2L, 2L))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "bitand(a, b), bitand(c, d), " +
@@ -1795,11 +1549,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Int, Int, Int, Int)]
     data.+=((1, 2, 2, 1))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "a / b, DIV(a, b), " +
       "c / d, DIV(c, d)" +
@@ -1821,10 +1570,6 @@ class BuiltinScalarFunctionITCase {
 
   @Test
   def testToBase64(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val data = new mutable.MutableList[(Int, Long, Array[Byte])]
     data.+=((3, 2L, "Hello world".getBytes))
     data.+=((1, 1L, "Hi".getBytes))
@@ -1848,10 +1593,6 @@ class BuiltinScalarFunctionITCase {
 
   @Test
   def testFromBase64Null(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val data = new mutable.MutableList[(Int, Long, String)]
     data.+=((1, 1L, null))
 
@@ -1873,10 +1614,6 @@ class BuiltinScalarFunctionITCase {
 
   @Test
   def testIfBinary(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
       Types.INT,
       Types.PRIMITIVE_ARRAY(Types.BYTE),
@@ -1909,10 +1646,6 @@ class BuiltinScalarFunctionITCase {
 
   @Test
   def testUUID(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val data = new mutable.MutableList[(Int, Array[Byte], Array[Byte])]
     data.+=((1, "Hello".getBytes, "Hi".getBytes))
 
@@ -1934,10 +1667,6 @@ class BuiltinScalarFunctionITCase {
 
   @Test
   def testUUIDWithBytes(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val b = "Hi".getBytes
     val md5: MessageDigest = MessageDigest.getInstance("MD5")
     md5.update(b, 0, b.length)
@@ -1967,14 +1696,9 @@ class BuiltinScalarFunctionITCase {
 
   @Test
   def testCardinality(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val data = new mutable.MutableList[(Int, Array[Int])]
     data.+=((1, Array(1, 2, 3)))
     val ds = env.fromCollection(data)
-
 
     val t = ds.toTable(tEnv, 'a, 'b, 'proctime.proctime)
     tEnv.registerTable("T1", t)
@@ -1994,11 +1718,6 @@ class BuiltinScalarFunctionITCase {
   def testSubString(): Unit = {
     val data = new mutable.MutableList[(String, String)]
     data.+=(("k1=v1;k2=v2", null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "SUBSTRING('', 222222222)," +
@@ -2030,11 +1749,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Int, String, String)]
     data.+=((100, "2017-09-15", "2017/09/15"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "TO_DATE(date1), " +
       "TO_DATE(date2), " +
@@ -2059,11 +1773,6 @@ class BuiltinScalarFunctionITCase {
   def testToTimestamp(): Unit = {
     val data = new mutable.MutableList[(Long, String, String)]
     data.+=((1513135677000L, "2017-09-15 00:00:00", "20170915000000"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val sqlQuery = "SELECT " +
       "TO_TIMESTAMP(timestamp1), " +
@@ -2090,11 +1799,6 @@ class BuiltinScalarFunctionITCase {
     val data = new mutable.MutableList[(Long, String)]
     data.+=((1513135677000L, "2017-09-15 00:00:00"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-
     val sqlQuery = "SELECT " +
       "FROM_TIMESTAMP(TO_TIMESTAMP(timestamp1)), " +
       "FROM_TIMESTAMP(TO_TIMESTAMP(timestamp2)) " +
@@ -2118,11 +1822,6 @@ class BuiltinScalarFunctionITCase {
   def testLiteral(): Unit = {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=((null, null, null))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val udf0 = new LiteralUDF("\"\\")
     val udf1 = new LiteralUDF("\u0001xyz")
@@ -2153,10 +1852,6 @@ class BuiltinScalarFunctionITCase {
   def testStringToMap(): Unit = {
     val data = new mutable.MutableList[(String, String)]
     data.+=(("k1=v1,k2=v2,k3=v3", "test1:1;test2:2;test3:3"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b)
     tEnv.registerTable("T1", t1)
@@ -2191,10 +1886,6 @@ class BuiltinScalarFunctionITCase {
   def testStrToMapWithNull: Unit = {
     val data = new mutable.MutableList[(String, String)]
     data.+=((null, ""))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b)
     tEnv.registerTable("T1", t1)

@@ -18,18 +18,18 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.functions.tablefunctions.StringSplit
-import org.apache.flink.table.runtime.utils.{TestingAppendSink, TestingAppendTableSink, TestingUpsertSink, TestingUpsertTableSink}
+import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink, TestingAppendTableSink, TestingUpsertTableSink}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 import scala.collection.mutable
 
-class CorrelateITCase {
+class CorrelateITCase extends StreamingTestBase {
 
   @Test
   // BLINK-13614111: Fix IndexOutOfBoundsException when UDTF is used on the
@@ -44,9 +44,6 @@ class CorrelateITCase {
       (1, "abc-bcd"),
       (1, "hhh"),
       (1, "xxx"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
@@ -82,9 +79,6 @@ class CorrelateITCase {
     val data = new mutable.MutableList[(String, String, String)]
     data.+=(("1", "1,L", "A,B"))
     data.+=(("2", "2,L", "B,C"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t)
@@ -124,9 +118,6 @@ class CorrelateITCase {
       (1, 2, "2018-06-01"),
       (1, 2, "2018-06-02"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
 
@@ -153,9 +144,6 @@ class CorrelateITCase {
       (1, 2, ""),
       (1, 3, ""))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
 
@@ -175,9 +163,6 @@ class CorrelateITCase {
       (1, 2, "3018-06-10|2018-06-03"),
       (1, 2, "2018-06-01"),
       (1, 2, "2018-06-02"))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
@@ -199,9 +184,6 @@ class CorrelateITCase {
       (1, 2, "2018-06-01"),
       (1, 2, "2018-06-02"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
 
@@ -221,9 +203,6 @@ class CorrelateITCase {
       (1, 2, "a"),
       (1, 3, ""))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
 
@@ -242,9 +221,6 @@ class CorrelateITCase {
     val data = List(
       (1, 2, ""),
       (1, 3, ""))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
@@ -266,9 +242,6 @@ class CorrelateITCase {
       (1, 2, "a"),
       (1, 3, ""))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)
 
@@ -287,9 +260,6 @@ class CorrelateITCase {
     val data = List(
       (1, 2, ""),
       (1, 3, ""))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T1", t1)

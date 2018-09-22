@@ -21,11 +21,12 @@ import java.math.BigDecimal
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
+import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{ConcatDistinctAggFunction, WeightedAvg}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.runtime.utils.TimeTestUtil.TimestampAndWatermarkWithOffset
+import org.apache.flink.table.runtime.utils.TimeTestUtil.{EventTimeSourceFunction, TimestampAndWatermarkWithOffset}
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
@@ -277,4 +278,45 @@ class GroupWindowITCase(mode: StateBackendMode)
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+
+  @Test
+  def testHopStartEndWithHaving(): Unit = {
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+
+    val sqlQueryHopStartEndWithHaving =
+      """
+        |SELECT
+        |  c AS k,
+        |  COUNT(a) AS v,
+        |  HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE) AS windowStart,
+        |  HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE) AS windowEnd
+        |FROM T1
+        |GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE), c
+        |HAVING
+        |  SUM(b) > 1 AND
+        |    QUARTER(HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE)) = 1
+      """.stripMargin
+    val data = Seq(
+      Left(14000005L, (1, 1L, "Hi")),
+      Left(14000000L, (2, 1L, "Hello")),
+      Left(14000002L, (3, 1L, "Hello")),
+      Right(14000010L),
+      Left(8640000000L, (4, 1L, "Hello")), // data for the quarter to validate having filter
+      Left(8640000001L, (4, 1L, "Hello")),
+      Right(8640000010L)
+    )
+    val t1 = env.addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
+             .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+    tEnv.registerTable("T1", t1)
+    val resultHopStartEndWithHaving = tEnv
+                                      .sqlQuery(sqlQueryHopStartEndWithHaving)
+                                      .toAppendStream[Row]
+    val sink = new TestingAppendSink
+    resultHopStartEndWithHaving.addSink(sink)
+    env.execute()
+    val expected = List(
+      "Hello,2,1970-01-01 03:53:00.0,1970-01-01 03:54:00.0"
+    )
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
 }

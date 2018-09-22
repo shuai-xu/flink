@@ -27,9 +27,7 @@ import org.apache.flink.table.runtime.utils.TestingAppendSink
 import org.apache.flink.types.Row
 import org.junit.Test
 
-
-class UserDefinedFunctionDebugTest {
-
+class UserDefinedFunctionDebugITCase {
 
   val data = List(
     (1L, 1, "Hi"),

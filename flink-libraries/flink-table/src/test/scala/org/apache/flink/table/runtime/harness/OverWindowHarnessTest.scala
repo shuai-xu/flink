@@ -64,7 +64,7 @@ class OverWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode
       new StreamQueryConfig().withIdleStateRetentionTime(Time.seconds(2), Time.seconds(3))
     val testHarness = createHarnessTester(t1.toAppendStream[Row](queryConfig), "over")
     val assertor = new BaseRowHarnessAssertor(
-      Array(Types.LONG, Types.STRING, Types.LONG, Types.LONG, Types.LONG))
+      Array(Types.LONG, Types.STRING, Types.LONG, Types.LONG, Types.LONG, Types.LONG))
 
     testHarness.open()
 

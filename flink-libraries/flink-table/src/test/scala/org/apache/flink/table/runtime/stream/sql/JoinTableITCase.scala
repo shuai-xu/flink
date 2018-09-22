@@ -29,22 +29,24 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
+import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.utils.{TestingAppendSink, TestingRetractSink}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.runtime.utils.{StreamingTestBase, StreamingWithStateTestBase, TestingAppendSink, TestingRetractSink}
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
-class JoinDimensionTableITCase extends AbstractTestBase {
+class JoinDimensionTableITCase extends StreamingTestBase {
 
   val data = List(
     (1, 12, "Julian"),
@@ -61,9 +63,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -88,8 +87,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableOnNullableKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
       BasicTypeInfo.INT_TYPE_INFO,
@@ -117,9 +114,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableWithPushDown(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -143,9 +137,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableWithNonEqualFilter(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -169,9 +160,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableOnMultiFields(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -195,9 +183,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableOnMultiKeyFields(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -221,9 +206,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableOnMultiKeyFields2(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -248,38 +230,7 @@ class JoinDimensionTableITCase extends AbstractTestBase {
   }
 
   @Test
-  def testAsyncJoinTemporalTableOnMultiKeyFields(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    // pk is (id: Int, name: String)
-    val dim = new TestDimensionTableSource2(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    // test left table's join key define order diffs from right's
-    val sql = "SELECT t1.id, t1.len, D.name FROM (select content, id, len FROM T) t1 JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON t1.content = D.name AND t1.id = D.id"
-
-    val sink = new TestingAppendSink
-    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "1,12,Julian",
-      "3,15,Fabian")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
   def testJoinTemporalTableOnMultiKeyFieldsWithConstantKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -301,9 +252,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableOnMultiKeyFieldsWithStringConstantKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -325,9 +273,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testJoinTemporalTableOnMultiConstantKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -355,9 +300,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testLeftJoinTemporalTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -384,8 +326,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
 
   @Test
   def testLeftJoinTemporalTableOnNullableKey(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
       BasicTypeInfo.INT_TYPE_INFO,
@@ -415,9 +355,6 @@ class JoinDimensionTableITCase extends AbstractTestBase {
   }
   @Test
   def testLeftJoinTemporalTableOnMultKeyFields(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
     tEnv.registerTable("T", streamTable)
@@ -442,204 +379,9 @@ class JoinDimensionTableITCase extends AbstractTestBase {
     assertEquals(0, dim.getFetcherResourceCount())
   }
 
-  @Test
-  def testAsyncJoinTemporalTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    val sql = "SELECT T.id, T.len, T.content, D.name FROM T JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON T.id = D.id"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "1,12,Julian,Julian",
-      "2,15,Hello,Jark",
-      "3,15,Fabian,Fabian")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
-  def testAsyncJoinTemporalTableWithPushDown(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-    env.getConfig.enableObjectReuse()
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    val sql = "SELECT T.id, T.len, T.content, D.name FROM T JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON T.id = D.id AND D.age > 20"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "2,15,Hello,Jark",
-      "3,15,Fabian,Fabian")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
-  def testAsyncJoinTemporalTableWithNonEqualFilter(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    val sql = "SELECT T.id, T.len, T.content, D.name, D.age FROM T JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON T.id = D.id WHERE T.len <= D.age"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "2,15,Hello,Jark,22",
-      "3,15,Fabian,Fabian,33")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
-  def testAsyncLeftJoinTemporalTableWithLocalPredicate(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    val sql = "SELECT T.id, T.len, T.content, D.name, D.age FROM T LEFT JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON T.id = D.id " +
-      "AND T.len > 1 AND D.age > 20 AND D.name = 'Fabian' " +
-      "WHERE T.id > 1"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "2,15,Hello,null,null",
-      "3,15,Fabian,Fabian,33",
-      "8,11,Hello world,null,null",
-      "9,12,Hello world!,null,null")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
-  def testAsyncJoinTemporalTableOnMultiFields(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    val sql = "SELECT T.id, T.len, D.name FROM T JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON T.id = D.id AND T.content = D.name"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "1,12,Julian",
-      "3,15,Fabian")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
-  def testAsyncJoinTemporalTableOnMultiFieldsWithUdf(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-    tEnv.registerFunction("mod1", TestMod)
-    tEnv.registerFunction("wrapper1", TestWrapperUdf)
-
-    val sql = "SELECT T.id, T.len, wrapper1(D.name) as name FROM T JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D " +
-      "ON mod1(T.id, 4) = D.id AND T.content = D.name"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "1,12,Julian",
-      "3,15,Fabian")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
-
-  @Test
-  def testAsyncLeftJoinTemporalTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
-    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    tEnv.registerTable("T", streamTable)
-
-    val dim = new TestDimensionTableSource(true)
-    tEnv.registerTableSource("csvdim", dim)
-
-    val sql = "SELECT T.id, T.len, D.name, D.age FROM T LEFT JOIN csvdim " +
-      "for system_time as of PROCTIME() AS D ON T.id = D.id"
-
-    val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = Seq(
-      "1,12,Julian,11",
-      "2,15,Jark,22",
-      "3,15,Fabian,33",
-      "8,11,null,null",
-      "9,12,null,null")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
-  }
 
   @Test
   def testCollectOnNestedJoinDimTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val data = List(
       (1, 1, (12, "45.6")),
       (2, 2, (12, "45.612")),
@@ -688,72 +430,220 @@ class JoinDimensionTableITCase extends AbstractTestBase {
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  class TestDimensionTableSource2(async: Boolean = false)
-    extends TestDimensionTableSource(async) {
-
-    override def getIndexes: util.Collection[IndexKey] = {
-      Collections.singleton(IndexKey.of(true, 1, 2))   // primary key(id, name)
-    }
-
-    override def getLookupFunction(index: IndexKey): TestDoubleKeyFetcher = {
-      fetcher = new TestDoubleKeyFetcher(0, 1) // new key idx mapping to keysRow
-      fetcher
-    }
-
-    override def getAsyncLookupFunction(index: IndexKey): TestAsyncDoubleKeyFetcher = {
-      asyncFetcher = new TestAsyncDoubleKeyFetcher(0, 1) // new idx mapping to keysRow
-      asyncFetcher
-    }
-  }
-
-  class TestDimensionTableSource(async: Boolean = false) extends DimensionTableSource[BaseRow] {
-    var fetcher: TestDoubleKeyFetcher = null
-    var asyncFetcher: TestAsyncDoubleKeyFetcher = null
-
-    override def getReturnType: DataType =
-      DataTypes.internal(
-        new BaseRowTypeInfo(classOf[GenericRow],
-          Array(Types.INT, Types.INT, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],
-          Array( "age", "id", "name")))
-
-    override def getLookupFunction(index: IndexKey): TestDoubleKeyFetcher = {
-      fetcher = new TestSingleKeyFetcher(0)
-      fetcher
-    }
-
-    override def isTemporal: Boolean = true
-
-    override def isAsync: Boolean = async
-
-    override def getAsyncConfig: AsyncConfig = {
-      val conf = new AsyncConfig
-      conf.setTimeoutMs(10000)
-      conf
-    }
-
-    override def getAsyncLookupFunction(index: IndexKey): TestAsyncDoubleKeyFetcher = {
-      asyncFetcher = new TestAsyncSingleKeyFetcher(0)
-      asyncFetcher
-    }
-
-    override def getIndexes: util.Collection[IndexKey] = {
-      Collections.singleton(IndexKey.of(true, 1)) // primary key(id)
-    }
-
-    def getFetcherResourceCount(): Int = {
-      if (async && null != asyncFetcher) {
-        asyncFetcher.resourceCounter
-      } else if (null != fetcher) {
-        fetcher.resourceCounter
-      } else {
-        0
-      }
-    }
-
-    /** Returns the table schema of the table source */
-    override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
-  }
 }
+
+@RunWith(classOf[Parameterized])
+class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
+  extends StreamingWithStateTestBase(backend) {
+
+  val data = List(
+    (1, 12, "Julian"),
+    (2, 15, "Hello"),
+    (3, 15, "Fabian"),
+    (8, 11, "Hello world"),
+    (9, 12, "Hello world!"))
+
+  @Test
+  def testAsyncJoinTemporalTableOnMultiKeyFields(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    // pk is (id: Int, name: String)
+    val dim = new TestDimensionTableSource2(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    // test left table's join key define order diffs from right's
+    val sql = "SELECT t1.id, t1.len, D.name FROM (select content, id, len FROM T) t1 JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON t1.content = D.name AND t1.id = D.id"
+
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian",
+      "3,15,Fabian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncJoinTemporalTable(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, T.content, D.name FROM T JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian,Julian",
+      "2,15,Hello,Jark",
+      "3,15,Fabian,Fabian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncJoinTemporalTableWithPushDown(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, T.content, D.name FROM T JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id AND D.age > 20"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "2,15,Hello,Jark",
+      "3,15,Fabian,Fabian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncJoinTemporalTableWithNonEqualFilter(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, T.content, D.name, D.age FROM T JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id WHERE T.len <= D.age"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "2,15,Hello,Jark,22",
+      "3,15,Fabian,Fabian,33")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncLeftJoinTemporalTableWithLocalPredicate(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, T.content, D.name, D.age FROM T LEFT JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id " +
+      "AND T.len > 1 AND D.age > 20 AND D.name = 'Fabian' " +
+      "WHERE T.id > 1"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "2,15,Hello,null,null",
+      "3,15,Fabian,Fabian,33",
+      "8,11,Hello world,null,null",
+      "9,12,Hello world!,null,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncJoinTemporalTableOnMultiFields(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, D.name FROM T JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id AND T.content = D.name"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian",
+      "3,15,Fabian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncJoinTemporalTableOnMultiFieldsWithUdf(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+    tEnv.registerFunction("mod1", TestMod)
+    tEnv.registerFunction("wrapper1", TestWrapperUdf)
+
+    val sql = "SELECT T.id, T.len, wrapper1(D.name) as name FROM T JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D " +
+      "ON mod1(T.id, 4) = D.id AND T.content = D.name"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian",
+      "3,15,Fabian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testAsyncLeftJoinTemporalTable(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, D.name, D.age FROM T LEFT JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id"
+
+    val sink = new TestingAppendSink
+    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian,11",
+      "2,15,Jark,22",
+      "3,15,Fabian,33",
+      "8,11,null,null",
+      "9,12,null,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+}
+
+// ------------------------------- Utils ----------------------------------------------
+
 
 object TestWrapperUdf extends ScalarFunction {
   def eval(id: Int): Int = {
@@ -769,6 +659,73 @@ object TestMod extends ScalarFunction {
   def eval(src: Int, mod: Int): Int = {
     src % mod
   }
+}
+
+class TestDimensionTableSource2(async: Boolean = false)
+  extends TestDimensionTableSource(async) {
+
+  override def getIndexes: util.Collection[IndexKey] = {
+    Collections.singleton(IndexKey.of(true, 1, 2))   // primary key(id, name)
+  }
+
+  override def getLookupFunction(index: IndexKey): TestDoubleKeyFetcher = {
+    fetcher = new TestDoubleKeyFetcher(0, 1) // new key idx mapping to keysRow
+    fetcher
+  }
+
+  override def getAsyncLookupFunction(index: IndexKey): TestAsyncDoubleKeyFetcher = {
+    asyncFetcher = new TestAsyncDoubleKeyFetcher(0, 1) // new idx mapping to keysRow
+    asyncFetcher
+  }
+}
+
+class TestDimensionTableSource(async: Boolean = false) extends DimensionTableSource[BaseRow] {
+  var fetcher: TestDoubleKeyFetcher = null
+  var asyncFetcher: TestAsyncDoubleKeyFetcher = null
+
+  override def getReturnType: DataType =
+    DataTypes.internal(
+      new BaseRowTypeInfo(
+        classOf[GenericRow],
+        Array(Types.INT, Types.INT, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],
+        Array( "age", "id", "name")))
+
+  override def getLookupFunction(index: IndexKey): TestDoubleKeyFetcher = {
+    fetcher = new TestSingleKeyFetcher(0)
+    fetcher
+  }
+
+  override def isTemporal: Boolean = true
+
+  override def isAsync: Boolean = async
+
+  override def getAsyncConfig: AsyncConfig = {
+    val conf = new AsyncConfig
+    conf.setTimeoutMs(10000)
+    conf
+  }
+
+  override def getAsyncLookupFunction(index: IndexKey): TestAsyncDoubleKeyFetcher = {
+    asyncFetcher = new TestAsyncSingleKeyFetcher(0)
+    asyncFetcher
+  }
+
+  override def getIndexes: util.Collection[IndexKey] = {
+    Collections.singleton(IndexKey.of(true, 1)) // primary key(id)
+  }
+
+  def getFetcherResourceCount(): Int = {
+    if (async && null != asyncFetcher) {
+      asyncFetcher.resourceCounter
+    } else if (null != fetcher) {
+      fetcher.resourceCounter
+    } else {
+      0
+    }
+  }
+
+  /** Returns the table schema of the table source */
+  override def getTableSchema: TableSchema = TableSchema.fromDataType(getReturnType)
 }
 
 // lookup data table using id index
@@ -822,7 +779,8 @@ class TestDoubleKeyFetcher(idIndex: Int, nameIndex: Int)
   }
 }
 
-class TestAsyncSingleKeyFetcher(leftKeyIdx: Int) extends TestAsyncDoubleKeyFetcher(leftKeyIdx, 1) {
+class TestAsyncSingleKeyFetcher(leftKeyIdx: Int)
+  extends TestAsyncDoubleKeyFetcher(leftKeyIdx, 1) {
 
   override def asyncInvoke(keysRow: BaseRow, asyncCollector: ResultFuture[BaseRow]): Unit = {
     CompletableFuture

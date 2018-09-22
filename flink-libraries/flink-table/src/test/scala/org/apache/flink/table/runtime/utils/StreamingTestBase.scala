@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.util
+package org.apache.flink.table.runtime.utils
 
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala.StreamTableEnvironment
-import org.apache.flink.table.runtime.utils.StreamTestSink
 import org.apache.flink.test.util.AbstractTestBase
-import org.junit.Before
+import org.junit.{Before, Rule}
 import org.junit.rules.TemporaryFolder
 
 class StreamingTestBase extends AbstractTestBase {
@@ -32,13 +31,17 @@ class StreamingTestBase extends AbstractTestBase {
   var tEnv: StreamTableEnvironment = _
   val _tempFolder = new TemporaryFolder
 
+  @Rule
+  def tempFolder: TemporaryFolder = _tempFolder
+
   @Before
   def before(): Unit = {
     StreamTestSink.clear()
     this.env = StreamExecutionEnvironment.getExecutionEnvironment
     this.env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    // enable object reuse as default
-    this.env.getConfig.enableObjectReuse()
+    // TODO: enable object reuse as default in the future. Currently, the object reuse will reuse
+    // TODO: network input record, sql operators doesn't handle this
+    // this.env.getConfig.enableObjectReuse()
     this.tEnv = TableEnvironment.getTableEnvironment(env)
   }
 

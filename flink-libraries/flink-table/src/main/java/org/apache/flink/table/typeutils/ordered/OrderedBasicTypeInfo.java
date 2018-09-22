@@ -24,8 +24,10 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.BigIntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.typeutils.BinaryStringSerializer;
+import org.apache.flink.table.util.StateUtil;
 
 import java.math.BigInteger;
 import java.util.Objects;
@@ -145,6 +147,18 @@ public class OrderedBasicTypeInfo<T> extends TypeInformation<T> {
 
 	@Override
 	public TypeSerializer<T> createSerializer(ExecutionConfig config) {
+		if (config.getGlobalJobParameters() != null) {
+			Configuration parameters = new Configuration();
+			parameters.addAll(config.getGlobalJobParameters().toMap());
+			if (parameters.getBoolean(StateUtil.STATE_BACKEND_ON_HEAP, true)) {
+				// using heap statebackend
+				// use non-ordered serialization here when String/BinaryString/byte[]
+				if (heapSerializer != null) {
+					return this.heapSerializer;
+				}
+			}
+		}
+
 		return this.serializer;
 	}
 

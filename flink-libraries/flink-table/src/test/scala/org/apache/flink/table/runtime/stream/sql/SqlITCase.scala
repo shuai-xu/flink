@@ -23,12 +23,8 @@ import java.io.{ByteArrayOutputStream, PrintStream}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.{Func15, SplitUDF}
-import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSinkUtil
@@ -38,15 +34,11 @@ import org.junit._
 
 import scala.collection.mutable
 
-class SqlITCase {
+class SqlITCase extends StreamingTestBase {
 
    /** test row stream registered table **/
   @Test
   def testRowRegister(): Unit = {
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTableRow WHERE c < 3"
 
     val data = List(
@@ -75,10 +67,6 @@ class SqlITCase {
   /** test selection **/
   @Test
   def testSelectExpressionFromTable(): Unit = {
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT a * 2, b - 1 FROM MyTable"
 
     val t = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv).as('a, 'b, 'c)
@@ -95,10 +83,6 @@ class SqlITCase {
   /** test filtering with registered table **/
   @Test
   def testSimpleFilter(): Unit = {
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTable WHERE a = 3"
 
     val t = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv).as('a, 'b, 'c)
@@ -115,10 +99,6 @@ class SqlITCase {
   /** test filtering with registered datastream **/
   @Test
   def testDatastreamFilter(): Unit = {
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM MyTable WHERE _1 = 3"
 
     val t = StreamTestData.getSmall3TupleDataStream(env)
@@ -135,9 +115,6 @@ class SqlITCase {
   /** test union with registered tables **/
   @Test
   def testUnion(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM T1 " +
       "UNION ALL " +
       "SELECT * FROM T2"
@@ -161,9 +138,6 @@ class SqlITCase {
   /** test union with filter **/
   @Test
   def testUnionWithFilter(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT * FROM T1 WHERE a = 3 " +
       "UNION ALL " +
       "SELECT * FROM T2 WHERE a = 2"
@@ -186,9 +160,6 @@ class SqlITCase {
   /** test union of a table and a datastream **/
   @Test
   def testUnionTableWithDataSet(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT c FROM T1 WHERE a = 3 " +
       "UNION ALL " +
       "SELECT c FROM T2 WHERE a = 2"
@@ -206,15 +177,25 @@ class SqlITCase {
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+  /** test union of multiple inputs **/
+  @Test
+  def testUnionOfMultiInputs(): Unit = {
+    tEnv.queryConfig.enableValuesSourceInput
+
+    val sqlQuery = "select max(v) as x, min(v) as n from \n" +
+      "(values cast(-100 as double), cast(2 as double), cast(-86.4 as double)) as t(v)"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sqlQuery).toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = List("2.0,-100.0")
+    assertEquals(expected, sink.getRetractResults)
+  }
+
   @Test
   def testUnionWithDifferentType(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val data = List(
-      (1.toByte, "2")
-    )
+    val data = List((1.toByte, "2"))
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -235,9 +216,6 @@ class SqlITCase {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1, null))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(2)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -255,9 +233,6 @@ class SqlITCase {
   def testUnionWithDifferentTypeNullLeft(): Unit = {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1, null))
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(2)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -273,13 +248,7 @@ class SqlITCase {
 
   @Test
   def testIntersectWithDifferentType(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val data = List(
-      (1.toByte, "1")
-    )
+    val data = List((1.toByte, "1"))
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -299,9 +268,6 @@ class SqlITCase {
   def testIntersectWithDifferentTypeNullRight(): Unit = {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1, null))
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -319,9 +285,6 @@ class SqlITCase {
   def testIntersectWithDifferentTypeNullLeft(): Unit = {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1, null))
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -337,12 +300,7 @@ class SqlITCase {
 
   @Test
   def testExceptWithDifferentType(): Unit = {
-    val data = List(
-      (1.toByte, "2")
-    )
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val data = List((1.toByte, "2"))
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -362,9 +320,6 @@ class SqlITCase {
   def testExceptWithDifferentTypeNullRight(): Unit = {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1, null))
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -384,9 +339,6 @@ class SqlITCase {
   def testExceptWithDifferentTypeNullLeft(): Unit = {
     val data = new mutable.MutableList[(Int, String)]
     data.+=((1, null))
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env.fromCollection(data)
     tEnv.registerDataStream("T", stream, 'a, 'b)
 
@@ -404,9 +356,6 @@ class SqlITCase {
 
   @Test
   def testUnnestPrimitiveArrayFromTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val data = List(
       (1, Array(12, 45), Array(Array(12, 45))),
       (2, Array(41, 5), Array(Array(18), Array(87))),
@@ -434,9 +383,6 @@ class SqlITCase {
 
   @Test
   def testUnnestArrayOfArrayFromTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val data = List(
       (1, Array(12, 45), Array(Array(12, 45))),
       (2, Array(41, 5), Array(Array(18), Array(87))),
@@ -462,9 +408,6 @@ class SqlITCase {
 
   @Test
   def testUnnestObjectArrayFromTableWithFilter(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val data = List(
       (1, Array((12, "45.6"), (12, "45.612"))),
       (2, Array((13, "41.6"), (14, "45.2136"))),
@@ -487,9 +430,6 @@ class SqlITCase {
 
   @Test
   def testUnnestMultiSetFromCollectResult(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT b, COLLECT(a) as `set` FROM MyTable GROUP BY b"
 
     val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv).as('a, 'b, 'c)
@@ -514,9 +454,6 @@ class SqlITCase {
 
   @Test
   def testUnnestObjectMultiSetFromUnboundedGroupByCollectResult(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT b, COLLECT(c) as `set` FROM MyTable GROUP BY b"
     val data = List(
       (1, 1, (12, "45.6")),
@@ -556,9 +493,6 @@ class SqlITCase {
       (7, "7", "Hello World"),
       (7, "8", "Hello World"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT a, COLLECT(b) as `set` FROM MyTable GROUP BY a"
 
     val t = env.fromCollection(data).toTable(tEnv).as('a, 'b, 'c)
@@ -585,8 +519,6 @@ class SqlITCase {
 
   @Test
   def testInsertIntoMemoryTable(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     MemoryTableSinkUtil.clear
 
     val t = StreamTestData.getSmall3TupleDataStream(env)
@@ -613,9 +545,7 @@ class SqlITCase {
   @Ignore
   @Test
   def testPrintSink(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val t = StreamTestData.getSmall3TupleDataStream(env)
       .assignAscendingTimestamps(x => x._2)
@@ -647,9 +577,6 @@ class SqlITCase {
 
   @Test
   def testNotIn(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery =
       s"""
          |SELECT * FROM MyTable WHERE a not in (
@@ -683,10 +610,6 @@ class SqlITCase {
       ("x\u0001y", "y\"z", "z\\\"\u0004z")
     )
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val splitUDF0 = new SplitUDF(deterministic = true)
     val splitUDF1 = new SplitUDF(deterministic = false)
 
@@ -716,9 +639,6 @@ class SqlITCase {
 
   @Test
   def testUDFWithLongVarargs(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     tEnv.registerFunction("func15", Func15)
 
     val parameters = "c," + (0 until 255).map(_ => "a").mkString(",")
@@ -740,9 +660,6 @@ class SqlITCase {
 
   @Test
   def testUDTFWithLongVarargs(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     tEnv.registerFunction("udtf", new JavaUserDefinedTableFunctions.JavaTableFunc1)
 
     val parameters = (0 until 300).map(_ => "c").mkString(",")
@@ -760,51 +677,6 @@ class SqlITCase {
       "1,600",
       "2,1500",
       "3,3300")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-  }
-
-  @Test
-  def testHopStartEndWithHaving(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    env.setParallelism(1)
-
-    val sqlQueryHopStartEndWithHaving =
-      """
-        |SELECT
-        |  c AS k,
-        |  COUNT(a) AS v,
-        |  HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE) AS windowStart,
-        |  HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE) AS windowEnd
-        |FROM T1
-        |GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE), c
-        |HAVING
-        |  SUM(b) > 1 AND
-        |    QUARTER(HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE)) = 1
-      """.stripMargin
-    val data = Seq(
-      Left(14000005L, (1, 1L, "Hi")),
-      Left(14000000L, (2, 1L, "Hello")),
-      Left(14000002L, (3, 1L, "Hello")),
-      Right(14000010L),
-      Left(8640000000L, (4, 1L, "Hello")), // data for the quarter to validate having filter
-      Left(8640000001L, (4, 1L, "Hello")),
-      Right(8640000010L)
-    )
-    val t1 = env.addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
-    tEnv.registerTable("T1", t1)
-    val resultHopStartEndWithHaving = tEnv
-      .sqlQuery(sqlQueryHopStartEndWithHaving)
-      .toAppendStream[Row]
-    val sink = new TestingAppendSink
-    resultHopStartEndWithHaving.addSink(sink)
-    env.execute()
-    val expected = List(
-      "Hello,2,1970-01-01 03:53:00.0,1970-01-01 03:54:00.0"
-    )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 

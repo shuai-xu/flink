@@ -21,49 +21,39 @@ import java.util
 
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.configuration.CoreOptions
-import org.apache.flink.runtime.state.heap.HeapInternalStateBackend
-import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
+import org.apache.flink.configuration.{CheckpointingOptions, Configuration}
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
+import org.apache.flink.runtime.state.gemini.GeminiConfiguration
+import org.apache.flink.runtime.state.memory.MemoryStateBackend
+import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.functions.source.FromElementsFunction
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.TableEnvironment
-import org.apache.flink.table.api.scala.StreamTableEnvironment
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, NIAGARA_BACKEND, StateBackendMode}
-import org.apache.flink.test.util.AbstractTestBase
-import org.junit.rules.TemporaryFolder
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.junit.runners.Parameterized
-import org.junit.{After, Assert, Before, Rule}
+import org.junit.{After, Assert, Before}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class StreamingWithStateTestBase(state: StateBackendMode)
-  extends AbstractTestBase {
-
-  var env: StreamExecutionEnvironment = _
-  var tEnv: StreamTableEnvironment = _
-  val _tempFolder = new TemporaryFolder
-
-  @Rule
-  def tempFolder: TemporaryFolder = _tempFolder
+class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestBase {
 
   @Before
-  def before(): Unit = {
-    StreamTestSink.clear()
-    this.env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+  override def before(): Unit = {
+    super.before()
     // set state backend
-//    state match {
-//      case HEAP_BACKEND =>
-//        env.setConfiguration(CoreOptions.STATE_BACKEND_CLASSNAME,
-//          classOf[HeapInternalStateBackend].getCanonicalName)
-//
-//      case NIAGARA_BACKEND =>
-//        env.getConfiguration.setString(
-//          CoreOptions.STATE_BACKEND_CLASSNAME,
-//          classOf[NiagaraStateBackend].getCanonicalName)
-//    }
+    state match {
+      case HEAP_BACKEND =>
+        val conf = new Configuration()
+        conf.setBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS, true)
+        conf.setString(GeminiConfiguration.GEMINI_COPY_VALUE, "true")
+        env.setStateBackend(new MemoryStateBackend().configure(conf))
+      case ROCKSDB_BACKEND =>
+        env.setStateBackend(new RocksDBStateBackend(
+          "file://" + tempFolder.newFolder().getAbsoluteFile))
+    }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
+    FailingCollectionSource.failedBefore = true
   }
 
   @After
@@ -75,32 +65,24 @@ class StreamingWithStateTestBase(state: StateBackendMode)
     * Creates a DataStream from the given non-empty [[Seq]].
     */
   def failingDataSource[T: TypeInformation](data: Seq[T]): DataStream[T] = {
-    state match {
-      case NIAGARA_BACKEND =>
-        // TODO: introducing state recovery may cause NIAGARA core dump, see BLINK-15412517
-        // TODO: please revert this after BLINK-15412517 is fixed
-        FailingCollectionSource.failedBefore = true
-        env.fromCollection(data)
-      case _ =>
-        env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE)
-        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0))
-        // reset failedBefore flag to false
-        FailingCollectionSource.reset()
+    env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE)
+    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0))
+    // reset failedBefore flag to false
+    FailingCollectionSource.reset()
 
-        require(data != null, "Data must not be null.")
-        val typeInfo = implicitly[TypeInformation[T]]
+    require(data != null, "Data must not be null.")
+    val typeInfo = implicitly[TypeInformation[T]]
 
-        val collection = scala.collection.JavaConversions.asJavaCollection(data)
-        // must not have null elements and mixed elements
-        FromElementsFunction.checkCollection(data, typeInfo.getTypeClass)
+    val collection = scala.collection.JavaConversions.asJavaCollection(data)
+    // must not have null elements and mixed elements
+    FromElementsFunction.checkCollection(data, typeInfo.getTypeClass)
 
-        val function = new FailingCollectionSource[T](
-          typeInfo.createSerializer(env.getConfig),
-          collection,
-          data.length / 2) // fail after half elements
+    val function = new FailingCollectionSource[T](
+      typeInfo.createSerializer(env.getConfig),
+      collection,
+      data.length / 2) // fail after half elements
 
-        env.addSource(function)(typeInfo).setMaxParallelism(1)
-    }
+    env.addSource(function)(typeInfo).setMaxParallelism(1)
   }
 
   private def mapStrEquals(str1: String, str2: String): Boolean = {
@@ -204,18 +186,13 @@ object StreamingWithStateTestBase {
   }
 
   val HEAP_BACKEND = StateBackendMode("HEAP")
-  val NIAGARA_BACKEND = StateBackendMode("NIAGARA")
+  val ROCKSDB_BACKEND = StateBackendMode("ROCKSDB")
 
   @Parameterized.Parameters(name = "StateBackend={0}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    val isLinuxAliOS = System.getProperty("os.name").startsWith("Linux") &&
-      System.getProperty("os.version").contains("alios7")
+    // disable rocksdb currently
+//     Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
+    Seq[Array[AnyRef]](Array(HEAP_BACKEND))
 
-    if (isLinuxAliOS) {
-      Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(NIAGARA_BACKEND))
-    } else {
-      // if OS is not linux, only check heap state backend
-      Seq[Array[AnyRef]](Array(HEAP_BACKEND))
-    }
   }
 }

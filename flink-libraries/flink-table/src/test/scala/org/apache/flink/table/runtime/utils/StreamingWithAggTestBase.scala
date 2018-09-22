@@ -21,7 +21,7 @@ import java.util
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase._
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, NIAGARA_BACKEND, StateBackendMode}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn, MicroBatchOn}
 import org.junit.Before
 import org.junit.runners.Parameterized
@@ -57,28 +57,23 @@ object StreamingWithAggTestBase {
 
   @Parameterized.Parameters(name = "LocalGlobal={0}, {1}, StateBackend={2}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    val isLinuxAliOS = System.getProperty("os.name").startsWith("Linux") &&
-      System.getProperty("os.version").contains("alios7")
-
-    if (isLinuxAliOS) {
-      Seq[Array[AnyRef]](
-        Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
-        Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOff, MiniBatchOff, NIAGARA_BACKEND),
-        Array(LocalGlobalOff, MiniBatchOn, NIAGARA_BACKEND),
-        Array(LocalGlobalOn, MiniBatchOn, NIAGARA_BACKEND),
-        Array(LocalGlobalOff, MicroBatchOn, NIAGARA_BACKEND),
-        Array(LocalGlobalOn, MicroBatchOn, NIAGARA_BACKEND))
-    } else {
-      Seq[Array[AnyRef]](
-        Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
-        Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
-        Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND))
-    }
+    // disable rocksdb currently
+//    Seq[Array[AnyRef]](
+//      Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
+//      Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
+//      Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
+//      Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
+//      Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND),
+//      Array(LocalGlobalOff, MiniBatchOff, ROCKSDB_BACKEND),
+//      Array(LocalGlobalOff, MiniBatchOn, ROCKSDB_BACKEND),
+//      Array(LocalGlobalOn, MiniBatchOn, ROCKSDB_BACKEND),
+//      Array(LocalGlobalOff, MicroBatchOn, ROCKSDB_BACKEND),
+//      Array(LocalGlobalOn, MicroBatchOn, ROCKSDB_BACKEND))
+    Seq[Array[AnyRef]](
+      Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
+      Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
+      Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
+      Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
+      Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND))
   }
 }

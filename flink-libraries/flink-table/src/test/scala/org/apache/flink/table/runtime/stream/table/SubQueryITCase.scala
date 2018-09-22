@@ -18,26 +18,14 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
-import org.junit.{Before, Test}
+import org.junit.Test
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.TestingRetractSink
+import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingRetractSink}
 
-class SubQueryITCase {
-
-  var env: StreamExecutionEnvironment = _
-  var tEnv: StreamTableEnvironment = _
-
-  @Before
-  def setup(): Unit = {
-    env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    tEnv = TableEnvironment.getTableEnvironment(env)
-  }
+class SubQueryITCase extends StreamingTestBase {
 
   @Test
   def testInUncorrelated(): Unit = {
@@ -73,7 +61,7 @@ class SubQueryITCase {
   }
 
   @Test
-  def testInUncorrelatedWithConditionAndAgg: Unit = {
+  def testInUncorrelatedWithConditionAndAgg(): Unit = {
     val dataA = Seq(
       (1, 1L, "Hello"),
       (2, 2L, "Hello"),
@@ -110,7 +98,7 @@ class SubQueryITCase {
   }
 
   @Test
-  def testInWithMultiUncorrelatedCondition: Unit = {
+  def testInWithMultiUncorrelatedCondition(): Unit = {
     val dataA = Seq(
       (1, 1L, "Hello"),
       (2, 2L, "Hello"),
@@ -137,7 +125,7 @@ class SubQueryITCase {
     val tableC = env.fromCollection(dataC).toTable(tEnv,'w, 'z)
 
     val result = tableA
-      .where(('a.in(tableB.select('x)) && ('b.in(tableC.select('w)))))
+      .where('a.in(tableB.select('x)) && 'b.in(tableC.select('w)))
 
     val sink = new TestingRetractSink
     val results = result.toRetractStream[Row]

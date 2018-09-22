@@ -44,8 +44,6 @@ import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo, 
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
 
-import scala.collection.JavaConverters._
-
 /**
  * Functions to convert Scala types to internal types.
  */

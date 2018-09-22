@@ -19,27 +19,16 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{StreamQueryConfig, TableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.TestingRetractSink
+import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingRetractSink}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
-import org.junit.{Before, Ignore, Test}
+import org.junit.Test
 
 import scala.collection.mutable
 
-class SubQueryITCase {
-
-  var env: StreamExecutionEnvironment = _
-  var tEnv: StreamTableEnvironment = _
-
-  @Before
-  def setup(): Unit = {
-    env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(4)
-    tEnv = TableEnvironment.getTableEnvironment(env)
-  }
+class SubQueryITCase extends StreamingTestBase {
 
   @Test
   def testInUncorrelated(): Unit = {

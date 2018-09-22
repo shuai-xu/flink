@@ -18,10 +18,8 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.TestingAppendSink
+import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink}
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._
@@ -29,16 +27,12 @@ import org.junit._
 /**
   * Just for blink
   */
-class BuiltinTableFunctionITCase {
+class BuiltinTableFunctionITCase extends StreamingTestBase {
 
   @Test
   def testStringSplit(): Unit = {
     val tab = org.apache.commons.lang3.StringEscapeUtils.unescapeJava("\002")
     val data = List(("abc-bcd","-"), ("hhh","-"), ("xxx" + tab + "yyy", tab))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val sqlQuery = "SELECT d, v FROM T1, lateral table(STRING_SPLIT(d, s)) as T(v)"
 
@@ -61,10 +55,6 @@ class BuiltinTableFunctionITCase {
     val data = List(("{\"qwe\":\"asd\",\"qwe2\":\"asd2\",\"qwe3\":\"asd3\"}","qwe3"),
       ("{\"qwe\":\"asd4\",\"qwe2\":\"asd5\",\"qwe3\":\"asd3\"}","qwe2"))
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val sqlQuery = "SELECT d, v FROM T1, lateral table(JSON_TUPLE(d, 'qwe', s)) as T(v)"
 
     val t1 = env.fromCollection(data).toTable(tEnv, 'd, 's, 'proctime.proctime)
@@ -86,10 +76,6 @@ class BuiltinTableFunctionITCase {
   @Test
   def testGenerateSeries(): Unit = {
     val data = List((1,3), (-2,1))
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-
-    val tEnv = TableEnvironment.getTableEnvironment(env)
 
     val sqlQuery = "SELECT s, e, v FROM T1, lateral table(generate_series(s, e)) as T(v)"
 

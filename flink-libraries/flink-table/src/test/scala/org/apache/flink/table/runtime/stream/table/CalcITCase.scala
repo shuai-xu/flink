@@ -19,28 +19,24 @@
 package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, RichFunc1, RichFunc2, SplitUDF}
 import org.apache.flink.table.functions.ScalarFunction
-import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendRowSink, TestingAppendSink, UserDefinedFunctionTestUtils}
-import org.apache.flink.test.util.AbstractTestBase
+import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
 import org.junit.Assert._
-import org.junit.{Ignore, Test}
+import org.junit.Test
 
 import scala.collection.{Seq, mutable}
 
-class CalcITCase extends AbstractTestBase {
+class CalcITCase extends StreamingTestBase {
 
   @Test
   def testSimpleSelectAll(): Unit = {
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv).select('_1, '_2, '_3)
 
     val sink = new TestingAppendSink
@@ -58,8 +54,6 @@ class CalcITCase extends AbstractTestBase {
   @Test
   def testSelectFirst(): Unit = {
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv).select('_1)
 
     val sink = new TestingAppendSink
@@ -75,8 +69,6 @@ class CalcITCase extends AbstractTestBase {
   def testSimpleSelectWithNaming(): Unit = {
 
     // verify ProjectMergeRule.
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val ds = StreamTestData.get3TupleDataStream(env).toTable(tEnv)
       .select('_1 as 'a, '_2 as 'b, '_1 as 'c)
       .select('a, 'b)
@@ -96,8 +88,6 @@ class CalcITCase extends AbstractTestBase {
   @Test
   def testSimpleSelectAllWithAs(): Unit = {
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
       .select('a, 'b, 'c)
 
@@ -118,9 +108,6 @@ class CalcITCase extends AbstractTestBase {
     /*
      * Test simple filter
      */
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter('a === 3)
@@ -138,9 +125,6 @@ class CalcITCase extends AbstractTestBase {
     /*
      * Test all-rejecting filter
      */
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( Literal(false) )
@@ -160,9 +144,6 @@ class CalcITCase extends AbstractTestBase {
     /*
      * Test all-rejecting filter
      */
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( Literal(false) )
@@ -179,9 +160,6 @@ class CalcITCase extends AbstractTestBase {
     /*
      * Test all-passing filter
      */
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( Literal(true) )
@@ -202,9 +180,6 @@ class CalcITCase extends AbstractTestBase {
     /*
      * Test filter on Integer tuple field.
      */
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val ds = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( 'a % 2 === 0 )
@@ -226,9 +201,6 @@ class CalcITCase extends AbstractTestBase {
     /*
      * Test filter on Integer tuple field.
      */
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val ds = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( 'a % 2 !== 0)
@@ -246,8 +218,6 @@ class CalcITCase extends AbstractTestBase {
 
   @Test
   def testUserDefinedFunctionWithParameter(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.registerFunction("RichFunc2", new RichFunc2)
     UserDefinedFunctionTestUtils.setJobParameters(env, Map("string.value" -> "ABC"))
 
@@ -267,8 +237,6 @@ class CalcITCase extends AbstractTestBase {
 
   @Test
   def testMultipleUserDefinedFunctions(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     tEnv.registerFunction("RichFunc1", new RichFunc1)
     tEnv.registerFunction("RichFunc2", new RichFunc2)
     UserDefinedFunctionTestUtils.setJobParameters(env, Map("string.value" -> "Abc"))
@@ -289,11 +257,8 @@ class CalcITCase extends AbstractTestBase {
 
   @Test
   def testFunctionSplitWhenCodegenOverLengthLimit(): Unit = {
-    val tableConf = new TableConfig
     // test function split
-    tableConf.setMaxGeneratedCodeLength(10)
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, tableConf)
+    tEnv.getConfig.setMaxGeneratedCodeLength(10)
 
     val udfLen = TestUDFLength
     tEnv.registerFunction("RichFunc1", new RichFunc1)
@@ -316,9 +281,6 @@ class CalcITCase extends AbstractTestBase {
 
   @Test
   def testScalarFunctionConstructorWithParams(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
     val testData = new mutable.MutableList[(Int, Long, String)]
     testData.+=((1, 1L, "Jack#22"))
     testData.+=((2, 2L, "John#19"))
@@ -351,8 +313,6 @@ class CalcITCase extends AbstractTestBase {
       ("a\u0001b", "c\"d", "e\\\"\u0004f"),
       ("x\u0001y", "y\"z", "z\\\"\u0004z")
     )
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val splitUDF0 = new SplitUDF(deterministic = true)
     val splitUDF1 = new SplitUDF(deterministic = false)
     val ds = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
@@ -374,56 +334,43 @@ class CalcITCase extends AbstractTestBase {
   }
 
   @Test
-  def testMapType(): Unit = {
-    def testPrimitiveType(): Unit = {
-      val env = StreamExecutionEnvironment.getExecutionEnvironment
-      val tEnv = TableEnvironment.getTableEnvironment(env)
-      val ds = StreamTestData.getSmall3TupleDataStream(env)
-        .toTable(tEnv)
-        .select(map('_2, 30, 10L, '_1))
+  def testPrimitiveMapType(): Unit = {
+    val ds = StreamTestData.getSmall3TupleDataStream(env)
+      .toTable(tEnv)
+      .select(map('_2, 30, 10L, '_1))
 
-      val results = ds.toAppendStream[Row]
-      val sink = new TestingAppendSink
-      results.addSink(sink)
-      env.execute()
+    val results = ds.toAppendStream[Row]
+    val sink = new TestingAppendSink
+    results.addSink(sink)
+    env.execute()
 
-      val expected = List(
-        "{1=30, 10=1}",
-        "{2=30, 10=2}",
-        "{2=30, 10=3}")
-      assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    }
+    val expected = List(
+      "{1=30, 10=1}",
+      "{2=30, 10=2}",
+      "{2=30, 10=3}")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
 
-    def testNonPrimitiveType(): Unit = {
-      val env = StreamExecutionEnvironment.getExecutionEnvironment
-      val tEnv = TableEnvironment.getTableEnvironment(env)
-      val ds = StreamTestData.getSmall3TupleDataStream(env)
-        .toTable(tEnv)
-        .select(map('_1, '_3))
+  @Test
+  def testNonPrimitiveType(): Unit = {
+    val ds = StreamTestData.getSmall3TupleDataStream(env)
+      .toTable(tEnv)
+      .select(map('_1, '_3))
 
-      val results = ds.toAppendStream[Row]
-      val sink = new TestingAppendSink
-      results.addSink(sink)
-      env.execute()
+    val results = ds.toAppendStream[Row]
+    val sink = new TestingAppendSink
+    results.addSink(sink)
+    env.execute()
 
-      val expected = List(
-        "{1=Hi}",
-        "{2=Hello}",
-        "{3=Hello world}")
-      assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    }
-
-    testPrimitiveType()
-    testNonPrimitiveType()
+    val expected = List(
+      "{1=Hi}",
+      "{2=Hello}",
+      "{3=Hello world}")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
   def testSelectStarFromNestedTable(): Unit = {
-
-    val sqlQuery = "SELECT * FROM MyTable"
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
     val table = tEnv.fromDataStream(env.fromCollection(Seq(
       ((0, 0), "0"),
       ((1, 1), "1"),

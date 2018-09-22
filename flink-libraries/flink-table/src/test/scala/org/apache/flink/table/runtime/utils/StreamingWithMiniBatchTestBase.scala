@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.utils
 
 import java.util
 
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, NIAGARA_BACKEND, StateBackendMode}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn, MicroBatchOn}
 import org.junit.runners.Parameterized
 
@@ -70,22 +70,17 @@ object StreamingWithMiniBatchTestBase {
 
   @Parameterized.Parameters(name = "{0}, StateBackend={1}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    val isLinuxAliOS = System.getProperty("os.name").startsWith("Linux") &&
-      System.getProperty("os.version").contains("alios7")
-
-    if (isLinuxAliOS) {
-      Seq[Array[AnyRef]](
-        Array(MiniBatchOff, HEAP_BACKEND),
-        Array(MiniBatchOn, HEAP_BACKEND),
-        Array(MiniBatchOff, NIAGARA_BACKEND),
-        Array(MiniBatchOn, NIAGARA_BACKEND),
-        Array(MicroBatchOn, HEAP_BACKEND),
-        Array(MicroBatchOn, NIAGARA_BACKEND))
-    } else {
-      Seq[Array[AnyRef]](
-        Array(MiniBatchOff, HEAP_BACKEND),
-        Array(MiniBatchOn, HEAP_BACKEND),
-        Array(MicroBatchOn, HEAP_BACKEND))
-    }
+    // disable rocksdb currently
+//    Seq[Array[AnyRef]](
+//      Array(MiniBatchOff, HEAP_BACKEND),
+//      Array(MiniBatchOn, HEAP_BACKEND),
+//      Array(MiniBatchOff, ROCKSDB_BACKEND),
+//      Array(MiniBatchOn, ROCKSDB_BACKEND),
+//      Array(MicroBatchOn, HEAP_BACKEND),
+//      Array(MicroBatchOn, ROCKSDB_BACKEND))
+    Seq[Array[AnyRef]](
+      Array(MiniBatchOff, HEAP_BACKEND),
+      Array(MiniBatchOn, HEAP_BACKEND),
+      Array(MicroBatchOn, HEAP_BACKEND))
   }
 }
