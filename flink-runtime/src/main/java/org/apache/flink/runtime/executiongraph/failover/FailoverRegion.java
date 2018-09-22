@@ -20,7 +20,6 @@ package org.apache.flink.runtime.executiongraph.failover;
 
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.concurrent.FutureUtils;
-import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -58,17 +56,17 @@ public class FailoverRegion {
 
 	// ------------------------------------------------------------------------
 
-	/** a unique id for debugging */
+	/** a unique id for debugging. */
 	private final AbstractID id = new AbstractID();
 
 	private final ExecutionGraph executionGraph;
 
 	private final List<ExecutionVertex> connectedExecutionVertices;
 
-	/** The executor that executes the recovery action after all vertices are in a */
+	/** The executor that executes the recovery action after all vertices are in terminal state. */
 	private final Executor executor;
 
-	/** Current status of the job execution */
+	/** Current status of the job execution. */
 	private volatile JobStatus state = JobStatus.RUNNING;
 
 	/** The max number the region can fail. */
@@ -114,13 +112,15 @@ public class FailoverRegion {
 	}
 
 	/**
-	 * get all execution vertices contained in this region
+	 * get all execution vertices contained in this region.
 	 */
 	public List<ExecutionVertex> getAllExecutionVertices() {
 		return connectedExecutionVertices;
 	}
 
-	// Notice the region to failover, 
+	/**
+	 * Notify the region to failover.
+ 	 */
 	private void failover(long globalModVersionOfFailover, Throwable cause) {
 		LOG.info("Try to fail and restart region due to error: ", cause);
 
@@ -185,10 +185,9 @@ public class FailoverRegion {
 
 	// reset all executions in this sub graph
 	private void reset(long globalModVersionOfFailover) {
-		try {
+		if (transitionState(JobStatus.CANCELED, JobStatus.CREATED)) {
 			// reset all connected ExecutionVertexes
 			final Collection<CoLocationGroup> colGroups = new HashSet<>();
-			final long restartTimestamp = System.currentTimeMillis();
 
 			for (ExecutionVertex ev : connectedExecutionVertices) {
 				CoLocationGroup cgroup = ev.getJobVertex().getCoLocationGroup();
@@ -196,51 +195,35 @@ public class FailoverRegion {
 					cgroup.resetConstraints();
 					colGroups.add(cgroup);
 				}
+			}
 
-				ev.resetForNewExecution(restartTimestamp, globalModVersionOfFailover);
-			}
-			if (transitionState(JobStatus.CANCELED, JobStatus.CREATED)) {
-				restart(globalModVersionOfFailover);
-			}
-			else {
-				failover(globalModVersionOfFailover,
-					new FlinkException("FailoverRegion " + id + " switch from CANCELLED to CREATED fail."));
-
-			}
+			restart(globalModVersionOfFailover);
 		}
-		catch (GlobalModVersionMismatch e) {
-			// happens when a global recovery happens concurrently to the regional recovery
-			// go back to a clean state
-			state = JobStatus.RUNNING;
-		}
-		catch (Throwable e) {
+		else {
 			failover(globalModVersionOfFailover,
-				new FlinkException("FailoverRegion " + id + " reset failed.", e));
+					new FlinkException("FailoverRegion " + id + " switch from CANCELLED to CREATED fail."));
 		}
 	}
 
-	// restart all executions in this sub graph
+	/**
+	 * Restart the region by notify the schedule plugin.
+	 */
 	private void restart(long globalModVersionOfFailover) {
 		try {
 			if (transitionState(JobStatus.CREATED, JobStatus.RUNNING)) {
-				// if we have checkpointed state, reload it into the executions
-				if (executionGraph.getCheckpointCoordinator() != null) {
-					executionGraph.getCheckpointCoordinator().restoreLatestCheckpointedState(
-							connectedExecutionVertices, false, false);
-				}
-				//TODO, use restart strategy to schedule them.
 				// Let the scheduler event to reschedule connected ExecutionVertices
-				executionGraph.getGraphManagerPlugin().onExecutionVertexFailover(
-					new ExecutionVertexFailoverEvent(
-						connectedExecutionVertices.stream().map(ExecutionVertex::getExecutionVertexID).collect(Collectors.toList())));
+				executionGraph.resetExecutionVerticesAndNotify(globalModVersionOfFailover, connectedExecutionVertices);
 			}
 			else {
 				failover(globalModVersionOfFailover,
-					new FlinkException("FailoverRegion " + id + " witch from CREATED to RUNNING fail."));
+						new FlinkException("FailoverRegion " + id + " witch from CREATED to RUNNING fail."));
 			}
+		} catch (GlobalModVersionMismatch e) {
+			// happens when a global recovery happens concurrently to the regional recovery
+			// should do nothing
 		} catch (Exception e) {
 			failover(globalModVersionOfFailover,
-				new FlinkException("FailoverRegion " + id + " restart failed.", e));
+					new FlinkException("FailoverRegion " + id + " restart failed.", e));
 		}
 	}
 

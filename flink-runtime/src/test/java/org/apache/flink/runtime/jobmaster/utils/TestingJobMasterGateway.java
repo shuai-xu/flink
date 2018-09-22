@@ -130,9 +130,9 @@ public class TestingJobMasterGateway implements JobMasterGateway {
 
 	@Override
 	public CompletableFuture<TaskExecutorReportResponse> reportTasksExecutionStatus(
-		final ResourceID taskManagerId,
-		final List<TaskExecutionStatus> tasksExecutionStatus,
-		@RpcTimeout final Time timeout) {
+			final ResourceID taskManagerId,
+			final List<TaskExecutionStatus> tasksExecutionStatus,
+			@RpcTimeout final Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 

@@ -18,19 +18,23 @@
 
 package org.apache.flink.api.common.io;
 
+import org.apache.flink.annotation.Public;
+import org.apache.flink.core.io.InputSplit;
+import org.apache.flink.core.io.InputSplitAssigner;
+import org.apache.flink.core.io.LocatableInputSplit;
+import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.NetUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.flink.annotation.Public;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.flink.core.io.InputSplitAssigner;
-import org.apache.flink.core.io.LocatableInputSplit;
-import org.apache.flink.util.NetUtils;
 
 /**
  * The locatable input split assigner assigns to each host splits that are local, before assigning
@@ -57,14 +61,14 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 	// --------------------------------------------------------------------------------------------
 
 	public LocatableInputSplitAssigner(Collection<LocatableInputSplit> splits) {
-		for(LocatableInputSplit split : splits) {
+		for (LocatableInputSplit split : splits) {
 			this.unassigned.add(new LocatableInputSplitWithCount(split));
 		}
 		this.remoteSplitChooser = new LocatableInputSplitChooser(unassigned);
 	}
 
 	public LocatableInputSplitAssigner(LocatableInputSplit[] splits) {
-		for(LocatableInputSplit split : splits) {
+		for (LocatableInputSplit split : splits) {
 			this.unassigned.add(new LocatableInputSplitWithCount(split));
 		}
 		this.remoteSplitChooser = new LocatableInputSplitChooser(unassigned);
@@ -148,7 +152,6 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 			}
 		}
 
-
 		// at this point, we have a list of local splits (possibly empty)
 		// we need to make sure no one else operates in the current list (that protects against
 		// list creation races) and that the unassigned set is consistent
@@ -198,6 +201,23 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 					}
 					return null;
 				}
+			}
+		}
+	}
+
+	@Override
+	public void inputSplitsAssigned(int taskId, List<InputSplit> inputSplits) {
+		for (InputSplit inputSplit : inputSplits) {
+			boolean found = false;
+			for (LocatableInputSplitWithCount split : unassigned) {
+				if (split.getSplit().equals(inputSplit)) {
+					unassigned.remove(split);
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				throw new FlinkRuntimeException("InputSplit not found for " + inputSplit.getSplitNumber());
 			}
 		}
 	}
@@ -278,15 +298,15 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 
 		public LocatableInputSplitChooser(Collection<LocatableInputSplitWithCount> splits) {
 			this.splits = new LinkedList<LocatableInputSplitWithCount>();
-			for(LocatableInputSplitWithCount isw : splits) {
+			for (LocatableInputSplitWithCount isw : splits) {
 				this.addInputSplit(isw);
 			}
 		}
 
 		/**
-		 * Adds a single input split
+		 * Adds a single input split.
 		 *
-		 * @param split The input split to add
+		 * @param split The input split to add.
 		 */
 		public void addInputSplit(LocatableInputSplitWithCount split) {
 			int localCount = split.getLocalCount();
@@ -324,7 +344,7 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 		 */
 		public LocatableInputSplitWithCount getNextUnassignedMinLocalCountSplit(Set<LocatableInputSplitWithCount> unassignedSplits) {
 
-			if(splits.size() == 0) {
+			if (splits.size() == 0) {
 				return null;
 			}
 
@@ -348,7 +368,7 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 					// split was already assigned
 					split = null;
 				}
-				if(elementCycleCount == 0) {
+				if (elementCycleCount == 0) {
 					// one full cycle, but no split with min local count found
 					// update minLocalCnt and element cycle count for next pass over the splits
 					minLocalCount = nextMinLocalCount;

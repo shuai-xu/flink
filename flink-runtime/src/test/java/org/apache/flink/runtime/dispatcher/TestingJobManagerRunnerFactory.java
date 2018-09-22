@@ -29,6 +29,7 @@ import org.apache.flink.runtime.jobmaster.JobManagerRunner;
 import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
 import org.apache.flink.runtime.jobmaster.factories.JobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 
 import java.util.concurrent.CompletableFuture;
@@ -61,7 +62,8 @@ final class TestingJobManagerRunnerFactory implements Dispatcher.JobManagerRunne
 			BlobServer blobServer,
 			JobManagerSharedServices jobManagerSharedServices,
 			JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
-			FatalErrorHandler fatalErrorHandler) throws Exception {
+			FatalErrorHandler fatalErrorHandler,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 		jobGraphFuture.complete(jobGraph);
 
 		final JobManagerRunner mock = mock(JobManagerRunner.class);

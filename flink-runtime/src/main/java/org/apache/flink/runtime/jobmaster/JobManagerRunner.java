@@ -39,6 +39,7 @@ import org.apache.flink.runtime.leaderelection.LeaderContender;
 import org.apache.flink.runtime.leaderelection.LeaderElectionService;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.util.AutoCloseableAsync;
 import org.apache.flink.util.ExceptionUtils;
@@ -82,6 +83,8 @@ public class JobManagerRunner implements LeaderContender, OnCompletionActions, A
 
 	private final FatalErrorHandler fatalErrorHandler;
 
+	private final LeaderShipLostHandler leaderShipLostHandler;
+
 	private final Time rpcTimeout;
 
 	private final CompletableFuture<ArchivedExecutionGraph> resultFuture;
@@ -112,7 +115,8 @@ public class JobManagerRunner implements LeaderContender, OnCompletionActions, A
 			final BlobServer blobServer,
 			final JobManagerSharedServices jobManagerSharedServices,
 			final JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
-			final FatalErrorHandler fatalErrorHandler) throws Exception {
+			final FatalErrorHandler fatalErrorHandler,
+			final LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 
 		this.resultFuture = new CompletableFuture<>();
 		this.terminationFuture = new CompletableFuture<>();
@@ -122,6 +126,7 @@ public class JobManagerRunner implements LeaderContender, OnCompletionActions, A
 			this.jobGraph = checkNotNull(jobGraph);
 			this.jobManagerSharedServices = checkNotNull(jobManagerSharedServices);
 			this.fatalErrorHandler = checkNotNull(fatalErrorHandler);
+			this.leaderShipLostHandler = checkNotNull(leaderShipLostHandler);
 
 			checkArgument(jobGraph.getNumberOfVertices() > 0, "The given job is empty");
 
@@ -329,7 +334,12 @@ public class JobManagerRunner implements LeaderContender, OnCompletionActions, A
 			log.info("JobManager runner for job {} ({}) was granted leadership with session id {} at {}.",
 				jobGraph.getName(), jobGraph.getJobID(), leaderSessionId, getAddress());
 
-			runningJobsRegistry.setJobRunning(jobGraph.getJobID());
+			if (jobSchedulingStatus == JobSchedulingStatus.RUNNING) {
+				// If finding the job status is running, it means someone has already started the job, need recover.
+				jobMaster.reconcile();
+			} else if (jobSchedulingStatus == JobSchedulingStatus.PENDING) {
+				runningJobsRegistry.setJobRunning(jobGraph.getJobID());
+			}
 
 			final CompletableFuture<Acknowledge> startFuture = jobMaster.start(new JobMasterId(leaderSessionId), rpcTimeout);
 			final CompletableFuture<JobMasterGateway> currentLeaderGatewayFuture = leaderGatewayFuture;
@@ -374,6 +384,8 @@ public class JobManagerRunner implements LeaderContender, OnCompletionActions, A
 				(Acknowledge ack, Throwable throwable) -> {
 					if (throwable != null) {
 						handleJobManagerRunnerError(new FlinkException("Could not suspend the job manager.", throwable));
+					} else {
+						leaderShipLostHandler.onLeaderShipLost(new Exception("Job manager runner was revoked leader ship."));
 					}
 				},
 				jobManagerSharedServices.getScheduledExecutorService());

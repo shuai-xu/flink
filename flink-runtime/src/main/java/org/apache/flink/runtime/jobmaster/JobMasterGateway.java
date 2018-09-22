@@ -210,9 +210,9 @@ public interface JobMasterGateway extends
 	 * @return Future indicating whether status reporting is successful
 	 */
 	CompletableFuture<TaskExecutorReportResponse> reportTasksExecutionStatus(
-		final ResourceID taskManagerId,
-		final List<TaskExecutionStatus> tasksExecutionStatus,
-		@RpcTimeout final Time timeout);
+			final ResourceID taskManagerId,
+			final List<TaskExecutionStatus> tasksExecutionStatus,
+			@RpcTimeout final Time timeout);
 
 	/**
 	 * Fails the slot with the given allocation id and cause.

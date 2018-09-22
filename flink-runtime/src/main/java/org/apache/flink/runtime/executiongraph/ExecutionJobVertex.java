@@ -67,6 +67,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static org.apache.flink.util.Preconditions.checkState;
+
 /**
  * An {@code ExecutionJobVertex} is part of the {@link ExecutionGraph}, and the peer
  * to the {@link JobVertex}.
@@ -247,14 +249,26 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 			}
 		}
 
+		if (jobVertex.getInputSplitSources() != null) {
+			// lazy assignment
+			this.inputSplitsMap = new HashMap<>();
+			this.splitAssignerMap = new HashMap<>();
+		} else {
+			this.inputSplitsMap = null;
+			this.splitAssignerMap = null;
+		}
+	}
+
+	public void setUpInputSplits(Map<OperatorID, InputSplit[]> inputSplitsInLog) throws JobException {
+
+		if (inputSplitsMap != null && inputSplitsMap.size() > 0) {
+			return;
+		}
 		// set up the input splits, if the vertex has any
 		try {
 			Map<OperatorID, InputSplitSource<?>> splitSourceMap = jobVertex.getInputSplitSources();
 
 			if (splitSourceMap != null) {
-				// lazy assignment
-				this.inputSplitsMap = new HashMap<>();
-				this.splitAssignerMap = new HashMap<>();
 
 				Thread currentThread = Thread.currentThread();
 				ClassLoader oldContextClassLoader = currentThread.getContextClassLoader();
@@ -266,18 +280,20 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 						@SuppressWarnings("unchecked")
 						InputSplitSource<InputSplit> splitSource = ((InputSplitSource<InputSplit>) entry.getValue());
 
-						InputSplit[] inputSplits = splitSource.createInputSplits(numTaskVertices);
+						InputSplit[] inputSplits = inputSplitsInLog != null ? inputSplitsInLog.get(operatorID) : null;
+						if (inputSplits == null) {
+							inputSplits = splitSource.createInputSplits(parallelism);
+						}
 						if (inputSplits != null) {
 							this.inputSplitsMap.put(operatorID, inputSplits);
 							this.splitAssignerMap.put(operatorID, splitSource.getInputSplitAssigner(inputSplits));
 						}
 					}
+
+					getGraph().getGraphManager().notifyInputSplitsCreated(getJobVertexId(), inputSplitsMap);
 				} finally {
 					currentThread.setContextClassLoader(oldContextClassLoader);
 				}
-			} else {
-				this.inputSplitsMap = null;
-				this.splitAssignerMap = null;
 			}
 		}
 		catch (Throwable t) {
@@ -305,7 +321,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 	public void setMaxParallelism(int maxParallelismDerived) {
 
-		Preconditions.checkState(!maxParallelismConfigured,
+		checkState(!maxParallelismConfigured,
 				"Attempt to override a configured max parallelism. Configured: " + this.maxParallelism
 						+ ", argument: " + maxParallelismDerived);
 
@@ -448,11 +464,12 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 			if (LOG.isDebugEnabled()) {
 				if (edge.getSource() == null) {
-					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via ID %s.",
-							num, jobVertex.getID(), jobVertex.getName(), edge.getSourceId()));
+					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via ID %s, %s.",
+							num, jobVertex.getID(), jobVertex.getName(), edge.getSourceId(), edge.getDistributionPattern()));
 				} else {
-					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via predecessor %s (%s).",
-							num, jobVertex.getID(), jobVertex.getName(), edge.getSource().getProducer().getID(), edge.getSource().getProducer().getName()));
+					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via predecessor %s (%s), %s, %s",
+							num, jobVertex.getID(), jobVertex.getName(), edge.getSource().getProducer().getID(),
+							edge.getSource().getProducer().getName(), edge.getDistributionPattern(), edge.getSource().getResultType()));
 				}
 			}
 
@@ -710,7 +727,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 					List<JobVertexID> alternativeIds = jobVertex.getIdAlternatives();
 					for (JobVertexID jobVertexID : alternativeIds) {
 						ExecutionJobVertex old = expanded.put(jobVertexID, executionJobVertex);
-						Preconditions.checkState(null == old || old.equals(executionJobVertex),
+						checkState(null == old || old.equals(executionJobVertex),
 								"Ambiguous jobvertex id detected during expansion to legacy ids.");
 					}
 				}

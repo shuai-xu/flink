@@ -32,7 +32,7 @@ public class IntermediateResultPartition {
 
 	private final int partitionNumber;
 
-	private final IntermediateResultPartitionID partitionId;
+	private IntermediateResultPartitionID partitionId;
 
 	private List<List<ExecutionEdge>> consumers;
 
@@ -60,6 +60,13 @@ public class IntermediateResultPartition {
 
 	public IntermediateResult getIntermediateResult() {
 		return totalResult;
+	}
+
+	/**
+	 * Set partition id to the one reported by task executor during jm failover.
+	 */
+	public void setPartitionId(IntermediateResultPartitionID id) {
+		this.partitionId = id;
 	}
 
 	public IntermediateResultPartitionID getPartitionId() {

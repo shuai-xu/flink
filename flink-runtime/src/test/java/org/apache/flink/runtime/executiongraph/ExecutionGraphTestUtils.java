@@ -56,7 +56,10 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobmanager.scheduler.Scheduler;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
+import org.apache.flink.runtime.jobmaster.GraphManager;
+import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.SlotOwner;
+import org.apache.flink.runtime.jobmaster.failover.OperationLogManager;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.TaskMessages.CancelTask;
@@ -336,7 +339,7 @@ public class ExecutionGraphTestUtils {
 	public static void setVertexResource(ExecutionVertex vertex, SimpleSlot slot) {
 		Execution exec = vertex.getCurrentExecutionAttempt();
 
-		if(!exec.tryAssignResource(slot)) {
+		if (!exec.tryAssignResource(slot)) {
 			throw new RuntimeException("Could not assign resource.");
 		}
 	}
@@ -541,14 +544,16 @@ public class ExecutionGraphTestUtils {
 			new ResultPartitionLocationTrackerProxy(jobGraph.getJobConfiguration()),
 			allocationTimeout,
 			log);
-
 		Configuration conf = new Configuration(jobGraph.getJobConfiguration());
 		conf.addAll(jobGraph.getSchedulingConfiguration());
 		GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
-		graphManagerPlugin.open(eg.getScheduler(), jobGraph,
-			new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
-		eg.setGraphManagerPlugin(graphManagerPlugin);
-
+		GraphManager graphManager = new GraphManager(
+				graphManagerPlugin,
+				mock(JobMasterGateway.class),
+				mock(OperationLogManager.class),
+				eg);
+		graphManager.open(jobGraph, new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
+		eg.setGraphManager(graphManager);
 		return eg;
 	}
 
@@ -679,9 +684,13 @@ public class ExecutionGraphTestUtils {
 		Configuration conf = new Configuration(jobGraph.getJobConfiguration());
 		conf.addAll(jobGraph.getSchedulingConfiguration());
 		GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
-		graphManagerPlugin.open(eg.getScheduler(), jobGraph,
-			new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
-		eg.setGraphManagerPlugin(graphManagerPlugin);
+		GraphManager graphManager = new GraphManager(
+				graphManagerPlugin,
+				mock(JobMasterGateway.class),
+				mock(OperationLogManager.class),
+				eg);
+		graphManager.open(jobGraph, new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
+		eg.setGraphManager(graphManager);
 
 		return eg;
 	}

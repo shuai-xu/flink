@@ -38,10 +38,12 @@ import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
+import org.apache.flink.runtime.util.TestingLeaderShipLostHandler;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TestLogger;
 
@@ -64,6 +66,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -124,6 +127,8 @@ public class DispatcherHATest extends TestLogger {
 
 		final BlockingQueue<DispatcherId> fencingTokens = new ArrayBlockingQueue<>(2);
 
+		final TestingLeaderShipLostHandler leaderShipLostHandler = new TestingLeaderShipLostHandler();
+
 		final HATestingDispatcher dispatcher = new HATestingDispatcher(
 			rpcService,
 			UUID.randomUUID().toString(),
@@ -137,7 +142,8 @@ public class DispatcherHATest extends TestLogger {
 			new MemoryArchivedExecutionGraphStore(),
 			new TestingJobManagerRunnerFactory(new CompletableFuture<>(), new CompletableFuture<>()),
 			testingFatalErrorHandler,
-			fencingTokens);
+			fencingTokens,
+			leaderShipLostHandler);
 
 		dispatcher.start();
 
@@ -156,6 +162,7 @@ public class DispatcherHATest extends TestLogger {
 
 			assertThat(dispatcher.getNumberJobs(timeout).get(), is(0));
 
+			assertEquals(1, leaderShipLostHandler.getLeaderShipLostCount());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(dispatcher, timeout);
 		}
@@ -172,8 +179,34 @@ public class DispatcherHATest extends TestLogger {
 		@Nonnull
 		private final BlockingQueue<DispatcherId> fencingTokens;
 
-		HATestingDispatcher(RpcService rpcService, String endpointId, Configuration configuration, HighAvailabilityServices highAvailabilityServices, ResourceManagerGateway resourceManagerGateway, BlobServer blobServer, HeartbeatServices heartbeatServices, JobManagerMetricGroup jobManagerMetricGroup, @Nullable String metricQueryServicePath, ArchivedExecutionGraphStore archivedExecutionGraphStore, JobManagerRunnerFactory jobManagerRunnerFactory, FatalErrorHandler fatalErrorHandler, @Nonnull BlockingQueue<DispatcherId> fencingTokens) throws Exception {
-			super(rpcService, endpointId, configuration, highAvailabilityServices, resourceManagerGateway, blobServer, heartbeatServices, jobManagerMetricGroup, metricQueryServicePath, archivedExecutionGraphStore, jobManagerRunnerFactory, fatalErrorHandler);
+		HATestingDispatcher(
+				RpcService rpcService,
+				String endpointId,
+				Configuration configuration,
+				HighAvailabilityServices highAvailabilityServices,
+				ResourceManagerGateway resourceManagerGateway,
+				BlobServer blobServer,
+				HeartbeatServices heartbeatServices,
+				JobManagerMetricGroup jobManagerMetricGroup,
+				@Nullable String metricQueryServicePath,
+				ArchivedExecutionGraphStore archivedExecutionGraphStore,
+				JobManagerRunnerFactory jobManagerRunnerFactory,
+				FatalErrorHandler fatalErrorHandler,
+				@Nonnull BlockingQueue<DispatcherId> fencingTokens,
+				LeaderShipLostHandler leaderShipLostHandler) throws Exception {
+			super(
+					rpcService,
+					endpointId,
+					configuration,
+					highAvailabilityServices,
+					resourceManagerGateway,
+					blobServer, heartbeatServices,
+					jobManagerMetricGroup,
+					metricQueryServicePath,
+					archivedExecutionGraphStore,
+					jobManagerRunnerFactory,
+					fatalErrorHandler,
+					leaderShipLostHandler);
 			this.fencingTokens = fencingTokens;
 		}
 

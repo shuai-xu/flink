@@ -44,7 +44,6 @@ import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.FutureUtils.ConjunctFuture;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
 import org.apache.flink.runtime.deployment.ResultPartitionLocationTrackerProxy;
-import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.execution.SuppressRestartsException;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
@@ -61,11 +60,9 @@ import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguratio
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.NoResourceAvailableException;
+import org.apache.flink.runtime.jobmaster.GraphManager;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
-import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
-import org.apache.flink.runtime.schedule.GraphManagerPlugin;
-import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
@@ -249,11 +246,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	/** The total number of vertices currently in the execution graph. */
 	private int numVerticesTotal;
 
-	/** Scheduler is responsible to schedule submitted vertices. */
-	private ExecutionGraphVertexScheduler scheduler;
-
-	/** The plugin receives events and decide vertices to schedule. */
-	private GraphManagerPlugin graphManagerPlugin;
+	/** The manager for the graph. */
+	private GraphManager graphManager;
 
 	// ------ Configuration of the Execution -------
 
@@ -275,6 +269,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 	/** A future that completes once the job has reached a terminal state. */
 	private volatile CompletableFuture<JobStatus> terminationFuture;
+
+	/** A future that completes once all the execution vertices finish reconciling. */
+	private volatile CompletableFuture<Collection<ExecutionAttemptID>> reconcileFuture;
 
 	/** On each global recovery, this version is incremented. The version breaks conflicts
 	 * between concurrent restart attempts by local failover strategies. */
@@ -368,8 +365,6 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		LOG.info("Job recovers via failover strategy: {}", failoverStrategy.getStrategyName());
 
 		this.schedulingFutures = new ConcurrentHashMap<>();
-
-		this.scheduler = new ExecutionGraphVertexScheduler();
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -392,21 +387,17 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		this.allowQueuedScheduling = allowed;
 	}
 
-	public ExecutionGraphVertexScheduler getScheduler() {
-		return scheduler;
-	}
-
-	public GraphManagerPlugin getGraphManagerPlugin() {
-		return graphManagerPlugin;
+	public GraphManager getGraphManager() {
+		return graphManager;
 	}
 
 	public boolean isLazyDeploymentAllowed() {
 		return allowLazyDeployment;
 	}
 
-	public void setGraphManagerPlugin(GraphManagerPlugin graphManagerPlugin) {
-		this.graphManagerPlugin = graphManagerPlugin;
-		this.allowLazyDeployment  = graphManagerPlugin.allowLazyDeployment();
+	public void setGraphManager(GraphManager graphManager) {
+		this.graphManager = checkNotNull(graphManager);
+		this.allowLazyDeployment  = graphManager.allowLazyDeployment();
 	}
 
 	public ResultPartitionLocationTrackerProxy getResultPartitionLocationTrackerProxy() {
@@ -873,12 +864,11 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 	public void scheduleForExecution() throws JobException {
 
+		for (ExecutionJobVertex ejv : getAllVertices().values()) {
+			ejv.setUpInputSplits(null);
+		}
 		if (transitionState(JobStatus.CREATED, JobStatus.RUNNING)) {
-
-			LOG.info("Start scheduling execution graph with graph manager plugin: {}",
-				graphManagerPlugin.getClass().getName());
-
-			graphManagerPlugin.onSchedulingStarted();
+			graphManager.startScheduling();
 		}
 		else {
 			throw new IllegalStateException("Job may only be scheduled from state " + JobStatus.CREATED);
@@ -1118,6 +1108,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			if (current == JobStatus.FAILING ||
 				current == JobStatus.SUSPENDING ||
 				current == JobStatus.SUSPENDED ||
+				current	== JobStatus.RECONCILING ||
 				current.isGloballyTerminalState()) {
 				return;
 			}
@@ -1165,6 +1156,29 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			}
 
 			// else: concurrent change to execution state, retry
+		}
+	}
+
+	public CompletableFuture<Collection<ExecutionAttemptID>> reconcile() {
+		JobStatus curStatus = state;
+		checkState(JobStatus.CREATED.equals(curStatus), "Not allow reconcile in state " + curStatus);
+
+		if (transitionState(curStatus, JobStatus.RECONCILING)) {
+			List<CompletableFuture<ExecutionAttemptID>> executionReconcileFutures = new ArrayList<>(currentExecutions.size());
+			for (ExecutionVertex ev : getAllExecutionVertices()) {
+				executionReconcileFutures.add(ev.getCurrentExecutionAttempt().reconcile());
+			}
+
+			reconcileFuture = FutureUtils.combineAll(executionReconcileFutures).whenComplete(
+					(ignore, throwable) -> {
+						if (!transitionState(JobStatus.RECONCILING, JobStatus.RUNNING)) {
+							LOG.error("When reconcile finish, the job is in {}, this is a logical error.", state);
+						}
+					}
+			);
+			return reconcileFuture;
+		} else {
+			throw new IllegalStateException("ExecutionGraph reconcile fail while in state " + curStatus);
 		}
 	}
 
@@ -1230,15 +1244,34 @@ public class ExecutionGraph implements AccessExecutionGraph {
 				}
 			}
 
-			// Reset the graph manager plugin to initial status
-			graphManagerPlugin.reset();
+			// Reset the graph manager to initial status
+			graphManager.reset();
 
-			scheduleForExecution();
-		}
-		catch (Throwable t) {
+			if (transitionState(JobStatus.CREATED, JobStatus.RUNNING)) {
+				graphManager.startScheduling();
+			}
+			else {
+				throw new IllegalStateException("Job may only be scheduled from state " + JobStatus.CREATED);
+			}
+		} catch (Throwable t) {
 			LOG.warn("Failed to restart the job.", t);
 			failGlobal(t);
 		}
+	}
+
+	public void resetExecutionVerticesAndNotify(long modVersion, List<ExecutionVertex> executionVertices) throws Exception {
+		final long resetTimestamp = System.currentTimeMillis();
+		List<ExecutionVertexID> evIds = new ArrayList<>(executionVertices.size());
+		for (ExecutionVertex ev : executionVertices) {
+			ev.resetForNewExecution(resetTimestamp, modVersion);
+			evIds.add(ev.getExecutionVertexID());
+		}
+		// if we have checkpointed state, reload it into the executions
+		if (checkpointCoordinator != null) {
+			checkpointCoordinator.restoreLatestCheckpointedState(executionVertices, false, false);
+		}
+
+		graphManager.notifyExecutionVertexFailover(evIds);
 	}
 
 	/**
@@ -1290,6 +1323,16 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		return terminationFuture;
 	}
 
+	/**
+	 * Returns the reconcile future of this {@link ExecutionGraph}. The reconcile future
+	 * is completed with the execution attempt ids once all the execution vertices finish reconciling.
+	 *
+	 * @return Reconcile future of this {@link ExecutionGraph}.
+	 */
+	public CompletableFuture<Collection<ExecutionAttemptID>> getReconcileFuture() {
+		return reconcileFuture;
+	}
+
 	@VisibleForTesting
 	public JobStatus waitUntilTerminal() throws InterruptedException {
 		try {
@@ -1316,8 +1359,72 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	 * and is used to disambiguate concurrent modifications between local and global
 	 * failover actions.
 	 */
-	long getGlobalModVersion() {
+	public long getGlobalModVersion() {
 		return globalModVersion;
+	}
+
+	public void scheduleVertices(Collection<ExecutionVertexID> verticesToSchedule) {
+
+		try {
+			long currentGlobalModVersion = globalModVersion;
+
+			if (verticesToSchedule == null || verticesToSchedule.isEmpty()) {
+				return;
+			}
+
+			int alreadyScheduledCount = 0;
+			int unhealthyCount = 0;
+			final List<ExecutionVertex> vertices = new ArrayList<>(verticesToSchedule.size());
+			for (ExecutionVertexID executionVertexID : verticesToSchedule) {
+				ExecutionVertex ev = getJobVertex(executionVertexID.getJobVertexID()).getTaskVertices()[executionVertexID.getSubTaskIndex()];
+				if (ev.getExecutionState() == ExecutionState.CREATED) {
+					vertices.add(ev);
+				} else if (ev.getExecutionState() == ExecutionState.SCHEDULED ||
+						ev.getExecutionState() == ExecutionState.DEPLOYING ||
+						ev.getExecutionState() == ExecutionState.RUNNING ||
+						ev.getExecutionState() == ExecutionState.FINISHED) {
+
+					alreadyScheduledCount++;
+				} else {
+
+					unhealthyCount++;
+				}
+			}
+			if (vertices.size() < verticesToSchedule.size()) {
+				throw new IllegalStateException("Not all submitted vertices can be scheduled. " +
+						alreadyScheduledCount + " vertices are already scheduled and " +
+						unhealthyCount + " vertices are in unhealthy state. " +
+						"Please check the schedule logic in " + graphManager.getClass().getCanonicalName());
+			}
+
+			LOG.info("Schedule {} vertices: {}", vertices.size(), vertices);
+
+			final CompletableFuture<Void> schedulingFuture = schedule(vertices);
+
+			if (state == JobStatus.RUNNING && currentGlobalModVersion == globalModVersion) {
+
+				schedulingFutures.put(schedulingFuture, schedulingFuture);
+
+				schedulingFuture.whenCompleteAsync(
+						(Void ignored, Throwable throwable) -> {
+							schedulingFutures.remove(schedulingFuture);
+
+							if (throwable != null) {
+								final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
+								if (!(strippedThrowable instanceof CancellationException)
+										&& !(strippedThrowable instanceof IllegalExecutionStateException)) {
+									// only fail if the scheduling future was not canceled
+									failGlobal(strippedThrowable);
+								}
+							}
+						},
+						futureExecutor);
+			} else {
+				schedulingFuture.cancel(false);
+			}
+		} catch (Throwable t) {
+			failGlobal(t);
+		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -1714,12 +1821,6 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			}
 		}
 
-		// Let the graph manager plugin handles task state changes before failover
-		graphManagerPlugin.onExecutionVertexStateChanged(
-			new ExecutionVertexStateChangedEvent(
-				new ExecutionVertexID(execution.getVertex().getJobvertexId(), execution.getParallelSubtaskIndex()),
-				newExecutionState));
-
 		// see what this means for us. currently, the first FAILED state means -> FAILED
 		if (newExecutionState == ExecutionState.FAILED) {
 			final Throwable ex = error != null ? error : new FlinkException("Unknown Error (missing cause)");
@@ -1745,85 +1846,4 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		}
 	}
 
-	/**
-	 * This scheduler leverages ExecutionGraph to schedule vertices.
-	 */
-	public class ExecutionGraphVertexScheduler implements VertexScheduler {
-
-		@Override
-		public void scheduleExecutionVertices(Collection<ExecutionVertexID> verticesToSchedule) {
-			try {
-				long currentGlobalModVersion = globalModVersion;
-
-				if (verticesToSchedule == null || verticesToSchedule.isEmpty()) {
-					return;
-				}
-
-				int alreadyScheduledCount = 0;
-				int unhealthyCount = 0;
-				final List<ExecutionVertex> vertices = new ArrayList<>(verticesToSchedule.size());
-				for (ExecutionVertexID executionVertexID : verticesToSchedule) {
-					ExecutionVertex ev = getJobVertex(executionVertexID.getJobVertexID()).getTaskVertices()[executionVertexID.getSubTaskIndex()];
-					if (ev.getExecutionState() == ExecutionState.CREATED) {
-						vertices.add(ev);
-					} else if (ev.getExecutionState() == ExecutionState.SCHEDULED ||
-						ev.getExecutionState() == ExecutionState.DEPLOYING ||
-						ev.getExecutionState() == ExecutionState.RUNNING ||
-						ev.getExecutionState() == ExecutionState.FINISHED) {
-
-						alreadyScheduledCount++;
-					} else {
-
-						unhealthyCount++;
-					}
-				}
-				if (vertices.size() < verticesToSchedule.size()) {
-					throw new IllegalStateException("Not all submitted vertices can be scheduled. " +
-						alreadyScheduledCount + " vertices are already scheduled and " +
-						unhealthyCount + " vertices are in unhealthy state. " +
-						"Please check the schedule logic in " + graphManagerPlugin.getClass().getCanonicalName());
-				}
-
-				LOG.info("Schedule {} vertices: {}", vertices.size(), vertices);
-
-				final CompletableFuture<Void> schedulingFuture = schedule(vertices);
-
-				if (state == JobStatus.RUNNING && currentGlobalModVersion == globalModVersion) {
-
-					schedulingFutures.put(schedulingFuture, schedulingFuture);
-
-					schedulingFuture.whenCompleteAsync(
-						(Void ignored, Throwable throwable) -> {
-							schedulingFutures.remove(schedulingFuture);
-
-							if (throwable != null) {
-								final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
-								if (!(strippedThrowable instanceof CancellationException)
-									&& !(strippedThrowable instanceof IllegalExecutionStateException)) {
-									// only fail if the scheduling future was not canceled
-									failGlobal(strippedThrowable);
-								}
-							}
-						},
-						futureExecutor);
-				} else {
-					schedulingFuture.cancel(false);
-				}
-			} catch (Throwable t) {
-				failGlobal(t);
-			}
-		}
-
-		@Override
-		public ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID) {
-			checkNotNull(executionVertexID);
-
-			ExecutionJobVertex vertex = tasks.get(executionVertexID.getJobVertexID());
-			if (vertex == null) {
-				throw new IllegalArgumentException("Cannot find any vertex with id " + executionVertexID.getJobVertexID());
-			}
-
-			return vertex.getTaskVertices()[executionVertexID.getSubTaskIndex()].getCurrentStatus();
-		}
-	}
 }

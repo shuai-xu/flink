@@ -179,6 +179,11 @@ public class JobManagerOptions {
 			.defaultValue("none")
 			.withDescription("The operation log store type for job master failover.");
 
+	public static final ConfigOption<Integer> OPLOG_FLUSH_INTERVAL =
+			key("jobmanager.failover.operation-log-flush-interval")
+					.defaultValue(3000)
+					.withDescription("The operation log store flush interval in ms.");
+
 	// ---------------------------------------------------------------------------------------------
 
 	private JobManagerOptions() {

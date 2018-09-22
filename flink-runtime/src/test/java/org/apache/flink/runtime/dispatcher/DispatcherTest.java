@@ -51,6 +51,7 @@ import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
 import org.apache.flink.runtime.rest.handler.legacy.utils.ArchivedExecutionGraphBuilder;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
@@ -62,6 +63,7 @@ import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
 import org.apache.flink.runtime.testutils.InMemorySubmittedJobGraphStore;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
+import org.apache.flink.runtime.util.TestingLeaderShipLostHandler;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.TestLogger;
@@ -129,6 +131,8 @@ public class DispatcherTest extends TestLogger {
 
 	private TestingFatalErrorHandler fatalErrorHandler;
 
+	private TestingLeaderShipLostHandler leaderShipLostHandler;
+
 	private FailableSubmittedJobGraphStore submittedJobGraphStore;
 
 	private TestingLeaderElectionService dispatcherLeaderElectionService;
@@ -168,6 +172,7 @@ public class DispatcherTest extends TestLogger {
 		jobGraph.setAllowQueuedScheduling(true);
 
 		fatalErrorHandler = new TestingFatalErrorHandler();
+		leaderShipLostHandler = new TestingLeaderShipLostHandler();
 		final HeartbeatServices heartbeatServices = new HeartbeatServices(1000L, 10000L);
 		submittedJobGraphStore = new FailableSubmittedJobGraphStore();
 
@@ -210,7 +215,8 @@ public class DispatcherTest extends TestLogger {
 			null,
 			new MemoryArchivedExecutionGraphStore(),
 			new ExpectedJobIdJobManagerRunnerFactory(TEST_JOB_ID, createdJobManagerRunnerLatch),
-			fatalErrorHandler);
+			fatalErrorHandler,
+			leaderShipLostHandler);
 	}
 
 	@After
@@ -595,7 +601,8 @@ public class DispatcherTest extends TestLogger {
 				BlobServer blobServer,
 				JobManagerSharedServices jobManagerSharedServices,
 				JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
-				FatalErrorHandler fatalErrorHandler) throws Exception {
+				FatalErrorHandler fatalErrorHandler,
+				LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 			assertEquals(expectedJobId, jobGraph.getJobID());
 
 			createdJobManagerRunnerLatch.countDown();
@@ -610,7 +617,8 @@ public class DispatcherTest extends TestLogger {
 				blobServer,
 				jobManagerSharedServices,
 				jobManagerJobMetricGroupFactory,
-				fatalErrorHandler);
+				fatalErrorHandler,
+				leaderShipLostHandler);
 		}
 	}
 

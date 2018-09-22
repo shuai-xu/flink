@@ -52,6 +52,7 @@ import org.apache.flink.runtime.util.clock.Clock;
 import org.apache.flink.runtime.util.clock.SystemClock;
 import org.apache.flink.util.AbstractID;
 import org.apache.flink.util.FlinkException;
+import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
@@ -336,6 +337,104 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 	}
 
 	// ------------------------------------------------------------------------
+	//  Failover related methods
+	// ------------------------------------------------------------------------
+
+	/**
+	 * After job master failover, the slot will be added to slot pool when task executor reports.
+	 */
+	public LogicalSlot recoverSlot(
+			AbstractID groupId,
+			SlotSharingGroupId slotSharingGroupId,
+			CoLocationConstraint coLocationConstraint,
+			AllocationID allocationId,
+			TaskManagerLocation taskManagerLocation,
+			int slotIndex,
+			ResourceProfile resourceProfile,
+			TaskManagerGateway taskManagerGateway) throws Exception {
+		SlotRequestId allocatedSlotRequestId = new SlotRequestId();
+		AllocatedSlot allocatedSlot = allocatedSlots.get(allocationId);
+		if (allocatedSlot == null) {
+			allocatedSlot = new AllocatedSlot(
+					allocationId,
+					taskManagerLocation,
+					slotIndex,
+					resourceProfile,
+					taskManagerGateway);
+			allocatedSlots.add(allocatedSlotRequestId, allocatedSlot);
+			log.debug("Recover allocated slot {} with request id {}.", allocatedSlot, allocatedSlotRequestId);
+		}
+
+		if ((enableSharedSlot || coLocationConstraint != null) && slotSharingGroupId != null) {
+			final SlotRequestId slotRequestId = new SlotRequestId();
+			final SlotSharingManager multiTaskSlotManager = slotSharingManagers.computeIfAbsent(
+					slotSharingGroupId,
+					id -> new SlotSharingManager(
+							id,
+							this,
+							providerAndOwner));
+
+			// For coLocation
+			if (coLocationConstraint != null) {
+				SlotRequestId coLocationSlotRequestId = coLocationConstraint.getSlotRequestId();
+				if (coLocationSlotRequestId != null) {
+					SlotSharingManager.TaskSlot parentSlot = multiTaskSlotManager.getTaskSlot(coLocationSlotRequestId);
+					if (parentSlot == null || !(parentSlot instanceof SlotSharingManager.MultiTaskSlot)) {
+						log.warn("CoLocation report {} has been assigned slot request id {}, but cannot find multi slot," +
+								" this is usually logic error.", allocationId, coLocationSlotRequestId);
+						throw new FlinkRuntimeException("Fail to find a slot for " + allocationId);
+					}
+					return ((SlotSharingManager.MultiTaskSlot) parentSlot)
+							.allocateSingleTaskSlot(slotRequestId, groupId, Locality.LOCAL).getLogicalSlotFuture().get();
+				}
+			}
+			Collection<SlotSharingManager.MultiTaskSlot> rootSlots = multiTaskSlotManager.getResolvedRootSlots();
+			for (SlotSharingManager.MultiTaskSlot rootSlot : rootSlots) {
+				if (rootSlot.getSlotContextFuture().get().getAllocationId().equals(allocationId)) {
+					if (coLocationConstraint != null) {
+						SlotRequestId coLocationSlotRequestId = new SlotRequestId();
+						rootSlot = rootSlot.allocateMultiTaskSlot(coLocationSlotRequestId, coLocationConstraint.getGroupId());
+						coLocationConstraint.setSlotRequestId(coLocationSlotRequestId);
+						coLocationConstraint.lockLocation(taskManagerLocation);
+					}
+					return rootSlot.allocateSingleTaskSlot(slotRequestId, groupId, Locality.LOCAL).getLogicalSlotFuture().get();
+				}
+			}
+
+			final SlotRequestId multiSlotRequestId = new SlotRequestId();
+			SlotSharingManager.MultiTaskSlot rootSlot = multiTaskSlotManager.createRootSlot(
+					multiSlotRequestId,
+					CompletableFuture.completedFuture(allocatedSlot),
+					allocatedSlotRequestId);
+			if (!allocatedSlot.tryAssignPayload(rootSlot)) {
+				Exception e = new FlinkRuntimeException("Fail to assign payload to allocation " + allocationId);
+				rootSlot.release(e);
+				throw e;
+			}
+			log.debug("Recover root slot {} with allocated id {}", multiSlotRequestId, allocatedSlotRequestId);
+			if (coLocationConstraint != null) {
+				SlotRequestId coLocationSlotRequestId = new SlotRequestId();
+				rootSlot = rootSlot.allocateMultiTaskSlot(coLocationSlotRequestId, coLocationConstraint.getGroupId());
+				log.debug("Recover co location slot {} with group id {}", coLocationSlotRequestId, coLocationConstraint.getGroupId());
+				coLocationConstraint.setSlotRequestId(coLocationSlotRequestId);
+				coLocationConstraint.lockLocation(taskManagerLocation);
+			}
+			return rootSlot.allocateSingleTaskSlot(slotRequestId, groupId, Locality.LOCAL).getLogicalSlotFuture().get();
+		} else {
+
+			SingleLogicalSlot slot = new SingleLogicalSlot(
+					allocatedSlotRequestId,
+					allocatedSlot,
+					null,
+					Locality.UNKNOWN,
+					getSlotOwner());
+
+			allocatedSlot.tryAssignPayload(slot);
+			return slot;
+		}
+	}
+
+	// ------------------------------------------------------------------------
 	//  Slot Allocation
 	// ------------------------------------------------------------------------
 
@@ -360,7 +459,6 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				enableSharedSlot,
 				task.getSlotSharingGroupId());
 		}
-
 
 		if (slotSharingGroupId != null) {
 			// allocate slot with slot sharing
@@ -1245,6 +1343,11 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 	@VisibleForTesting
 	void triggerCheckIdleSlot() {
 		runAsync(this::checkIdleSlot);
+	}
+
+	@VisibleForTesting
+	SlotSharingManager getSlotSharingManager(SlotSharingGroupId slotSharingGroupId) {
+		return slotSharingManagers.get(slotSharingGroupId);
 	}
 
 	// ------------------------------------------------------------------------

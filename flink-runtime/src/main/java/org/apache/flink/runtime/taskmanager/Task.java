@@ -474,6 +474,10 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		return createTimestamp;
 	}
 
+	public InputSplitProvider getInputSplitProvider() {
+		return inputSplitProvider;
+	}
+
 	// ------------------------------------------------------------------------
 	//  Task Execution
 	// ------------------------------------------------------------------------

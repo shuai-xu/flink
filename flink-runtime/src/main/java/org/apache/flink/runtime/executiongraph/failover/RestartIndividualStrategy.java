@@ -20,7 +20,6 @@ package org.apache.flink.runtime.executiongraph.failover;
 
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
-import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
@@ -116,11 +115,7 @@ public class RestartIndividualStrategy extends FailoverStrategy {
 		terminationFuture.thenAcceptAsync(
 			(ExecutionState value) -> {
 				try {
-					long createTimestamp = System.currentTimeMillis();
-					vertexToRecover.resetForNewExecution(createTimestamp, globalModVersion);
-					// Let the scheduler event to reschedule the failed vertex
-					executionGraph.getGraphManagerPlugin().onExecutionVertexFailover(
-						new ExecutionVertexFailoverEvent(Collections.singletonList(vertexToRecover.getExecutionVertexID())));
+					executionGraph.resetExecutionVerticesAndNotify(globalModVersion, Collections.singletonList(vertexToRecover));
 				}
 				catch (GlobalModVersionMismatch e) {
 					// this happens if a concurrent global recovery happens. simply do nothing.

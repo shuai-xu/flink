@@ -21,6 +21,7 @@ package org.apache.flink.runtime.executiongraph;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+import org.apache.flink.util.FlinkRuntimeException;
 
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,6 +81,17 @@ public class IntermediateResult {
 
 		// The runtime type for this produced result
 		this.resultType = checkNotNull(resultType);
+	}
+
+	/**
+	 * Reset the partition looker help as the IntermediateResultPartitionID will be reset when jm failover.
+	 */
+	public void resetLookupHelper(IntermediateResultPartitionID originId, IntermediateResultPartitionID newId) {
+		Integer partitionNumber = partitionLookupHelper.remove(originId);
+		if (partitionNumber == null) {
+			throw new FlinkRuntimeException("Fail to find origin partition " + originId);
+		}
+		partitionLookupHelper.put(newId, partitionNumber);
 	}
 
 	public void setPartition(int partitionNumber, IntermediateResultPartition partition) {

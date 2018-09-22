@@ -112,6 +112,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -645,6 +646,7 @@ public class JobMasterTest extends TestLogger {
 
 			final JobMasterId jobMasterId2 = JobMasterId.generate();
 
+			jobMaster.reconcile();
 			jobMaster.start(jobMasterId2, testingTimeout).get();
 
 			final JobMasterId secondRegistrationAttempt = registrationQueue.take();
@@ -1100,6 +1102,11 @@ public class JobMasterTest extends TestLogger {
 		@Override
 		public InputSplit getNextInputSplit(String host, int taskId){
 			return new TestingInputSplit(splitIndex++);
+		}
+
+		@Override
+		public void inputSplitsAssigned(int taskId, List<InputSplit> inputSplits) {
+			throw new UnsupportedOperationException("This method should not be called.");
 		}
 	}
 

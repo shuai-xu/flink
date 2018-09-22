@@ -24,6 +24,7 @@ import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.accumulators.StringifiedAccumulatorResult;
@@ -35,7 +36,6 @@ import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.deployment.PartialInputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
-import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
@@ -130,7 +130,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	private final ExecutionVertex vertex;
 
 	/** The unique ID marking the specific execution instant of the task. */
-	private final ExecutionAttemptID attemptId;
+	private ExecutionAttemptID attemptId;
 
 	/** Gets the global modification version of the execution graph when this execution was created.
 	 * This version is bumped in the ExecutionGraph whenever a global failover happens. It is used
@@ -140,7 +140,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	/** The timestamps when state transitions occurred, indexed by {@link ExecutionState#ordinal()}. */
 	private final long[] stateTimestamps;
 
-	private final int attemptNumber;
+	private int attemptNumber;
 
 	private final Time rpcTimeout;
 
@@ -183,6 +183,9 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	private final Object updatePartitionLock = new Object();
 
 	private ScheduledFuture updatePartitionFuture;
+
+	/** A future that completes once the Execution reconcile finish. */
+	private CompletableFuture<ExecutionAttemptID> reconcileFuture;
 
 	/**
 	 * Creates a new Execution attempt.
@@ -313,7 +316,12 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	public TaskManagerLocation getAssignedResourceLocation() {
 		// returns non-null only when a location is already assigned
 		final LogicalSlot currentAssignedResource = assignedResource;
-		return currentAssignedResource != null ? currentAssignedResource.getTaskManagerLocation() : null;
+		try {
+			return currentAssignedResource != null ? currentAssignedResource.getTaskManagerLocation() :
+					(taskManagerLocationFuture.isDone() ? taskManagerLocationFuture.get() : null);
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	public Throwable getFailureCause() {
@@ -374,6 +382,13 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 */
 	public CompletableFuture<?> getReleaseFuture() {
 		return releaseFuture;
+	}
+
+	/**
+	 * Gets the reconcile future which is completed once the task executor report status or timeout.
+	 */
+	public CompletableFuture<ExecutionAttemptID> getReconcileFuture() {
+		return reconcileFuture;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -777,18 +792,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		}
 	}
 
-	void scheduleOrUpdateConsumers(IntermediateResultPartition partition) {
-
-		// Notify the scheduler to handle the consumable partition
-		getVertex().getExecutionGraph().getGraphManagerPlugin().onResultPartitionConsumable(
-			new ResultPartitionConsumableEvent(
-				partition.getIntermediateResult().getId(),
-				partition.getPartitionNumber()));
-
-		updateConsumers(partition.getConsumers());
-	}
-
-	private void updateConsumers(List<List<ExecutionEdge>> allConsumers) {
+	protected void updateConsumers(List<List<ExecutionEdge>> allConsumers) {
 		final int numConsumers = allConsumers.size();
 
 		if (numConsumers > 1) {
@@ -918,6 +922,97 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		}
 	}
 
+	/**
+	 * Let the execution begins to reconcile.
+	 */
+	public CompletableFuture<ExecutionAttemptID> reconcile() {
+		checkState(reconcileFuture == null);
+		reconcileFuture = new CompletableFuture<>();
+		reconcileFuture.whenComplete(
+				(value, throwable) -> {
+					if (throwable == null && value == null) {
+						sendPartitionInfoAsync();
+					}
+				});
+		if (ExecutionState.CREATED.equals(state) || ExecutionState.FINISHED.equals(state)) {
+			reconcileFuture.complete(null);
+		} else {
+			getVertex().getExecutionGraph().getFutureExecutorService().schedule(
+				() -> {
+					if (!reconcileFuture.isDone()) {
+						reconcileFuture.complete(getAttemptId());
+					}
+				},
+				getVertex().getExecutionGraph().getJobConfiguration().getLong(JobManagerOptions.JOB_RECONCILE_TIMEOUT),
+				TimeUnit.SECONDS);
+		}
+		return reconcileFuture;
+	}
+
+	/**
+	 * Reconcile status with the info reported by task executor.
+	 *
+	 * @param reportedState The state reported by task executor.
+	 * @param executionId The execution attempt id reported.
+	 * @param attemptNumber The attempt number reported.
+	 * @param startTimestamp The start time reported.
+	 * @param slot The logic slot reported.
+	 * @return
+	 */
+	public boolean reconcileStatus(
+			ExecutionState reportedState,
+			ExecutionAttemptID executionId,
+			int attemptNumber,
+			long startTimestamp,
+			LogicalSlot slot ) {
+		if (!reportedState.equals(state)) {
+			LOG.info("Reconcile {} fail as expected status {} with actural {}.",
+					vertex.getTaskNameWithSubtaskIndex(), state, reportedState);
+			return false;
+		} else if (reconcileFuture.isDone()) {
+			LOG.info("Reconcile {} fail as reconcile has finished.", vertex.getTaskNameWithSubtaskIndex());
+			return false;
+		}
+
+		if (ASSIGNED_SLOT_UPDATER.compareAndSet(this, null, slot) && slot.tryAssignPayload(this)) {
+			if (taskManagerLocationFuture.isDone() && !slot.getTaskManagerLocation().equals(taskManagerLocationFuture.getNow(null))) {
+				ASSIGNED_SLOT_UPDATER.compareAndSet(this, slot, null);
+				reconcileFuture.complete(attemptId);
+				LOG.info("Reconcile {} fail as has already has a different location.", vertex.getTaskNameWithSubtaskIndex());
+				return false;
+			} else if (!taskManagerLocationFuture.isDone() && !taskManagerLocationFuture.complete(slot.getTaskManagerLocation())) {
+				ASSIGNED_SLOT_UPDATER.compareAndSet(this, slot, null);
+				reconcileFuture.complete(attemptId);
+				LOG.info("Reconcile {} fail as has already has a location.", vertex.getTaskNameWithSubtaskIndex());
+				return false;
+			} else {
+				if (reconcileFuture.complete(null)) {
+					assignedAllocationID = slot.getAllocationId();
+					this.attemptId = executionId;
+					this.attemptNumber = attemptNumber;
+					markTimestamp(ExecutionState.CREATED, startTimestamp);
+					LOG.info("Reconcile {} success, the state is {}.", vertex.getTaskNameWithSubtaskIndex(), reportedState);
+					return true;
+				} else {
+					ASSIGNED_SLOT_UPDATER.compareAndSet(this, slot, null);
+					LOG.info("Reconcile {} fail as it has reconciled finished.", vertex.getTaskNameWithSubtaskIndex());
+					return false;
+				}
+			}
+		} else {
+			LOG.info("Reconcile {} fail as has already assigned a slot {}.",
+					vertex.getTaskNameWithSubtaskIndex(), assignedResource);
+			return false;
+		}
+	}
+
+	/**
+	 * Set the state to the state recovered when job master failover.
+	 */
+	public void recoverState(ExecutionState recoveredState) {
+		transitionState(state, recoveredState);
+	}
+
 	// --------------------------------------------------------------------------------------------
 	//   Callbacks
 	// --------------------------------------------------------------------------------------------
@@ -951,16 +1046,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 				if (transitionState(current, FINISHED)) {
 					try {
-						for (IntermediateResultPartition finishedPartition
-							: getVertex().finishAllBlockingPartitions()) {
-
-							IntermediateResultPartition[] allPartitions = finishedPartition
-								.getIntermediateResult().getPartitions();
-
-							for (IntermediateResultPartition partition : allPartitions) {
-								scheduleOrUpdateConsumers(partition);
-							}
-						}
+						getVertex().finishAllBlockingPartitionsAndNotify();
 
 						updateAccumulatorsAndMetrics(userAccumulators, metrics);
 
@@ -1072,6 +1158,9 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	void sendPartitionInfoAsync() {
+		if (reconcileFuture != null && !reconcileFuture.isDone()) {
+			return;
+		}
 		synchronized (updatePartitionLock) {
 			if (updatePartitionFuture == null) {
 				updatePartitionFuture = getVertex().getExecutionGraph().getFutureExecutorService().schedule(

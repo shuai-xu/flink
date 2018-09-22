@@ -25,7 +25,9 @@ import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
+import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.DummyScheduledUnit;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmaster.JobMasterId;
@@ -75,6 +77,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+/**
+ * Tests for the slot pool logic.
+ */
 public class SlotPoolTest extends TestLogger {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SlotPoolTest.class);
@@ -529,7 +534,7 @@ public class SlotPoolTest extends TestLogger {
 	}
 
 	/**
-	 * Tests that a SlotPool shutdown releases all registered slots
+	 * Tests that a SlotPool shutdown releases all registered slots.
 	 */
 	@Test
 	public void testShutdownReleasesAllSlots() throws Exception {
@@ -739,6 +744,167 @@ public class SlotPoolTest extends TestLogger {
 		}
 	}
 
+	/**
+	 * Tests that slots can be recovered according to the report of task executor after job maseter failover.
+	 */
+	@Test
+	public void testRecoverSlot() throws Exception {
+
+		final SlotPool slotPool = new SlotPool(rpcService, jobId, LocationPreferenceSchedulingStrategy.getInstance());
+
+		try {
+			SlotPoolGateway slotPoolGateway = setupSlotPool(slotPool, resourceManagerGateway);
+			slotPoolGateway.registerTaskManager(taskManagerLocation.getResourceID());
+
+			TestingPayload payload = new TestingPayload();
+			JobVertexID vertexIDWithoutSharing = new JobVertexID();
+			AllocationID allocationIDWithoutSharing = new AllocationID();
+			LogicalSlot slotWithoutSharing = slotPool.recoverSlot(
+					vertexIDWithoutSharing,
+					null,
+					null,
+					allocationIDWithoutSharing,
+					taskManagerLocation,
+					0,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slotWithoutSharing.tryAssignPayload(payload);
+
+			assertEquals(allocationIDWithoutSharing, slotWithoutSharing.getAllocationId());
+			assertEquals(0, slotWithoutSharing.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slotWithoutSharing.getTaskManagerLocation());
+			assertEquals(0, slotPool.getAllocatedSlots().get(allocationIDWithoutSharing).getPhysicalSlotNumber());
+
+			SlotSharingGroupId slotSharingGroupId = new SlotSharingGroupId();
+			AllocationID allocationID1WithSharing = new AllocationID();
+
+			JobVertexID vertexID1WithSharing = new JobVertexID();
+			LogicalSlot slot1WithSharing = slotPool.recoverSlot(
+					vertexID1WithSharing,
+					slotSharingGroupId,
+					null,
+					allocationID1WithSharing,
+					taskManagerLocation,
+					1,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slot1WithSharing.tryAssignPayload(payload);
+
+			assertEquals(allocationID1WithSharing, slot1WithSharing.getAllocationId());
+			assertEquals(1, slot1WithSharing.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slot1WithSharing.getTaskManagerLocation());
+
+			JobVertexID vertexID2WithSharing = new JobVertexID();
+			LogicalSlot slot2WithSharing = slotPool.recoverSlot(
+					vertexID2WithSharing,
+					slotSharingGroupId,
+					null,
+					allocationID1WithSharing,
+					taskManagerLocation,
+					1,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slot2WithSharing.tryAssignPayload(payload);
+
+			assertEquals(allocationID1WithSharing, slot2WithSharing.getAllocationId());
+			assertEquals(1, slot2WithSharing.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slot2WithSharing.getTaskManagerLocation());
+			assertFalse(slot1WithSharing.getSlotRequestId().equals(slot2WithSharing.getSlotRequestId()));
+
+			CoLocationGroup coLocationGroup = new CoLocationGroup();
+			JobVertexID vertexID1WithCoLocation = new JobVertexID();
+			LogicalSlot slot1WithCoLocation = slotPool.recoverSlot(
+					vertexID1WithCoLocation,
+					slotSharingGroupId,
+					coLocationGroup.getLocationConstraint(0),
+					allocationID1WithSharing,
+					taskManagerLocation,
+					1,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slot1WithCoLocation.tryAssignPayload(payload);
+
+			assertEquals(allocationID1WithSharing, slot1WithCoLocation.getAllocationId());
+			assertEquals(1, slot1WithCoLocation.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slot1WithCoLocation.getTaskManagerLocation());
+			assertFalse(slot1WithSharing.getSlotRequestId().equals(slot1WithCoLocation.getSlotRequestId()));
+
+			JobVertexID vertexID2WithCoLocation = new JobVertexID();
+			LogicalSlot slot2WithCoLocation = slotPool.recoverSlot(
+					vertexID2WithCoLocation,
+					slotSharingGroupId,
+					coLocationGroup.getLocationConstraint(0),
+					allocationID1WithSharing,
+					taskManagerLocation,
+					1,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slot2WithCoLocation.tryAssignPayload(payload);
+
+			assertEquals(allocationID1WithSharing, slot2WithCoLocation.getAllocationId());
+			assertEquals(1, slot2WithCoLocation.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slot2WithCoLocation.getTaskManagerLocation());
+			assertFalse(slot2WithCoLocation.getSlotRequestId().equals(slot1WithCoLocation.getSlotRequestId()));
+
+			AllocationID allocationID2WithSharing = new AllocationID();
+
+			LogicalSlot slot3WithCoLocation = slotPool.recoverSlot(
+					vertexID1WithCoLocation,
+					slotSharingGroupId,
+					coLocationGroup.getLocationConstraint(1),
+					allocationID2WithSharing,
+					taskManagerLocation,
+					2,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slot3WithCoLocation.tryAssignPayload(payload);
+
+			assertEquals(allocationID2WithSharing, slot3WithCoLocation.getAllocationId());
+			assertEquals(2, slot3WithCoLocation.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slot3WithCoLocation.getTaskManagerLocation());
+			assertFalse(slot1WithCoLocation.getSlotRequestId().equals(slot3WithCoLocation.getSlotRequestId()));
+
+			LogicalSlot slot4WithCoLocation = slotPool.recoverSlot(
+					vertexID2WithCoLocation,
+					slotSharingGroupId,
+					coLocationGroup.getLocationConstraint(1),
+					allocationID2WithSharing,
+					taskManagerLocation,
+					2,
+					DEFAULT_TESTING_PROFILE,
+					taskManagerGateway);
+			slot4WithCoLocation.tryAssignPayload(payload);
+
+			assertEquals(allocationID2WithSharing, slot4WithCoLocation.getAllocationId());
+			assertEquals(2, slot4WithCoLocation.getPhysicalSlotNumber());
+			assertEquals(taskManagerLocation, slot4WithCoLocation.getTaskManagerLocation());
+			assertFalse(slot3WithCoLocation.getSlotRequestId().equals(slot4WithCoLocation.getSlotRequestId()));
+
+			SlotSharingManager slotSharingManager = slotPool.getSlotSharingManager(slotSharingGroupId);
+			assertEquals(slotSharingManager.getTaskSlot(slot4WithCoLocation.getSlotRequestId()).getGroupId(), vertexID2WithCoLocation);
+
+			Exception exception = new Exception("Test exception for release slot");
+			slot3WithCoLocation.releaseSlot(exception).get();
+			slot4WithCoLocation.releaseSlot(exception).get();
+			assertEquals(1, slotPool.getAvailableSlots().size());
+
+			slotPool.releaseTaskManager(taskManagerLocation.getResourceID(), exception).get();
+
+			assertTrue(slotSharingManager.getTaskSlot(slot4WithCoLocation.getSlotRequestId()) == null);
+			assertTrue(slotSharingManager.getTaskSlot(slot3WithCoLocation.getSlotRequestId()) == null);
+			assertTrue(slotSharingManager.getTaskSlot(slot2WithCoLocation.getSlotRequestId()) == null);
+			assertTrue(slotSharingManager.getTaskSlot(slot1WithCoLocation.getSlotRequestId()) == null);
+			assertTrue(slotSharingManager.getTaskSlot(slot1WithSharing.getSlotRequestId()) == null);
+			assertTrue(slotSharingManager.getTaskSlot(slot2WithSharing.getSlotRequestId()) == null);
+
+			assertTrue(slotSharingManager.isEmpty());
+			assertEquals(7, payload.count);
+			assertEquals(0, slotPool.getAvailableSlots().size());
+		} finally {
+			slotPool.shutDown();
+		}
+	}
+
 	private static SlotPoolGateway setupSlotPool(
 			SlotPool slotPool,
 			ResourceManagerGateway resourceManagerGateway) throws Exception {
@@ -751,12 +917,16 @@ public class SlotPoolTest extends TestLogger {
 		return slotPool.getSelfGateway(SlotPoolGateway.class);
 	}
 
-	private AllocatedSlot createSlot(final AllocationID allocationId) {
-		return new AllocatedSlot(
-			allocationId,
-			taskManagerLocation,
-			0,
-			ResourceProfile.UNKNOWN,
-			taskManagerGateway);
+	private class TestingPayload implements LogicalSlot.Payload {
+		private int count = 0;
+
+		@Override
+		public void fail(Throwable cause) {
+			count++;
+		}
+		@Override
+		public CompletableFuture<?> getTerminalStateFuture() {
+			return CompletableFuture.completedFuture(null);
+		}
 	}
 }

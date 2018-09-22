@@ -21,12 +21,12 @@ package org.apache.flink.runtime.jobmaster.failover;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.Iterator;
-
+/**
+ * Tests for the memory base operation log store.
+ */
 public class MemoryOperationLogStoreTest {
 	@Test
-	public void testReadAndWriteOpLog() throws IOException {
+	public void testReadAndWriteOpLog() {
 		OperationLogStore store = new MemoryOperationLogStore();
 
 		// Initial the store and test read write.
@@ -44,28 +44,24 @@ public class MemoryOperationLogStoreTest {
 		store.writeOpLog(opLog3);
 		store.writeOpLog(opLog4);
 
-		Iterator<OperationLog> opLogs = store.opLogs().iterator();
-
-		Assert.assertEquals(opLog0, opLogs.next());
-		Assert.assertEquals(opLog1, opLogs.next());
-		Assert.assertEquals(opLog2, opLogs.next());
-		Assert.assertEquals(opLog3, opLogs.next());
-		Assert.assertEquals(opLog4, opLogs.next());
-		Assert.assertFalse(opLogs.hasNext());
+		Assert.assertEquals(opLog0, store.readOpLog());
+		Assert.assertEquals(opLog1, store.readOpLog());
+		Assert.assertEquals(opLog2, store.readOpLog());
+		Assert.assertEquals(opLog3, store.readOpLog());
+		Assert.assertEquals(opLog4, store.readOpLog());
+		Assert.assertEquals(null, store.readOpLog());
 
 		store.stop();
 
 		// test restart a fs store can retrieve former logs
 		store.start();
 
-		opLogs = store.opLogs().iterator();
-
-		Assert.assertEquals(opLog0, opLogs.next());
-		Assert.assertEquals(opLog1, opLogs.next());
-		Assert.assertEquals(opLog2, opLogs.next());
-		Assert.assertEquals(opLog3, opLogs.next());
-		Assert.assertEquals(opLog4, opLogs.next());
-		Assert.assertFalse(opLogs.hasNext());
+		Assert.assertEquals(opLog0, store.readOpLog());
+		Assert.assertEquals(opLog1, store.readOpLog());
+		Assert.assertEquals(opLog2, store.readOpLog());
+		Assert.assertEquals(opLog3, store.readOpLog());
+		Assert.assertEquals(opLog4, store.readOpLog());
+		Assert.assertEquals(null, store.readOpLog());
 
 		store.stop();
 
@@ -75,8 +71,7 @@ public class MemoryOperationLogStoreTest {
 
 		store.start();
 
-		opLogs = store.opLogs().iterator();
-		Assert.assertFalse(opLogs.hasNext());
+		Assert.assertTrue(null == store.readOpLog());
 
 		store.stop();
 	}

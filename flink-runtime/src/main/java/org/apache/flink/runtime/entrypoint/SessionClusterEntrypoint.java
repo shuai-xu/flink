@@ -40,6 +40,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.RestServerEndpointConfiguration;
 import org.apache.flink.runtime.rest.handler.RestHandlerConfiguration;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.webmonitor.retriever.LeaderGatewayRetriever;
 import org.apache.flink.runtime.webmonitor.retriever.MetricQueryServiceRetriever;
@@ -116,7 +117,8 @@ public abstract class SessionClusterEntrypoint extends ClusterEntrypoint {
 			ArchivedExecutionGraphStore archivedExecutionGraphStore,
 			FatalErrorHandler fatalErrorHandler,
 			@Nullable String restAddress,
-			HistoryServerArchivist historyServerArchivist) throws Exception {
+			HistoryServerArchivist historyServerArchivist,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 
 		// create the default dispatcher
 		return new StandaloneDispatcher(
@@ -133,6 +135,7 @@ public abstract class SessionClusterEntrypoint extends ClusterEntrypoint {
 			Dispatcher.DefaultJobManagerRunnerFactory.INSTANCE,
 			fatalErrorHandler,
 			restAddress,
-			historyServerArchivist);
+			historyServerArchivist,
+			leaderShipLostHandler);
 	}
 }

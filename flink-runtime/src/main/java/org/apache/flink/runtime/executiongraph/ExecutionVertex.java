@@ -43,17 +43,19 @@ import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
-import org.apache.flink.runtime.jobmaster.LogicalSlot;
-import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
+import org.apache.flink.runtime.jobmaster.LogicalSlot;
+import org.apache.flink.runtime.jobmaster.failover.ResultDescriptor;
+import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.util.EvictingBoundedList;
 import org.apache.flink.types.Either;
 import org.apache.flink.util.ExceptionUtils;
+import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.SerializedValue;
 
@@ -67,6 +69,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -90,7 +93,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	private final ExecutionJobVertex jobVertex;
 
-	private final Map<IntermediateResultPartitionID, IntermediateResultPartition> resultPartitions;
+	private Map<IntermediateResultPartitionID, IntermediateResultPartition> resultPartitions;
 
 	private final ExecutionEdge[][] inputEdges;
 
@@ -102,12 +105,12 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	private final Time timeout;
 
-	/** The name in the format "myTask (2/7)", cached to avoid frequent string concatenations */
+	/** The name in the format "myTask (2/7)", cached to avoid frequent string concatenations. */
 	private final String taskNameWithSubtask;
 
 	private volatile CoLocationConstraint locationConstraint;
 
-	/** The current or latest execution attempt of this vertex's task */
+	/** The current or latest execution attempt of this vertex's task. */
 	private volatile Execution currentExecution;	// this field must never be null
 
 	/** The create timestamp of execution. */
@@ -524,15 +527,13 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	 *             The creation timestamp for the new Execution
 	 * @param originatingGlobalModVersion
 	 *             The
-	 *
-	 * @return Returns the new created Execution.
+	 * @return Returns the new created Execution. 
 	 *
 	 * @throws GlobalModVersionMismatch Thrown, if the execution graph has a new global mod
 	 *                                  version than the one passed to this message.
 	 */
 	public Execution resetForNewExecution(final long timestamp, final long originatingGlobalModVersion)
-			throws GlobalModVersionMismatch
-	{
+			throws GlobalModVersionMismatch {
 		LOG.debug("Resetting execution vertex {} for new execution.", getTaskNameWithSubtaskIndex());
 
 		synchronized (priorExecutions) {
@@ -547,7 +548,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 			final Execution oldExecution = currentExecution;
 			final ExecutionState oldState = oldExecution.getState();
 
-			if (oldState.isTerminal()) {
+			if (oldState.isTerminal() || getExecutionGraph().getGraphManager().isReplaying()) {
 				priorExecutions.add(oldExecution);
 
 				final Execution newExecution = new Execution(
@@ -575,7 +576,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 				}
 
 				//TODO: set this index according to checkpoint when batch support checkpoint.
-				inputSplitIndexMap.clear();;
+				inputSplitIndexMap.clear();
 
 				// Reset intermediate results
 				for (IntermediateResultPartition resultPartition : resultPartitions.values()) {
@@ -625,7 +626,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	 */
 	public CompletableFuture<?> cancel() {
 		// to avoid any case of mixup in the presence of concurrent calls,
-		// we copy a reference to the stack to make sure both calls go to the same Execution
+		// we copy a reference to the stack to make sure both calls go to the same Execution.
 		final Execution exec = this.currentExecution;
 		exec.cancel();
 		return exec.getReleaseFuture();
@@ -660,12 +661,23 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		if (partition.getIntermediateResult().getResultType().isPipelined()) {
 			// Schedule or update receivers of this partition
 			partition.markDataProduced();
-			execution.scheduleOrUpdateConsumers(partition);
+			// Notify the scheduler to handle the consumable partition
+			notifyAndUpdateConsumers(partition);
 		}
 		else {
 			throw new IllegalArgumentException("ScheduleOrUpdateConsumers msg is only valid for" +
 					"pipelined partitions.");
 		}
+	}
+
+	protected void notifyAndUpdateConsumers(IntermediateResultPartition partition) {
+
+		currentExecution.updateConsumers(partition.getConsumers());
+		getExecutionGraph().getGraphManager().notifyResultPartitionConsumable(
+				getExecutionVertexID(),
+				partition.getIntermediateResult().getId(),
+				partition.getPartitionNumber(),
+				getCurrentAssignedResourceLocation());
 	}
 
 	public void cachePartitionInfo(PartialInputChannelDeploymentDescriptor partitionInfo){
@@ -682,27 +694,36 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	}
 
 	/**
-	 * Returns all blocking result partitions whose receivers can be scheduled/updated.
+	 * Finish all blocking result partitions whose receivers can be scheduled/updated and notify.
 	 */
-	List<IntermediateResultPartition> finishAllBlockingPartitions() {
-		List<IntermediateResultPartition> finishedBlockingPartitions = null;
+	void finishAllBlockingPartitionsAndNotify() {
 
+		List<IntermediateResult> finishedResults = new ArrayList<>(resultPartitions.size());
 		for (IntermediateResultPartition partition : resultPartitions.values()) {
 			if (partition.getResultType().isBlocking() && partition.markFinished()) {
-				if (finishedBlockingPartitions == null) {
-					finishedBlockingPartitions = new LinkedList<IntermediateResultPartition>();
-				}
-
-				finishedBlockingPartitions.add(partition);
+				finishedResults.add(partition.getIntermediateResult());
 			}
 		}
+		for (IntermediateResult rs : finishedResults) {
+			for (IntermediateResultPartition partition : rs.getPartitions()) {
+				notifyAndUpdateConsumers(partition);
+			}
+		}
+	}
 
-		if (finishedBlockingPartitions == null) {
-			return Collections.emptyList();
+	void resetResultPartitionID(ResultPartitionID[] partitionIds) {
+
+		Map<IntermediateResultPartitionID, IntermediateResultPartition> newResultPartitions =
+				new LinkedHashMap<>(resultPartitions.size());
+		Iterator<IntermediateResultPartition> iterator = resultPartitions.values().iterator();
+		for (int i = 0; i < resultPartitions.size(); i++) {
+			IntermediateResultPartition resultPartition = iterator.next();
+			IntermediateResultPartitionID originId = resultPartition.getPartitionId();
+			resultPartition.setPartitionId(partitionIds[i].getPartitionId());
+			resultPartition.getIntermediateResult().resetLookupHelper(originId, partitionIds[i].getPartitionId());
+			newResultPartitions.put(resultPartition.getPartitionId(), resultPartition);
 		}
-		else {
-			return finishedBlockingPartitions;
-		}
+		this.resultPartitions = newResultPartitions;
 	}
 
 	// the following two method is added for region failover
@@ -729,6 +750,140 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		return split;
 	}
 
+	public Map<OperatorID, List<InputSplit>> getAssignedInputSplits() {
+		return Collections.unmodifiableMap(assignedInputSplitsMap);
+	}
+
+	/**
+	 * Recover the execution vertex status after job master failover.
+	 *
+	 * @param state The state in the log.
+	 * @param assignedInputSplits The assigned input splits of a finished executions.
+	 * @param resultDescriptor The result information of a finished executions.
+	 */
+	public void recoverStatus(
+			ExecutionState state,
+			Map<OperatorID, List<InputSplit>> assignedInputSplits,
+			ResultDescriptor resultDescriptor) {
+		if (!ExecutionState.FINISHED.equals(state) &&
+				(assignedInputSplits != null && resultDescriptor != null)) {
+			throw new FlinkRuntimeException("Can not assign input split or result partion when execution is " + state);
+		}
+		switch (state) {
+			case FINISHED:
+				currentExecution.getTaskManagerLocationFuture().complete(resultDescriptor.getTaskManagerLocation());
+				resetResultPartitionID(resultDescriptor.getResultPartitionIds());
+				currentExecution.markFinished();
+
+				if (assignedInputSplits != null) {
+					assignedInputSplitsMap.clear();
+					assignedInputSplitsMap.putAll(assignedInputSplits);
+					for (Map.Entry<OperatorID, List<InputSplit>> opToInputs : assignedInputSplits.entrySet()) {
+						getJobVertex().getSplitAssigner(opToInputs.getKey()).inputSplitsAssigned(subTaskIndex, opToInputs.getValue());
+					}
+				}
+				break;
+			case RUNNING:
+				currentExecution.switchToRunning();
+				break;
+			case DEPLOYING:
+				currentExecution.recoverState(state);
+				break;
+			default:
+				throw new FlinkRuntimeException("Unsupported replaying the state " + state);
+		}
+	}
+
+	/**
+	 * Recover the pipelined result partition consume status after job master failover.
+	 *
+	 * @param resultId The intermediate data set id in the log.
+	 */
+	public void recoverResultPartitionStatus(
+			IntermediateDataSetID resultId,
+			TaskManagerLocation location) {
+
+		IntermediateResultPartition partitionToRecover = null;
+		for (IntermediateResultPartition irp : getProducedPartitions().values()) {
+			if (irp.getIntermediateResult().getId().equals(resultId)) {
+				partitionToRecover = irp;
+			}
+		}
+		if (partitionToRecover == null) {
+			throw new FlinkRuntimeException("Can not find the intermediate result " + resultId + " on " + getTaskNameWithSubtaskIndex());
+		}
+		if (!(ExecutionState.RUNNING.equals(currentExecution.getState()) &&
+						partitionToRecover.getResultType().isPipelined())) {
+			throw new FlinkRuntimeException("Invalid state " + currentExecution.getState() + " for " + getTaskNameWithSubtaskIndex());
+		}
+		currentExecution.getTaskManagerLocationFuture().complete(location);
+
+		scheduleOrUpdateConsumers(new ResultPartitionID(partitionToRecover.getPartitionId(), currentExecution.getAttemptId()));
+	}
+
+	/**
+	 * Reconcile the execution with the running info reported by task executor.
+	 * @param executionId
+	 * @param attemptNumber
+	 * @param startTimestamp
+	 * @param partitionIds
+	 */
+	public boolean reconcileExecution(
+			ExecutionState state,
+			ExecutionAttemptID executionId,
+			int attemptNumber,
+			long startTimestamp,
+			ResultPartitionID[] partitionIds,
+			boolean[] partitionsConsumable,
+			Map<OperatorID, List<InputSplit>> assignedInputSplits,
+			LogicalSlot slot) {
+
+		LOG.debug("Reconcile execution vertex {} for current execution.", getTaskNameWithSubtaskIndex());
+		if (resultPartitions.size() != partitionIds.length) {
+			LOG.info("Reconcile execution failed due to partition number with actual {}, expect {}.",
+					partitionIds.length, resultPartitions.size());
+			return false;
+		}
+
+		// first, update the IntermediateResultPartition and reset the map
+		resetResultPartitionID(partitionIds);
+
+		// second, update the pipelined partition info to its consumers.
+		for (int i = 0; i < partitionIds.length; i++) {
+			IntermediateResultPartition partition = resultPartitions.get(partitionIds[i].getPartitionId());
+			if (partition.getResultType().isPipelined()) {
+				if (partition.hasDataProduced() != partitionsConsumable[i]) {
+					LOG.info("Reconcile execution {} failed due to partition {} consumable not equals to {}.",
+							getTaskNameWithSubtaskIndex(), partition.getPartitionId(), partition.hasDataProduced());
+
+					currentExecution.getReconcileFuture().complete(currentExecution.getAttemptId());
+					return false;
+				}
+			}
+		}
+
+		// third, reset execution basic information
+		getExecutionGraph().deregisterExecution(currentExecution);
+		if (currentExecution.reconcileStatus(state, executionId, attemptNumber, startTimestamp, slot)) {
+			getExecutionGraph().registerExecution(currentExecution);
+
+			// forth, build the input split map
+			inputSplitIndexMap.clear();
+			assignedInputSplitsMap.clear();
+			for (Map.Entry<OperatorID, List<InputSplit>> opToInputs : assignedInputSplits.entrySet()) {
+				for (InputSplit inputSplit : opToInputs.getValue()) {
+					inputSplitAssigned(opToInputs.getKey(), inputSplit);
+				}
+				getJobVertex().getSplitAssigner(opToInputs.getKey()).inputSplitsAssigned(subTaskIndex, opToInputs.getValue());
+			}
+			return true;
+		}
+		else {
+			getExecutionGraph().registerExecution(currentExecution);
+			return false;
+		}
+	}
+
 	// --------------------------------------------------------------------------------------------
 	//   Notifications from the Execution Attempt
 	// --------------------------------------------------------------------------------------------
@@ -750,7 +905,7 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	// --------------------------------------------------------------------------------------------
 
 	/**
-	 * Simply forward this notification
+	 * Simply forward this notification.
 	 */
 	void notifyStateTransition(Execution execution, ExecutionState newState, Throwable error) {
 		// only forward this notification if the execution is still the current execution

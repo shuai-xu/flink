@@ -27,6 +27,7 @@ import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 
 import javax.annotation.Nullable;
@@ -48,7 +49,8 @@ class TestingDispatcher extends Dispatcher {
 		@Nullable String metricQueryServicePath,
 		ArchivedExecutionGraphStore archivedExecutionGraphStore,
 		JobManagerRunnerFactory jobManagerRunnerFactory,
-		FatalErrorHandler fatalErrorHandler) throws Exception {
+		FatalErrorHandler fatalErrorHandler,
+		LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 		super(
 			rpcService,
 			endpointId,
@@ -64,7 +66,8 @@ class TestingDispatcher extends Dispatcher {
 			jobManagerRunnerFactory,
 			fatalErrorHandler,
 			null,
-			VoidHistoryServerArchivist.INSTANCE);
+			VoidHistoryServerArchivist.INSTANCE,
+			leaderShipLostHandler);
 	}
 
 	@VisibleForTesting

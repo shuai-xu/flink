@@ -58,6 +58,7 @@ import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobmaster.JMTMRegistrationSuccess;
+import org.apache.flink.runtime.jobmaster.JobMasterException;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.jobmaster.ResourceManagerAddress;
@@ -208,7 +209,6 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 	@Nullable
 	private UUID currentRegistrationTimeoutId;
-
 
 	public TaskExecutor(
 			RpcService rpcService,
@@ -1149,6 +1149,9 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 	private void establishJobManagerConnection(JobID jobId, final JobMasterGateway jobMasterGateway, JMTMRegistrationSuccess registrationSuccess) {
 
+		// Remove pending reconnection if there is one.
+		reconnectingJobManagerTable.remove(jobId);
+
 		if (jobManagerTable.contains(jobId)) {
 			JobManagerConnection oldJobManagerConnection = jobManagerTable.get(jobId);
 
@@ -1236,6 +1239,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 							currentTask.getTaskInfo().getIndexOfThisSubtask(),
 							resultPartitionIDs,
 							resultPartitionsConsumable,
+							currentTask.getInputSplitProvider().getAssignedInputSplits(),
 							currentTaskSlot.generateSlotOffer());
 					allTaskExecutionStatus.add(taskExecutionStatus);
 				}
@@ -1486,7 +1490,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		futureAcknowledge.whenCompleteAsync(
 			(ack, throwable) -> {
 				if (throwable != null) {
-					if (throwable instanceof TimeoutException) {
+					if (throwable instanceof TimeoutException || throwable instanceof JobMasterException) {
 						log.warn("Update task execution state failed, will retry after {}. Job {}: Attempt {}, {}",
 								taskManagerConfiguration.getRefusedRegistrationPause(),
 								taskExecutionState.getJobID(), executionAttemptID, throwable);

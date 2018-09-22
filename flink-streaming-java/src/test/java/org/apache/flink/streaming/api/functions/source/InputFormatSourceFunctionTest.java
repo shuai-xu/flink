@@ -41,6 +41,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -296,6 +298,11 @@ public class InputFormatSourceFunctionTest {
 					if (nextSplit < inputSplits.length) {
 						return inputSplits[nextSplit++];
 					}
+					return null;
+				}
+
+				@Override
+				public Map<OperatorID, List<InputSplit>> getAssignedInputSplits() {
 					return null;
 				}
 			};

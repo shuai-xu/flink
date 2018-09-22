@@ -34,6 +34,7 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.util.FlinkException;
 
@@ -73,7 +74,8 @@ public class MiniDispatcher extends Dispatcher {
 			@Nullable String restAddress,
 			HistoryServerArchivist historyServerArchivist,
 			JobGraph jobGraph,
-			JobClusterEntrypoint.ExecutionMode executionMode) throws Exception {
+			JobClusterEntrypoint.ExecutionMode executionMode,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 		super(
 			rpcService,
 			endpointId,
@@ -89,7 +91,8 @@ public class MiniDispatcher extends Dispatcher {
 			jobManagerRunnerFactory,
 			fatalErrorHandler,
 			restAddress,
-			historyServerArchivist);
+			historyServerArchivist,
+			leaderShipLostHandler);
 
 		this.executionMode = checkNotNull(executionMode);
 		this.jobTerminationFuture = new CompletableFuture<>();

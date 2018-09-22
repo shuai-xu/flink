@@ -42,7 +42,7 @@ public class OperationLogStoreLoader {
 			case "filesystem":
 				return new FileSystemOperationLogStore(jobID, config);
 			default:
-				return null;
+				return new DummyOperationLogStore();
 		}
 	}
 }

@@ -39,6 +39,7 @@ import org.apache.flink.runtime.rest.handler.legacy.utils.ArchivedExecutionGraph
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
+import org.apache.flink.runtime.util.TestingLeaderShipLostHandler;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.TestLogger;
 
@@ -61,7 +62,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 /**
- * Tests for the {@link JobManagerRunner}
+ * Tests for the {@link JobManagerRunner}.
  */
 public class JobManagerRunnerTest extends TestLogger {
 
@@ -85,6 +86,8 @@ public class JobManagerRunnerTest extends TestLogger {
 	private TestingHighAvailabilityServices haServices;
 
 	private TestingFatalErrorHandler fatalErrorHandler;
+
+	private TestingLeaderShipLostHandler leaderShipLostHandler;
 
 	@BeforeClass
 	public static void setupClass() throws Exception {
@@ -117,6 +120,7 @@ public class JobManagerRunnerTest extends TestLogger {
 		haServices.setCheckpointRecoveryFactory(new StandaloneCheckpointRecoveryFactory());
 
 		fatalErrorHandler = new TestingFatalErrorHandler();
+		leaderShipLostHandler = new TestingLeaderShipLostHandler();
 	}
 
 	@After
@@ -138,7 +142,7 @@ public class JobManagerRunnerTest extends TestLogger {
 			rpcService.stopService();
 		}
 	}
-	
+
 	@Test
 	public void testJobCompletion() throws Exception {
 		final JobManagerRunner jobManagerRunner = createJobManagerRunner();
@@ -238,6 +242,7 @@ public class JobManagerRunnerTest extends TestLogger {
 			blobServer,
 			jobManagerSharedServices,
 			UnregisteredJobManagerJobMetricGroupFactory.INSTANCE,
-			fatalErrorHandler);
+			fatalErrorHandler,
+			leaderShipLostHandler);
 	}
 }

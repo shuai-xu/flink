@@ -74,8 +74,13 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
+import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.exceptions.JobModificationException;
 import org.apache.flink.runtime.jobmaster.factories.JobManagerJobMetricGroupFactory;
+import org.apache.flink.runtime.jobmaster.failover.OperationLogManager;
+import org.apache.flink.runtime.jobmaster.failover.OperationLogStoreLoader;
+import org.apache.flink.runtime.jobmaster.failover.OperationLogType;
 import org.apache.flink.runtime.jobmaster.message.ClassloadingProps;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolFactory;
@@ -109,7 +114,6 @@ import org.apache.flink.runtime.rpc.akka.AkkaRpcServiceUtils;
 import org.apache.flink.runtime.schedule.GraphManagerPlugin;
 import org.apache.flink.runtime.schedule.GraphManagerPluginFactory;
 import org.apache.flink.runtime.schedule.SchedulingConfig;
-import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.taskexecutor.AccumulatorReport;
 import org.apache.flink.runtime.taskexecutor.TaskExecutionStatus;
@@ -206,6 +210,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private final ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy;
 
+	// --------- Failover --------
+	private final OperationLogManager operationLogManager;
+
 	// --------- BackPressure --------
 
 	private final BackPressureStatsTracker backPressureStatsTracker;
@@ -222,8 +229,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private ExecutionGraph executionGraph;
 
-	/** The graph manager plugin handles execution events and decides vertices to schedule. */
-	private GraphManagerPlugin graphManagerPlugin;
+	/** The graph manager manages the expansion and schedule of graph. */
+	private GraphManager graphManager;
 
 	@Nullable
 	private JobManagerJobStatusListener jobStatusListener;
@@ -326,15 +333,18 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		this.backPressureStatsTracker = checkNotNull(jobManagerSharedServices.getBackPressureStatsTracker());
 		this.lastInternalSavepoint = null;
 
-		this.jobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
-		this.executionGraph = createAndRestoreExecutionGraph(jobManagerJobMetricGroup);
+		this.operationLogManager = new OperationLogManager(
+				OperationLogStoreLoader.loadOperationLogStore(jobGraph.getJobID(), jobMasterConfiguration.getConfiguration()));
 
 		this.jobStatusListener = null;
 
 		this.resourceManagerConnection = null;
 		this.establishedResourceManagerConnection = null;
 
-		setupGraphManagerPlugin();
+		JobManagerJobMetricGroup jmJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
+		ExecutionGraph eg = createAndRestoreExecutionGraph(jmJobMetricGroup);
+
+		assignExecutionGraph(eg, jmJobMetricGroup);
 	}
 
 	//----------------------------------------------------------------------------------------------
@@ -382,6 +392,43 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	/**
+	 * Let job master enter RECONCILING status. This means it should wait a moment of time for task executors
+	 * to report the running task status. It will create a new job graph and let it be RECONCILING,
+	 * and replay from the operation log manager.
+	 *
+	 * <p>Job enter RECONCILING because job master found that the job has already been started by
+	 * a previous job master.
+	 *
+	 */
+	public void reconcile() throws Exception {
+
+		if (executionGraph.getState() != JobStatus.CREATED) {
+			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
+			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
+
+			assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
+		}
+		graphManager.enterReconcile();
+
+		try {
+			operationLogManager.replay();
+		} catch (Throwable t) {
+			log.warn("Fail to replay log for {}, will start the job as a new one.", executionGraph.getJobID(), t);
+			operationLogManager.clear();
+
+			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
+			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
+			assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
+			return;
+		}
+		log.info("Job master replay log finish.");
+
+		operationLogManager.start();
+
+		executionGraph.reconcile();
+	}
+
+	/**
 	 * Suspend the job and shutdown all other services including rpc.
 	 */
 	@Override
@@ -389,8 +436,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		log.info("Stopping the JobMaster for job {}({}).", jobGraph.getName(), jobGraph.getJobID());
 
 		// dispose graph manager plugin
-		if (graphManagerPlugin != null) {
-			graphManagerPlugin.close();
+		if (graphManager != null) {
+			graphManager.dispose();
 		}
 
 		// disconnect from all registered TaskExecutors
@@ -546,7 +593,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 				// check if the ExecutionGraph is still the same
 				if (executionGraph == currentExecutionGraph) {
 					clearExecutionGraphFields();
+					checkState(executionGraph.getState().isTerminalState());
 					assignExecutionGraph(restoredExecutionGraph, newJobManagerJobMetricGroup);
+					operationLogManager.clear();
 					scheduleExecutionGraph();
 
 					return Acknowledge.get();
@@ -582,6 +631,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	public CompletableFuture<Acknowledge> updateTaskExecutionState(
 			final TaskExecutionState taskExecutionState) {
 		checkNotNull(taskExecutionState, "taskExecutionState");
+
+		if (graphManager.isReconciling()) {
+			return FutureUtils.completedExceptionally(
+					new JobMasterException("The job master is reconciling with task executors."));
+		}
 
 		if (executionGraph.updateState(taskExecutionState)) {
 			return CompletableFuture.completedFuture(Acknowledge.get());
@@ -686,6 +740,12 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	public CompletableFuture<Acknowledge> scheduleOrUpdateConsumers(
 			final ResultPartitionID partitionID,
 			final Time timeout) {
+
+		if (graphManager.isReconciling()) {
+			return FutureUtils.completedExceptionally(
+					new JobMasterException("The job master is reconciling with task executors."));
+		}
+
 		try {
 			executionGraph.scheduleOrUpdateConsumers(partitionID);
 			return CompletableFuture.completedFuture(Acknowledge.get());
@@ -696,7 +756,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	@Override
 	public CompletableFuture<Acknowledge> disconnectTaskManager(final ResourceID resourceID, final Exception cause) {
-		log.debug("Disconnect TaskExecutor {} because: {}", resourceID, cause.getMessage());
+		log.info("Disconnect TaskExecutor {} because: {}", resourceID, cause.getMessage());
 
 		taskManagerHeartbeatManager.unmonitorTarget(resourceID);
 		CompletableFuture<Acknowledge> releaseFuture = slotPoolGateway.releaseTaskManager(resourceID, cause);
@@ -882,6 +942,98 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	@Override
+	public CompletableFuture<TaskExecutorReportResponse> reportTasksExecutionStatus(
+			final ResourceID taskManagerId,
+			final List<TaskExecutionStatus> tasksExecutionStatus,
+			@RpcTimeout final Time timeout) {
+
+		if (executionGraph.getState() != JobStatus.RECONCILING) {
+			log.info("Refuse reported task status from {}", taskManagerId);
+
+			TaskExecutorReportResponse response = new TaskExecutorReportResponse.Decline(
+					"The reported task exceeds the duration time, the job master is not in reconciling state now.");
+			return CompletableFuture.completedFuture(response);
+		}
+
+		Tuple2<TaskManagerLocation, TaskExecutorGateway> taskManager = registeredTaskManagers.get(taskManagerId);
+		if (taskManager == null) {
+			TaskExecutorReportResponse response = new TaskExecutorReportResponse.Decline("Unknown TaskManager " + taskManagerId);
+			return CompletableFuture.completedFuture(response);
+		}
+
+		final TaskManagerLocation taskManagerLocation = taskManager.f0;
+		final TaskExecutorGateway taskExecutorGateway = taskManager.f1;
+		final RpcTaskManagerGateway rpcTaskManagerGateway = new RpcTaskManagerGateway(taskExecutorGateway, this.getFencingToken());
+
+		List<Integer> rejected = new ArrayList<>();
+		for (int i = 0; i < tasksExecutionStatus.size(); i++) {
+			TaskExecutionStatus executionStatus = tasksExecutionStatus.get(i);
+			SlotOffer slotOffer = executionStatus.getBoundSlot();
+
+			log.debug("Accept reported task execution {} with state {} from {}",
+					executionStatus.getExecutionAttemptID(),
+					executionStatus.getExecutionState(),
+					taskManagerId);
+
+			ExecutionJobVertex ejv = executionGraph.getJobVertex(executionStatus.getJobVertexID());
+			SlotSharingGroup sharingGroup = ejv.getSlotSharingGroup();
+
+			CoLocationConstraint coLocationConstraint = null;
+			if (ejv.getCoLocationGroup() != null){
+				coLocationConstraint = ejv.getCoLocationGroup().getLocationConstraint(executionStatus.getIndexOfSubtask());
+			}
+
+			LogicalSlot singleLogicalSlot = null;
+			try {
+				singleLogicalSlot = slotPool.recoverSlot(
+						executionStatus.getJobVertexID(),
+						sharingGroup == null ? null : sharingGroup.getSlotSharingGroupId(),
+						coLocationConstraint,
+						slotOffer.getAllocationId(),
+						taskManagerLocation,
+						slotOffer.getSlotIndex(),
+						slotOffer.getResourceProfile(),
+						rpcTaskManagerGateway);
+			} catch (Exception e) {
+				rejected.add(i);
+				continue;
+			}
+
+			try {
+				if (!graphManager.reconcileExecutionVertex(
+						executionStatus.getJobVertexID(),
+						executionStatus.getIndexOfSubtask(),
+						executionStatus.getExecutionState(),
+						executionStatus.getExecutionAttemptID(),
+						executionStatus.getAttemptNumber(),
+						executionStatus.getCreateTimestamp(),
+						executionStatus.getResultPartitionIDs(),
+						executionStatus.getResultPartitionsConsumable(),
+						executionStatus.getAssignedInputSplits(),
+						singleLogicalSlot)) {
+					slotPool.releaseSlot(
+							singleLogicalSlot.getSlotRequestId(),
+							singleLogicalSlot.getSlotSharingGroupId(),
+							new Exception("Fail to recover the slot"));
+					rejected.add(i);
+					log.info("Fail to reconcile status for execution {} with state {} from {}",
+							executionStatus.getExecutionAttemptID(),
+							executionStatus.getExecutionState(),
+							taskManagerId);
+				}
+
+			} catch (Exception ex) {
+				log.warn("Fail to recover vertex {}_{} execution {}",
+						executionStatus.getJobVertexID(), executionStatus.getIndexOfSubtask(), executionStatus.getExecutionAttemptID(), ex);
+				rejected.add(i);
+			}
+		}
+
+		TaskExecutorReportResponse response = new TaskExecutorReportResponse.Success(rejected);
+		return CompletableFuture.completedFuture(response);
+	}
+
+	@Override
 	public void failSlot(
 			final ResourceID taskManagerId,
 			final AllocationID allocationId,
@@ -976,14 +1128,6 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	@Override
 	public CompletableFuture<ArchivedExecutionGraph> requestJob(Time timeout) {
 		return CompletableFuture.completedFuture(ArchivedExecutionGraph.createFrom(executionGraph));
-	}
-
-	@Override
-	public CompletableFuture<TaskExecutorReportResponse> reportTasksExecutionStatus(
-		final ResourceID taskManagerId,
-		final List<TaskExecutionStatus> tasksExecutionStatus,
-		final Time timeout) {
-		throw new UnsupportedOperationException("Not yet implement.");
 	}
 
 	@Override
@@ -1083,7 +1227,34 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		log.info("Starting execution of job {} ({})", jobGraph.getName(), jobGraph.getJobID());
 
-		resetAndScheduleExecutionGraph();
+		// For a new job, schedule it directly. If in RECONCILING, it will be scheduled after reconcile finish.
+		if (JobStatus.CREATED.equals(executionGraph.getState())) {
+			scheduleExecutionGraph();
+		} else {
+			executionGraph.getReconcileFuture().thenApplyAsync(
+					(Collection<ExecutionAttemptID> reconcileFailedExecutions) -> {
+						if (JobStatus.RUNNING.equals(executionGraph.getState())) {
+							graphManager.leaveReconcile();
+							for (ExecutionAttemptID executionAttemptId : reconcileFailedExecutions) {
+								if (executionAttemptId != null) {
+									Execution execution = executionGraph.getRegisteredExecutions().get(executionAttemptId);
+									if (execution != null) {
+										updateTaskExecutionState(new TaskExecutionState(
+												executionGraph.getJobID(),
+												execution.getAttemptId(),
+												ExecutionState.FAILED,
+												new FlinkException("Fail to reconcile with master")));
+									}
+								}
+							}
+						} else {
+							log.error("When reconcile finished, the job is in {}, this is a logical error.", executionGraph.getState());
+						}
+
+						return null;
+					}
+			, getMainThreadExecutor());
+		}
 
 		return Acknowledge.get();
 	}
@@ -1106,10 +1277,6 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	private void setNewFencingToken(JobMasterId newJobMasterId) {
 		if (getFencingToken() != null) {
 			log.info("Restarting old job with JobMasterId {}. The new JobMasterId is {}.", getFencingToken(), newJobMasterId);
-
-			// first we have to suspend the current execution
-			suspendExecution(new FlinkException("Old job with JobMasterId " + getFencingToken() +
-				" is restarted with a new JobMasterId " + newJobMasterId + '.'));
 		}
 
 		// set new leader id
@@ -1117,11 +1284,10 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	/**
-	 * Suspending job, all the running tasks will be cancelled, and communication with other components
-	 * will be disposed.
+	 * Suspending job, and communication with other components will be disposed.
 	 *
-	 * <p>Mostly job is suspended because of the leadership has been revoked, one can be restart this job by
-	 * calling the {@link #start(JobMasterId, Time)} method once we take the leadership back again.
+	 * <p>Mostly job is suspended without cancelling running tasks because of the leadership has been revoked,
+	 * the one who takes the leadership can take over the control.
 	 *
 	 * @param cause The reason of why this job been suspended.
 	 */
@@ -1144,7 +1310,10 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		suspendAndClearExecutionGraphFields(cause);
 
-		// the slot pool stops receiving messages and clears its pooled slots
+		// flush the operation logs.
+		operationLogManager.stop();
+
+		// the slot pool stops receiving messages and clears its pooled slots.
 		slotPoolGateway.suspend();
 
 		// disconnect from resource manager:
@@ -1156,46 +1325,27 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	private void assignExecutionGraph(
 			ExecutionGraph newExecutionGraph,
 			JobManagerJobMetricGroup newJobManagerJobMetricGroup) {
-		validateRunsInMainThread();
-		checkState(executionGraph.getState().isTerminalState());
+		checkState(executionGraph == null ||
+				JobStatus.CREATED.equals(executionGraph.getState()) ||
+				executionGraph.getState().isTerminalState(),
+				"The job state is " + (executionGraph == null ? null : executionGraph.getState()));
 		checkState(jobManagerJobMetricGroup == null);
 
 		executionGraph = newExecutionGraph;
 		jobManagerJobMetricGroup = newJobManagerJobMetricGroup;
 
-		setupGraphManagerPlugin();
-	}
-
-	private void resetAndScheduleExecutionGraph() throws Exception {
-		validateRunsInMainThread();
-
-		final CompletableFuture<Void> executionGraphAssignedFuture;
-
-		if (executionGraph.getState() == JobStatus.CREATED) {
-			executionGraphAssignedFuture = CompletableFuture.completedFuture(null);
-		} else {
-			suspendAndClearExecutionGraphFields(new FlinkException("ExecutionGraph is being reset in order to be rescheduled."));
-			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
-			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
-
-			executionGraphAssignedFuture = executionGraph.getTerminationFuture().handleAsync(
-				(JobStatus ignored, Throwable throwable) -> {
-					assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
-					return null;
-				},
-				getMainThreadExecutor());
-		}
-
-		executionGraphAssignedFuture.thenRun(this::scheduleExecutionGraph);
-	}
-
-	private void scheduleExecutionGraph() {
 		checkState(jobStatusListener == null);
 		// register self as job status change listener
 		jobStatusListener = new JobManagerJobStatusListener();
 		executionGraph.registerJobStatusListener(jobStatusListener);
 
+		setupGraphManager();
+	}
+
+	private void scheduleExecutionGraph() {
+
 		try {
+			operationLogManager.start();
 			executionGraph.scheduleForExecution();
 		}
 		catch (Throwable t) {
@@ -1265,7 +1415,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		jobStatusListener = null;
 	}
 
-	private GraphManagerPlugin createGraphManagerPlugin(VertexScheduler scheduler) {
+	private GraphManager createGraphManager() {
 		Configuration schedulingConfig = jobGraph.getSchedulingConfiguration();
 		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
 			schedulingConfig, userCodeLoader);
@@ -1279,18 +1429,24 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			configuration.addAll(schedulingConfig);
 		}
 
-		graphManagerPlugin.open(scheduler, jobGraph, new SchedulingConfig(configuration, userCodeLoader));
+		GraphManager graphManager = new GraphManager(
+				graphManagerPlugin,
+				getSelfGateway(JobMasterGateway.class),
+				operationLogManager,
+				executionGraph);
+		graphManager.open(jobGraph, new SchedulingConfig(configuration, userCodeLoader));
 
-		return graphManagerPlugin;
+		return graphManager;
 	}
 
-	private void setupGraphManagerPlugin() {
-		if (graphManagerPlugin != null) {
-			graphManagerPlugin.close();
+	private void setupGraphManager() {
+		if (graphManager != null) {
+			graphManager.dispose();
 		}
-		VertexScheduler scheduler = executionGraph.getScheduler();
-		graphManagerPlugin = createGraphManagerPlugin(scheduler);
-		executionGraph.setGraphManagerPlugin(graphManagerPlugin);
+		graphManager = createGraphManager();
+		this.operationLogManager.registerLogHandler(OperationLogType.GRAPH_MANAGER, this.graphManager);
+		executionGraph.setGraphManager(graphManager);
+		executionGraph.registerExecutionListener(graphManager);
 	}
 
 	/**
@@ -1351,6 +1507,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		if (newJobStatus.isGloballyTerminalState()) {
 			final ArchivedExecutionGraph archivedExecutionGraph = ArchivedExecutionGraph.createFrom(executionGraph);
+			operationLogManager.clear();
 			scheduledExecutorService.execute(() -> jobCompletionActions.jobReachedGloballyTerminalState(archivedExecutionGraph));
 		}
 	}

@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.jobmaster.failover;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 
 /**
  * A store for recording the {@link OperationLog} of the {@link org.apache.flink.runtime.jobmaster.JobMaster}.
@@ -28,29 +27,29 @@ interface OperationLogStore {
 	/**
 	 * Start the store, usually should reset the reader and writer.
 	 */
-	void start() throws IOException;
+	void start();
 
 	/**
 	 * Stop the store, usually should close the reader and writer.
 	 */
-	void stop() throws IOException;
+	void stop();
 
 	/**
 	 * Clear all the logs in the store.
 	 */
-	void clear() throws IOException;
+	void clear();
 
 	/**
 	 * Write an operation log.
 	 *
 	 * @param opLog The operation log need to be record
 	 */
-	void writeOpLog(@Nonnull OperationLog opLog) throws IOException;
+	void writeOpLog(@Nonnull OperationLog opLog);
 
 	/**
 	 * Return a iterator of operation logs in the store.
 	 *
 	 * @return a iterator of operation logs in the store
 	 */
-	Iterable<OperationLog> opLogs() throws IOException;
+	OperationLog readOpLog();
 }

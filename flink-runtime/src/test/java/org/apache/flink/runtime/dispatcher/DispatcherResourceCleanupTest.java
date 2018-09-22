@@ -51,11 +51,13 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
 import org.apache.flink.runtime.rest.handler.legacy.utils.ArchivedExecutionGraphBuilder;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
 import org.apache.flink.runtime.testutils.InMemorySubmittedJobGraphStore;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
+import org.apache.flink.runtime.util.TestingLeaderShipLostHandler;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TestLogger;
 
@@ -117,6 +119,8 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 
 	private TestingFatalErrorHandler fatalErrorHandler;
 
+	private TestingLeaderShipLostHandler leaderShipLostHandler;
+
 	private BlobServer blobServer;
 
 	private PermanentBlobKey permanentBlobKey;
@@ -172,6 +176,7 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 		resultFuture = new CompletableFuture<>();
 
 		fatalErrorHandler = new TestingFatalErrorHandler();
+		leaderShipLostHandler = new TestingLeaderShipLostHandler();
 
 		dispatcher = new TestingDispatcher(
 			rpcService,
@@ -186,7 +191,8 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 			null,
 			new MemoryArchivedExecutionGraphStore(),
 			new TestingJobManagerRunnerFactory(resultFuture, CompletableFuture.completedFuture(null)),
-			fatalErrorHandler);
+			fatalErrorHandler,
+			leaderShipLostHandler);
 
 		dispatcher.start();
 
@@ -357,7 +363,21 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 	}
 
 	private static final class TestingDispatcher extends Dispatcher {
-		TestingDispatcher(RpcService rpcService, String endpointId, Configuration configuration, HighAvailabilityServices highAvailabilityServices, SubmittedJobGraphStore submittedJobGraphStore, ResourceManagerGateway resourceManagerGateway, BlobServer blobServer, HeartbeatServices heartbeatServices, JobManagerMetricGroup jobManagerMetricGroup, @Nullable String metricServiceQueryPath, ArchivedExecutionGraphStore archivedExecutionGraphStore, JobManagerRunnerFactory jobManagerRunnerFactory, FatalErrorHandler fatalErrorHandler) throws Exception {
+		TestingDispatcher(
+				RpcService rpcService,
+				String endpointId,
+				Configuration configuration,
+				HighAvailabilityServices highAvailabilityServices,
+				SubmittedJobGraphStore submittedJobGraphStore,
+				ResourceManagerGateway resourceManagerGateway,
+				BlobServer blobServer,
+				HeartbeatServices heartbeatServices,
+				JobManagerMetricGroup jobManagerMetricGroup,
+				@Nullable String metricServiceQueryPath,
+				ArchivedExecutionGraphStore archivedExecutionGraphStore,
+				JobManagerRunnerFactory jobManagerRunnerFactory,
+				FatalErrorHandler fatalErrorHandler,
+				LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 			super(
 				rpcService,
 				endpointId,
@@ -373,7 +393,8 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 				jobManagerRunnerFactory,
 				fatalErrorHandler,
 				null,
-				VoidHistoryServerArchivist.INSTANCE);
+				VoidHistoryServerArchivist.INSTANCE,
+				leaderShipLostHandler);
 		}
 	}
 
@@ -389,7 +410,18 @@ public class DispatcherResourceCleanupTest extends TestLogger {
 		}
 
 		@Override
-		public JobManagerRunner createJobManagerRunner(ResourceID resourceId, JobGraph jobGraph, Configuration configuration, RpcService rpcService, HighAvailabilityServices highAvailabilityServices, HeartbeatServices heartbeatServices, BlobServer blobServer, JobManagerSharedServices jobManagerServices, JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory, FatalErrorHandler fatalErrorHandler) {
+		public JobManagerRunner createJobManagerRunner(
+				ResourceID resourceId,
+				JobGraph jobGraph,
+				Configuration configuration,
+				RpcService rpcService,
+				HighAvailabilityServices highAvailabilityServices,
+				HeartbeatServices heartbeatServices,
+				BlobServer blobServer,
+				JobManagerSharedServices jobManagerServices,
+				JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
+				FatalErrorHandler fatalErrorHandler,
+				LeaderShipLostHandler leaderShipLostHandler) {
 			final JobManagerRunner jobManagerRunnerMock = mock(JobManagerRunner.class);
 
 			when(jobManagerRunnerMock.getResultFuture()).thenReturn(resultFuture);

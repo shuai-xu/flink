@@ -18,27 +18,31 @@
 
 package org.apache.flink.runtime.jobmaster.failover;
 
-import javax.annotation.Nonnull;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+
+import java.io.Serializable;
 
 /**
- * Dummy {@link OperationLogStore} implementation that does nothing.
+ * Descriptor for the result partition. Used for persist the result information of a finished execution.
  */
-public class DummyOperationLogStore implements OperationLogStore {
+public class ResultDescriptor implements Serializable {
 
-	@Override
-	public void start() { }
+	private TaskManagerLocation taskManagerLocation;
 
-	@Override
-	public void stop() { }
+	private ResultPartitionID[] resultPartitionIds;
 
-	@Override
-	public void clear() { }
-
-	@Override
-	public void writeOpLog(@Nonnull OperationLog opLog) { }
-
-	@Override
-	public OperationLog readOpLog() {
-		return null;
+	public ResultDescriptor(TaskManagerLocation taskManagerLocation, ResultPartitionID[] resultPartitionIds) {
+		this.taskManagerLocation = taskManagerLocation;
+		this.resultPartitionIds = resultPartitionIds;
 	}
+
+	public TaskManagerLocation getTaskManagerLocation() {
+		return taskManagerLocation;
+	}
+
+	public ResultPartitionID[] getResultPartitionIds() {
+		return resultPartitionIds;
+	}
+
 }

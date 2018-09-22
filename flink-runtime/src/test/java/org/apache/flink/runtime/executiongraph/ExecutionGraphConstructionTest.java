@@ -437,6 +437,9 @@ public class ExecutionGraphConstructionTest {
 				new NoRestartStrategy(),
 				new Scheduler(TestingUtils.defaultExecutionContext()),
 				ordered);
+			for (ExecutionJobVertex ejv : eg.getAllVertices().values()) {
+				ejv.setUpInputSplits(null);
+			}
 			
 			assertEquals(assigner1, eg.getAllVertices().get(v3.getID()).getSplitAssigner(operatorID1));
 			assertEquals(assigner2, eg.getAllVertices().get(v5.getID()).getSplitAssigner(operatorID2));

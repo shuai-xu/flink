@@ -16,47 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.flink.examples.java.distcp;
+package org.apache.flink.runtime.jobmaster.failover;
 
 import org.apache.flink.core.io.InputSplit;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
+
+import java.util.Map;
 
 /**
- * Implementation of {@code InputSplit} for copying files.
+ * The base class of the operation log.
  */
-public class FileCopyTaskInputSplit implements InputSplit {
+public class InputSplitsOperationLog extends OperationLog {
 
-	private static final long serialVersionUID = -7621656017747660450L;
+	private final JobVertexID jobVertexID;
 
-	private final FileCopyTask task;
-	private final int splitNumber;
+	private final Map<OperatorID, InputSplit[]> inputSplitsMap;
 
-	public FileCopyTaskInputSplit(FileCopyTask task, int splitNumber) {
-		this.task = task;
-		this.splitNumber = splitNumber;
+	public InputSplitsOperationLog(
+			final JobVertexID jobVertexID,
+			final Map<OperatorID, InputSplit[]> inputSplitsMap) {
+		super(OperationLogType.GRAPH_MANAGER);
+
+		this.jobVertexID = jobVertexID;
+		this.inputSplitsMap = inputSplitsMap;
 	}
 
-	public FileCopyTask getTask() {
-		return task;
+	public JobVertexID getJobVertexID() {
+		return jobVertexID;
 	}
 
-	@Override
-	public int getSplitNumber() {
-		return splitNumber;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-
-		if (obj == this) {
-			return true;
-		}
-		else if (obj instanceof FileCopyTaskInputSplit) {
-			FileCopyTaskInputSplit other = (FileCopyTaskInputSplit) obj;
-
-			return this.getSplitNumber() == other.getSplitNumber();
-		}
-		else {
-			return false;
-		}
+	public Map<OperatorID, InputSplit[]> getInputSplitsMap() {
+		return inputSplitsMap;
 	}
 }

@@ -39,6 +39,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.RestServerEndpointConfiguration;
 import org.apache.flink.runtime.rest.handler.RestHandlerConfiguration;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.webmonitor.retriever.LeaderGatewayRetriever;
 import org.apache.flink.runtime.webmonitor.retriever.MetricQueryServiceRetriever;
@@ -102,7 +103,8 @@ public abstract class JobClusterEntrypoint extends ClusterEntrypoint {
 			ArchivedExecutionGraphStore archivedExecutionGraphStore,
 			FatalErrorHandler fatalErrorHandler,
 			@Nullable String restAddress,
-			HistoryServerArchivist historyServerArchivist) throws Exception {
+			HistoryServerArchivist historyServerArchivist,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 
 		final JobGraph jobGraph = retrieveJobGraph(configuration);
 
@@ -126,7 +128,8 @@ public abstract class JobClusterEntrypoint extends ClusterEntrypoint {
 			restAddress,
 			historyServerArchivist,
 			jobGraph,
-			executionMode);
+			executionMode,
+			leaderShipLostHandler);
 
 		registerShutdownActions(dispatcher.getJobTerminationFuture());
 

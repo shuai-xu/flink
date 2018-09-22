@@ -18,27 +18,25 @@
 
 package org.apache.flink.runtime.jobmaster.failover;
 
-import javax.annotation.Nonnull;
+import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+
+import java.util.List;
+
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Dummy {@link OperationLogStore} implementation that does nothing.
+ * The base class of the operation log.
  */
-public class DummyOperationLogStore implements OperationLogStore {
+public class FailoverOperationLog extends OperationLog {
 
-	@Override
-	public void start() { }
+	private final List<ExecutionVertexID> executionVertexIDs;
 
-	@Override
-	public void stop() { }
+	public FailoverOperationLog(List<ExecutionVertexID> ids){
+		super(OperationLogType.GRAPH_MANAGER);
+		this.executionVertexIDs = checkNotNull(ids);
+	}
 
-	@Override
-	public void clear() { }
-
-	@Override
-	public void writeOpLog(@Nonnull OperationLog opLog) { }
-
-	@Override
-	public OperationLog readOpLog() {
-		return null;
+	public List<ExecutionVertexID> getExecutionVertexIDs() {
+		return executionVertexIDs;
 	}
 }

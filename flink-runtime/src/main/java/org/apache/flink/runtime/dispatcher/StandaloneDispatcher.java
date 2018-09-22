@@ -27,6 +27,7 @@ import org.apache.flink.runtime.jobmaster.JobMaster;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 
 import javax.annotation.Nullable;
@@ -51,7 +52,8 @@ public class StandaloneDispatcher extends Dispatcher {
 			JobManagerRunnerFactory jobManagerRunnerFactory,
 			FatalErrorHandler fatalErrorHandler,
 			@Nullable String restAddress,
-			HistoryServerArchivist historyServerArchivist) throws Exception {
+			HistoryServerArchivist historyServerArchivist,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 		super(
 			rpcService,
 			endpointId,
@@ -67,6 +69,7 @@ public class StandaloneDispatcher extends Dispatcher {
 			jobManagerRunnerFactory,
 			fatalErrorHandler,
 			restAddress,
-			historyServerArchivist);
+			historyServerArchivist,
+			leaderShipLostHandler);
 	}
 }

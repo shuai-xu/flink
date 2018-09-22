@@ -20,7 +20,6 @@ package org.apache.flink.runtime.jobmaster.failover;
 
 import org.apache.flink.util.FlinkRuntimeException;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +34,8 @@ public class OperationLogManager {
 
 	private final Map<OperationLogType, Replayable> opLogTypeToReplayHandlers;
 
+	private volatile boolean replaying = false;
+
 	public OperationLogManager(OperationLogStore store) {
 		this.operationLogStore = checkNotNull(store);
 		opLogTypeToReplayHandlers = new HashMap<>(1);
@@ -43,22 +44,30 @@ public class OperationLogManager {
 	/**
 	 * Start the operation log manager.
 	 */
-	public void start() throws IOException {
+	public void start() {
 		operationLogStore.start();
 	}
 
 	/**
 	 * Stop the operation log manager.
 	 */
-	public void stop()throws IOException {
+	public void stop() {
 		operationLogStore.stop();
 	}
 
 	/**
 	 * Clear all the logs in store.
 	 */
-	public void clear() throws IOException {
+	public void clear() {
 		operationLogStore.clear();
+		replaying = false;
+	}
+
+	/**
+	 * Weather is replaying log.
+	 */
+	public boolean isReplaying() {
+		return replaying;
 	}
 
 	/**
@@ -67,7 +76,7 @@ public class OperationLogManager {
 	 * @param type The log type
 	 * @param logHandler The handler for the specified log type when replaying.
 	 */
-	void registerLogHandler(OperationLogType type, Replayable logHandler) {
+	public void registerLogHandler(OperationLogType type, Replayable logHandler) {
 		opLogTypeToReplayHandlers.put(type, logHandler);
 	}
 
@@ -76,15 +85,17 @@ public class OperationLogManager {
 	 *
 	 * @param opLog The operation log need to be record
 	 */
-	void writeOpLog(OperationLog opLog) throws IOException {
+	public void writeOpLog(OperationLog opLog){
 		operationLogStore.writeOpLog(opLog);
 	}
 
 	/**
 	 * Replay the operation logs that have been record.
 	 */
-	void replay() throws IOException {
-		for (OperationLog opLog : operationLogStore.opLogs()) {
+	public void replay() {
+		replaying = true;
+		OperationLog opLog = null;
+		while ((opLog = operationLogStore.readOpLog()) != null) {
 			Replayable replayHandler = opLogTypeToReplayHandlers.get(opLog.getType());
 			if (replayHandler != null) {
 				replayHandler.replayOpLog(opLog);
@@ -92,5 +103,6 @@ public class OperationLogManager {
 				throw new FlinkRuntimeException("Can not find replayer for log type " + opLog.getType());
 			}
 		}
+		replaying = false;
 	}
 }

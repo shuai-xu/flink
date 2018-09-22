@@ -77,6 +77,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -274,6 +276,11 @@ public class JvmExitOnFatalErrorTest {
 
 			@Override
 			public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) {
+				return null;
+			}
+
+			@Override
+			public Map<OperatorID, List<InputSplit>> getAssignedInputSplits() {
 				return null;
 			}
 		}

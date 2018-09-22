@@ -124,6 +124,12 @@ public class YarnJobClusterEntrypoint extends JobClusterEntrypoint {
 	}
 
 	@Override
+	public void onLeaderShipLost(Throwable exception) {
+		// For yarn job cluster we need to exit so yarn will start another master.
+		onFatalError(exception);
+	}
+
+	@Override
 	protected JobGraph retrieveJobGraph(Configuration configuration) throws FlinkException {
 		String jobGraphFile = configuration.getString(JOB_GRAPH_FILE_PATH, "job.graph");
 		File fp = new File(jobGraphFile);

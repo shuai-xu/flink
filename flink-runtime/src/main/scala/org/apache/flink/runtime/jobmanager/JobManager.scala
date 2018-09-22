@@ -58,7 +58,8 @@ import org.apache.flink.runtime.jobgraph.{JobGraph, JobStatus}
 import org.apache.flink.runtime.jobmanager.SubmittedJobGraphStore.SubmittedJobGraphListener
 import org.apache.flink.runtime.jobmanager.scheduler.{Scheduler => FlinkScheduler}
 import org.apache.flink.runtime.jobmanager.slots.ActorTaskManagerGateway
-import org.apache.flink.runtime.jobmaster.JobMaster
+import org.apache.flink.runtime.jobmaster.failover.{OperationLogManager, OperationLogStoreLoader}
+import org.apache.flink.runtime.jobmaster.{GraphManager, JobMaster}
 import org.apache.flink.runtime.leaderelection.{LeaderContender, LeaderElectionService}
 import org.apache.flink.runtime.messages.ArchiveMessages.ArchiveExecutionGraph
 import org.apache.flink.runtime.messages.ExecutionGraphMessages.JobStatusChanged
@@ -713,8 +714,13 @@ class JobManager(
             executionGraph.getJobVertex(vertexID) match {
               case vertex: ExecutionJobVertex => vertex.getSplitAssigner(operatorID) match {
                 case splitAssigner: InputSplitAssigner =>
-                  val nextInputSplit = splitAssigner.getNextInputSplit(host, taskId)
-
+                  var nextInputSplit = execution.getVertex.getNextInputSplitFromAssgined(operatorID)
+                  if (nextInputSplit == null) {
+                    nextInputSplit = splitAssigner.getNextInputSplit(host, taskId)
+                    if (nextInputSplit != null) {
+                      execution.getVertex.inputSplitAssigned(operatorID, nextInputSplit)
+                    }
+                  }
                   log.debug(s"Send next input split $nextInputSplit.")
 
                   try {
@@ -1302,13 +1308,16 @@ class JobManager(
           Time.milliseconds(allocationTimeout),
           log.logger)
 
-        val graphScheduler = executionGraph.getScheduler
+        val conf = new Configuration(jobGraph.getJobConfiguration)
+        conf.addAll(jobGraph.getSchedulingConfiguration)
         val graphManagerPlugin = new DefaultGraphManagerPlugin
-        val configuration = new Configuration(jobGraph.getJobConfiguration)
-        configuration.addAll(jobGraph.getSchedulingConfiguration)
-        graphManagerPlugin.open(graphScheduler, jobGraph,
-          new SchedulingConfig(configuration, userCodeLoader))
-        executionGraph.setGraphManagerPlugin(graphManagerPlugin)
+        val operationLogManager = new OperationLogManager(
+          OperationLogStoreLoader.loadOperationLogStore(jobGraph.getJobID(), conf))
+        val graphManager =
+          new GraphManager(graphManagerPlugin, null, operationLogManager, executionGraph)
+        graphManager.open(jobGraph, new SchedulingConfig(conf, userCodeLoader))
+        executionGraph.setGraphManager(graphManager)
+        operationLogManager.start()
 
         if (registerNewGraph) {
           currentJobs.put(jobGraph.getJobID, (executionGraph, jobInfo))

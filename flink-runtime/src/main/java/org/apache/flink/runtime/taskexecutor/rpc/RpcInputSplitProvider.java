@@ -30,13 +30,21 @@ import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * A provider which gets input splits from job master through rpc.
+ */
 public class RpcInputSplitProvider implements InputSplitProvider {
 	private final JobMasterGateway jobMasterGateway;
 	private final JobVertexID jobVertexID;
 	private final ExecutionAttemptID executionAttemptID;
 	private final Time timeout;
+	private final Map<OperatorID, List<InputSplit>> assignedInutSplits;
 
 	public RpcInputSplitProvider(
 			JobMasterGateway jobMasterGateway,
@@ -47,8 +55,8 @@ public class RpcInputSplitProvider implements InputSplitProvider {
 		this.jobVertexID = Preconditions.checkNotNull(jobVertexID);
 		this.executionAttemptID = Preconditions.checkNotNull(executionAttemptID);
 		this.timeout = Preconditions.checkNotNull(timeout);
+		this.assignedInutSplits = new HashMap<>(1);
 	}
-
 
 	@Override
 	public InputSplit getNextInputSplit(OperatorID operatorID, ClassLoader userCodeClassLoader) throws InputSplitProviderException {
@@ -66,10 +74,18 @@ public class RpcInputSplitProvider implements InputSplitProvider {
 			if (serializedInputSplit.isEmpty()) {
 				return null;
 			} else {
-				return InstantiationUtil.deserializeObject(serializedInputSplit.getInputSplitData(), userCodeClassLoader);
+				InputSplit inputSplit = InstantiationUtil.deserializeObject(serializedInputSplit.getInputSplitData(), userCodeClassLoader);
+				assignedInutSplits.putIfAbsent(operatorID, new ArrayList<>(1));
+				assignedInutSplits.get(operatorID).add(inputSplit);
+				return inputSplit;
 			}
 		} catch (Exception e) {
 			throw new InputSplitProviderException("Requesting the next input split failed.", e);
 		}
+	}
+
+	@Override
+	public Map<OperatorID, List<InputSplit>> getAssignedInputSplits() {
+		return assignedInutSplits;
 	}
 }

@@ -105,7 +105,8 @@ public class DefaultGraphManagerPlugin implements GraphManagerPlugin {
 	public void onResultPartitionConsumable(ResultPartitionConsumableEvent event) {
 		switch (scheduleMode) {
 			case EAGER:
-				throw new IllegalStateException("No input data consumable notification should happen in EAGER mode.");
+				LOG.warn("Ignore the result partition consumable event {} as the schedule mode is EAGER.", event);
+				break;
 			case LAZY_FROM_SOURCES:
 				final List<ExecutionVertexID> verticesToSchedule = new ArrayList<>();
 				final Collection<Collection<ExecutionVertexID>> consumerVertices = jobGraph

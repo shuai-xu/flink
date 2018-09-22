@@ -18,13 +18,17 @@
 
 package org.apache.flink.runtime.taskexecutor;
 
+import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -40,19 +44,20 @@ public class TaskExecutionStatus implements Serializable {
 	private final int indexOfSubtask;
 	private final ResultPartitionID[] resultPartitionIDs;
 	private final boolean[] resultPartitionsConsumable;
+	private final Map<OperatorID, List<InputSplit>> assignedInputSplits;
 	private final SlotOffer boundSlot;
 
 	public TaskExecutionStatus(
-		ExecutionState executionState,
-		int attemptNumber,
-		long createTimestamp,
-		JobVertexID jobVertexID,
-		ExecutionAttemptID executionAttemptID,
-		int indexOfSubtask,
-		ResultPartitionID[] resultPartitionIDs,
-		boolean[] resultPartitionsConsumable,
-		SlotOffer boundSlot
-	) {
+			ExecutionState executionState,
+			int attemptNumber,
+			long createTimestamp,
+			JobVertexID jobVertexID,
+			ExecutionAttemptID executionAttemptID,
+			int indexOfSubtask,
+			ResultPartitionID[] resultPartitionIDs,
+			boolean[] resultPartitionsConsumable,
+			Map<OperatorID, List<InputSplit>> assignedInputSplits,
+			SlotOffer boundSlot) {
 		this.executionState = executionState;
 		this.attemptNumber = attemptNumber;
 		this.createTimestamp = createTimestamp;
@@ -61,6 +66,7 @@ public class TaskExecutionStatus implements Serializable {
 		this.indexOfSubtask = indexOfSubtask;
 		this.resultPartitionIDs = resultPartitionIDs;
 		this.resultPartitionsConsumable = resultPartitionsConsumable;
+		this.assignedInputSplits = assignedInputSplits;
 		this.boundSlot = boundSlot;
 	}
 
@@ -98,6 +104,10 @@ public class TaskExecutionStatus implements Serializable {
 
 	public boolean[] getResultPartitionsConsumable() {
 		return resultPartitionsConsumable;
+	}
+
+	public Map<OperatorID, List<InputSplit>> getAssignedInputSplits() {
+		return assignedInputSplits;
 	}
 
 	@Override

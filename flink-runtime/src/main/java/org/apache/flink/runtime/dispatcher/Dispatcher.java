@@ -59,6 +59,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceOverview;
 import org.apache.flink.runtime.rest.handler.legacy.backpressure.OperatorBackPressureStatsResponse;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.util.ExceptionUtils;
@@ -120,6 +121,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 
 	private final HistoryServerArchivist historyServerArchivist;
 
+	private final LeaderShipLostHandler leaderShipLostHandler;
+
 	@Nullable
 	private final String metricQueryServicePath;
 
@@ -143,7 +146,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 			JobManagerRunnerFactory jobManagerRunnerFactory,
 			FatalErrorHandler fatalErrorHandler,
 			@Nullable String restAddress,
-			HistoryServerArchivist historyServerArchivist) throws Exception {
+			HistoryServerArchivist historyServerArchivist,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 		super(rpcService, endpointId);
 
 		this.configuration = Preconditions.checkNotNull(configuration);
@@ -154,6 +158,7 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 		this.fatalErrorHandler = Preconditions.checkNotNull(fatalErrorHandler);
 		this.submittedJobGraphStore = Preconditions.checkNotNull(submittedJobGraphStore);
 		this.jobManagerMetricGroup = Preconditions.checkNotNull(jobManagerMetricGroup);
+		this.leaderShipLostHandler = Preconditions.checkNotNull(leaderShipLostHandler);
 		this.metricQueryServicePath = metricServiceQueryPath;
 
 		this.jobManagerSharedServices = JobManagerSharedServices.fromConfiguration(
@@ -294,7 +299,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 			blobServer,
 			jobManagerSharedServices,
 			new DefaultJobManagerJobMetricGroupFactory(jobManagerMetricGroup),
-			fatalErrorHandler);
+			fatalErrorHandler,
+			leaderShipLostHandler);
 
 		jobManagerRunner.getResultFuture().whenCompleteAsync(
 			(ArchivedExecutionGraph archivedExecutionGraph, Throwable throwable) -> {
@@ -810,6 +816,7 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 				log.info("Dispatcher {} was revoked leadership.", getAddress());
 
 				setNewFencingToken(null);
+				leaderShipLostHandler.onLeaderShipLost(new Exception("Dispatcher was revoked leader ship"));
 			});
 	}
 
@@ -877,7 +884,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 			BlobServer blobServer,
 			JobManagerSharedServices jobManagerServices,
 			JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
-			FatalErrorHandler fatalErrorHandler) throws Exception;
+			FatalErrorHandler fatalErrorHandler,
+			LeaderShipLostHandler leaderShipLostHandler) throws Exception;
 	}
 
 	/**
@@ -897,7 +905,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 				BlobServer blobServer,
 				JobManagerSharedServices jobManagerServices,
 				JobManagerJobMetricGroupFactory jobManagerJobMetricGroupFactory,
-				FatalErrorHandler fatalErrorHandler) throws Exception {
+				FatalErrorHandler fatalErrorHandler,
+				LeaderShipLostHandler leaderShipLostHandler) throws Exception {
 			return new JobManagerRunner(
 				resourceId,
 				jobGraph,
@@ -908,7 +917,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 				blobServer,
 				jobManagerServices,
 				jobManagerJobMetricGroupFactory,
-				fatalErrorHandler);
+				fatalErrorHandler,
+				leaderShipLostHandler);
 		}
 	}
 }

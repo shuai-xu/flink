@@ -19,14 +19,17 @@
 package org.apache.flink.runtime.jobmaster.failover;
 
 import org.apache.flink.core.fs.Path;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.util.Iterator;
 
+/**
+ * Tests for the File system operation log store.
+ */
 public class FileSystemOperationLogStoreTest {
 	@Rule
 	public final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
@@ -51,30 +54,46 @@ public class FileSystemOperationLogStoreTest {
 		store.writeOpLog(opLog3);
 		store.writeOpLog(opLog4);
 
-		Iterator<OperationLog> opLogs = store.opLogs().iterator();
+		Assert.assertEquals(opLog0, store.readOpLog());
+		Assert.assertEquals(opLog1, store.readOpLog());
+		Assert.assertEquals(opLog2, store.readOpLog());
+		Assert.assertEquals(opLog3, store.readOpLog());
+		Assert.assertEquals(opLog4, store.readOpLog());
+		Assert.assertTrue(null == store.readOpLog());
 
-		Assert.assertEquals(opLog0, opLogs.next());
-		Assert.assertEquals(opLog1, opLogs.next());
-		Assert.assertEquals(opLog2, opLogs.next());
-		Assert.assertEquals(opLog3, opLogs.next());
-		Assert.assertEquals(opLog4, opLogs.next());
-		Assert.assertFalse(opLogs.hasNext());
+		store.stop();
 
+		// generate two empty file
+		store.start();
+		store.stop();
+		store.start();
 		store.stop();
 
 		// test restart a fs store can retrieve former logs
 		store.start();
 
-		opLogs = store.opLogs().iterator();
+		Assert.assertEquals(opLog0, store.readOpLog());
+		Assert.assertEquals(opLog1, store.readOpLog());
+		Assert.assertEquals(opLog2, store.readOpLog());
+		Assert.assertEquals(opLog3, store.readOpLog());
+		Assert.assertEquals(opLog4, store.readOpLog());
+		Assert.assertTrue(null == store.readOpLog());
 
-		Assert.assertEquals(opLog0, opLogs.next());
-		Assert.assertEquals(opLog1, opLogs.next());
-		Assert.assertEquals(opLog2, opLogs.next());
-		Assert.assertEquals(opLog3, opLogs.next());
-		Assert.assertEquals(opLog4, opLogs.next());
-		Assert.assertFalse(opLogs.hasNext());
-
+		store.writeOpLog(opLog0);
+		store.writeOpLog(opLog1);
 		store.stop();
+
+		// test restart a fs store can retrieve former logs
+		store.start();
+
+		Assert.assertEquals(opLog0, store.readOpLog());
+		Assert.assertEquals(opLog1, store.readOpLog());
+		Assert.assertEquals(opLog2, store.readOpLog());
+		Assert.assertEquals(opLog3, store.readOpLog());
+		Assert.assertEquals(opLog4, store.readOpLog());
+		Assert.assertEquals(opLog0, store.readOpLog());
+		Assert.assertEquals(opLog1, store.readOpLog());
+		Assert.assertTrue(null == store.readOpLog());
 
 		// test clear the store
 		store.start();
@@ -82,8 +101,7 @@ public class FileSystemOperationLogStoreTest {
 
 		store.start();
 
-		opLogs = store.opLogs().iterator();
-		Assert.assertFalse(opLogs.hasNext());
+		Assert.assertTrue(null == store.readOpLog());
 
 		store.stop();
 	}

@@ -58,6 +58,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.akka.AkkaRpcService;
 import org.apache.flink.runtime.security.SecurityConfiguration;
@@ -99,7 +100,7 @@ import scala.concurrent.duration.FiniteDuration;
  *
  * <p>Specialization of this class can be used for the session mode and the per-job mode
  */
-public abstract class ClusterEntrypoint implements FatalErrorHandler {
+public abstract class ClusterEntrypoint implements FatalErrorHandler, LeaderShipLostHandler {
 
 	public static final ConfigOption<String> EXECUTION_MODE = ConfigOptions
 		.key("internal.cluster.execution-mode")
@@ -361,7 +362,8 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler {
 				archivedExecutionGraphStore,
 				this,
 				webMonitorEndpoint.getRestBaseUrl(),
-				historyServerArchivist);
+				historyServerArchivist,
+				this);
 
 			LOG.debug("Starting ResourceManager.");
 			resourceManager.start();
@@ -535,6 +537,11 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler {
 		System.exit(RUNTIME_FAILURE_RETURN_CODE);
 	}
 
+	@Override
+	public void onLeaderShipLost(Throwable exception) {
+		// For most cluster, we just need to wait for another master take over the leader.
+	}
+
 	// --------------------------------------------------
 	// Internal methods
 	// --------------------------------------------------
@@ -662,7 +669,8 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler {
 		ArchivedExecutionGraphStore archivedExecutionGraphStore,
 		FatalErrorHandler fatalErrorHandler,
 		@Nullable String restAddress,
-		HistoryServerArchivist historyServerArchivist) throws Exception;
+		HistoryServerArchivist historyServerArchivist,
+		LeaderShipLostHandler leaderShipLostHandler) throws Exception;
 
 	protected abstract ResourceManager<?> createResourceManager(
 		Configuration configuration,

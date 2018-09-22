@@ -23,4 +23,5 @@ import java.io.Serializable;
 /**
  * Subclasses of this event will be handled by graph manager plugin to schedule vertices in graph.
  */
-public abstract class ExecutionEvent implements Serializable {}
+public abstract class ExecutionEvent implements Serializable {
+}

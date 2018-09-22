@@ -65,6 +65,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerRunner;
 import org.apache.flink.runtime.rest.RestServerEndpointConfiguration;
 import org.apache.flink.runtime.rest.handler.RestHandlerConfiguration;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.akka.AkkaRpcService;
@@ -374,7 +375,8 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 					Dispatcher.DefaultJobManagerRunnerFactory.INSTANCE,
 					new ShutDownFatalErrorHandler(),
 					dispatcherRestEndpoint.getRestBaseUrl(),
-					historyServerArchivist);
+					historyServerArchivist,
+					new IgnoreLeaderShipLostHandler());
 
 				dispatcher.start();
 
@@ -1005,6 +1007,14 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 		public void onFatalError(Throwable exception) {
 			LOG.warn("Error in MiniCluster. Shutting the MiniCluster down.", exception);
 			closeAsync();
+		}
+	}
+
+	private class IgnoreLeaderShipLostHandler implements LeaderShipLostHandler {
+
+		@Override
+		public void onLeaderShipLost(Throwable exception) {
+			LOG.warn("Something in MiniCluster lost its leader ship", exception);
 		}
 	}
 }

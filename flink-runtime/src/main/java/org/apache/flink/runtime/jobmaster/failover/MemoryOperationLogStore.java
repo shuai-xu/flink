@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +33,9 @@ import java.util.List;
 public class MemoryOperationLogStore implements OperationLogStore {
 	private static final Logger LOG = LoggerFactory.getLogger(MemoryOperationLogStore.class);
 
-	private List<OperationLog> operationLogs;
+	private static List<OperationLog> operationLogs;
+
+	private int readIndex;
 
 	public MemoryOperationLogStore() {
 	}
@@ -41,13 +44,22 @@ public class MemoryOperationLogStore implements OperationLogStore {
 		if (operationLogs == null) {
 			operationLogs = new ArrayList<>();
 		}
+		readIndex = 0;
 	}
 
 	public void stop() {
+		readIndex = 0;
 	}
 
 	public void clear() {
-		operationLogs.clear();
+		if (operationLogs != null) {
+			operationLogs.clear();
+		}
+		readIndex = 0;
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("All operation logs in memory are cleared.");
+		}
+
 	}
 
 	@Override
@@ -64,11 +76,15 @@ public class MemoryOperationLogStore implements OperationLogStore {
 	}
 
 	@Override
-	public Iterable<OperationLog> opLogs() {
+	public OperationLog readOpLog() {
 		if (operationLogs == null) {
 			throw new IllegalStateException("Cannot read OpLog from a store before starting it");
 		}
-
-		return operationLogs;
+		if (readIndex < operationLogs.size()) {
+			return operationLogs.get(readIndex++);
+		} else {
+			return null;
+		}
 	}
 }
+

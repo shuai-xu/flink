@@ -16,29 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobmaster.failover;
+package org.apache.flink.runtime.util;
 
-import javax.annotation.Nonnull;
+import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 
 /**
- * Dummy {@link OperationLogStore} implementation that does nothing.
+ * Testing leader ship lost handler which only records the count.
  */
-public class DummyOperationLogStore implements OperationLogStore {
+public class TestingLeaderShipLostHandler implements LeaderShipLostHandler {
+
+	private int count = 0;
 
 	@Override
-	public void start() { }
+	public void onLeaderShipLost(Throwable exception) {
+		count++;
+	}
 
-	@Override
-	public void stop() { }
-
-	@Override
-	public void clear() { }
-
-	@Override
-	public void writeOpLog(@Nonnull OperationLog opLog) { }
-
-	@Override
-	public OperationLog readOpLog() {
-		return null;
+	public int getLeaderShipLostCount() {
+		return count;
 	}
 }

@@ -16,29 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobmaster.failover;
-
-import javax.annotation.Nonnull;
+package org.apache.flink.runtime.rpc;
 
 /**
- * Dummy {@link OperationLogStore} implementation that does nothing.
+ * Handler for a component lost its leader ship.
  */
-public class DummyOperationLogStore implements OperationLogStore {
+public interface LeaderShipLostHandler {
 
-	@Override
-	public void start() { }
-
-	@Override
-	public void stop() { }
-
-	@Override
-	public void clear() { }
-
-	@Override
-	public void writeOpLog(@Nonnull OperationLog opLog) { }
-
-	@Override
-	public OperationLog readOpLog() {
-		return null;
-	}
+	/**
+	 * Being called when a component lost its leader ship.
+	 *
+	 * <p>IMPORTANT: This call should never be blocking since it might be called from within
+	 * the main thread of an {@link RpcEndpoint}.
+	 *
+	 * @param exception cause
+	 */
+	void onLeaderShipLost(Throwable exception);
 }
