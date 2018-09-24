@@ -158,6 +158,30 @@ class AggregateTest extends TableTestBase {
     assertEquals(Types.LONG, rowTypeInfo.getTypeAt(0))
     assertEquals(Types.INT, rowTypeInfo.getTypeAt(1))
   }
+
+  @Test
+  def testColumnIntervalOnDifferentType(): Unit = {
+    streamUtil.addTable[(Int, Long)]("T", 'a, 'b)
+
+    // FlinkRelMdModifiedMonotonicity will analyse sum argument's column interval
+    // this test covers all column interval types
+
+    val sql =
+      """
+        |SELECT
+        |  a,
+        |  sum(cast(1 as INT)),
+        |  sum(cast(2 as BIGINT)),
+        |  sum(cast(3 as TINYINT)),
+        |  sum(cast(4 as SMALLINT)),
+        |  sum(cast(5 as FLOAT)),
+        |  sum(cast(6 as DECIMAL)),
+        |  sum(cast(7 as DOUBLE))
+        |FROM T GROUP BY a
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
 }
 
 case class MyAccumulator(var sum: Long, var count: Long)

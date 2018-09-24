@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.cost
 
-import java.lang.{Double => JDouble, String => JString}
+import java.lang.{Double => JDouble, String => JString, Integer => JInt, Long => JLong, Float => JFloat, Short => JShort, Byte => JByte}
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util
@@ -631,13 +631,16 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
 
   private def isValueGreaterThanZero[T](value: Comparable[T]): Int = {
     value match {
+      case i: JInt => i.compareTo(0)
+      case l: JLong => l.compareTo(0L)
+      case db: JDouble => db.compareTo(0d)
+      case f: JFloat => f.compareTo(0f)
+      case s: JShort => s.compareTo(0.toShort)
+      case b: JByte => b.compareTo(0.toByte)
+      case dec: JBigDecimal => dec.compareTo(JBigDecimal.ZERO)
       case _: Date | _: Time | _: Timestamp | _: JString =>
         //not interested here, just return negative
         -1
-      case dec: JBigDecimal =>
-        dec.compareTo(JBigDecimal.ZERO)
-      case db: JDouble =>
-        db.compareTo(0d)
       case _ =>
         // other numeric types
         value.asInstanceOf[Comparable[Any]].compareTo(0.asInstanceOf[Comparable[Any]])
