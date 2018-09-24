@@ -59,6 +59,9 @@ class RetractRankFunction(
   with Compiler[RecordComparator]
   with Logging {
 
+  // flag to skip records with non-exist error instead to fail, true by default.
+  private val lenient: Boolean = true
+
   @transient
   // a map state stores mapping from sort key to records list
   private var dataState: KeyedMapState[BaseRow, BaseRow, JList[BaseRow]] = _
@@ -153,9 +156,19 @@ class RetractRankFunction(
           sortedMap.put(sortKey, count)
         }
       } else {
-        throw new RuntimeException(
-          s"Can not retract a non-existent record: ${inputBaseRow.toString}. " +
-            s"This should never happen.")
+        if (sortedMap.isEmpty) {
+          val message = s"The sorted map state is cleared because of state ttl. " +
+            "This will result in incorrect result. You can increase the state ttl to avoid this."
+          if (lenient) {
+            LOG.warn(message)
+          } else {
+            throw new RuntimeException(message)
+          }
+        } else {
+          throw new RuntimeException(
+            s"Can not retract a non-existent record: ${inputBaseRow.toString}. " +
+              s"This should never happen.")
+        }
       }
 
       // we have updated the data state in retractRecordWithRowNumber(...)

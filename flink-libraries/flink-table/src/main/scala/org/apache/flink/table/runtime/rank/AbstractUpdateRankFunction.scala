@@ -73,7 +73,7 @@ abstract class AbstractUpdateRankFunction(
   // a sorted map stores mapping from sort key to rowkey list
   protected var sortedMap: SortedMap[BaseRow] = _
   @transient
-  protected var kvSortedMap: LRUMap[BaseRow, SortedMap[BaseRow]] = _
+  protected var kvSortedMap: JMap[BaseRow, SortedMap[BaseRow]] = _
 
   @transient
   // a HashMap stores mapping from rowkey to record, a heap mirror to dataState
@@ -87,7 +87,8 @@ abstract class AbstractUpdateRankFunction(
     super.open(ctx)
     val lruCacheSize: Int = Math.max(1, (cacheSize / getMaxSortMapSize).toInt)
     // make sure the cached map is in a fixed size, avoid OOM
-    kvSortedMap = new LRUMap[BaseRow, SortedMap[BaseRow]](lruCacheSize)
+    kvSortedMap = new JHashMap[BaseRow, SortedMap[BaseRow]](
+      lruCacheSize)
     kvRowKeyMap = new LRUMap[BaseRow, JMap[BaseRow, RankRow]](
       lruCacheSize,
       new CacheRemovalListener())
@@ -247,6 +248,7 @@ abstract class AbstractUpdateRankFunction(
       val partitionKey = eldest.getKey
       val currentRowKeyMap = eldest.getValue
       executionContext.setCurrentKey(partitionKey)
+      kvSortedMap.remove(partitionKey)
       synchronizeState(currentRowKeyMap)
       executionContext.setCurrentKey(previousKey)
     }
