@@ -120,11 +120,14 @@ class DistinctAggCodeGen(
     val accumulateCode = innerAggCodeGens.map(_.accumulate(generator)).mkString("\n")
     val countTerm = newName("count")
 
-    val body = if (consumeRetraction) {
+    val body =
       s"""
          |${keyExpr.code}
          |java.lang.Long $countTerm = (java.lang.Long) $distinctAccTerm.get($key);
          |if ($countTerm != null) {
+         |  // NOTE: we have to keep this even though in append input stream,
+         |  // we find regression here when we remove the additional put logic,
+         |  // which result in more cache miss and get latency increase.
          |  $countTerm += 1;
          |  if ($countTerm == 0) {    // cnt is -1 before
          |    $distinctAccTerm.remove($key);
@@ -139,19 +142,6 @@ class DistinctAggCodeGen(
          |  // end do accumulate
          |}
       """.stripMargin
-    } else {
-      s"""
-         |${keyExpr.code}
-         |java.lang.Long $countTerm = (java.lang.Long) $distinctAccTerm.get($key);
-         |if ($countTerm == null) {
-         |  // this key is first been seen
-         |  $distinctAccTerm.put($key, 1L);
-         |  // do accumulate
-         |  $accumulateCode
-         |  // end do accumulate
-         |}
-      """.stripMargin
-    }
 
     filterExpression match {
       case None => body
@@ -220,77 +210,59 @@ class DistinctAggCodeGen(
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck = true)
       .bindInput(DataTypes.internal(keyType), inputTerm = DISTINCT_KEY_TERM)
 
-    if (consumeRetraction) {
-      val retractCodes = innerAggCodeGens.map(_.retract(exprGenerator)).mkString("\n")
-      val accumulateCodes = innerAggCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
-
-      s"""
-         |$ITERABLE<$MAP_ENTRY> $otherEntries = ($ITERABLE<$MAP_ENTRY>) $otherAccTerm.entries();
-         |if ($otherEntries != null) {
-         |  for ($MAP_ENTRY entry: $otherEntries) {
-         |    $keyTypeTerm $DISTINCT_KEY_TERM = ($keyTypeTerm) entry.getKey();
-         |    ${ctx.reuseInputUnboxingCode(Set(DISTINCT_KEY_TERM))}
-         |    java.lang.Long otherCnt = (java.lang.Long) entry.getValue();
-         |    java.lang.Long thisCnt = (java.lang.Long) $distinctAccTerm.get($DISTINCT_KEY_TERM);
-         |    if (thisCnt != null) {
-         |      java.lang.Long mergedCnt = thisCnt + otherCnt;
-         |      if (mergedCnt == 0) {
-         |        $distinctAccTerm.remove($DISTINCT_KEY_TERM);
-         |        if (thisCnt > 0) {
-         |          // do retract
-         |          $retractCodes
-         |          // end do retract
-         |        }
-         |      } else if (mergedCnt < 0) {
-         |        $distinctAccTerm.put($DISTINCT_KEY_TERM, mergedCnt);
-         |        if (thisCnt > 0) {
-         |          // do retract
-         |          $retractCodes
-         |          // end do retract
-         |        }
-         |      } else {    // mergedCnt > 0
-         |        $distinctAccTerm.put($DISTINCT_KEY_TERM, mergedCnt);
-         |        if (thisCnt < 0) {
-         |          // do accumulate
-         |          $accumulateCodes
-         |          // end do accumulate
-         |        }
-         |      }
-         |    } else {  // thisCnt == null
-         |      if (otherCnt > 0) {
-         |        $distinctAccTerm.put($DISTINCT_KEY_TERM, otherCnt);
-         |        // do accumulate
-         |        $accumulateCodes
-         |        // end do accumulate
-         |      } else if (otherCnt < 0) {
-         |        $distinctAccTerm.put($DISTINCT_KEY_TERM, otherCnt);
-         |      } // ignore otherCnt == 0
-         |    }
-         |  } // end foreach
-         |} // end otherEntries != null
-     """.stripMargin
+    val retractCodes = if (consumeRetraction) {
+      innerAggCodeGens.map(_.retract(exprGenerator)).mkString("\n")
     } else {
-      // distinct without retraction not need to generate retract codes
-      val accumulateCodes = innerAggCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
-
-      s"""
-         |$ITERABLE<$MAP_ENTRY> $otherEntries = ($ITERABLE<$MAP_ENTRY>) $otherAccTerm.entries();
-         |if ($otherEntries != null) {
-         |  for ($MAP_ENTRY entry: $otherEntries) {
-         |    $keyTypeTerm $DISTINCT_KEY_TERM = ($keyTypeTerm) entry.getKey();
-         |    java.lang.Long thisCnt = (java.lang.Long) $distinctAccTerm.get($DISTINCT_KEY_TERM);
-         |    if (thisCnt == null) {
-         |      $distinctAccTerm.put($DISTINCT_KEY_TERM, 1L);
-         |      ${ctx.reuseInputUnboxingCode(Set(DISTINCT_KEY_TERM))}
-         |      // do accumulate
-         |      $accumulateCodes
-         |      // end do accumulate
-         |    }
-         |    // ignore thisCnt != null
-         |  } // end foreach
-         |} // end otherEntries != null
-     """.stripMargin
+      "throw new RuntimeException(\"This distinct aggregate do not consume retractions, " +
+        "but received retract message, which should never happen.\");"
     }
+    val accumulateCodes = innerAggCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
+
+    s"""
+       |$ITERABLE<$MAP_ENTRY> $otherEntries = ($ITERABLE<$MAP_ENTRY>) $otherAccTerm.entries();
+       |if ($otherEntries != null) {
+       |  for ($MAP_ENTRY entry: $otherEntries) {
+       |    $keyTypeTerm $DISTINCT_KEY_TERM = ($keyTypeTerm) entry.getKey();
+       |    ${ctx.reuseInputUnboxingCode(Set(DISTINCT_KEY_TERM))}
+       |    java.lang.Long otherCnt = (java.lang.Long) entry.getValue();
+       |    java.lang.Long thisCnt = (java.lang.Long) $distinctAccTerm.get($DISTINCT_KEY_TERM);
+       |    if (thisCnt != null) {
+       |      java.lang.Long mergedCnt = thisCnt + otherCnt;
+       |      if (mergedCnt == 0) {
+       |        $distinctAccTerm.remove($DISTINCT_KEY_TERM);
+       |        if (thisCnt > 0) {
+       |          // do retract
+       |          $retractCodes
+       |          // end do retract
+       |        }
+       |      } else if (mergedCnt < 0) {
+       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, mergedCnt);
+       |        if (thisCnt > 0) {
+       |          // do retract
+       |          $retractCodes
+       |          // end do retract
+       |        }
+       |      } else {    // mergedCnt > 0
+       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, mergedCnt);
+       |        if (thisCnt < 0) {
+       |          // do accumulate
+       |          $accumulateCodes
+       |          // end do accumulate
+       |        }
+       |      }
+       |    } else {  // thisCnt == null
+       |      if (otherCnt > 0) {
+       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, otherCnt);
+       |        // do accumulate
+       |        $accumulateCodes
+       |        // end do accumulate
+       |      } else if (otherCnt < 0) {
+       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, otherCnt);
+       |      } // ignore otherCnt == 0
+       |    }
+       |  } // end foreach
+       |} // end otherEntries != null
+   """.stripMargin
   }
 
   override def getValue(generator: ExprCodeGenerator): GeneratedExpression = {
