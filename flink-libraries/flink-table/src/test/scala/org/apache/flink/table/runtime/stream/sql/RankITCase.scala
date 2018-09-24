@@ -335,6 +335,66 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
     assertEquals(updatedExpected.sorted, sink.getUpsertResults.sorted)
   }
 
+  @Ignore("Enable when state support SortedMapState")
+  @Test
+  def testUnarySortTopNOnString(): Unit = {
+    val data = List(
+      ("book", 11, "100"),
+      ("book", 11, "200"),
+      ("book", 12, "400"),
+      ("book", 12, "600"),
+      ("book", 10, "600"),
+      ("book", 10, "700"),
+      ("book", 9, "800"),
+      ("book", 9, "900"),
+      ("book", 10, "500"),
+      ("book", 8, "110"),
+      ("book", 8, "120"),
+      ("book", 7, "812"),
+      ("book", 9, "300"),
+      ("book", 6, "900"),
+      ("book", 7, "50"),
+      ("book", 11, "800"),
+      ("book", 7, "50"),
+      ("book", 8, "200"),
+      ("book", 6, "700"),
+      ("book", 5, "800"),
+      ("book", 4, "910"),
+      ("book", 3, "110"),
+      ("book", 2, "900"),
+      ("book", 1, "700")
+    )
+
+    val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'price)
+    tEnv.registerTable("T", ds)
+
+    val sql =
+      """
+        |SELECT *
+        |FROM (
+        |  SELECT category, shopId, max_price,
+        |      ROW_NUMBER() OVER (PARTITION BY category ORDER BY max_price ASC) as rank_num
+        |  FROM (
+        |     SELECT category, shopId, max(price) as max_price
+        |     FROM T
+        |     GROUP BY category, shopId
+        |  ))
+        |WHERE rank_num <= 3
+      """.stripMargin
+
+    val sink = new TestingUpsertTableSink(Array(0, 3))
+    tEnv.sqlQuery(sql).writeToSink(sink)
+    env.execute()
+
+    val updatedExpected = List(
+      "book,3,110,1",
+      "book,8,200,2",
+      "book,12,600,3")
+
+    assertEquals(updatedExpected.sorted, sink.getUpsertResults.sorted)
+  }
+
+
   @Test
   def testTopNWithGroupBy(): Unit = {
     val data = List(

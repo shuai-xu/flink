@@ -1232,6 +1232,8 @@ abstract class StreamTableEnvironment(
       sink: TableSink[T],
       streamQueryConfig: StreamQueryConfig): (DataStream[T], RelNode) = {
 
+    mergeParameters()
+
     sink match {
 
       case retractSink: RetractStreamTableSink[_] =>

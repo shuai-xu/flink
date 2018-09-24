@@ -133,6 +133,48 @@ class RankTest extends TableTestBase {
   }
 
   @Test
+  def testTopNWithKeyChanged(): Unit = {
+    val subquery =
+      """
+        |SELECT a, last_value(b) as b, SUM(c) as sum_c
+        |FROM MyTable
+        |GROUP BY a
+      """.stripMargin
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, sum_c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY sum_c DESC) as rank_num
+         |  FROM ($subquery))
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    streamUtil.verifyPlanAndTrait(sql)
+  }
+
+  @Test
+  def testUnarySortTopNOnString(): Unit = {
+    streamUtil.addTable[(String, Int, String)]("T", 'category, 'shopId, 'price)
+    val sql =
+      """
+        |SELECT *
+        |FROM (
+        |  SELECT category, shopId, max_price,
+        |      ROW_NUMBER() OVER (PARTITION BY category ORDER BY max_price ASC) as rank_num
+        |  FROM (
+        |     SELECT category, shopId, max(price) as max_price
+        |     FROM T
+        |     GROUP BY category, shopId
+        |  ))
+        |WHERE rank_num <= 3
+      """.stripMargin
+
+    streamUtil.verifyPlanAndTrait(sql)
+  }
+
+  @Test
   def testTopNOrderByCount(): Unit = {
     val subquery =
       """

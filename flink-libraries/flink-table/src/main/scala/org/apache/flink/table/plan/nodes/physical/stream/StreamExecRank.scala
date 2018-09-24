@@ -68,7 +68,7 @@ class StreamExecRank(
     if (strategy == null || forceRecompute) {
       val qc: StreamQueryConfig = queryConfig.getOrElse(
         cluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig]))
-      strategy = RankUtil.analyzeRankStrategy(cluster, qc, inputNode, sortCollation)
+      strategy = RankUtil.analyzeRankStrategy(cluster, qc, this, sortCollation)
     }
     strategy
   }
@@ -211,7 +211,7 @@ class StreamExecRank(
         // unary update rank requires a key selector that returns key of other types rather
         // than BaseRow
         val genSortKeyExtractor = getUnarySortKeyExtractor(fieldCollation, inputSchema)
-        val unarySortKeyType = inputSchema.fieldTypeInfos(fieldCollation.head.getFieldIndex)
+        val unarySortKeyType = inputSchema.fieldTypes(fieldCollation.head.getFieldIndex)
         val rowKeyType = createRowKeyType(primaryKeys, inputSchema)
         val rowKeySelector = createKeySelector(primaryKeys, inputSchema)
         new UnarySortUpdateRankFunction[Any](

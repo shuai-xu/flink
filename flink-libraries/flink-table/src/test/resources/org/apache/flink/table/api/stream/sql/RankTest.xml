@@ -16,6 +16,46 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
+  <TestCase name="testUnarySortTopNOnString">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_price ASC], rankRange=[rankStart=1, rankEnd=3], strategy=[UnaryUpdateRank[0,1]], select=[*, rowNum])
+  StreamExecExchange(distribution=[hash[category]])
+    StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, MAX(price) AS max_price])
+      StreamExecExchange(distribution=[hash[category, shopId]])
+        StreamExecScan(table=[[_DataStreamTable_1]])
+]]>
+	</Resource>
+	<Resource name="trait">
+		<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+	</Resource>
+  </TestCase>
+  <TestCase name="testTopNWithKeyChanged">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[RetractRank], select=[*, rowNum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a], select=[a, LAST_VALUE(b) AS b, SUM(c) AS sum_c])
+      StreamExecExchange(distribution=[hash[a]])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+	</Resource>
+	<Resource name="trait">
+		<![CDATA[
+StreamExecRank(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[true], accMode=[AccRetract])
+    StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+]]>
+	</Resource>
+  </TestCase>
   <TestCase name="testNestedTopN">
     <Resource name="plan">
       <![CDATA[

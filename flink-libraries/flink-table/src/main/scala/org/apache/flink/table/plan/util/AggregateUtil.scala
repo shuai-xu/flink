@@ -280,7 +280,7 @@ object AggregateUtil {
           .map(FlinkTypeFactory.toInternalType) // InternalType
           .toArray
 
-        val keyType = createDistinctKeyType(argTypes)
+        val keyType = createInternalType(argTypes)
 
         val accTypeInfo = new MapViewTypeInfo(
           TypeUtils.createTypeInfoFromDataType(keyType),
@@ -325,7 +325,7 @@ object AggregateUtil {
     (distinctMap.values.toArray, newAggCalls)
   }
 
-  private def createDistinctKeyType(argTypes: Array[DataType]): DataType = {
+  def createInternalType(argTypes: Array[DataType]): DataType = {
     if (argTypes.length == 1) {
       argTypes(0) match {
         case BYTE => BYTE

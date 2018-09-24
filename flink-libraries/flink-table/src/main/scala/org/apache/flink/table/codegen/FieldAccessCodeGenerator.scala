@@ -22,6 +22,7 @@ import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat._
+import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 
 /**
@@ -49,7 +50,7 @@ object FieldAccessCodeGenerator {
 
     val code =
       j"""
-      public class $className extends ${baseClass} {
+      public class $className extends $baseClass {
 
         ${ctx.reuseMemberCode()}
 
@@ -61,7 +62,7 @@ object FieldAccessCodeGenerator {
         public $resultTypeTerm extract($BASE_ROW $inputTerm) {
           ${ctx.reuseFieldCode()}
           ${expr.code}
-          return ${expr.resultTerm};
+          return ${genToExternal(ctx, outType, expr.resultTerm)};
         }
       }
     """.stripMargin

@@ -21,7 +21,7 @@ import java.util
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptUtil}
 import org.apache.calcite.rel.RelFieldCollation.Direction
-import org.apache.calcite.rel.{RelCollation, RelFieldCollation, RelNode}
+import org.apache.calcite.rel.{RelCollation, RelFieldCollation}
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.validate.SqlMonotonicity
@@ -33,6 +33,7 @@ import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.runtime.aggregate.SortUtil
 import org.apache.flink.table.runtime.{BinaryRowKeySelector, NullBinaryRowKeySelector}
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
@@ -395,8 +396,10 @@ object RankUtil {
   def analyzeRankStrategy(
       cluster: RelOptCluster,
       queryConfig: StreamQueryConfig,
-      rankInput: RelNode,
+      rank: StreamExecRank,
       sortCollation: RelCollation): RankStrategy = {
+
+    val rankInput = rank.getInput
     val fieldCollations = sortCollation.getFieldCollations
 
     val mono = cluster.getMetadataQuery.asInstanceOf[FlinkRelMetadataQuery]
@@ -432,11 +435,14 @@ object RankUtil {
     }
 
     val isUpdateStream = !UpdatingPlanChecker.isAppendOnly(rankInput)
+    val partitionKey = rank.partitionKey
 
     if (isUpdateStream) {
       val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(rankInput)
       val uniqueKeys = cluster.getMetadataQuery.getUniqueKeys(rankInput)
-      if (inputIsAccRetract || uniqueKeys == null || uniqueKeys.isEmpty) {
+      if (inputIsAccRetract || uniqueKeys == null || uniqueKeys.isEmpty
+        // unique key should contains partition key
+        || !uniqueKeys.exists(k => k.contains(partitionKey))) {
         // input is AccRetract or extract the unique keys failed,
         // and we fall back to using retract rank
         RetractRank

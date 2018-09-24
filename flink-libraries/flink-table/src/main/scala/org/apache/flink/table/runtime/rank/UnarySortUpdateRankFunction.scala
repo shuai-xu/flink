@@ -34,7 +34,7 @@ import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.codegen.{CodeGenUtils, Compiler, FieldAccess, GeneratedFieldExtractor}
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, OrderedTypeUtils}
@@ -70,7 +70,7 @@ import org.apache.flink.util.Collector
 class UnarySortUpdateRankFunction[K](
     inputRowType: BaseRowTypeInfo[_],
     rowKeyType: BaseRowTypeInfo[_],
-    sortKeyType: TypeInformation[_],
+    sortKeyType: DataType,
     rowKeySelector: KeySelector[BaseRow, BaseRow],
     genSortKeyExtractor: GeneratedFieldExtractor,
     order: Order,
@@ -137,8 +137,9 @@ class UnarySortUpdateRankFunction[K](
     LOG.info("Top{} operator is using LRU caches key-size: {}", getDefaultTopSize, lruCacheSize)
 
     // create sort key comparator
-    sortKeyComparator = OrderedTypeUtils.createComparatorFromDataType(
-      DataTypes.of(sortKeyType), order).asInstanceOf[Comparator[K]]
+    sortKeyComparator = OrderedTypeUtils
+      .createComparatorFromDataType(sortKeyType, order)
+      .asInstanceOf[Comparator[K]]
 
     // create sort key selector
     sortKeySelector = CodeGenUtils.compile(
@@ -154,8 +155,9 @@ class UnarySortUpdateRankFunction[K](
       new SortedMapStateDescriptor(
         "data-state-with-unary-update",
         sortKeyComparator,
-        OrderedTypeUtils.createOrderedTypeInfoFromDataType(
-          DataTypes.of(sortKeyType), order).asInstanceOf[TypeInformation[K]],
+        OrderedTypeUtils
+          .createOrderedTypeInfoFromDataType(sortKeyType, order)
+          .asInstanceOf[TypeInformation[K]],
         valueTypeInfo.asInstanceOf[TypeInformation[JList[BaseRow]]])
 
     dataState = ctx.getKeyedSortedMapState(sortedMapStateDesc)
