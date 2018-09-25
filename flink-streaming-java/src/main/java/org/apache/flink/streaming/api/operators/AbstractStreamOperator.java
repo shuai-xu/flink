@@ -680,7 +680,7 @@ public abstract class AbstractStreamOperator<OUT>
 		}
 	}
 
-	@SuppressWarnings({"unchecked", "rawtypes"})
+	@Override @SuppressWarnings({"unchecked", "rawtypes"})
 	public void setCurrentKey(Object key) {
 		if (keyedStateBackend != null) {
 			try {
@@ -699,7 +699,7 @@ public abstract class AbstractStreamOperator<OUT>
 		return config.getStateKeySerializer(getUserCodeClassloader());
 	}
 
-	@SuppressWarnings({"unchecked", "rawtypes"})
+	@Override @SuppressWarnings({"unchecked", "rawtypes"})
 	public Object getCurrentKey() {
 		if (keyedStateBackend != null) {
 			return keyedStateBackend.getCurrentKey();
