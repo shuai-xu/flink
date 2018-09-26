@@ -57,23 +57,16 @@ object StreamingWithAggTestBase {
 
   @Parameterized.Parameters(name = "LocalGlobal={0}, {1}, StateBackend={2}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    // disable rocksdb currently
-//    Seq[Array[AnyRef]](
-//      Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
-//      Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
-//      Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
-//      Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
-//      Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND),
-//      Array(LocalGlobalOff, MiniBatchOff, ROCKSDB_BACKEND),
-//      Array(LocalGlobalOff, MiniBatchOn, ROCKSDB_BACKEND),
-//      Array(LocalGlobalOn, MiniBatchOn, ROCKSDB_BACKEND),
-//      Array(LocalGlobalOff, MicroBatchOn, ROCKSDB_BACKEND),
-//      Array(LocalGlobalOn, MicroBatchOn, ROCKSDB_BACKEND))
     Seq[Array[AnyRef]](
       Array(LocalGlobalOff, MiniBatchOff, HEAP_BACKEND),
       Array(LocalGlobalOff, MiniBatchOn, HEAP_BACKEND),
       Array(LocalGlobalOn, MiniBatchOn, HEAP_BACKEND),
       Array(LocalGlobalOff, MicroBatchOn, HEAP_BACKEND),
-      Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND))
+      Array(LocalGlobalOn, MicroBatchOn, HEAP_BACKEND),
+      Array(LocalGlobalOff, MiniBatchOff, ROCKSDB_BACKEND),
+      Array(LocalGlobalOff, MiniBatchOn, ROCKSDB_BACKEND),
+      Array(LocalGlobalOn, MiniBatchOn, ROCKSDB_BACKEND),
+      Array(LocalGlobalOff, MicroBatchOn, ROCKSDB_BACKEND),
+      Array(LocalGlobalOn, MicroBatchOn, ROCKSDB_BACKEND))
   }
 }

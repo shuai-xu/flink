@@ -20,7 +20,6 @@ package org.apache.flink.contrib.streaming.state;
 
 import org.apache.flink.api.common.functions.Comparator;
 import org.apache.flink.api.common.functions.Merger;
-import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.SerializationException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
@@ -521,12 +520,11 @@ public class RocksDBInternalState implements InternalState {
 	//  Check whether arguments illegal
 	// ------------------------------------------------------------------------
 
+	// TODO ensure comparator and serializer both ordered
 	private void checkOrderedPrefixKeys(Row prefixKeys) {
 		int numPrefixKeys = prefixKeys == null ? 0 : prefixKeys.getArity();
 		Preconditions.checkArgument(numPrefixKeys < descriptor.getNumKeyColumns());
-		Comparator<?> comparator = descriptor.getKeyColumnDescriptor(numPrefixKeys).getComparator();
-		Preconditions.checkArgument(comparator != null);
-		Preconditions.checkArgument(comparator instanceof BytewiseComparator, "RocksDB internal state only supports byte-wise comparator currently.");
+		Preconditions.checkArgument(descriptor.getKeyColumnDescriptor(numPrefixKeys).getComparator() != null);
 	}
 
 	private void checkKeyAndValue(Row key, Row value) {
@@ -545,14 +543,9 @@ public class RocksDBInternalState implements InternalState {
 		}
 	}
 
+	// TODO ensure comparator and serializer both ordered
 	private boolean isKeyColumnByteWiseOrdered(int column) {
-		Comparator<?> comparator = descriptor.getKeyColumnDescriptor(column).getComparator();
-		if (comparator == null) {
-			return false;
-		} else if (!(comparator instanceof BytewiseComparator)) {
-			throw new UnsupportedOperationException("RocksDB internal state only supports byte-wise comparator currently.");
-		}
-		return true;
+		return descriptor.getKeyColumnDescriptor(column).getComparator() != null;
 	}
 
 	// ------------------------------------------------------------------------

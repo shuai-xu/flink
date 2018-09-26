@@ -70,17 +70,12 @@ object StreamingWithMiniBatchTestBase {
 
   @Parameterized.Parameters(name = "{0}, StateBackend={1}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    // disable rocksdb currently
-//    Seq[Array[AnyRef]](
-//      Array(MiniBatchOff, HEAP_BACKEND),
-//      Array(MiniBatchOn, HEAP_BACKEND),
-//      Array(MiniBatchOff, ROCKSDB_BACKEND),
-//      Array(MiniBatchOn, ROCKSDB_BACKEND),
-//      Array(MicroBatchOn, HEAP_BACKEND),
-//      Array(MicroBatchOn, ROCKSDB_BACKEND))
     Seq[Array[AnyRef]](
       Array(MiniBatchOff, HEAP_BACKEND),
       Array(MiniBatchOn, HEAP_BACKEND),
-      Array(MicroBatchOn, HEAP_BACKEND))
+      Array(MiniBatchOff, ROCKSDB_BACKEND),
+      Array(MiniBatchOn, ROCKSDB_BACKEND),
+      Array(MicroBatchOn, HEAP_BACKEND),
+      Array(MicroBatchOn, ROCKSDB_BACKEND))
   }
 }

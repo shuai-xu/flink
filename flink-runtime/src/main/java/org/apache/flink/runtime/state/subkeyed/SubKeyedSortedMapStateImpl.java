@@ -29,6 +29,9 @@ import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -47,6 +50,8 @@ import java.util.TreeMap;
 public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 	extends AbstractSubKeyedMapStateImpl<K, N, MK, MV, SortedMap<MK, MV>>
 	implements SubKeyedSortedMapState<K, N, MK, MV> {
+
+	private static final Logger LOG = LoggerFactory.getLogger(SubKeyedSortedMapStateImpl.class);
 
 	/**
 	 * Constructor with the internal state to store mappings.
@@ -72,6 +77,11 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 		final SubKeyedSortedMapStateDescriptor<K, N, MK, MV> subKeyedStateDescriptor
 	) {
 		Preconditions.checkNotNull(subKeyedStateDescriptor);
+
+		LOG.warn("If using stateBackend which would store keys in bytes format," +
+				" please ensure the mapKey's comparator: {} and serializer: {} are both ordered.",
+			subKeyedStateDescriptor.getMapKeySerializer(),
+			subKeyedStateDescriptor.getComparator());
 
 		return new InternalStateDescriptorBuilder(subKeyedStateDescriptor.getName())
 			.addKeyColumn("key",

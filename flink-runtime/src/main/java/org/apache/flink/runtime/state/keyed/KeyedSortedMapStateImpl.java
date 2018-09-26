@@ -31,6 +31,9 @@ import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -47,6 +50,8 @@ import java.util.TreeMap;
 public final class KeyedSortedMapStateImpl<K, MK, MV>
 	extends AbstractKeyedMapStateImpl<K, MK, MV, SortedMap<MK, MV>>
 	implements KeyedSortedMapState<K, MK, MV> {
+
+	private static final Logger LOG = LoggerFactory.getLogger(KeyedSortedMapStateImpl.class);
 
 	/**
 	 * The descriptor of current state.
@@ -76,6 +81,11 @@ public final class KeyedSortedMapStateImpl<K, MK, MV>
 		final KeyedSortedMapStateDescriptor<K, MK, MV> keyedStateDescriptor
 	) {
 		stateDescriptor = Preconditions.checkNotNull(keyedStateDescriptor);
+
+		LOG.warn("If using stateBackend which would store keys in bytes format," +
+			" please ensure the mapKey's comparator: {} and serializer: {} are both ordered.",
+			keyedStateDescriptor.getMapKeySerializer(),
+			keyedStateDescriptor.getMapKeyComparator());
 
 		return new InternalStateDescriptorBuilder(keyedStateDescriptor.getName())
 			.addKeyColumn("key",

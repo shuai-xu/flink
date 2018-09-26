@@ -190,9 +190,6 @@ object StreamingWithStateTestBase {
 
   @Parameterized.Parameters(name = "StateBackend={0}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    // disable rocksdb currently
-//     Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
-    Seq[Array[AnyRef]](Array(HEAP_BACKEND))
-
+    Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
   }
 }
