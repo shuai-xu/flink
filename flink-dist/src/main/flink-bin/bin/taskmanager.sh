@@ -53,11 +53,13 @@ if [[ $STARTSTOP == "start" ]] || [[ $STARTSTOP == "start-foreground" ]]; then
 
     if [ "${FLINK_TM_HEAP}" -gt "0" ]; then
 
-        TM_HEAP_SIZE=$(calculateTaskManagerHeapSizeMB)
-        # Long.MAX_VALUE in TB: This is an upper bound, much less direct memory will be used
-        TM_MAX_OFFHEAP_SIZE="8388607T"
+        TASK_MANAGER_RESOURCE=$(CalculateTaskManagerResource)
 
-        export JVM_ARGS="${JVM_ARGS} -Xms${TM_HEAP_SIZE}M -Xmx${TM_HEAP_SIZE}M -XX:MaxDirectMemorySize=${TM_MAX_OFFHEAP_SIZE}"
+        TM_HEAP_SIZE=$(echo ${TASK_MANAGER_RESOURCE} | sed 's/.*TotalHeapMemory:\([0-9]*\).*/\1/g')
+        TM_YOUNG_HEAP_SIZE=$(echo ${TASK_MANAGER_RESOURCE} | sed 's/.*YoungHeapMemory:\([0-9]*\).*/\1/g')
+        TM_MAX_OFFHEAP_SIZE=$(echo ${TASK_MANAGER_RESOURCE} | sed 's/.*TotalDirectMemory:\([0-9]*\).*/\1/g')
+
+        export JVM_ARGS="${JVM_ARGS} -Xms${TM_HEAP_SIZE}M -Xmx${TM_HEAP_SIZE}M -Xmn${TM_YOUNG_HEAP_SIZE}M -XX:MaxDirectMemorySize=${TM_MAX_OFFHEAP_SIZE}M"
 
     fi
 

@@ -414,6 +414,10 @@ public class BootstrapTools {
 		params.add(String.format("-Xms%dm", tmParams.taskManagerHeapSizeMB()));
 		params.add(String.format("-Xmx%dm", tmParams.taskManagerHeapSizeMB()));
 
+		if (tmParams.getYoungMemoryMB() > 0) {
+			params.add(String.format("-Xmn%dm", tmParams.getYoungMemoryMB()));
+		}
+
 		if (tmParams.taskManagerDirectMemoryLimitMB() >= 0) {
 			params.add(String.format("-XX:MaxDirectMemorySize=%dm",
 				tmParams.taskManagerDirectMemoryLimitMB()));

@@ -603,3 +603,12 @@ calculateTaskManagerHeapSizeMB() {
 
     echo ${tm_heap_size_mb}
 }
+
+# Use org.apache.flink.runtime.clusterframework.standalone.TaskManagerResourceCalculator to get taskManagerResource
+# taskManagerResource should be same as TotalResourceOfTaskExecutor in StandaloneResourceManager
+CalculateTaskManagerResource() {
+    FLINK_CLASSPATH=`constructFlinkClassPath`
+    CLASS_TO_RUN='org.apache.flink.runtime.clusterframework.standalone.TaskManagerResourceCalculator'
+    ARGS="--configDir ${FLINK_CONF_DIR}"
+    $JAVA_RUN -classpath ${FLINK_CLASSPATH} ${CLASS_TO_RUN} ${ARGS}
+}
