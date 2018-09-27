@@ -45,15 +45,14 @@ class IfCallGen() extends CallGenerator {
         operands(1).resultType, operands(2).resultType))
     }
 
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
     val resultTypeTerm = primitiveTypeTermForType(returnType)
+    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
+    val nullTerm = ctx.newReusableField("isNull", "boolean")
+
 
     val resultCode =
       s"""
          |${operands.head.code}
-         |$resultTypeTerm $resultTerm;
-         |boolean $nullTerm;
          |if (${operands.head.resultTerm}) {
          |  ${operands(1).code}
          |  $resultTerm = $castedResultTerm1;

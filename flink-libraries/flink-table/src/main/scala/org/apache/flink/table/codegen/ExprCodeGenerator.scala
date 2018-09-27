@@ -674,11 +674,15 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       case (o@_, idx) =>
         // for AND/OR/CASE/COALESCE, except for the first operand, other
         // operands will enter a new scope
+        // Note: 'IF' function was introduced by Blink, it is a scalar function,
+        // without specific SqlKind info. Here we have to use the 'name'
+        // 'IF' function does create new variable scope(see #IfCallGen)
         val newScope = idx > 0 &&
           (call.getKind == SqlKind.AND
             || call.getKind == SqlKind.OR
             || call.getKind == SqlKind.CASE
-            || call.getKind == SqlKind.COALESCE)
+            || call.getKind == SqlKind.COALESCE
+            || call.op.getName == "IF")
         if (newScope) {
           ctx.enterScope()
         }

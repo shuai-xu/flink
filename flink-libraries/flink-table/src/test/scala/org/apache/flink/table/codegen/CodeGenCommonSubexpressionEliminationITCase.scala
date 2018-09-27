@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.codegen
 
-
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
@@ -30,11 +29,7 @@ import org.apache.flink.types.Row
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 
-
 class CodeGenCommonSubexpressionEliminationITCase {
-  val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-  val tableConfig = new TableConfig
-  val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
 
   val sourceData = List(
     (1, "Pink Floyd"),
@@ -56,7 +51,94 @@ class CodeGenCommonSubexpressionEliminationITCase {
   }
 
   @Test
+  def testIf(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val configs = Array(new TableConfig, new TableConfig)
+    configs(0).setMaxGeneratedCodeLength(1)
+
+    configs.foreach { config =>
+
+      val tEnv = TableEnvironment.getTableEnvironment(env, config)
+      val t1 = env.fromCollection(sourceData)
+        .toTable(tEnv)
+        .as('id, 'band)
+
+      tEnv.registerTable("T1", t1)
+
+      val sqlQuery =
+        """
+          | SELECT
+          |   id,
+          |   if (char_length(band) >= 10, 1, 0),
+          |   if (char_length(band) >= 10, 1, 0)
+          | FROM T1
+        """.stripMargin
+
+      val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+      val sink = new TestingAppendSink
+      result.addSink(sink)
+      env.execute()
+
+      val expected = List(
+        "1,1,1",
+        "2,1,1",
+        "3,0,0",
+        "4,0,0",
+        "5,0,0"
+      )
+      assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    }
+  }
+
+  @Test
+  def testIfWithDifferentScope(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val configs = Array(new TableConfig(), new TableConfig)
+
+    configs(0).setMaxGeneratedCodeLength(1)
+
+    configs.foreach(tableConfig => {
+      val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, tableConfig)
+      tEnv.registerFunction("UpperUdf", new UpperUdf)
+      tEnv.registerFunction("LowerUdf", new LowerUdf)
+
+      val t1 = env.fromCollection(sourceData)
+        .toTable(tEnv)
+        .as('id, 'band)
+
+      tEnv.registerTable("T1", t1)
+
+      val sqlQuery =
+        """
+          | SELECT
+          |   id,
+          |   trim(UpperUdf(band)),
+          |   if (char_length(band) >= 10, UpperUdf(band), LowerUdf(band)),
+          |   if (char_length(band) >= 10, UpperUdf(band), LowerUdf(band)),
+          |   trim(LowerUdf(band))
+          | FROM T1
+        """.stripMargin
+
+      val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+      val sink = new TestingAppendSink
+      result.addSink(sink)
+      env.execute()
+
+      val expected = List(
+        "1,PINK FLOYD,PINK FLOYD,PINK FLOYD,pink floyd",
+        "2,DEAD CAN DANCE,DEAD CAN DANCE,DEAD CAN DANCE,dead can dance",
+        "3,THE DOORS,the doors,the doors,the doors",
+        "4,DOU WEI,dou wei,dou wei,dou wei",
+        "5,CUI JIAN,cui jian,cui jian,cui jian"
+      )
+      assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    })
+  }
+
+  @Test
   def testCaseWhen(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
 
     tEnv.registerFunction("UpperUdf", new UpperUdf)
     tEnv.registerFunction("LowerUdf", new LowerUdf)
@@ -93,6 +175,8 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testCoalesce(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
 
     tEnv.registerFunction("UpperUdf", new UpperUdf)
     tEnv.registerFunction("LowerUdf", new LowerUdf)
@@ -129,6 +213,8 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testNonDeterministic(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
     tEnv.registerFunction("NonDeterministicUdf", new NonDeterministicUdf)
 
     val t1 = env.fromCollection(sourceData)
@@ -159,6 +245,8 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testJoin(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
     tEnv.registerFunction("UpperUdf", new UpperUdf)
     tEnv.registerFunction("LowerUdf", new LowerUdf)
 
@@ -196,6 +284,7 @@ class CodeGenCommonSubexpressionEliminationITCase {
 
   @Test
   def testSubexpressionEliminationWithCodeSplit(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val configs = Array(new TableConfig(), new TableConfig)
 
     configs(0).setMaxGeneratedCodeLength(1)
