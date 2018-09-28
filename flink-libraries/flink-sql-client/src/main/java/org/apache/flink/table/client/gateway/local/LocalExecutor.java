@@ -559,7 +559,7 @@ public class LocalExecutor implements Executor {
 		TableEnvironment tableEnv = envInst.getTableEnvironment();
 		try {
 			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
-			return SqlJobUtil.registerFunctions(tableEnv, sqlNodeList, tableEnv.userClassLoader(), null);
+			return SqlJobUtil.registerFunctions(tableEnv, sqlNodeList, null);
 		} catch (Exception e) {
 			throw new SqlExecutionException(e.getMessage(), e);
 		}

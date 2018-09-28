@@ -29,18 +29,30 @@ trait CrudExternalCatalog extends ExternalCatalog {
 
   /**
     * Add a function to this catalog.
-    * @param functionName The function name.
-    * @param className The class name of the function.
+    * @param functionName   The function name.
+    * @param className      The class name of the function.
+    * @param ignoreIfExists if function already exists in the catalog, not throw exception and
+    *                       leave the existed function if ignoreIfExists is true;
+    *                       else throw FunctionAlreadyExistException
+    * @throws FunctionAlreadyExistException if function exists in the catalog and
+    *                                        ignoreIfExists is false
+    * @throws InvalidFunctionException      thrown if create function failed
     */
+  @throws[FunctionAlreadyExistException]
   @throws[InvalidFunctionException]
-  def createFunction(functionName: String, className: String): Unit
+  def createFunction(functionName: String, className: String, ignoreIfExists: Boolean): Unit
 
   /**
-    * Get the function from a external catalog.
-    * @param functionName The function name.
-    * @return The external catalog function.
+    * Deletes function from this catalog.
+    *
+    * @param functionName      Name of the function to delete.
+    * @param ignoreIfNotExists Flag to specify behavior if the function does not exist:
+    *                          if set to false, throw an exception,
+    *                          if set to true, nothing happens.
+    * @throws FunctionNotExistException    thrown if the function does not exist in the catalog
     */
-  def getFunction(functionName: String): ExternalCatalogFunction
+  @throws[FunctionNotExistException]
+  def dropFunction(functionName: String, ignoreIfNotExists: Boolean): Unit
 
   /**
     * Adds partition into an external Catalog table

@@ -63,6 +63,20 @@ trait ExternalCatalog {
   def listPartitions(tableName: String): JList[PartitionSpec]
 
   /**
+    * Get the function from a external catalog.
+    * @param functionName The function name.
+    * @return The external catalog function.
+    */
+  @throws[FunctionNotExistException]
+  def getFunction(functionName: String): ExternalCatalogFunction
+
+  /**
+    * List functions from a external catalog.
+    * @return The external catalog functions.
+    */
+  def listFunctions(): JList[ExternalCatalogFunction]
+
+  /**
     * Get a table from this catalog.
     *
     * @param tableName The name of the table.

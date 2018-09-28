@@ -244,16 +244,14 @@ public class ExecutionContext<T> {
 		private EnvironmentInstance() {
 			// create environments
 			streamExecEnv = createStreamExecutionEnvironment();
-			if (mergedEnv.getExecution().isStreamingExecution()) {
-				tableEnv = TableEnvironment.getTableEnvironment(streamExecEnv);
+				if (mergedEnv.getExecution().isStreamingExecution()) {
+					tableEnv = TableEnvironment.getTableEnvironment(streamExecEnv);
 			} else if (mergedEnv.getExecution().isBatchExecution()) {
 				tableEnv = TableEnvironment.getBatchTableEnvironment(streamExecEnv);
 			} else {
 				throw new SqlExecutionException("Unsupported execution type specified.");
 			}
 
-			// Pass the user class loader to table environment
-			tableEnv.userClassLoader_$eq(classLoader);
 			Thread.currentThread().setContextClassLoader(classLoader);
 
 			// create query config

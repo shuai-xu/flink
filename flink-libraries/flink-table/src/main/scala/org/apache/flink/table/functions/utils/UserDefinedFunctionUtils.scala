@@ -687,7 +687,7 @@ object UserDefinedFunctionUtils {
         alias = Some(Seq(name) ++ extraNames)
         unwrap(child)
       case Call(name, args) =>
-        val function = tableEnv.functionCatalog.lookupFunction(name, args)
+        val function = tableEnv.chainedFunctionCatalog.lookupFunction(name, args)
         unwrap(function)
       case c: TableFunctionCall => c
       case _ =>
@@ -862,5 +862,17 @@ object UserDefinedFunctionUtils {
       case _ =>
     }
     func
+  }
+
+  def getImplicitResultType[T](tf: TableFunction[T]) = {
+    val implicitResultType = try {
+      DataTypes.of(TypeExtractor
+        .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
+    } catch {
+      case e: InvalidTypesException =>
+        // may be we should get type from getResultType
+        new GenericType(classOf[AnyRef])
+    }
+    implicitResultType
   }
 }

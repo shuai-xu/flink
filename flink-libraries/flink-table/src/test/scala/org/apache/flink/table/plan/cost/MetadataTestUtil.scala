@@ -31,12 +31,11 @@ import org.apache.calcite.tools.{FrameworkConfig, Frameworks}
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.ExpressionReducer
-import org.apache.flink.table.plan.schema.TableSourceTable
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.TestTableSourceTable
-import org.apache.flink.table.validate.FunctionCatalog
+import org.apache.flink.table.validate.BuiltInFunctionCatalog
 
 import scala.collection.JavaConversions._
 
@@ -47,7 +46,7 @@ object MetadataTestUtil {
       .configBuilder()
       .setLex(Lex.JAVA)
       .build()
-    val sqlOperatorTable = FunctionCatalog.withBuiltIns(null).getSqlOperatorTable
+    val sqlOperatorTable = BuiltInFunctionCatalog.withBuiltIns.getSqlOperatorTable
     val config = new TableConfig
     Frameworks
       .newConfigBuilder

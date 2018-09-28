@@ -41,8 +41,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.{Partition, PartitionableTableSource, TableSource}
-import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.types.Row
+import org.apache.flink.table.types.DataType
 import org.apache.flink.util.Preconditions
 import org.junit.Assert._
 import org.junit.runner.RunWith

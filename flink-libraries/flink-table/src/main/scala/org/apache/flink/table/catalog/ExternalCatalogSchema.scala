@@ -24,7 +24,7 @@ import org.apache.calcite.linq4j.tree.Expression
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelProtoDataType}
 import org.apache.calcite.schema._
 import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.flink.table.api.{CatalogNotExistException, TableNotExistException}
+import org.apache.flink.table.api.{CatalogNotExistException, ExternalCatalogAlreadyExistException, FunctionAlreadyExistException, TableNotExistException}
 import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
@@ -32,7 +32,7 @@ import scala.collection.JavaConverters._
 /**
   * This class is responsible to connect an external catalog to Calcite's catalog.
   * This enables to look-up and access tables in SQL queries without registering tables in advance.
-  * The the external catalog and all included sub-catalogs and tables is registered as
+  * The external catalog and all included sub-catalogs and tables are registered as
   * sub-schemas and tables in Calcite.
   *
   * @param catalogIdentifier external catalog name
@@ -123,13 +123,21 @@ object ExternalCatalogSchema {
     * @param parentSchema              Parent schema into which the catalog is registered
     * @param externalCatalogIdentifier Identifier of the external catalog
     * @param externalCatalog           The external catalog to register
+    * @throws ExternalCatalogAlreadyExistException if catalog exists
     */
+  @throws[ExternalCatalogAlreadyExistException]
   def registerCatalog(
       parentSchema: SchemaPlus,
       externalCatalogIdentifier: String,
-      externalCatalog: ExternalCatalog): Unit = {
-    val newSchema = new ExternalCatalogSchema(externalCatalogIdentifier, externalCatalog)
-    val schemaPlusOfNewSchema = parentSchema.add(externalCatalogIdentifier, newSchema)
-    newSchema.registerSubSchemas(schemaPlusOfNewSchema)
+      externalCatalog: ExternalCatalog): Unit = synchronized {
+    parentSchema.getSubSchema(externalCatalogIdentifier) match {
+      case _: SchemaPlus =>
+        throw new ExternalCatalogAlreadyExistException(externalCatalogIdentifier)
+      case _ => {
+        val newSchema = new ExternalCatalogSchema(externalCatalogIdentifier, externalCatalog)
+        val schemaPlusOfNewSchema = parentSchema.add(externalCatalogIdentifier, newSchema)
+        newSchema.registerSubSchemas(schemaPlusOfNewSchema)
+      }
+    }
   }
 }

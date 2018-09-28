@@ -123,7 +123,7 @@ case class PartitionAlreadyExistException(
 }
 
 /**
-  * Exception for an operation on a nonexistent table
+  * Exception for an operation on a nonexistent table.
   *
   * @param catalog    catalog name
   * @param table      table name
@@ -136,6 +136,23 @@ case class TableNotExistException(
     extends RuntimeException(s"Table $catalog.$table does not exist.", cause) {
 
   def this(catalog: String, table: String) = this(catalog, table, null)
+
+}
+
+/**
+  * Exception for an operation on a nonexistent function.
+  *
+  * @param catalog    catalog name
+  * @param function   function name
+  * @param cause      the cause
+  */
+case class FunctionNotExistException(
+    catalog: String,
+    function: String,
+    cause: Throwable)
+  extends RuntimeException(s"Function $catalog.$function does not exist.", cause) {
+
+  def this(catalog: String, function: String) = this(catalog, function, null)
 
 }
 
@@ -168,6 +185,23 @@ case class TableAlreadyExistException(
     extends RuntimeException(s"Table $catalog.$table already exists.", cause) {
 
   def this(catalog: String, table: String) = this(catalog, table, null)
+
+}
+
+/**
+  * Exception for adding an already existent function
+  *
+  * @param catalog    catalog name
+  * @param function   function name
+  * @param cause      the cause
+  */
+case class FunctionAlreadyExistException(
+    catalog: String,
+    function: String,
+    cause: Throwable)
+  extends RuntimeException(s"Function $catalog.$function already exists.", cause) {
+
+  def this(catalog: String, function: String) = this(catalog, function, null)
 
 }
 

@@ -22,7 +22,6 @@ package org.apache.flink.table.catalog
 import java.util.{LinkedHashMap => JLinkedHashMap, LinkedHashSet => JLinkedHashSet}
 
 import com.google.common.collect.{ImmutableMap, ImmutableSet}
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.table.api._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.types.DataTypes
@@ -325,6 +324,57 @@ class InMemoryExternalCatalogTest {
   @Test(expected = classOf[TableNotExistException])
   def testAlterTableStatsWithNotExistTable(): Unit = {
     catalog.alterTableStats("nonexisted", Some(new TableStats(1000L)), ignoreIfNotExists = false)
+  }
+
+  @Test
+  def testCreateFunction(): Unit = {
+    assertTrue(catalog.listFunctions().isEmpty)
+    val functionName = "concatString"
+    val className = "org.apache.flink.table.catalog.test.functions.StringFunction"
+    catalog.createFunction(functionName, className, false)
+
+    val functions = catalog.listFunctions()
+    assertEquals(1, functions.size())
+    assertEquals(functionName, functions.get(0).funcName)
+    assertEquals(className, functions.get(0).className)
+    assertEquals(functions.get(0), catalog.getFunction(functionName))
+  }
+
+  @Test(expected = classOf[FunctionAlreadyExistException])
+  def testCreateExistedFunction(): Unit = {
+    val functionName = "concatString"
+    val className = "org.apache.flink.table.catalog.test.functions.StringFunction"
+    catalog.createFunction(functionName, className, false)
+    catalog.createFunction(functionName, className, false)
+  }
+
+  @Test
+  def testCreateExistedFunctionWithIgnoreIfExists(): Unit = {
+    val functionName = "concatString"
+    val className = "org.apache.flink.table.catalog.test.functions.StringFunction"
+    catalog.createFunction(functionName, className, false)
+    catalog.createFunction(functionName, className, true)
+  }
+
+  @Test
+  def testDropFunction(): Unit = {
+    val functionName = "concatString"
+    val className = "org.apache.flink.table.catalog.test.functions.StringFunction"
+
+    catalog.createFunction(functionName, className, false)
+    assertTrue(catalog.getFunction(functionName).funcName.equals(functionName))
+    catalog.dropFunction(functionName, ignoreIfNotExists = false)
+    assertTrue(catalog.listFunctions().size() == 0)
+  }
+
+  @Test(expected = classOf[FunctionNotExistException])
+  def testDropNotExistFunction(): Unit = {
+    catalog.dropFunction("non_existed_function", ignoreIfNotExists = false)
+  }
+
+  @Test
+  def testDropNotExistFunctionWithIgnore(): Unit = {
+    catalog.dropFunction("non_existed_function", ignoreIfNotExists = true)
   }
 
   private def createTableInstance(): ExternalCatalogTable = {

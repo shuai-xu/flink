@@ -29,11 +29,12 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.`type`.SqlTypeName.{BIGINT, INTEGER, VARCHAR}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.util.RexNodeExtractor
 import org.apache.flink.table.util.InputTypeBuilder.inputOf
-import org.apache.flink.table.validate.FunctionCatalog
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
 import org.apache.flink.util.TimeConvertUtils
 import org.hamcrest.CoreMatchers.is
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertThat}
@@ -43,7 +44,7 @@ import scala.collection.JavaConverters._
 
 class RexNodeExtractorTest extends RexNodeTestBase {
 
-  private val functionCatalog: FunctionCatalog = FunctionCatalog.withBuiltIns(null)
+  private val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns
 
   @Test
   def testExtractRefInputFields(): Unit = {

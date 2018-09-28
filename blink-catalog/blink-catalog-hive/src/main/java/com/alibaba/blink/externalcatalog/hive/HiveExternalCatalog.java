@@ -20,6 +20,8 @@ package com.alibaba.blink.externalcatalog.hive;
 
 import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.api.CatalogNotExistException;
+import org.apache.flink.table.api.FunctionAlreadyExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.InvalidFunctionException;
 import org.apache.flink.table.api.PartitionAlreadyExistException;
 import org.apache.flink.table.api.PartitionNotExistException;
@@ -117,7 +119,9 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 	@Override
 	public void createFunction(
 			String functionName,
-			String className) {
+			String className,
+			boolean ignoreIfExists)
+		throws FunctionAlreadyExistException, InvalidFunctionException {
 
 		LOG.info("create function, function name={}, class name={}", functionName, className);
 		Function func = new Function(
@@ -133,9 +137,26 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 
 		try {
 			getMSC().createFunction(func);
+		} catch (AlreadyExistsException e) {
+			if (ignoreIfExists) {
+				return;
+			} else {
+				throw new FunctionAlreadyExistException(database, functionName, e);
+			}
 		} catch (TException e) {
 			throw new InvalidFunctionException(database, functionName, className, e);
 		}
+	}
+
+	@Override
+	public void dropFunction(
+			String functionName,
+			boolean ignoreIfNotExists) throws FunctionNotExistException {
+
+		LOG.info("dropFunction, functionName={}, ignoreIfNotExists={}",
+			functionName, ignoreIfNotExists);
+
+		throw new UnsupportedOperationException("Drop Function is not supported!");
 	}
 
 	@Override
@@ -143,15 +164,26 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 
 		try {
 			Function function = getMSC().getFunction(database, functionName);
-			return new ExternalCatalogFunction(
-				function.getDbName(),
-				function.getFunctionName(),
-				function.getClassName(),
-				function.getOwnerName(),
-				function.getCreateTime() * 1000L);
+			return this.toExternalCatalogFunction(function);
 		} catch (TException e) {
-			throw new InvalidFunctionException(database, functionName, "", e);
+			throw new FunctionNotExistException(database, functionName, e);
 		}
+	}
+
+	@Override
+	public List<ExternalCatalogFunction> listFunctions() {
+		List<ExternalCatalogFunction> externalCatalogFunctions = new ArrayList<>();
+		try {
+			List<Function> functions = getMSC().getAllFunctions().getFunctions();
+			if (functions != null && !functions.isEmpty()) {
+				for (Function function : functions) {
+					externalCatalogFunctions.add(this.toExternalCatalogFunction(function));
+				}
+			}
+		} catch (TException e) {
+			throw new InvalidFunctionException(database, "", "", e);
+		}
+		return externalCatalogFunctions;
 	}
 
 	@Override
@@ -513,5 +545,14 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 		} catch (TException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private ExternalCatalogFunction toExternalCatalogFunction(Function function){
+		return new ExternalCatalogFunction(
+			function.getDbName(),
+			function.getFunctionName(),
+			function.getClassName(),
+			function.getOwnerName(),
+			function.getCreateTime() * 1000L);
 	}
 }

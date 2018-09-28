@@ -26,6 +26,7 @@ import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.prepare.CalciteCatalogReader
 import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.sql.validate.SqlMonikerType
+import org.apache.flink.table.api.ExternalCatalogAlreadyExistException
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.plan.schema.TableSourceTable
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -59,6 +60,14 @@ class ExternalCatalogSchemaTest {
       typeFactory,
       calciteConnConfig
     )
+  }
+
+  @Test(expected = classOf[ExternalCatalogAlreadyExistException])
+  def testDuplicatedRegisterCatalog(): Unit = {
+    val rootSchemaPlus: SchemaPlus = CalciteSchema.createRootSchema(true, false).plus()
+    val catalog = CommonTestData.getInMemoryTestCatalog
+    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog)
+    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog)
   }
 
   @Test

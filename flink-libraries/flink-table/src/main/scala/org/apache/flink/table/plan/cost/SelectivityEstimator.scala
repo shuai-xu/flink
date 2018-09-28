@@ -495,7 +495,7 @@ class SelectivityEstimator(rel: RelNode, mq: FlinkRelMetadataQuery)
                 maxCnfNodeCount,
                 ts.getRowType.getFieldNames,
                 ts.getCluster.getRexBuilder,
-                FunctionCatalog.withBuiltIns(null))
+                FlinkRelOptUtil.getFunctionCatalog(ts))
             val (_, nonPartitionPredicates) =
               PartitionPredicateExtractor.extractPartitionPredicates(convertedPredicates, names)
             unconvertedRexNodes.isEmpty && nonPartitionPredicates.isEmpty

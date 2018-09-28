@@ -26,7 +26,7 @@ import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan._
 import org.apache.calcite.plan.volcano.VolcanoPlanner
 import org.apache.calcite.rel.RelCollation
-import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rel.logical.LogicalAggregate
 import org.apache.calcite.rex.{RexBuilder, RexNode}
 import org.apache.calcite.sql.SqlRankFunction
@@ -110,12 +110,9 @@ object FlinkRelBuilder {
 
   def create(config: FrameworkConfig,
       tableConfig: TableConfig,
+      typeFactory: RelDataTypeFactory,
       traitDefs: Array[RelTraitDef[_ <: RelTrait]] = Array(ConventionTraitDef.INSTANCE))
       : FlinkRelBuilder = {
-
-    // create Flink type factory
-    val typeSystem = config.getTypeSystem
-    val typeFactory = new FlinkTypeFactory(typeSystem)
 
     // create context instances with Flink type factory
     val planner = new VolcanoPlanner(

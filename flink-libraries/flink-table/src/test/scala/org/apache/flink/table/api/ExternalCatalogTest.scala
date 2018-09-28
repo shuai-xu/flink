@@ -56,4 +56,12 @@ class ExternalCatalogTest extends TableTestBase {
 
     util.verifyPlan(sqlQuery)
   }
+
+  @Test(expected = classOf[UnsupportedOperationException])
+  def testDuplicatedRegisterExternalCatalog(): Unit = {
+    val util = streamTestUtil()
+
+    util.tableEnv.registerExternalCatalog("test_a", CommonTestData.getInMemoryTestCatalog)
+    util.tableEnv.registerExternalCatalog("test_b", CommonTestData.getInMemoryTestCatalog)
+  }
 }

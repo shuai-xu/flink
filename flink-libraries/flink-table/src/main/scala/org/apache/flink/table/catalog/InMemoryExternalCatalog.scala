@@ -24,6 +24,7 @@ import org.apache.commons.collections.CollectionUtils
 import org.apache.flink.table.api._
 import org.apache.flink.table.catalog.ExternalCatalogTypes.PartitionSpec
 import org.apache.flink.table.plan.stats.TableStats
+import org.slf4j.LoggerFactory
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -36,9 +37,11 @@ import _root_.scala.collection.mutable
   * It could be used for testing or developing instead of used in production environment.
   */
 class InMemoryExternalCatalog(name: String) extends CrudExternalCatalog {
+  private val LOG = LoggerFactory.getLogger(classOf[InMemoryExternalCatalog])
 
   private val databases = new mutable.HashMap[String, ExternalCatalog]
   private val tables = new mutable.HashMap[String, ExternalCatalogTable]
+  private val functions = new mutable.HashMap[String, ExternalCatalogFunction]
   private val partitions =
     new mutable.HashMap[String, mutable.HashMap[PartitionSpec, ExternalCatalogTablePartition]]
 
@@ -232,14 +235,39 @@ class InMemoryExternalCatalog(name: String) extends CrudExternalCatalog {
     }
   }
 
-  /**
-    * Add a function to this catalog.
-    *
-    * @param functionName The function name.
-    * @param className    The class name of the function.
-    */
-  override def createFunction(functionName: String, className: String): Unit = {
-    // Do nothing
+  override def createFunction(
+    functionName: String,
+    className: String,
+    ignoreIfExists: Boolean): Unit = synchronized {
+    functions.get(functionName) match {
+      case Some(_) => {
+        if (!ignoreIfExists) {
+          throw new FunctionAlreadyExistException(name, functionName)
+        }
+      }
+      case _ => {
+        functions.put(functionName, new ExternalCatalogFunction(
+          name,
+          functionName,
+          className,
+          "Flink",
+          System.currentTimeMillis()))
+      }
+    }
+  }
+
+  override def dropFunction(
+    functionName: String,
+    ignoreIfNotExists: Boolean): Unit = synchronized {
+
+    LOG.info("dropFunction, functionName={}, ignoreIfNotExists={}",
+      functionName, ignoreIfNotExists)
+
+    functions.get(functionName) match {
+      case Some(_) => functions.remove(functionName)
+      case _ if !ignoreIfNotExists => throw new FunctionNotExistException(name, functionName)
+      case _ => // do nothing
+    }
   }
 
   /**
@@ -249,6 +277,18 @@ class InMemoryExternalCatalog(name: String) extends CrudExternalCatalog {
     * @return The external catalog function.
     */
   override def getFunction(functionName: String): ExternalCatalogFunction = {
-    throw new UnsupportedOperationException("Unsupported External Catalog")
+    functions.get(functionName) match {
+      case Some(t) => t
+      case _ => throw new FunctionNotExistException(name, functionName)
+    }
+  }
+
+  /**
+    * List functions from a external catalog.
+    *
+    * @return The external catalog functions.
+    */
+  override def listFunctions(): JList[ExternalCatalogFunction] = synchronized {
+    functions.values.toList.asJava
   }
 }

@@ -151,7 +151,8 @@ abstract class AggregateFunctionTestBase {
       expectedFinalResult: BinaryRow,
       expectedFinalResultType: BaseRowTypeInfo[_]): Unit = {
     // convert to logical aggregate plan
-    val builder = FlinkRelBuilder.create(tableEnv.getFrameworkConfig, tableEnv.getConfig)
+    val builder = FlinkRelBuilder.create(
+      tableEnv.getFrameworkConfig, tableEnv.getConfig, tableEnv.getTypeFactory)
     val plan = Aggregate(
       Nil,
       aggExprs.zipWithIndex.map { case (agg, index) => Alias(agg, "agg" + index) },

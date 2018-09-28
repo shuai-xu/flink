@@ -43,7 +43,7 @@ import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, SqlTimeTypeInfo}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkRelBuilder, FlinkTypeFactory}
+import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.expr
 import org.apache.flink.table.expressions.{ProctimeAttribute, RowtimeAttribute, WindowReference, WindowStart}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
@@ -80,8 +80,10 @@ class FlinkRelMdHandlerTestBase {
 
   @Before
   def setUp(): Unit = {
+    val typeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
+
     relBuilder = FlinkRelBuilder.create(
-      frameworkConfig, new TableConfig, Array(
+      frameworkConfig, new TableConfig, typeFactory, Array(
         ConventionTraitDef.INSTANCE,
         FlinkRelDistributionTraitDef.INSTANCE,
         RelCollationTraitDef.INSTANCE))

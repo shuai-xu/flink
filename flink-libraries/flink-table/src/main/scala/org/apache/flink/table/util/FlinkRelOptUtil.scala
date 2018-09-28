@@ -32,7 +32,9 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.SqlKind._
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -65,6 +67,12 @@ object FlinkRelOptUtil {
   def getTableConfig(rel: RelNode): TableConfig = {
     Option(rel.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig]))
       .getOrElse(TableConfig.DEFAULT)
+  }
+
+
+  def getFunctionCatalog(rel: RelNode): FunctionCatalog = {
+    Option(rel.getCluster.getPlanner.getContext.unwrap(classOf[FunctionCatalog]))
+      .getOrElse(BuiltInFunctionCatalog.withBuiltIns)
   }
 
   /**

@@ -20,11 +20,7 @@ package org.apache.flink.table.client.utils;
 
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.errorcode.TableErrors;
-import org.apache.flink.table.functions.AggregateFunction;
-import org.apache.flink.table.functions.ScalarFunction;
-import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.table.functions.UserDefinedFunction;
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.DecimalType;
@@ -108,13 +104,11 @@ public class SqlJobUtil {
 	 *
 	 * @param tableEnv        the {@link TableEnvironment} of the sql job
 	 * @param sqlNodeInfoList the parsed result of a sql context
-	 * @param classLoader     the class loader to load user classes
 	 * @return true or false
 	 */
 	public static boolean registerFunctions(
 		TableEnvironment tableEnv,
 		List<SqlNodeInfo> sqlNodeInfoList,
-		ClassLoader classLoader,
 		String userPyLibs) {
 
 		Map<String, String> pyUdfNameClass = new HashMap<>();
@@ -132,29 +126,9 @@ public class SqlJobUtil {
 				}
 
 				// Register in catalog
+				// TODO ignoreIfExists should not be fixed
 				tableEnv.registerExternalFunction(
-					null, functionName, sqlCreateFunction.getClassName());
-
-				Object instance = UserDefinedFunctionUtils.createUserDefinedFunction(
-					classLoader, functionName, sqlCreateFunction.getClassName());
-				// Register in memory
-				if (instance instanceof TableFunction) {
-					TableFunction<?> tableFunction = (TableFunction) instance;
-					tableEnv.registerFunction(functionName, tableFunction);
-				} else if (instance instanceof AggregateFunction) {
-					AggregateFunction<?, ?> aggregateFunction = (AggregateFunction) instance;
-					tableEnv.registerFunction(functionName, aggregateFunction);
-				} else if (instance instanceof ScalarFunction) {
-					ScalarFunction scalarFunction = (ScalarFunction) instance;
-					tableEnv.registerFunction(functionName, scalarFunction);
-				} else {
-					LOG.warn("Could not match the type of UDF class: {}", sqlCreateFunction.getClassName());
-					throw new RuntimeException(
-						TableErrors.INST.sqlRegisterUserDefinedFuncError(
-							functionName,
-							sqlCreateFunction.getClassName(),
-							"Could not match the type of UDF class: " + sqlCreateFunction.getClassName()));
-				}
+					null, functionName, sqlCreateFunction.getClassName(), false);
 			}
 		}
 

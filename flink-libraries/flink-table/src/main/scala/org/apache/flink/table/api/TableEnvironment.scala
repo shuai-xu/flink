@@ -34,7 +34,6 @@ import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
 import org.apache.flink.api.common.JobExecutionResult
-import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
 import org.apache.flink.api.common.typeutils.CompositeType
@@ -54,15 +53,16 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.connector.DefinedDistribution
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.sinks._
@@ -71,7 +71,7 @@ import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BaseRowUtil, PartitionUtils}
-import org.apache.flink.table.validate.FunctionCatalog
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 import org.apache.flink.types.Row
 
 import _root_.scala.annotation.varargs
@@ -88,21 +88,30 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   val DEFAULT_SCHEMA: String = "hive"
 
-  private[this] var _userClassLoader: ClassLoader = _
-
-  def userClassLoader: ClassLoader = _userClassLoader
-
-  def userClassLoader_=(value: ClassLoader): Unit = {
-    _userClassLoader = value
-  }
-
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
   private val internalSchema: CalciteSchema = CalciteSchema.createRootSchema(true, false)
   private val rootSchema: SchemaPlus = internalSchema.plus()
 
-  // Table API/SQL function catalog
-  private[flink] val functionCatalog: FunctionCatalog = FunctionCatalog.withBuiltIns(this)
+  private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
+
+  // registered external catalog names -> catalog
+  private lazy val externalCatalogs = new mutable.LinkedHashMap[String, ExternalCatalog]
+
+  // Table API/SQL function catalog (built in, does not contain external functions)
+  private val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns
+
+  // Table API/SQL external function catalogs
+  private lazy val externalFunctionCatalogs: Seq[FunctionCatalog] =
+    externalCatalogs.values.map(new ExternalFunctionCatalog(_, typeFactory)).toSeq
+
+  // Table API/SQL function catalog which chained external function catalogs
+  // and built in function catalog.
+  // The chained order:
+  //    external function catalogs precede built-in function catalog.
+  //    when multiple external function catalogs, the order same as insertion order.
+  private[flink] lazy val chainedFunctionCatalog: FunctionCatalog =
+    new ChainedFunctionCatalog(externalFunctionCatalogs :+ functionCatalog)
 
   // the configuration to create a Calcite planner
   protected lazy val frameworkConfig: FrameworkConfig = Frameworks
@@ -110,20 +119,18 @@ abstract class TableEnvironment(val config: TableConfig) {
     .defaultSchema(rootSchema)
     .parserConfig(getSqlParserConfig)
     .costFactory(getFlinkCostFactory)
-    .typeSystem(new FlinkTypeSystem)
     .operatorTable(getSqlOperatorTable)
     // set the executor to evaluate constant expressions
     .executor(new ExpressionReducer(config))
-    .context(FlinkChainContext.chain(Contexts.of(config)))
+    .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(chainedFunctionCatalog)))
     .build
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
-  protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(frameworkConfig, config)
+  protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
+    frameworkConfig, config, getTypeFactory)
 
   // the planner instance used to optimize queries of this TableEnvironment
   private lazy val planner: RelOptPlanner = relBuilder.getPlanner
-
-  lazy val typeFactory: FlinkTypeFactory = relBuilder.getTypeFactory
 
   // reuse flink planner
   private lazy val flinkPlanner = new FlinkPlannerImpl(
@@ -140,9 +147,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   private[flink] val tableNameCntr: AtomicInteger = new AtomicInteger(0)
 
   private[flink] val tableNamePrefix = "_TempTable_"
-
-  // registered external catalog names -> catalog
-  private val externalCatalogs = new mutable.HashMap[String, ExternalCatalog]
 
   // sink nodes collection
   private[flink] val sinkNodes = new mutable.MutableList[LogicalNode]
@@ -171,16 +175,15 @@ abstract class TableEnvironment(val config: TableConfig) {
     */
   protected def getSqlOperatorTable: SqlOperatorTable = {
     val calciteConfig = config.getCalciteConfig
+
     calciteConfig.getSqlOperatorTable match {
-
       case None =>
-        functionCatalog.getSqlOperatorTable
-
+        chainedFunctionCatalog.getSqlOperatorTable
       case Some(table) =>
         if (calciteConfig.replacesSqlOperatorTable) {
           table
         } else {
-          ChainedSqlOperatorTable.of(functionCatalog.getSqlOperatorTable, table)
+          ChainedSqlOperatorTable.of(chainedFunctionCatalog.getSqlOperatorTable, table)
         }
     }
   }
@@ -217,16 +220,25 @@ abstract class TableEnvironment(val config: TableConfig) {
   /**
     * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
     * All tables registered in the [[ExternalCatalog]] can be accessed.
+    * Current implementation does not allow registering multiple external catalogs.
     *
     * @param name            The name under which the externalCatalog will be registered
     * @param externalCatalog The externalCatalog to register
     */
-  def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
+  def registerExternalCatalog(
+      name: String,
+      externalCatalog: ExternalCatalog): Unit = synchronized {
     if (rootSchema.getSubSchema(name) != null) {
       throw new ExternalCatalogAlreadyExistException(name)
     }
+
+    if (!externalCatalogs.isEmpty) {
+      throw new UnsupportedOperationException(
+        "Unsupported registering multiple external catalogs")
+    }
+
     this.externalCatalogs.put(name, externalCatalog)
-    // create an external catalog calicte schema, register it on the root schema
+    // create an external catalog calcite schema, register it on the root schema
     ExternalCatalogSchema.registerCatalog(rootSchema, name, externalCatalog)
   }
 
@@ -282,18 +294,6 @@ abstract class TableEnvironment(val config: TableConfig) {
     registerAggregateFunction(name, f, resultType, accType)
   }
 
-  def getImplicitResultType[T](tf: TableFunction[T]) = {
-    val implicitResultType = try {
-      DataTypes.of(TypeExtractor
-        .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0))
-    } catch {
-      case e: InvalidTypesException =>
-        // may be we should get type from getResultType
-        new GenericType(classOf[AnyRef])
-    }
-    implicitResultType
-  }
-
   /**
    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
    * Registered functions can be referenced in Table API and SQL queries.
@@ -303,7 +303,7 @@ abstract class TableEnvironment(val config: TableConfig) {
    * @tparam T The type of the output row.
    */
   def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
-    val implicitResultType = getImplicitResultType(tf)
+    val implicitResultType = UserDefinedFunctionUtils.getImplicitResultType(tf)
     registerTableFunction(name, tf, implicitResultType)
   }
 
@@ -715,8 +715,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * Gets the names of all functions registered in this environment.
     */
   def listUserDefinedFunctions(): Array[String] = {
-    // TODO list from external meta
-    functionCatalog.getUserDefinedFunctions.toArray
+    chainedFunctionCatalog.getSqlOperatorTable.getOperatorList.map(e => e.getName).toArray
   }
 
   /**
@@ -1115,7 +1114,8 @@ abstract class TableEnvironment(val config: TableConfig) {
   def registerExternalFunction(
       catalogPaths: Array[String],
       functionName: String,
-      className: String) = {
+      className: String,
+      ignoreIfExists: Boolean) = {
 
     val externalCatalog = getExternalCatalog(catalogPaths)
     require(
@@ -1123,7 +1123,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       "Catalog is not allowed to create table")
 
     externalCatalog.asInstanceOf[CrudExternalCatalog].createFunction(
-      functionName, className)
+      functionName, className, ignoreIfExists)
   }
 
   protected def getRowType(name: String): RelDataType = {
@@ -1159,8 +1159,9 @@ abstract class TableEnvironment(val config: TableConfig) {
     typeFactory
   }
 
+  /** Returns the chained [[FunctionCatalog]]. */
   private[flink] def getFunctionCatalog: FunctionCatalog = {
-    functionCatalog
+    chainedFunctionCatalog
   }
 
   /** Returns the Calcite [[FrameworkConfig]] of this TableEnvironment. */
