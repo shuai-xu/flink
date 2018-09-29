@@ -114,6 +114,7 @@ public class JobVertexDetailsInfo implements ResponseBody {
 		public static final String FIELD_NAME_END_TIME = "end-time";
 		public static final String FIELD_NAME_DURATION = "duration";
 		public static final String FIELD_NAME_METRICS = "metrics";
+		public static final String FIELD_NAME_RESOURCE_ID = "resource-id";
 
 		@JsonProperty(FIELD_NAME_SUBTASK)
 		private final int subtask;
@@ -139,6 +140,9 @@ public class JobVertexDetailsInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_METRICS)
 		private final IOMetricsInfo metrics;
 
+		@JsonProperty(FIELD_NAME_RESOURCE_ID)
+		private final String resourceId;
+
 		@JsonCreator
 		public VertexTaskDetail(
 				@JsonProperty(FIELD_NAME_SUBTASK) int subtask,
@@ -148,7 +152,8 @@ public class JobVertexDetailsInfo implements ResponseBody {
 				@JsonProperty(FIELD_NAME_START_TIME) long startTime,
 				@JsonProperty(FIELD_NAME_END_TIME) long endTime,
 				@JsonProperty(FIELD_NAME_DURATION) long duration,
-				@JsonProperty(FIELD_NAME_METRICS) IOMetricsInfo metrics) {
+				@JsonProperty(FIELD_NAME_METRICS) IOMetricsInfo metrics,
+				@JsonProperty(FIELD_NAME_RESOURCE_ID) String resourceId) {
 			this.subtask = subtask;
 			this.status = checkNotNull(status);
 			this.attempt = attempt;
@@ -157,6 +162,7 @@ public class JobVertexDetailsInfo implements ResponseBody {
 			this.endTime = endTime;
 			this.duration = duration;
 			this.metrics = checkNotNull(metrics);
+			this.resourceId = checkNotNull(resourceId);
 		}
 
 		@Override
@@ -177,12 +183,13 @@ public class JobVertexDetailsInfo implements ResponseBody {
 				startTime == that.startTime &&
 				endTime == that.endTime &&
 				duration == that.duration &&
-				Objects.equals(metrics, that.metrics);
+				Objects.equals(metrics, that.metrics) &&
+				Objects.equals(resourceId, that.resourceId);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(subtask, status, attempt, host, startTime, endTime, duration, metrics);
+			return Objects.hash(subtask, status, attempt, host, startTime, endTime, duration, metrics, resourceId);
 		}
 	}
 }

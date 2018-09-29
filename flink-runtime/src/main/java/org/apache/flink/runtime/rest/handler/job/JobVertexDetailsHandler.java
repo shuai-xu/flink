@@ -132,6 +132,11 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 				metricFetcher,
 				jobID.toString(),
 				jobVertex.getJobVertexId().toString());
+			String resourceId = "";
+			TaskManagerLocation taskManagerLocation = vertex.getCurrentAssignedResourceLocation();
+			if (taskManagerLocation != null) {
+				resourceId = taskManagerLocation.getResourceID().getResourceIdString();
+			}
 			subtasks.add(new JobVertexDetailsInfo.VertexTaskDetail(
 				num,
 				status,
@@ -148,7 +153,8 @@ public class JobVertexDetailsHandler extends AbstractExecutionGraphHandler<JobVe
 					counts.getNumRecordsIn(),
 					counts.isNumRecordsInComplete(),
 					counts.getNumRecordsOut(),
-					counts.isNumRecordsOutComplete())));
+					counts.isNumRecordsOutComplete()),
+				resourceId));
 
 			num++;
 		}
