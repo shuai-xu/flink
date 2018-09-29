@@ -28,7 +28,7 @@ import org.apache.flink.util.Preconditions;
 
 public class RpcCheckpointResponder implements CheckpointResponder {
 
-	private final CheckpointCoordinatorGateway checkpointCoordinatorGateway;
+	private CheckpointCoordinatorGateway checkpointCoordinatorGateway;
 
 	public RpcCheckpointResponder(CheckpointCoordinatorGateway checkpointCoordinatorGateway) {
 		this.checkpointCoordinatorGateway = Preconditions.checkNotNull(checkpointCoordinatorGateway);
@@ -58,5 +58,9 @@ public class RpcCheckpointResponder implements CheckpointResponder {
 			Throwable cause) {
 
 		checkpointCoordinatorGateway.declineCheckpoint(jobID, executionAttemptID, checkpointId, cause);
+	}
+
+	public void notifyCheckpointCoordinatorGatewayChanged(CheckpointCoordinatorGateway checkpointCoordinatorGateway) {
+		this.checkpointCoordinatorGateway = checkpointCoordinatorGateway;
 	}
 }

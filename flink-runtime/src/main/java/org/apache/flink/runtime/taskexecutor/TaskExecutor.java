@@ -122,10 +122,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -190,6 +192,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 	private final LeaderRetrievalService resourceManagerLeaderRetriever;
 
+	private final Map<JobID, ReusableTaskComponents> reusableTaskComponentsMap;
+
 	// ------------------------------------------------------------------------
 
 	private final HardwareDescription hardwareDescription;
@@ -241,6 +245,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		this.resourceManagerLeaderRetriever = haServices.getResourceManagerLeaderRetriever();
 
 		this.reconnectingJobManagerTable = new JobManagerTable();
+		this.reusableTaskComponentsMap = new HashMap<>();
 
 		final ResourceID resourceId = taskExecutorServices.getTaskManagerLocation().getResourceID();
 
@@ -1148,7 +1153,6 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	}
 
 	private void establishJobManagerConnection(JobID jobId, final JobMasterGateway jobMasterGateway, JMTMRegistrationSuccess registrationSuccess) {
-
 		// Remove pending reconnection if there is one.
 		reconnectingJobManagerTable.remove(jobId);
 
@@ -1354,6 +1358,10 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 								jobId, maxReconnectionDuration);
 
 							shutDownTasks(jobId);
+							reusableTaskComponentsMap.remove(jobId);
+
+							// close library cache after all tasks shutdown
+							reconnectingJobManager.getLibraryCacheManager().shutdown();
 
 							// Free active slots which are empty
 							// Directly free slot during iterate task slots will cause concurrent modification exception.
@@ -1383,28 +1391,52 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	}
 
 	private JobManagerConnection associateWithJobManager(
-			JobID jobID,
-			ResourceID resourceID,
-			JobMasterGateway jobMasterGateway) {
+			@Nonnull JobID jobID,
+			@Nonnull ResourceID resourceID,
+			@Nonnull JobMasterGateway jobMasterGateway) {
 		checkNotNull(jobID);
 		checkNotNull(resourceID);
 		checkNotNull(jobMasterGateway);
 
-		TaskManagerActions taskManagerActions = new TaskManagerActionsImpl(jobMasterGateway);
+		final TaskManagerActionsImpl taskManagerActions;
+		final RpcCheckpointResponder checkpointResponder;
+		final BlobLibraryCacheManager libraryCacheManager;
+		final RpcResultPartitionConsumableNotifier resultPartitionConsumableNotifier;
+		final RpcPartitionStateChecker partitionStateChecker;
 
-		CheckpointResponder checkpointResponder = new RpcCheckpointResponder(jobMasterGateway);
+		final ReusableTaskComponents components = reusableTaskComponentsMap.get(jobID);
 
-		final LibraryCacheManager libraryCacheManager = new BlobLibraryCacheManager(
-			blobCacheService.getPermanentBlobService(),
-			taskManagerConfiguration.getClassLoaderResolveOrder(),
-			taskManagerConfiguration.getAlwaysParentFirstLoaderPatterns());
+		if (components == null) {
+			taskManagerActions = new TaskManagerActionsImpl(jobMasterGateway);
+			checkpointResponder = new RpcCheckpointResponder(jobMasterGateway);
+			libraryCacheManager = new BlobLibraryCacheManager(
+				blobCacheService.getPermanentBlobService(),
+				taskManagerConfiguration.getClassLoaderResolveOrder(),
+				taskManagerConfiguration.getAlwaysParentFirstLoaderPatterns());
+			resultPartitionConsumableNotifier = new RpcResultPartitionConsumableNotifier(
+				jobMasterGateway,
+				getRpcService().getExecutor(),
+				taskManagerConfiguration.getTimeout());
+			partitionStateChecker = new RpcPartitionStateChecker(jobMasterGateway);
 
-		ResultPartitionConsumableNotifier resultPartitionConsumableNotifier = new RpcResultPartitionConsumableNotifier(
-			jobMasterGateway,
-			getRpcService().getExecutor(),
-			taskManagerConfiguration.getTimeout());
+			reusableTaskComponentsMap.put(jobID,
+				new ReusableTaskComponents(
+					taskManagerActions,
+					checkpointResponder,
+					libraryCacheManager,
+					resultPartitionConsumableNotifier,
+					partitionStateChecker));
+		} else {
+			// should reuse previous components because they are already passed to tasks
+			taskManagerActions = components.getTaskManagerActions();
+			checkpointResponder = components.getCheckpointResponder();
+			libraryCacheManager = components.getLibraryCacheManager();
+			resultPartitionConsumableNotifier = components.getResultPartitionConsumableNotifier();
+			partitionStateChecker = components.getPartitionStateChecker();
 
-		PartitionProducerStateChecker partitionStateChecker = new RpcPartitionStateChecker(jobMasterGateway);
+			// update job master gateway
+			components.updateJobMasterGateway(jobMasterGateway);
+		}
 
 		registerQueryableState(jobID, jobMasterGateway);
 
@@ -1425,21 +1457,24 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		JobManagerConnection jobManagerConnection = jobManagerTable.remove(jobID);
 
 		if (jobManagerConnection != null) {
-			final KvStateRegistry kvStateRegistry = networkEnvironment.getKvStateRegistry();
-
-			if (kvStateRegistry != null) {
-				kvStateRegistry.unregisterListener(jobManagerConnection.getJobID());
-			}
-
-			final KvStateClientProxy kvStateClientProxy = networkEnvironment.getKvStateProxy();
-
-			if (kvStateClientProxy != null) {
-				kvStateClientProxy.updateKvStateLocationOracle(jobManagerConnection.getJobID(), null);
-			}
+			unregisterQueryableState(jobManagerConnection);
 
 			JobMasterGateway jobManagerGateway = jobManagerConnection.getJobManagerGateway();
 			jobManagerGateway.disconnectTaskManager(getResourceID(), cause);
-			jobManagerConnection.getLibraryCacheManager().shutdown();
+		}
+	}
+
+	private void unregisterQueryableState(JobManagerConnection jobManagerConnection) {
+		final KvStateRegistry kvStateRegistry = networkEnvironment.getKvStateRegistry();
+
+		if (kvStateRegistry != null) {
+			kvStateRegistry.unregisterListener(jobManagerConnection.getJobID());
+		}
+
+		final KvStateClientProxy kvStateClientProxy = networkEnvironment.getKvStateProxy();
+
+		if (kvStateClientProxy != null) {
+			kvStateClientProxy.updateKvStateLocationOracle(jobManagerConnection.getJobID(), null);
 		}
 	}
 
@@ -1759,8 +1794,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		}
 	}
 
-	private final class TaskManagerActionsImpl implements TaskManagerActions {
-		private final JobMasterGateway jobMasterGateway;
+	final class TaskManagerActionsImpl implements TaskManagerActions {
+		private JobMasterGateway jobMasterGateway;
 
 		private TaskManagerActionsImpl(JobMasterGateway jobMasterGateway) {
 			this.jobMasterGateway = checkNotNull(jobMasterGateway);
@@ -1789,6 +1824,10 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		@Override
 		public void updateTaskExecutionState(final TaskExecutionState taskExecutionState) {
 			TaskExecutor.this.updateTaskExecutionState(jobMasterGateway, taskExecutionState);
+		}
+
+		void notifyJobMasterGatewayChanged(JobMasterGateway jobMasterGateway) {
+			this.jobMasterGateway = jobMasterGateway;
 		}
 	}
 
