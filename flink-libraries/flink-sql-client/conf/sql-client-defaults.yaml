@@ -54,6 +54,9 @@ execution:
 
 # Deployment properties allow for describing the cluster to which table
 # programs are submitted to.
+# NOTE: The keys in this file will be read as lowercase and will be normalized, so if the key
+# you want to modify is uppercase, be careful, consider the shorthand way of using command options.
+# e.g, yarnapplicationId: your-app-id should change to yid: your-app-id
 
 deployment:
   # general cluster communication timeout in ms
@@ -62,4 +65,9 @@ deployment:
   gateway-address: ""
   # (optional) port from cluster to gateway
   gateway-port: 0
-  jobmanager: local
+
+  # (optional) yarn cluster per-job mode
+  # jobmanager: yarn-cluster
+
+  # (optional) yarn session mode
+  # yid: your-app-id

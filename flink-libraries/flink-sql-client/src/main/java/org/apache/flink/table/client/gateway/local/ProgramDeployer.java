@@ -92,6 +92,10 @@ public class ProgramDeployer<C> implements Runnable {
 			try {
 				// new cluster
 				if (context.getClusterId() == null) {
+					if (this.awaitJobResult) {
+						throw new UnsupportedOperationException("Can't deploy a attach job to per-job cluster.");
+					}
+
 					deployJobOnNewCluster(clusterDescriptor, jobGraph, result, context.getClassLoader());
 				}
 				// reuse existing cluster
@@ -117,9 +121,7 @@ public class ProgramDeployer<C> implements Runnable {
 		try {
 			// deploy job cluster with job attached
 			clusterClient = clusterDescriptor.deployJobCluster(
-				context.getClusterSpec(), null, !awaitJobResult);
-
-			clusterClient.submitJob(jobGraph, classLoader);
+				context.getClusterSpec(), jobGraph, true);
 
 			// save information about the new cluster
 			result.setClusterInformation(clusterClient.getClusterId(), clusterClient.getWebInterfaceURL());
@@ -129,7 +131,7 @@ public class ProgramDeployer<C> implements Runnable {
 				final JobExecutionResult jobResult = ((RestClusterClient<T>) clusterClient)
 						.requestJobResult(jobGraph.getJobID())
 						.get()
-						.toJobExecutionResult(context.getClassLoader()); // throws exception if job fails
+						.toJobExecutionResult(classLoader); // throws exception if job fails
 				executionResultBucket.add(jobResult);
 			}
 		} finally {

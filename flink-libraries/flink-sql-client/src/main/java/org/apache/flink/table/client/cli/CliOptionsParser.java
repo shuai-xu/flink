@@ -126,14 +126,15 @@ public class CliOptionsParser {
 		.desc("The SQL file to be executed.")
 		.build();
 
-	public static final Option OPTION_SINGLE_JOB = Option
+	public static final Option OPTION_SINGLE_JOB_MODE = Option
 		.builder("S")
 		.required(false)
 		.longOpt("single-job")
 		.numberOfArgs(1)
-		.argName("Boolean")
-		.desc("If true, regard SQLs as single job; if false, submit SQLs as individual jobs; " +
-			"if not present, it will be determined by streaming/batch type.")
+		.argName("job mode: single-job|multiple-jobs|default")
+		.desc("If single-job, regard SQLs as single job; " +
+			"if multiple-jobs, submit SQLs as individual jobs; " +
+			"if not present(default), it will be determined by streaming/batch type.")
 		.build();
 
 	private static final Options EMBEDDED_MODE_CLIENT_OPTIONS = getEmbeddedModeClientOptions(new Options());
@@ -150,7 +151,7 @@ public class CliOptionsParser {
 		options.addOption(OPTION_ENVIRONMENT);
 		options.addOption(OPTION_UPDATE);
 		options.addOption(OPTION_FILE);
-		options.addOption(OPTION_SINGLE_JOB);
+		options.addOption(OPTION_SINGLE_JOB_MODE);
 	}
 
 	public static Options getEmbeddedModeClientOptions(Options options) {
@@ -162,7 +163,7 @@ public class CliOptionsParser {
 		options.addOption(OPTION_LIBRARY);
 		options.addOption(OPTION_UPDATE);
 		options.addOption(OPTION_FILE);
-		options.addOption(OPTION_SINGLE_JOB);
+		options.addOption(OPTION_SINGLE_JOB_MODE);
 		return options;
 	}
 
@@ -261,7 +262,7 @@ public class CliOptionsParser {
 				checkUrls(line, CliOptionsParser.OPTION_LIBRARY),
 				line.getOptionValue(CliOptionsParser.OPTION_UPDATE.getOpt()),
 				checkUrl(line, CliOptionsParser.OPTION_FILE),
-				line.getOptionValue(CliOptionsParser.OPTION_SINGLE_JOB.getOpt())
+				line.getOptionValue(CliOptionsParser.OPTION_SINGLE_JOB_MODE.getOpt())
 			);
 		}
 		catch (ParseException e) {
@@ -282,7 +283,7 @@ public class CliOptionsParser {
 				checkUrls(line, CliOptionsParser.OPTION_LIBRARY),
 				line.getOptionValue(CliOptionsParser.OPTION_UPDATE.getOpt()),
 				checkUrl(line, CliOptionsParser.OPTION_FILE),
-				line.getOptionValue(CliOptionsParser.OPTION_SINGLE_JOB.getOpt())
+				line.getOptionValue(CliOptionsParser.OPTION_SINGLE_JOB_MODE.getOpt())
 			);
 		}
 		catch (ParseException e) {
@@ -303,7 +304,7 @@ public class CliOptionsParser {
 				checkUrls(line, CliOptionsParser.OPTION_LIBRARY),
 				null,
 				checkUrl(line, CliOptionsParser.OPTION_FILE),
-				line.getOptionValue(CliOptionsParser.OPTION_SINGLE_JOB.getOpt())
+				line.getOptionValue(CliOptionsParser.OPTION_SINGLE_JOB_MODE.getOpt())
 			);
 		}
 		catch (ParseException e) {

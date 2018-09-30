@@ -611,6 +611,7 @@ public class LocalExecutor implements Executor {
 	private static Options collectCommandLineOptions(List<CustomCommandLine<?>> commandLines) {
 		final Options customOptions = new Options();
 		for (CustomCommandLine<?> customCommandLine : commandLines) {
+			customCommandLine.addGeneralOptions(customOptions);
 			customCommandLine.addRunOptions(customOptions);
 		}
 		return CliFrontendParser.mergeOptions(
