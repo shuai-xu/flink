@@ -292,8 +292,8 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 			} else {
 				// Skip elements if state value of the timestamp is cleared.
 				String message = "The element state is cleared because of state ttl. This will " +
-								 "result in incorrect result. You can increase the state ttl to " +
-								 "avoid this.";
+								"result in incorrect result. You can increase the state ttl to " +
+								"avoid this.";
 				LOG.warn(message);
 			}
 			elementQueueState.remove(timestamp);
@@ -344,8 +344,8 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 				}
 			}  else {
 				String message = "The element state is cleared because of state ttl. This will " +
-								 "result in incorrect result. You can increase the state ttl to " +
-								 "avoid this.";
+								"result in incorrect result. You can increase the state ttl to " +
+								"avoid this.";
 				LOG.warn(message);
 			}
 			elementQueueState.remove(timestamp);

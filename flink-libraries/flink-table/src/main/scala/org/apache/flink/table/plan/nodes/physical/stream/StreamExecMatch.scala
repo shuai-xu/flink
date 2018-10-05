@@ -35,8 +35,8 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.ExecutionConfig
+import org.apache.flink.cep.nfa.aftermatch.AfterMatchSkipStrategy
 import org.apache.flink.cep.{EventComparator, PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
-import org.apache.flink.cep.nfa.AfterMatchSkipStrategy
 import org.apache.flink.cep.nfa.compiler.NFACompiler
 import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCepOperator, SelectCepOperator, SelectTimeoutCepOperator}
 import org.apache.flink.cep.pattern.Pattern
@@ -545,7 +545,8 @@ class StreamExecMatch(
       inputTypeInfo: BaseRowTypeInfo[BaseRow],
       outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
-    val nfaFactory = NFACompiler.compileFactory(cepPattern, inputSerializer, true)
+    val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
+    val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
 
     val patternStreamTransform = new OneInputTransformation(
       inputTransform,
@@ -556,7 +557,8 @@ class StreamExecMatch(
         nfaFactory,
         comparator,
         cepPattern.getAfterMatchSkipStrategy,
-        patternSelectFunction),
+        patternSelectFunction,
+        timeoutOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
 
@@ -575,7 +577,8 @@ class StreamExecMatch(
       inputTypeInfo: BaseRowTypeInfo[BaseRow],
       outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
-    val nfaFactory = NFACompiler.compileFactory(cepPattern, inputSerializer, true)
+    val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
+    val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
 
     val patternStreamTransform = new OneInputTransformation(
       inputTransform,
@@ -586,7 +589,8 @@ class StreamExecMatch(
         nfaFactory,
         comparator,
         cepPattern.getAfterMatchSkipStrategy,
-        patternFlatSelectFunction),
+        patternFlatSelectFunction,
+        timeoutOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
 
@@ -606,8 +610,9 @@ class StreamExecMatch(
       inputTypeInfo: BaseRowTypeInfo[BaseRow],
       outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
-    val nfaFactory = NFACompiler.compileFactory(cepPattern, inputSerializer, true)
+    val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
     val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
+    val lateDataOutputTag = new OutputTag(UUID.randomUUID.toString, inputTypeInfo)
 
     val patternStreamTransform = new OneInputTransformation(
       inputTransform,
@@ -620,7 +625,8 @@ class StreamExecMatch(
         cepPattern.getAfterMatchSkipStrategy,
         patternSelectFunction,
         patternTimeoutFunction,
-        timeoutOutputTag),
+        timeoutOutputTag,
+        lateDataOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
 
@@ -650,8 +656,9 @@ class StreamExecMatch(
       inputTypeInfo: BaseRowTypeInfo[BaseRow],
       outputTypeInfo: BaseRowTypeInfo[BaseRow]): StreamTransformation[BaseRow] = {
     val inputSerializer = inputTypeInfo.createSerializer(new ExecutionConfig)
-    val nfaFactory = NFACompiler.compileFactory(cepPattern, inputSerializer, true)
+    val nfaFactory = NFACompiler.compileFactory(cepPattern, true)
     val timeoutOutputTag = new OutputTag(UUID.randomUUID.toString, outputTypeInfo)
+    val lateDataOutputTag = new OutputTag(UUID.randomUUID.toString, inputTypeInfo)
 
     val patternStreamTransform = new OneInputTransformation(
       inputTransform,
@@ -664,7 +671,8 @@ class StreamExecMatch(
         cepPattern.getAfterMatchSkipStrategy,
         patternFlatSelectFunction,
         patternFlatTimeoutFunction,
-        timeoutOutputTag),
+        timeoutOutputTag,
+        lateDataOutputTag),
       outputTypeInfo,
       inputTransform.getParallelism)
 
