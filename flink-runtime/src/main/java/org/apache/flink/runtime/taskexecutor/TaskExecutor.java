@@ -1263,7 +1263,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		final JobMasterGateway jobMasterGateway = jobManagerConnection.getJobManagerGateway();
 
 		log.info("Report {} tasks of {} to JobMaster {}.",
-			jobId, allTaskExecutionStatus.size(), jobMasterGateway.getAddress());
+			allTaskExecutionStatus.size(), jobId, jobMasterGateway.getAddress());
 
 		CompletableFuture<TaskExecutorReportResponse> acceptedSlotsFuture = jobMasterGateway.reportTasksExecutionStatus(
 			getResourceID(),
@@ -1334,7 +1334,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	 */
 	private void closeJobManagerConnection(JobID jobId, Exception cause) {
 		if (log.isDebugEnabled()) {
-			log.debug("Close JobManager connection for job {}.", jobId, cause);
+			log.debug("Close JobManager connection for job {}, {}.", jobId, cause);
 		} else {
 			log.info("Close JobManager connection for job {}.", jobId);
 		}

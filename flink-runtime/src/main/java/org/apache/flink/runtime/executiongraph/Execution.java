@@ -1133,6 +1133,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	void sendPartitionInfos() {
+		if (vertex.getExecutionGraph().getGraphManager().isReplaying()) {
+			return;
+		}
+
 		synchronized (updatePartitionLock) {
 			updatePartitionFuture = null;
 		}

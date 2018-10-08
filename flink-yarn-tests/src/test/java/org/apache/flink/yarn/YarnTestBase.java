@@ -92,6 +92,7 @@ import static org.apache.flink.test.util.MiniClusterResource.NEW_CODEBASE;
  *
  * <p>The test is not thread-safe. Parallel execution of tests is not possible!
  */
+@SuppressWarnings("WeakerAccess")
 public abstract class YarnTestBase extends TestLogger {
 	private static final Logger LOG = LoggerFactory.getLogger(YarnTestBase.class);
 
@@ -474,7 +475,7 @@ public abstract class YarnTestBase extends TestLogger {
 		try {
 			Thread.sleep(time);
 		} catch (InterruptedException e) {
-			LOG.warn("Interruped", e);
+			LOG.warn("Interrupted", e);
 		}
 	}
 
@@ -534,7 +535,7 @@ public abstract class YarnTestBase extends TestLogger {
 				yarnCluster.start();
 			}
 
-			Map<String, String> map = new HashMap<String, String>(System.getenv());
+			Map<String, String> map = new HashMap<>(System.getenv());
 
 			File flinkConfDirPath = findFile(flinkDistRootDir, new ContainsName(new String[]{"flink-conf.yaml"}));
 			Assert.assertNotNull(flinkConfDirPath);
@@ -542,7 +543,7 @@ public abstract class YarnTestBase extends TestLogger {
 			final String confDirPath = flinkConfDirPath.getParentFile().getAbsolutePath();
 			globalConfiguration = GlobalConfiguration.loadConfiguration(confDirPath);
 
-			//copy conf dir to test temporary workspace location
+			// copy conf dir to test temporary workspace location
 			tempConfPathForSecureRun = tmp.newFolder("conf");
 
 			FileUtils.copyDirectory(new File(confDirPath), tempConfPathForSecureRun);
@@ -567,7 +568,7 @@ public abstract class YarnTestBase extends TestLogger {
 			map.put("IN_TESTS", "yes we are in tests"); // see YarnClusterDescriptor() for more infos
 			TestBaseUtils.setEnv(map);
 
-			Assert.assertTrue(yarnCluster.getServiceState() == Service.STATE.STARTED);
+			Assert.assertSame(Service.STATE.STARTED, yarnCluster.getServiceState());
 
 			// wait for the nodeManagers to connect
 			while (!yarnCluster.waitForNodeManagersToConnect(500)) {
@@ -578,7 +579,6 @@ public abstract class YarnTestBase extends TestLogger {
 			LOG.error("setup failure", ex);
 			Assert.fail();
 		}
-
 	}
 
 	/**
@@ -593,7 +593,11 @@ public abstract class YarnTestBase extends TestLogger {
 
 	protected static ByteArrayOutputStream outContent;
 	protected static ByteArrayOutputStream errContent;
-	enum RunTypes {
+
+	/**
+	 * Enumeration of RunType.
+	 */
+	protected enum RunTypes {
 		YARN_SESSION, CLI_FRONTEND
 	}
 
@@ -633,7 +637,7 @@ public abstract class YarnTestBase extends TestLogger {
 		runner.setName("Frontend (CLI/YARN Client) runner thread (startWithArgs()).");
 		runner.start();
 
-		for (int second = 0; second <  startTimeoutSeconds; second++) {
+		for (int second = 0; second < startTimeoutSeconds; second++) {
 			sleep(1000);
 			// check output for correct TaskManager startup.
 			if (outContent.toString().contains(startedAfterString)
@@ -747,7 +751,7 @@ public abstract class YarnTestBase extends TestLogger {
 				catch (InterruptedException e) {
 					LOG.warn("Interrupted while stopping runner", e);
 				}
-				LOG.warn("RunWithArgs runner stopped.");
+				LOG.info("RunWithArgs runner stopped.");
 			}
 			else {
 				// check if thread died
@@ -756,8 +760,7 @@ public abstract class YarnTestBase extends TestLogger {
 					break;
 				}
 			}
-		}
-		while (runner.getRunnerError() == null && !expectedStringSeen && System.currentTimeMillis() < deadline);
+		} while (runner.getRunnerError() == null && !expectedStringSeen && System.currentTimeMillis() < deadline);
 
 		resetStreamsAndSendOutput();
 

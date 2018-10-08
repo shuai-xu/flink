@@ -886,7 +886,15 @@ public class SlotPoolTest extends TestLogger {
 			Exception exception = new Exception("Test exception for release slot");
 			slot3WithCoLocation.releaseSlot(exception).get();
 			slot4WithCoLocation.releaseSlot(exception).get();
-			assertEquals(1, slotPool.getAvailableSlots().size());
+
+			// The root slot is returned to available slots asynchronously
+			long startTime = System.currentTimeMillis();
+			while (1 != slotPool.getAvailableSlots().size()) {
+				Thread.sleep(100);
+				if (System.currentTimeMillis() - startTime > 2000) {
+					fail("Slot was not returned to available slots.");
+				}
+			}
 
 			slotPool.releaseTaskManager(taskManagerLocation.getResourceID(), exception).get();
 

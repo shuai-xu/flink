@@ -1386,13 +1386,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 					alreadyScheduledCount++;
 				} else {
-
 					unhealthyCount++;
 				}
 			}
-			if (vertices.size() < verticesToSchedule.size()) {
+			if (unhealthyCount >  0) {
 				throw new IllegalStateException("Not all submitted vertices can be scheduled. " +
-						alreadyScheduledCount + " vertices are already scheduled and " +
+//						alreadyScheduledCount + " vertices are already scheduled and " +
 						unhealthyCount + " vertices are in unhealthy state. " +
 						"Please check the schedule logic in " + graphManager.getClass().getCanonicalName());
 			}
