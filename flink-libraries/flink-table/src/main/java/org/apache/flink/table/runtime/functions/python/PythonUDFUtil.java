@@ -44,7 +44,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -142,7 +141,7 @@ public class PythonUDFUtil {
 		try {
 			// only once
 			if (pyWorkingDir == null || !pyWorkingDir.exists()) {
-				ArrayList<File> usrFiles = getUserFilesFromDistributedCache(ctx);
+				Map<String, File> usrFiles = getUserFilesFromDistributedCache(ctx);
 				pyWorkingDir = preparePythonWorkingDir(usrFiles);
 			}
 
@@ -196,10 +195,10 @@ public class PythonUDFUtil {
 		Map<String, UserDefinedFunction> pyUdfs = new HashMap<>();
 		ServerSocket serverSocket = null;
 		try {
-			ArrayList<File> usrFiles = new ArrayList<>();
+			Map<String, File> usrFiles = new HashMap<>();
 			for (String path : usrFilePaths) {
 				File f = new File(path);
-				usrFiles.add(f);
+				usrFiles.put(f.getName(), f);
 			}
 			File pyWorkDir = preparePythonWorkingDir(usrFiles);
 
@@ -345,18 +344,19 @@ public class PythonUDFUtil {
 		return types;
 	}
 
-	private static ArrayList<File> getUserFilesFromDistributedCache(FunctionContext ctx)
+	private static HashMap<String, File> getUserFilesFromDistributedCache(FunctionContext ctx)
 		throws FileNotFoundException {
-		ArrayList<File> usrFiles = new ArrayList<>();
+		// key(fileName), distributed file
+		HashMap<String, File> usrFiles = new HashMap<>();
 		String usrLibIds = ctx.getJobParameter(PYFLINK_CACHED_USR_LIB_IDS, "");
 
 		// copy all user's files from distributed cache to tmp folder
-		for (String fileId : usrLibIds.split(",")) {
-			File usrFile = ctx.getCachedFile(fileId);
-			if (usrFile == null || !usrFile.exists()) {
-				throw new FileNotFoundException("User's python lib file " + fileId + " does not exist.");
+		for (String fileName : usrLibIds.split(",")) {
+			File dcFile = ctx.getCachedFile(fileName);
+			if (dcFile == null || !dcFile.exists()) {
+				throw new FileNotFoundException("User's python lib file " + fileName + " does not exist.");
 			}
-			usrFiles.add(usrFile);
+			usrFiles.put(fileName, dcFile);
 		}
 
 		return usrFiles;
@@ -368,7 +368,7 @@ public class PythonUDFUtil {
 	 * @return working directory
 	 * @throws IOException
 	 */
-	private static File preparePythonWorkingDir(ArrayList<File> usrFiles) throws IOException {
+	private static File preparePythonWorkingDir(Map<String, File> usrFiles) throws IOException {
 
 		File pyWorkDir;
 
@@ -384,13 +384,14 @@ public class PythonUDFUtil {
 		tmpFileDirPath.getFileSystem().mkdirs(tmpFileDirPath);
 
 		// copy all user's files from distributed cache to tmp folder
-		for (File usrFile : usrFiles) {
-			if (usrFile.getName().endsWith(VIRTUALEVN_ZIP_FILENAME)) {
-				prepareVirtualEnvFiles(usrFile.getAbsolutePath(), tmpFileDirPath.toUri().toString());
+		for (Map.Entry<String, File> entry : usrFiles.entrySet()) {
+			if (entry.getKey().endsWith(VIRTUALEVN_ZIP_FILENAME)) {
+				prepareVirtualEnvFiles(entry.getValue().getAbsolutePath(), tmpFileDirPath.toUri().toString());
 			}
 			else {
-				Path targetFilePath = new Path(tmpFileDirPath, usrFile.getName());
-				FileCache.copy(new Path(usrFile.toURI().toString()), targetFilePath, false);
+				// use the original name (key)
+				Path targetFilePath = new Path(tmpFileDirPath, entry.getKey());
+				FileCache.copy(new Path(entry.getValue().toURI().toString()), targetFilePath, false);
 			}
 		}
 
@@ -491,22 +492,26 @@ public class PythonUDFUtil {
 		pythonPathEnv.append(pythonDir);
 
 		// default executable command
-		final String pythonExec = "python";
+		String pythonExec = "python";
 		String[] commands;
 		if (virtualenvEnabled) {
-			commands = buildStartVirtualEnvCommands(pythonDir, pythonPathEnv.toString(), pyWorker, javaPort);
+			pythonExec = pythonDir + "/venv/bin/python";
 		}
-		else {
-			commands = new String[] {
-				pythonExec,
-				"-m",
-				pyWorker,
-				" " + javaPort
-			};
-		}
+
+		commands = new String[] {
+			pythonExec,
+			"-m",
+			pyWorker,
+			" " + javaPort
+		};
 
 		ProcessBuilder pb = new ProcessBuilder();
 		Map<String, String> env = pb.environment();
+		StringBuilder pathVar = new StringBuilder();
+		pathVar.append(pythonDir + "/venv/bin/");
+		pathVar.append(File.pathSeparator);
+		pathVar.append(env.get("PATH"));
+		env.put("PATH", pathVar.toString());
 		env.put("PYTHONPATH", pythonPathEnv.toString());
 		pb.command(commands);
 		Process p = pb.start();
@@ -524,47 +529,6 @@ public class PythonUDFUtil {
 		Runtime.getRuntime().addShutdownHook(new ShutDownPythonHook(p, pythonDir));
 
 		return p;
-	}
-
-	/**
-	 * activate virtualenv and start python.
-	 * Note: If use absolute path, python can started, but site package can be imported! Bug in virtualenv?
-	 * If set PATH environment and start python directly using ProcessBuilder, still, site packages can be imported.
-	 * That why a script is created to activate virtualenv and start python worker process.
-	 * @param pythonDir
-	 * @param pythonPathEnv
-	 * @param javaPort
-	 * @return
-	 */
-	private static String[] buildStartVirtualEnvCommands(
-		String pythonDir,
-		String pythonPathEnv,
-		String pyWorker,
-		int javaPort) {
-		try {
-			StringBuffer scriptBuilder = new StringBuffer();
-			scriptBuilder.append("source " + pythonDir + "/venv/bin/activate \n");
-			scriptBuilder.append("export PYTHONPATH=" + pythonPathEnv + "\n");
-			scriptBuilder.append("python -m ");
-			scriptBuilder.append(pyWorker);
-			scriptBuilder.append(" " + javaPort);
-			String scriptPath = pythonDir + "/start_venv_python.sh";
-			File f = new File(scriptPath);
-			DataOutputStream scriptOut = new DataOutputStream(new FileOutputStream(f));
-			scriptOut.writeBytes(scriptBuilder.toString());
-			scriptOut.flush();
-			scriptOut.close();
-
-			String[] commands = new String[] {
-				"/bin/bash",
-				scriptPath
-			};
-
-			return commands;
-		}
-		catch (Exception ex) {
-			throw new RuntimeException(" Can't start python with virtualenv. " + ex.getMessage());
-		}
 	}
 
 	private static void redirectStreamsToStderr(InputStream stdout, InputStream stderr) {
@@ -588,7 +552,7 @@ public class PythonUDFUtil {
 		DataOutputStream argsDataOut = new DataOutputStream(argsDataBuff);
 
 		// Header & commands & args num
-		cmdOut.writeInt(PythonUDFUtil.PROTOCAL_VER);  // protocal version
+		cmdOut.writeInt(PythonUDFUtil.PROTOCAL_VER);  // protocol version
 		cmdOut.writeInt(PythonUDFUtil.SCALAR_UDF);    // action
 		cmdOut.writeUTF(pyFunctionName);              // with length
 		cmdOut.writeShort(args.length);               // args num
