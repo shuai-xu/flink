@@ -65,6 +65,7 @@ public class AbstractUdfStreamOperatorLifecycleTest {
 			"UDF::open",
 			"OPERATOR::run",
 			"UDF::run",
+			"OPERATOR::prepareSnapshotPreBarrier",
 			"OPERATOR::snapshotState",
 			"OPERATOR::close",
 			"UDF::close",
@@ -85,7 +86,7 @@ public class AbstractUdfStreamOperatorLifecycleTest {
 
 	private static final String ALL_METHODS_STREAM_OPERATOR = "[close[], dispose[], getChainingStrategy[], " +
 			"getCurrentKey[], getMetricGroup[], getOperatorID[], initializeState[], " +
-			"notifyCheckpointComplete[long], open[], requireState[], setChainingStrategy[class " +
+			"notifyCheckpointComplete[long], open[], prepareSnapshotPreBarrier[long], requireState[], setChainingStrategy[class " +
 			"org.apache.flink.streaming.api.operators.ChainingStrategy], setCurrentKey[class java.lang.Object], " +
 			"setKeyContextElement1[class org.apache.flink.streaming.runtime.streamrecord.StreamRecord], " +
 			"setKeyContextElement2[class org.apache.flink.streaming.runtime.streamrecord.StreamRecord], " +
@@ -267,6 +268,12 @@ public class AbstractUdfStreamOperatorLifecycleTest {
 		public void initializeState(StateInitializationContext context) throws Exception {
 			ACTUAL_ORDER_TRACKING.add("OPERATOR::initializeState");
 			super.initializeState(context);
+		}
+
+		@Override
+		public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+			ACTUAL_ORDER_TRACKING.add("OPERATOR::prepareSnapshotPreBarrier");
+			super.prepareSnapshotPreBarrier(checkpointId);
 		}
 
 		@Override

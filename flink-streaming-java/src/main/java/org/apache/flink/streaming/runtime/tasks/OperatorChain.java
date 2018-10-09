@@ -270,6 +270,15 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		}
 	}
 
+	public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+		// go forward through the operator chain and tell each operator
+		// to prepare the checkpoint
+		// NOTE: prepareSnapshotPreBarrier must use ascend order iterator.
+		for (StreamOperator<?> op : getAllOperatorsTopologySorted()) {
+			op.prepareSnapshotPreBarrier(checkpointId);
+		}
+	}
+
 	public RecordWriterOutput<?>[] getStreamOutputs() {
 		return streamOutputs;
 	}
@@ -1015,6 +1024,11 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 				endSuccessorsInput();
 			}
 		}
+
+		@Override
+		public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+			operator.prepareSnapshotPreBarrier(checkpointId);
+		}
 	}
 
 	private static class TwoInputStreamOperatorProxy<IN1, IN2, OUT> extends AbstractStreamOperatorProxy<OUT> implements TwoInputStreamOperator<IN1, IN2, OUT> {
@@ -1198,6 +1212,11 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 
 		public void registerSelectionChangedListener(SelectionChangedListener listener) {
 			this.listener = listener;
+		}
+
+		@Override
+		public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+			operator.prepareSnapshotPreBarrier(checkpointId);
 		}
 	}
 

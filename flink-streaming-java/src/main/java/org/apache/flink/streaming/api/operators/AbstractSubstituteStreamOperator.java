@@ -45,6 +45,11 @@ public interface AbstractSubstituteStreamOperator <OUT> extends StreamOperator<O
 	}
 
 	@Override
+	default void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+		throw new UnsupportedOperationException("This method is unsupported in AbstractSubstituteStreamOperator.");
+	}
+
+	@Override
 	default void open() throws Exception {
 		throw new UnsupportedOperationException("For an AbstractSubstituteStreamOperator, this method should not be called");
 	}
