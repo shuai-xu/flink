@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.net.Socket;
 
 /**
- * python scalar UDF wrapper.
+ * Python scalar UDF wrapper.
  */
 public class PythonScalarFunction extends ScalarFunction {
 	private static final Logger LOG = LoggerFactory.getLogger(PythonScalarFunction.class);

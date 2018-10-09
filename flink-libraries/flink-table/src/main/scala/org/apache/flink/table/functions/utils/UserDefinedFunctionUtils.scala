@@ -40,7 +40,6 @@ import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
 import org.apache.flink.table.dataformat.{BinaryString, Decimal}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.hive.functions._
-import org.apache.flink.table.sqlgen.SqlGenUtil
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.util.InstantiationUtil
@@ -814,6 +813,7 @@ object UserDefinedFunctionUtils {
 
     var func: Any = Nil
     val javaClass = functionDef.contains(".")
+
     if (javaClass) {
       try {
         func = classLoader.loadClass(functionDef).newInstance()
@@ -823,25 +823,27 @@ object UserDefinedFunctionUtils {
             TableErrors.INST.sqlCreateUserDefinedFuncError(
               funcName,
               functionDef,
-              e.getClass().getCanonicalName() + " : " + e.getMessage()),
+              e.getClass.getCanonicalName + " : " + e.getMessage),
             e)
       }
     } else {
       try {
         // try deserialize first
-        func = SqlGenUtil.deSerializeObject(SqlGenUtil.hexString2String(functionDef), classLoader)
+        func = InstantiationUtil
+          .deserializeObject[Object](Base64.decodeBase64(hexString2String(functionDef)),
+          classLoader)
       } catch {
         case e: Exception =>
           try {
             // It might be a java class without package name
-            func = classLoader.loadClass(functionDef).newInstance();
+            func = classLoader.loadClass(functionDef).newInstance()
           } catch {
             case e: Exception =>
               throw new RuntimeException(
                 TableErrors.INST.sqlCreateUserDefinedFuncError(
                   funcName,
                   functionDef,
-                  e.getClass().getCanonicalName() + " : " + e.getMessage()),
+                  e.getClass.getCanonicalName + " : " + e.getMessage),
                 e)
           }
       }
@@ -874,5 +876,10 @@ object UserDefinedFunctionUtils {
         new GenericType(classOf[AnyRef])
     }
     implicitResultType
+  }
+
+  private def hexString2String(str: String): String = {
+    str.sliding(2, 2).map(s =>
+      Integer.parseInt(s, 16).asInstanceOf[Char].toString).mkString("")
   }
 }

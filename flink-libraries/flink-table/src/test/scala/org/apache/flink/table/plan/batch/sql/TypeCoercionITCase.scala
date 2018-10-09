@@ -31,7 +31,7 @@ import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTimestamp}
 import scala.collection.Seq
 
 /**
-  * This class includes cases of type coericion.
+  * This class includes cases of type coercion.
   */
 class TypeCoercionITCase extends QueryTest {
   @Before

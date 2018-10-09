@@ -36,13 +36,13 @@ under the License.
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>blink-sql-parser</artifactId>
+			<artifactId>flink-sql-parser</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>blink-catalog-hive</artifactId>
+			<artifactId>flink-catalog-hive</artifactId>
 			<version>${project.version}</version>
 			<exclusions>
 				<exclusion>

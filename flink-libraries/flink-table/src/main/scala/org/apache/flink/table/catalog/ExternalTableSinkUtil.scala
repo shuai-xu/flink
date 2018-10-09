@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.catalog
 
-import com.alibaba.blink.factories.BlinkTableFactory
-import com.alibaba.blink.table.api.{RichTableSchema, TableProperties}
+import org.apache.flink.factories.FlinkTableFactory
+import org.apache.flink.table.api.{RichTableSchema, TableProperties}
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.schema.TableSinkTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
@@ -49,7 +49,7 @@ object ExternalTableSinkUtil {
       tableName: String,
       externalTable: ExternalCatalogTable): TableSinkTable[_] = {
 
-    val tableFactory = BlinkTableFactory.INSTANCE
+    val tableFactory = FlinkTableFactory.INSTANCE
     val tableProperties = new TableProperties()
     tableProperties.addAll(externalTable.properties)
 

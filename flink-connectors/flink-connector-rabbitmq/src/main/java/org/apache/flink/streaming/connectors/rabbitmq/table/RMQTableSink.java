@@ -24,6 +24,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.connectors.rabbitmq.RMQSink;
 import org.apache.flink.streaming.connectors.rabbitmq.common.RMQConnectionConfig;
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.sinks.BatchExecCompatibleStreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.UpsertStreamTableSink;
@@ -33,8 +34,6 @@ import org.apache.flink.table.types.InternalType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
-
-import com.alibaba.blink.table.api.RichTableSchema;
 
 import java.io.Serializable;
 

@@ -59,7 +59,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * python UDF utilities.
+ * Python UDF utilities.
  */
 public class PythonUDFUtil {
 	private static final Logger LOG = LoggerFactory.getLogger(PythonUDFUtil.class);

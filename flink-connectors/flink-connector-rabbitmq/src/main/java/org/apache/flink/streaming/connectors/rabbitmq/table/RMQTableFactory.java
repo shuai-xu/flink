@@ -18,13 +18,12 @@
 
 package org.apache.flink.streaming.connectors.rabbitmq.table;
 
+import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.TableFactory;
+import org.apache.flink.table.api.TableProperties;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sources.DimensionTableSource;
 import org.apache.flink.table.sources.TableSource;
-
-import com.alibaba.blink.table.api.RichTableSchema;
-import com.alibaba.blink.table.api.TableFactory;
-import com.alibaba.blink.table.api.TableProperties;
 
 /**
  * Table Factory for RMQ.

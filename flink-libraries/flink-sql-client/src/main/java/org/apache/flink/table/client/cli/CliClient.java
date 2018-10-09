@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.client.cli;
 
+import org.apache.flink.sql.parser.util.SqlInfo;
+import org.apache.flink.sql.parser.util.SqlLists;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.cli.SqlCommandParser.SqlCommandCall;
@@ -29,8 +31,6 @@ import org.apache.flink.table.client.gateway.SessionContext;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.client.gateway.local.ExecutionContext;
 
-import com.alibaba.blink.sql.parser.util.SqlInfo;
-import com.alibaba.blink.sql.parser.util.SqlLists;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;

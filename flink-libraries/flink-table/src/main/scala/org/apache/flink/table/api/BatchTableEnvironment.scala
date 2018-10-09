@@ -27,6 +27,7 @@ import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config
+import org.apache.flink.annotation.InterfaceStability
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
@@ -68,6 +69,7 @@ import _root_.scala.collection.mutable.ArrayBuffer
  *
  * @param config The [[TableConfig]] of this [[BatchTableEnvironment]].
  */
+@InterfaceStability.Evolving
 class BatchTableEnvironment(
     private[flink] val streamEnv: StreamExecutionEnvironment,
     config: TableConfig)
@@ -149,7 +151,7 @@ class BatchTableEnvironment(
 
   private def execute(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
       jobName: Option[String]): JobExecutionResult = {
-    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv);
+    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
     ruKeeper.setScheduleConfig(context)
     jobName match {
       case Some(jn) => context.setJobName(jn)
@@ -876,13 +878,6 @@ class BatchTableEnvironment(
       dumpRelNode(optimizedNode, dumpFilePath)
     }
   }
-
-  /**
-   * generate a sql text in form of bayes
-   *
-   * @return
-   */
-  override def getSqlText(): String = ""
 
   def getRUKeeper(): RunningUnitKeeper = ruKeeper
 }

@@ -20,14 +20,14 @@ package org.apache.flink.streaming.connectors.rabbitmq.table;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableProperties;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
 
-import com.alibaba.blink.table.api.RichTableSchema;
-import com.alibaba.blink.table.api.TableProperties;
 import org.junit.Ignore;
 import org.junit.Test;
 

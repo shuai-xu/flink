@@ -18,6 +18,15 @@
 
 package org.apache.flink.table.client.utils;
 
+import org.apache.flink.sql.parser.ddl.SqlColumnType;
+import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
+import org.apache.flink.sql.parser.ddl.SqlCreateTable;
+import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
+import org.apache.flink.sql.parser.ddl.SqlTableColumn;
+import org.apache.flink.sql.parser.impl.FlinkSqlParserImpl;
+import org.apache.flink.sql.parser.plan.FlinkPlannerImpl;
+import org.apache.flink.sql.parser.plan.SqlParseException;
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.errorcode.TableErrors;
 import org.apache.flink.table.functions.UserDefinedFunction;
@@ -27,17 +36,6 @@ import org.apache.flink.table.types.DecimalType;
 import org.apache.flink.table.types.GenericType;
 import org.apache.flink.table.types.InternalType;
 
-import com.alibaba.blink.sql.parser.ddl.SqlColumnType;
-import com.alibaba.blink.sql.parser.ddl.SqlCreateFunction;
-import com.alibaba.blink.sql.parser.ddl.SqlCreateTable;
-import com.alibaba.blink.sql.parser.ddl.SqlCreateTable.IndexWrapper;
-import com.alibaba.blink.sql.parser.ddl.SqlNodeInfo;
-import com.alibaba.blink.sql.parser.ddl.SqlTableColumn;
-import com.alibaba.blink.sql.parser.impl.BlinkSqlParserImpl;
-import com.alibaba.blink.sql.parser.plan.BlinkPlannerImpl;
-import com.alibaba.blink.sql.parser.plan.SqlParseException;
-import com.alibaba.blink.table.api.RichTableSchema;
-import com.alibaba.blink.table.api.RichTableSchema.Index;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.Lex;
@@ -69,7 +67,7 @@ public class SqlJobUtil {
 	 * Configuration for sql parser.
 	 */
 	private static final SqlParser.Config PARSER_CONFIG = SqlParser.configBuilder()
-		.setParserFactory(BlinkSqlParserImpl.FACTORY)
+		.setParserFactory(FlinkSqlParserImpl.FACTORY)
 		.setQuoting(Quoting.BACK_TICK)
 		.setQuotedCasing(Casing.UNCHANGED)
 		.setUnquotedCasing(Casing.UNCHANGED)
@@ -93,7 +91,7 @@ public class SqlJobUtil {
 	 * @throws SqlParseException if there is any syntactic error
 	 */
 	public static List<SqlNodeInfo> parseSqlContext(String sqlContext) throws SqlParseException {
-		BlinkPlannerImpl planner = new BlinkPlannerImpl(FRAMEWORK_CONFIG);
+		FlinkPlannerImpl planner = new FlinkPlannerImpl(FRAMEWORK_CONFIG);
 		List<SqlNodeInfo> sqlNodeList = planner.parseContext(sqlContext);
 		planner.validate(sqlNodeList);
 		return sqlNodeList;
@@ -249,15 +247,15 @@ public class SqlJobUtil {
 		}
 
 		//set index
-		List<IndexWrapper> indexKeyList = sqlCreateTable.getIndexKeysList();
+		List<SqlCreateTable.IndexWrapper> indexKeyList = sqlCreateTable.getIndexKeysList();
 		if (indexKeyList != null) {
-			List<Index> indexes = new ArrayList<>();
-			for (IndexWrapper idx : indexKeyList) {
+			List<RichTableSchema.Index> indexes = new ArrayList<>();
+			for (SqlCreateTable.IndexWrapper idx : indexKeyList) {
 				List<String> keyList = new ArrayList<>();
 				for (int i = 0; i < idx.indexKeys.size(); i++) {
 					keyList.add(idx.indexKeys.get(i).toString());
 				}
-				indexes.add(new Index(idx.unique, keyList));
+				indexes.add(new RichTableSchema.Index(idx.unique, keyList));
 			}
 			schema.setIndexes(indexes);
 		}

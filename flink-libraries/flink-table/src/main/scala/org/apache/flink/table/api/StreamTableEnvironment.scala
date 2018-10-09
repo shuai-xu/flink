@@ -27,6 +27,7 @@ import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataType
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql.SqlCall
 import org.apache.calcite.sql2rel.SqlToRelConverter
+import org.apache.flink.annotation.InterfaceStability
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
@@ -54,7 +55,6 @@ import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilde
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
-import org.apache.flink.table.sqlgen.SqlGenVisitor
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
 import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, StateUtil, WatermarkUtils}
@@ -81,6 +81,7 @@ import _root_.scala.collection.mutable.ArrayBuffer
   *                [[StreamTableEnvironment]].
   * @param config The [[TableConfig]] of this [[StreamTableEnvironment]].
   */
+@InterfaceStability.Evolving
 abstract class StreamTableEnvironment(
     val execEnv: StreamExecutionEnvironment,
     config: TableConfig)
@@ -325,49 +326,6 @@ abstract class StreamTableEnvironment(
         translate(table, sink, streamQueryConfig)
       emitDataStream(sink, result)
     }
-  }
-
-  override def getSqlText(): String = {
-    if (config.getSubsectionOptimization) {
-      getSqlText(sinkNodes, new SqlGenVisitor(this))
-    } else {
-      ""
-    }
-  }
-
-  private def getSqlText(nodes: Seq[LogicalNode], visitor: SqlGenVisitor): String = {
-    val visited = new util.IdentityHashMap[LogicalNode, Boolean]()
-    val buffer = new StringBuffer()
-
-    def visitNode(node: LogicalNode): Unit = {
-      for(child <- node.children) {
-        if (!visited.containsKey(child)) {
-          visitNode(child)
-          visited.put(child, true)
-        }
-      }
-      val currSql = visitor.visit(node)
-      if (currSql._3) {
-        buffer.append(currSql._2)
-      }
-    }
-
-    for(sinkNode <- nodes) {
-      if (!visited.containsKey(sinkNode)) {
-        visited.put(sinkNode, true)
-        visitNode(sinkNode)
-      }
-    }
-
-    val functionSignatures = visitor.exprVisitor.functionMap.map {
-      case (name, (data, Some(comment))) =>
-        s"-- $comment\n" +
-        s"CREATE FUNCTION $name AS '$data';"
-      case (name, (data, _)) =>
-        s"CREATE FUNCTION $name AS '$data';"
-    }.mkString("\n")
-
-    functionSignatures + "\n" + buffer.toString
   }
 
   /**

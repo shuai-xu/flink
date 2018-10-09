@@ -21,8 +21,7 @@ package org.apache.flink.streaming.connectors.rabbitmq.table;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.streaming.connectors.rabbitmq.common.RMQConnectionConfig;
-
-import com.alibaba.blink.table.api.TableProperties;
+import org.apache.flink.table.api.TableProperties;
 
 /**
  * RMQ connector options for table.

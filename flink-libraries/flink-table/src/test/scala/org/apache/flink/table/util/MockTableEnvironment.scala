@@ -62,13 +62,6 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
       tableSink: TableSink[_]): Unit = ???
 
   /**
-    * generate a sql text in form of bayes
-    *
-    * @return
-    */
-  override def getSqlText(): String = ""
-
-  /**
     * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
     * the result of the given [[Table]].
     *

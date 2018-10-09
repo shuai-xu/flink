@@ -900,12 +900,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   def execute(jobName: String): JobExecutionResult
 
   /**
-    * generate a sql text in form of bayes
-    * @return
-    */
-  def getSqlText(): String
-
-  /**
     * Writes the [[Table]] to a [[TableSink]] that was registered under the specified name.
     *
     * @param table The table to write to the TableSink.

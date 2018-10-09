@@ -26,7 +26,6 @@ import org.jboss.byteman.agent.*;
 import org.jboss.byteman.modules.ModuleSystem;
 
 import java.lang.instrument.Instrumentation;
-import java.lang.reflect.Field;
 import java.util.List;
 
 /**

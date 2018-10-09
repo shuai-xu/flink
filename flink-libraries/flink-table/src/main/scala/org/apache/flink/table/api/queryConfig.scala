@@ -20,10 +20,12 @@ package org.apache.flink.table.api
 
 import _root_.java.io.Serializable
 
+import org.apache.flink.annotation.Experimental
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.functions.AggregateFunction
 
+@Experimental
 class QueryConfig private[table] extends Serializable {
 }
 
@@ -39,6 +41,7 @@ object QueryConfig {
 /**
   * The [[BatchQueryConfig]] holds parameters to configure the behavior of batch queries.
   */
+@Experimental
 class BatchQueryConfig private[table] extends QueryConfig
 
 /**
@@ -47,6 +50,7 @@ class BatchQueryConfig private[table] extends QueryConfig
   * An empty [[StreamQueryConfig]] can be generated using the [[StreamTableEnvironment.queryConfig]]
   * method.
   */
+@Experimental
 class StreamQueryConfig extends QueryConfig {
 
   private val DEFAULT_FIRE_INTERVAL = Long.MinValue

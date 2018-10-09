@@ -286,13 +286,14 @@ object TableFactoryService extends Logging {
           |${supportedKeys.sorted.mkString("\n")}""".stripMargin,
         factoryClass,
         foundFactories,
-        properties)
+        properties, null)
     } else if (supportedFactories.isEmpty) {
       throw new NoMatchingTableFactoryException(
         s"No factory supports all properties.",
         factoryClass,
         foundFactories,
-        properties)
+        properties,
+        null)
     } else if (supportedFactories.length > 1) {
       throw new AmbiguousTableFactoryException(
         supportedFactories,
