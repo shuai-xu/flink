@@ -137,8 +137,9 @@ public abstract class BatchJoinStreamOperator
 			Boolean leftIsAccRetract,
 			Boolean rightIsAccRetract,
 			boolean[] filterNullKeys,
-			CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
-		super(coBundleTrigger);
+			CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger,
+			boolean finishBundleBeforeSnapshot) {
+		super(coBundleTrigger, finishBundleBeforeSnapshot);
 		this.leftType = leftType;
 		this.rightType = rightType;
 		this.condFuncCode = condFuncCode;

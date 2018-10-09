@@ -228,7 +228,9 @@ class StreamExecGlobalGroupAggregate(
       new KeyedBundleOperator(
         aggFunction,
         getMiniBatchTrigger(queryConfig, useLocalAgg = true),
-        valueTypeInfo)
+        valueTypeInfo,
+        queryConfig.getParameters.getBoolean(
+          StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       throw new TableException("Local-Global optimization is only worked in minibatch mode")
     }

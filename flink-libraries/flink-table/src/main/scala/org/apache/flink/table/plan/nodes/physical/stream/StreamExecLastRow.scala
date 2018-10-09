@@ -121,7 +121,9 @@ class StreamExecLastRow(
       new KeyedBundleOperator(
         processFunction,
         getMiniBatchTrigger(queryConfig),
-        rowTypeInfo)
+        rowTypeInfo,
+        queryConfig.getParameters.getBoolean(
+          StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val processFunction = new LastRowFunction(
         rowTypeInfo,

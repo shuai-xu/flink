@@ -52,7 +52,8 @@ public class LeftOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperat
 			Boolean leftIsAccRetract,
 			Boolean rightIsAccRetract,
 			boolean[] filterNullKeys,
-			CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
+			CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger,
+			boolean finishBundleBeforeSnapshot) {
 		super(leftType,
 			rightType,
 			condFuncCode,
@@ -69,7 +70,8 @@ public class LeftOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperat
 			leftIsAccRetract,
 			rightIsAccRetract,
 			filterNullKeys,
-			coBundleTrigger);
+			coBundleTrigger,
+			finishBundleBeforeSnapshot);
 	}
 
 	@Override

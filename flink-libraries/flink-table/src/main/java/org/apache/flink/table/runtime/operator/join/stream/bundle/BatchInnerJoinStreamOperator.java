@@ -59,10 +59,11 @@ public class BatchInnerJoinStreamOperator extends BatchJoinStreamOperator {
 			JoinStateHandler.Type leftJoinStateType,
 			JoinStateHandler.Type rightJoinStateType, long maxRetentionTime, long minRetentionTime,
 			Boolean leftIsAccRetract, Boolean rightIsAccRetract,
-			boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
+			boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger,
+			boolean finishBundleBeforeSnapshot) {
 		super(leftType, rightType, condFuncCode, leftKeySelector, rightKeySelector, leftPkProjectCode,
 				rightPkProjectCode, leftJoinStateType, rightJoinStateType, maxRetentionTime, minRetentionTime,
-				leftIsAccRetract, rightIsAccRetract, filterNullKeys, coBundleTrigger);
+				leftIsAccRetract, rightIsAccRetract, filterNullKeys, coBundleTrigger, finishBundleBeforeSnapshot);
 	}
 
 	@Override

@@ -61,7 +61,7 @@ public class MiniBatchJoinOperatorTest {
 	public void testReduceList() {
 		BatchInnerJoinStreamOperator innerjoin = new BatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, true, true,
-				new boolean[]{false}, combinedTrigger);
+				new boolean[]{false}, combinedTrigger, true);
 
 		List<Tuple2<BaseRow, Long>> reducedList = new LinkedList<>();
 		List<BaseRow> list = new LinkedList<>();
@@ -88,7 +88,7 @@ public class MiniBatchJoinOperatorTest {
 	public void testUpsertReduceListForKeyValue() {
 		BatchInnerJoinStreamOperator innerjoin = new BatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, false, false,
-				new boolean[]{false}, combinedTrigger);
+				new boolean[]{false}, combinedTrigger, true);
 
 		List<Tuple2<BaseRow, Long>> reducedList = new LinkedList<>();
 		List<BaseRow> list = new LinkedList<>();
@@ -113,7 +113,7 @@ public class MiniBatchJoinOperatorTest {
 	public void testUpsertReduceListForKeyMap() {
 		BatchInnerJoinStreamOperator innerjoin = new BatchInnerJoinStreamOperator(null, null,
 				null, leftKeySelector, rightKeySelector, null, null, null, null, 0, 0, false, false,
-			new boolean[]{false}, combinedTrigger);
+			new boolean[]{false}, combinedTrigger, true);
 
 		List<Tuple2<BaseRow, Long>> reducedList = new LinkedList<>();
 		List<BaseRow> list = new LinkedList<>();

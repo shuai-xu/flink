@@ -73,6 +73,8 @@ public class BundleOperator<K, V, IN, OUT>
 
 	private static final String STATE_NAME = "_async_wait_operator_state_";
 
+	private final boolean finishBundleBeforeSnapshot;
+
 	/** The trigger that determines how many elements should be put into a bundle. */
 	private final BundleTrigger<IN> bundleTrigger;
 
@@ -104,8 +106,9 @@ public class BundleOperator<K, V, IN, OUT>
 		BundleTrigger<IN> bundleTrigger,
 		TypeInformation<K> keyType,
 		TypeInformation<V> valueType,
-		KeySelector<IN, K> keySelector) {
-
+		KeySelector<IN, K> keySelector,
+		boolean finishBundleBeforeSnapshot) {
+		this.finishBundleBeforeSnapshot = finishBundleBeforeSnapshot;
 		chainingStrategy = ChainingStrategy.ALWAYS;
 
 		this.function = checkNotNull(function, "function is null");
@@ -224,29 +227,38 @@ public class BundleOperator<K, V, IN, OUT>
 	}
 
 	@Override
+	public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+		if (finishBundleBeforeSnapshot) {
+			finishBundle();
+		}
+	}
+
+	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
 		while (isInFinishingBundle) {
 			checkpointingLock.wait();
 		}
 		super.snapshotState(context);
-		TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);
-		ListState<Tuple2<K, V>> bufferState = getOperatorStateBackend()
-			.getListState(new ListStateDescriptor<>(STATE_NAME, tupleType));
+		if (!finishBundleBeforeSnapshot) {
+			TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);
+			ListState<Tuple2<K, V>> bufferState = getOperatorStateBackend()
+				.getListState(new ListStateDescriptor<>(STATE_NAME, tupleType));
 
-		// clear state first
-		bufferState.clear();
+			// clear state first
+			bufferState.clear();
 
-		Iterator<Map.Entry<K, V>> iter = buffer.entrySet().iterator();
-		List<Tuple2<K, V>> stateToPut = new ArrayList<>(buffer.size());
-		while (iter.hasNext()) {
-			Map.Entry<K, V> entry = iter.next();
-			K key = entry.getKey();
-			V value = entry.getValue();
-			stateToPut.add(Tuple2.of(key, value));
+			Iterator<Map.Entry<K, V>> iter = buffer.entrySet().iterator();
+			List<Tuple2<K, V>> stateToPut = new ArrayList<>(buffer.size());
+			while (iter.hasNext()) {
+				Map.Entry<K, V> entry = iter.next();
+				K key = entry.getKey();
+				V value = entry.getValue();
+				stateToPut.add(Tuple2.of(key, value));
+			}
+
+			// batch put
+			bufferState.addAll(stateToPut);
 		}
-
-		// batch put
-		bufferState.addAll(stateToPut);
 	}
 
 	@Override

@@ -58,6 +58,8 @@ public abstract class KeyedCoBundleOperator
 
 	private final CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger;
 
+	private final boolean finishBundleBeforeSnapshot;
+
 	private transient Object checkpointingLock;
 
 	private transient StreamRecordCollector<BaseRow> collector;
@@ -78,7 +80,8 @@ public abstract class KeyedCoBundleOperator
 	private TypeSerializer<BaseRow> rTypeSerializer;
 	private transient volatile boolean isInFinishingBundle = false;
 
-	public KeyedCoBundleOperator(CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
+	public KeyedCoBundleOperator(CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger, boolean finishBundleBeforeSnapshot) {
+		this.finishBundleBeforeSnapshot = finishBundleBeforeSnapshot;
 		Preconditions.checkNotNull(coBundleTrigger, "coBundleTrigger is null");
 		this.coBundleTrigger = coBundleTrigger;
 	}
@@ -160,6 +163,13 @@ public abstract class KeyedCoBundleOperator
 	}
 
 	@Override
+	public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+		if (finishBundleBeforeSnapshot) {
+			finishBundle();
+		}
+	}
+
+	@Override
 	public void finishBundle() throws Exception {
 		synchronized (checkpointingLock) {
 			while (isInFinishingBundle) {
@@ -218,6 +228,7 @@ public abstract class KeyedCoBundleOperator
 		this.leftBufferState = getKeyedState(leftBufferStateDesc);
 		this.leftBuffer = new HashMap<>();
 		this.leftBuffer.putAll(leftBufferState.getAll());
+		leftBufferState.removeAll();
 
 		//noinspection unchecked
 		KeyedValueStateDescriptor<BaseRow, List<BaseRow>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
@@ -227,6 +238,7 @@ public abstract class KeyedCoBundleOperator
 		this.rightBufferState = getKeyedState(rightBufferStateDesc);
 		this.rightBuffer = new HashMap<>();
 		this.rightBuffer.putAll(rightBufferState.getAll());
+		rightBufferState.removeAll();
 
 		coBundleTrigger.registerBundleTriggerCallback(
 			this,
@@ -271,13 +283,15 @@ public abstract class KeyedCoBundleOperator
 		}
 		super.snapshotState(context);
 
-		// clear state first
-		leftBufferState.removeAll();
-		rightBufferState.removeAll();
+		if (!finishBundleBeforeSnapshot) {
+			// clear state first
+			leftBufferState.removeAll();
+			rightBufferState.removeAll();
 
-		// update state
-		leftBufferState.putAll(leftBuffer);
-		rightBufferState.putAll(rightBuffer);
+			// update state
+			leftBufferState.putAll(leftBuffer);
+			rightBufferState.putAll(rightBuffer);
+		}
 	}
 
 	@Override

@@ -74,10 +74,12 @@ public class AntiSemiBatchJoinStreamOperator extends BatchJoinStreamOperator {
 			JoinMatchStateHandler.Type leftMatchStateType,
 			JoinMatchStateHandler.Type rightMatchStateType,
 			Boolean leftIsAccRetract, Boolean rightIsAccRetract, Boolean isSemi, Boolean
-					isEqualJoin, boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
+					isEqualJoin, boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger,
+			boolean finishBundleBeforeSnapshot) {
 		super(leftType, rightType, condFuncCode, leftKeySelector, rightKeySelector, leftPkProjectCode,
 				rightPkProjectCode, leftJoinStateType, rightJoinStateType, maxRetentionTime,
-				minRetentionTime, leftIsAccRetract, rightIsAccRetract, filterNullKeys, coBundleTrigger);
+				minRetentionTime, leftIsAccRetract, rightIsAccRetract, filterNullKeys, coBundleTrigger,
+				finishBundleBeforeSnapshot);
 		this.leftMatchStateType = leftMatchStateType;
 		this.rightMatchStateType = rightMatchStateType;
 		this.isSemi = isSemi;

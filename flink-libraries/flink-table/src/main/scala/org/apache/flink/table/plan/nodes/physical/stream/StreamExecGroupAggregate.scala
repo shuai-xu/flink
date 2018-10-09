@@ -233,7 +233,9 @@ class StreamExecGroupAggregate(
       new KeyedBundleOperator(
         aggFunction,
         getMiniBatchTrigger(queryConfig, useLocalAgg = false),
-        valueType)
+        valueType,
+        queryConfig.getParameters.getBoolean(
+          StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val aggFunction = new GroupAggFunction(
         aggsHandler,

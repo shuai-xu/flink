@@ -46,11 +46,12 @@ public class FullOuterBatchJoinStreamOperator extends OuterBatchJoinStreamOperat
 			JoinMatchStateHandler.Type leftMatchStateType,
 			JoinMatchStateHandler.Type rightMatchStateType,
 			Boolean leftIsAccRetract, Boolean rightIsAccRetract,
-			boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
+			boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger,
+			boolean finishBundleBeforeSnapshot) {
 		super(leftType, rightType, condFuncCode, leftKeySelector, rightKeySelector, leftPkProjectCode,
 				rightPkProjectCode, leftJoinTableType, rightJoinTableType, maxRetentionTime, minRetentionTime,
 				leftMatchStateType, rightMatchStateType, leftIsAccRetract, rightIsAccRetract,
-				filterNullKeys, coBundleTrigger);
+				filterNullKeys, coBundleTrigger, finishBundleBeforeSnapshot);
 	}
 
 	@Override

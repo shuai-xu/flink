@@ -63,6 +63,8 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	implements OneInputStreamOperator<IN, OUT>, BundleTriggerCallback {
 	private static final long serialVersionUID = 5081841938324118594L;
 
+	private final boolean finishBundleBeforeSnapshot;
+
 	/** The trigger that determines how many elementsMap should be put into a bundle. */
 	private final BundleTrigger<IN> bundleTrigger;
 
@@ -87,7 +89,9 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 	public KeyedBundleOperator(
 		BundleFunction<K, V, IN, OUT> function,
 		BundleTrigger<IN> bundleTrigger,
-		TypeInformation<V> valueType) {
+		TypeInformation<V> valueType,
+		boolean finishBundleBeforeSnapshot) {
+		this.finishBundleBeforeSnapshot = finishBundleBeforeSnapshot;
 		chainingStrategy = ChainingStrategy.ALWAYS;
 
 		this.function = function;
@@ -115,12 +119,14 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 		TypeSerializer<V> valueSer = valueType.createSerializer(getExecutionConfig());
 		//noinspection unchecked
 		KeyedValueStateDescriptor<K, V> bufferStateDesc = new KeyedValueStateDescriptor<>(
-			"globalBufferState",
-			(TypeSerializer<K>) getKeySerializer(),
-			valueSer);
+				"globalBufferState",
+				(TypeSerializer<K>) getKeySerializer(),
+				valueSer);
 		this.bufferState = getKeyedState(bufferStateDesc);
 		// recovering buffer
 		buffer.putAll(bufferState.getAll());
+		bufferState.removeAll();
+
 		// recovering number
 		numOfElements = buffer.size();
 
@@ -185,6 +191,13 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 		super.processWatermark(mark);
 	}
 
+	@Override
+	public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+		if (finishBundleBeforeSnapshot) {
+			finishBundle();
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void snapshotState(StateSnapshotContext context) throws Exception {
@@ -192,11 +205,14 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 			checkpointingLock.wait();
 		}
 		super.snapshotState(context);
-		// clear state first
-		bufferState.removeAll();
 
-		// update state
-		bufferState.putAll(buffer);
+		if (!finishBundleBeforeSnapshot) {
+			// clear state first
+			bufferState.removeAll();
+
+			// update state
+			bufferState.putAll(buffer);
+		}
 	}
 
 	@Override

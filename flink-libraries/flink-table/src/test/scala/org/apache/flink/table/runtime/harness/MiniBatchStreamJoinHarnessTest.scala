@@ -101,8 +101,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(queryConfig)
-    )
+      getMiniBatchTrigger(queryConfig),
+      queryConfig.getParameters.getBoolean(
+        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -196,8 +197,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(queryConfig)
-    )
+      getMiniBatchTrigger(queryConfig),
+      queryConfig.getParameters.getBoolean(
+        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(

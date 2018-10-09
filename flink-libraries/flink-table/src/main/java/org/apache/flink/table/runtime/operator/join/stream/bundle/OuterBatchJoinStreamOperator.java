@@ -72,10 +72,12 @@ abstract class OuterBatchJoinStreamOperator extends BatchJoinStreamOperator {
 			JoinStateHandler.Type rightJoinStateType, long maxRetentionTime, long minRetentionTime,
 			JoinMatchStateHandler.Type leftMatchStateType,
 			JoinMatchStateHandler.Type rightMatchStateType, Boolean leftIsAccRetract, Boolean rightIsAccRetract,
-			boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
+			boolean[] filterNullKeys, CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger,
+			boolean finishBundleBeforeSnapshot) {
 		super(leftType, rightType, condFuncCode, leftKeySelector, rightKeySelector, leftPkProjectCode,
 				rightPkProjectCode, leftJoinStateType, rightJoinStateType, maxRetentionTime,
-				minRetentionTime, leftIsAccRetract, rightIsAccRetract, filterNullKeys, coBundleTrigger);
+				minRetentionTime, leftIsAccRetract, rightIsAccRetract, filterNullKeys, coBundleTrigger,
+				finishBundleBeforeSnapshot);
 		this.leftMatchStateType = leftMatchStateType;
 		this.rightMatchStateType = rightMatchStateType;
 	}

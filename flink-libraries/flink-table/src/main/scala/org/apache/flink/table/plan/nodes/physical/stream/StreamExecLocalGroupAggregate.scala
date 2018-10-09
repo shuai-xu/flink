@@ -200,7 +200,9 @@ class StreamExecLocalGroupAggregate(
       getMiniBatchTrigger(queryConfig, useLocalAgg = true),
       selector.getProducedType,
       valueTypeInfo,
-      selector)
+      selector,
+      queryConfig.getParameters.getBoolean(
+        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     new OneInputTransformation(
       inputTransformation,

@@ -19,7 +19,7 @@
 package org.apache.flink.table.api
 
 import _root_.java.io.Serializable
-import _root_.java.lang.{Boolean => JBoolean, Long => JLong}
+import _root_.java.lang.{Boolean => JBool, Long => JLong}
 import _root_.java.util.{Map => JMap}
 
 import org.apache.flink.annotation.Experimental
@@ -508,6 +508,7 @@ object StreamQueryConfig {
     .key("blink.state.ttl.ms")
     .defaultValue(Long.MinValue)
 
+<<<<<<< HEAD
   /**
     * The maximum time until state which was not updated will be retained.
     * State will be cleared and removed if it was not updated for the defined period of time.
@@ -515,4 +516,10 @@ object StreamQueryConfig {
   val BLINK_STATE_TTL_MAX_MS: ConfigOption[JLong] = ConfigOptions
     .key("blink.state.ttl.max.ms")
     .defaultValue(Long.MinValue)
+=======
+  val BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT: ConfigOption[JBool] = ConfigOptions
+      .key("blink.miniBatch.flushBeforeSnapshot")
+      .defaultValue(false)
+
+>>>>>>> 666cb675a3... [BLINK-17069143] [table] Add option to finishBundle before snapshot in mini-batch processing
 }

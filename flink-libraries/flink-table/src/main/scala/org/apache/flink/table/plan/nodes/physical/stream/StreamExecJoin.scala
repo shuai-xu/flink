@@ -242,7 +242,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig))
+            getMiniBatchTrigger(queryConfig),
+            queryConfig.getParameters.getBoolean(
+              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.LEFT =>
           new LeftOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -261,7 +263,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig))
+            getMiniBatchTrigger(queryConfig),
+            queryConfig.getParameters.getBoolean(
+              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.RIGHT =>
           new RightOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -280,7 +284,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig))
+            getMiniBatchTrigger(queryConfig),
+            queryConfig.getParameters.getBoolean(
+              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.FULL =>
           new FullOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -299,7 +305,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig))
+            getMiniBatchTrigger(queryConfig),
+            queryConfig.getParameters.getBoolean(
+              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
           new AntiSemiBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -320,7 +328,9 @@ class StreamExecJoin(
             joinType.equals(FlinkJoinRelType.SEMI),
             joinInfo.isEqui,
             filterNulls,
-            getMiniBatchTrigger(queryConfig))
+            getMiniBatchTrigger(queryConfig),
+            queryConfig.getParameters.getBoolean(
+              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
       }
     } else {
       joinType match {
