@@ -459,6 +459,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
 		}
 		final RelNode newInput = frame.r;
 
+		// aggregate outputs mappings: group keys + aggregates
+		Map<Integer, Integer> outputsMapping = Maps.newHashMap();
+
 		// map from newInput
 		Map<Integer, Integer> mapNewInputToProjOutputs = new HashMap<>();
 		final int oldGroupKeyCount = rel.getGroupSet().cardinality();
@@ -475,6 +478,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
 		// oldInput has the original group by keys in the front.
 		final NavigableMap<Integer, RexLiteral> omittedConstants = new TreeMap<>();
 		for (int i = 0; i < oldGroupKeyCount; i++) {
+			// add the mappings of group by keys.
+			outputsMapping.put(i, i);
+
 			final RexLiteral constant = projectedLiteral(newInput, i);
 			if (constant != null) {
 				// Exclude constants. Aggregate({true}) occurs because Aggregate({})
@@ -573,9 +579,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 					oldAggCall.adaptTo(newProject, aggArgs, filterArg,
 							oldGroupKeyCount, newGroupKeyCount));
 
-			// The old to new output position mapping will be the same as that
-			// of newProject, plus any aggregates that the oldAgg produces.
-			combinedMap.put(
+			outputsMapping.put(
 					oldInputOutputFieldCount + i,
 					newInputOutputFieldCount + i);
 		}
@@ -595,7 +599,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
 		// Aggregate does not change input ordering so corVars will be
 		// located at the same position as the input newProject.
-		return register(rel, relBuilder.build(), combinedMap, corDefOutputs);
+		return register(rel, relBuilder.build(), outputsMapping, corDefOutputs);
 	}
 
 	public Frame getInvoke(RelNode r, RelNode parent) {
@@ -875,7 +879,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 						map.put(def, ((RexInputRef) e.getNode()).getIndex());
 					} else {
 						map.put(def,
-								frame.r.getRowType().getFieldCount() + projects.size());
+						        frame.r.getRowType().getFieldCount() + projects.size());
 						projects.add((RexNode) e.getNode());
 					}
 				}
@@ -906,7 +910,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
 		RelNode join =
 				LogicalJoin.create(frame.r, valueGen, rexBuilder.makeLiteral(true),
-						ImmutableSet.<CorrelationId>of(), JoinRelType.INNER);
+				                   ImmutableSet.<CorrelationId>of(), JoinRelType.INNER);
 
 		// Join or Filter does not change the old input ordering. All
 		// input fields from newLeftInput (i.e. the original input to the old
@@ -1124,7 +1128,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 				RexUtil.composeConjunction(rexBuilder, conditions, false);
 		RelNode newJoin =
 				LogicalJoin.create(leftFrame.r, rightFrame.r, condition,
-						ImmutableSet.<CorrelationId>of(), rel.getJoinType().toJoinType());
+				                   ImmutableSet.<CorrelationId>of(), rel.getJoinType().toJoinType());
 
 		return register(rel, newJoin, mapOldToNewOutputs, corDefOutputs);
 	}
@@ -1155,8 +1159,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
 		final RelNode newJoin =
 				LogicalJoin.create(leftFrame.r, rightFrame.r,
-						decorrelateExpr(currentRel, map, cm, rel.getCondition()),
-						ImmutableSet.<CorrelationId>of(), rel.getJoinType());
+				                   decorrelateExpr(currentRel, map, cm, rel.getCondition()),
+				                   ImmutableSet.<CorrelationId>of(), rel.getJoinType());
 
 		// Create the mapping between the output of the old correlation rel
 		// and the new join rel
@@ -1454,7 +1458,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 	}
 
 	static boolean allLessThan(Collection<Integer> integers, int limit,
-			Litmus ret) {
+	                           Litmus ret) {
 		for (int value : integers) {
 			if (value >= limit) {
 				return ret.fail("out of range; value: {}, limit: {}", value, limit);
@@ -1501,7 +1505,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 							// This input does produce the corVar referenced.
 							return new RexInputRef(newInputPos + newInputOutputOffset,
 									frame.r.getRowType().getFieldList().get(newInputPos)
-											.getType());
+									       .getType());
 						}
 					}
 
@@ -2763,16 +2767,16 @@ public class RelDecorrelator implements ReflectiveVisitor {
 		final ImmutableSortedMap<Integer, Integer> oldToNewOutputs;
 
 		Frame(RelNode oldRel, RelNode r, SortedMap<CorDef, Integer> corDefOutputs,
-				Map<Integer, Integer> oldToNewOutputs) {
+		      Map<Integer, Integer> oldToNewOutputs) {
 			this.r = Preconditions.checkNotNull(r);
 			this.corDefOutputs = ImmutableSortedMap.copyOf(corDefOutputs);
 			this.oldToNewOutputs = ImmutableSortedMap.copyOf(oldToNewOutputs);
 			assert allLessThan(this.corDefOutputs.values(),
-					r.getRowType().getFieldCount(), Litmus.THROW);
+			                   r.getRowType().getFieldCount(), Litmus.THROW);
 			assert allLessThan(this.oldToNewOutputs.keySet(),
-					oldRel.getRowType().getFieldCount(), Litmus.THROW);
+			                   oldRel.getRowType().getFieldCount(), Litmus.THROW);
 			assert allLessThan(this.oldToNewOutputs.values(),
-					r.getRowType().getFieldCount(), Litmus.THROW);
+			                   r.getRowType().getFieldCount(), Litmus.THROW);
 		}
 	}
 }

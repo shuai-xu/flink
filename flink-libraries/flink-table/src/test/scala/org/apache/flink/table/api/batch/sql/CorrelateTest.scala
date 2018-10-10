@@ -262,4 +262,17 @@ class CorrelateTest extends TableTestBatchExecBase {
     val sqlQuery = "SELECT count(*) FROM MyTable, LATERAL TABLE(parser(a)) AS T(name, len)"
     util.verifyPlan(sqlQuery)
   }
+
+  @Test
+  def testCorrelateAfterConcatAggWithConstantParam(): Unit = {
+    val util = batchTestUtil()
+    val func1 = new TableFunc1
+    util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
+    util.addFunction("func1", func1)
+
+    val sqlQuery = "SELECT * FROM " +
+      "(SELECT concat_agg(c, '#') AS c FROM MyTable) as t, LATERAL TABLE(func1(c)) AS T(s)"
+
+    util.verifyPlan(sqlQuery)
+  }
 }

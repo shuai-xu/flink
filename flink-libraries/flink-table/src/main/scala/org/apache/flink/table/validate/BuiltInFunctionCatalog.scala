@@ -182,8 +182,9 @@ object BuiltInFunctionCatalog {
     "lead" -> classOf[Lead],
     "lag" -> classOf[Lag],
     "collect" -> classOf[Collect],
-    "firstValue" -> classOf[FirstValue],
-    "lastValue" -> classOf[LastValue],
+    "first_value" -> classOf[FirstValue],
+    "last_value" -> classOf[LastValue],
+    "concat_agg" -> classOf[ConcatAgg],
 
     // string functions
     "charLength" -> classOf[CharLength],

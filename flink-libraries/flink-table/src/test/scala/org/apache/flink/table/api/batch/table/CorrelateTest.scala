@@ -86,4 +86,18 @@ class CorrelateTest extends TableTestBatchExecBase {
 
     util.verifyPlan(result)
   }
+
+  @Test
+  def testCorrelateAfterConcatAggWithConstantParam(): Unit = {
+    val util = batchTestUtil()
+    val sourceTable = util.addTable[(String)]("MyTable1", 'a)
+    val function = util.addFunction("func1", new TableFunc0)
+    val left = sourceTable.groupBy("5").select('a.concat_agg("#") as 'a)
+    val result = left.join(function('a))
+
+    util.verifyPlan(result)
+  }
+
+
+
 }

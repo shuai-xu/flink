@@ -575,9 +575,9 @@ case class SingleValue(child: Expression) extends Aggregation {
     logicalExprVisitor.visit(this)
 }
 
-case class ConcatAgg(separator: Expression, child: Expression) extends Aggregation {
-  override private[flink] def children: Seq[Expression] = Seq(separator, child)
-  override def toString = s"concat_agg($separator, $child)"
+case class ConcatAgg(child: Expression, separator: Expression) extends Aggregation {
+  override private[flink] def children: Seq[Expression] = Seq(child, separator)
+  override def toString = s"concat_agg($child, $separator)"
 
   override private[flink] def toAggCall(name: String)(implicit relBuilder: RelBuilder): AggCall =
     relBuilder.aggregateCall(

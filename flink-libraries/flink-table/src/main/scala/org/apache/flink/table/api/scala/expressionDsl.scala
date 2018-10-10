@@ -173,6 +173,12 @@ trait ImplicitExpressionOperations {
     * If all values are null, 0 is returned.
     */
   def sum0 = Sum0(expr)
+
+  /**
+    * Returns the a string that stitching all of the input values.
+    * If all values are null, null is returned.
+    */
+  def concat_agg(separator: Expression) = ConcatAgg(expr, separator)
   
   /**
     * Returns the minimum value of field across all input values.
@@ -213,6 +219,18 @@ trait ImplicitExpressionOperations {
     * according to the ordering of rows within the window partition.
     */
   def rowNumber = RowNumber()
+
+  /**
+    * Returns the first value in an ordered set of the inputs.
+    * If all values are null, null is returned.
+    */
+  def first_value = FirstValue(expr)
+
+  /**
+    * Returns the last value in an ordered set of the inputs.
+    * If all values are null, null is returned.
+    */
+  def last_value = LastValue(expr)
 
   /**
     * Returns the population standard deviation of an expression (the square root of varPop()).

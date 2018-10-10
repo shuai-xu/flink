@@ -338,6 +338,21 @@ class CorrelateITCase extends QueryTest {
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
+  @Test
+  def testCorrelateAfterConcatAggWithConstantParam(): Unit = {
+    val in = testData.as('a, 'b, 'c)
+    val in2 = testData.as('a, 'b, 'c)
+    val func0 = new TableFunc0
+    val left = in.select('c.concat_agg("#") as 'd)
+    val result = in2.join(left).as('a, 'b, 'c, 'd)
+      .join(func0('c) as ('name, 'age))
+      .select('a, 'c, 'name, 'age)
+
+    val results = result.collect()
+    val expected = "1,Jack#22,Jack,22\n2,John#19,John,19\n3,Anna#44,Anna,44"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
   private def testData: Table = {
 
     val data = new mutable.MutableList[(Int, Long, String)]

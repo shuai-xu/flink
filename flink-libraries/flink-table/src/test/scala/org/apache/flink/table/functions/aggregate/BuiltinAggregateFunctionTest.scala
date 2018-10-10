@@ -521,7 +521,7 @@ class BuiltinAggregateFunctionTest extends AggregateFunctionTestBase {
       Types.STRING
     )
 
-    val aggExprs = Seq(ConcatAgg('f0, 'f1))
+    val aggExprs = Seq(ConcatAgg('f1, 'f0))
 
     testAggregateFunctions(
       inputData,

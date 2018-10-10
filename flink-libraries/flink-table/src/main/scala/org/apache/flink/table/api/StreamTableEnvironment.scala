@@ -25,7 +25,6 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
 import org.apache.calcite.rex.RexBuilder
-import org.apache.calcite.sql.SqlCall
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.flink.annotation.InterfaceStability
 import org.apache.flink.api.common.JobExecutionResult
@@ -1315,8 +1314,7 @@ abstract class StreamTableEnvironment(
       tableName: String,
       sourceTable: Table,
       rowtimeField: String,
-      watermarkCall: SqlCall): Unit = {
-    val offset = WatermarkUtils.getWithOffsetParameters(rowtimeField, watermarkCall)
+      offset: Long): Unit = {
     val source = sourceTable.getRelNode
     registerTable(
       tableName,

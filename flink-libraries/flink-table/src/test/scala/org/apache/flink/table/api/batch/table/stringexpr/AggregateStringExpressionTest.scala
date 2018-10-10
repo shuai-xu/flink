@@ -224,20 +224,22 @@ class AggregateStringExpressionTest extends TableTestBatchExecBase {
   }
 
   @Test
-  def testAnalyticAggregation(): Unit = {
+  def testAllAggregations(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(Int, Long, Float, Double)]('_1, '_2, '_3, '_4)
+    val t = util.addTable[(Int, Long, Float, Double, String)]('_1, '_2, '_3, '_4, '_5)
 
     val resScala = t.select(
       '_1.stddevPop, '_2.stddevPop, '_3.stddevPop, '_4.stddevPop,
       '_1.stddevSamp, '_2.stddevSamp, '_3.stddevSamp, '_4.stddevSamp,
       '_1.varPop, '_2.varPop, '_3.varPop, '_4.varPop,
-      '_1.varSamp, '_2.varSamp, '_3.varSamp, '_4.varSamp)
+      '_1.varSamp, '_2.varSamp, '_3.varSamp, '_4.varSamp, '_5.concat_agg("#"),
+      '_5.first_value, '_5.last_value)
     val resJava = t.select("""
       _1.stddevPop, _2.stddevPop, _3.stddevPop, _4.stddevPop,
       _1.stddevSamp, _2.stddevSamp, _3.stddevSamp, _4.stddevSamp,
       _1.varPop, _2.varPop, _3.varPop, _4.varPop,
-      _1.varSamp, _2.varSamp, _3.varSamp, _4.varSamp""")
+      _1.varSamp, _2.varSamp, _3.varSamp, _4.varSamp, _5.concat_agg('#'),
+      _5.first_value, _5.last_value""")
 
     verifyTableEquals(resScala, resJava)
   }

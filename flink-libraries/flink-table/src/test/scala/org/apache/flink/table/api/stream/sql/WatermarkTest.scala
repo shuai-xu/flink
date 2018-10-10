@@ -47,7 +47,7 @@ class WatermarkTest extends TableTestBase {
       "test",
       table,
       "a",
-      mockSqlCall)
+      WatermarkUtils.getWithOffsetParameters("a", mockSqlCall))
     util.verifyPlan("select * from test")
   }
 
@@ -69,7 +69,7 @@ class WatermarkTest extends TableTestBase {
       "test",
       table,
       "a",
-      mockSqlCall)
+      WatermarkUtils.getWithOffsetParameters("a", mockSqlCall))
     util.verifyPlan("select * from test")
   }
 
@@ -91,7 +91,7 @@ class WatermarkTest extends TableTestBase {
       "test",
       table,
       "a",
-      mockSqlCall)
+      WatermarkUtils.getWithOffsetParameters("a", mockSqlCall))
     util.verifyPlan("select * from test")
   }
 
@@ -113,7 +113,7 @@ class WatermarkTest extends TableTestBase {
       "test",
       table,
       "a",
-      mockSqlCall)
+      WatermarkUtils.getWithOffsetParameters("a", mockSqlCall))
     util.verifyPlan("select * from test")
   }
 }

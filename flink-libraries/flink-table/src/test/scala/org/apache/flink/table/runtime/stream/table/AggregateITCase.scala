@@ -47,6 +47,19 @@ class AggregateITCase(
   extends StreamingWithAggTestBase(aggMode, minibatch, backend) {
 
   @Test
+  def testSimpleLogical(): Unit = {
+    val t = failingDataSource(StreamTestData.getSmall3TupleData).toTable(tEnv, 'a, 'b, 'c)
+      .select('c.first_value, 'c.last_value, 'c.concat_agg("#"))
+
+    val sink = new TestingRetractSink
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = mutable.MutableList("Hi,Hello world,Hi#Hello#Hello world")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
   def testDistinct(): Unit = {
     val t = failingDataSource(StreamTestData.get3TupleData).toTable(tEnv, 'a, 'b, 'c)
       .select('b, Null(DataTypes.LONG)).distinct()
