@@ -26,6 +26,8 @@ import org.apache.calcite.config.Lex
 import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.logical.LogicalTableModify
+import org.apache.calcite.schema
 import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.schema.impl.AbstractTable
 import org.apache.calcite.sql.parser.SqlParser
@@ -33,6 +35,7 @@ import org.apache.calcite.sql.util.ChainedSqlOperatorTable
 import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
+import org.apache.commons.lang3.StringUtils
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
@@ -225,9 +228,17 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param name            The name under which the externalCatalog will be registered
     * @param externalCatalog The externalCatalog to register
     */
-  def registerExternalCatalog(
-      name: String,
-      externalCatalog: ExternalCatalog): Unit = synchronized {
+  def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = ???
+
+  /**
+    * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
+    * All tables registered in the [[ExternalCatalog]] can be accessed.
+    *
+    * @param name            The name under which the externalCatalog will be registered
+    * @param externalCatalog The externalCatalog to register
+    */
+  def registerExternalCatalogInternal(
+      name: String, externalCatalog: ExternalCatalog, isStreaming: Boolean): Unit = {
     if (rootSchema.getSubSchema(name) != null) {
       throw new ExternalCatalogAlreadyExistException(name)
     }
@@ -239,7 +250,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     this.externalCatalogs.put(name, externalCatalog)
     // create an external catalog calcite schema, register it on the root schema
-    ExternalCatalogSchema.registerCatalog(rootSchema, name, externalCatalog)
+    ExternalCatalogSchema.registerCatalog(rootSchema, name, externalCatalog, isStreaming)
   }
 
   /**
@@ -837,18 +848,28 @@ abstract class TableEnvironment(val config: TableConfig) {
     val parsed = flinkPlanner.parse(stmt)
     parsed match {
       case insert: SqlInsert =>
-        // validate the SQL query
-        val query = insert.getSource
-        // validate the sql query
-        val validated = flinkPlanner.validate(query)
+        if (insert.getTargetTable.isInstanceOf[SqlIdentifier] &&
+            insert.getTargetTable.asInstanceOf[SqlIdentifier].toString.equals("console") &&
+            getTable("console") == null) {
+          val source = flinkPlanner.validate(insert.getSource)
+          val queryResult = new Table(this, LogicalRelNode(flinkPlanner.rel(source).rel))
+          val schema = queryResult.getSchema
+          val printTableSink = new PrintTableSink(getConfig.getTimeZone).configure(
+            schema.getColumnNames, schema.getTypes.asInstanceOf[Array[DataType]])
+          writeToSink(queryResult, printTableSink, queryConfig, "console")
+          return
+        }
+        // validate the insert sql
+        val validated = flinkPlanner.validate(insert)
         // transform to a relational tree
-        val relational = flinkPlanner.rel(validated)
+        val relational:LogicalTableModify = flinkPlanner.rel(validated).rel
+            .asInstanceOf[LogicalTableModify]
 
         // get query result as Table
-        val queryResult = new Table(this, LogicalRelNode(relational.rel))
+        val queryResult = new Table(this, LogicalRelNode(relational.getInput(0)))
 
         // get name of sink table
-        val targetTableName = insert.getTargetTable.asInstanceOf[SqlIdentifier].names.get(0)
+        val targetTable = relational.getTable
 
         // set emit configs
         val emit = insert.getEmit
@@ -863,12 +884,11 @@ abstract class TableEnvironment(val config: TableConfig) {
         }
 
         // insert query result into sink table
-        if (targetTableName.equalsIgnoreCase("console")) {
-          queryResult.writeToSink(new PrintTableSink(getConfig.getTimeZone), config)
-        } else {
-          // insert query result into sink table
-          insertInto(queryResult, targetTableName, config)
-        }
+        insertInto(
+            queryResult,
+            targetTable.unwrap(classOf[schema.Table]),
+            StringUtils.join(targetTable.getQualifiedName, ","),
+            config)
       case _ =>
         throw new TableException(
           "Unsupported SQL query! sqlUpdate() only accepts SQL statements of type INSERT.")
@@ -915,66 +935,79 @@ abstract class TableEnvironment(val config: TableConfig) {
     if (!isRegistered(sinkTableName)) {
       throw TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
     }
+    val targetTable = getTable(sinkTableName)
 
-    getSinkTable(sinkTableName) match {
-      case s: TableSinkTable[_] =>
-        val tableSink = s.tableSink
-        // validate schema of source table and table sink
-        val srcFieldTypes = table.getSchema.getTypes
-        val sinkFieldTypes = tableSink.getFieldTypes.map(DataTypes.internal)
+    insertInto(table, targetTable, sinkTableName, conf)
+  }
 
-        val srcFieldNames = table.getSchema.getColumnNames
-        val sinkFieldNames = tableSink.getFieldNames
-
-        val srcNameTypes = srcFieldNames.zip(srcFieldTypes)
-        val sinkNameTypes = sinkFieldNames.zip(sinkFieldTypes)
-
-        def typeMatch(t1: InternalType, t2: InternalType): Boolean = {
-          t1 == t2 ||
-            (t1.isInstanceOf[DateType] && t2.isInstanceOf[DateType]) ||
-            (t1.isInstanceOf[TimestampType] && t2.isInstanceOf[TimestampType])
-        }
-
-        if (srcFieldTypes.length != sinkFieldTypes.length) {
-          // format table and table sink schema strings
-          val srcSchema = srcNameTypes
-            .map{ case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-            .mkString("[", ", ", "]")
-
-          val sinkSchema = sinkNameTypes
-            .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-            .mkString("[", ", ", "]")
-
-          throw ValidationException(
-            TableErrors.INST.sqlInsertIntoMismatchedFieldLen(
-              sinkTableName, srcSchema, sinkSchema))
-        } else if(srcFieldTypes.zip(sinkFieldTypes)
-          .exists {
-            case (_: GenericType[_], _: GenericType[_]) => false
-            case (srcF, snkF) => !typeMatch(srcF, snkF)}
-        ) {
-          val diffNameTypes = srcNameTypes.zip(sinkNameTypes)
-            .filter {
-              case ((_, srcType), (_, sinkType)) => !typeMatch(srcType, sinkType)}
-          val srcDiffMsg = diffNameTypes
-            .map(_._1)
-            .map{ case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-            .mkString("[", ", ", "]")
-          val sinkDiffMsg = diffNameTypes
-            .map(_._2)
-            .map{ case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-            .mkString("[", ", ", "]")
-
-          throw ValidationException(
-            TableErrors.INST.sqlInsertIntoMismatchedFieldTypes(
-              sinkTableName, srcDiffMsg, sinkDiffMsg))
-        }
-
-        // emit the table to the configured table sink
-        writeToSink(table, tableSink, conf, sinkTableName)
+  private def insertInto(
+      sourceTable: Table,
+      targetTable: schema.Table,
+      targetTableName: String,
+      conf: QueryConfig) = {
+    val tableSink = targetTable match {
+      case s: CatalogTable => s.tableSink
+      case s: TableSinkTable[_] => s.tableSink
       case _ =>
-        throw TableException(TableErrors.INST.sqlNotTableSinkError(sinkTableName))
+        throw TableException(TableErrors.INST.sqlNotTableSinkError(targetTableName))
+
     }
+
+    // validate schema of source table and table sink
+    val srcFieldTypes = sourceTable.getSchema.getTypes
+    val sinkFieldTypes = tableSink.getFieldTypes.map(DataTypes.internal)
+
+    val srcFieldNames = sourceTable.getSchema.getColumnNames
+    val sinkFieldNames = tableSink.getFieldNames
+
+    val srcNameTypes = srcFieldNames.zip(srcFieldTypes)
+    val sinkNameTypes = sinkFieldNames.zip(sinkFieldTypes)
+
+    def typeMatch(t1: InternalType, t2: InternalType): Boolean = {
+      t1 == t2 ||
+          (t1.isInstanceOf[DateType] && t2.isInstanceOf[DateType]) ||
+          (t1.isInstanceOf[TimestampType] && t2.isInstanceOf[TimestampType])
+    }
+
+    if (srcFieldTypes.length != sinkFieldTypes.length) {
+      // format table and table sink schema strings
+      val srcSchema = srcNameTypes
+          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+          .mkString("[", ", ", "]")
+
+      val sinkSchema = sinkNameTypes
+          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+          .mkString("[", ", ", "]")
+
+      throw ValidationException(
+        TableErrors.INST.sqlInsertIntoMismatchedFieldLen(
+          targetTableName, srcSchema, sinkSchema))
+    } else if (srcFieldTypes.zip(sinkFieldTypes)
+        .exists {
+          case (_: GenericType[_], _: GenericType[_]) => false
+          case (srcF, snkF) => !typeMatch(srcF, snkF)
+        }
+    ) {
+      val diffNameTypes = srcNameTypes.zip(sinkNameTypes)
+          .filter {
+            case ((_, srcType), (_, sinkType)) => !typeMatch(srcType, sinkType)
+          }
+      val srcDiffMsg = diffNameTypes
+          .map(_._1)
+          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+          .mkString("[", ", ", "]")
+      val sinkDiffMsg = diffNameTypes
+          .map(_._2)
+          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+          .mkString("[", ", ", "]")
+
+      throw ValidationException(
+        TableErrors.INST.sqlInsertIntoMismatchedFieldTypes(
+          targetTableName, srcDiffMsg, sinkDiffMsg))
+    }
+
+    // emit the table to the configured table sink
+    writeToSink(sourceTable, tableSink, conf, targetTableName)
   }
 
   /**
@@ -1041,36 +1074,6 @@ abstract class TableEnvironment(val config: TableConfig) {
       if (schema != null) {
         val tableName = tablePath(tablePath.length - 1)
         schema.getTable(tableName)
-      } else {
-        null
-      }
-    }
-  }
-
-  private[flink] def getSinkTable(tablePath: String*): org.apache.calcite.schema.Table = {
-    require(tablePath != null && tablePath.nonEmpty, "tablePath must not be null or empty.")
-    if (tablePath.length == 1) {
-      // First, try to get the SINK table directly from the memory
-      var table = rootSchema.getTable(tablePath.head)
-
-      // Second, try to get the table from the external catalog
-      if (null == table) {
-        val externalCatalog = getRegisteredExternalCatalog(DEFAULT_SCHEMA)
-        val externalTable = externalCatalog.getTable(tablePath.head)
-        table = ExternalTableSinkUtil.convertExternalCatalogTableToSinkTable(
-          tablePath.head, externalTable)
-      }
-      table
-    } else {
-      // table in external catalog
-      val rootCatalog = getRegisteredExternalCatalog(tablePath.head)
-      val leafCatalog = tablePath.slice(1, tablePath.length - 1).foldLeft(rootCatalog) {
-        case (parentCatalog, name) => parentCatalog.getSubCatalog(name)
-      }
-      if (leafCatalog != null) {
-        val tableName = tablePath(tablePath.length - 1)
-        val externalTable = leafCatalog.getTable(tableName)
-        ExternalTableSinkUtil.convertExternalCatalogTableToSinkTable(tableName, externalTable)
       } else {
         null
       }

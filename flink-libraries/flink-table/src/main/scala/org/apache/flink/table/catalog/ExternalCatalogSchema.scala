@@ -25,6 +25,7 @@ import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelProtoD
 import org.apache.calcite.schema._
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.table.api.{CatalogNotExistException, ExternalCatalogAlreadyExistException, FunctionAlreadyExistException, TableNotExistException}
+import org.apache.flink.table.plan.schema.CatalogTable
 import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
@@ -40,7 +41,8 @@ import scala.collection.JavaConverters._
   */
 class ExternalCatalogSchema(
     catalogIdentifier: String,
-    catalog: ExternalCatalog) extends Schema with Logging {
+    catalog: ExternalCatalog,
+    isStreaming: Boolean) extends Schema with Logging {
 
   /**
     * Looks up a sub-schema by the given sub-schema name in the external catalog.
@@ -52,7 +54,7 @@ class ExternalCatalogSchema(
   override def getSubSchema(name: String): Schema = {
     try {
       val db = catalog.getSubCatalog(name)
-      new ExternalCatalogSchema(name, db)
+      new ExternalCatalogSchema(name, db, isStreaming)
     } catch {
       case _: CatalogNotExistException =>
         LOG.warn(s"Sub-catalog $name does not exist in externalCatalog $catalogIdentifier")
@@ -77,7 +79,7 @@ class ExternalCatalogSchema(
     */
   override def getTable(name: String): Table = try {
     val externalCatalogTable = catalog.getTable(name)
-    ExternalTableSourceUtil.fromExternalCatalogTable(externalCatalogTable)
+    new  CatalogTable(name, externalCatalogTable, isStreaming)
   } catch {
     case TableNotExistException(table, _, _) => {
       LOG.warn(s"Table $table does not exist in externalCatalog $catalogIdentifier")
@@ -129,12 +131,14 @@ object ExternalCatalogSchema {
   def registerCatalog(
       parentSchema: SchemaPlus,
       externalCatalogIdentifier: String,
-      externalCatalog: ExternalCatalog): Unit = synchronized {
+      externalCatalog: ExternalCatalog,
+      isStreaming: Boolean): Unit = synchronized {
     parentSchema.getSubSchema(externalCatalogIdentifier) match {
       case _: SchemaPlus =>
         throw new ExternalCatalogAlreadyExistException(externalCatalogIdentifier)
       case _ => {
-        val newSchema = new ExternalCatalogSchema(externalCatalogIdentifier, externalCatalog)
+        val newSchema = new ExternalCatalogSchema(
+          externalCatalogIdentifier, externalCatalog, isStreaming)
         val schemaPlusOfNewSchema = parentSchema.add(externalCatalogIdentifier, newSchema)
         newSchema.registerSubSchemas(schemaPlusOfNewSchema)
       }

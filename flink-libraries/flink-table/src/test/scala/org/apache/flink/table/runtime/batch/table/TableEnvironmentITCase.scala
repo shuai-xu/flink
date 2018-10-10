@@ -143,6 +143,18 @@ class TableEnvironmentITCase extends QueryTest {
     val expected = List("1,1,Hi", "2,2,Hello", "3,2,Hello world")
     assertEquals(expected.sorted, MemoryTableSinkUtil.results.sorted)
   }
+
+  @Test
+  def testSinkToConsole(): Unit = {
+    val data = List(
+      SomeCaseClass("Peter", 28, 4000.00, "Sales"),
+      SomeCaseClass("Anna", 56, 10000.00, "Engineering"),
+      SomeCaseClass("Lucy", 42, 6000.00, "HR"))
+
+    tEnv.registerTable("s", tEnv.fromCollection(data, "a, b, c, d"))
+    tEnv.sqlUpdate("insert into console select * from s")
+    tEnv.execute()
+  }
 }
 
 object TableEnvironmentITCase {

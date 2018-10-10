@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec

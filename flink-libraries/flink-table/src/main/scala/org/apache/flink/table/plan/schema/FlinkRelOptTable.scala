@@ -25,16 +25,16 @@ import org.apache.calcite.adapter.enumerable.EnumerableTableScan
 import org.apache.calcite.linq4j.tree.Expression
 import org.apache.calcite.plan.RelOptTable.ToRelContext
 import org.apache.calcite.plan.{RelOptCluster, RelOptSchema, RelOptTable}
+import org.apache.calcite.prepare.Prepare.AbstractPreparingTable
 import org.apache.calcite.prepare.{CalcitePrepareImpl, RelOptTableImpl}
-import org.apache.calcite.prepare.Prepare.PreparingTable
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.runtime.Hook
-import org.apache.calcite.schema.{ColumnStrategy, StreamableTable, TemporalTable, TranslatableTable}
+import org.apache.calcite.schema._
 import org.apache.calcite.sql.SqlAccessType
 import org.apache.calcite.sql.validate.{SqlModality, SqlMonotonicity}
-import org.apache.calcite.sql2rel.InitializerContext
+import org.apache.calcite.sql2rel.{InitializerContext, NullInitializerExpressionFactory}
 import org.apache.calcite.util.{ImmutableBitSet, Util}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.stats.FlinkStatistic
@@ -55,7 +55,7 @@ class FlinkRelOptTable protected(
     schema: RelOptSchema,
     rowType: RelDataType,
     names: JList[String],
-    table: FlinkTable) extends PreparingTable {
+    table: FlinkTable) extends AbstractPreparingTable {
 
   // Default value of rowCount if there is no available stats.
   // Sets a bigger default value to avoid broadcast join.
@@ -88,18 +88,22 @@ class FlinkRelOptTable protected(
     None
   }
 
+  lazy val initializerExpressionFactory = new NullInitializerExpressionFactory() {
+    override def generationStrategy(table:RelOptTable, iColumn: Int):ColumnStrategy = {
+      table.unwrap(classOf[CatalogTable]) match {
+        case catalogTable: CatalogTable if
+            !catalogTable.table.richTableSchema.getColumnNames.contains(
+                table.getRowType.getFieldList.get(iColumn).getName) =>
+          ColumnStrategy.VIRTUAL
+        case _ =>
+          super.generationStrategy(table, iColumn)
+      }
+    }
+  }
+
   def copy(newTable: FlinkTable, newRowType: RelDataType): FlinkRelOptTable =
     new FlinkRelOptTable(schema, newRowType, names, newTable)
 
-
-  /**
-    * Extends a table with the given extra fields, which is not supported now.
-    *
-    * @param extendedFields
-    * @return
-    */
-  override def extend(extendedFields: JList[RelDataTypeField]): RelOptTable =
-    throw new UnsupportedOperationException
 
   /**
     * Obtains an identifier for this table.
@@ -145,6 +149,8 @@ class FlinkRelOptTable protected(
       clazz.cast(this)
     } else if (clazz.isInstance(table)) {
       clazz.cast(table)
+    } else if (clazz.isInstance(initializerExpressionFactory)) {
+      clazz.cast(initializerExpressionFactory)
     } else {
       null.asInstanceOf[T]
     }
@@ -318,7 +324,7 @@ class FlinkRelOptTable protected(
     */
   def getFlinkStatistic: FlinkStatistic = {
     if (table.getStatistic != null) {
-      table.getStatistic.asInstanceOf[FlinkStatistic]
+      table.getStatistic
     } else {
       FlinkStatistic.UNKNOWN
     }
@@ -326,6 +332,12 @@ class FlinkRelOptTable protected(
 
   override def getColumnStrategies: JList[ColumnStrategy] = RelOptTableImpl.columnStrategies(this)
 
+  override def extend(extendedTable: Table) =
+    throw new RuntimeException("Extending column not supported")
+
+  override def config(qualifiedNames: JList[String], configuredTable: Table) =
+    new FlinkRelOptTable(
+      schema, getRowType, qualifiedNames, configuredTable.asInstanceOf[FlinkTable])
 }
 
 object FlinkRelOptTable {

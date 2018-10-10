@@ -172,11 +172,15 @@ public class MetaConverter {
 				tableType,
 				tableSchema,
 				table.getParameters(),
+				null,
 				tableStats,
 				table.getDbName() + "." + table.getTableName(),
 				getPartitionColumnNames(table.getPartitionKeys()),
 				table.getPartitionKeys() != null
 						&& table.getPartitionKeys().size() > 0,
+				null,
+				null,
+				null,
 				table.getCreateTime() * 1000L,
 				table.getLastAccessTime() * 1000L);
 	}

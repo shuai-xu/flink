@@ -66,8 +66,8 @@ class InsertIntoValidationTest {
     tEnv.sqlUpdate(sql)
   }
 
-  @Test(expected = classOf[ValidationException])
-  def testUnsupportedPartialInsert(): Unit = {
+  @Test
+  def testPartialInsert(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
 
@@ -80,8 +80,7 @@ class InsertIntoValidationTest {
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     val sql = "INSERT INTO targetTable (d, f) SELECT a, c FROM sourceTable"
-
-    // must fail because we don't support partial insert yet.
+    tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.sqlUpdate(sql)
   }
 }

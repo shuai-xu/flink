@@ -60,8 +60,8 @@ class InsertIntoValidationTest extends TableTestBatchExecBase {
     util.tableEnv.sqlUpdate(sql)
   }
 
-  @Test(expected = classOf[ValidationException])
-  def testUnsupportedPartialInsert(): Unit = {
+  @Test
+  def testPartialInsert(): Unit = {
     val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("sourceTable", 'a, 'b, 'c)
 

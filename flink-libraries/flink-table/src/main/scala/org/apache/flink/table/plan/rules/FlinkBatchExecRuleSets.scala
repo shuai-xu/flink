@@ -272,7 +272,11 @@ object FlinkBatchExecRuleSets {
             //ensure except set operator have the same row type
             new CoerceInputsRule(classOf[LogicalMinus], false),
             MergeMultiEqualsToInRule.INSTANCE,
-            MergeMultiNotEqualsToNotInRule.INSTANCE
+            MergeMultiNotEqualsToNotInRule.INSTANCE,
+
+            // rules to convert catalog table to normal table.
+            CatalogTableRules.BATCH_TABLE_SCAN_RULE,
+            CatalogTableRules.DIM_TABLE_SCAN_RULE
           )).asJava)
 
   val BATCH_EXEC_WINDOW_RULES: RuleSet = RuleSets.ofList(

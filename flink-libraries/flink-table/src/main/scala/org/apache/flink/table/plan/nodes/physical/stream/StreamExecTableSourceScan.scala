@@ -20,19 +20,16 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
-import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{StreamTableSource, TableSourceUtil}
 import org.apache.flink.table.types.DataTypes
-import org.apache.flink.table.typeutils.TypeUtils
 
 /** Flink RelNode to read data from an external source defined by a [[StreamTableSource]]. */
 class StreamExecTableSourceScan(

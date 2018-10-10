@@ -26,24 +26,42 @@ import org.apache.flink.sql.parser.ddl.SqlTableColumn;
 import org.apache.flink.sql.parser.impl.FlinkSqlParserImpl;
 import org.apache.flink.sql.parser.plan.FlinkPlannerImpl;
 import org.apache.flink.sql.parser.plan.SqlParseException;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.Column;
 import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.TableSchemaBuilder;
+import org.apache.flink.table.catalog.ExternalCatalogTable;
+import org.apache.flink.table.client.gateway.SqlExecutionException;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.errorcode.TableErrors;
 import org.apache.flink.table.functions.UserDefinedFunction;
+import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
+import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.StreamTableSource;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.DecimalType;
 import org.apache.flink.table.types.GenericType;
 import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.util.WatermarkUtils;
+import org.apache.flink.util.StringUtils;
 
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.Lex;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlProperty;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.tools.FrameworkConfig;
@@ -57,11 +75,73 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import scala.collection.JavaConverters;
+
 /**
  * Util to transform a sql context (a sequence of sql statements) into a flink job.
  */
 public class SqlJobUtil {
 	private static final Logger LOG = LoggerFactory.getLogger(SqlJobUtil.class);
+
+	/**
+	 * Register an external table to table environment.
+	 * @param tableEnv     table environment
+	 * @param sqlNodeInfo  external table defined in ddl.
+	 */
+	public static void registerExternalTable(TableEnvironment tableEnv, SqlNodeInfo sqlNodeInfo) {
+		final SqlCreateTable sqlCreateTable = (SqlCreateTable) sqlNodeInfo.getSqlNode();
+		final String tableName = sqlCreateTable.getTableName().toString();
+
+		// set with properties
+		SqlNodeList propertyList = sqlCreateTable.getPropertyList();
+		Map<String, String> properties = new HashMap<>();
+		for (SqlNode sqlNode : propertyList) {
+			SqlProperty sqlProperty = (SqlProperty) sqlNode;
+			properties.put(
+					sqlProperty.getKeyString(), sqlProperty.getValueString());
+		}
+		String tableType = properties.get("type");
+		if (StringUtils.isNullOrWhitespaceOnly(tableType)) {
+			throw new SqlExecutionException("The type of CREATE TABLE is null");
+		}
+
+		TableSchema tableSchema = SqlJobUtil.getTableSchema(tableEnv, sqlCreateTable);
+
+		List<RexNode> exprList = SqlJobUtil.getComputedColumns(tableEnv, sqlCreateTable);
+		Map<String, RexNode> computedColumns = null;
+		if (exprList != null) {
+			computedColumns = new HashMap<>();
+			for (int i = 0; i < tableSchema.getColumns().length; i++) {
+				computedColumns.put(tableSchema.getColumnName(i), exprList.get(i));
+			}
+		}
+
+		String rowtimeField = null;
+		long offset = -1;
+		if (sqlCreateTable.getWatermark() != null) {
+			rowtimeField = sqlCreateTable.getWatermark().getColumnName().toString();
+			offset = WatermarkUtils.getWithOffsetParameters(
+					rowtimeField, sqlCreateTable.getWatermark().getFunctionCall());
+		}
+
+		long now = System.currentTimeMillis();
+		ExternalCatalogTable externalCatalogTable = new ExternalCatalogTable(
+				tableType,
+				tableSchema,
+				properties,
+				SqlJobUtil.createBlinkTableSchema(sqlCreateTable),
+				null,
+				"SQL Client Table",  // TODO We don't have a table comment from DDL
+				null,
+				false,
+				computedColumns,
+				rowtimeField,
+				offset,
+				now,
+				now);
+		tableEnv.registerExternalTable(
+				null, tableName, externalCatalogTable, true);
+	}
 
 	/**
 	 * Configuration for sql parser.
@@ -304,6 +384,131 @@ public class SqlJobUtil {
 			default:
 				LOG.warn("Unsupported sql column type: {}", type);
 				throw new IllegalArgumentException("Unsupported sql column type " + type + " !");
+		}
+	}
+
+	public static List<RexNode> getComputedColumns(
+			TableEnvironment tEnv, SqlCreateTable sqlCreateTable) {
+
+		RichTableSchema richTableSchema = createBlinkTableSchema(sqlCreateTable);
+		if (!sqlCreateTable.containsComputedColumn()) {
+			return null;
+		}
+		TableSchema originalSchema = new TableSchema(
+				richTableSchema.getColumnNames(),
+				richTableSchema.getColumnTypes(),
+				richTableSchema.getNullables());
+
+		String name = tEnv.createUniqueTableName();
+		tEnv.registerTableSource(
+				name, new MockTableSource(name, originalSchema));
+		String viewSql = "select " + sqlCreateTable.getColumnSqlString() + " from " + name;
+		Table viewTable = tEnv.sqlQuery(viewSql);
+
+		LogicalProject project = (LogicalProject) viewTable.getRelNode();
+		List<RexNode> exprs = project.getProjects();
+		return exprs;
+	}
+
+	public static TableSchema getTableSchema(TableEnvironment tEnv, SqlCreateTable sqlCreateTable) {
+		RichTableSchema richTableSchema = createBlinkTableSchema(sqlCreateTable);
+		String rowtimeField = null;
+		if (sqlCreateTable.getWatermark() != null) {
+			rowtimeField = sqlCreateTable.getWatermark().getColumnName().toString();
+		}
+
+		TableSchemaBuilder builder = TableSchema.builder();
+		if (sqlCreateTable.containsComputedColumn()) {
+			TableSchema originalSchema = new TableSchema(
+					richTableSchema.getColumnNames(),
+					richTableSchema.getColumnTypes(),
+					richTableSchema.getNullables());
+
+			String name = tEnv.createUniqueTableName();
+			tEnv.registerTableSource(
+					name, new MockTableSource(name, originalSchema));
+			String viewSql = "select " + sqlCreateTable.getColumnSqlString() + " from " + name;
+			Table viewTable = tEnv.sqlQuery(viewSql);
+
+			TableSchema schemaWithComputedColumn = viewTable.getSchema();
+
+			for (int i = 0; i < schemaWithComputedColumn.getColumns().length; i++) {
+				Column col = schemaWithComputedColumn.getColumn(i);
+				if (col.name().equals(rowtimeField)) {
+					builder.field(
+							rowtimeField,
+							DataTypes.ROWTIME_INDICATOR,
+							false);
+				} else {
+					builder.field(
+							col.name(),
+							col.internalType(),
+							col.isNullable());
+				}
+			}
+		} else {
+			for (int i = 0; i < richTableSchema.getColumnNames().length; i++) {
+				if (richTableSchema.getColumnNames()[i].equals(rowtimeField)) {
+					builder.field(rowtimeField, DataTypes.ROWTIME_INDICATOR, false);
+				} else {
+					builder.field(
+							richTableSchema.getColumnNames()[i],
+							richTableSchema.getColumnTypes()[i],
+							richTableSchema.getNullables()[i]);
+				}
+			}
+		}
+
+		builder.primaryKey(
+				JavaConverters.asScalaIteratorConverter(
+						richTableSchema.getPrimaryKeys().iterator()).asScala().toSeq());
+		for (List<String> uniqueKey: richTableSchema.getUniqueKeys()) {
+			builder.primaryKey(
+					JavaConverters.asScalaIteratorConverter(
+							uniqueKey.iterator()).asScala().toSeq());
+		}
+		return builder.build();
+	}
+
+	private static class MockTableSource
+			implements BatchExecTableSource<BaseRow>, StreamTableSource<BaseRow> {
+
+		private String name;
+		private TableSchema schema;
+
+		public MockTableSource(String name, TableSchema tableSchema) {
+			this.name = name;
+			this.schema = tableSchema;
+		}
+
+		@Override
+		public DataStream<BaseRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
+			return null;
+		}
+
+		@Override
+		public DataType getReturnType() {
+			return DataTypes.createRowType(schema.getTypes(), schema.getColumnNames());
+		}
+
+		@Override
+		public TableSchema getTableSchema() {
+			return schema;
+		}
+
+		@Override
+		public String explainSource() {
+			return name;
+		}
+
+		@Override
+		public TableStats getTableStats() {
+			return null;
+		}
+
+		@Override
+		public DataStream<BaseRow> getDataStream(StreamExecutionEnvironment execEnv) {
+			return null;
 		}
 	}
 }

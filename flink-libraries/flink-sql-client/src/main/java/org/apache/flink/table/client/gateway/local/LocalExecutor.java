@@ -33,14 +33,11 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
-import org.apache.flink.sql.parser.ddl.SqlProperty;
 import org.apache.flink.sql.parser.plan.SqlParseException;
 import org.apache.flink.table.api.QueryConfig;
-import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Environment;
@@ -58,8 +55,6 @@ import org.apache.flink.table.client.utils.SqlJobUtil;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.StringUtils;
 
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
 import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -315,42 +310,7 @@ public class LocalExecutor implements Executor {
 			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
 			for (SqlNodeInfo sqlNodeInfo : sqlNodeList) {
 				if (sqlNodeInfo.getSqlNode() instanceof SqlCreateTable) {
-					final SqlCreateTable sqlCreateTable = (SqlCreateTable) sqlNodeInfo.getSqlNode();
-					final String tableName = sqlCreateTable.getTableName().toString();
-
-					// set with properties
-					SqlNodeList propertyList = sqlCreateTable.getPropertyList();
-					Map<String, String> properties = new HashMap<>();
-					for (SqlNode sqlNode : propertyList) {
-						SqlProperty sqlProperty = (SqlProperty) sqlNode;
-						properties.put(
-							sqlProperty.getKeyString(), sqlProperty.getValueString());
-					}
-					String tableType = properties.get("type");
-					if (StringUtils.isNullOrWhitespaceOnly(tableType)) {
-						throw new SqlExecutionException("The type of CREATE TABLE is null");
-					}
-
-					RichTableSchema richTableSchema = SqlJobUtil.createBlinkTableSchema(sqlCreateTable);
-
-					TableSchema tableSchema = new TableSchema(
-						richTableSchema.getColumnNames(),
-						richTableSchema.getColumnTypes(),
-						richTableSchema.getNullables());
-
-					long now = System.currentTimeMillis();
-					ExternalCatalogTable externalCatalogTable = new ExternalCatalogTable(
-						tableType,
-						tableSchema,
-						properties,
-						null,
-						"SQL Client Table",  // TODO We don't have a table comment from DDL
-						null,
-						false,
-						now,
-						now);
-					tableEnv.registerExternalTable(
-						null, tableName, externalCatalogTable, true);
+					SqlJobUtil.registerExternalTable(tableEnv, sqlNodeInfo);
 				}
 			}
 		} catch (SqlParseException e) {

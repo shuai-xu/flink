@@ -42,7 +42,7 @@ class BatchExecJoinTableRule extends ConverterRule(
     val cluster = join.getCluster
     val tableSource = join.tableSource
     val flinkTypeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    val tableSourceRowType = flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema)
+    val tableSourceRowType = flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, false)
     var requiredTraitSet = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
 
     // if partitioning enabled, use the join key as partition key

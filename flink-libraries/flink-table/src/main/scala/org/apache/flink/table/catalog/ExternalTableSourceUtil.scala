@@ -39,6 +39,7 @@ import scala.collection.mutable
   */
 object ExternalTableSourceUtil extends Logging {
 
+
   // config file to specify scan package to search TableSourceConverter
   private val tableSourceConverterConfigFileName = "tableSourceConverter.properties"
 
@@ -89,36 +90,51 @@ object ExternalTableSourceUtil extends Logging {
   }
 
   /**
-    * Converts an [[ExternalCatalogTable]] instance to a [[TableSourceTable]] instance
-    *
-    * @param externalCatalogTable the [[ExternalCatalogTable]] instance which to convert
-    * @return converted [[TableSourceTable]] instance from the input catalog table
-    */
-  def fromExternalCatalogTable(externalCatalogTable: ExternalCatalogTable): TableSourceTable = {
+   * Converts an [[ExternalCatalogTable]] instance to a [[TableSourceTable]] instance
+   *
+   * @param externalCatalogTable the [[ExternalCatalogTable]] instance which to convert
+   * @return converted [[TableSourceTable]] instance from the input catalog table
+   */
+  def toTableSource(externalCatalogTable: ExternalCatalogTable): Option[TableSource] = {
     val tableType = externalCatalogTable.tableType
     val propertyKeys = externalCatalogTable.properties.keySet()
     tableTypeToTableSourceConvertersClazz.get(tableType) match {
       case Some(converterClasses) =>
         val matchedConverters = converterClasses.map(InstantiationUtil.instantiate(_))
         if (matchedConverters.isEmpty) {
-          LOG.error(s"Cannot find any TableSourceConverter binded to table type [$tableType]. " +
-            s"Register TableSourceConverter via externalCatalogTable.properties file.")
-          throw new NoMatchedTableSourceConverterException(tableType)
+          LOG.warn(s"Cannot find any TableSourceConverter binded to table type [$tableType]. " +
+              s"Register TableSourceConverter via externalCatalogTable.properties file.")
+          None
         }
         val filteredMatchedConverters = matchedConverters.filter(
           converter => propertyKeys.containsAll(converter.requiredProperties))
         if (filteredMatchedConverters.isEmpty) {
-          LOG.error(s"Cannot find any matched TableSourceConverter for type [$tableType], " +
-            s"because the required properties does not match.")
-          throw new NoMatchedTableSourceConverterException(tableType)
+          LOG.warn(s"Cannot find any matched TableSourceConverter for type [$tableType], " +
+              s"because the required properties does not match.")
+          None
         } else if (filteredMatchedConverters.size > 1) {
-          LOG.error(s"Finds more than one matched TableSourceConverter for type [$tableType], " +
-            s"they are ${filteredMatchedConverters.map(_.getClass.getName)}")
-          throw new AmbiguousTableSourceConverterException(tableType)
+          LOG.warn(s"Finds more than one matched TableSourceConverter for type [$tableType], " +
+              s"they are ${filteredMatchedConverters.map(_.getClass.getName)}")
+          None
         } else {
-          val convertedTableSource: TableSource = filteredMatchedConverters.head
-            .fromExternalCatalogTable(externalCatalogTable)
-            .asInstanceOf[TableSource]
+          Some(filteredMatchedConverters.head
+              .fromExternalCatalogTable(externalCatalogTable)
+              .asInstanceOf[TableSource])
+        }
+      case None =>
+        None
+    }
+  }
+
+  /**
+    * Converts an [[ExternalCatalogTable]] instance to a [[TableSourceTable]] instance
+    *
+    * @param externalCatalogTable the [[ExternalCatalogTable]] instance which to convert
+    * @return converted [[TableSourceTable]] instance from the input catalog table
+    */
+  def fromExternalCatalogTable(externalCatalogTable: ExternalCatalogTable): TableSourceTable = {
+    toTableSource(externalCatalogTable) match {
+      case Some(tableSource:TableSource) => {
           // TODO introduce uniqueKeys information
           val flinkStatistic: FlinkStatistic =
           if (externalCatalogTable.isPartitioned) {
@@ -129,7 +145,7 @@ object ExternalTableSourceUtil extends Logging {
               FlinkStatistic.UNKNOWN
           }
 
-          convertedTableSource match {
+          tableSource match {
             case s: StreamTableSource[_] => new StreamTableSourceTable(s, flinkStatistic)
             case s: BatchExecTableSource[_] => new BatchTableSourceTable(s, flinkStatistic)
             case s: DimensionTableSource[_] if s.isTemporal =>
@@ -139,9 +155,10 @@ object ExternalTableSourceUtil extends Logging {
           }
         }
       case None =>
-        LOG.error(s"Cannot find any TableSourceConverter binded to table type [$tableType]. " +
-          s"Register TableSourceConverter via externalCatalogTable.properties file.")
-        throw new NoMatchedTableSourceConverterException(tableType)
+        LOG.error(s"Cannot find any TableSourceConverter binded " +
+            s"to table type [${externalCatalogTable.tableType}]. " +
+            s"Register TableSourceConverter via externalCatalogTable.properties file.")
+        throw new NoMatchedTableSourceConverterException(externalCatalogTable.tableType)
     }
   }
 

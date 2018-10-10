@@ -38,6 +38,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
+import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
@@ -880,4 +881,8 @@ class BatchTableEnvironment(
   }
 
   def getRUKeeper(): RunningUnitKeeper = ruKeeper
+
+  override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
+    registerExternalCatalogInternal(name, externalCatalog, false)
+  }
 }

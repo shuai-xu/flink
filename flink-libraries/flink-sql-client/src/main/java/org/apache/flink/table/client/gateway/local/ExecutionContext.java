@@ -28,7 +28,6 @@ import org.apache.flink.client.deployment.ClusterDescriptor;
 import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.externalcatalog.hive.HiveExternalCatalog;
 import org.apache.flink.optimizer.plan.FlinkPlan;
 import org.apache.flink.runtime.execution.librarycache.FlinkUserCodeClassLoaders;
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -39,6 +38,7 @@ import org.apache.flink.table.api.BatchQueryConfig;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.catalog.InMemoryExternalCatalog;
 import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Deployment;
 import org.apache.flink.table.client.config.Environment;
@@ -49,7 +49,6 @@ import org.apache.flink.util.FlinkException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.apache.hadoop.hive.conf.HiveConf;
 
 import java.net.URL;
 import java.util.List;
@@ -257,15 +256,10 @@ public class ExecutionContext<T> {
 			// create query config
 			queryConfig = createQueryConfig();
 
-			// register external catalog as default
-			HiveConf hiveConf = new HiveConf();
-			// TODO pass these from the configurations
-			hiveConf.setBoolVar(HiveConf.ConfVars.METASTORE_SCHEMA_VERIFICATION, false);
-			hiveConf.setBoolean("datanucleus.schema.autoCreateTables", true);
-			hiveConf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, "file:///tmp/hive");
+			// TODO: use hive catalog when storing ExternalCatalogTable supported.
 			tableEnv.registerExternalCatalog(
-					tableEnv.DEFAULT_SCHEMA(), new HiveExternalCatalog(
-						HiveExternalCatalog.DEFAULT, hiveConf));
+					tableEnv.DEFAULT_SCHEMA(),
+					new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA()));
 		}
 
 		public QueryConfig getQueryConfig() {

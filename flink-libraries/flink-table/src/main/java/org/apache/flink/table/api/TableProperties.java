@@ -27,6 +27,10 @@ import java.util.Map;
  */
 public class TableProperties extends Configuration {
 
+	public static final String BLINK_ENVIRONMENT_TYPE_KEY = "blinkEnvironmentTypeKey";
+	public static final String BLINK_ENVIRONMENT_STREAM_VALUE = "stream";
+	public static final String BLINK_ENVIRONMENT_BATCHEXEC_VALUE = "batchExec";
+
 	/**
 	 * Returns a new TableProperties with lower case keys.
 	 */

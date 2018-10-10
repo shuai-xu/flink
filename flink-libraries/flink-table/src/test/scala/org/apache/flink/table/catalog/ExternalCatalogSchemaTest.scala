@@ -28,8 +28,9 @@ import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.sql.validate.SqlMonikerType
 import org.apache.flink.table.api.ExternalCatalogAlreadyExistException
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.plan.schema.TableSourceTable
+import org.apache.flink.table.plan.schema.CatalogTable
 import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.sources.{BatchExecTableSource, TableSource}
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.junit.Assert._
 import org.junit.{Before, Test}
@@ -48,7 +49,7 @@ class ExternalCatalogSchemaTest {
   def setUp(): Unit = {
     val rootSchemaPlus: SchemaPlus = CalciteSchema.createRootSchema(true, false).plus()
     val catalog = CommonTestData.getInMemoryTestCatalog
-    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog)
+    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog, false)
     externalCatalogSchema = rootSchemaPlus.getSubSchema("schemaName")
     val typeFactory = new FlinkTypeFactory(new FlinkTypeSystem())
     val prop = new Properties()
@@ -66,8 +67,8 @@ class ExternalCatalogSchemaTest {
   def testDuplicatedRegisterCatalog(): Unit = {
     val rootSchemaPlus: SchemaPlus = CalciteSchema.createRootSchema(true, false).plus()
     val catalog = CommonTestData.getInMemoryTestCatalog
-    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog)
-    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog)
+    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog, true)
+    ExternalCatalogSchema.registerCatalog(rootSchemaPlus, schemaName, catalog, true)
   }
 
   @Test
@@ -85,13 +86,8 @@ class ExternalCatalogSchemaTest {
   def testGetTable(): Unit = {
     val relOptTable = calciteCatalogReader.getTable(Lists.newArrayList(schemaName, db, tb))
     assertNotNull(relOptTable)
-    val tableSourceTable = relOptTable.unwrap(classOf[TableSourceTable])
-    tableSourceTable match {
-      case tst: TableSourceTable =>
-        assertTrue(tst.tableSource.isInstanceOf[CsvTableSource])
-      case _ =>
-        fail("unexpected table type!")
-    }
+    val table = relOptTable.unwrap(classOf[CatalogTable])
+    assertTrue(table.batchTableSource.isInstanceOf[CsvTableSource])
   }
 
   @Test

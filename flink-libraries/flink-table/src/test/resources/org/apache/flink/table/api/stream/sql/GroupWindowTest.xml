@@ -20,9 +20,9 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS EXPR$0, CAST(/(-($f3, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1)))) AS EXPR$1, CAST(POWER(/(-($f4, /(*(CAST($f1), CAST($f1)), $f2)), $f2), 0.5)) AS EXPR$2, CAST(POWER(/(-($f5, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1))), 0.5)) AS EXPR$3, w$start AS EXPR$4, w$end AS EXPR$5])
-  StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[SUM($f3) AS $f0, SUM(c) AS $f1, COUNT(c) AS $f2, SUM($f5) AS $f3, SUM($f7) AS $f4, SUM($f9) AS $f5, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+  StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[SUM($f2) AS $f0, SUM(c) AS $f1, COUNT(c) AS $f2, SUM($f3) AS $f3, SUM($f4) AS $f4, SUM($f5) AS $f5, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
     StreamExecExchange(distribution=[single])
-      StreamExecCalc(select=[rowtime, c, CAST(c) AS c0, *(CAST(c), CAST(c)) AS $f3, CAST(c) AS c01, *(CAST(c), CAST(c)) AS $f5, CAST(c) AS c012, *(CAST(c), CAST(c)) AS $f7, CAST(c) AS c0123, *(CAST(c), CAST(c)) AS $f9])
+      StreamExecCalc(select=[rowtime, c, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -34,6 +34,17 @@ StreamExecCalc(select=[EXPR$0, +(w$end, 60000) AS EXPR$1])
   StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[COUNT(*) AS EXPR$0, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
     StreamExecExchange(distribution=[single])
       StreamExecCalc(select=[rowtime])
+        StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testExpressionOnWindowHavingFunction">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[EXPR$0, w$start AS EXPR$1], where=[AND(>($f1, 0), =(EXTRACT(FLAG(QUARTER), CAST(w$start)), 1))])
+  StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 60000.millis, 900000.millis)], select=[COUNT(*) AS EXPR$0, SUM(a) AS $f1, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+    StreamExecExchange(distribution=[single])
+      StreamExecCalc(select=[rowtime, a])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

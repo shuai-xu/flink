@@ -77,23 +77,6 @@ void TableColumn(List<SqlNode> list) :
     }
 }
 
-void PropertyValue(List<SqlNode> list) :
-{
-    SqlIdentifier key;
-
-    SqlParserPos pos;
-
-    SqlNode value;
-}
-{
-    key = CompoundIdentifier()
-    { pos = getPos(); }
-    <EQ> value = StringLiteral()
-    {
-        list.add(new SqlProperty(key, value, getPos()));
-    }
-}
-
 String DimDetect() :
 {
 }
@@ -275,14 +258,21 @@ SqlNode SqlCreateTable() :
     [
         <WITH>
             {
+                SqlNode property;
                 List<SqlNode> proList = new ArrayList<SqlNode>();
                 pos = getPos();
             }
             <LPAREN>
             [
-                PropertyValue(proList)
+                property = PropertyValue()
+                {
+                proList.add(property);
+                }
                 (
-                <COMMA> PropertyValue(proList)
+                <COMMA> property = PropertyValue()
+                    {
+                    proList.add(property);
+                    }
                 )*
             ]
             <RPAREN>

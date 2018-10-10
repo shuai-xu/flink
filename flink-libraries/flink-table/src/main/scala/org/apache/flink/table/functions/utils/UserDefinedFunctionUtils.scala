@@ -386,7 +386,7 @@ object UserDefinedFunctionUtils {
       tableFunction: TableFunction[_],
       implicitResultType: DataType,
       typeFactory: FlinkTypeFactory)
-    : SqlFunction = {
+    : TableSqlFunction = {
     // we don't know the exact result type yet.
     val function = new DeferredTypeFlinkTableFunction(tableFunction, implicitResultType)
     new TableSqlFunction(name, displayName, tableFunction, implicitResultType,

@@ -103,10 +103,14 @@ public class HiveExternalCatalogTest {
 				table.tableType(),
 				tableSchema,
 				table.properties(),
+				null,
 				table.stats(),
 				table.comment(),
 				table.partitionColumnNames(),
 				table.isPartitioned(),
+				null,
+				null,
+				null,
 				table.createTime(),
 				table.lastAccessTime());
 
@@ -157,10 +161,14 @@ public class HiveExternalCatalogTest {
 				table.tableType(),
 				tableSchema,
 				table.properties(),
+				null,
 				table.stats(),
 				table.comment(),
 				table.partitionColumnNames(),
 				table.isPartitioned(),
+				null,
+				null,
+				null,
 				table.createTime(),
 				table.lastAccessTime());
 
@@ -409,9 +417,13 @@ public class HiveExternalCatalogTest {
 				schema,
 				null,
 				null,
+				null,
 				"",
 				partitions,
 				true,
+				null,
+				null,
+				null,
 				System.currentTimeMillis(),
 				System.currentTimeMillis());
 	}

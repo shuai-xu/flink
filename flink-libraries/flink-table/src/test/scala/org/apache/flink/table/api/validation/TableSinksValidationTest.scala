@@ -65,4 +65,6 @@ class TableSinksValidationTest extends TableTestBase {
     util.tableEnv
       .registerTableSink("TargetTable", fieldNames, fieldTypes, new UnsafeMemoryAppendTableSink)
   }
+
+
 }

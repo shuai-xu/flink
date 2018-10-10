@@ -41,6 +41,7 @@ import org.apache.flink.util.StringUtils
   */
 class PrintTableSink(tz: TimeZone)
   extends TableSinkBase[JTuple2[JBool, Row]]
+  with BatchExecCompatibleStreamTableSink
   with UpsertStreamTableSink[Row] {
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): Unit = {
@@ -55,6 +56,12 @@ class PrintTableSink(tz: TimeZone)
   override def setIsAppendOnly(isAppendOnly: JBool): Unit = {}
 
   override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes, getFieldNames)
+
+  /** Emits the DataStream. */
+  override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]]) = {
+    val sink: PrintSinkFunction = new PrintSinkFunction(tz)
+    boundedStream.addSink(sink).name(sink.toString)
+  }
 }
 
 /**

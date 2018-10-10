@@ -243,10 +243,14 @@ class FlinkTypeFactory(typeSystem: RelDataTypeSystem) extends JavaTypeFactoryImp
     * @param tableSchema  the table schema
     * @return a struct type with the input fieldNames, input fieldTypes, and system fields
     */
-  def buildLogicalRowType(tableSchema: TableSchema): RelDataType = {
+  def buildLogicalRowType(tableSchema: TableSchema, isStreaming: Boolean): RelDataType = {
     buildRelDataType(
       tableSchema.getColumnNames,
-      tableSchema.getTypes,
+      tableSchema.getTypes map {
+        case DataTypes.PROCTIME_INDICATOR if !isStreaming => DataTypes.TIMESTAMP
+        case DataTypes.ROWTIME_INDICATOR if !isStreaming => DataTypes.TIMESTAMP
+        case tpe: InternalType => tpe
+      },
       tableSchema.getNullables)
   }
 

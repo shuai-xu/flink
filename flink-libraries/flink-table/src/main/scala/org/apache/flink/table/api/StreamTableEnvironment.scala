@@ -37,6 +37,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
+import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
@@ -1365,6 +1366,10 @@ abstract class StreamTableEnvironment(
     } else {
       null
     }
+  }
+
+  override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
+    registerExternalCatalogInternal(name, externalCatalog, true)
   }
 }
 

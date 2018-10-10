@@ -263,7 +263,13 @@ object FlinkStreamExecRuleSets {
           //ensure intersect set operator have the same row type
           new CoerceInputsRule(classOf[LogicalIntersect], false),
           //ensure except set operator have the same row type
-          new CoerceInputsRule(classOf[LogicalMinus], false))
+          new CoerceInputsRule(classOf[LogicalMinus], false),
+          new CoerceInputsRule(classOf[LogicalMinus], false),
+
+          // rules to convert catalog table to normal table.
+          CatalogTableRules.STREAM_TABLE_SCAN_RULE,
+          CatalogTableRules.DIM_TABLE_SCAN_RULE
+        )
       ).asJava)
 
   val STREAM_EXEC_WINDOW_RULES: RuleSet = RuleSets.ofList(

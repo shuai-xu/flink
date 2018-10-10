@@ -20,8 +20,6 @@ package org.apache.flink.table.catalog
 
 import java.util.{Collections => JCollections, Set => JSet}
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
-import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableSchema
@@ -30,6 +28,7 @@ import org.apache.flink.table.sources.StreamTableSource
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.{Before, Test}
 
 class ExternalTableSourceUtilTest {
@@ -46,6 +45,15 @@ class ExternalTableSourceUtilTest {
     val tableSource = ExternalTableSourceUtil.fromExternalCatalogTable(table)
     assertTrue(tableSource.isInstanceOf[StreamTableSourceTable[_]])
   }
+
+  @Test
+  def testNotExistedExternalTable() = {
+    val schema = new TableSchema(Array("foo"), Array(DataTypes.INT))
+    val table = ExternalCatalogTable("mock1", schema)
+    val tableSource = ExternalTableSourceUtil.toTableSource(table)
+    assertFalse(tableSource.isDefined)
+  }
+
 }
 
 class MockTableSourceConverter extends TableSourceConverter[StreamTableSource[Row]] {

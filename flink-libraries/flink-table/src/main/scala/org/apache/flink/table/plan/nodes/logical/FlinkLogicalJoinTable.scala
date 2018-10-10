@@ -85,7 +85,8 @@ class FlinkLogicalJoinTable(
 
     def getTableSourceSchema(): BaseRowSchema = {
       val flinkTypeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-      val tableSourceRowType = flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema)
+      val tableSourceRowType = flinkTypeFactory.buildLogicalRowType(
+        tableSource.getTableSchema, false)
       new BaseRowSchema(tableSourceRowType)
     }
 
@@ -196,7 +197,7 @@ class FlinkLogicalJoinTable(
     if (calcProgram.isDefined) {
       calcProgram.get.getOutputRowType
     } else {
-      flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema)
+      flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, false)
     }
   }
 

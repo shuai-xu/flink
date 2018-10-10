@@ -27,7 +27,6 @@
     "org.apache.flink.sql.parser.ddl.SqlAnalyzeTable",
     "org.apache.flink.sql.parser.ddl.SqlRichDescribeTable",
     "org.apache.flink.sql.parser.ddl.SqlCreateTable.IndexWrapper",
-    "org.apache.flink.sql.parser.ddl.SqlProperty",
     "org.apache.flink.sql.parser.ddl.SqlTableColumn",
     "org.apache.flink.sql.parser.ddl.SqlCreateFunction",
     "org.apache.flink.sql.parser.ddl.SqlCreateView",

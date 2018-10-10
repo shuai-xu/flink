@@ -22,7 +22,7 @@ import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.schema.TableSourceTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.sources.{StreamTableSource, TableSource}
 
 /**
  * Test class for TableSourceTable.
@@ -51,5 +51,6 @@ class TestTableSourceTable(
 
   override def getRowType(relDataTypeFactory: RelDataTypeFactory) =
     relDataTypeFactory.asInstanceOf[FlinkTypeFactory]
-        .buildLogicalRowType(tableSource.getTableSchema)
+        .buildLogicalRowType(
+          tableSource.getTableSchema, tableSource.isInstanceOf[StreamTableSource[_]])
 }

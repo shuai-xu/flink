@@ -21,8 +21,9 @@ package org.apache.flink.table.catalog
 import java.util.{HashMap => JHashMap, LinkedHashSet => JLinkedHashSet, Map => JMap}
 import java.lang.{Long => JLong}
 
-import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.plan.stats.TableStats
+import org.apache.calcite.rex.RexNode
 
 /**
   * Defines a table in an [[ExternalCatalog]].
@@ -30,8 +31,12 @@ import org.apache.flink.table.plan.stats.TableStats
   * @param tableType            Table type, e.g csv, hbase, kafka
   * @param schema               Schema of the table (column names and types)
   * @param properties           Properties of the table
+  * @param richTableSchema      RichTableSchema of the table
   * @param stats                Statistics of the table
   * @param comment              Comment of the table
+  * @param computedColumns      Computed columns expression
+  * @param rowTimeField         Row time field
+  * @param watermarkOffset      Watermark offset for row time
   * @param createTime           Create timestamp of the table
   * @param lastAccessTime       Timestamp of last access of the table
   */
@@ -39,9 +44,13 @@ case class ExternalCatalogTable(
     tableType: String,
     schema: TableSchema,
     properties: JMap[String, String] = new JHashMap(),
+    richTableSchema: RichTableSchema = null,
     stats: TableStats = null,
     comment: String = null,
     partitionColumnNames: JLinkedHashSet[String] = new JLinkedHashSet(),
     isPartitioned: Boolean = false,
+    computedColumns: JMap[String, RexNode] = null,
+    rowTimeField: String = null,
+    watermarkOffset: JLong = -1L,
     createTime: JLong = System.currentTimeMillis,
     lastAccessTime: JLong = -1L)
