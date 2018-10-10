@@ -496,7 +496,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			env.getCheckpointConfig(),
 			env.getParallelism(),
 			env.getBufferTimeout(),
-			ResultPartitionType.PIPELINED_BOUNDED);
+			ResultPartitionType.PIPELINED_BOUNDED,
+			DataPartitionerType.REBALANCE);
 		assertFalse("Checkpointing enabled", streamGraph.getCheckpointConfig().isCheckpointingEnabled());
 
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);

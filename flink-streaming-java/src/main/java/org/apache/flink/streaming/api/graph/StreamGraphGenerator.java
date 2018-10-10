@@ -24,6 +24,8 @@ import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
@@ -123,7 +125,8 @@ public class StreamGraphGenerator {
 			context.getCheckpointConfig(),
 			context.getDefaultParallelism(),
 			context.getBufferTimeout(),
-			context.getPipelineResultPartitionType());
+			context.getPipelineResultPartitionType(),
+			DataPartitionerType.valueOf(context.getDefaultPartitioner()));
 		this.streamGraph.setJobName(context.getJobName());
 		this.streamGraph.getCustomConfiguration().setString(ScheduleMode.class.getName(), context.getScheduleMode().toString());
 		this.streamGraph.setTimeCharacteristic(context.getTimeCharacteristic());
@@ -724,6 +727,9 @@ public class StreamGraphGenerator {
 		private ResultPartitionType pipelineResultPartitionType;
 		private Configuration configuration = new Configuration();
 
+		private int defaultParallelism;
+		private String defaultPartitioner;
+
 		public static Context buildStreamProperties(StreamExecutionEnvironment env) {
 			Context context = new Context();
 
@@ -740,6 +746,10 @@ public class StreamGraphGenerator {
 
 			// For infinite stream job, by default schedule tasks in eager mode
 			context.setScheduleMode(ScheduleMode.EAGER);
+
+			Configuration globalConf = GlobalConfiguration.loadConfiguration();
+			context.setDefaultPartitioner(globalConf.getString(CoreOptions.DEFAULT_PARTITIONER));
+
 			return context;
 		}
 
@@ -762,6 +772,10 @@ public class StreamGraphGenerator {
 
 				// For finite stream job, by default schedule tasks in lazily from sources mode
 				context.setScheduleMode(ScheduleMode.LAZY_FROM_SOURCES);
+
+				Configuration globalConf = GlobalConfiguration.loadConfiguration();
+				context.setDefaultPartitioner(globalConf.getString(CoreOptions.DEFAULT_PARTITIONER));
+
 				return context;
 			} catch (IOException e) {
 				throw new FlinkRuntimeException("This exception could not happen.", e);
@@ -866,7 +880,13 @@ public class StreamGraphGenerator {
 			this.defaultParallelism = defaultParallelism;
 		}
 
-		private int defaultParallelism;
+		public String getDefaultPartitioner() {
+			return defaultPartitioner;
+		}
+
+		public void setDefaultPartitioner(String defaultPartitioner) {
+			this.defaultPartitioner = defaultPartitioner;
+		}
 
 		public boolean isMultiHeadChainMode() {
 			return isMultiHeadChainMode;

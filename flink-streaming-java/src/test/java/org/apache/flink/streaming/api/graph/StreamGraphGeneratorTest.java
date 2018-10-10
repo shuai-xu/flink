@@ -22,6 +22,9 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -39,6 +42,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.GlobalPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
+import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.ShufflePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
@@ -48,15 +52,22 @@ import org.apache.flink.streaming.util.EvenOddOutputSelector;
 import org.apache.flink.streaming.util.NoOpIntMap;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Tests for {@link StreamGraphGenerator}. This only tests correct translation of split/select,
  * union, partitioning since the other translation routines are tested already in operation
  * specific tests.
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(GlobalConfiguration.class)
 public class StreamGraphGeneratorTest {
 
 	@Test
@@ -479,6 +490,25 @@ public class StreamGraphGeneratorTest {
 		}
 		// IllegalArgumentException will be thrown without FLINK-9216
 		env.getStreamGraph().getStreamingPlanAsJSON();
+	}
+
+	@Test
+	public void testDefaultDataPartitionerType() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		DataStream<Integer> map = env.fromElements(1, 10)
+			.map(new NoOpIntMap()).setParallelism(2);
+
+		StreamGraph graph = env.getStreamGraph();
+		assertTrue(graph.getStreamNode(map.getId()).getInEdges().get(0).getPartitioner() instanceof RebalancePartitioner);
+
+		// set the default partitioner type to RESCALE
+		PowerMockito.mockStatic(GlobalConfiguration.class);
+		Configuration configuration = new Configuration();
+		configuration.setString(CoreOptions.DEFAULT_PARTITIONER, DataPartitionerType.RESCALE.toString());
+		when(GlobalConfiguration.loadConfiguration()).thenReturn(configuration);
+
+		graph = env.getStreamGraph();
+		assertTrue(graph.getStreamNode(map.getId()).getInEdges().get(0).getPartitioner() instanceof RescalePartitioner);
 	}
 
 	private static class OutputTypeConfigurableOperationWithTwoInputs

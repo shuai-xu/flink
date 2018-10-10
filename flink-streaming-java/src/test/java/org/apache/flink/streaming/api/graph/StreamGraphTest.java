@@ -20,6 +20,9 @@ package org.apache.flink.streaming.api.graph;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
+import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
+import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
+import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 
 import org.junit.Test;
 
@@ -36,7 +39,8 @@ public class StreamGraphTest {
 			new CheckpointConfig(),
 			3,
 			1234L,
-			ResultPartitionType.PIPELINED_BOUNDED);
+			ResultPartitionType.PIPELINED_BOUNDED,
+			DataPartitionerType.REBALANCE);
 
 		streamGraph.addNode(999, null, null, null, null);
 		streamGraph.addNode(888, null, null, null, null);
@@ -57,5 +61,50 @@ public class StreamGraphTest {
 		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, streamGraph.getStreamEdges(999, 222).get(0).getResultPartitionType());
 		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(888, 333).get(0).getResultPartitionType());
 		assertEquals(ResultPartitionType.BLOCKING, streamGraph.getStreamEdges(888, 444).get(0).getResultPartitionType());
+	}
+
+	@Test
+	public void testDataPartitionerType() {
+		// case: set the default partitioner type to REBALANCE
+		{
+			StreamGraph streamGraph = new StreamGraph(new ExecutionConfig(),
+				new CheckpointConfig(),
+				3,
+				1234L,
+				ResultPartitionType.PIPELINED_BOUNDED,
+				DataPartitionerType.REBALANCE);
+
+			streamGraph.addNode(999, null, null, null, null);
+			streamGraph.addNode(888, null, null, null, null);
+			streamGraph.addNode(777, null, null, null, null)
+				.setParallelism(100);
+
+			streamGraph.addEdge(999, 888, 0, null);
+			streamGraph.addEdge(888, 777, 0, null);
+
+			assertEquals(ForwardPartitioner.class, streamGraph.getStreamEdges(999, 888).get(0).getPartitioner().getClass());
+			assertEquals(RebalancePartitioner.class, streamGraph.getStreamEdges(888, 777).get(0).getPartitioner().getClass());
+		}
+
+		// case: set the default partitioner type to RESCALE
+		{
+			StreamGraph streamGraph = new StreamGraph(new ExecutionConfig(),
+				new CheckpointConfig(),
+				3,
+				1234L,
+				ResultPartitionType.PIPELINED_BOUNDED,
+				DataPartitionerType.RESCALE);
+
+			streamGraph.addNode(999, null, null, null, null);
+			streamGraph.addNode(888, null, null, null, null);
+			streamGraph.addNode(777, null, null, null, null)
+				.setParallelism(100);
+
+			streamGraph.addEdge(999, 888, 0, null);
+			streamGraph.addEdge(888, 777, 0, null);
+
+			assertEquals(ForwardPartitioner.class, streamGraph.getStreamEdges(999, 888).get(0).getPartitioner().getClass());
+			assertEquals(RescalePartitioner.class, streamGraph.getStreamEdges(888, 777).get(0).getPartitioner().getClass());
+		}
 	}
 }

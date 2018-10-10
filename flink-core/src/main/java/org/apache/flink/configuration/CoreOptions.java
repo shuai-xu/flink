@@ -195,6 +195,16 @@ public class CoreOptions {
 		.key("parallelism.default")
 		.defaultValue(1);
 
+	/**
+	 * The default stream partitioner, used when the upstream and downstream parallelisms are not equal
+	 * and partitioner is not specified.
+	 */
+	public static final ConfigOption<String> DEFAULT_PARTITIONER = ConfigOptions
+		.key("partitioner.default")
+		.defaultValue("REBALANCE")
+		.withDescription("The default stream partitioner, used when the upstream and downstream parallelisms are" +
+			"  not equal and partitioner is not specified. Possible values are 'RESCALE' and 'REBALANCE'.");
+
 	// ------------------------------------------------------------------------
 	//  file systems
 	// ------------------------------------------------------------------------

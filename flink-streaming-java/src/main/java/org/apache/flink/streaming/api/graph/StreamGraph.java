@@ -49,6 +49,7 @@ import org.apache.flink.streaming.api.operators.StreamSourceV2;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
+import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.SourceStreamTask;
@@ -116,18 +117,21 @@ public class StreamGraph extends StreamingPlan {
 	private final transient int defaultParallelism;
 	private final transient long defaultBufferTimeout;
 	private final transient ResultPartitionType defaultResultPartitionType;
+	private final transient DataPartitionerType defaultPartitionerType;
 
 	public StreamGraph(ExecutionConfig executionConfig,
 		CheckpointConfig checkpointConfig,
 		int defaultParallelism,
 		long defaultBufferTimeout,
-		ResultPartitionType defaultResultPartitionType) {
+		ResultPartitionType defaultResultPartitionType,
+		DataPartitionerType defaultPartitionerType) {
 
 		this.executionConfig = executionConfig;
 		this.checkpointConfig = checkpointConfig;
 		this.defaultParallelism = defaultParallelism;
 		this.defaultBufferTimeout = defaultBufferTimeout;
 		this.defaultResultPartitionType = defaultResultPartitionType;
+		this.defaultPartitionerType = defaultPartitionerType;
 
 		// set default schedule mode
 		this.customConfiguration.setString(ScheduleMode.class.getName(), ScheduleMode.EAGER.toString());
@@ -500,11 +504,17 @@ public class StreamGraph extends StreamingPlan {
 			StreamNode downstreamNode = getStreamNode(downStreamVertexID);
 
 			// If no partitioner was specified and the parallelism of upstream and downstream
-			// operator matches use forward partitioning, use rebalance otherwise.
+			// operator matches use forward partitioning, use the default partitioning otherwise.
 			if (partitioner == null && upstreamNode.getParallelism() == downstreamNode.getParallelism()) {
-				partitioner = new ForwardPartitioner<Object>();
+				partitioner = new ForwardPartitioner<>();
 			} else if (partitioner == null) {
-				partitioner = new RebalancePartitioner<Object>();
+				if (defaultPartitionerType == DataPartitionerType.RESCALE) {
+					partitioner = new RescalePartitioner<>();
+				} else if (defaultPartitionerType == DataPartitionerType.REBALANCE) {
+					partitioner = new RebalancePartitioner<>();
+				} else {
+					throw new IllegalArgumentException("Error default partitioner type: " + defaultPartitionerType);
+				}
 			}
 
 			if (partitioner instanceof ForwardPartitioner) {
