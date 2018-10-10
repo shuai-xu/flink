@@ -22,13 +22,11 @@ import java.sql.{Date, Time, Timestamp}
 
 import org.apache.calcite.avatica.util.DateTimeUtils._
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{
-  CurrentRange, CurrentRow, UnboundedRange, UnboundedRow, TableException}
-import org.apache.flink.table.expressions.ExpressionUtils.{
-  convertArray, toMilliInterval, toMonthInterval, toRowInterval, toRangeInterval}
+import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, UnboundedRange, UnboundedRow}
+import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRangeInterval, toRowInterval}
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
-import org.apache.flink.table.expressions.{Literal, _}
+import org.apache.flink.table.expressions.{Atan2, Literal, _}
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -1337,6 +1335,19 @@ object concat {
 object concat_ws {
   def apply(separator: Expression, string: Expression, strings: Expression*): Expression = {
     new ConcatWs(separator, Seq(string) ++ strings)
+  }
+}
+
+/**
+  * Calculates the arc tangent of a given coordinate.
+  */
+object atan2 {
+
+  /**
+    * Calculates the arc tangent of a given coordinate.
+    */
+  def apply(y: Expression, x: Expression): Expression = {
+    Atan2(y, x)
   }
 }
 

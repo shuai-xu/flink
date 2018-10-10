@@ -36,6 +36,12 @@ import org.apache.flink.table.dataformat.{BinaryString, Decimal}
 
 /**
   * Built-in scalar runtime functions.
+  *
+  * NOTE: Before you add functions here, check if Calcite provides it in
+  * [[org.apache.calcite.runtime.SqlFunctions]]. Furthermore, make sure to implement the function
+  * efficiently. Sometimes it makes sense to create a
+  * [[org.apache.flink.table.codegen.calls.CallGenerator]] instead to avoid massive object
+  * creation and reuse instances.
   */
 class ScalarFunctions {}
 
@@ -91,6 +97,10 @@ object ScalarFunctions {
 
   def atan(b0: Decimal): Double = {
     Math.atan(b0.doubleValue())
+  }
+
+  def atan2(b0: Decimal, b1: Decimal): Double = {
+    Math.atan2(b0.doubleValue(), b1.doubleValue())
   }
 
   def sin(b0: Decimal): Double = {

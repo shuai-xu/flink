@@ -108,6 +108,7 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("ASIN(0.5)", "0.5235987755982989")
     testSqlApi("ACOS(0.5)", "1.0471975511965979")
     testSqlApi("ATAN(0.5)", "0.4636476090008061")
+    testSqlApi("ATAN2(0.5, 0.5)", "0.7853981633974483")
     testSqlApi("DEGREES(0.5)", "28.64788975654116")
     testSqlApi("RADIANS(0.5)", "0.008726646259971648")
     testSqlApi("SIGN(-1.1)", "-1.0")  // calcite: SIGN(Decimal(p,s)) => Decimal(p,s)

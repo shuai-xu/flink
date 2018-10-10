@@ -20,6 +20,8 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo.DOUBLE_TYPE_INFO
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -284,6 +286,29 @@ case class Atan(child: Expression) extends UnaryExpression {
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder.call(SqlStdOperatorTable.ATAN, child.toRexNode)
+  }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+case class Atan2(y: Expression, x: Expression) extends BinaryExpression {
+
+  override private[flink] def left = y
+
+  override private[flink] def right = x
+
+  override private[flink] def resultType: InternalType = DataTypes.DOUBLE
+
+  override private[flink] def validateInput() = {
+    TypeCheckUtils.assertNumericExpr(y.resultType, "atan2")
+    TypeCheckUtils.assertNumericExpr(x.resultType, "atan2")
+  }
+
+  override def toString: String = s"atan2($left, $right)"
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(SqlStdOperatorTable.ATAN2, left.toRexNode, right.toRexNode)
   }
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =

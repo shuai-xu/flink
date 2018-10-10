@@ -23,17 +23,21 @@ import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.validate._
 
 /**
-  * Expressions that have specification on its inputs.
+  * Expressions that have strict data type specification on its inputs.
   */
 trait InputTypeSpec extends Expression {
 
   /**
     * Input type specification for each child.
     *
-    * For example, [[Power]] expecting both of the children be of Double Type should use:
+    * For example, [[Power]] expecting both of the children be of double type should use:
     * {{{
-    *   def expectedTypes: Seq[InternalType] = DataTypes.DOUBLE :: DataTypes.DOUBLE :: Nil
+    *   def expectedTypes: Seq[TypeInformation[_]] = DOUBLE_TYPE_INFO :: DOUBLE_TYPE_INFO :: Nil
     * }}}
+    *
+    * Inputs that don't match the expected type will be safely casted to a higher type. Therefore,
+    * use the decimal type with caution as all numeric types would be casted to a very
+    * inefficient type.
     */
   private[flink] def expectedTypes: Seq[InternalType]
 
