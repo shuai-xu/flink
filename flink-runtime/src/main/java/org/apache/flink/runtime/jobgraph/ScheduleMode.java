@@ -18,16 +18,20 @@
 
 package org.apache.flink.runtime.jobgraph;
 
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
-
 /**
- * The ScheduleMode decides how vertices are started in {@link DefaultGraphManagerPlugin}.
+ * The ScheduleMode decides whether vertices should be scheduled with
+ * {@link org.apache.flink.runtime.schedule.EagerSchedulingPlugin} or
+ * {@link org.apache.flink.runtime.schedule.StepwiseSchedulingPlugin}.
  */
 public enum ScheduleMode {
 
-	/** Schedule vertices lazily from the sources. Downstream vertices are started once their input data are ready */
+	/** Schedule vertices lazily from the sources. {@link org.apache.flink.runtime.schedule.StepwiseSchedulingPlugin}
+	 * will be used in this mode.
+	 */
 	LAZY_FROM_SOURCES,
 
-	/** Schedules all vertices immediately. */
+	/** Schedules all vertices immediately. {@link org.apache.flink.runtime.schedule.EagerSchedulingPlugin}
+	 * will be used in this mode.
+	 */
 	EAGER
 }

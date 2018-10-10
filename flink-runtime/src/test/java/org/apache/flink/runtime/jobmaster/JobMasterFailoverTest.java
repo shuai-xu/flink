@@ -55,6 +55,7 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobmanager.OnCompletionActions;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.jobmaster.factories.UnregisteredJobManagerJobMetricGroupFactory;
@@ -64,9 +65,8 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
-import org.apache.flink.runtime.schedule.SchedulingConfig;
-import org.apache.flink.runtime.schedule.VertexScheduler;
+import org.apache.flink.runtime.schedule.EagerSchedulingPlugin;
+import org.apache.flink.runtime.schedule.StepwiseSchedulingPlugin;
 import org.apache.flink.runtime.taskexecutor.TaskExecutionStatus;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorReportResponse;
 import org.apache.flink.runtime.taskexecutor.TestingTaskExecutorGateway;
@@ -163,7 +163,7 @@ public class JobMasterFailoverTest extends TestLogger {
 
 		configuration.setString(BlobServerOptions.STORAGE_DIRECTORY, temporaryFolder.newFolder().getAbsolutePath());
 		configuration.setString(JobManagerOptions.OPERATION_LOG_STORE, "memory");
-		configuration.setString("org.apache.flink.runtime.jobgraph.ScheduleMode", "EAGER");
+		configuration.setString(ScheduleMode.class.getName(), "EAGER");
 		blobServer = new BlobServer(configuration, new VoidBlobStore());
 
 		blobServer.start();
@@ -195,8 +195,8 @@ public class JobMasterFailoverTest extends TestLogger {
 	 */
 	@Test
 	public void testReplayLog() throws Exception {
-		TestingGraphManagerPlugin.init();
-		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingGraphManagerPlugin.class.getName());
+		TestingEagerSchedulingPlugin.init();
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
 		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.BLOCKING);
 		final JobMaster jobMaster = createJobMaster(
 				configuration,
@@ -263,14 +263,14 @@ public class JobMasterFailoverTest extends TestLogger {
 			jobMasterGateway.updateTaskExecutionState(new TaskExecutionState(
 					producerConsumerJobGraph.getJobID(), executionAttemptId, ExecutionState.FINISHED)).get();
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getResetCount());
 			if (!tdd.getProducedPartitions().isEmpty()) {
-				assertEquals(1, TestingGraphManagerPlugin.getConsumableCount());
+				assertEquals(1, TestingEagerSchedulingPlugin.getConsumableCount());
 			}
-			assertEquals(2, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(1, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(0, TestingGraphManagerPlugin.getRunningCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getRunningCount());
 
 			// Another master can replay the log as the use the same log store.
 			final JobMaster newJobMaster = createJobMaster(
@@ -293,14 +293,14 @@ public class JobMasterFailoverTest extends TestLogger {
 			assertEquals(ExecutionState.DEPLOYING, newJobMaster.getExecutionGraph().getAllVertices().get(theOther)
 					.getTaskVertices()[0].getExecutionState());
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getResetCount());
 			if (!tdd.getProducedPartitions().isEmpty()) {
-				assertEquals(2, TestingGraphManagerPlugin.getConsumableCount());
+				assertEquals(2, TestingEagerSchedulingPlugin.getConsumableCount());
 			}
-			assertEquals(4, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(2, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(0, TestingGraphManagerPlugin.getRunningCount());
+			assertEquals(4, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getRunningCount());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -311,8 +311,8 @@ public class JobMasterFailoverTest extends TestLogger {
 	 */
 	@Test
 	public void testReplayLogWithFailover() throws Exception {
-		TestingGraphManagerPlugin.init();
-		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingGraphManagerPlugin.class.getName());
+		TestingEagerSchedulingPlugin.init();
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
 		configuration.setString(JobManagerOptions.EXECUTION_FAILOVER_STRATEGY, "region");
 		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.BLOCKING);
 		JobManagerSharedServices sharedServices = new TestingJobManagerSharedServicesBuilder()
@@ -391,7 +391,7 @@ public class JobMasterFailoverTest extends TestLogger {
 
 			ExecutionGraphTestUtils.waitUntilExecutionVertexState(theOtherEV, ExecutionState.DEPLOYING, 2000L);
 
-			assertEquals(1, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getFailoverCount());
 
 			// Another master can replay the log as the use the same log store.
 			final JobMaster newJobMaster = createJobMaster(
@@ -414,15 +414,15 @@ public class JobMasterFailoverTest extends TestLogger {
 			assertEquals(ExecutionState.DEPLOYING, newJobMaster.getExecutionGraph().getAllVertices()
 					.get(theOtherJobVertexID).getTaskVertices()[0].getExecutionState());
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getResetCount());
 			if (!tdd.getProducedPartitions().isEmpty()) {
-				assertEquals(2, TestingGraphManagerPlugin.getConsumableCount());
+				assertEquals(2, TestingEagerSchedulingPlugin.getConsumableCount());
 			}
-			assertEquals(6, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(2, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(0, TestingGraphManagerPlugin.getRunningCount());
-			assertEquals(2, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(6, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getRunningCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getFailoverCount());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -433,8 +433,8 @@ public class JobMasterFailoverTest extends TestLogger {
 	 */
 	@Test
 	public void testReplayLogWithFullRestart() throws Exception {
-		TestingGraphManagerPlugin.init();
-		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingGraphManagerPlugin.class.getName());
+		TestingEagerSchedulingPlugin.init();
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
 		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.BLOCKING);
 		JobManagerSharedServices sharedServices = new TestingJobManagerSharedServicesBuilder()
 				.setRestartStrategyFactory(new FixedDelayRestartStrategy.FixedDelayRestartStrategyFactory(1, 0)).build();
@@ -516,7 +516,7 @@ public class JobMasterFailoverTest extends TestLogger {
 					ExecutionState.DEPLOYING,
 					2000L);
 
-			assertEquals(0, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getFailoverCount());
 
 			// Another master can replay the log as the use the same log store.
 			final JobMaster newJobMaster = createJobMaster(
@@ -536,15 +536,15 @@ public class JobMasterFailoverTest extends TestLogger {
 			assertEquals(ExecutionState.DEPLOYING, newJobMaster.getExecutionGraph().getAllVertices()
 					.get(theOtherJobVertexID).getTaskVertices()[0].getExecutionState());
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(2, TestingGraphManagerPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getResetCount());
 			if (!tdd.getProducedPartitions().isEmpty()) {
-				assertEquals(1, TestingGraphManagerPlugin.getConsumableCount());
+				assertEquals(1, TestingEagerSchedulingPlugin.getConsumableCount());
 			}
-			assertEquals(6, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(1, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(0, TestingGraphManagerPlugin.getRunningCount());
-			assertEquals(0, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(6, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getRunningCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getFailoverCount());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -555,10 +555,9 @@ public class JobMasterFailoverTest extends TestLogger {
 	 */
 	@Test
 	public void testReplayLogLazyFromSource() throws Exception {
-		TestingGraphManagerPlugin.init();
-		configuration.setString("org.apache.flink.runtime.jobgraph.ScheduleMode", "LAZY_FROM_SOURCES");
+		TestingStepwiseSchedulingPlugin.init();
 		configuration.setString(JobManagerOptions.EXECUTION_FAILOVER_STRATEGY, "region");
-		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingGraphManagerPlugin.class.getName());
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingStepwiseSchedulingPlugin.class.getName());
 		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.PIPELINED);
 		JobManagerSharedServices sharedServices = new TestingJobManagerSharedServicesBuilder()
 				.setRestartStrategyFactory(new FixedDelayRestartStrategy.FixedDelayRestartStrategyFactory(1, 0)).build();
@@ -648,7 +647,7 @@ public class JobMasterFailoverTest extends TestLogger {
 					ExecutionState.DEPLOYING,
 					2000L);
 
-			assertEquals(1, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(1, TestingStepwiseSchedulingPlugin.getFailoverCount());
 			assertEquals(ExecutionState.CREATED, theOtherEV.getExecutionState());
 
 			// Another master can replay the log as the use the same log store.
@@ -669,13 +668,13 @@ public class JobMasterFailoverTest extends TestLogger {
 			assertEquals(ExecutionState.CREATED, newJobMaster.getExecutionGraph().getAllVertices()
 					.get(theOtherJobVertexID).getTaskVertices()[0].getExecutionState());
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
-			assertEquals(2, TestingGraphManagerPlugin.getConsumableCount());
-			assertEquals(6, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(0, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(2, TestingGraphManagerPlugin.getRunningCount());
-			assertEquals(2, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(0, TestingStepwiseSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingStepwiseSchedulingPlugin.getResetCount());
+			assertEquals(2, TestingStepwiseSchedulingPlugin.getConsumableCount());
+			assertEquals(6, TestingStepwiseSchedulingPlugin.getDeployingCount());
+			assertEquals(0, TestingStepwiseSchedulingPlugin.getFinishedCount());
+			assertEquals(2, TestingStepwiseSchedulingPlugin.getRunningCount());
+			assertEquals(2, TestingStepwiseSchedulingPlugin.getFailoverCount());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -686,8 +685,8 @@ public class JobMasterFailoverTest extends TestLogger {
 	 */
 	@Test
 	public void testReconcileWithTaskExecutor() throws Exception {
-		TestingGraphManagerPlugin.init();
-		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingGraphManagerPlugin.class.getName());
+		TestingEagerSchedulingPlugin.init();
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
 		configuration.setString(JobManagerOptions.EXECUTION_FAILOVER_STRATEGY, "region");
 		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.BLOCKING);
 		final JobMaster jobMaster = createJobMaster(
@@ -781,13 +780,13 @@ public class JobMasterFailoverTest extends TestLogger {
 			assertEquals(ExecutionState.RUNNING, producerEJV.getAggregateState());
 			assertEquals(ExecutionState.RUNNING, newJobMaster.getExecutionGraph().getAllVertices().get(theOtherJobVertexID).getAggregateState());
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
-			assertEquals(0, TestingGraphManagerPlugin.getConsumableCount());
-			assertEquals(4, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(0, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(4, TestingGraphManagerPlugin.getRunningCount());
-			assertEquals(0, TestingGraphManagerPlugin.getFailoverCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getConsumableCount());
+			assertEquals(4, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(4, TestingEagerSchedulingPlugin.getRunningCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getFailoverCount());
 
 			newJobMaster.start(jobMasterId, testingTimeout).get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
 			newJobMaster.registerTaskManager(testingTaskExecutorGateway.getAddress(), taskManagerLocation, testingTimeout).get();
@@ -855,7 +854,7 @@ public class JobMasterFailoverTest extends TestLogger {
 	 */
 	@Test
 	public void testReplayInputSplits() throws Exception {
-		TestingGraphManagerPlugin.init();
+		TestingEagerSchedulingPlugin.init();
 
 		InputSplitSource<TestingInputSplit> inputSplitSource = new TestingInputSplitSource();
 		final OperatorID operatorID = new OperatorID();
@@ -867,7 +866,7 @@ public class JobMasterFailoverTest extends TestLogger {
 
 		final JobGraph jobGraph = new JobGraph(producer);
 		jobGraph.setAllowQueuedScheduling(true);
-		jobGraph.getSchedulingConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingGraphManagerPlugin.class.getName());
+		jobGraph.getSchedulingConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
 
 		final JobMaster jobMaster = createJobMaster(
 				configuration,
@@ -952,12 +951,12 @@ public class JobMasterFailoverTest extends TestLogger {
 			jobMasterGateway.updateTaskExecutionState(new TaskExecutionState(
 					jobGraph.getJobID(), theOther, ExecutionState.RUNNING)).get();
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
-			assertEquals(0, TestingGraphManagerPlugin.getConsumableCount());
-			assertEquals(2, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(1, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(1, TestingGraphManagerPlugin.getRunningCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getConsumableCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getRunningCount());
 
 			// Another master can replay the log as the use the same log store.
 			final JobMaster newJobMaster = createJobMaster(
@@ -1000,12 +999,12 @@ public class JobMasterFailoverTest extends TestLogger {
 					getRegisteredExecutions().keySet().iterator().next();
 			verifyGetNextInputSplit(2, newJobMaster, executionVertexID.getJobVertexID(), unfinishedAttempID, operatorID);
 
-			assertEquals(0, TestingGraphManagerPlugin.getCloseCount());
-			assertEquals(1, TestingGraphManagerPlugin.getResetCount());
-			assertEquals(0, TestingGraphManagerPlugin.getConsumableCount());
-			assertEquals(4, TestingGraphManagerPlugin.getDeployingCount());
-			assertEquals(2, TestingGraphManagerPlugin.getFinishedCount());
-			assertEquals(2, TestingGraphManagerPlugin.getRunningCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getCloseCount());
+			assertEquals(1, TestingEagerSchedulingPlugin.getResetCount());
+			assertEquals(0, TestingEagerSchedulingPlugin.getConsumableCount());
+			assertEquals(4, TestingEagerSchedulingPlugin.getDeployingCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getFinishedCount());
+			assertEquals(2, TestingEagerSchedulingPlugin.getRunningCount());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}
@@ -1100,13 +1099,9 @@ public class JobMasterFailoverTest extends TestLogger {
 	}
 
 	/**
-	 * A testing plugin.
+	 * A testing version of EagerSchedulingPlugin.
 	 */
-	public static final class TestingGraphManagerPlugin extends DefaultGraphManagerPlugin {
-
-		private JobGraph jobGraph;
-
-		private VertexScheduler scheduler;
+	public static final class TestingEagerSchedulingPlugin extends EagerSchedulingPlugin {
 
 		private static int resetCount = 0;
 
@@ -1133,10 +1128,105 @@ public class JobMasterFailoverTest extends TestLogger {
 		}
 
 		@Override
-		public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig config) {
-			super.open(scheduler, jobGraph, config);
-			this.jobGraph = jobGraph;
-			this.scheduler = scheduler;
+		public void close() {
+			closeCount++;
+		}
+
+		@Override
+		public void reset() {
+			resetCount++;
+		}
+
+		@Override
+		public void onSchedulingStarted() {
+			super.onSchedulingStarted();
+		}
+
+		@Override
+		public void onResultPartitionConsumable(ResultPartitionConsumableEvent event) {
+			consumableCount++;
+			super.onResultPartitionConsumable(event);
+		}
+
+		@Override
+		public void onExecutionVertexStateChanged(ExecutionVertexStateChangedEvent event) {
+			if (ExecutionState.RUNNING.equals(event.getNewExecutionState())) {
+				runningCount++;
+			} else if (ExecutionState.DEPLOYING.equals(event.getNewExecutionState())) {
+				deployingCount++;
+			} else if (ExecutionState.FINISHED.equals(event.getNewExecutionState())) {
+				finishedCount++;
+			}
+			super.onExecutionVertexStateChanged(event);
+		}
+
+		@Override
+		public void onExecutionVertexFailover(ExecutionVertexFailoverEvent event) {
+			failoverCount++;
+			super.onExecutionVertexFailover(event);
+		}
+
+		@Override
+		public boolean allowLazyDeployment() {
+			return true;
+		}
+
+		public static int getResetCount() {
+			return resetCount;
+		}
+
+		public static int getCloseCount() {
+			return closeCount;
+		}
+
+		public static int getDeployingCount() {
+			return deployingCount;
+		}
+
+		public static int getRunningCount() {
+			return runningCount;
+		}
+
+		public static int getFinishedCount() {
+			return finishedCount;
+		}
+
+		public static int getConsumableCount() {
+			return consumableCount;
+		}
+
+		public static int getFailoverCount(){
+			return failoverCount;
+		}
+	}
+
+	/**
+	 * A testing version of StepwiseSchedulingPlugin.
+	 */
+	public static final class TestingStepwiseSchedulingPlugin extends StepwiseSchedulingPlugin {
+
+		private static int resetCount = 0;
+
+		private static int closeCount = 0;
+
+		private static int consumableCount = 0;
+
+		private static int finishedCount = 0;
+
+		private static int deployingCount = 0;
+
+		private static int runningCount = 0;
+
+		private static int failoverCount = 0;
+
+		public static void init() {
+			resetCount = 0;
+			closeCount = 0;
+			consumableCount = 0;
+			finishedCount = 0;
+			deployingCount = 0;
+			runningCount = 0;
+			failoverCount = 0;
 		}
 
 		@Override

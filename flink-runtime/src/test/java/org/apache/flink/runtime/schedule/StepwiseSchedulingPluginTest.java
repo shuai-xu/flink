@@ -34,78 +34,25 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
-import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Tests for the {@link DefaultGraphManagerPlugin}.
+ * Tests for the {@link StepwiseSchedulingPlugin}.
  */
-public class DefaultGraphManagerPluginTest extends TestLogger {
+public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 
 	/**
-	 * Tests EAGER scheduling.
+	 * Tests stepwise scheduling.
 	 */
 	@Test
-	public void testDefaultGraphManagerPluginInEagerMode() throws Exception {
-
-		final JobID jobId = new JobID();
-		final JobVertex v1 = new JobVertex("vertex1");
-		final JobVertex v2 = new JobVertex("vertex2");
-		v1.setParallelism(3);
-		v2.setParallelism(4);
-		v1.setInvokableClass(AbstractInvokable.class);
-		v2.setInvokableClass(AbstractInvokable.class);
-		v2.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
-
-		final JobGraph jobGraph = new JobGraph(jobId, "test job", new JobVertex[] {v1, v2});
-		jobGraph.setScheduleMode(ScheduleMode.EAGER);
-
-		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
-			jobGraph,
-			new SimpleAckingTaskManagerGateway(),
-			new NoRestartStrategy());
-
-		final List<ExecutionVertex> executionVertices = new ArrayList<>();
-		final List<ExecutionVertexID> vertices = new ArrayList<>();
-		for (ExecutionJobVertex ejv : eg.getVerticesTopologically()) {
-			for (ExecutionVertex ev : ejv.getTaskVertices()) {
-				executionVertices.add(ev);
-				vertices.add(ev.getExecutionVertexID());
-			}
-		}
-
-		final TestExecutionVertexScheduler scheduler = new TestExecutionVertexScheduler(executionVertices);
-
-		final GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
-		graphManagerPlugin.open(
-			scheduler,
-			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
-
-		graphManagerPlugin.onSchedulingStarted();
-		assertTrue(compareVertices(scheduler.getScheduledVertices(), vertices));
-		scheduler.clearScheduledVertices();
-
-		graphManagerPlugin.onExecutionVertexFailover(new ExecutionVertexFailoverEvent(vertices));
-		assertTrue(compareVertices(scheduler.getScheduledVertices(), vertices));
-	}
-
-	/**
-	 * Tests LAZY_FROM_SOURCES scheduling.
-	 */
-	@Test
-	public void testDefaultGraphManagerPluginInLazyMode() throws Exception {
+	public void testStepwiseScheduling() throws Exception {
 
 		final JobID jobId = new JobID();
 		final JobVertex v1 = new JobVertex("vertex1");
@@ -148,7 +95,7 @@ public class DefaultGraphManagerPluginTest extends TestLogger {
 
 		final TestExecutionVertexScheduler scheduler = new TestExecutionVertexScheduler(executionVertices);
 
-		final GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
+		final GraphManagerPlugin graphManagerPlugin = new StepwiseSchedulingPlugin();
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
@@ -165,47 +112,5 @@ public class DefaultGraphManagerPluginTest extends TestLogger {
 
 		graphManagerPlugin.onExecutionVertexFailover(new ExecutionVertexFailoverEvent(vertices));
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), vertices1));
-	}
-
-	private boolean compareVertices(Collection<ExecutionVertexID> vertices1, Collection<ExecutionVertexID> vertices2) {
-		checkNotNull(vertices1);
-		checkNotNull(vertices2);
-		return vertices1.size() == vertices2.size() && vertices1.containsAll(vertices2)  && vertices2.containsAll(vertices1);
-	}
-
-	/**
-	 * VertexScheduler for test purposes.
-	 */
-	private static class TestExecutionVertexScheduler implements VertexScheduler {
-
-		private Map<ExecutionVertexID, ExecutionVertex> vertices;
-
-		private Collection<ExecutionVertexID> scheduledVertices = new ArrayList<>();
-
-		public TestExecutionVertexScheduler(Collection<ExecutionVertex> evs) {
-			this.vertices = new HashMap<>();
-			for (ExecutionVertex ev : evs) {
-				vertices.put(ev.getExecutionVertexID(), ev);
-			}
-		}
-
-		@Override
-		public void scheduleExecutionVertices(Collection<ExecutionVertexID> executionVertexIDs) {
-			scheduledVertices.addAll(executionVertexIDs);
-		}
-
-		@Override
-		public ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID) {
-			ExecutionVertex ev = vertices.get(executionVertexID);
-			return new ExecutionVertexStatus(executionVertexID, ev.getExecutionState(), ev.isInputDataConsumable());
-		}
-
-		public Collection<ExecutionVertexID> getScheduledVertices() {
-			return scheduledVertices;
-		}
-
-		public void clearScheduledVertices() {
-			scheduledVertices.clear();
-		}
 	}
 }

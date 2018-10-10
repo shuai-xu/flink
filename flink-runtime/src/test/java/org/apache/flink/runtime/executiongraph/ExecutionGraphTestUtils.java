@@ -65,8 +65,8 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.TaskMessages.CancelTask;
 import org.apache.flink.runtime.messages.TaskMessages.FailIntermediateResultPartitions;
 import org.apache.flink.runtime.messages.TaskMessages.SubmitTask;
-import org.apache.flink.runtime.schedule.DefaultGraphManagerPlugin;
 import org.apache.flink.runtime.schedule.GraphManagerPlugin;
+import org.apache.flink.runtime.schedule.GraphManagerPluginFactory;
 import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
@@ -546,7 +546,7 @@ public class ExecutionGraphTestUtils {
 			log);
 		Configuration conf = new Configuration(jobGraph.getJobConfiguration());
 		conf.addAll(jobGraph.getSchedulingConfiguration());
-		GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
+		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(conf, classLoader);
 		GraphManager graphManager = new GraphManager(
 				graphManagerPlugin,
 				mock(JobMasterGateway.class),
@@ -666,6 +666,7 @@ public class ExecutionGraphTestUtils {
 		jobGraph.getJobConfiguration().addAll(jobInformation.getJobConfiguration());
 		jobGraph.addVertices(vertices);
 
+		ClassLoader classLoader = ExecutionGraph.class.getClassLoader();
 		ExecutionGraph eg = new ExecutionGraph(
 			jobInformation,
 			futureExecutor,
@@ -674,7 +675,7 @@ public class ExecutionGraphTestUtils {
 			restartStrategy,
 			failoverStrategy,
 			slotProvider,
-			ExecutionGraph.class.getClassLoader(),
+			classLoader,
 			blobWriter,
 			new ResultPartitionLocationTrackerProxy(jobInformation.getJobConfiguration()),
 			timeout);
@@ -683,7 +684,7 @@ public class ExecutionGraphTestUtils {
 
 		Configuration conf = new Configuration(jobGraph.getJobConfiguration());
 		conf.addAll(jobGraph.getSchedulingConfiguration());
-		GraphManagerPlugin graphManagerPlugin = new DefaultGraphManagerPlugin();
+		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(conf, classLoader);
 		GraphManager graphManager = new GraphManager(
 				graphManagerPlugin,
 				mock(JobMasterGateway.class),
