@@ -28,10 +28,10 @@ import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
+import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
-import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow, GenericRow}
+import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
@@ -289,8 +289,7 @@ trait CommonCalc {
             "filterApply",
             "private final boolean",
             0)
-          val conditionResultTerm = CodeGenUtils.newName("result")
-          val nullTerm = CodeGenUtils.newName("null")
+          val Seq(conditionResultTerm, nullTerm) = newNames(Seq("result", "isNull"))
           val callCode =
             s"""
                |boolean $nullTerm = false;
@@ -312,8 +311,7 @@ trait CommonCalc {
               "filterApply",
               "private final boolean",
               0)
-            val conditionResultTerm = CodeGenUtils.newName("result")
-            val nullTerm = CodeGenUtils.newName("null")
+            val Seq(conditionResultTerm, nullTerm) = newNames(Seq("result", "isNull"))
             var index = 0
             var subCalls = filterSplitFunc.callings.map(c => c.substring(0, c.length - 1))
             val resBuffer = new ListBuffer[Seq[String]]()

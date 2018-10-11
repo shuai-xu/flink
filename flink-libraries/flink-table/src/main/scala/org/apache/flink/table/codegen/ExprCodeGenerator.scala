@@ -31,10 +31,9 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
-import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, StreamRecordTimestampSqlFunction}
 import org.apache.flink.table.dataformat._
+import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, StreamRecordTimestampSqlFunction}
 import org.apache.flink.table.types._
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.apache.flink.util.Preconditions.checkArgument
 
 import scala.collection.JavaConversions._
@@ -426,8 +425,9 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
 
     val resultTypeTerm = primitiveTypeTermForType(fieldAccessExpr.resultType)
     val defaultValue = primitiveDefaultValue(fieldAccessExpr.resultType)
-    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
-    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
+      Seq("result", "isNull"),
+      Seq(resultTypeTerm, "boolean"))
 
     val resultCode = if (nullCheck) {
       s"""

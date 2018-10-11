@@ -56,6 +56,12 @@ object CodeGenUtils {
     s"$name$$${nameCounter.getAndIncrement}"
   }
 
+  def newNames(names: Seq[String]): Seq[String] = {
+    require(names.toSet.size == names.length, "Duplicated names")
+    val newId = nameCounter.getAndIncrement
+    names.map(name => s"$name$$$newId")
+  }
+
   /**
     * Retrieve the canonical name of a class type.
     */
@@ -360,10 +366,11 @@ object CodeGenUtils {
   }
 
   def generateRowtimeAccess(
-    contextTerm: String,
-    ctx: CodeGeneratorContext): GeneratedExpression = {
-    val resultTerm = ctx.newReusableField("result", "Long")
-    val nullTerm = ctx.newReusableField("isNull", "boolean")
+      contextTerm: String,
+      ctx: CodeGeneratorContext): GeneratedExpression = {
+    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
+      Seq("result", "isNull"),
+      Seq("Long", "boolean"))
 
     val accessCode =
       s"""
@@ -420,9 +427,10 @@ object CodeGenUtils {
         val fieldType = ct.getFieldTypes()(index)
         val resultTypeTerm = primitiveTypeTermForType(fieldType)
         val defaultValue = primitiveDefaultValue(fieldType)
-        val nullTerm = ctx.newReusableField("isNull", "boolean")
         val readCode = baseRowFieldReadAccess(ctx, index.toString, inputTerm, fieldType, objReuse)
-        val fieldTerm = ctx.newReusableField("field", resultTypeTerm)
+        val Seq(fieldTerm, nullTerm) = ctx.newReusableFields(
+          Seq("field", "isNull"),
+          Seq(resultTypeTerm, "boolean"))
         val inputCode = if (nullCheck) {
           s"""
              |$nullTerm = $inputTerm.isNullAt($index);
@@ -460,8 +468,9 @@ object CodeGenUtils {
     val resultTypeTerm = primitiveTypeTermForType(fieldType)
     val defaultValue = primitiveDefaultValue(fieldType)
 
-    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
-    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
+      Seq("result", "isNull"),
+      Seq(resultTypeTerm, "boolean"))
     val fieldAccessExpr = generateFieldAccess(
       ctx, inputType, inputTerm, index, nullCheck, objReuse)
 
@@ -497,8 +506,9 @@ object CodeGenUtils {
     val resultTypeTerm = primitiveTypeTermForType(fieldType)
     val defaultValue = primitiveDefaultValue(fieldType)
 
-    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
-    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
+      Seq("result", "isNull"),
+      Seq(resultTypeTerm, "boolean"))
 
     val wrappedCode = if (nullCheck) {
       s"""

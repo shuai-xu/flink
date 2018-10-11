@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.codegen.calls
 
-import org.apache.flink.table.codegen.CodeGenUtils.{newName, primitiveTypeTermForType}
+import org.apache.flink.table.codegen.CodeGenUtils.{newNames, primitiveTypeTermForType}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -31,11 +31,8 @@ class PrintCallGen extends CallGenerator {
       ctx: CodeGeneratorContext,
       operands: Seq[GeneratedExpression],
       returnType: InternalType,
-      nullCheck: Boolean)
-    : GeneratedExpression = {
-
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+      nullCheck: Boolean): GeneratedExpression = {
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val resultTypeTerm = primitiveTypeTermForType(returnType)
 
     // add logger, prefer name without number suffix to make sure only one definition

@@ -621,7 +621,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
     val queryConfig = new StreamQueryConfig()
     queryConfig.enableMiniBatch
     queryConfig.withMiniBatchTriggerSize(1)
-    queryConfig.withMiniBatchTriggerTime(1)
+    queryConfig.withMiniBatchTriggerTime(2)
     tEnv.setQueryConfig(queryConfig)
     tEnv.registerTable("T", streamTable)
 

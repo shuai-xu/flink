@@ -757,8 +757,7 @@ class MatchCodeGenerator(
   }
 
   override def visitPatternFieldRef(fieldRef: RexPatternFieldRef): GeneratedExpression = {
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val patternNameTerm = newName("patternName")
     val eventNameTerm = newName("event")
     val eventNameListTerm = newName("eventNameList")
@@ -892,8 +891,7 @@ class MatchCodeGenerator(
 
     val elementTypeTerm = boxedTypeTermForType(elementType)
     val resultTypeTerm = boxedTypeTermForType(returnType)
-    val resultTerm = newName("result")
-    val nullTerm = newName("null")
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val elementTerm = newName("element")
     val inputTerm = newName("input")
 
@@ -998,8 +996,7 @@ class MatchCodeGenerator(
 
       case rexCall: RexCall if rexCall.getOperator == CLASSIFIER =>
         val classifierList = newName("classifiers")
-        val resultTerm = newName("result")
-        val nullTerm = newName("isNull")
+        val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
         val indexTerm = newName("eventIndex")
         val eventTerm = newName("event")
         val resultTypeTerm = primitiveTypeTermForType(DataTypes.internal(resultType))
@@ -1190,8 +1187,7 @@ class MatchCodeGenerator(
         generateCallExpression(rexCall.getOperator, operands, resultType)
 
       case rexCall: RexCall if rexCall.getOperator == CLASSIFIER =>
-        val resultTerm = newName("result")
-        val nullTerm = newName("isNull")
+        val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
         val resultTypeTerm = primitiveTypeTermForType(resultType)
         val defaultValue = primitiveDefaultValue(resultType)
 

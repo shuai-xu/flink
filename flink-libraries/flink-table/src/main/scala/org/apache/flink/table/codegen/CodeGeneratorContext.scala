@@ -798,6 +798,14 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
     fieldName
   }
 
+  def newReusableFields(names: Seq[String], fieldTypeTerms: Seq[String]): Seq[String] = {
+    require(names.length == fieldTypeTerms.length)
+    require(names.toSet.size == names.length, "Duplicated names")
+    val fieldNames = newNames(names)
+    fieldTypeTerms.zip(fieldNames).foreach(x => reusableFieldStatements.add(s"${x._1} ${x._2};"))
+    fieldNames
+  }
+
   def setOperatorBaseClass(operatorBaseClass: Class[_]): CodeGeneratorContext = {
     this.operatorBaseClass = operatorBaseClass
     this

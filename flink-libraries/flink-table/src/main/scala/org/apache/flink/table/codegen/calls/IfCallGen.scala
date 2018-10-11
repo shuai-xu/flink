@@ -46,9 +46,9 @@ class IfCallGen() extends CallGenerator {
     }
 
     val resultTypeTerm = primitiveTypeTermForType(returnType)
-    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
-    val nullTerm = ctx.newReusableField("isNull", "boolean")
-
+    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
+      Seq("result", "isNull"),
+      Seq(resultTypeTerm, "boolean"))
 
     val resultCode =
       s"""

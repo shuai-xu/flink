@@ -170,8 +170,7 @@ object ScalarOperators {
         needle.code,
         resultType)
 
-      val resultTerm = newName("result")
-      val nullTerm = newName("isNull")
+      val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
       val resultTypeTerm = primitiveTypeTermForType(DataTypes.BOOLEAN)
       val defaultValue = primitiveDefaultValue(DataTypes.BOOLEAN)
 
@@ -444,10 +443,8 @@ object ScalarOperators {
   def generateAnd(
       nullCheck: Boolean,
       left: GeneratedExpression,
-      right: GeneratedExpression)
-    : GeneratedExpression = {
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+      right: GeneratedExpression): GeneratedExpression = {
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
 
     val operatorCode = if (nullCheck) {
       // Three-valued logic:
@@ -511,10 +508,8 @@ object ScalarOperators {
   def generateOr(
       nullCheck: Boolean,
       left: GeneratedExpression,
-      right: GeneratedExpression)
-    : GeneratedExpression = {
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+      right: GeneratedExpression): GeneratedExpression = {
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
 
     val operatorCode = if (nullCheck) {
       // Three-valued logic:
@@ -1133,8 +1128,7 @@ object ScalarOperators {
       val trueAction = generateCast(ctx, nullCheck, operands(i + 1), resultType)
       val falseAction = generateIfElse(ctx, nullCheck, operands, resultType, i + 2)
 
-      val resultTerm = newName("result")
-      val nullTerm = newName("isNull")
+      val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
       val resultTypeTerm = primitiveTypeTermForType(resultType)
 
       val operatorCode = if (nullCheck) {
@@ -1444,8 +1438,7 @@ object ScalarOperators {
       array: GeneratedExpression,
       index: GeneratedExpression,
       nullCheck: Boolean): GeneratedExpression = {
-    val nullTerm = newName("isNull")
-    val resultTerm = newName("result")
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val componentInfo = array.resultType.asInstanceOf[ArrayType].getElementType
     val resultTypeTerm = primitiveTypeTermForType(componentInfo)
     val defaultTerm = primitiveDefaultValue(componentInfo)
@@ -1470,8 +1463,7 @@ object ScalarOperators {
       ctx: CodeGeneratorContext,
       array: GeneratedExpression,
       nullCheck: Boolean): GeneratedExpression = {
-    val nullTerm = newName("isNull")
-    val resultTerm = newName("result")
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val resultType = array.resultType.asInstanceOf[ArrayType].getElementType
     val resultTypeTerm = primitiveTypeTermForType(resultType)
     val defaultValue = primitiveDefaultValue(resultType)
@@ -1641,8 +1633,7 @@ object ScalarOperators {
       map: GeneratedExpression,
       key: GeneratedExpression,
       nullCheck: Boolean): GeneratedExpression = {
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val tmpKey = newName("key")
     val length = newName("length")
     val keys = newName("keys")
@@ -1880,18 +1871,18 @@ object ScalarOperators {
 
     val fieldName = operands(1).literalValue.toString
     val fieldIdx = operands
-    .head
-    .resultType
-    .asInstanceOf[BaseRowType]
-    .getFieldIndex(fieldName)
-    val access = generateFieldAccess(ctx,
-    operands.head.resultType,
-    operands.head.resultTerm,
-    fieldIdx,
-    nullCheck)
+        .head
+        .resultType
+        .asInstanceOf[BaseRowType]
+        .getFieldIndex(fieldName)
+    val access = generateFieldAccess(
+      ctx,
+      operands.head.resultType,
+      operands.head.resultTerm,
+      fieldIdx,
+      nullCheck)
 
-    val resultTerm = newName("result")
-    val nullTerm = newName("isNull")
+    val Seq(resultTerm, nullTerm) = newNames(Seq("result", "isNull"))
     val resultTypeTerm = primitiveTypeTermForType(access.resultType)
     val defaultValue = primitiveDefaultValue(access.resultType)
 
