@@ -21,6 +21,7 @@ flink-formats/flink-avro/src/test/java/org/apache/flink/formats/avro/generated/
 flink-runtime-web/web-dashboard/assets/fonts/
 flink-runtime-web/web-dashboard/node_modules/
 flink-runtime-web/web-dashboard/bower_components/
+flink-libraries/flink-sql-client/metastore_db
 atlassian-ide-plugin.xml
 out/
 /docs/api

@@ -23,31 +23,52 @@ import java.util.{Comparator, Queue => JQueue}
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.functions.KeySelector
-import org.apache.flink.streaming.api.operators.OneInputStreamOperator
+import org.apache.flink.api.java.typeutils.ResultTypeQueryable
+import org.apache.flink.configuration.{CheckpointingOptions, Configuration}
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
+import org.apache.flink.runtime.state.StateBackend
+import org.apache.flink.runtime.state.gemini.GeminiConfiguration
+import org.apache.flink.runtime.state.memory.MemoryStateBackend
+import org.apache.flink.streaming.api.operators.{OneInputStreamOperator, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, TestHarnessUtil}
+import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, KeyedTwoInputStreamOperatorTestHarness, TestHarnessUtil}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.runtime.utils.StreamingTestBase
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.BaseRowUtil
+import org.junit.runners.Parameterized
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 
-class HarnessTestBase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode) {
+class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
 
-  override def after(): Unit = {
-    // ignore super call
+  protected def getStateBackend: StateBackend = {
+    mode match {
+      case HEAP_BACKEND =>
+        val conf = new Configuration()
+        conf.setBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS, true)
+        conf.setString(GeminiConfiguration.GEMINI_COPY_VALUE, "true")
+        new MemoryStateBackend().configure(conf)
+
+      case ROCKSDB_BACKEND =>
+        new RocksDBStateBackend("file://" + tempFolder.newFolder().getAbsoluteFile)
+    }
   }
 
   def createHarnessTester[IN, OUT, KEY](
-    operator: OneInputStreamOperator[IN, OUT],
-    keySelector: KeySelector[IN, KEY],
-    keyType: TypeInformation[KEY]): KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT] = {
-    new KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT](operator, keySelector, keyType)
+      operator: OneInputStreamOperator[IN, OUT],
+      keySelector: KeySelector[IN, KEY],
+      keyType: TypeInformation[KEY]): KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT] = {
+    val harness = new KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT](
+      operator,
+      keySelector,
+      keyType)
+    harness.setStateBackend(getStateBackend)
+    harness
   }
 
   def createHarnessTester(
@@ -66,6 +87,41 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingWithStateTestBase
     createHarnessTester(processOperator, keySelector, keyType)
       .asInstanceOf[KeyedOneInputStreamOperatorTestHarness[BaseRow, BaseRow, BaseRow]]
   }
+
+  def createTwoInputHarnessTester[IN1, IN2, OUT, K](
+    operator: TwoInputStreamOperator[IN1, IN2, OUT],
+    leftKeySelector: KeySelector[IN1, K],
+    rightKeySelector: KeySelector[IN2, K])
+  : KeyedTwoInputStreamOperatorTestHarness[K, IN1, IN2, OUT] = {
+    val testHarness =
+      new KeyedTwoInputStreamOperatorTestHarness(
+        operator,
+        leftKeySelector,
+        rightKeySelector,
+        rightKeySelector.asInstanceOf[ResultTypeQueryable[K]].getProducedType,
+        1, 1, 0)
+    testHarness.setStateBackend(getStateBackend)
+    testHarness
+  }
+
+//  def createTwoInputHarnessTester[IN1, IN2, OUT, K](
+//    operator: TwoInputStreamOperator[IN1, IN2, OUT],
+//    leftKeySelector: KeySelector[IN1, K],
+//    rightKeySelector: KeySelector[IN2, K],
+//    typeSerializer1: TypeSerializer[IN1],
+//    typeSerializer2: TypeSerializer[IN2])
+//  : KeyedTwoInputStreamOperatorTestHarness[K, IN1, IN2, OUT] = {
+//    val testHarness =
+//      new KeyedTwoInputStreamOperatorTestHarness(
+//        operator,
+//        leftKeySelector,
+//        rightKeySelector,
+//        rightKeySelector.asInstanceOf[ResultTypeQueryable[K]].getProducedType,
+//        1, 1, 0)
+//    operator.setup
+//    testHarness.setStateBackend(getStateBackend)
+//    testHarness
+//  }
 
   def verify(
     expected: JQueue[Object],
@@ -106,7 +162,7 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingWithStateTestBase
   }
 
   def dropWatermarks(elements: Array[AnyRef]): util.Collection[AnyRef] = {
-    elements.filter(e => !e.isInstanceOf[Watermark]).toList.asJava
+    elements.filter(e => !e.isInstanceOf[Watermark]).toList
   }
 
   def convertStreamRecordToGenericRow(
@@ -136,6 +192,11 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingWithStateTestBase
 }
 
 object HarnessTestBase {
+
+  @Parameterized.Parameters(name = "StateBackend={0}")
+  def parameters(): util.Collection[Array[java.lang.Object]] = {
+    Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
+  }
 
   /**
     * Return 0 for equal Rows and non zero for different rows

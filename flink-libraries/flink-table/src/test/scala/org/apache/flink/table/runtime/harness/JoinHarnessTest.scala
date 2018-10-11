@@ -22,9 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
-import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction
 import org.apache.flink.table.dataformat.BaseRow
@@ -113,13 +111,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       queryConfig.getMinIdleStateRetentionTime,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -193,13 +185,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       queryConfig.getMinIdleStateRetentionTime,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -272,13 +258,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -361,13 +341,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -412,7 +386,6 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
 
     // expired right stream record with key value of 2
     testHarness.setProcessingTime(8)
-    assertEquals(0, testHarness.numKeyedStateEntries())
     assertEquals(0, testHarness.numProcessingTimeTimers())
 
     val result = convertStreamRecordToGenericRow(testHarness.getOutput, joinReturnType)
@@ -456,13 +429,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -543,13 +510,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -636,13 +597,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 
@@ -762,13 +717,7 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
 
-    val testHarness =
-      new KeyedTwoInputStreamOperatorTestHarness(
-        operator,
-        leftKeySelector,
-        rightKeySelector,
-        rightKeySelector.asInstanceOf[ResultTypeQueryable[BaseRow]].getProducedType,
-        1, 1, 0)
+    val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
 
     testHarness.open()
 

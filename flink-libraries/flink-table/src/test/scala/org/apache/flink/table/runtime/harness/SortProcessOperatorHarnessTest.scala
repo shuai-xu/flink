@@ -28,17 +28,20 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, TestHarnessUtil}
+import org.apache.flink.streaming.util.TestHarnessUtil
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
 import org.apache.flink.table.runtime.aggregate.SortUtil
 import org.apache.flink.table.runtime.harness.SortProcessOperatorHarnessTest._
 import org.apache.flink.table.runtime.operator.sort.{ProcTimeSortOperator, RowTimeSortOperator}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils._
-import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
-class SortProcessOperatorHarnessTest extends TableTestBase {
+@RunWith(classOf[Parameterized])
+class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
 
   @Test
   def testSortProcTimeHarnessPartitioned(): Unit = {
@@ -67,10 +70,11 @@ class SortProcessOperatorHarnessTest extends TableTestBase {
       generatedSorter,
       1 * 1024 * 1024)
 
-    val testHarness = new KeyedOneInputStreamOperatorTestHarness[Integer, BaseRow, BaseRow](
+    val testHarness = createHarnessTester(
       sortOperator,
       new TupleRowSelector(0),
       BasicTypeInfo.INT_TYPE_INFO)
+
     testHarness.setup(outputSerializer.asInstanceOf[TypeSerializer[BaseRow]])
     testHarness.open()
     testHarness.setProcessingTime(3)
@@ -161,7 +165,7 @@ class SortProcessOperatorHarnessTest extends TableTestBase {
       4,
       1 * 1024 * 1024)
 
-    val testHarness = new KeyedOneInputStreamOperatorTestHarness[Integer, BaseRow, BaseRow](
+    val testHarness = createHarnessTester(
      processOperator,
       new TupleRowSelector(0),
       BasicTypeInfo.INT_TYPE_INFO)
