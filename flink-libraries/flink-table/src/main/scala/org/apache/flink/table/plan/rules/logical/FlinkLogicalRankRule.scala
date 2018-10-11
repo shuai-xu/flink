@@ -21,9 +21,9 @@ import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rex.{RexProgramBuilder, RexUtil}
 import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalOverWindow, FlinkLogicalRank}
-import org.apache.flink.table.plan.util.{ConstantRankRange, InputRefVisitor, RankUtil}
+import org.apache.flink.table.plan.util.{ConstantRankRange, ConstantRankRangeWithoutEnd, InputRefVisitor, RankUtil}
 
 import scala.collection.JavaConversions._
 
@@ -74,6 +74,13 @@ class FlinkLogicalRankRule
         val remainingPredsAccessRank = remainingPreds.isDefined &&
           RankUtil.accessesRankField(remainingPreds.get, rankFieldIndex)
 
+        rankRange match {
+          case Some(_: ConstantRankRangeWithoutEnd) =>
+            throw TableException("Rank end is not specified. Currently rank only support TopN, " +
+                                   "which means the rank end must be specified.")
+          case _ => // ignore
+        }
+
         rankRange.isDefined && !remainingPredsAccessRank
       } else {
         false
@@ -121,32 +128,38 @@ class FlinkLogicalRankRule
       typeBuilder.build()
     }
 
-    val rank = new FlinkLogicalRank(
-      cluster,
-      window.getTraitSet,
-      window.getInput,
-      rankFun,
-      group.keys,
-      group.orderKeys,
-      rankRange.get,
-      outputRankFunColumn)
+    rankRange match {
+      case Some(ConstantRankRange(_, rankEnd)) if rankEnd <= 0 =>
+        throw new TableException(s"Rank end should not less than zero, but now is $rankEnd")
 
-    if (RexUtil.isIdentity(exprList, rankRowType) && remainingPreds.isEmpty) {
-      // project is trivial and filter is empty, remove the Calc
-      call.transformTo(rank)
-    } else {
-      val programBuilder = RexProgramBuilder.create(
-        rexBuilder,
-        rankRowType,
-        calcProgram.getExprList,
-        calcProgram.getProjectList,
-        remainingPreds.orNull,
-        calc.getRowType,
-        true, // normalize
-        null) // simplify
+      case _ =>
+        val rank = new FlinkLogicalRank(
+          cluster,
+          window.getTraitSet,
+          window.getInput,
+          rankFun,
+          group.keys,
+          group.orderKeys,
+          rankRange.get,
+          outputRankFunColumn)
 
-      val newCalc = calc.copy(calc.getTraitSet, rank, programBuilder.getProgram)
-      call.transformTo(newCalc)
+        if (RexUtil.isIdentity(exprList, rankRowType) && remainingPreds.isEmpty) {
+          // project is trivial and filter is empty, remove the Calc
+          call.transformTo(rank)
+        } else {
+          val programBuilder = RexProgramBuilder.create(
+            rexBuilder,
+            rankRowType,
+            calcProgram.getExprList,
+            calcProgram.getProjectList,
+            remainingPreds.orNull,
+            calc.getRowType,
+            true, // normalize
+            null) // simplify
+
+          val newCalc = calc.copy(calc.getTraitSet, rank, programBuilder.getProgram)
+          call.transformTo(newCalc)
+        }
     }
   }
 }

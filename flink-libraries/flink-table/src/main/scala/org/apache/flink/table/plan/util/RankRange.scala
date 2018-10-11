@@ -21,22 +21,22 @@ sealed trait RankRange extends Serializable {
   def toString(inputFieldNames: Seq[String]): String
 }
 
-// rankStart and rankEnd are inclusive, rankStart always start from one.
+/** [[ConstantRankRangeWithoutEnd]] is a RankRange which not specify RankEnd. */
+case class ConstantRankRangeWithoutEnd(rankStart: Long) extends RankRange {
+  override def toString(inputFieldNames: Seq[String]): String = this.toString
+
+  override def toString: String = s"rankStart=$rankStart"
+}
+
+/** rankStart and rankEnd are inclusive, rankStart always start from one. */
 case class ConstantRankRange(rankStart: Long, rankEnd: Long) extends RankRange {
 
   override def toString(inputFieldNames: Seq[String]): String = this.toString
 
-  override def toString: String = {
-    if (rankEnd != Long.MaxValue) {
-      s"rankStart=$rankStart, rankEnd=$rankEnd"
-    } else {
-      s"rankStart=$rankStart"
-    }
-  }
-
+  override def toString: String = s"rankStart=$rankStart, rankEnd=$rankEnd"
 }
 
-// changing rank limit depends on input
+/** changing rank limit depends on input */
 case class VariableRankRange(rankEndIndex: Int) extends RankRange {
   override def toString(inputFieldNames: Seq[String]): String = {
     s"rankEnd=${inputFieldNames(rankEndIndex)}"

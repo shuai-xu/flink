@@ -100,8 +100,8 @@ object RankUtil {
       case Seq(Some(UpperBoundary(x)), Some(LowerBoundary(y))) =>
         ConstantRankRange(y, x)
       case Seq(Some(LowerBoundary(x))) =>
-        // only offset, use Long.MaxValue to indicate unlimited
-        ConstantRankRange(x, Long.MaxValue)
+        // only offset
+        ConstantRankRangeWithoutEnd(x)
       case Seq(Some(UpperBoundary(x))) =>
         // rankStart starts from one
         ConstantRankRange(1, x)

@@ -130,8 +130,8 @@ LogicalProject(a=[$0], b=[$1], rk=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-FlinkLogicalCalc(select=[a, b, w0$o0 AS $2])
-+- FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=3], select=[a, b, c, rk])
+FlinkLogicalCalc(select=[a, b, w0$o0 AS $2], where=[>(w0$o0, 2)])
++- FlinkLogicalOverWindow(window#0=[window(partition {1} order by [0 ASC-nulls-first, 2 ASC-nulls-first] range between UNBOUNDED PRECEDING and CURRENT ROW aggs [RANK()])])
    +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

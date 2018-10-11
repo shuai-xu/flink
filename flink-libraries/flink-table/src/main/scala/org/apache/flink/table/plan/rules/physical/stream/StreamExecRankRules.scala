@@ -23,14 +23,13 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalSort}
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.ConstantRankRange
-import org.apache.flink.table.runtime.aggregate.SortUtil
 
 object StreamExecRankRules {
   val SORT_INSTANCE: RelOptRule = new StreamExecRankFromSortRule
@@ -77,7 +76,8 @@ object StreamExecRankRules {
       val rankEnd = if (sort.fetch != null) {
         rankStart + RexLiteral.intValue(sort.fetch) - 1
       } else {
-        Long.MaxValue
+        // we have checked in matches method that fetch is not null
+        throw TableException("This should never happen, please file an issue.")
       }
 
       new StreamExecRank(

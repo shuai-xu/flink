@@ -18,6 +18,7 @@
 package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.util.TableTestBase
@@ -80,6 +81,8 @@ class FlinkLogicalRankRuleTest extends TableTestBase {
     val sqlQuery = "SELECT * FROM (" +
       "SELECT a, b, RANK() OVER (PARTITION BY b ORDER BY a, c) rk FROM x) t " +
       "WHERE rk > 2"
+    thrown.expectMessage("Rank end is not specified.")
+    thrown.expect(classOf[TableException])
     util.verifyPlan(sqlQuery)
   }
 

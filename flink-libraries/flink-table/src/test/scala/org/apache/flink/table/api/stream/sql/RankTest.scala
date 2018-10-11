@@ -19,7 +19,7 @@ package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment, TableException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.aggregate.LongSumAggFunction
 import org.apache.flink.table.functions.{Monotonicity, ScalarFunction}
@@ -35,6 +35,40 @@ class RankTest extends TableTestBase {
   val streamUtil: StreamTableTestUtil = streamTestUtil()
   streamUtil.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
   streamUtil.addFunction("add", new AddUdf)
+
+  @Test
+  def testRankEndMustSpecified(): Unit = {
+    val sql =
+      """
+        |SELECT *
+        |FROM (
+        |  SELECT a, b, c,
+        |      ROW_NUMBER() OVER (PARTITION BY a ORDER BY b DESC) as rank_num
+        |  FROM MyTable)
+        |WHERE rank_num >= 10
+      """.stripMargin
+
+    thrown.expectMessage("Rank end is not specified.")
+    thrown.expect(classOf[TableException])
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testRankEndLessThanZero(): Unit = {
+    val sql =
+      """
+        |SELECT *
+        |FROM (
+        |  SELECT a, b, c,
+        |      ROW_NUMBER() OVER (PARTITION BY a ORDER BY b DESC) as rank_num
+        |  FROM MyTable)
+        |WHERE rank_num <= 0
+      """.stripMargin
+
+    thrown.expectMessage("Rank end should not less than zero")
+    thrown.expect(classOf[TableException])
+    streamUtil.verifyPlan(sql)
+  }
 
   @Test
   def testOrderByLimit(): Unit = {
