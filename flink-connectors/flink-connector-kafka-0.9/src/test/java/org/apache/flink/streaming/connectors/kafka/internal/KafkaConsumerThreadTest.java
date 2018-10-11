@@ -797,7 +797,8 @@ public class KafkaConsumerThreadTest {
 			when(mockConsumer.position(any(TopicPartition.class))).thenAnswer(new Answer<Object>() {
 				@Override
 				public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-					return mockConsumerAssignmentAndPosition.get(invocationOnMock.getArgumentAt(0, TopicPartition.class));
+					return mockConsumerAssignmentAndPosition.get(
+						invocationOnMock.getArgumentAt(0, TopicPartition.class));
 				}
 			});
 		} else {
@@ -809,7 +810,8 @@ public class KafkaConsumerThreadTest {
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 				mockConsumerAssignmentAndPosition.clear();
 
-				List<TopicPartition> assignedPartitions = invocationOnMock.getArgumentAt(0, List.class);
+				List<TopicPartition> assignedPartitions = invocationOnMock.getArgumentAt(0,
+					List.class);
 				for (TopicPartition assigned : assignedPartitions) {
 					mockConsumerAssignmentAndPosition.put(assigned, null);
 				}
@@ -821,7 +823,7 @@ public class KafkaConsumerThreadTest {
 			@Override
 			public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 				TopicPartition partition = invocationOnMock.getArgumentAt(0, TopicPartition.class);
-				long position = invocationOnMock.getArgumentAt(1, long.class);
+				long position = invocationOnMock.getArgumentAt(1, Long.class);
 
 				if (!mockConsumerAssignmentAndPosition.containsKey(partition)) {
 					throw new Exception("the current mock assignment does not contain partition " + partition);

@@ -40,9 +40,9 @@ class LiteralValueValidator(keyPrefix: String) extends HierarchyDescriptorValida
    */
 
   override protected def validateWithPrefix(
-      keyPrefix: String,
-      properties: DescriptorProperties)
-    : Unit = {
+    keyPrefix: String,
+    properties: DescriptorProperties)
+  : Unit = {
 
     val typeKey = s"$keyPrefix${LiteralValueValidator.TYPE}"
 

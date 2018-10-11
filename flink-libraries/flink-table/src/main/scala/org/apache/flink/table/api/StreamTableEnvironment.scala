@@ -40,6 +40,7 @@ import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, Flink
 import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`._
@@ -48,7 +49,7 @@ import org.apache.flink.table.plan.logical.{LogicalNode, LogicalRelNode, SinkNod
 import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
 import org.apache.flink.table.plan.optimize.StreamOptimizeContext
-import org.apache.flink.table.plan.schema._
+import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
 import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder, MiniBatchHelper}
@@ -236,6 +237,45 @@ abstract class StreamTableEnvironment(
   }
 
   /**
+    * Creates a table source and/or table sink from a descriptor.
+    *
+    * Descriptors allow for declaring the communication to external systems in an
+    * implementation-agnostic way. The classpath is scanned for suitable table factories that match
+    * the desired configuration.
+    *
+    * The following example shows how to read from a Kafka connector using a JSON format and
+    * registering a table source "MyTable" in append mode:
+    *
+    * {{{
+    *
+    * tableEnv
+    *   .connect(
+    *     new Kafka()
+    *       .version("0.11")
+    *       .topic("clicks")
+    *       .property("zookeeper.connect", "localhost")
+    *       .property("group.id", "click-group")
+    *       .startFromEarliest())
+    *   .withFormat(
+    *     new Json()
+    *       .jsonSchema("{...}")
+    *       .failOnMissingField(false))
+    *   .withSchema(
+    *     new Schema()
+    *       .field("user-name", "VARCHAR").from("u_name")
+    *       .field("count", "DECIMAL")
+    *       .field("proc-time", "TIMESTAMP").proctime())
+    *   .inAppendMode()
+    *   .registerSource("MyTable")
+    * }}}
+    *
+    * @param connectorDescriptor connector descriptor describing the external system
+    */
+  def connect(connectorDescriptor: ConnectorDescriptor): StreamTableDescriptor = {
+    new StreamTableDescriptor(this, connectorDescriptor)
+  }
+
+  /**
     * Registers an external [[TableSink]] with given field names and types in this
     * [[TableEnvironment]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
@@ -282,6 +322,72 @@ abstract class StreamTableEnvironment(
 
         val configuredSink = streamTableSink.configure(fieldNames, fieldTypes)
         registerTableInternal(name, new TableSinkTable(configuredSink))
+      case _ =>
+        throw new TableException(
+          "Only AppendStreamTableSink, UpsertStreamTableSink, and RetractStreamTableSink can be " +
+            "registered in StreamTableEnvironment.")
+    }
+  }
+
+  /**
+    * Registers an external [[TableSink]] with already configured field names and field types in
+    * this [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param configuredSink The configured [[TableSink]] to register.
+    */
+  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = {
+    registerTableSinkInternal(name, configuredSink)
+  }
+
+  private def registerTableSinkInternal(name: String, configuredSink: TableSink[_]): Unit = {
+    // validate
+    checkValidTableName(name)
+    if (configuredSink.getFieldNames == null || configuredSink.getFieldTypes == null) {
+      throw new TableException("Table sink is not configured.")
+    }
+    if (configuredSink.getFieldNames.length == 0) {
+      throw new TableException("Field names must not be empty.")
+    }
+    if (configuredSink.getFieldNames.length != configuredSink.getFieldTypes.length) {
+      throw new TableException("Same number of field names and types required.")
+    }
+
+    // register
+    configuredSink match {
+
+      // check for proper batch table sink
+      case _: StreamTableSink[_] =>
+
+        // check if a table (source or sink) is registered
+        getTable(name) match {
+
+          // table source and/or sink is registered
+          case table: TableSourceSinkTable[_] => table.tableSinkTable match {
+
+            // wrapper contains sink
+            case Some(_: TableSinkTable[_]) =>
+              throw new TableException(s"Table '$name' already exists. " +
+                s"Please choose a different name.")
+
+            // wrapper contains only source (not sink)
+            case _ =>
+              val enrichedTable = new TableSourceSinkTable(
+                table.tableSourceTable,
+                Some(new TableSinkTable(configuredSink)))
+              replaceRegisteredTable(name, enrichedTable)
+          }
+
+          // no table is registered
+          case _ =>
+            val newTable = new TableSourceSinkTable(
+              None,
+              Some(new TableSinkTable(configuredSink)))
+            registerTableInternal(name, newTable)
+        }
+
+      // not a stream table sink
       case _ =>
         throw new TableException(
           "Only AppendStreamTableSink, UpsertStreamTableSink, and RetractStreamTableSink can be " +

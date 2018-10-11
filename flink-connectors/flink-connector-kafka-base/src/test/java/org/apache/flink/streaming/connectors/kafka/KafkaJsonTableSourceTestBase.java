@@ -23,6 +23,7 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps;
+import org.apache.flink.table.types.DataTypes;
 
 import org.junit.Test;
 
@@ -35,8 +36,12 @@ import static org.junit.Assert.assertNull;
 
 /**
  * Abstract test base for all Kafka JSON table sources.
+ *
+ * @deprecated Ensures backwards compatibility with Flink 1.5. Can be removed once we
+ *             drop support for format-specific table sources.
  */
-public abstract class KafkaJsonTableSourceTestBase extends KafkaTableSourceTestBase {
+@Deprecated
+public abstract class KafkaJsonTableSourceTestBase extends KafkaTableSourceBuilderTestBase {
 
 	@Test
 	public void testJsonEqualsTableSchema() {
@@ -46,7 +51,7 @@ public abstract class KafkaJsonTableSourceTestBase extends KafkaTableSourceTestB
 		KafkaJsonTableSource source = (KafkaJsonTableSource) b.build();
 
 		// check return type
-		RowTypeInfo returnType = (RowTypeInfo) source.getReturnType();
+		RowTypeInfo returnType = (RowTypeInfo) DataTypes.toTypeInfo(source.getReturnType());
 		assertNotNull(returnType);
 		assertEquals(5, returnType.getArity());
 		// check field names
@@ -79,19 +84,19 @@ public abstract class KafkaJsonTableSourceTestBase extends KafkaTableSourceTestB
 
 		// set Avro class with different fields
 		b.forJsonSchema(TableSchema.builder()
-			.field("otherField1", Types.LONG())
-			.field("otherField2", Types.STRING())
-			.field("rowtime", Types.LONG())
-			.field("otherField3", Types.DOUBLE())
-			.field("otherField4", Types.BYTE())
-			.field("otherField5", Types.INT()).build());
+			.field("otherField1", DataTypes.LONG)
+			.field("otherField2", DataTypes.STRING)
+			.field("rowtime", DataTypes.LONG)
+			.field("otherField3", DataTypes.DOUBLE)
+			.field("otherField4", DataTypes.BYTE)
+			.field("otherField5", DataTypes.INT).build());
 		b.withTableToJsonMapping(mapping);
 		b.withRowtimeAttribute("time1", new ExistingField("timeField1"), new AscendingTimestamps());
 
 		KafkaJsonTableSource source = (KafkaJsonTableSource) b.build();
 
 		// check return type
-		RowTypeInfo returnType = (RowTypeInfo) source.getReturnType();
+		RowTypeInfo returnType = (RowTypeInfo) DataTypes.toTypeInfo(source.getReturnType());
 		assertNotNull(returnType);
 		assertEquals(6, returnType.getArity());
 		// check field names

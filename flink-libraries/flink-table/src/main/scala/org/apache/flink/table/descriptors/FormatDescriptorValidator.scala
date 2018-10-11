@@ -18,7 +18,8 @@
 
 package org.apache.flink.table.descriptors
 
-import org.apache.flink.table.descriptors.FormatDescriptorValidator.{FORMAT_PROPERTY_VERSION, FORMAT_TYPE}
+import org.apache.flink.table.descriptors.FormatDescriptorValidator.{FORMAT_PROPERTY_VERSION,
+  FORMAT_TYPE}
 
 /**
   * Validator for [[FormatDescriptor]].

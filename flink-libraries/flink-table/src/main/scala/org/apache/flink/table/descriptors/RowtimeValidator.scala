@@ -29,9 +29,9 @@ import scala.collection.JavaConverters._
   * Validator for [[Rowtime]].
   */
 class RowtimeValidator(
-    supportsSourceTimestamps: Boolean,
-    supportsSourceWatermarks: Boolean,
-    prefix: String = "")
+  supportsSourceTimestamps: Boolean,
+  supportsSourceWatermarks: Boolean,
+  prefix: String = "")
   extends DescriptorValidator {
 
   override def validate(properties: DescriptorProperties): Unit = {
@@ -122,19 +122,19 @@ object RowtimeValidator {
   def normalizeTimestampExtractor(extractor: TimestampExtractor): Map[String, String] =
     extractor match {
 
-        case existing: ExistingField =>
-          Map(
-            ROWTIME_TIMESTAMPS_TYPE -> ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_FIELD,
-            ROWTIME_TIMESTAMPS_FROM -> existing.getArgumentFields.apply(0))
+      case existing: ExistingField =>
+        Map(
+          ROWTIME_TIMESTAMPS_TYPE -> ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_FIELD,
+          ROWTIME_TIMESTAMPS_FROM -> existing.getArgumentFields.apply(0))
 
-        case _: StreamRecordTimestamp =>
-          Map(ROWTIME_TIMESTAMPS_TYPE -> ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_SOURCE)
+      case _: StreamRecordTimestamp =>
+        Map(ROWTIME_TIMESTAMPS_TYPE -> ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_SOURCE)
 
-        case _: TimestampExtractor =>
-          Map(
-            ROWTIME_TIMESTAMPS_TYPE -> ROWTIME_TIMESTAMPS_TYPE_VALUE_CUSTOM,
-            ROWTIME_TIMESTAMPS_CLASS -> extractor.getClass.getName,
-            ROWTIME_TIMESTAMPS_SERIALIZED -> serialize(extractor))
+      case _: TimestampExtractor =>
+        Map(
+          ROWTIME_TIMESTAMPS_TYPE -> ROWTIME_TIMESTAMPS_TYPE_VALUE_CUSTOM,
+          ROWTIME_TIMESTAMPS_CLASS -> extractor.getClass.getName,
+          ROWTIME_TIMESTAMPS_SERIALIZED -> serialize(extractor))
     }
 
   def normalizeWatermarkStrategy(strategy: WatermarkStrategy): Map[String, String] =
@@ -159,7 +159,7 @@ object RowtimeValidator {
     }
 
   def getRowtimeComponents(properties: DescriptorProperties, prefix: String)
-    : Option[(TimestampExtractor, WatermarkStrategy)] = {
+  : Option[(TimestampExtractor, WatermarkStrategy)] = {
 
     // create timestamp extractor
     val t = properties.getOptionalString(prefix + ROWTIME_TIMESTAMPS_TYPE)
@@ -177,7 +177,7 @@ object RowtimeValidator {
 
       case ROWTIME_TIMESTAMPS_TYPE_VALUE_CUSTOM =>
         val clazz = properties.getClass(
-          ROWTIME_TIMESTAMPS_CLASS,
+          prefix + ROWTIME_TIMESTAMPS_CLASS,
           classOf[TimestampExtractor])
         DescriptorProperties.deserialize(
           properties.getString(prefix + ROWTIME_TIMESTAMPS_SERIALIZED),

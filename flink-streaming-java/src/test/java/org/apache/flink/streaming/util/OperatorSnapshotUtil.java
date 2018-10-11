@@ -164,7 +164,7 @@ public class OperatorSnapshotUtil {
 				new StateObjectCollection<>(rawOperatorState),
 				new StateObjectCollection<>(managedKeyedState),
 				new StateObjectCollection<>(rawKeyedState),
-				null);
+				new StateObjectCollection<>());
 		}
 	}
 }

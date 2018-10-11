@@ -31,11 +31,12 @@ import org.apache.commons.lang.StringEscapeUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.configuration.MemorySize
 import org.apache.flink.table.api.{TableException, TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.DescriptorProperties.{NAME, TYPE, normalizeTableSchema, toJava}
-import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeStringUtils
-import org.apache.flink.util.InstantiationUtil
+import org.apache.flink.util.{InstantiationUtil, Preconditions}
 import org.apache.flink.util.Preconditions.checkNotNull
 
 import scala.collection.JavaConverters._
@@ -128,6 +129,15 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
     checkNotNull(key)
     checkNotNull(schema)
     putTableSchema(key, normalizeTableSchema(schema))
+  }
+
+  /**
+    * Adds a Flink [[MemorySize]] under the given key.
+    */
+  def putMemorySize(key: String, size: MemorySize): Unit = {
+    checkNotNull(key)
+    checkNotNull(size)
+    put(key, size.toString)
   }
 
   /**
@@ -396,7 +406,7 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
         properties.getOrElse(name, throw new ValidationException(s"Invalid table schema. " +
           s"Could not find name for field '$key.$i'.")
         ),
-        DataTypes.internal(TypeStringUtils.readTypeInfo(
+        DataTypes.of(TypeStringUtils.readTypeInfo(
           properties.getOrElse(tpe, throw new ValidationException(s"Invalid table schema. " +
             s"Could not find type for field '$key.$i'."))
         ))
@@ -410,6 +420,21 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
     */
   def getTableSchema(key: String): TableSchema = {
     getOptionalTableSchema(key).orElseThrow(exceptionSupplier(key))
+  }
+
+  /**
+    * Returns a Flink [[MemorySize]] under the given key if it exists.
+    */
+  def getOptionalMemorySize(key: String): Optional[MemorySize] = {
+    val value = properties.get(key).map(MemorySize.parse(_, MemorySize.MemoryUnit.BYTES))
+    toJava(value)
+  }
+
+  /**
+    * Returns a Flink [[MemorySize]] under the given existing key.
+    */
+  def getMemorySize(key: String): MemorySize = {
+    getOptionalMemorySize(key).orElseThrow(exceptionSupplier(key))
   }
 
   /**
@@ -549,6 +574,13 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
     properties.filterKeys(_.startsWith(prefix)).toSeq.map{ case (k, v) =>
       k.substring(prefix.length) -> v // remove prefix
     }.toMap.asJava
+  }
+
+  /**
+    * Returns if a key is exactly equal to the given value.
+    */
+  def isValue(key: String, value: String): Boolean = {
+    getString(key) == value
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -965,6 +997,63 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
   }
 
   /**
+    * Validates a Flink [[MemorySize]].
+    *
+    * The precision defines the allowed minimum unit in bytes (e.g. 1024 would only allow KB).
+    */
+  def validateMemorySize(
+    key: String,
+    isOptional: Boolean,
+    precision: Int)
+  : Unit = {
+    validateMemorySize(key, isOptional, precision, 0, Long.MaxValue)
+  }
+
+  /**
+    * Validates a Flink [[MemorySize]]. The boundaries are inclusive and in bytes.
+    *
+    * The precision defines the allowed minimum unit in bytes (e.g. 1024 would only allow KB).
+    */
+  def validateMemorySize(
+    key: String,
+    isOptional: Boolean,
+    precision: Int,
+    min: Long) // inclusive
+  : Unit = {
+    validateMemorySize(key, isOptional, precision, min, Long.MaxValue)
+  }
+
+  /**
+    * Validates a Flink [[MemorySize]]. The boundaries are inclusive and in bytes.
+    *
+    * The precision defines the allowed minimum unit in bytes (e.g. 1024 would only allow KB).
+    */
+  def validateMemorySize(
+    key: String,
+    isOptional: Boolean,
+    precision: Int,
+    min: Long, // inclusive
+    max: Long) // inclusive
+  : Unit = {
+    Preconditions.checkArgument(precision > 0)
+
+    validateComparable(
+      key,
+      isOptional,
+      Long.box(min),
+      Long.box(max),
+      "memory size (in bytes)",
+      (value: String) => {
+        val bytes = Long.box(MemorySize.parse(value, MemorySize.MemoryUnit.BYTES).getBytes)
+        if (bytes % precision != 0) {
+          throw new ValidationException(
+            s"Memory size for key '$key' must be a multiple of $precision bytes but was: $value")
+        }
+        bytes
+      })
+  }
+
+  /**
     * Validates a enum property with a set of validation logic for each enum value.
     */
   def validateEnum(
@@ -1065,6 +1154,10 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
     properties.toMap.asJava
   }
 
+  override def toString: String = {
+    DescriptorProperties.toString(properties.toMap)
+  }
+
   // ----------------------------------------------------------------------------------------------
 
   /**
@@ -1086,7 +1179,7 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
     */
   private def put(key: String, value: String): Unit = {
     if (properties.contains(key)) {
-      throw new IllegalStateException("Property already present:" + key)
+      throw new ValidationException(s"Property already present: $key")
     }
     if (normalizeKeys) {
       properties.put(key.toLowerCase, value)
@@ -1188,6 +1281,7 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
     isOptional: Boolean,
     min: T,
     max: T,
+    typeName: String,
     parseFunction: String => T)
   : Unit = {
     if (!properties.contains(key)) {
@@ -1195,7 +1289,6 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
         throw new ValidationException(s"Could not find required property '$key'.")
       }
     } else {
-      val typeName = min.getClass.getSimpleName
       try {
         val value = parseFunction(properties(key))
 
@@ -1204,11 +1297,32 @@ class DescriptorProperties(normalizeKeys: Boolean = true) {
             s" value between $min and $max but was: ${properties(key)}")
         }
       } catch {
-        case _: NumberFormatException =>
+        case _: NumberFormatException | _: IllegalArgumentException =>
           throw new ValidationException(
             s"Property '$key' must be a $typeName value but was: ${properties(key)}")
       }
     }
+  }
+
+  /**
+    * Validates a property by first parsing the string value to a comparable object.
+    * The boundaries are inclusive.
+    */
+  private def validateComparable[T <: Comparable[T]](
+    key: String,
+    isOptional: Boolean,
+    min: T,
+    max: T,
+    parseFunction: String => T)
+  : Unit = {
+
+    validateComparable(
+      key,
+      isOptional,
+      min,
+      max,
+      min.getClass.getSimpleName,
+      parseFunction)
   }
 }
 
@@ -1282,6 +1396,12 @@ object DescriptorProperties {
       .toSeq
       .sorted
       .mkString("\n")
+  }
+
+  def toJavaMap(descriptor: Descriptor): util.Map[String, String] = {
+    val descriptorProperties = new DescriptorProperties()
+    descriptor.addProperties(descriptorProperties)
+    descriptorProperties.asMap
   }
 
   // the following methods help for Scala <-> Java interfaces

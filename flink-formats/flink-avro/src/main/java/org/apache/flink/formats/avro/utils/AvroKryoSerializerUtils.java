@@ -33,6 +33,11 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+import org.joda.time.Chronology;
+import org.joda.time.DateTimeZone;
+import org.joda.time.LocalDate;
+import org.joda.time.LocalTime;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.Serializable;
 import java.util.LinkedHashMap;
@@ -45,7 +50,7 @@ public class AvroKryoSerializerUtils extends AvroUtils {
 	@Override
 	public void addAvroSerializersIfRequired(ExecutionConfig reg, Class<?> type) {
 		if (org.apache.avro.specific.SpecificRecordBase.class.isAssignableFrom(type) ||
-			org.apache.avro.generic.GenericData.Record.class.isAssignableFrom(type)) {
+			GenericData.Record.class.isAssignableFrom(type)) {
 
 			// Avro POJOs contain java.util.List which have GenericData.Array as their runtime type
 			// because Kryo is not able to serialize them properly, we use this serializer for them
@@ -83,7 +88,7 @@ public class AvroKryoSerializerUtils extends AvroUtils {
 
 	/**
 	 * Slow serialization approach for Avro schemas.
-	 * This is only used with {{@link org.apache.avro.generic.GenericData.Record}} types.
+	 * This is only used with {{@link GenericData.Record}} types.
 	 * Having this serializer, we are able to handle avro Records.
 	 */
 	public static class AvroSchemaSerializer extends Serializer<Schema> implements Serializable {
@@ -101,6 +106,71 @@ public class AvroKryoSerializerUtils extends AvroUtils {
 			// the parser seems to be stateful, to we need a new one for every type.
 			Schema.Parser sParser = new Schema.Parser();
 			return sParser.parse(schemaAsString);
+		}
+	}
+
+	/**
+	 * Avro logical types use JodaTime's LocalDate but Kryo is unable to serialize it
+	 * properly (esp. visible after calling the toString() method).
+	 */
+	public static class JodaLocalDateSerializer extends Serializer<LocalDate> {
+
+		public JodaLocalDateSerializer() {
+			setImmutable(true);
+		}
+
+		@Override
+		public void write(Kryo kryo, Output output, LocalDate localDate) {
+			output.writeInt(localDate.getYear());
+			output.writeInt(localDate.getMonthOfYear());
+			output.writeInt(localDate.getDayOfMonth());
+
+			final Chronology chronology = localDate.getChronology();
+			if (chronology != null && chronology != ISOChronology.getInstanceUTC()) {
+				throw new RuntimeException("Unsupported chronology: " + chronology);
+			}
+		}
+
+		@Override
+		public LocalDate read(Kryo kryo, Input input, Class<LocalDate> aClass) {
+			final int y = input.readInt();
+			final int m = input.readInt();
+			final int d = input.readInt();
+
+			return new LocalDate(
+				y,
+				m,
+				d,
+				null);
+		}
+	}
+
+	/**
+	 * Avro logical types use JodaTime's LocalTime but Kryo is unable to serialize it
+	 * properly (esp. visible after calling the toString() method).
+	 */
+	public static class JodaLocalTimeSerializer extends Serializer<LocalTime> {
+
+		@Override
+		public void write(Kryo kryo, Output output, LocalTime object) {
+			final int time = object.getMillisOfDay();
+			output.writeInt(time, true);
+
+			final Chronology chronology = object.getChronology();
+			if (chronology != null && chronology != ISOChronology.getInstanceUTC()) {
+				throw new RuntimeException("Unsupported chronology: " + chronology);
+			}
+		}
+
+		@Override
+		public LocalTime read(Kryo kryo, Input input, Class<LocalTime> type) {
+			final int time = input.readInt(true);
+			return new LocalTime(time, ISOChronology.getInstanceUTC().withZone(DateTimeZone.UTC));
+		}
+
+		@Override
+		public LocalTime copy(Kryo kryo, LocalTime original) {
+			return new LocalTime(original);
 		}
 	}
 }

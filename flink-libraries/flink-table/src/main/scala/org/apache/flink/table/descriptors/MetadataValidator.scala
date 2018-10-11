@@ -18,7 +18,8 @@
 
 package org.apache.flink.table.descriptors
 
-import org.apache.flink.table.descriptors.MetadataValidator.{METADATA_COMMENT, METADATA_CREATION_TIME, METADATA_LAST_ACCESS_TIME, METADATA_PROPERTY_VERSION}
+import org.apache.flink.table.descriptors.MetadataValidator.{METADATA_COMMENT,
+  METADATA_CREATION_TIME, METADATA_LAST_ACCESS_TIME, METADATA_PROPERTY_VERSION}
 
 /**
   * Validator for [[Metadata]].

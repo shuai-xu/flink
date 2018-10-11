@@ -73,8 +73,8 @@ import static org.powermock.api.mockito.PowerMockito.when;
  * <p>For regenerating the binary snapshot files run {@link #writeSnapshot()} on the corresponding
  * Flink release-* branch.
  */
+@Ignore // TODO: should fix this when default
 @RunWith(Parameterized.class)
-@Ignore
 public class FlinkKafkaConsumerBaseMigrationTest {
 
 	/**
@@ -94,7 +94,11 @@ public class FlinkKafkaConsumerBaseMigrationTest {
 
 	@Parameterized.Parameters(name = "Migration Savepoint: {0}")
 	public static Collection<MigrationVersion> parameters () {
-		return Arrays.asList(MigrationVersion.v1_2, MigrationVersion.v1_3, MigrationVersion.v1_4);
+		return Arrays.asList(
+			MigrationVersion.v1_2,
+			MigrationVersion.v1_3,
+			MigrationVersion.v1_4,
+			MigrationVersion.v1_5);
 	}
 
 	public FlinkKafkaConsumerBaseMigrationTest(MigrationVersion testMigrateVersion) {

@@ -22,7 +22,6 @@ import java.util
 import java.util.{ArrayList => JArrayList}
 
 import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.rel.RelNode
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.commons.lang3.SystemUtils
@@ -39,7 +38,6 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.types.InternalType
-import org.apache.flink.table.util.{DiffRepository, RelTraitUtil}
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}

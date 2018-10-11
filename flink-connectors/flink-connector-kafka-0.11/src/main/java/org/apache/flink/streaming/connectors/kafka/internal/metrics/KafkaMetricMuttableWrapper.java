@@ -28,9 +28,9 @@ import org.apache.kafka.common.Metric;
  */
 @Internal
 public class KafkaMetricMuttableWrapper implements Gauge<Double> {
-	private org.apache.kafka.common.Metric kafkaMetric;
+	private Metric kafkaMetric;
 
-	public KafkaMetricMuttableWrapper(org.apache.kafka.common.Metric metric) {
+	public KafkaMetricMuttableWrapper(Metric metric) {
 		this.kafkaMetric = metric;
 	}
 

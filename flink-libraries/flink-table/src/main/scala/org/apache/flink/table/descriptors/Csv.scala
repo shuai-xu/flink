@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.descriptors
 
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.CsvValidator._
-import org.apache.flink.table.types.{DataTypes, InternalType}
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
@@ -33,7 +33,7 @@ class Csv extends FormatDescriptor(FORMAT_TYPE_VALUE, version = 1) {
   private var fieldDelim: Option[String] = None
   private var lineDelim: Option[String] = None
   private val schema: mutable.LinkedHashMap[String, String] =
-      mutable.LinkedHashMap[String, String]()
+    mutable.LinkedHashMap[String, String]()
   private var quoteCharacter: Option[Character] = None
   private var commentPrefix: Option[String] = None
   private var isIgnoreFirstLine: Option[Boolean] = None
@@ -81,10 +81,10 @@ class Csv extends FormatDescriptor(FORMAT_TYPE_VALUE, version = 1) {
     * also the order of the fields in the format.
     *
     * @param fieldName the field name
-    * @param dataType the type information of the field
+    * @param fieldType the type information of the field
     */
-  def field(fieldName: String, dataType: InternalType): Csv = {
-    field(fieldName, DescriptorProperties.normalizeTypeInfo(DataTypes.toTypeInfo(dataType)))
+  def field(fieldName: String, fieldType: TypeInformation[_]): Csv = {
+    field(fieldName, DescriptorProperties.normalizeTypeInfo(fieldType))
     this
   }
 

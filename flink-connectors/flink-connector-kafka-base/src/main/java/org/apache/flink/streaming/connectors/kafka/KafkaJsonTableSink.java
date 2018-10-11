@@ -20,16 +20,20 @@ package org.apache.flink.streaming.connectors.kafka;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.SerializationSchema;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.formats.json.JsonRowSerializationSchema;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.types.Row;
 
 import java.util.Properties;
 
 /**
  * Base class for {@link KafkaTableSink} that serializes data in JSON format.
+ *
+ * @deprecated Use table descriptors instead of implementation-specific classes.
  */
+@Deprecated
 @Internal
 public abstract class KafkaJsonTableSink extends KafkaTableSink {
 
@@ -39,13 +43,15 @@ public abstract class KafkaJsonTableSink extends KafkaTableSink {
 	 * @param topic topic in Kafka to which table is written
 	 * @param properties properties to connect to Kafka
 	 * @param partitioner Kafka partitioner
+	 * @deprecated Use table descriptors instead of implementation-specific classes.
 	 */
+	@Deprecated
 	public KafkaJsonTableSink(String topic, Properties properties, FlinkKafkaPartitioner<Row> partitioner) {
 		super(topic, properties, partitioner);
 	}
 
 	@Override
-	protected SerializationSchema<Row> createSerializationSchema(RowTypeInfo rowSchema) {
-		return new JsonRowSerializationSchema(rowSchema);
+	protected SerializationSchema<Row> createSerializationSchema(DataType rowSchema) {
+		return new JsonRowSerializationSchema(DataTypes.toTypeInfo(rowSchema));
 	}
 }

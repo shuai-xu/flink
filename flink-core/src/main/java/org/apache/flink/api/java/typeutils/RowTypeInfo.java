@@ -274,6 +274,13 @@ public class RowTypeInfo extends TupleTypeInfoBase<Row> {
 		return types;
 	}
 
+	/**
+	 * Tests whether an other object describes the same, schema-equivalent row information.
+	 */
+	public boolean schemaEquals(Object obj) {
+		return equals(obj) && Arrays.equals(fieldNames, ((RowTypeInfo) obj).fieldNames);
+	}
+
 	private boolean hasDuplicateFieldNames(String[] fieldNames) {
 		HashSet<String> names = new HashSet<>();
 		for (String field : fieldNames) {

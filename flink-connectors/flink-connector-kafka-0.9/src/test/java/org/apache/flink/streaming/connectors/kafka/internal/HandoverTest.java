@@ -202,7 +202,7 @@ public class HandoverTest {
 		try {
 			handover.produce(createTestRecords());
 		}
-		catch (Handover.WakeupException e) {
+		catch (WakeupException e) {
 			fail();
 		}
 
@@ -213,7 +213,7 @@ public class HandoverTest {
 			handover.produce(createTestRecords());
 			fail("should throw an exception");
 		}
-		catch (Handover.WakeupException e) {
+		catch (WakeupException e) {
 			// expected
 		}
 
@@ -224,7 +224,7 @@ public class HandoverTest {
 		try {
 			handover.produce(createTestRecords());
 		}
-		catch (Handover.WakeupException e) {
+		catch (WakeupException e) {
 			fail();
 		}
 	}

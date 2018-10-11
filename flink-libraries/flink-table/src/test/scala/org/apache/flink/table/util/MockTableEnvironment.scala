@@ -20,6 +20,7 @@ package org.apache.flink.table.util
 
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.table.api.{QueryConfig, Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
@@ -61,6 +62,8 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
       fieldTypes: Array[DataType],
       tableSink: TableSink[_]): Unit = ???
 
+  override def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = ???
+
   /**
     * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
     * the result of the given [[Table]].
@@ -68,4 +71,6 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
     * @param table The table for which the AST and execution plan will be returned.
     */
   override def explain(table: Table): String = ???
+
+  override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
 }

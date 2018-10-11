@@ -22,7 +22,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.DescriptorProperties.{normalizeTableSchema, normalizeTypeInfo}
 import org.apache.flink.table.descriptors.SchemaValidator._
-import org.apache.flink.table.types.{DataTypes, InternalType}
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
@@ -61,10 +60,10 @@ class Schema extends Descriptor {
     * also the order of the fields in a row.
     *
     * @param fieldName the field name
-    * @param dataType the type information of the field
+    * @param fieldType the type information of the field
     */
-  def field(fieldName: String, dataType: InternalType): Schema = {
-    field(fieldName, normalizeTypeInfo(DataTypes.toTypeInfo(dataType)))
+  def field(fieldName: String, fieldType: TypeInformation[_]): Schema = {
+    field(fieldName, normalizeTypeInfo(fieldType))
     this
   }
 

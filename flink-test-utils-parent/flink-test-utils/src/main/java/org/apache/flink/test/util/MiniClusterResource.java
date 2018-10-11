@@ -84,6 +84,15 @@ public class MiniClusterResource extends ExternalResource {
 		this(miniClusterResourceConfiguration, false);
 	}
 
+	// A bridge method for two MiniClusterResourceConfigurations.
+	// Should remove when upgrade to newest version.
+	public MiniClusterResource(final org.apache.flink.test.util.MiniClusterResourceConfiguration
+		miniClusterResourceConfiguration) {
+		this(new MiniClusterResourceConfiguration(miniClusterResourceConfiguration.getConfiguration(),
+			miniClusterResourceConfiguration.getNumberTaskManagers(),
+			miniClusterResourceConfiguration.getNumberSlotsPerTaskManager()), true);
+	}
+
 	public MiniClusterResource(
 			final MiniClusterResourceConfiguration miniClusterResourceConfiguration,
 			final MiniClusterType miniClusterType) {

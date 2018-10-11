@@ -18,7 +18,8 @@
 
 package org.apache.flink.table.descriptors
 
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.table.api.Types
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -82,11 +83,11 @@ class ClassInstance extends HierarchyDescriptor {
     * Adds a constructor parameter value of literal type. The type is explicitly defined using
     * type information. The value is parsed accordingly. Expression values are not allowed.
     *
-    * @param dataType the type that define how to parse the given value string
+    * @param typeInfo the type that define how to parse the given value string
     * @param valueString the literal value to be parsed
     */
-  def parameter(dataType: InternalType, valueString: String): ClassInstance = {
-    constructor += Left(new LiteralValue().of(dataType).value(valueString))
+  def parameter(typeInfo: TypeInformation[_], valueString: String): ClassInstance = {
+    constructor += Left(new LiteralValue().of(typeInfo).value(valueString))
     this
   }
 
@@ -96,7 +97,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value BOOLEAN value
     */
   def parameter(value: Boolean): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.BOOLEAN).value(value))
+    constructor += Left(new LiteralValue().of(Types.BOOLEAN).value(value))
     this
   }
 
@@ -106,7 +107,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value DOUBLE value
     */
   def parameter(value: Double): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.DOUBLE).value(value))
+    constructor += Left(new LiteralValue().of(Types.DOUBLE).value(value))
     this
   }
 
@@ -116,7 +117,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value FLOAT value
     */
   def parameter(value: Float): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.FLOAT).value(value))
+    constructor += Left(new LiteralValue().of(Types.FLOAT).value(value))
     this
   }
 
@@ -126,7 +127,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value INT value
     */
   def parameter(value: Int): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.INT).value(value))
+    constructor += Left(new LiteralValue().of(Types.INT).value(value))
     this
   }
 
@@ -136,7 +137,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value VARCHAR value
     */
   def parameter(value: String): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.STRING).value(value))
+    constructor += Left(new LiteralValue().of(Types.STRING).value(value))
     this
   }
 
@@ -146,7 +147,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value BIGINT value
     */
   def parameter(value: Long): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.LONG).value(value))
+    constructor += Left(new LiteralValue().of(Types.LONG).value(value))
     this
   }
 
@@ -156,7 +157,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value TINYINT value
     */
   def parameter(value: Byte): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.BYTE).value(value))
+    constructor += Left(new LiteralValue().of(Types.BYTE).value(value))
     this
   }
 
@@ -166,7 +167,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value SMALLINT value
     */
   def parameter(value: Short): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DataTypes.SHORT).value(value))
+    constructor += Left(new LiteralValue().of(Types.SHORT).value(value))
     this
   }
 
@@ -176,7 +177,7 @@ class ClassInstance extends HierarchyDescriptor {
     * @param value DECIMAL value
     */
   def parameter(value: java.math.BigDecimal): ClassInstance = {
-    constructor += Left(new LiteralValue().of(DecimalType.DEFAULT).value(value))
+    constructor += Left(new LiteralValue().of(Types.DECIMAL).value(value))
     this
   }
 
@@ -203,8 +204,8 @@ class ClassInstance extends HierarchyDescriptor {
     * Internal method for properties conversion.
     */
   override private[flink] def addPropertiesWithPrefix(
-      keyPrefix: String,
-      properties: DescriptorProperties): Unit = {
+    keyPrefix: String,
+    properties: DescriptorProperties): Unit = {
     className.foreach(properties.putString(s"$keyPrefix${ClassInstanceValidator.CLASS}", _))
     var i = 0
     while (i < constructor.size) {

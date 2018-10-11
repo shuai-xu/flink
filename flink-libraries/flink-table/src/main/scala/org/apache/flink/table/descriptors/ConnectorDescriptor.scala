@@ -18,7 +18,8 @@
 
 package org.apache.flink.table.descriptors
 
-import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_TYPE, CONNECTOR_PROPERTY_VERSION}
+import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_TYPE,
+  CONNECTOR_PROPERTY_VERSION}
 
 /**
   * Describes a connector to an other system.
@@ -26,9 +27,9 @@ import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTO
   * @param tpe string identifier for the connector
   */
 abstract class ConnectorDescriptor(
-  private val tpe: String,
-  private val version: Int,
-  private val formatNeeded: Boolean)
+    private val tpe: String,
+    private val version: Int,
+    private val formatNeeded: Boolean)
   extends Descriptor {
 
   override def toString: String = this.getClass.getSimpleName

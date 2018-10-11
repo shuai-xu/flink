@@ -57,6 +57,7 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
@@ -690,6 +691,16 @@ abstract class TableEnvironment(val config: TableConfig) {
       fieldTypes: Array[DataType],
       tableSink: TableSink[_]): Unit
 
+  /**
+    * Registers an external [[TableSink]] with already configured field names and field types in
+    * this [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param configuredSink The configured [[TableSink]] to register.
+    */
+  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit
+
   private[flink] def getStateTableNameForWrite(name: String): String = {
     s"__W_$name"
   }
@@ -757,6 +768,37 @@ abstract class TableEnvironment(val config: TableConfig) {
       None
     }
   }
+
+  /**
+    * Creates a table source and/or table sink from a descriptor.
+    *
+    * Descriptors allow for declaring the communication to external systems in an
+    * implementation-agnostic way. The classpath is scanned for suitable table factories that match
+    * the desired configuration.
+    *
+    * The following example shows how to read from a connector using a JSON format and
+    * registering a table source as "MyTable":
+    *
+    * {{{
+    *
+    * tableEnv
+    *   .connect(
+    *     new ExternalSystemXYZ()
+    *       .version("0.11"))
+    *   .withFormat(
+    *     new Json()
+    *       .jsonSchema("{...}")
+    *       .failOnMissingField(false))
+    *   .withSchema(
+    *     new Schema()
+    *       .field("user-name", "VARCHAR").from("u_name")
+    *       .field("count", "DECIMAL")
+    *   .registerSource("MyTable")
+    * }}}
+    *
+    * @param connectorDescriptor connector descriptor describing the external system
+    */
+  def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor
 
   private def getSchema(schemaPath: Array[String]): SchemaPlus = {
     var schema = rootSchema

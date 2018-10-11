@@ -51,8 +51,9 @@ import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
-import org.apache.flink.table.sinks.{BatchExecCompatibleStreamTableSink, BatchExecTableSink, CollectTableSink, TableSink}
+import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
@@ -686,6 +687,39 @@ class BatchTableEnvironment(
     }
   }
 
+  /**
+    * Creates a table source and/or table sink from a descriptor.
+    *
+    * Descriptors allow for declaring the communication to external systems in an
+    * implementation-agnostic way. The classpath is scanned for suitable table factories that match
+    * the desired configuration.
+    *
+    * The following example shows how to read from a connector using a JSON format and
+    * registering a table source as "MyTable":
+    *
+    * {{{
+    *
+    * tableEnv
+    *   .connect(
+    *     new ExternalSystemXYZ()
+    *       .version("0.11"))
+    *   .withFormat(
+    *     new Json()
+    *       .jsonSchema("{...}")
+    *       .failOnMissingField(false))
+    *   .withSchema(
+    *     new Schema()
+    *       .field("user-name", "VARCHAR").from("u_name")
+    *       .field("count", "DECIMAL")
+    *   .registerSource("MyTable")
+    * }}}
+    *
+    * @param connectorDescriptor connector descriptor describing the external system
+    */
+  def connect(connectorDescriptor: ConnectorDescriptor): BatchTableDescriptor = {
+    new BatchTableDescriptor(this, connectorDescriptor)
+  }
+
   override def registerTableSink(
       name: String,
       fieldNames: Array[String],
@@ -709,6 +743,70 @@ class BatchTableEnvironment(
       case _ =>
         throw new TableException("Only BatchExecTableSink|CompatibleStreamTableSink can be " +
             "registered in BatchExecTableEnvironment")
+    }
+  }
+
+  /**
+    * Registers an external [[TableSink]] with already configured field names and field types in
+    * this [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param configuredSink The configured [[TableSink]] to register.
+    */
+  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = {
+    registerTableSinkInternal(name, configuredSink)
+  }
+
+  private def registerTableSinkInternal(name: String, configuredSink: TableSink[_]): Unit = {
+    // validate
+    checkValidTableName(name)
+    if (configuredSink.getFieldNames == null || configuredSink.getFieldTypes == null) {
+      throw new TableException("Table sink is not configured.")
+    }
+    if (configuredSink.getFieldNames.length == 0) {
+      throw new TableException("Field names must not be empty.")
+    }
+    if (configuredSink.getFieldNames.length != configuredSink.getFieldTypes.length) {
+      throw new TableException("Same number of field names and types required.")
+    }
+
+    // register
+    configuredSink match {
+
+      // check for proper batch table sink
+      case _: BatchExecTableSink[_] =>
+
+        // check if a table (source or sink) is registered
+        getTable(name) match {
+
+          // table source and/or sink is registered
+          case table: TableSourceSinkTable[_] => table.tableSinkTable match {
+
+            // wrapper contains sink
+            case Some(_: TableSinkTable[_]) =>
+              throw new TableException(s"Table '$name' already exists. " +
+                s"Please choose a different name.")
+
+            // wrapper contains only source (not sink)
+            case _ =>
+              val enrichedTable = new TableSourceSinkTable(
+                table.tableSourceTable,
+                Some(new TableSinkTable(configuredSink)))
+              replaceRegisteredTable(name, enrichedTable)
+          }
+
+          // no table is registered
+          case _ =>
+            val newTable = new TableSourceSinkTable(
+              None,
+              Some(new TableSinkTable(configuredSink)))
+            registerTableInternal(name, newTable)
+        }
+
+      // not a batch table sink
+      case _ =>
+        throw new TableException("Only BatchTableSink can be registered in BatchTableEnvironment.")
     }
   }
 

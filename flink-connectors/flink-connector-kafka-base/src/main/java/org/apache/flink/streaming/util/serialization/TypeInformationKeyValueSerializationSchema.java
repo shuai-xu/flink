@@ -29,6 +29,7 @@ import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataOutputSerializer;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * A serialization and deserialization schema for Key Value Pairs that uses Flink's serialization stack to
@@ -101,11 +102,11 @@ public class TypeInformationKeyValueSerializationSchema<K, V> implements KeyedDe
 		V value = null;
 
 		if (messageKey != null) {
-			inputDeserializer.setBuffer(messageKey, 0, messageKey.length);
+			inputDeserializer.setBuffer(ByteBuffer.wrap(messageKey));
 			key = keySerializer.deserialize(inputDeserializer);
 		}
 		if (message != null) {
-			inputDeserializer.setBuffer(message, 0, message.length);
+			inputDeserializer.setBuffer(ByteBuffer.wrap(message));
 			value = valueSerializer.deserialize(inputDeserializer);
 		}
 		return new Tuple2<>(key, value);

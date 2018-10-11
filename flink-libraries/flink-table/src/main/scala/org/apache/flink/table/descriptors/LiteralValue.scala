@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.descriptors
 
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.ValidationException
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.TypeStringUtils
 import org.apache.flink.util.Preconditions
 
@@ -44,11 +44,11 @@ class LiteralValue extends HierarchyDescriptor {
   /**
     * Type information of the literal value. E.g. Types.BOOLEAN.
     *
-    * @param dataType type information describing the value
+    * @param typeInfo type information describing the value
     */
-  def of(dataType: InternalType): LiteralValue = {
+  def of(typeInfo: TypeInformation[_]): LiteralValue = {
     Preconditions.checkNotNull("Type information must not be null.")
-    this.typeInfo = Option(TypeStringUtils.writeTypeInfo(DataTypes.toTypeInfo(dataType)))
+    this.typeInfo = Option(TypeStringUtils.writeTypeInfo(typeInfo))
     this
   }
 

@@ -18,7 +18,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 
@@ -66,14 +66,20 @@ under the License.
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-test-utils-junit</artifactId>
-			<version>${project.version}</version>
-			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<!-- use a dedicated Scala version to not depend on it -->
 			<artifactId>flink-table_2.11</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<!-- Add for flink-table test dependency -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
@@ -88,9 +94,14 @@ under the License.
 	</dependencies>
 
 	<profiles>
+		<!-- Create SQL Client uber jars by default -->
 		<profile>
-			<!-- Create SQL Client uber jars for releases -->
-			<id>release</id>
+			<id>sql-jars</id>
+			<activation>
+				<property>
+					<name>!skipSqlJars</name>
+				</property>
+			</activation>
 			<build>
 				<plugins>
 					<plugin>

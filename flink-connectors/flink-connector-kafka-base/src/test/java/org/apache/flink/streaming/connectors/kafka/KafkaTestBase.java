@@ -82,10 +82,7 @@ public abstract class KafkaTestBase extends TestLogger {
 	@ClassRule
 	public static MiniClusterResource flink = new MiniClusterResource(
 		new MiniClusterResource.MiniClusterResourceConfiguration(
-			getFlinkConfiguration(),
-			NUM_TMS,
-			TM_SLOTS),
-		true);
+			getFlinkConfiguration(), NUM_TMS, TM_SLOTS), true);
 
 	protected static FiniteDuration timeout = new FiniteDuration(10, TimeUnit.SECONDS);
 

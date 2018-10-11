@@ -174,6 +174,15 @@ class TableSchema(
     new TableSchema(converted)
   }
 
+  /**
+    * Converts a table schema into a (nested) type information describing a Row.
+    *
+    * @return type information where columns are fields of a row
+    */
+  def toRowType: DataType = {
+    DataTypes.createRowType(getTypes, getColumnNames)
+  }
+
   override def toString: String = {
     val builder = new StringBuilder
     builder.append("root\n")
