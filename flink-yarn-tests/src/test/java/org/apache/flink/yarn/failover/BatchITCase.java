@@ -18,12 +18,18 @@
 
 package org.apache.flink.yarn.failover;
 
+import org.apache.flink.yarn.YarnTestBase;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +44,17 @@ import java.util.regex.Pattern;
  */
 public class BatchITCase extends YarnJobMasterFailoverTestBase {
 	private static final Logger LOG = LoggerFactory.getLogger(BatchITCase.class);
+
+	private static final String logDir = "jm-failover-BatchITCase";
+
+	@BeforeClass
+	public static void setup() {
+		YarnJobMasterFailoverTestBase.startHighAvailabilityService();
+		YARN_CONFIGURATION.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+		YARN_CONFIGURATION.set(YarnTestBase.TEST_CLUSTER_NAME_KEY, logDir);
+		YARN_CONFIGURATION.setInt(YarnConfiguration.NM_PMEM_MB, 4096);
+		startYARNWithConfig(YARN_CONFIGURATION);
+	}
 
 	@Test
 	public void test() throws Exception {
@@ -64,6 +81,7 @@ public class BatchITCase extends YarnJobMasterFailoverTestBase {
 			() -> {
 				final File jmLog = findFile("..", (dir, name) ->
 					name.contains("jobmanager.log") && dir.getAbsolutePath().contains("_01_")
+						&& dir.getAbsolutePath().contains(logDir)
 						&& dir.getAbsolutePath().contains(fmt.format(id.getId())));
 				if (jmLog != null) {
 					final String jmLogText = FileUtils.readFileToString(jmLog);
@@ -88,6 +106,7 @@ public class BatchITCase extends YarnJobMasterFailoverTestBase {
 			() -> {
 				final File jmLog = findFile("..", (dir, name) ->
 					name.contains("jobmanager.log") && dir.getAbsolutePath().contains("_02_")
+						&& dir.getAbsolutePath().contains(logDir)
 						&& dir.getAbsolutePath().contains(fmt.format(id.getId())));
 				if (jmLog != null) {
 					final String jmLogText = FileUtils.readFileToString(jmLog);
@@ -99,6 +118,7 @@ public class BatchITCase extends YarnJobMasterFailoverTestBase {
 
 		final File tmLog = findFile("..", (dir, name) ->
 			name.contains("taskmanager.log") && dir.getAbsolutePath().contains("_01_000003")
+				&& dir.getAbsolutePath().contains(logDir)
 				&& dir.getAbsolutePath().contains(fmt.format(id.getId())));
 
 		Assert.assertNotNull(tmLog);
@@ -109,5 +129,8 @@ public class BatchITCase extends YarnJobMasterFailoverTestBase {
 
 		yarnClient.killApplication(id);
 		runner.sendStop();
+
+		// wait for the thread to stop
+		runner.join();
 	}
 }

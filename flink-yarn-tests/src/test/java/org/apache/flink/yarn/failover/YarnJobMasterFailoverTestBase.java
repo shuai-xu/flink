@@ -27,12 +27,8 @@ import org.apache.flink.yarn.YarnTestBase;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.curator.test.TestingServer;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
@@ -58,8 +54,7 @@ public abstract class YarnJobMasterFailoverTestBase extends YarnTestBase {
 
 	protected static NumberFormat fmt = NumberFormat.getInstance();
 
-	@BeforeClass
-	public static void setup() {
+	protected static void startHighAvailabilityService() {
 		try {
 			zkServer = new TestingServer();
 			zkServer.start();
@@ -70,13 +65,10 @@ public abstract class YarnJobMasterFailoverTestBase extends YarnTestBase {
 			Assert.fail("Could not start ZooKeeper testing cluster.");
 		}
 
-		YARN_CONFIGURATION.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
-		YARN_CONFIGURATION.set(YarnTestBase.TEST_CLUSTER_NAME_KEY, "flink-yarn-tests-jm-failover");
-		YARN_CONFIGURATION.setInt(YarnConfiguration.NM_PMEM_MB, 4096);
-		startYARNWithConfig(YARN_CONFIGURATION);
-
 		fmt.setGroupingUsed(false);
 		fmt.setMinimumIntegerDigits(4);
+
+		// startYARNWithConfig should be implemented by subclass
 	}
 
 	@AfterClass
