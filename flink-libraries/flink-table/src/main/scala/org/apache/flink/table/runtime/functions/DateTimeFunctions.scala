@@ -206,6 +206,7 @@ object DateTimeFunctions {
     range match {
       case TimeUnitRange.YEAR => v / 12
       case TimeUnitRange.MONTH => v % 12
+      case TimeUnitRange.QUARTER => (v % 12 + 2) / 3
       case _ => throw new AssertionError(range)
     }
   }
