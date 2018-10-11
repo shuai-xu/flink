@@ -18,11 +18,15 @@
 
 package org.apache.flink.table.api
 
+import _root_.java.util.{Map => JMap}
+
 import _root_.java.io.Serializable
 
 import org.apache.flink.annotation.Experimental
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import org.apache.flink.configuration.{ConfigOption, ConfigOptions, Configuration, GlobalConfiguration}
+import org.apache.flink.table.api.StreamQueryConfig._
 import org.apache.flink.table.functions.AggregateFunction
 
 @Experimental
@@ -54,6 +58,11 @@ class BatchQueryConfig private[table] extends QueryConfig
 class StreamQueryConfig extends QueryConfig {
 
   private val DEFAULT_FIRE_INTERVAL = Long.MinValue
+
+  /**
+    * Defines user-defined configuration
+    */
+  private val parameters = GlobalConfiguration.loadConfiguration()
 
   /**
     * The minimum time until state which was not updated will be retained.
@@ -141,6 +150,25 @@ class StreamQueryConfig extends QueryConfig {
   var queryableState2ParamMap: Map[String, Map[String, String]] = Map.empty
 
   /**
+    * Returns user-defined configuration
+    */
+  def getParameters: Configuration = parameters
+
+  /**
+    * Sets user-defined configuration
+    */
+  def setParameters(parameters: Configuration): Unit = {
+    this.parameters.addAll(parameters)
+  }
+
+  /**
+    * Sets user-defined configuration
+    */
+  def setParameters(parameters: JMap[String, String]): Unit = {
+    this.parameters.addAll(parameters)
+  }
+
+  /**
     * Specifies the time interval for how long idle state, i.e., state which was not updated, will
     * be retained. When state was not updated for the specified interval of time, it will be cleared
     * and removed.
@@ -212,6 +240,18 @@ class StreamQueryConfig extends QueryConfig {
     }
     lateFireInterval = interval.toMilliseconds
     this
+  }
+
+  def withPartialBucketNum(buckets: Integer): StreamQueryConfig = {
+    if (buckets <= 0) {
+      throw new RuntimeException("partialAgg buckets number must be positive!")
+    }
+    this.parameters.setInteger(SQL_EXEC_AGG_PARTIAL_BUCKET_NUM, buckets)
+    this
+  }
+
+  def getPartialBucketNum: Integer = {
+    this.parameters.getInteger(SQL_EXEC_AGG_PARTIAL_BUCKET_NUM)
   }
 
   def getMinIdleStateRetentionTime: Long = {
@@ -399,4 +439,13 @@ class StreamQueryConfig extends QueryConfig {
     newCopy.nonTemporalSort = this.nonTemporalSort
     newCopy
   }
+}
+
+object StreamQueryConfig {
+
+  /** configure number of buckets in partial final mode */
+  val SQL_EXEC_AGG_PARTIAL_BUCKET_NUM: ConfigOption[Integer] = ConfigOptions
+    .key("sql.exec.partialAgg.bucket.num")
+    .defaultValue(256)
+
 }

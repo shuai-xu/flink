@@ -142,6 +142,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
+    val queryConfig = call.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
     val originalAggregate: StreamExecGroupAggregate = call.rel(0)
     val realInput = if (inputIsExchange) call.rels(2) else call.rels(1)
     val needRetraction = StreamExecRetractionRules.isAccRetract(realInput)
@@ -172,6 +173,8 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     }.distinct.diff(originalAggregate.getGroupings).sorted
 
     val hashFieldsMap: mutable.Map[Int, Int] = mutable.Map()
+    val buckets = queryConfig.getPartialBucketNum
+
     if (hashFieldIndexes.nonEmpty) {
       val projects = new util.ArrayList[RexNode](relBuilder.fields)
       val hashFieldsOffset = projects.size()
@@ -181,7 +184,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
         val node: RexNode = relBuilder.call(
           SqlStdOperatorTable.MOD,
           relBuilder.call(ScalarSqlFunctions.HASH_CODE, hashField),
-          relBuilder.literal(BUCKETS))
+          relBuilder.literal(buckets))
         projects.add(node)
         hashFieldsMap.put(hashFieldIdx, hashFieldsOffset + index)
       }
@@ -355,8 +358,6 @@ object StreamExecSplitAggregateRule {
       operand(
         classOf[StreamExecExchange],
         operand(classOf[RelNode], any))), true)
-
-  val BUCKETS: Int = 1024
 
   val PARTIAL_FINAL_MAP: Map[SqlAggFunction, (Seq[SqlAggFunction], Seq[SqlAggFunction])] = Map(
     AVG -> (Seq(SUM0, COUNT), Seq(SUM0, SUM0)),

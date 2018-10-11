@@ -19,9 +19,12 @@
 package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Test
+
+import scala.collection.JavaConverters._
 
 class SplitAggregateTest() extends TableTestBase {
 
@@ -129,6 +132,14 @@ class SplitAggregateTest() extends TableTestBase {
          |  ) GROUP BY c
          |) as MyTable1 JOIN MyTable ON MyTable1.b + 2 = MyTable.a
        """.stripMargin
+    streamUtil.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testBucketsConfiguration(): Unit = {
+    streamUtil.tableEnv.queryConfig.getParameters.setInteger(
+      StreamQueryConfig.SQL_EXEC_AGG_PARTIAL_BUCKET_NUM, 100)
+    val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }
 }
