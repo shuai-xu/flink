@@ -65,13 +65,13 @@ class ScalarFunctionCallGen(scalarFunction: ScalarFunction) extends CallGenerato
     } else {
       boxedTypeTermForType(returnType)
     }
-    val resultTerm = newName("result")
+    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
     val evalResult = s"$functionReference.eval(${parameters.map(_.resultTerm).mkString(", ")})"
     val resultExternalType = UserDefinedFunctionUtils.getResultTypeOfScalarFunction(
       scalarFunction, arguments, operandTypes)
     val setResult = {
       if (resultClass.isPrimitive) {
-        s"$resultTypeTerm $resultTerm = $evalResult;"
+        s"$resultTerm = $evalResult;"
       } else {
         val javaTerm = newName("javaResult")
         // it maybe a Internal class, so use resultClass is most safety.
@@ -79,7 +79,7 @@ class ScalarFunctionCallGen(scalarFunction: ScalarFunction) extends CallGenerato
         val internal = genToInternalIfNeeded(ctx, resultExternalType, resultClass, javaTerm)
         s"""
             |$javaTypeTerm $javaTerm = ($javaTypeTerm) $evalResult;
-            |$resultTypeTerm $resultTerm = $javaTerm == null ? null : ($internal);
+            |$resultTerm = $javaTerm == null ? null : ($internal);
             """.stripMargin
       }
     }
