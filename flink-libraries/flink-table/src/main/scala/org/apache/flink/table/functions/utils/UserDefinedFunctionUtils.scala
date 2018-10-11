@@ -237,6 +237,7 @@ object UserDefinedFunctionUtils {
 
     val methods = checkAndExtractMethods(function, methodName)
 
+    var applyCnt = 0
     val filtered = methods
       // go over all the methods and filter out matching methods
       .filter {
@@ -245,9 +246,18 @@ object UserDefinedFunctionUtils {
           val dataTypes = parameterTypes(signatures)
           // match parameters of signature to actual parameters
           methodSignature.length == signatures.length &&
-            signatures.zipWithIndex.forall { case (clazz, i) =>
+            signatures.zipWithIndex.forall { case (clazz, i) => {
+              if (methodSignature(i) == classOf[Object]) {
+                // The element of the method signature comes from the Table API's apply().
+                // We can not decide the type here. It is an Unresolved Expression.
+                // Actually, we do not have to decide the type here, any method of the overrides
+                // which matches the arguments count will do the job.
+                // So here we choose any method is correct.
+                applyCnt += 1
+              }
               parameterTypeEquals(methodSignature(i), clazz) ||
                   parameterDataTypeEquals(internalTypes(i), dataTypes(i))
+            }
           }
         case cur if cur.isVarArgs =>
           val signatures = cur.getParameterTypes
@@ -297,6 +307,10 @@ object UserDefinedFunctionUtils {
         s"Scala-style variable arguments in '$methodName' methods are not supported. Please " +
           s"add a @scala.annotation.varargs annotation.")
     } else if (found.length > 1) {
+      if (applyCnt > 0) {
+        // As we can not decide type while apply() exists, so choose any one is correct
+        return found.headOption
+      }
       throw new ValidationException(
         s"Found multiple '$methodName' methods which match the signature.")
     }
@@ -723,7 +737,8 @@ object UserDefinedFunctionUtils {
         null
     }
     val signature = params.map { param =>
-      if (param.valid) param.resultType else new GenericType(new Object().getClass)
+      if (param.valid) param.resultType
+      else new GenericType(new Object().getClass)  // apply() can not decide type
     }
     val argTypes = getEvalMethodSignature(func, signature.map(DataTypes.internal))
     val udt = func.getResultType(arguments, argTypes)

@@ -256,6 +256,27 @@ class CorrelateITCase extends StreamingTestBase {
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+  @Test
+  def testMultipleEvals(): Unit = {
+    val rf = new RF
+    val tf = new TableFunc7
+
+    val row = Row.of(
+      12.asInstanceOf[Integer],
+      true.asInstanceOf[JBoolean],
+      Row.of(1.asInstanceOf[Integer], 2.asInstanceOf[Integer], 3.asInstanceOf[Integer])
+    )
+
+    val rowType = Types.ROW(Types.INT, Types.BOOLEAN, Types.ROW(Types.INT, Types.INT, Types.INT))
+    val in = env.fromElements(row, row)(rowType).toTable(tEnv).as('a, 'b, 'c)
+    val result = in.select(rf('a) as 'd).join(tf('d) as 'e)
+
+    val sink = new TestingAppendSink
+
+    result.addSink(sink)
+    env.execute()
+  }
+
 
   private def testData(
       env: StreamExecutionEnvironment)

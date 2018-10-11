@@ -19,11 +19,13 @@ package org.apache.flink.table.util
 
 import java.lang.Boolean
 import java.sql.Timestamp
+import java.util
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.calcite.schema.FunctionParameter
 import org.apache.flink.api.java.tuple.Tuple3
 import org.apache.flink.table.api.{Types, ValidationException}
-import org.apache.flink.table.functions.{FunctionContext, TableFunction}
+import org.apache.flink.table.functions.{FunctionContext, ScalarFunction, TableFunction}
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert
@@ -384,8 +386,22 @@ class TableFunc6 extends TableFunction[Row] {
       typeInfos: Array[Class[_]]): DataType = {
     DataTypes.createRowType(DataTypes.INT, DataTypes.INT, DataTypes.INT)
   }
+}
 
+class TableFunc7 extends TableFunction[Row] {
 
+  def eval(row: Row): Unit = {
+  }
+
+  def eval(row: java.util.List[Row]): Unit = {
+  }
+}
+
+class RF extends ScalarFunction {
+
+  def eval(x: Int): java.util.List[Row] = {
+    java.util.Collections.emptyList()
+  }
 }
 
 class VarArgsFunc0 extends TableFunction[String] {
