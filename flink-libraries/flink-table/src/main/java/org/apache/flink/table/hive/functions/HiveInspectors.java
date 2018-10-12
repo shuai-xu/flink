@@ -176,7 +176,13 @@ public class HiveInspectors {
 		assert args.length == constants.size();
 		List<TypeInfo> typeInfos = new ArrayList<>();
 		for (Object arg: args) {
-			typeInfos.add(TypeInfoFactory.getPrimitiveTypeInfoFromJavaPrimitive(arg.getClass()));
+			if (arg == null) {
+				// If arg is null, we use String Type Info to replace.
+				// This may only be called at the default case of the client side.
+				typeInfos.add(TypeInfoFactory.stringTypeInfo);
+			} else {
+				typeInfos.add(TypeInfoFactory.getPrimitiveTypeInfoFromJavaPrimitive(arg.getClass()));
+			}
 		}
 		ObjectInspector[] argumentInspectors = new ObjectInspector[typeInfos.size()];
 		for (int i = 0; i < typeInfos.size(); i++) {
@@ -224,6 +230,9 @@ public class HiveInspectors {
 			case BINARY:
 				// TODO Test this for blink
 				return new JavaConstantBinaryObjectInspector((byte[]) value);
+			case UNKNOWN:
+				// If type is null, we use the Java Constant String to replace
+				return new JavaConstantStringObjectInspector((String) value);
 			default:
 				throw new RuntimeException("Internal error: Cannot find "
 						+ "ConstantObjectInspector for " + typeInfo);

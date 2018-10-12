@@ -21,7 +21,9 @@ import java.util.Random
 
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.ScalarFunction
+import org.apache.flink.table.hive.functions.{HiveFunctionWrapper, HiveGenericUDF}
 import org.apache.flink.table.runtime.batch.sql.TestData.{data3, nullablesOfData3, type3}
+import org.apache.hadoop.hive.ql.udf.generic.{GenericUDF}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 
@@ -41,6 +43,20 @@ class UdfITCase extends QueryTest {
     result.foreach { row =>
       assertEquals(1, row.getArity)
       assertTrue(row.getField(0).asInstanceOf[Int] > 0)
+    }
+  }
+
+  @Test
+  def testHiveGenericUDFConcat(): Unit = {
+
+    val concatUdf = new HiveGenericUDF(new HiveFunctionWrapper[GenericUDF](
+      "org.apache.hadoop.hive.ql.udf.generic.GenericUDFConcat"))
+    tEnv.registerFunction("concat", concatUdf)
+    val result = executeQuery("SELECT concat(c, c) FROM Table3")
+    result.foreach { row =>
+      assertEquals(1, row.getArity)
+      val base = row.toString.substring(0, row.getField(0).toString.length / 2)
+      assertEquals(base + base, row.toString)
     }
   }
 
