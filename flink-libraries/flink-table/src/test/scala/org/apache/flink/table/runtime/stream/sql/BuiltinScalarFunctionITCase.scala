@@ -789,7 +789,18 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
     data.+=(("k1:v1|k2:v2", "|", ":", null))
     data.+=(("k1:v1|k2:v2", "|", null, "k3"))
     data.+=(("k1=v1;k2=v2", ";", "=", "k2"))
+    data.+=(("k1=v1;k2=v2;", ";", "=", "k2"))
+    data.+=(("k1=v1;k2", ";", "=", "k2"))
+    data.+=(("k1;k2=v2", ";", "=", "k1"))
+    data.+=(("k=1=v1;k2=v2", ";", "=", "k=1"))
+    data.+=(("k1==v1;k2=v2", ";", "=", "k1"))
+    data.+=(("k1==v1;k2=v2", ";", "=", "k1="))
+    data.+=(("k1k1=v1;k2=v2", ";", "=", "k1"))
     data.+=((null, "|", ":", "k3"))
+    data.+=(("k1=v1abababk2=v2", "ababc", "=", "abk2"))
+    data.+=(("k1=v1abababk2=v2", "ababc", "=", "k2"))
+    data.+=(("k1:v1 k2:v2", null, ":", "k2"))
+    data.+=(("k1 v1;k2 v2", ";", null, "k2"))
 
     val sqlQuery = "SELECT str,split1,split2,key1," +
       "KEYVALUE(str, split1, split2, key1) as `result` from T1"
@@ -810,7 +821,18 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
       "k1:v1|k2:v2,|,:,null,null",
       "k1:v1|k2:v2,|,null,k3,null",
       "k1=v1;k2=v2,;,=,k2,v2",
-      "null,|,:,k3,null"
+      "k1=v1;k2=v2;,;,=,k2,v2",
+      "k1=v1;k2,;,=,k2,null",
+      "k1;k2=v2,;,=,k1,null",
+      "k=1=v1;k2=v2,;,=,k=1,null",
+      "k1==v1;k2=v2,;,=,k1,=v1",
+      "k1==v1;k2=v2,;,=,k1=,null",
+      "k1k1=v1;k2=v2,;,=,k1,null",
+      "null,|,:,k3,null",
+      "k1=v1abababk2=v2,ababc,=,abk2,null",
+      "k1=v1abababk2=v2,ababc,=,k2,v2",
+      "k1:v1 k2:v2,null,:,k2,v2",
+      "k1 v1;k2 v2,;,null,k2,v2"
     )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }

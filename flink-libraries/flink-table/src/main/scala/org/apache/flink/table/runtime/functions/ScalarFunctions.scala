@@ -437,6 +437,26 @@ object ScalarFunctions {
     }
   }
 
+  def keyValue(
+    str: BinaryString,
+    split1: BinaryString,
+    split2: BinaryString,
+    keyName: BinaryString): BinaryString = {
+    if (str == null || str.numBytes() == 0) {
+      return null;
+    }
+    if (split1!= null && split1.numBytes() == 1 && split2 != null && split2.numBytes() == 1) {
+      str.keyValue(split1.getByte(0), split2.getByte(0), keyName)
+    } else {
+      BinaryString.fromString(
+        keyValue(
+          BinaryString.safeToString(str),
+          BinaryString.safeToString(split1),
+          BinaryString.safeToString(split2),
+          BinaryString.safeToString(keyName)))
+    }
+  }
+
   /**
     * Parse target string as key-value string and
     * return the value matches key name.

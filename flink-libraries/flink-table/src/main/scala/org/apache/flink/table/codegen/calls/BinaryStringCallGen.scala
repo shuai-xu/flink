@@ -479,7 +479,7 @@ object BinaryStringCallGen {
     val className = classOf[ScalarFunctions].getCanonicalName
     generateCallIfArgsNullable(ctx, nullCheck = true, DataTypes.STRING, operands) {
       terms =>
-        s"$BINARY_STRING.fromString($className.keyValue(${safeToStringTerms(terms, operands)}))"
+        s"$className.keyValue(${terms.mkString(",")})"
     }
   }
 

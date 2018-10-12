@@ -1001,6 +1001,122 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	/**
+	 * Parse target string as key-value string and
+	 * return the value matches key name.
+	 * If accept any null arguments, return null.
+	 * example:
+	 * keyvalue('k1=v1;k2=v2', ';', '=', 'k2') = 'v2'
+	 * keyvalue('k1:v1,k2:v2', ',', ':', 'k3') = NULL
+	 *
+	 * @param split1  separator between key-value tuple.
+	 * @param split2  separator between key and value.
+	 * @param keyName name of the key whose value you want return.
+	 *
+	 * @return target value.
+	 */
+	public BinaryString keyValue(byte split1, byte split2, BinaryString keyName) {
+		if (keyName == null || keyName.numBytes == 0) {
+			return null;
+		}
+		if (inOneSeg() && keyName.inOneSeg()) {
+			// position in byte
+			int byteIdx = 0;
+			// position of last split1
+			int lastSplit1Idx = -1;
+			while (byteIdx < numBytes) {
+				// If find next split1 in str, process current kv
+				if (segments[0].get(offset + byteIdx) == split1) {
+					int currentKeyIdx = lastSplit1Idx + 1;
+					// If key of current kv is keyName, return the value directly
+					BinaryString value = findValueOfKey(split2, keyName, currentKeyIdx, byteIdx);
+					if (value != null) {
+						return value;
+					}
+					lastSplit1Idx = byteIdx;
+				}
+				byteIdx++;
+			}
+			// process the string which is not ends with split1
+			int currentKeyIdx = lastSplit1Idx + 1;
+			BinaryString value = findValueOfKey(split2, keyName, currentKeyIdx, numBytes);
+			return value;
+		} else {
+			return keyValueSlow(split1, split2, keyName);
+		}
+	}
+
+	private BinaryString findValueOfKey(
+			byte split,
+			BinaryString keyName,
+			int start,
+			int end) {
+		int keyNameLen = keyName.numBytes;
+		for (int idx = start; idx < end; idx++) {
+			if (segments[0].get(offset + idx) == split) {
+				if (idx == start + keyNameLen &&
+					segments[0].equalTo(keyName.segments[0], offset + start,
+										keyName.offset, keyNameLen)) {
+					int valueIdx = idx + 1;
+					int valueLen = end - valueIdx;
+					byte[] bytes = new byte[valueLen];
+					segments[0].get(offset + valueIdx, bytes, 0, valueLen);
+					return fromBytes(bytes, 0, valueLen);
+				} else {
+					return null;
+				}
+			}
+		}
+		return null;
+	}
+
+	private BinaryString keyValueSlow(
+			byte split1,
+			byte split2,
+			BinaryString keyName) {
+		// position in byte
+		int byteIdx = 0;
+		// position of last split1
+		int lastSplit1Idx = -1;
+		while (byteIdx < numBytes) {
+			// If find next split1 in str, process current kv
+			if (getByte(byteIdx) == split1) {
+				int currentKeyIdx = lastSplit1Idx + 1;
+				BinaryString value = findValueOfKeySlow(split2, keyName, currentKeyIdx, byteIdx);
+				if (value != null) {
+					return value;
+				}
+				lastSplit1Idx = byteIdx;
+			}
+			byteIdx++;
+		}
+		int currentKeyIdx = lastSplit1Idx + 1;
+		BinaryString value = findValueOfKeySlow(split2, keyName, currentKeyIdx, numBytes);
+		return value;
+	}
+
+	private BinaryString findValueOfKeySlow(
+			byte split,
+			BinaryString keyName,
+			int start,
+			int end) {
+		int keyNameLen = keyName.numBytes;
+		for (int idx = start; idx < end; idx++) {
+			if (getByte(idx) == split) {
+				if (idx == start + keyNameLen &&
+					BinaryRowUtil.equals(segments, offset + start, keyName.segments,
+										keyName.offset, keyNameLen)) {
+					int valueIdx = idx + 1;
+					byte[] bytes = BinaryRowUtil.copy(segments, offset + valueIdx, end - valueIdx);
+					return fromBytes(bytes);
+				} else {
+					return null;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Returns the position of the first occurence of substr in  current string starting from given
 	 * position.
 	 *

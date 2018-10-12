@@ -591,4 +591,97 @@ public class BinaryStringTest {
 		);
 
 	}
+
+	@Test
+	public void testKeyValue() {
+		assertEquals(null,
+					fromString("k1:v1|k2:v2").keyValue(
+							fromString("|").getByte(0),
+							fromString(":").getByte(0),
+							fromString("k3")));
+		assertEquals(null,
+					fromString("k1:v1|k2:v2|").keyValue(
+							fromString("|").getByte(0),
+							fromString(":").getByte(0),
+							fromString("k3")));
+		assertEquals(null,
+					fromString("|k1:v1|k2:v2|").keyValue(
+							fromString("|").getByte(0),
+							fromString(":").getByte(0),
+							fromString("k3")));
+		String tab = org.apache.commons.lang3.StringEscapeUtils.unescapeJava("\t");
+		assertEquals(fromString("v2"),
+					fromString("k1:v1" + tab + "k2:v2").keyValue(
+							fromString("\t").getByte(0),
+							fromString(":").getByte(0),
+							fromString("k2")));
+		assertEquals(null,
+					fromString("k1:v1|k2:v2").keyValue(
+							fromString("|").getByte(0),
+							fromString(":").getByte(0),
+							null));
+		assertEquals(fromString("v2"),
+					fromString("k1=v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k2")));
+		assertEquals(fromString("v2"),
+					fromString("|k1=v1|k2=v2|").keyValue(
+							fromString("|").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k2")));
+		assertEquals(fromString("v2"),
+					fromString("k1=v1||k2=v2").keyValue(
+							fromString("|").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k2")));
+		assertEquals(null,
+					fromString("k1=v1;k2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k2")));
+		assertEquals(null,
+					fromString("k1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k1")));
+		assertEquals(null,
+					fromString("k=1=v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k=")));
+		assertEquals(fromString("=v1"),
+					fromString("k1==v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0), fromString("k1")));
+		assertEquals(null,
+					fromString("k1==v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0), fromString("k1=")));
+		assertEquals(null,
+					fromString("k1=v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k1=")));
+		assertEquals(null,
+					fromString("k1k1=v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k1")));
+		assertEquals(null,
+					fromString("k1=v1;k2=v2").keyValue(
+							fromString(";").getByte(0),
+							fromString("=").getByte(0),
+							fromString("k1k1k1k1k1k1k1k1k1k1")));
+		assertEquals(fromString("v2"),
+					fromString("k1:v||k2:v2").keyValue(
+							fromString("|").getByte(0),
+							fromString(":").getByte(0),
+							fromString("k2")));
+		assertEquals(fromString("v2"),
+					fromString("k1:v||k2:v2").keyValue(
+							fromString("|").getByte(0),
+							fromString(":").getByte(0),
+							fromString("k2")));
+	}
 }
