@@ -29,7 +29,7 @@ import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction, TableValuedAggSqlFunction}
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, TableValuedAggregateFunction}
-import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, StringSplit}
+import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, StringSplit, MultiKeyValue}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.mutable
@@ -317,7 +317,8 @@ object BuiltInFunctionCatalog {
   val buildInTableFunctions: Map[String, TableFunction[_]] = Map(
     "string_split" -> new StringSplit,
     "json_tuple" -> new JsonTuple,
-    "generate_series" -> new GenerateSeries
+    "generate_series" -> new GenerateSeries,
+    "multi_keyvalue" -> new MultiKeyValue
   )
 
   /**

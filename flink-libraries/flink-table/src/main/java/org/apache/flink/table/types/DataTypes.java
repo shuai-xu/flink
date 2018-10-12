@@ -217,6 +217,10 @@ public class DataTypes {
 		return types;
 	}
 
+	public static BaseRowType createBaseRowType(InternalType[] types) {
+		return new BaseRowType(types);
+	}
+
 	public static BaseRowType createBaseRowType(
 			InternalType[] types, String[] fieldNames) {
 		return new BaseRowType(types, fieldNames);

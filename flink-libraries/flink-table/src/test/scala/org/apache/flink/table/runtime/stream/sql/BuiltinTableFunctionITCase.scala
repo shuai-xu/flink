@@ -92,4 +92,136 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
+  @Test
+  def testDynamicMultiKeyValue(): Unit = {
+    val data = List(
+      ("a=1,b=2,c=3", ",", "=", "a", "b"),
+      (null, ",", "=", "a", "b"),
+      ("a=2,b=3,c=4", "-", "=", "a", "c"),
+      ("a=11", ",", "=", "a", "b"),
+      ("a=12", null, "=", "a", "b"),
+      ("a=13", ",", null, "a", "b"),
+      ("a=14", ",", "=", "", "b"),
+      ("a=15", ",", "=", "a", ""),
+      ("a=16,,b=2,c=3", ",,", "=", "a", "b"),
+      ("a==17==2,b=2,==3", ",", "==", "a", "b"),
+      ("aa=18,b=2,c=3", ",", "=", "a", "b"),
+      (",,aa=19,,a=20,b=2,c=3", ",", "=", ",a", "b"),
+      ("a=1 b=2,c=3", null, "=", "a", "b"),
+      ("a=1,b 2,c=3", ",", null, ",a", "b"),
+      ("a=1,b=2|c=3", "|,","=", "a", "c"),
+      ("a=1,b:2,c:3", ",", ":=", "a", "c"))
+
+    val sqlQuery = "SELECT d, c1, c2 FROM T1, " +
+      "lateral table(multi_keyvalue(d, sep1, sep2, f1, f2)) as T(c1, c2)"
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'd, 'sep1, 'sep2, 'f1, 'f2, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "a=1,b=2,c=3,1,2",
+      "null,null,null",
+      "a=2,b=3,c=4,null,null",
+      "a=11,11,null",
+      "a=12,12,null",
+      "a=13,null,null",
+      "a=14,null,null",
+      "a=15,15,null",
+      "a=16,,b=2,c=3,16,2",
+      "a==17==2,b=2,==3,null,2",
+      "aa=18,b=2,c=3,null,2",
+      ",,aa=19,,a=20,b=2,c=3,null,2",
+      "a=1 b=2,c=3,1,null",
+      "a=1,b 2,c=3,null,2",
+      "a=1,b=2|c=3,1,3",
+      "a=1,b:2,c:3,1,3")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testConstantMultiKeyValue1(): Unit = {
+    val data = List(("a=1,b=2,c=3"), (""), ("a=2,b=3,c=4"), ("a=1"))
+
+    val sqlQuery = "SELECT d, c1, c2 FROM T1, " +
+      "lateral table(multi_keyvalue(d, ',', '=', 'a', 'b')) as T(c1, c2)"
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'd, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List("a=1,b=2,c=3,1,2", ",null,null", "a=2,b=3,c=4,2,3", "a=1,1,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testConstantMultiKeyValue2(): Unit = {
+    val data = List(("a=1,b=2,c=3"), (""), ("a:2|b=3,c=4"), ("a:1"))
+
+    val sqlQuery = "SELECT d, c1, c2 FROM T1, " +
+      "lateral table(multi_keyvalue(d, ',|', '=:', 'a', 'b')) as T(c1, c2)"
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'd, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List("a=1,b=2,c=3,1,2", ",null,null", "a:2|b=3,c=4,2,3", "a:1,1,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testConstantMultiKeyValue3(): Unit = {
+    val data = List(("a=1 b=2 c=3"), (""), ("a=2\tb=3 c=4"), ("a=1"))
+
+    val sqlQuery = "SELECT d, c1, c2 FROM T1, " +
+      "lateral table(multi_keyvalue(d, null, '=', 'a', 'b')) as T(c1, c2)"
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'd, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List("a=1 b=2 c=3,1,2", ",null,null", "a=2\tb=3 c=4,2,3", "a=1,1,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testConstantMultiKeyValue4(): Unit = {
+    val data = List(("a\t1,b 2,c=3"), (""), ("a 2,b 3,c=4"), ("a=1"))
+
+    val sqlQuery = "SELECT d, c1, c2 FROM T1, " +
+      "lateral table(multi_keyvalue(d, ',', null, 'a', 'b')) as T(c1, c2)"
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'd, 'proctime.proctime)
+
+    tEnv.registerTable("T1", t1)
+
+    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List("a\t1,b 2,c=3,1,2", ",null,null", "a 2,b 3,c=4,2,3", "a=1,null,null")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
 }
