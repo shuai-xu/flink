@@ -31,7 +31,7 @@ import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTime
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
 
 /**
@@ -166,11 +166,16 @@ class ProcTimeBoundedRangeOver(
       if (elementKey < limit) {
         // element key outside of window. Retract values
         val elementsRemove = inputState.get(currentKey, elementKey)
-        var iRemove = 0
-        while (iRemove < elementsRemove.size()) {
-          val retractRow = elementsRemove.get(iRemove)
-          function.retract(retractRow)
-          iRemove += 1
+        if (elementsRemove != null) {
+          var iRemove = 0
+          while (iRemove < elementsRemove.size()) {
+            val retractRow = elementsRemove.get(iRemove)
+            function.retract(retractRow)
+            iRemove += 1
+          }
+        } else {
+          // Does not retract values which are outside of window if the state is cleared already.
+          LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
         }
         // mark element for later removal not to modify the iterator over MapState
         markToRemove.add(elementKey)

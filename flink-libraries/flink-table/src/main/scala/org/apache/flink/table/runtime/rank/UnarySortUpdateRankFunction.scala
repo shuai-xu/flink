@@ -38,7 +38,7 @@ import org.apache.flink.table.types.DataType
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, OrderedTypeUtils}
-import org.apache.flink.table.util.{LRUMap, Logging}
+import org.apache.flink.table.util.{LRUMap, Logging, StateUtil}
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.util.Collector
 
@@ -425,13 +425,26 @@ class UnarySortUpdateRankFunction[K](
           if (sortedMap.currentTopNum < rankEnd) {
             throw new TableException("This shouldn't happen. Please file an issue!")
           }
-          val tempRowkey = dataState.get(partitionKey, adjKeyInState).head
-          val tempRow = rowkeyState.get(partitionKey, tempRowkey)
-          /*
+          val tempRowKeys = dataState.get(partitionKey, adjKeyInState)
+          if (tempRowKeys != null) {
+            val tempRowkey = tempRowKeys.head
+            val tempRow = rowkeyState.get(partitionKey, tempRowkey)
+            /*
            * if there's row squeezed out of topn as consequence of inserting new row in topn range
            * and it's in state now, send delete msg to downstream
            */
-          delete(out, tempRow)
+            if (tempRow != null) {
+              delete(out, tempRow)
+            } else {
+              /**
+                * Does not send delete msg to downstream which is squeezed out of topn if cannot
+                * find the row data of the the row because the data state is cleared.
+                */
+              LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+            }
+          } else {
+            LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+          }
         }
       } else {
         val tempRowkey = sortedMap.getElement(rankEnd.toInt + 1)
@@ -680,15 +693,26 @@ class UnarySortUpdateRankFunction[K](
           } else {
             val (_, adjKeyInState) = getAdjacentElems(partitionKey)
             if (adjKeyInState != null.asInstanceOf[K]) {
-              val tempRowKey = dataState.get(partitionKey, adjKeyInState).head
-              rowkeyState.get(partitionKey, tempRowKey)
+              val tempRowKeys = dataState.get(partitionKey, adjKeyInState)
+              if (tempRowKeys != null) {
+                val tempRowKey = tempRowKeys.head
+                rowkeyState.get(partitionKey, tempRowKey)
+              } else {
+                /**
+                  * Does not send delete msg to downstream which is squeezed out of topn if cannot
+                  * find the row data of the the row because the data state is cleared.
+                  */
+                LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+                null.asInstanceOf[BaseRow]
+              }
             } else {
               null.asInstanceOf[BaseRow]
             }
           }
-
-          /* send delete msg for row that is squeezed out of topn range */
-          delete(out, rowAfterN)
+          if (rowAfterN != null) {
+            /* send delete msg for row that is squeezed out of topn range */
+            delete(out, rowAfterN)
+          }
           /* emit updated row */
           collect(out, row)
         }
@@ -878,8 +902,15 @@ class UnarySortUpdateRankFunction[K](
       sortedMap.get(sortKey)
     } else {
       val tempRowkeyList = dataState.get(partitionKey, sortKey)
-      tempRowkeyList.remove(rowKey)
-      tempRowkeyList
+      if (tempRowkeyList != null) {
+        tempRowkeyList.remove(rowKey)
+        tempRowkeyList
+      } else {
+        // Remove the partitionKey and sortKey from data state if cannot find the row data of the
+        // the row because the data state is cleared.
+        LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+        null
+      }
     }
 
     /* update data state */

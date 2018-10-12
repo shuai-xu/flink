@@ -231,9 +231,18 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		// STEP 2
 		while (!sortedTimestamps.isEmpty() && sortedTimestamps.peek() <= timerService.currentWatermark()) {
 			long timestamp = sortedTimestamps.poll();
-			sort(elementQueueState.get(timestamp)).forEachOrdered(
-				event -> processEvent(nfa, event, timestamp)
-			);
+			List<IN> elements = elementQueueState.get(timestamp);
+			if (elements != null) {
+				sort(elements).forEachOrdered(
+						event -> processEvent(nfa, event, timestamp)
+				);
+			} else {
+				// Skip elements if state value of the timestamp is cleared.
+				String message = "The element state is cleared because of state ttl. This will " +
+								"result in incorrect result. You can increase the state ttl to " +
+								"avoid this.";
+				LOG.warn(message);
+			}
 			elementQueueState.remove(timestamp);
 		}
 
@@ -269,9 +278,17 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		// STEP 2
 		while (!sortedTimestamps.isEmpty()) {
 			long timestamp = sortedTimestamps.poll();
-			sort(elementQueueState.get(timestamp)).forEachOrdered(
-				event -> processEvent(nfa, event, timestamp)
-			);
+			List<IN> elements = elementQueueState.get(timestamp);
+			if (elements != null) {
+				sort(elements).forEachOrdered(
+						event -> processEvent(nfa, event, timestamp)
+				);
+			}  else {
+				String message = "The element state is cleared because of state ttl. This will " +
+								"result in incorrect result. You can increase the state ttl to " +
+								"avoid this.";
+				LOG.warn(message);
+			}
 			elementQueueState.remove(timestamp);
 		}
 

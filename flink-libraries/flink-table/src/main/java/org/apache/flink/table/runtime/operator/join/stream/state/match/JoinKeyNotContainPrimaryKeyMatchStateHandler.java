@@ -20,6 +20,10 @@ package org.apache.flink.table.runtime.operator.join.stream.state.match;
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.util.StateUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,6 +35,7 @@ import java.util.Set;
  */
 public class JoinKeyNotContainPrimaryKeyMatchStateHandler implements JoinMatchStateHandler {
 
+	private static final Logger LOG = LoggerFactory.getLogger(JoinKeyNotContainPrimaryKeyMatchStateHandler.class);
 	private final KeyedMapState<BaseRow, BaseRow, Long> keyedMapState;
 
 	//pk projection
@@ -80,8 +85,14 @@ public class JoinKeyNotContainPrimaryKeyMatchStateHandler implements JoinMatchSt
 	@Override
 	public void addRowMatchJoinCnt(BaseRow joinKey, BaseRow baseRow, long joinCnt) {
 		BaseRow mapKey = pkProjection.apply(baseRow);
-		long count = keyedMapState.get(joinKey, mapKey);
-		keyedMapState.add(joinKey, mapKey, joinCnt + count);
+		Long count = keyedMapState.get(joinKey, mapKey);
+		if (count != null) {
+			keyedMapState.add(joinKey, mapKey, joinCnt + count);
+		} else {
+			// Assume the history count is 0 if state value is cleared.
+			LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG);
+			keyedMapState.add(joinKey, mapKey, joinCnt);
+		}
 	}
 
 	@Override

@@ -30,7 +30,7 @@ import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTime
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.{Collector, Preconditions}
 
 /**
@@ -138,15 +138,18 @@ class ProcTimeBoundedRowsOver(
 
     if (counter == precedingOffset) {
       val retractList = inputState.get(currentKey, smallestTs)
-
-      // get oldest element beyond buffer size
-      // and if oldest element exist, retract value
-      val retractRow = retractList.get(0)
-      function.retract(retractRow)
-      retractList.remove(0)
-
+      if (retractList != null) {
+        // get oldest element beyond buffer size
+        // and if oldest element exist, retract value
+        val retractRow = retractList.get(0)
+        function.retract(retractRow)
+        retractList.remove(0)
+      } else {
+        // Does not retract values which are outside of window if the state is cleared already.
+        LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+      }
       // if reference timestamp list not empty, keep the list
-      if (!retractList.isEmpty) {
+      if (retractList != null && !retractList.isEmpty) {
         inputState.add(currentKey, smallestTs, retractList)
       } // if smallest timestamp list is empty, remove and find new smallest
       else {

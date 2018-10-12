@@ -23,7 +23,11 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.util.StateUtil;
 import org.apache.flink.util.Preconditions;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,6 +42,8 @@ import java.util.Set;
  */
 @Internal
 public class CountKeySizeStateHandler implements JoinStateHandler {
+
+	private static final Logger LOG = LoggerFactory.getLogger(CountKeySizeStateHandler.class);
 
 	private final KeyedValueState<BaseRow, Long> keyedValueState;
 
@@ -146,6 +152,11 @@ public class CountKeySizeStateHandler implements JoinStateHandler {
 		long [] updateStatus = new long[rows.size()];
 		int idx = 0;
 		Long cnt = keyedValueState.get(key);
+		if (cnt == null) {
+			// Assume the history count is 0 if state value is cleared.
+			LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG);
+			cnt = 0L;
+		}
 		for (Tuple2<BaseRow, Long> tuple2: rows) {
 			cnt += tuple2.f1;
 			idx++;

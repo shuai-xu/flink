@@ -215,13 +215,14 @@ class RowTimeBoundedRowsOver(
             retractTs = Long.MaxValue
             val dataTimestampIt = inputState.iterator(currentKey)
             while (dataTimestampIt.hasNext) {
-              val dataTs = dataTimestampIt.next.getKey
+              val data = dataTimestampIt.next
+              val dataTs = data.getKey
               if (dataTs < retractTs) {
                 retractTs = dataTs
+                // get the oldest rows to retract them
+                retractList = data.getValue
               }
             }
-            // get the oldest rows to retract them
-            retractList = inputState.get(currentKey, retractTs)
           }
 
           retractRow = retractList.get(retractCnt)

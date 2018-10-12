@@ -27,7 +27,19 @@ import org.apache.flink.runtime.state.memory.MemoryStateBackend;
  */
 public class StateUtil {
 
+	private StateUtil() {
+		// Deprecate default constructor
+	}
+
 	public static final String STATE_BACKEND_ON_HEAP = "statebackend.onheap";
+
+	/**
+	 * Message to indicate the state is cleared because of ttl restriction. The messgae could be
+	 * used to output to log.
+	 */
+	public static final String STATE_CLEARED_WARN_MSG = "The state is cleared because of state ttl. " +
+														"This will result in incorrect result. " +
+														"You can increase the state ttl to avoid this.";
 
 	/**
 	 * Returns true when the statebackend is on heap.

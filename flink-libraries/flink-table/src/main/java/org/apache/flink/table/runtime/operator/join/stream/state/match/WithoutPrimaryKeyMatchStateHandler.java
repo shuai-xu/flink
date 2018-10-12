@@ -19,6 +19,10 @@ package org.apache.flink.table.runtime.operator.join.stream.state.match;
 
 import org.apache.flink.runtime.state.keyed.KeyedMapState;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.util.StateUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +32,7 @@ import java.util.Set;
  */
 public class WithoutPrimaryKeyMatchStateHandler implements JoinMatchStateHandler {
 
+	private static final Logger LOG = LoggerFactory.getLogger(WithoutPrimaryKeyMatchStateHandler.class);
 	private final KeyedMapState<BaseRow, BaseRow, Long> keyedMapState;
 
 	private transient BaseRow currentJoinKey;
@@ -70,8 +75,14 @@ public class WithoutPrimaryKeyMatchStateHandler implements JoinMatchStateHandler
 
 	@Override
 	public void addRowMatchJoinCnt(BaseRow joinKey, BaseRow baseRow, long joinCnt) {
-		long count = keyedMapState.get(joinKey, baseRow);
-		keyedMapState.add(joinKey, baseRow, joinCnt + count);
+		Long count = keyedMapState.get(joinKey, baseRow);
+		if (count != null) {
+			keyedMapState.add(joinKey, baseRow, joinCnt + count);
+		} else {
+			// Assume the history count is 0 if state value is cleared.
+			LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG);
+			keyedMapState.add(joinKey, baseRow, joinCnt);
+		}
 	}
 
 	@Override

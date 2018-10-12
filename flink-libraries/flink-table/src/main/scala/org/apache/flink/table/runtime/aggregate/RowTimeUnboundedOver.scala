@@ -30,7 +30,7 @@ import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTime
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
 
 
@@ -191,10 +191,13 @@ abstract class RowTimeUnboundedOver(
       while (!sortedTimestamps.isEmpty) {
         val curTimestamp = sortedTimestamps.removeFirst()
         val curRowList = inputState.get(currentKey, curTimestamp)
-
-        // process the same timestamp datas, the mechanism is different according ROWS or RANGE
-        processElementsWithSameTimestamp(curRowList, out)
-
+        if (curRowList != null) {
+          // process the same timestamp datas, the mechanism is different according ROWS or RANGE
+          processElementsWithSameTimestamp(curRowList, out)
+        } else {
+          // Ignore the same timestamp datas if the state is cleared already.
+          LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+        }
         inputState.remove(currentKey, curTimestamp)
       }
 

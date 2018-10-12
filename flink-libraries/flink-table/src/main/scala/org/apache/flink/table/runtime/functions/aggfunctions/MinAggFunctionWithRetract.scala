@@ -73,13 +73,11 @@ abstract class MinWithRetractAggFunction[T](implicit ord: Ordering[T])
         // update min to acc
         acc.update(0, v)
       }
-
-      if (!map.contains(v)) {
+      val count = map.get(v)
+      if (count == null) {
         map.put(v, 1L)
       } else {
-        var count = map.get(v)
-        count += 1L
-        map.put(v, count)
+        map.put(v, count + 1L)
       }
     }
   }
@@ -153,8 +151,9 @@ abstract class MinWithRetractAggFunction[T](implicit ord: Ordering[T])
           val entry = curAccItor.next()
           val key = entry.getKey
           val count = entry.getValue
-          if (map.contains(key)) {
-            map.put(key, map.get(key) + count)
+          val oldCnt = map.get(key)
+          if (oldCnt != null) {
+            map.put(key, oldCnt + count)
           } else {
             map.put(key, count)
           }

@@ -37,7 +37,7 @@ import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.{BaseRowUtil, Logging}
+import org.apache.flink.table.util.{BaseRowUtil, Logging, StateUtil}
 import org.apache.flink.util.Collector
 
 class RetractRankFunction(
@@ -157,12 +157,10 @@ class RetractRankFunction(
         }
       } else {
         if (sortedMap.isEmpty) {
-          val message = s"The sorted map state is cleared because of state ttl. " +
-            "This will result in incorrect result. You can increase the state ttl to avoid this."
           if (lenient) {
-            LOG.warn(message)
+            LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
           } else {
-            throw new RuntimeException(message)
+            throw new RuntimeException(StateUtil.STATE_CLEARED_WARN_MSG)
           }
         } else {
           throw new RuntimeException(
@@ -194,24 +192,33 @@ class RetractRankFunction(
       val key = entry.getKey
       if (!needUpdate && key.equals(sortKey)) {
         val inputs = dataState.get(currentKey, key)
-        val inputIter = inputs.iterator()
-        while (inputIter.hasNext && isInRankEnd(curRank)) {
-          curRank += 1
-          val prevRow = inputIter.next()
-          if (!needUpdate && prevRow.equalsWithoutHeader(inputRow)) {
-            delete(out, prevRow, curRank)
-            curRank -= 1
-            needUpdate = true
-            inputIter.remove()
-          } else if (needUpdate) {
-            retract(out, prevRow, curRank + 1)
-            collect(out, prevRow, curRank)
+        if (inputs == null) {
+          // Skip the data if it's state is cleared because of state ttl.
+          if (lenient) {
+            LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+          } else {
+            throw new RuntimeException(StateUtil.STATE_CLEARED_WARN_MSG)
           }
-        }
-        if (inputs.isEmpty) {
-          dataState.remove(currentKey, key)
         } else {
-          dataState.add(currentKey, key, inputs)
+          val inputIter = inputs.iterator()
+          while (inputIter.hasNext && isInRankEnd(curRank)) {
+            curRank += 1
+            val prevRow = inputIter.next()
+            if (!needUpdate && prevRow.equalsWithoutHeader(inputRow)) {
+              delete(out, prevRow, curRank)
+              curRank -= 1
+              needUpdate = true
+              inputIter.remove()
+            } else if (needUpdate) {
+              retract(out, prevRow, curRank + 1)
+              collect(out, prevRow, curRank)
+            }
+          }
+          if (inputs.isEmpty) {
+            dataState.remove(currentKey, key)
+          } else {
+            dataState.add(currentKey, key, inputs)
+          }
         }
       } else if (needUpdate) {
         val inputs = dataState.get(currentKey, entry.getKey)
@@ -248,13 +255,22 @@ class RetractRankFunction(
         needUpdate = true
       } else if (needUpdate) {
         val inputs = dataState.get(currentKey, entry.getKey)
-        var i = 0
-        while (i < inputs.size() && isInRankEnd(curRank)) {
-          curRank += 1
-          val prevRow = inputs.get(i)
-          retract(out, prevRow, curRank - 1)
-          collect(out, prevRow, curRank)
-          i += 1
+        if (inputs == null) {
+          // Skip the data if it's state is cleared because of state ttl.
+          if (lenient) {
+            LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
+          } else {
+            throw new RuntimeException(StateUtil.STATE_CLEARED_WARN_MSG)
+          }
+        } else {
+          var i = 0
+          while (i < inputs.size() && isInRankEnd(curRank)) {
+            curRank += 1
+            val prevRow = inputs.get(i)
+            retract(out, prevRow, curRank - 1)
+            collect(out, prevRow, curRank)
+            i += 1
+          }
         }
       } else {
         curRank += entry.getValue

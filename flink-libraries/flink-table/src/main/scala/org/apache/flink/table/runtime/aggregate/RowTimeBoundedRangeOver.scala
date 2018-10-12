@@ -30,7 +30,7 @@ import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTime
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.{Collector, Preconditions}
 
 /**
@@ -198,13 +198,18 @@ class RowTimeBoundedRangeOver(
         val offset = timestamp - dataTs
         if (offset > precedingOffset) {
           val retractDataList = inputState.get(currentKey, dataTs)
-          dataListIndex = 0
-          while (dataListIndex < retractDataList.size()) {
-            val retractRow = retractDataList.get(dataListIndex)
-            function.retract(retractRow)
-            dataListIndex += 1
+          if (retractDataList != null) {
+            dataListIndex = 0
+            while (dataListIndex < retractDataList.size()) {
+              val retractRow = retractDataList.get(dataListIndex)
+              function.retract(retractRow)
+              dataListIndex += 1
+            }
+            retractTsList.add(dataTs)
+          } else {
+            // Does not retract values which are outside of window if the state is cleared already.
+            LOG.warn(StateUtil.STATE_CLEARED_WARN_MSG)
           }
-          retractTsList.add(dataTs)
         }
       }
 
