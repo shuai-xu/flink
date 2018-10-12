@@ -212,6 +212,7 @@ object FlinkStreamExecRuleSets {
   private val STREAM_EXEC_LOGICAL_CONVERTERS: RuleSet = RuleSets.ofList(
     // translate to flink logical rel nodes
     FlinkLogicalAggregate.STREAM_CONVERTER,
+    FlinkLogicalTableValuedAggregate.CONVERTER,
     FlinkLogicalWindowAggregate.CONVERTER,
     FlinkLogicalOverWindow.CONVERTER,
     FlinkLogicalCalc.CONVERTER,
@@ -307,6 +308,7 @@ object FlinkStreamExecRuleSets {
     // translate to StreamExec nodes
     StreamExecSortRule.INSTANCE,
     StreamExecGroupAggregateRule.INSTANCE,
+    StreamExecGroupTableValuedAggregateRule.INSTANCE,
     StreamExecOverAggregateRule.INSTANCE,
     StreamExecGroupWindowAggregateRule.INSTANCE,
     StreamExecCalcRule.INSTANCE,

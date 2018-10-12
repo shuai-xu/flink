@@ -427,6 +427,8 @@ class LogicalNodeBlock(val outputNode: LogicalNode, tEnv: TableEnvironment) {
           case AliasNode(aliasList, _) => AliasNode(aliasList, child)
           case Project(projectList, _) => Project(projectList, child)
           case Sort(order, _) => Sort(order, child)
+          case LogicalTableValuedAggregateCall(call, groupKey, _) =>
+            LogicalTableValuedAggregateCall(call, groupKey, child)
           case _ => throw TableException(s"Unsupported UnaryNode node: $node")
         }
       case b: BinaryNode =>

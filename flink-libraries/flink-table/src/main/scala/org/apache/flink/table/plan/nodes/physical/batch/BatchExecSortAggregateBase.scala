@@ -25,9 +25,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
-import org.apache.flink.table.functions.{UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.{UserDefinedAggregateFunction, TableValuedAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
@@ -60,20 +59,39 @@ abstract class BatchExecSortAggregateBase(
     isFinal) {
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
-    val inputRows = mq.getRowCount(getInput())
-    if (inputRows == null) {
-      return null
+    if (isTableValuedAgg(aggregates) && isFinal) {
+      val inputRows = mq.getRowCount(getInput())
+      if (inputRows == null) {
+        return null
+      }
+      val cpuCost = FUNC_CPU_COST * inputRows
+      val outRows =  mq.getRowCount(this)
+      val averageRowSize: Double = mq.getAverageRowSize(this)
+      val memCost = averageRowSize
+      val rowCountCost: Double =
+        if (outRows != null && isTableValuedAgg(aggregates) && isFinal) {
+          outRows * 2
+        } else {
+          outRows
+        }
+      val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
+      costFactory.makeCost(rowCountCost, cpuCost, 0, 0, memCost)
+    } else {
+      val inputRows = mq.getRowCount(getInput())
+      if (inputRows == null) {
+        return null
+      }
+      // sort is not done here
+      var cpuCost = FUNC_CPU_COST * inputRows * aggCallToAggFunction.size
+      // Punish One-phase aggregate if it's input data is skew on groupKeys.
+      if (isFinal && !isMerge && isSkewOnGroupKeys(mq)) {
+        cpuCost = cpuCost * getSkewPunishFactor()
+      }
+      val averageRowSize: Double = mq.getAverageRowSize(this)
+      val memCost = averageRowSize
+      val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
+      costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
     }
-    // sort is not done here
-    var cpuCost = FUNC_CPU_COST * inputRows * aggCallToAggFunction.size
-    // Punish One-phase aggregate if it's input data is skew on groupKeys.
-    if (isFinal && !isMerge && isSkewOnGroupKeys(mq)) {
-      cpuCost = cpuCost * getSkewPunishFactor()
-    }
-    val averageRowSize: Double = mq.getAverageRowSize(this)
-    val memCost = averageRowSize
-    val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
-    costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, memCost)
   }
 
   override def getOutputRowType: BaseRowType = {
@@ -93,10 +111,9 @@ abstract class BatchExecSortAggregateBase(
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
 
     // register udaggs
-    aggCallToAggFunction.map(_._2).filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+    aggCallToAggFunction.map(_._2).filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_]])
         .map(a => ctx.addReusableFunction(a))
 
-    val lastKeyTerm = "lastKey"
     val currentKeyTerm = "currentKey"
     val currentKeyWriterTerm = "currentKeyWriter"
 
@@ -110,7 +127,6 @@ abstract class BatchExecSortAggregateBase(
       aggCallToAggFunction, aggregates, udaggs, inputTerm, inputType,
       aggBufferNames, aggBufferTypes, outputType)
 
-    val joinedRow = "joinedRow"
     ctx.addOutputRecord(DataTypes.internal(outputType), joinedRow)
     val binaryRow = classOf[BinaryRow].getName
     ctx.addReusableMember(s"$binaryRow $lastKeyTerm = null;")
@@ -129,10 +145,7 @@ abstract class BatchExecSortAggregateBase(
          |  $initAggBufferCode
          |} else if ($keyNotEquals) {
          |
-         |  // write output
-         |  ${aggOutputExpr.code}
-         |
-         |  ${generatorCollect(s"$joinedRow.replace($lastKeyTerm, ${aggOutputExpr.resultTerm})")}
+         |  ${getAggOutputCode(aggOutputExpr, isFinal, withKey = true)}
          |
          |  $lastKeyTerm = $currentKeyTerm.copy();
          |
@@ -147,9 +160,7 @@ abstract class BatchExecSortAggregateBase(
     val endInputCode =
       s"""
          |if (hasInput) {
-         |  // write last output
-         |  ${aggOutputExpr.code}
-         |  ${generatorCollect(s"$joinedRow.replace($lastKeyTerm, ${aggOutputExpr.resultTerm})")}
+         |  ${getAggOutputCode(aggOutputExpr, isFinal, withKey = true)}
          |}
        """.stripMargin
 

@@ -30,6 +30,7 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.BatchExecRelVisitor
+import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator

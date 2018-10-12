@@ -22,17 +22,19 @@ import java.lang.{Iterable => JIterable}
 
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.runtime.util.SingleElementIterator
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.dataview.{ListView, MapView}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
-import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference, ResolvedAggLocalReference}
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.plan.util.AggregateInfo
 import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
 import org.apache.flink.table.dataview.DataViewSpec
+import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
+import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
+import org.apache.flink.table.plan.util.AggregateInfo
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.{genToExternal, genToInternal}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeUtils
 
 /**
@@ -53,24 +55,35 @@ import org.apache.flink.table.typeutils.TypeUtils
   * @param hasNamespace  whether the accumulators state has namespace
   */
 class ImperativeAggCodeGen(
-    ctx: CodeGeneratorContext,
-    aggInfo: AggregateInfo,
-    filterExpression: Option[Expression],
-    mergedAccOffset: Int,
-    aggBufferOffset: Int,
-    aggBufferSize: Int,
-    inputTypes: Seq[InternalType],
-    constantExprs: Seq[GeneratedExpression],
-    relBuilder: RelBuilder,
-    hasNamespace: Boolean,
-    mergedAccOnHeap: Boolean,
-    mergedAccExternalType: DataType)
-  extends AggCodeGen {
+      ctx: CodeGeneratorContext,
+      aggInfo: AggregateInfo,
+      filterExpression: Option[Expression],
+      mergedAccOffset: Int,
+      aggBufferOffset: Int,
+      aggBufferSize: Int,
+      inputTypes: Seq[InternalType],
+      constantExprs: Seq[GeneratedExpression],
+      relBuilder: RelBuilder,
+      hasNamespace: Boolean,
+      mergedAccOnHeap: Boolean,
+      mergedAccExternalType: DataType)
+    extends AggCodeGen {
 
   private val SINGLE_ITERABLE = className[SingleElementIterator[_]]
   private val UPDATABLE_ROW = className[UpdatableRow]
 
-  val function: AggregateFunction[_, _] = aggInfo.function.asInstanceOf[AggregateFunction[_, _]]
+  val function = aggInfo.function match {
+    case _: AggregateFunction[_, _] =>  aggInfo.function.asInstanceOf[AggregateFunction[_, _]]
+    case _: TableValuedAggregateFunction[_, _] =>
+      aggInfo.function.asInstanceOf[TableValuedAggregateFunction[_, _]]
+    case _ =>
+      throw new TableException(s"Unsupported UserDefinedAggregateFunction: ${
+        aggInfo.function
+        .getClass
+        .getSimpleName
+      }")
+  }
+
   val functionTerm: String = ctx.addReusableFunction(
     function,
     constructorTerm = s"$CONTEXT_TERM.getRuntimeContext()")
@@ -104,7 +117,63 @@ class ImperativeAggCodeGen(
 
   val viewSpecs: Array[DataViewSpec] = aggInfo.viewSpecs
   // add reusable dataviews to context
-  addReusableStateDataViews(ctx, hasNamespace, viewSpecs)
+  addReusableDataViews(viewSpecs)
+
+  /**
+    * Create DataView term, for example, acc1_map_dataview.
+    *
+    * @return term to access [[MapView]] or [[ListView]]
+    */
+  private def createDataViewTerm(spec: DataViewSpec): String = {
+    s"${spec.stateId}_dataview"
+  }
+
+  /**
+    * Create DataView backup term, for example, acc1_map_dataview_backup.
+    * The backup dataview term is used for merging two statebackend
+    * dataviews, e.g. session window.
+    *
+    * @return term to access backup [[MapView]] or [[ListView]]
+    */
+  private def createDataViewBackupTerm(spec: DataViewSpec): String = {
+    s"${spec.stateId}_dataview_backup"
+  }
+
+  private def addReusableDataViews(viewSpecs: Array[DataViewSpec]): Unit = {
+    // add reusable dataviews to context
+    viewSpecs.foreach { spec =>
+      val viewFieldTerm = createDataViewTerm(spec)
+      val backupViewTerm = createDataViewBackupTerm(spec)
+      val viewTypeTerm = spec.getStateDataViewClass(hasNamespace).getCanonicalName
+      ctx.addReusableMember(s"private $viewTypeTerm $viewFieldTerm;")
+      // always create backup dataview
+      ctx.addReusableMember(s"private $viewTypeTerm $backupViewTerm;")
+
+      val descTerm = ctx.addReusableObject(spec.toStateDescriptor, "desc")
+      val createStateCall = spec.getCreateStateCall(hasNamespace)
+
+      val openCode =
+        s"""
+           |$viewFieldTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+           |$backupViewTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+         """.stripMargin
+      ctx.addReusableOpenStatement(openCode)
+
+      // only cleanup dataview term, do not cleanup backup
+      val cleanupCode = if (hasNamespace) {
+        s"""
+           |$viewFieldTerm.setKeyNamespace($CURRENT_KEY, $NAMESPACE_TERM);
+           |$viewFieldTerm.clear();
+        """.stripMargin
+      } else {
+        s"""
+           |$viewFieldTerm.setKey($CURRENT_KEY);
+           |$viewFieldTerm.clear();
+        """.stripMargin
+      }
+      ctx.addReusableCleanupStatement(cleanupCode)
+    }
+  }
 
   def createAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
     // do not set dataview into the acc in createAccumulator
@@ -212,7 +281,7 @@ class ImperativeAggCodeGen(
       val otherAccExternal = newName("other_acc_external")
       s"""
          |$accTypeExternalTerm $otherAccExternal = ${
-            genToExternal(ctx, mergedAccExternalType, expr.resultTerm)};
+        genToExternal(ctx, mergedAccExternalType, expr.resultTerm)};
          |$accIterTerm.set($otherAccExternal);
          |$functionTerm.merge($accExternalTerm, $accIterTerm);
       """.stripMargin
@@ -238,6 +307,19 @@ class ImperativeAggCodeGen(
     GeneratedExpression(valueInternalTerm, nullTerm, code, DataTypes.internal(resultType))
   }
 
+  override def emitValue(generator: ExprCodeGenerator): String = {
+    val code = if (isAccTypeInternal) {
+      s"""
+         |$functionTerm.emitValue($accInternalTerm, ${MEMBER_COLLECTOR_TERM});
+      """.stripMargin
+    } else {
+      s"""
+         |$functionTerm.emitValue($accExternalTerm, ${MEMBER_COLLECTOR_TERM});
+      """.stripMargin
+    }
+    code
+  }
+
   private def aggParametersCode(generator: ExprCodeGenerator): String = {
     val externalUDITypes = getAggUserDefinedInputTypes(
       function,
@@ -251,19 +333,7 @@ class ImperativeAggCodeGen(
           genToExternal(ctx, externalUDITypes(index), expr.resultTerm)}"
       } else {
         // index to input field
-        val inputRef = if (DISTINCT_KEY_TERM == generator.input1Term) {
-          if (argTypes.length == 1) {
-            // called from distinct merge and the inputTerm is the only argument
-            ResolvedAggLocalReference(generator.input1Term, "false", generator.input1Type)
-          } else {
-            // called from distinct merge call and the inputTerm is BaseRow type
-            ResolvedAggInputReference(f.toString, index, inputTypes(f))
-          }
-        } else {
-          // called from accumulate
-          ResolvedAggInputReference(f.toString, f, inputTypes(f))
-        }
-
+        val inputRef = ResolvedAggInputReference(f.toString, f, inputTypes(f))
         val inputExpr = generator.generateExpression(inputRef.toRexNode(relBuilder))
         var term = s"${genToExternal(ctx, externalUDITypes(index), inputExpr.resultTerm)}"
         if (needCloneRefForDataType(externalUDITypes(index))) {
@@ -285,15 +355,15 @@ class ImperativeAggCodeGen(
     * that this method using UpdatableRow to wrap BaseRow to handle DataViews.
     */
   def generateAccumulatorAccess(
-      ctx: CodeGeneratorContext,
-      inputType: InternalType,
-      inputTerm: String,
-      index: Int,
-      viewSpecs: Array[DataViewSpec],
-      useStateDataView: Boolean,
-      useBackupDataView: Boolean,
-      nullableInput: Boolean,
-      nullCheck: Boolean): GeneratedExpression = {
+    ctx: CodeGeneratorContext,
+    inputType: InternalType,
+    inputTerm: String,
+    index: Int,
+    viewSpecs: Array[DataViewSpec],
+    useStateDataView: Boolean,
+    useBackupDataView: Boolean,
+    nullableInput: Boolean,
+    nullCheck: Boolean): GeneratedExpression = {
 
     // if input has been used before, we can reuse the code that
     // has already been generated
@@ -340,8 +410,8 @@ class ImperativeAggCodeGen(
             if (isAccTypeInternal) {
               val code =
                 s"""
-                  |${newExpr.code}
-                  |${generateDataViewFieldSetter(newExpr.resultTerm, viewSpecs, useBackupDataView)}
+                   |${newExpr.code}
+                   |${generateDataViewFieldSetter(newExpr.resultTerm, viewSpecs, useBackupDataView)}
                 """.stripMargin
               GeneratedExpression(newExpr.resultTerm, newExpr.nullTerm, code, newExpr.resultType)
             } else {
@@ -353,7 +423,7 @@ class ImperativeAggCodeGen(
                    |$fieldTerm = null;
                    |if (!${newExpr.nullTerm}) {
                    |  $fieldTerm = new $UPDATABLE_ROW(${newExpr.resultTerm}, ${
-                        DataTypes.getArity(fieldType)});
+                  DataTypes.getArity(fieldType)});
                    |  ${generateDataViewFieldSetter(fieldTerm, viewSpecs, useBackupDataView)}
                    |}
                 """.stripMargin
@@ -378,9 +448,9 @@ class ImperativeAggCodeGen(
     * @return data view field set statements
     */
   private def generateDataViewFieldSetter(
-      accTerm: String,
-      viewSpecs: Array[DataViewSpec],
-      useBackupDataView: Boolean): String = {
+    accTerm: String,
+    viewSpecs: Array[DataViewSpec],
+    useBackupDataView: Boolean): String = {
     ctx.addAllReusableFields(Set(s"$BASE_ROW $CURRENT_KEY = ctx.currentKey();"))
     val setters = for (spec <- viewSpecs) yield {
       if (hasNamespace) {
@@ -412,42 +482,42 @@ class ImperativeAggCodeGen(
 
 
   def checkNeededMethods(
-      needAccumulate: Boolean = false,
-      needRetract: Boolean = false,
-      needMerge: Boolean = false,
-      needReset: Boolean = false): Unit = {
+    needAccumulate: Boolean = false,
+    needRetract: Boolean = false,
+    needMerge: Boolean = false,
+    needReset: Boolean = false): Unit = {
 
     val methodSignatures = typesToClasses(argTypes)
 
     if (needAccumulate) {
       getAggFunctionUDIMethod(function, "accumulate", externalAccType, argTypes)
-        .getOrElse(
-          throw new CodeGenException(
-            s"No matching accumulate method found for AggregateFunction " +
-              s"'${function.getClass.getCanonicalName}'" +
-              s"with parameters '${signatureToString(methodSignatures)}'.")
-        )
+      .getOrElse(
+        throw new CodeGenException(
+          s"No matching accumulate method found for AggregateFunction " +
+            s"'${function.getClass.getCanonicalName}'" +
+            s"with parameters '${signatureToString(methodSignatures)}'.")
+      )
     }
 
     if (needRetract) {
       getAggFunctionUDIMethod(function, "retract", externalAccType, argTypes)
-        .getOrElse(
-          throw new CodeGenException(
-            s"No matching retract method found for AggregateFunction " +
-              s"'${function.getClass.getCanonicalName}'" +
-              s"with parameters '${signatureToString(methodSignatures)}'.")
-        )
+      .getOrElse(
+        throw new CodeGenException(
+          s"No matching retract method found for AggregateFunction " +
+            s"'${function.getClass.getCanonicalName}'" +
+            s"with parameters '${signatureToString(methodSignatures)}'.")
+      )
     }
 
     if (needMerge) {
       val iterType = DataTypes.extractType(classOf[JIterable[Any]])
       val methods =
         getUserDefinedMethod(function, "merge", Array(externalAccType, iterType))
-          .getOrElse(
-            throw new CodeGenException(
-              s"No matching merge method found for AggregateFunction " +
-                s"${function.getClass.getCanonicalName}'.")
-          )
+        .getOrElse(
+          throw new CodeGenException(
+            s"No matching merge method found for AggregateFunction " +
+              s"${function.getClass.getCanonicalName}'.")
+        )
 
       var iterableTypeClass = methods.getGenericParameterTypes.apply(1)
         .asInstanceOf[ParameterizedType].getActualTypeArguments.apply(0)
@@ -467,11 +537,12 @@ class ImperativeAggCodeGen(
 
     if (needReset) {
       getUserDefinedMethod(function, "resetAccumulator", Array(externalAccType))
-        .getOrElse(
-          throw new CodeGenException(
-            s"No matching resetAccumulator method found for " +
-              s"aggregate ${function.getClass.getCanonicalName}'.")
-        )
+      .getOrElse(
+        throw new CodeGenException(
+          s"No matching resetAccumulator method found for " +
+            s"aggregate ${function.getClass.getCanonicalName}'.")
+      )
     }
   }
+
 }

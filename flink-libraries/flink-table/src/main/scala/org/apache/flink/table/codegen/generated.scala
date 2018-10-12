@@ -25,7 +25,7 @@ import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, SubKeyedAggsHandleFunction}
+import org.apache.flink.table.runtime.functions.{AggsHandleFunction, SubKeyedAggsHandleFunction, TableValuedAggHandleFunction}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.types.InternalType
 
@@ -278,6 +278,19 @@ case class GeneratedBoundComparator(name: String, code: String)
   */
 case class GeneratedAggsHandleFunction(name: String, code: String, references: Array[AnyRef])
   extends GeneratedClass[AggsHandleFunction]
+
+/**
+  * Describes a generated table-valued aggregate helper function
+  *
+  * @param name class name of the generated Function.
+  * @param code code of the generated Function.
+  */
+case class GeneratedTableValuedAggHandleFunction(
+    name: String,
+    code: String,
+    references:
+    Array[AnyRef])
+  extends GeneratedClass[TableValuedAggHandleFunction]
 
 /**
   * Describes a generated subkeyed aggregate helper function

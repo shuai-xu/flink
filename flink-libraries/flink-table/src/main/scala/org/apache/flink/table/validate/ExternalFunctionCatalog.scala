@@ -25,8 +25,8 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.catalog.{CrudExternalCatalog, ExternalCatalog, ExternalCatalogFunction}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getResultTypeOfCTDFunction
-import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction, UserDefinedFunctionUtils}
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.functions.utils._
+import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.DataTypes
 
 import _root_.scala.collection.JavaConversions._
@@ -92,6 +92,15 @@ class ExternalFunctionCatalog(
           aggSqlFunction.getResultType,
           aggSqlFunction.getAccumulatorType,
           children)
+      case _: TableValuedAggSqlFunction =>
+        val tableValuedAggSqlFunction =
+          sqlFunction.asInstanceOf[TableValuedAggregateFunction[_, _]]
+        TableValuedAggFunctionCall(
+          tableValuedAggSqlFunction,
+          tableValuedAggSqlFunction.getResultType,
+          tableValuedAggSqlFunction.getAccumulatorType,
+          children
+        )
     }
   }
 
@@ -137,6 +146,24 @@ class ExternalFunctionCatalog(
           val externalAccType = UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction(
             f, implicitAccType)
           UserDefinedFunctionUtils.createAggregateSqlFunction(
+            name,
+            name,
+            f,
+            externalResultType,
+            externalAccType,
+            typeFactory
+          )
+        case _: TableValuedAggregateFunction[_, _] =>
+          val f = functionInstance.asInstanceOf[TableValuedAggregateFunction[_, _]]
+          val implicitResultType = DataTypes.of(TypeExtractor
+            .createTypeInfo(f, classOf[TableValuedAggregateFunction[_, _]], f.getClass, 0))
+          val implicitAccType = DataTypes.of(TypeExtractor
+            .createTypeInfo(f, classOf[TableValuedAggregateFunction[_, _]], f.getClass, 1))
+          val externalResultType = UserDefinedFunctionUtils.getResultTypeOfAggregateFunction(
+            f, implicitResultType)
+          val externalAccType = UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction(
+            f, implicitAccType)
+          UserDefinedFunctionUtils.createTableValuedAggregateSqlFunction(
             name,
             name,
             f,

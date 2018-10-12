@@ -24,18 +24,17 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableException}
-import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
 import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
-import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
+import org.apache.flink.table.codegen.{GeneratedExpression, CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
+import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.util.FlinkRelOptUtil
@@ -74,7 +73,7 @@ abstract class BatchExecGroupAggregateBase(
     case (a: DeclarativeAggregateFunction, index) =>
       val idx = auxGrouping.length + index
       a.aggBufferAttributes.map(attr => s"agg${idx}_${attr.name}").toArray
-    case (_: UserDefinedAggregateFunction[_, _], index) =>
+    case (_: UserDefinedAggregateFunction[_], index) =>
       val idx = auxGrouping.length + index
       Array(s"agg$idx")
   }
@@ -84,7 +83,7 @@ abstract class BatchExecGroupAggregateBase(
   } ++ aggregates.map {
     case a: DeclarativeAggregateFunction =>
       a.aggBufferSchema.map(DataTypes.internal).toArray
-    case a: UserDefinedAggregateFunction[_, _] =>
+    case a: UserDefinedAggregateFunction[_] =>
       Array(DataTypes.internal(getAccumulatorTypeOfAggregateFunction(a)))
   }.toArray[Array[InternalType]]
 
@@ -95,10 +94,10 @@ abstract class BatchExecGroupAggregateBase(
     }, grouping.map(inputRelDataType.getFieldNames.get(_)))
 
   // get udagg instance names
-  lazy val udaggs: Map[UserDefinedAggregateFunction[_, _], String] = aggregates
-      .filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+  lazy val udaggs: Map[UserDefinedAggregateFunction[_], String] = aggregates
+      .filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_]])
       .map(a => a -> CodeGeneratorContext.udfFieldName(a)).toMap
-      .asInstanceOf[Map[UserDefinedAggregateFunction[_, _], String]]
+      .asInstanceOf[Map[UserDefinedAggregateFunction[_], String]]
 
   override def deriveRowType(): RelDataType = rowRelDataType
 
@@ -158,7 +157,7 @@ abstract class BatchExecGroupAggregateBase(
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
 
     // register udagg
-    aggregates.filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+    aggregates.filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_]])
         .map(a => ctx.addReusableFunction(a))
 
     val (initAggBufferCode, doAggregateCode, aggOutputExpr) = genSortAggCodes(
@@ -184,14 +183,12 @@ abstract class BatchExecGroupAggregateBase(
          |if (!hasInput) {
          |  $initAggBufferCode
          |}
-         |${aggOutputExpr.code}
-         |${generatorCollect(aggOutputExpr.resultTerm)}
+         |${getAggOutputCode(aggOutputExpr, isFinal, withKey = false)}
          |""".stripMargin
     } else {
       s"""
          |if (hasInput) {
-         |  ${aggOutputExpr.code}
-         |  ${generatorCollect(aggOutputExpr.resultTerm)}
+         |  ${getAggOutputCode(aggOutputExpr, isFinal, withKey = false)}
          |}""".stripMargin
     }
 
@@ -201,6 +198,30 @@ abstract class BatchExecGroupAggregateBase(
     generateOperator(
       ctx, className, baseClass, processCode, endInputCode, inputRelDataType, config)
   }
+
+  private[flink] def getAggOutputCode(
+      aggOutputExpr: GeneratedExpression,
+      isFinal: Boolean,
+      withKey: Boolean) =
+    if (isFinal && isTableValuedAgg(aggregates)) {
+      s"""
+         |// write output
+         |${aggOutputExpr.code}
+      """.stripMargin
+    } else if (withKey) {
+      s"""
+         |// write output
+         |${aggOutputExpr.code}
+         |${generatorCollect(s"$joinedRow.replace($lastKeyTerm, ${aggOutputExpr.resultTerm})")}
+      """.stripMargin
+    } else {
+      s"""
+         |// write output
+         |${aggOutputExpr.code}
+         |${generatorCollect(aggOutputExpr.resultTerm)}
+      """.stripMargin
+    }
+
 
   /**
     * Check whether input data of current agg is skew on group keys.

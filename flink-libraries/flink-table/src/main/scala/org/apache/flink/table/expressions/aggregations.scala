@@ -19,15 +19,15 @@ package org.apache.flink.table.expressions
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
-import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.SqlAggFunction
+import org.apache.calcite.sql.fun._
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.tools.RelBuilder.AggCall
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.functions.sql.AggSqlFunctions
-import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
+import org.apache.flink.table.functions.utils.AggSqlFunction
+import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.types.{DataType, DataTypes, InternalType, MultisetType}
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -51,6 +51,8 @@ abstract sealed class Aggregation extends Expression {
   private[flink] def getSqlAggFunction()(implicit relBuilder: RelBuilder): SqlAggFunction
 
 }
+
+// build-in Aggregations
 
 case class Sum(child: Expression) extends Aggregation {
   override private[flink] def children: Seq[Expression] = Seq(child)
@@ -502,57 +504,6 @@ case class LastValue(child: Expression) extends Aggregation {
     logicalExprVisitor.visit(this)
 }
 
-case class AggFunctionCall(
-    aggregateFunction: AggregateFunction[_, _],
-    externalResultType: DataType,
-    externalAccType: DataType,
-    args: Seq[Expression])
-  extends Aggregation {
-
-  override private[flink] def children: Seq[Expression] = args
-
-  override def resultType: InternalType = DataTypes.internal(externalResultType)
-
-  override def validateInput(): ValidationResult = {
-    val signature = children.map(_.resultType)
-    // look for a signature that matches the input types
-    val foundSignature = getAccumulateMethodSignature(aggregateFunction, signature)
-    if (foundSignature.isEmpty) {
-      ValidationFailure(s"Given parameters do not match any signature. \n" +
-                          s"Actual: ${signatureToString(signature)} \n" +
-                          s"Expected: ${
-                            getMethodSignatures(aggregateFunction, "accumulate").drop(1)
-                              .map(signatureToString).mkString(", ")}")
-    } else {
-      ValidationSuccess
-    }
-  }
-
-  override def toString: String = s"${aggregateFunction.getClass.getSimpleName}($args)"
-
-  override def toAggCall(name: String)(implicit relBuilder: RelBuilder): AggCall =
-    relBuilder.aggregateCall(
-      this.getSqlAggFunction(), false, false, null, name, args.map(_.toRexNode): _*)
-
-  override private[flink] def getSqlAggFunction()(implicit relBuilder: RelBuilder) = {
-    val typeFactory = relBuilder.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    AggSqlFunction(
-      aggregateFunction.functionIdentifier,
-      aggregateFunction.toString,
-      aggregateFunction,
-      externalResultType,
-      externalAccType,
-      typeFactory,
-      aggregateFunction.requiresOver)
-  }
-
-  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode =
-    relBuilder.call(this.getSqlAggFunction(), args.map(_.toRexNode): _*)
-
-  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
-    logicalExprVisitor.visit(this)
-}
-
 case class SingleValue(child: Expression) extends Aggregation {
   override private[flink] def children: Seq[Expression] = Seq(child)
   override def toString = s"single_value($child)"
@@ -591,4 +542,120 @@ case class ConcatAgg(child: Expression, separator: Expression) extends Aggregati
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
+}
+
+//Aggregate function calls
+
+/**
+  * Represent aggregate function call
+  */
+case class AggFunctionCall(
+    aggregateFunction: AggregateFunction[_, _],
+    externalResultType: DataType,
+    externalAccType: DataType,
+    args: Seq[Expression])
+  extends Aggregation {
+
+  override private[flink] def children: Seq[Expression] = args
+
+  override def resultType: InternalType = DataTypes.internal(externalResultType)
+
+  override def validateInput(): ValidationResult = {
+    val signature = children.map(_.resultType)
+    // look for a signature that matches the input types
+    val foundSignature = getAccumulateMethodSignature(aggregateFunction, signature)
+    if (foundSignature.isEmpty) {
+      ValidationFailure(s"Given parameters do not match any signature. \n" +
+                          s"Actual: ${signatureToString(signature)} \n" +
+                          s"Expected: ${
+                            getMethodSignatures(aggregateFunction, "accumulate").drop(1)
+                            .map(signatureToString).mkString(", ")}")
+    } else {
+      ValidationSuccess
+    }
+  }
+
+  override def toString: String = s"${aggregateFunction.getClass.getSimpleName}($args)"
+
+  override def toAggCall(name: String)(implicit relBuilder: RelBuilder): AggCall =
+    relBuilder.aggregateCall(
+      this.getSqlAggFunction(), false, false, null, name, args.map(_.toRexNode): _*)
+
+  override private[flink] def getSqlAggFunction()(implicit relBuilder: RelBuilder) = {
+    val typeFactory = relBuilder.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    AggSqlFunction(
+      aggregateFunction.functionIdentifier,
+      aggregateFunction.toString,
+      aggregateFunction,
+      externalResultType,
+      externalAccType,
+      typeFactory,
+      aggregateFunction.requiresOver())
+  }
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode =
+    relBuilder.call(this.getSqlAggFunction(), args.map(_.toRexNode): _*)
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+
+/**
+  * Represent aggregate table-valued function call
+  */
+case class TableValuedAggFunctionCall(
+    function: TableValuedAggregateFunction[_, _],
+    externalResultType: DataType,
+    externalAccType: DataType,
+    args: Seq[Expression])
+  extends Expression {
+
+  override def validateInput(): ValidationResult = {
+    var callCount = 0
+    def visit(expression: Expression): Unit = {
+      if (expression.isInstanceOf[TableValuedAggFunctionCall]) {
+        callCount += 1
+      }
+      if (expression.children != Nil) {
+        expression.children.foreach(visit)
+      }
+    }
+
+    visit(this)
+
+    if (callCount > 1) {
+      return ValidationFailure("Find nested TableValuedAggFunctionCall, this is not supported.")
+    }
+
+    val signature = children.map(_.resultType)
+
+    // look for a signature that matches the input types
+    val foundSignature = getAccumulateMethodSignature(function, signature)
+    if (foundSignature.isEmpty) {
+      ValidationFailure(
+        s"Given parameters do not match any signature. \n" +
+        s"Actual: ${signatureToString(signature)} \n" +
+        s"Expected: ${getMethodSignatures(function, "accumulate")
+          .drop(1).map(signatureToString).mkString(", ")}")
+    } else {
+      ValidationSuccess
+    }
+  }
+
+  /**
+    * Returns the [[InternalType]] for evaluating this expression.
+    * It is sometimes not available until the expression is valid.
+    */
+  override private[flink] def resultType: InternalType = DataTypes.internal(externalResultType)
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T = {
+    logicalExprVisitor.visit(this)
+  }
+
+  /**
+    * List of child nodes that should be considered when doing transformations. Other values
+    * in the Product will not be transformed, only handed through.
+    */
+  override private[flink] def children: Seq[Expression] = args
 }

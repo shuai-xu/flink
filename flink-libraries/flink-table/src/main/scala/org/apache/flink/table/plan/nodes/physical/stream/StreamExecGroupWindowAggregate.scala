@@ -33,9 +33,9 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.ExpressionUtils.{isTimeIntervalLiteral, _}
-import org.apache.flink.table.expressions.ResolvedFieldReference
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
+import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util._

@@ -96,6 +96,8 @@ public class BaseRowHarnessAssertor {
 				// joined row can't equals to generic row, so cast joined row to generic row first
 				GenericRow actualRow = BaseRowUtil.toGenericRow(actualOutput, typeInfos, typeSerializers);
 				actualRecords.add(actualRow);
+			} else if (act instanceof GenericRow){
+				actualRecords.add((GenericRow) act);
 			}
 		}
 

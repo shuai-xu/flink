@@ -28,7 +28,7 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions}
-import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner, LogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalTableValuedAggregate, LogicalWatermarkAssigner, LogicalWindowAggregate}
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.validate.BasicOperatorTable
 
@@ -77,8 +77,16 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
       val input = uncollect.getInput.accept(this)
       Uncollect.create(uncollect.getTraitSet, input, uncollect.withOrdinality)
 
-    case scan: LogicalTableFunctionScan =>
-      scan
+    case tableFuncScan: LogicalTableFunctionScan =>
+      tableFuncScan
+
+    case tableValuedAggregate: LogicalTableValuedAggregate =>
+      val input = tableValuedAggregate.getInput.accept(this)
+      LogicalTableValuedAggregate.create(
+        input,
+        tableValuedAggregate.call,
+        tableValuedAggregate.groupKey,
+        tableValuedAggregate.groupKeyName)
 
     case aggregate: LogicalWindowAggregate =>
       val convAggregate = convertAggregate(aggregate)

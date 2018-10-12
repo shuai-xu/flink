@@ -39,9 +39,10 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCo
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
+import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.plan.util.AggregateUtil.asLong
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
@@ -93,7 +94,7 @@ abstract class BatchExecWindowAggregateBase(
     case (a: DeclarativeAggregateFunction, index) =>
       val idx = auxGrouping.length + index
       a.aggBufferAttributes.map(attr => s"agg${idx}_${attr.name}").toArray
-    case (_: UserDefinedAggregateFunction[_, _], index) =>
+    case (_: UserDefinedAggregateFunction[_], index) =>
       val idx = auxGrouping.length + index
       Array(s"agg$idx")
   }
@@ -102,7 +103,7 @@ abstract class BatchExecWindowAggregateBase(
     Array(FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType))
   } ++ aggregates.map {
     case a: DeclarativeAggregateFunction => a.aggBufferSchema.map(DataTypes.internal).toArray
-    case a: UserDefinedAggregateFunction[_, _] =>
+    case a: UserDefinedAggregateFunction[_] =>
       Array(getAccumulatorTypeOfAggregateFunction(a)).map(DataTypes.internal)
   }.toArray[Array[InternalType]]
 
@@ -113,10 +114,10 @@ abstract class BatchExecWindowAggregateBase(
     }, grouping.map(inputRelDataType.getFieldNames.get(_)))
 
   // get udagg instance names
-  lazy val udaggs: Map[UserDefinedAggregateFunction[_, _], String] = aggregates
-      .filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+  lazy val udaggs: Map[UserDefinedAggregateFunction[_], String] = aggregates
+      .filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_]])
       .map(a => a -> CodeGeneratorContext.udfFieldName(a)).toMap
-      .asInstanceOf[Map[UserDefinedAggregateFunction[_, _], String]]
+      .asInstanceOf[Map[UserDefinedAggregateFunction[_], String]]
 
   lazy val windowedGroupKeyType: BaseRowType = new BaseRowType(
     classOf[BinaryRow],

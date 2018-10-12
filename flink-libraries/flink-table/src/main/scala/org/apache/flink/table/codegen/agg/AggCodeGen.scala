@@ -39,6 +39,9 @@ trait AggCodeGen {
 
   def getValue(generator: ExprCodeGenerator): GeneratedExpression
 
+  // TODO common AGG may using emitValue in the future, e.g.: filter push down.
+  def emitValue(generator: ExprCodeGenerator): String
+
   def checkNeededMethods(
     needAccumulate: Boolean = false,
     needRetract: Boolean = false,

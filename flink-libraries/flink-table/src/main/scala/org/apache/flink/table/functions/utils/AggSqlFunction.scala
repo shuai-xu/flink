@@ -76,13 +76,13 @@ class AggSqlFunction(
 object AggSqlFunction {
 
   def apply(
-      name: String,
-      displayName: String,
-      aggregateFunction: AggregateFunction[_, _],
-      externalResultType: DataType,
-      externalAccType: DataType,
-      typeFactory: FlinkTypeFactory,
-      requiresOver: Boolean): AggSqlFunction = {
+    name: String,
+    displayName: String,
+    aggregateFunction: AggregateFunction[_, _],
+    externalResultType: DataType,
+    externalAccType: DataType,
+    typeFactory: FlinkTypeFactory,
+    requiresOver: Boolean): AggSqlFunction = {
 
     new AggSqlFunction(
       name,
@@ -95,22 +95,23 @@ object AggSqlFunction {
   }
 
   private[flink] def createOperandTypeInference(
-      name: String,
-      aggregateFunction: AggregateFunction[_, _],
-      typeFactory: FlinkTypeFactory)
+    name: String,
+    aggregateFunction: AggregateFunction[_, _],
+    typeFactory: FlinkTypeFactory)
   : SqlOperandTypeInference = {
     /**
       * Operand type inference based on [[AggregateFunction]] given information.
       */
     new SqlOperandTypeInference {
       override def inferOperandTypes(
-          callBinding: SqlCallBinding,
-          returnType: RelDataType,
-          operandTypes: Array[RelDataType]): Unit = {
+        callBinding: SqlCallBinding,
+        returnType: RelDataType,
+        operandTypes: Array[RelDataType]): Unit = {
 
         val operandTypeInfo = getOperandType(callBinding)
 
-        val foundSignature = getAccumulateMethodSignature(aggregateFunction, operandTypeInfo)
+        val foundSignature =
+          getAccumulateMethodSignature(aggregateFunction, operandTypeInfo)
           .getOrElse(
             throw new ValidationException(
               s"Given parameters of function '$name' do not match any signature. \n" +
@@ -118,7 +119,7 @@ object AggSqlFunction {
                 s"Expected: ${signaturesToString(aggregateFunction, "accumulate")}"))
 
         val inferredTypes = getParameterTypes(aggregateFunction, foundSignature.drop(1))
-          .map(typeFactory.createTypeFromInternalType(_, isNullable = true))
+                            .map(typeFactory.createTypeFromInternalType(_, isNullable = true))
 
         for (i <- operandTypes.indices) {
           if (i < inferredTypes.length - 1) {
@@ -135,8 +136,8 @@ object AggSqlFunction {
   }
 
   private[flink] def createReturnTypeInference(
-      resultType: InternalType,
-      typeFactory: FlinkTypeFactory)
+    resultType: InternalType,
+    typeFactory: FlinkTypeFactory)
   : SqlReturnTypeInference = {
 
     new SqlReturnTypeInference {
@@ -147,9 +148,9 @@ object AggSqlFunction {
   }
 
   private[flink] def createOperandTypeChecker(
-      name: String,
-      aggregateFunction: AggregateFunction[_, _])
-    : SqlOperandTypeChecker = {
+    name: String,
+    aggregateFunction: AggregateFunction[_, _])
+  : SqlOperandTypeChecker = {
 
     val methods = checkAndExtractMethods(aggregateFunction, "accumulate")
 
@@ -185,8 +186,8 @@ object AggSqlFunction {
       }
 
       override def checkOperandTypes(
-          callBinding: SqlCallBinding,
-          throwOnFailure: Boolean)
+        callBinding: SqlCallBinding,
+        throwOnFailure: Boolean)
       : Boolean = {
         val operandTypeInfo = getOperandType(callBinding)
 

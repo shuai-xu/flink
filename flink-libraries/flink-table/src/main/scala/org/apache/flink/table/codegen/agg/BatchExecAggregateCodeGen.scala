@@ -30,11 +30,13 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.STREAM_RECORD
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression, GeneratedOperator, _}
 import org.apache.flink.table.expressions._
+import org.apache.flink.table.functions.utils.TableValuedAggSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.{TableValuedAggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
 import org.apache.flink.table.types._
+import org.apache.flink.table.codegen.Indenter.toISC
 
 import scala.collection.JavaConverters._
 
@@ -132,7 +134,7 @@ trait BatchExecAggregateCodeGen {
         val idx = auxGrouping.length + aggIndex
         agg.aggBufferAttributes.map(_.postOrderTransform(
           bindReference(isMerge, agg, idx, argsMapping, aggBufferTypes)))
-      case (_: UserDefinedAggregateFunction[_, _], aggIndex: Int) =>
+      case (_: UserDefinedAggregateFunction[_], aggIndex: Int) =>
         val idx = auxGrouping.length + aggIndex
         val variableName = aggBufferNames(idx)(0)
         Some(ResolvedAggBufferReference(
@@ -153,7 +155,7 @@ trait BatchExecAggregateCodeGen {
       auxGrouping: Array[Int],
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
@@ -178,7 +180,7 @@ trait BatchExecAggregateCodeGen {
       builder: RelBuilder,
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
@@ -197,7 +199,7 @@ trait BatchExecAggregateCodeGen {
         val idx = auxGrouping.length + aggIndex
         agg.getValueExpression.postOrderTransform(
           bindReference(isMerge, agg, idx, argsMapping, aggBufferTypes))
-      case (agg: UserDefinedAggregateFunction[_, _], aggIndex) =>
+      case (agg: UserDefinedAggregateFunction[_], aggIndex) =>
         val idx = auxGrouping.length + aggIndex
         (agg, idx)
     }.map {
@@ -205,7 +207,7 @@ trait BatchExecAggregateCodeGen {
       case t@_ => t
     }.map {
       case (rex: RexNode) => exprCodegen.generateExpression(rex)
-      case (agg: UserDefinedAggregateFunction[_, _], aggIndex: Int) =>
+      case (agg: UserDefinedAggregateFunction[_], aggIndex: Int) =>
         val resultType = getResultTypeOfAggregateFunction(agg)
         val accType = getAccumulatorTypeOfAggregateFunction(agg)
         val resultTerm = genToInternal(ctx, resultType,
@@ -229,7 +231,7 @@ trait BatchExecAggregateCodeGen {
       grouping: Array[Int],
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       aggBufferExprs: Seq[GeneratedExpression],
       forHashAgg: Boolean = false): String = {
     val exprCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
@@ -251,14 +253,14 @@ trait BatchExecAggregateCodeGen {
     val initAggCallBufferExprs = aggregates.flatMap {
       case (agg: DeclarativeAggregateFunction) =>
         agg.initialValuesExpressions
-      case (agg: UserDefinedAggregateFunction[_, _]) =>
+      case (agg: UserDefinedAggregateFunction[_]) =>
         Some(agg)
     }.map {
       case (expr: Expression) => expr.toRexNode(builder)
       case t@_ => t
     }.map {
       case (rex: RexNode) => exprCodegen.generateExpression(rex)
-      case (agg: UserDefinedAggregateFunction[_, _]) =>
+      case (agg: UserDefinedAggregateFunction[_]) =>
         val resultTerm = s"${udaggs(agg)}.createAccumulator()"
         val nullTerm = "false"
         val resultType = getAccumulatorTypeOfAggregateFunction(agg)
@@ -296,7 +298,7 @@ trait BatchExecAggregateCodeGen {
       inputType: BaseRowType,
       auxGrouping: Array[Int],
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
@@ -314,7 +316,7 @@ trait BatchExecAggregateCodeGen {
             agg.accumulateExpressions.map(_.postOrderTransform(
               bindReference(isMerge = false, agg, idx, argsMapping, aggBufferTypes)))
                 .map(e => (e, aggCall))
-          case agg: UserDefinedAggregateFunction[_, _] =>
+          case agg: UserDefinedAggregateFunction[_] =>
             val idx = auxGrouping.length + aggIndex
             Some(agg, idx, aggCall)
         }
@@ -330,7 +332,7 @@ trait BatchExecAggregateCodeGen {
            |}
            """.stripMargin, aggCall.filterArg)
       // UserDefinedAggregateFunction
-      case ((agg: UserDefinedAggregateFunction[_, _], aggIndex: Int, aggCall: AggregateCall),
+      case ((agg: UserDefinedAggregateFunction[_], aggIndex: Int, aggCall: AggregateCall),
           aggBufVar) =>
         val inFields = argsMapping(aggIndex)
         val externalAccType = getAccumulatorTypeOfAggregateFunction(agg)
@@ -385,7 +387,7 @@ trait BatchExecAggregateCodeGen {
       inputType: BaseRowType,
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
@@ -401,7 +403,7 @@ trait BatchExecAggregateCodeGen {
         agg.mergeExpressions.map(
           _.postOrderTransform(
             bindReference(isMerge = true, agg, idx, argsMapping, aggBufferTypes)))
-      case (agg: UserDefinedAggregateFunction[_, _], aggIndex) =>
+      case (agg: UserDefinedAggregateFunction[_], aggIndex) =>
         val idx = auxGrouping.length + aggIndex
         Some(agg, idx)
     }.zip(aggBufferExprs.slice(auxGrouping.length, aggBufferExprs.size)).map {
@@ -416,7 +418,7 @@ trait BatchExecAggregateCodeGen {
            |}
            """.stripMargin.trim
       // UserDefinedAggregateFunction
-      case ((agg: UserDefinedAggregateFunction[_, _], aggIndex: Int), aggBufVar) =>
+      case ((agg: UserDefinedAggregateFunction[_], aggIndex: Int), aggBufVar) =>
         val (inputIndex, inputType) = argsMapping(aggIndex)(0)
         val inputRef = ResolvedAggInputReference(inputTerm, inputIndex, inputType)
         val inputExpr = exprCodegen.generateExpression(inputRef.toRexNode(builder))
@@ -492,11 +494,76 @@ trait BatchExecAggregateCodeGen {
       ctx: CodeGeneratorContext,
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)]): Unit = {
     aggCallToAggFunction
-        .map(_._2).filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+        .map(_._2).filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_]])
         .map(a => ctx.addReusableFunction(a))
   }
 
   // ===============================================================================================
+
+  def addReusableConvertCollector(
+      ctx: CodeGeneratorContext,
+      resultType: DataType,
+      withoutKey: Boolean = true,
+      joinedRowTerm: String = "",
+      lastKeyTerm:String = ""): String = {
+    val COLLECTOR = AggsHandlerCodeGenerator.COLLECTOR
+    val CONVERT_COLLECTOR_TYPE_TERM = AggsHandlerCodeGenerator.CONVERT_COLLECTOR_TYPE_TERM
+    val CONVERTER_RESULT_TERM = AggsHandlerCodeGenerator.CONVERTER_RESULT_TERM
+    val COLLECTOR_TERM = AggsHandlerCodeGenerator.COLLECTOR_TERM
+    val STREAM_RECORD = OperatorCodeGenerator.STREAM_RECORD
+    val OUT_ELEMENT = OperatorCodeGenerator.OUT_ELEMENT
+
+    val preUnboxExprs = ctx.getReusableInputUnboxingExprs.clone()
+
+    val baseRowConverterCode = CodeGenUtils.convertToBaseRow(
+      ctx,
+      CONVERTER_RESULT_TERM,
+      "record",
+      resultType,
+      true,
+      true)
+
+    val collectCode = if (withoutKey) {
+      s"""
+         |this.out.collect($OUT_ELEMENT.replace($CONVERTER_RESULT_TERM));
+          """
+    } else {
+      s"""
+         |this.out.collect(
+         |    $OUT_ELEMENT.replace(
+         |        $joinedRowTerm.replace($lastKeyTerm, $CONVERTER_RESULT_TERM)));
+       """.stripMargin
+    }
+
+    val code =
+      j"""
+          public class $CONVERT_COLLECTOR_TYPE_TERM implements $COLLECTOR {
+
+              public $COLLECTOR<$STREAM_RECORD> out;
+
+              @Override
+              public void collect(Object record) throws Exception {
+                    $baseRowConverterCode
+                    $collectCode
+              }
+
+              @Override
+              public void close() {
+                   this.out.close();
+              }
+          }
+      """
+
+    ctx.setReusableInputUnboxingExprs(preUnboxExprs)
+
+    ctx.addReusableInnerClass(CONVERT_COLLECTOR_TYPE_TERM, code)
+    ctx.addReusableMember(
+      s"public $CONVERT_COLLECTOR_TYPE_TERM $COLLECTOR_TERM;")
+    ctx.addReusableOpenStatement(s"$COLLECTOR_TERM = new $CONVERT_COLLECTOR_TYPE_TERM();")
+    ctx.addReusableOpenStatement(s"$COLLECTOR_TERM.out = output;")
+
+    COLLECTOR_TERM
+  }
 
   def genSortAggOutputExpr(
       isMerge: Boolean,
@@ -507,20 +574,38 @@ trait BatchExecAggregateCodeGen {
       grouping: Array[Int],
       auxGrouping: Array[Int],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       argsMapping: Array[Array[(Int, InternalType)]],
       aggBufferNames: Array[Array[String]],
       aggBufferTypes: Array[Array[InternalType]],
       aggBufferExprs: Seq[GeneratedExpression],
-      outputType: BaseRowType): GeneratedExpression = {
+      outputType: BaseRowType,
+      resultType: DataType = null,
+      accType: DataType = null): GeneratedExpression = {
     val valueRow = CodeGenUtils.newName("valueRow")
     val resultCodegen = new ExprCodeGenerator(ctx, false, config.getNullCheck)
     if (isFinal) {
-      val getValueExprs = genGetValueFromFlatAggregateBuffer(
-        isMerge, ctx, config, builder, auxGrouping, aggregates, udaggs, argsMapping,
-        aggBufferNames, aggBufferTypes, outputType)
-      val valueRowType = new BaseRowType(classOf[GenericRow], getValueExprs.map(_.resultType): _*)
-      resultCodegen.generateResultExpression(getValueExprs, valueRowType, valueRow)
+      if (isTableValuedAgg(aggregates)) {
+        val otherFieldCode = ctx.reuseFieldCode()
+        val collector = if (grouping.length == 0) {
+          addReusableConvertCollector(ctx, resultType)
+        } else {
+          addReusableConvertCollector(ctx, resultType, false, joinedRow, lastKeyTerm)
+        }
+        val aggterm = udaggs(aggregates(0).asInstanceOf[UserDefinedAggregateFunction[_]])
+        val code =
+          s"$aggterm.emitValue(${genToExternal(ctx, accType, aggBufferNames(0)(0))}, $collector);"
+        ctx.startNewFieldStatements("processElementAndEndInput")
+        ctx.addAllReusableFields(otherFieldCode.split("\n").toSet)
+        GeneratedExpression("", "", code, null)
+      } else {
+        val getValueExprs = genGetValueFromFlatAggregateBuffer(
+          isMerge, ctx, config, builder, auxGrouping, aggregates, udaggs, argsMapping,
+          aggBufferNames, aggBufferTypes, outputType)
+        val valueRowType =
+          new BaseRowType(classOf[GenericRow], getValueExprs.map(_.resultType): _*)
+        resultCodegen.generateResultExpression(getValueExprs, valueRowType, valueRow)
+      }
     } else {
       val valueRowType = new BaseRowType(classOf[GenericRow], aggBufferExprs.map(_.resultType): _*)
       resultCodegen.generateResultExpression(aggBufferExprs, valueRowType, valueRow)
@@ -538,7 +623,7 @@ trait BatchExecAggregateCodeGen {
       inputRelDataType: RelDataType,
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
+      udaggs: Map[UserDefinedAggregateFunction[_], String],
       inputTerm: String,
       inputType: BaseRowType,
       aggBufferNames: Array[Array[String]],
@@ -555,9 +640,20 @@ trait BatchExecAggregateCodeGen {
     val doAggregateCode = genAggregateByFlatAggregateBuffer(
       isMerge, ctx, config, builder, inputType, inputTerm, auxGrouping, aggCallToAggFunction,
       aggregates, udaggs, argsMapping, aggBufferNames, aggBufferTypes, aggBufferExprs)
-    val aggOutputExpr = genSortAggOutputExpr(
-      isMerge, isFinal, ctx, config, builder, grouping, auxGrouping, aggregates, udaggs,
-      argsMapping, aggBufferNames, aggBufferTypes, aggBufferExprs, outputType)
+    val aggOutputExpr = if (isTableValuedAgg(aggregates)) {
+      val sqlFunction = aggCallToAggFunction.head._1.
+        getAggregation.asInstanceOf[TableValuedAggSqlFunction]
+      val resultType = sqlFunction.externalResultType
+      val accType = sqlFunction.externalAccType
+      genSortAggOutputExpr(
+        isMerge, isFinal, ctx, config, builder, grouping, auxGrouping, aggregates, udaggs,
+        argsMapping, aggBufferNames, aggBufferTypes, aggBufferExprs,
+        outputType, resultType, accType)
+    } else {
+      genSortAggOutputExpr(
+        isMerge, isFinal, ctx, config, builder, grouping, auxGrouping, aggregates, udaggs,
+        argsMapping, aggBufferNames, aggBufferTypes, aggBufferExprs, outputType)
+    }
 
     (initAggBufferCode, doAggregateCode, aggOutputExpr)
   }
@@ -583,4 +679,12 @@ trait BatchExecAggregateCodeGen {
       config,
       lazyInputUnboxingCode = true)
   }
+
+  val lastKeyTerm = "lastKey"
+
+  val joinedRow = "joinedRow"
+
+  private[flink] def isTableValuedAgg(aggregates: Seq[UserDefinedFunction]) =
+    aggregates.size == 1 &&
+      aggregates.head.isInstanceOf[TableValuedAggregateFunction[_, _]]
 }

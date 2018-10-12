@@ -27,8 +27,8 @@ import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
-import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction}
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction, TableValuedAggSqlFunction}
+import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, StringSplit}
 
 import _root_.scala.collection.JavaConversions._
@@ -94,6 +94,21 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
         val externalResultType = aggregateFunction.externalResultType
         val externalAccType = aggregateFunction.externalAccType
         AggFunctionCall(
+          function,
+          externalResultType,
+          externalAccType,
+          children)
+
+      // user-defined table-valued aggregate function call
+      case tvaf if classOf[TableValuedAggregateFunction[_, _]].isAssignableFrom(tvaf) =>
+        val tableValuedAggregateFunction = sqlFunctions
+          .find(f => f.getName.equalsIgnoreCase(name) && f.isInstanceOf[TableValuedAggSqlFunction])
+          .getOrElse(throw ValidationException(s"Undefined table-valued aggregate function: $name"))
+          .asInstanceOf[TableValuedAggSqlFunction]
+        val function = tableValuedAggregateFunction.getFunction
+        val externalResultType = tableValuedAggregateFunction.externalResultType
+        val externalAccType = tableValuedAggregateFunction.externalAccType
+        TableValuedAggFunctionCall(
           function,
           externalResultType,
           externalAccType,

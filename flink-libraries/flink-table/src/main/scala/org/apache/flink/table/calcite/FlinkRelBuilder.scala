@@ -28,7 +28,7 @@ import org.apache.calcite.plan.volcano.VolcanoPlanner
 import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rel.logical.LogicalAggregate
-import org.apache.calcite.rex.{RexBuilder, RexNode}
+import org.apache.calcite.rex.{RexBuilder, RexCall, RexNode}
 import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.tools.RelBuilder.{AggCall, GroupKey}
 import org.apache.calcite.tools.{FrameworkConfig, RelBuilder, RelBuilderFactory}
@@ -38,7 +38,7 @@ import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkRelFactories.ExpandFactory
 import org.apache.flink.table.expressions.WindowProperty
 import org.apache.flink.table.plan.logical.LogicalWindow
-import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalTableValuedAggregate, LogicalWindowAggregate}
 import org.apache.flink.table.plan.util.RankRange
 
 /**
@@ -84,6 +84,16 @@ class FlinkRelBuilder(
     // build logical window aggregate from it
     push(LogicalWindowAggregate.create(window, namedProperties, aggregate))
     this
+  }
+
+  def tableValuedAggregate(
+    call: RexCall,
+    groupKey: Seq[RexNode],
+    groupKeyName: Seq[String]): RelBuilder = {
+
+    val input = build()
+    push(LogicalTableValuedAggregate.create(input, call, groupKey, groupKeyName))
+
   }
 
   def expand(

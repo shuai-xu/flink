@@ -26,8 +26,8 @@ import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, Unb
 import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRangeInterval, toRowInterval}
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
-import org.apache.flink.table.expressions.{Atan2, Literal, _}
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.expressions.{Atan2, Literal, UDTVAGGExpression, _}
+import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
 import scala.language.implicitConversions
@@ -1111,6 +1111,10 @@ trait ImplicitExpressionConversions {
   implicit def array2ArrayConstructor(array: Array[_]): Expression = convertArray(array)
   implicit def userDefinedAggFunctionConstructor[T: TypeInformation, ACC: TypeInformation]
       (udagg: AggregateFunction[T, ACC]): UDAGGExpression[T, ACC] = UDAGGExpression(udagg)
+  implicit def tableValuedExpression2Call[T: TypeInformation, ACC: TypeInformation]
+  (udtvagg: TableValuedAggregateFunction[T, ACC]): UDTVAGGExpression[T, ACC] = {
+    new UDTVAGGExpression[T, ACC](udtvagg)
+  }
 }
 
 // ------------------------------------------------------------------------------------------------

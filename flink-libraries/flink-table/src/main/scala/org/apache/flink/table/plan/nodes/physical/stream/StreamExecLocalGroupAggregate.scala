@@ -31,10 +31,10 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
+import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.BundleOperator
 import org.apache.flink.table.types.DataTypes

@@ -30,7 +30,7 @@ class AggregateValidationTest extends TableTestBatchExecBase {
   @Test(expected = classOf[ValidationException])
   def testNonWorkingAggregationDataTypes(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(String, Int)]("Table2")
+    val t = util.addTable[(String, Int)]("Table2", '_1, '_2)
 
     // Must fail. Field '_1 is not a numeric type.
     t.select('_1.sum)
@@ -39,7 +39,7 @@ class AggregateValidationTest extends TableTestBatchExecBase {
   @Test(expected = classOf[ValidationException])
   def testNoNestedAggregations(): Unit = {
     val util = batchTestUtil()
-    val t = util.addTable[(String, Int)]("Table2")
+    val t = util.addTable[(String, Int)]("Table2", '_1, '_2)
 
     // Must fail. Sum aggregation can not be chained.
     t.select('_2.sum.sum)

@@ -310,8 +310,8 @@ class BatchExecOverAggregate(
           needMerge = false,
           tableEnv.getConfig.getNullCheck)
         // over agg code gen must pass the constants
-        generator.withConstants(constants).generateAggsHandler(
-          "BoundedOverAggregateHelper", aggInfoList)
+        generator.withConstants(constants)
+          .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
       }.toArray
       val operator = new OverWindowOperator(aggHandlers, needResets, generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,
@@ -367,7 +367,8 @@ class BatchExecOverAggregate(
               needMerge = false,
               config.getNullCheck)
             // over agg code gen must pass the constants
-            val genAggsHandler = generator.withConstants(constants)
+            val genAggsHandler =
+              generator.withConstants(constants)
                 .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
             // The second arg mean the offset for leag/lag function, and the default value is 1L.
             val flag = if (aggCall.getAggregation.kind == SqlKind.LEAD) 1 else -1
@@ -410,7 +411,7 @@ class BatchExecOverAggregate(
 
           // over agg code gen must pass the constants
           val genAggsHandler = generator.withConstants(constants)
-              .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
+            .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
 
           mode match {
             case OverWindowMode.Range if isUnboundedWindow(windowGroup) =>

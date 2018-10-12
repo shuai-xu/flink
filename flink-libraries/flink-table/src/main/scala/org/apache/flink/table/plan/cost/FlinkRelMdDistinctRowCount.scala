@@ -101,6 +101,10 @@ class FlinkRelMdDistinctRowCount private extends MetadataHandler[BuiltInMetadata
       mq: RelMetadataQuery,
       groupKey: ImmutableBitSet,
       predicate: RexNode): Double = {
+
+    if (rel.isFinal && rel.isTableValuedAgg(rel.aggregates)) {
+      return null
+    }
     if (predicate == null || predicate.isAlwaysTrue) {
       if (groupKey.isEmpty) {
         return 1D

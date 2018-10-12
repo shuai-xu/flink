@@ -40,6 +40,7 @@ import org.apache.flink.table.dataformat._
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction, SqlThrowExceptionFunction}
+import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isNumeric, isTemporal, isTimeInterval}
 import org.apache.flink.table.typeutils._
@@ -811,6 +812,96 @@ object CodeGenUtils {
           TableErrors.INST.sqlCodeGenUnsupportedCall(
             s"$call${operands.map(_.resultType).mkString(",")}"))
     }
+  }
+
+  def convertToBaseRow(
+      ctx: CodeGeneratorContext,
+      outputTerm: String,
+      inputTerm: String,
+      inputType: DataType,
+      nullableInput: Boolean,
+      nullableResult: Boolean): String = {
+
+    val methodName = "converter"
+    ctx.startNewFieldStatements(methodName)
+
+    val tempTerm = newName("tempTerm");
+
+    val isResultTypeInternal = inputType match {
+      case t: BaseRowType if t.getTypeClass == classOf[GenericRow] => true
+      case _ => false
+    }
+
+    val isResultTypeCompositeType = inputType match {
+      case t: TypeInfoWrappedType if TypeUtils.isInternalCompositeType(t.getTypeInfo) => true
+      case _ => false
+    }
+
+    val resultTypeInternalTerm  = if (isResultTypeInternal) {
+      className[GenericRow]
+    } else if (isResultTypeCompositeType) {
+      className[BaseRow]
+    } else {
+      boxedTypeTermForType(DataTypes.internal(inputType))
+    }
+
+    val resultTypeInfo = if (isResultTypeInternal) { //GenericRow
+      inputType.asInstanceOf[BaseRowType]
+    } else if (isResultTypeCompositeType) { //Composite
+      val row = DataTypes.internal(inputType).asInstanceOf[BaseRowType]
+      new BaseRowType(classOf[GenericRow], row.getFieldTypes, row.getFieldNames)
+    } else {//Primitive Type
+      new BaseRowType(classOf[GenericRow], DataTypes.internal(inputType))
+    }
+
+    val inputTypeInfo = if (isResultTypeInternal) {
+      resultTypeInfo
+    } else {
+      DataTypes.internal(inputType)
+    }
+
+    val convertCode = if (isResultTypeInternal) {
+      s"$resultTypeInternalTerm ${tempTerm} =" +
+        s"($resultTypeInternalTerm) ${inputTerm};"
+    } else {
+      s"$resultTypeInternalTerm ${tempTerm} =" +
+        s" ${InternalTypeConverters.genToInternal(ctx, inputType, inputTerm)};"
+    }
+
+    val resultExpr = if (isResultTypeInternal || isResultTypeCompositeType) {
+      val exprGenerator =
+        new ExprCodeGenerator(ctx, nullableInput, nullableResult).bindInput(inputTypeInfo, tempTerm)
+
+      exprGenerator.generateConverterResultExpression(
+        resultTypeInfo,
+        outputTerm,
+        reusedOutRow = false,
+        objReuse = false)
+    } else {
+      val expr =
+        Seq(GeneratedExpression({tempTerm}, "false", convertCode, inputTypeInfo))
+      val exprGenerator = new ExprCodeGenerator(ctx, nullableInput, nullableResult)
+      // always create a new accumulator row
+      exprGenerator.generateResultExpression(
+        expr,
+        DataTypes.internal(resultTypeInfo).asInstanceOf[BaseRowType],
+        outRow = outputTerm,
+        reusedOutRow = false)
+    }
+    val code = if (isResultTypeInternal  || isResultTypeCompositeType) {
+      s"""
+         |$convertCode
+         |${ctx.reuseFieldCode("converter")}
+         |${ctx.reuseInputUnboxingCode(Set({tempTerm}))}
+         |${resultExpr.code}
+      """.stripMargin
+    } else {
+      s"""
+         |${ctx.reuseFieldCode("converter")}
+         |${resultExpr.code}
+      """.stripMargin
+    }
+    code
   }
 
   // ----------------------------------------------------------------------------------------------
