@@ -88,11 +88,12 @@ object UserDefinedFunctionUtils {
   def throwValidationException(
       name: String,
       func: UserDefinedFunction,
-      parameters: Array[InternalType]): Method = {
+      parameters: Array[InternalType],
+      methodName: String = "eval"): Method = {
     throw new ValidationException(
       s"Given parameters of function '$name' do not match any signature. \n" +
           s"Actual: ${signatureToString(parameters)} \n" +
-          s"Expected: ${signaturesToString(func, "eval")}")
+          s"Expected: ${signaturesToString(func, methodName)}")
   }
 
   private def getParamClassesConsiderVarArgs(
@@ -125,10 +126,11 @@ object UserDefinedFunctionUtils {
   def getAggUserDefinedInputTypes(
       func: UserDefinedAggregateFunction[_],
       externalAccType: DataType,
-      expectedTypes: Array[InternalType]): Array[DataType] = {
+      expectedTypes: Array[InternalType],
+      methodName: String = "accumulate"): Array[DataType] = {
     val accMethod = getAggFunctionUDIMethod(
-      func, "accumulate", externalAccType, expectedTypes).getOrElse(
-      throwValidationException(func.getClass.getCanonicalName, func, expectedTypes)
+      func, methodName, externalAccType, expectedTypes).getOrElse(
+      throwValidationException(func.getClass.getCanonicalName, func, expectedTypes, methodName)
     )
     func.getUserDefinedInputTypes(
       getParamClassesConsiderVarArgs(
@@ -148,11 +150,12 @@ object UserDefinedFunctionUtils {
     */
   def getAccumulateMethodSignature(
       function: UserDefinedAggregateFunction[_],
-      expectedTypes: Seq[InternalType])
+      expectedTypes: Seq[InternalType],
+      methodName: String = "accumulate")
       : Option[Array[Class[_]]] = {
     getAggFunctionUDIMethod(
       function,
-      "accumulate",
+      methodName,
       getAccumulatorTypeOfAggregateFunction(function),
       expectedTypes
     ).map(_.getParameterTypes)
@@ -463,6 +466,36 @@ object UserDefinedFunctionUtils {
       typeFactory)
   }
 
+  /**
+    * Create [[SqlFunction]] for an [[CoTableValuedAggregateFunction]]
+    *
+    * @param name function name
+    * @param aggFunction aggregate function
+    * @param typeFactory type factory
+    * @return the TableSqlFunction
+    */
+  def createCoTableValuedAggregateSqlFunction(
+    name: String,
+    displayName: String,
+    aggFunction: CoTableValuedAggregateFunction[_, _],
+    externalResultType: DataType,
+    externalAccType: DataType,
+    typeFactory: FlinkTypeFactory)
+  : SqlFunction = {
+    //check if a qualified accumulate method exists before create Sql function
+    checkAndExtractMethods(aggFunction, "accumulateLeft")
+    checkAndExtractMethods(aggFunction, "accumulateRight")
+
+    CoTableValuedAggSqlFunction(
+      name,
+      displayName,
+      aggFunction,
+      externalResultType,
+      externalAccType,
+      true,
+      typeFactory)
+  }
+
   // ----------------------------------------------------------------------------------------------
   // Utilities for user-defined functions
   // ----------------------------------------------------------------------------------------------
@@ -544,8 +577,9 @@ object UserDefinedFunctionUtils {
     parameterTypePos: Int): DataType = {
 
     val clazz = aggregateFunction match {
-      case agg: AggregateFunction[_, _] => classOf[AggregateFunction[_, _]]
-      case tvAgg: TableValuedAggregateFunction[_, _] => classOf[TableValuedAggregateFunction[_, _]]
+      case _: AggregateFunction[_, _] => classOf[AggregateFunction[_, _]]
+      case _: TableValuedAggregateFunction[_, _] => classOf[TableValuedAggregateFunction[_, _]]
+      case _: CoTableValuedAggregateFunction[_, _] => classOf[CoTableValuedAggregateFunction[_, _]]
       case _ =>
         throw new TableException(s"Unsupported UserDefinedAggregateFunction: ${
           aggregateFunction
@@ -773,6 +807,35 @@ object UserDefinedFunctionUtils {
         throw new TableException(
           "aggApply(String) constructor only accept String " +
             "that define table-valued function.")
+    }
+
+    unwrap(ExpressionParser.parseExpression(tvaggCall))
+  }
+
+  /**
+    * Creates a [[CoTableValuedAggFunctionCall]] by parsing a String expression.
+    *
+    * @param tableEnv The table environmenent to lookup the function.
+    * @param tvaggCall String expression of a CoTableValuedAggFunctionCall,
+    *                                   such as "fun(c)(d)"
+    * @return A CoTableValuedAggFunctionCall.
+    */
+  def createLogicalCoTableValuedAggFunctionCall(
+    tableEnv: TableEnvironment,
+    tvaggCall: String): CoTableValuedAggFunctionCall = {
+
+    // unwrap an Expression until we get a TableValuedAggFunctionCall
+    def unwrap(expr: Expression): CoTableValuedAggFunctionCall = expr match {
+      case CoCall(name, args1, args2) =>
+        val list1 = ExpressionList(args1)
+        val list2 = ExpressionList(args2)
+        val function = tableEnv.chainedFunctionCatalog.lookupFunction(name, Seq(list1, list2))
+        unwrap(function)
+      case c: CoTableValuedAggFunctionCall => c
+      case _ =>
+        throw new TableException(
+          "coAggApply(String) constructor only accept String " +
+            "that define co-table-valued function.")
     }
 
     unwrap(ExpressionParser.parseExpression(tvaggCall))

@@ -25,11 +25,11 @@ import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.common.state._
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.functions.co.CoProcessFunction
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.runtime.functions.{CoProcessFunction, ExecutionContext, ProcessFunctionBase}
+import org.apache.flink.table.runtime.functions.ProcessFunctionBase.{Context, OnTimerContext}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
 
@@ -99,7 +99,8 @@ abstract class TimeBoundedStreamJoin(
     throw new IllegalArgumentException("The allowed lateness must be non-negative.")
   }
 
-  override def open(parameters: Configuration): Unit = {
+  override def open(ctx: ExecutionContext): Unit = {
+    super.open(ctx)
     LOG.debug(s"Compiling JoinFunction: $genJoinFuncName \n\n " +
       s"Code:\n $genJoinFuncCode")
     val clazz = compile(
@@ -139,7 +140,7 @@ abstract class TimeBoundedStreamJoin(
     * Process rows from the left stream.
     */
   override def processElement1(value: BaseRow,
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+    ctx: Context,
     out: Collector[BaseRow]): Unit = {
 
     joinCollector.innerCollector = out
@@ -235,7 +236,7 @@ abstract class TimeBoundedStreamJoin(
     * Process rows from the right stream.
     */
   override def processElement2(value: BaseRow,
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+    ctx: Context,
     out: Collector[BaseRow]): Unit = {
 
     joinCollector.innerCollector = out
@@ -333,7 +334,7 @@ abstract class TimeBoundedStreamJoin(
     * @param out       the collector for returning result values
     */
   override def onTimer(timestamp: Long,
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#OnTimerContext,
+    ctx: OnTimerContext,
     out: Collector[BaseRow]): Unit = {
 
     joinCollector.innerCollector = out
@@ -391,7 +392,7 @@ abstract class TimeBoundedStreamJoin(
     * @param leftRow whether this row comes from the left stream
     */
   private def registerCleanUpTimer(
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+    ctx: Context,
     rowTime: Long,
     leftRow: Boolean): Unit = {
     if (leftRow) {
@@ -421,7 +422,7 @@ abstract class TimeBoundedStreamJoin(
     expirationTime: Long,
     rowCache: MapState[Long, JList[BaseRow]],
     timerState: ValueState[Long],
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#OnTimerContext,
+    ctx: OnTimerContext,
     removeLeft: Boolean): Unit = {
 
     val iterator = rowCache.iterator()
@@ -489,7 +490,7 @@ abstract class TimeBoundedStreamJoin(
     *
     * @param ctx the context to acquire watermarks
     */
-  def updateOperatorTime(ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context): Unit
+  def updateOperatorTime(ctx: ProcessFunctionBase.Context): Unit
 
   /**
     * Return the time for the target row from the left stream.
@@ -501,7 +502,7 @@ abstract class TimeBoundedStreamJoin(
     * @return time for the target row
     */
   def getTimeForLeftStream(
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+    ctx: ProcessFunctionBase.Context,
     row: BaseRow): Long
 
   /**
@@ -514,7 +515,7 @@ abstract class TimeBoundedStreamJoin(
     * @return time for the target row
     */
   def getTimeForRightStream(
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+    ctx: ProcessFunctionBase.Context,
     row: BaseRow): Long
 
   /**
@@ -524,6 +525,6 @@ abstract class TimeBoundedStreamJoin(
     * @param cleanupTime timestamp for the timer
     */
   def registerTimer(
-    ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+    ctx: ProcessFunctionBase.Context,
     cleanupTime: Long)
 }

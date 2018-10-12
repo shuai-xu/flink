@@ -25,13 +25,11 @@ import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{RelNode, SingleRel}
-import org.apache.calcite.rex.{RexLiteral, RexNode}
+import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexNode}
 import org.apache.calcite.util._
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.expressions.ExpressionUtils._
-import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.calcite.{CoTableValuedAggregate, Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.stats.ValueInterval
@@ -54,6 +52,27 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
   }
 
   /**
+    * Get output rowCount of CoTableValuedAggregate.
+    */
+  def getRowCount(rel: CoTableValuedAggregate, mq: RelMetadataQuery): Double = {
+    val offset = rel.getLeft.getRowType.getFieldCount
+    val leftGroupSet =
+      ImmutableBitSet.of(rel.groupKey1.map(e => e.asInstanceOf[RexInputRef].getIndex): _*)
+    val rightGroupSet =
+      ImmutableBitSet.of(rel.groupKey2.map(e => e.asInstanceOf[RexInputRef].getIndex - offset): _*)
+    val leftCount =
+      getRowCountOfAggWithChild(rel.getLeft, leftGroupSet, leftGroupSet.size, mq)._1
+    val rightCount =
+      getRowCountOfAggWithChild(rel.getRight, rightGroupSet, rightGroupSet.size, mq)._1
+
+    if (leftCount == null || rightCount == null) {
+      return null
+    } else {
+      leftCount + rightCount
+    }
+  }
+
+  /**
     * Get output rowCount and input rowCount of agg
     *
     * @param rel           agg relNode
@@ -67,13 +86,23 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
       groupSet: ImmutableBitSet,
       groupSetsSize: Int,
       mq: RelMetadataQuery): (Double, Double) = {
-    val childRowCount = mq.getRowCount(rel.getInput)
+
+    getRowCountOfAggWithChild(rel.getInput, groupSet, groupSetsSize, mq)
+  }
+
+  private def getRowCountOfAggWithChild(
+      input: RelNode,
+      groupSet: ImmutableBitSet,
+      groupSetsSize: Int,
+      mq: RelMetadataQuery): (Double, Double) = {
+
+    val childRowCount = mq.getRowCount(input)
     if (groupSet.cardinality() == 0) {
       return (1.0, childRowCount)
     }
 
     // rowCount is the cardinality of the group by columns
-    val distinctRowCount = mq.getDistinctRowCount(rel.getInput, groupSet, null)
+    val distinctRowCount = mq.getDistinctRowCount(input, groupSet, null)
     val groupCount = groupSet.cardinality()
     val d: Double = if (distinctRowCount == null) {
       NumberUtil.multiply(childRowCount,

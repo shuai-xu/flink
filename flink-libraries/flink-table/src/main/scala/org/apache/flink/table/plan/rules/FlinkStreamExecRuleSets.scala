@@ -231,7 +231,8 @@ object FlinkStreamExecRuleSets {
     FlinkLogicalDimensionTableSourceScan.STATIC_CONVERTER,
     FlinkLogicalDimensionTableSourceScan.TEMPORAL_CONVERTER,
     FlinkLogicalWatermarkAssigner.CONVERTER,
-    FlinkLogicalLastRow.CONVERTER
+    FlinkLogicalLastRow.CONVERTER,
+    FlinkLogicalCoTableValuedAggregate.CONVERTER
   )
 
   /**
@@ -326,7 +327,8 @@ object FlinkStreamExecRuleSets {
     StreamExecRankRules.RANK_INSTANCE,
     StreamExecWatermarkAssignerRule.INSTANCE,
     StreamExecExpandRule.INSTANCE,
-    StreamExecLastRowRule.INSTANCE
+    StreamExecLastRowRule.INSTANCE,
+    StreamExecCoGroupTableValuedAggregateRule.INSTANCE
   )
 
   /**

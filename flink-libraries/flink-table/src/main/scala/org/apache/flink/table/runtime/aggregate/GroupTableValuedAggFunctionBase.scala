@@ -18,14 +18,13 @@
 
 package org.apache.flink.table.runtime.aggregate
 
-import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.GeneratedTableValuedAggHandleFunction
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunction, TableValuedAggHandleFunction}
-import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.functions.ProcessFunctionBase.OnTimerContext
+import org.apache.flink.table.runtime.functions.{ExecutionContext, TableValuedAggHandleFunction}
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.{BinaryRowUtil, Logging}
 import org.apache.flink.util.Collector
 
@@ -38,6 +37,7 @@ abstract class GroupTableValuedAggFunctionBase(
     groupWithoutKey: Boolean,
     queryConfig: StreamQueryConfig)
   extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig)
+    with TableValuedAggFunctionBase
     with Logging {
 
   protected var function: TableValuedAggHandleFunction = _
@@ -57,24 +57,16 @@ abstract class GroupTableValuedAggFunctionBase(
     function = genAggsHandler.newInstance(ctx.getRuntimeContext.getUserCodeClassLoader)
     function.open(ctx)
 
-    // serialize as GenericRow, deserialize as BinaryRow
-    val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], DataTypes.toTypeInfo(accTypes))
-    val accDesc = new ValueStateDescriptor("accState", accTypeInfo)
-    accState = ctx.getKeyedValueState(accDesc)
-
-    val counterTypeInfo =
-      new BaseRowTypeInfo(classOf[BaseRow], DataTypes.toTypeInfo(DataTypes.LONG))
-    val counterDesc = new ValueStateDescriptor("groupedDataCounter", counterTypeInfo)
-    groupedDataCounter = ctx.getKeyedValueState(counterDesc)
-
+    val t = initState(accTypes, ctx)
+    accState = t._1
+    groupedDataCounter = t._2
     appendCollector = new AppendGroupKeyCollector
-
     initCleanupTimeState("GroupAggregateCleanupTime")
   }
 
   override def onTimer(
     timestamp: Long,
-    ctx: ProcessFunction.OnTimerContext,
+    ctx: OnTimerContext,
     out: Collector[BaseRow]): Unit = {
     if (needToCleanupState(timestamp)) {
       cleanupState(accState, groupedDataCounter)
@@ -92,22 +84,11 @@ abstract class GroupTableValuedAggFunctionBase(
     // output default value if grouping without key and it's an empty group
     if (groupWithoutKey) {
       executionContext.setCurrentKey(BinaryRowUtil.EMPTY_ROW)
-      if (getCounter(executionContext.currentKey()).getLong(0) == 0) {
+      if (getCounter(executionContext.currentKey(), groupedDataCounter).getLong(0) == 0) {
         function.setAccumulators(function.createAccumulators)
         appendCollector.reSet(out, executionContext.currentKey(), isRetract = false)
         function.emitValue(appendCollector)
       }
     }
   }
-
-  def getCounter(key: BaseRow): BaseRow = {
-    var counter = groupedDataCounter.get(key)
-    if (counter == null) {
-      counter = new GenericRow(1)
-      counter.setLong(0, 0)
-      groupedDataCounter.put(key, counter)
-    }
-    counter
-  }
-
 }

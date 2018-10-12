@@ -26,6 +26,7 @@ import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, Unb
 import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRangeInterval, toRowInterval}
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
+import org.apache.flink.table.functions.CoTableValuedAggregateFunction
 import org.apache.flink.table.expressions.{Atan2, Literal, UDTVAGGExpression, _}
 import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -1114,6 +1115,10 @@ trait ImplicitExpressionConversions {
   implicit def tableValuedExpression2Call[T: TypeInformation, ACC: TypeInformation]
   (udtvagg: TableValuedAggregateFunction[T, ACC]): UDTVAGGExpression[T, ACC] = {
     new UDTVAGGExpression[T, ACC](udtvagg)
+  }
+  implicit def coTableValuedExpression2Call[T: TypeInformation, ACC: TypeInformation]
+  (udctvagg: CoTableValuedAggregateFunction[T, ACC]): UDCTVAGGExpression[T, ACC] = {
+    new UDCTVAGGExpression[T, ACC](udctvagg)
   }
 }
 

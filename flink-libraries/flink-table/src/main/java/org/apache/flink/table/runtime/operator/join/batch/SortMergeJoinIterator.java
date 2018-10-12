@@ -100,7 +100,7 @@ public abstract class SortMergeJoinIterator implements Closeable {
 		}
 	}
 
-	private boolean nextBuffered() throws IOException {
+	protected boolean nextBuffered() throws IOException {
 		if ((bufferedRow = bufferedIterator.next(bufferedRow)) != null) {
 			bufferedKey = bufferedProjection.apply(bufferedRow);
 			return true;

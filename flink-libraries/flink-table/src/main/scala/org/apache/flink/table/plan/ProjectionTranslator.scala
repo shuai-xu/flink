@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan
 
-import org.apache.flink.table.api.{OverWindow, TableEnvironment}
+import org.apache.flink.table.api.{OverWindow, TableEnvironment, TableException}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical.{LogicalNode, Project}
 import org.apache.flink.table.types.BaseRowType
@@ -420,5 +420,55 @@ object ProjectionTranslator {
       // Other expressions
       case e: Expression => e
     }
+  }
+
+  /**
+    * Extract left and right group keys for connect.
+    *
+    * @param leftReferences  The references of left input.
+    * @param rightReferences The references of right input.
+    * @param condition       The condition of connect.
+    * @return left and right group keys for connect
+    */
+  def extractGroupKeys(
+      leftReferences: Seq[NamedExpression],
+      rightReferences: Seq[NamedExpression],
+      condition: Option[Expression]): (Seq[Expression], Seq[Expression]) = {
+
+    val leftGroupKeys = new ListBuffer[Expression]()
+    val rightGroupKeys = new ListBuffer[Expression]()
+
+    def containsExpression(exprs: Seq[NamedExpression], expr: Expression): Boolean = {
+      val refs = extractFieldReferences(Array(expr))
+      return exprs.contains(refs)
+    }
+
+    def visitExpressions(expr: Expression): Unit = {
+      expr match {
+        case and: And =>
+          visitExpressions(and.left)
+          visitExpressions(and.right)
+        case e: EqualTo =>
+          // Note: left/right can either or both be literal.
+          if (!containsExpression(rightReferences, e.left) &&
+            !containsExpression(leftReferences, e.right)) {
+            // if e.left doesn't contain right expression and e.right doesn't contain left, we can
+            // add e.left to left.
+            leftGroupKeys += e.left
+            rightGroupKeys += e.right
+          } else if (!containsExpression(leftReferences, e.left) &&
+            !containsExpression(rightReferences, e.right)) {
+            leftGroupKeys += e.right
+            rightGroupKeys += e.left
+          }
+        case _ =>
+          throw new TableException("Only equal to can be used in connect condition.")
+      }
+    }
+
+    if (condition.isDefined) {
+      visitExpressions(condition.get)
+    }
+    (leftGroupKeys, rightGroupKeys)
   }
 }

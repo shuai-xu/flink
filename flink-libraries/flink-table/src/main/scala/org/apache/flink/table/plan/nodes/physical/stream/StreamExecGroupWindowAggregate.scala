@@ -254,10 +254,10 @@ class StreamExecGroupWindowAggregate(
     val aggsGenerator = new AggsHandlerCodeGenerator(
       ctx,
       relBuilder,
-      inputSchema.fieldTypes,
       needRetraction,
       needMerge,
       config.getNullCheck)
+      .bindInput(inputSchema.fieldTypes)
     aggsGenerator.generateSubKeyedAggsHandler(
       "GroupingWindowAggsHandler",
       aggInfoList,

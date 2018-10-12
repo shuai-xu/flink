@@ -25,24 +25,22 @@ import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
-import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ProjectionCodeGenerator}
 import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.BatchExecCost._
-import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkRelMetadataQuery}
+import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
+import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
-import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.BatchExecResourceUtil
 import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
 
 import scala.collection.JavaConversions._
 
-trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
+trait BatchExecSortMergeJoinBase extends BatchExecJoinBase with CommonSortMergeJoin {
 
   lazy val joinOperatorName: String = if (getCondition != null) {
     val inFields = inputDataType.getFieldNames.toList
@@ -128,24 +126,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, sortMemCost)
   }
 
-  private def inferLeftRowCountRatio: Double = {
-    val mq = FlinkRelMetadataQuery.reuseOrCreate(getCluster.getMetadataQuery)
-    val leftRowCnt = mq.getRowCount(getLeft)
-    val rightRowCnt = mq.getRowCount(getRight)
-    if (leftRowCnt == null || rightRowCnt == null) {
-      0.5d
-    } else {
-      leftRowCnt / (rightRowCnt + leftRowCnt)
-    }
-  }
-
-  private def calcSortMemory(ratio: Double, totalSortMemory: Long): Long = {
-    val minGuaranteedMemory = BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-    val maxGuaranteedMemory = totalSortMemory - BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-    val inferLeftSortMemory = (totalSortMemory * ratio).toLong
-    Math.max(Math.min(inferLeftSortMemory, maxGuaranteedMemory), minGuaranteedMemory)
-  }
-
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
@@ -177,7 +157,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     val infer = BatchExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
 
     val leftRatio = if (infer) {
-      inferLeftRowCountRatio
+      inferLeftRowCountRatio(getLeft, getRight, getCluster.getMetadataQuery)
     } else {
       0.5d
     }
@@ -223,27 +203,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
   private[flink] def getExternalBufferNum: Int = {
     if (flinkJoinType == FlinkJoinRelType.FULL) 2 else 1
-  }
-
-  private def newGeneratedSorter(originalKeys: Array[Int], t: BaseRowType): GeneratedSorter = {
-    val originalOrders = originalKeys.map((_) => true)
-    val (keys, orders, nullsIsLast) = SortUtil.deduplicationSortKeys(
-      originalKeys,
-      originalOrders,
-      SortUtil.getNullDefaultOrders(originalOrders))
-
-    val types = keys.map(t.getFieldTypes()(_))
-    val compAndSers = types.zip(orders).map { case (internalType, order) =>
-      (TypeUtils.createComparator(internalType, order), TypeUtils.createSerializer(internalType))
-    }
-    val comps = compAndSers.map(_._1)
-    val sers = compAndSers.map(_._2)
-
-    val gen = new SortCodeGenerator(keys, types, comps, orders, nullsIsLast)
-    GeneratedSorter(
-      gen.generateNormalizedKeyComputer("SMJComputer"),
-      gen.generateRecordComparator("SMJComparator"),
-      sers, comps)
   }
 }
 

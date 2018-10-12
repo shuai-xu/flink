@@ -31,7 +31,7 @@ import org.apache.flink.runtime.state.gemini.GeminiConfiguration
 import org.apache.flink.runtime.state.memory.MemoryStateBackend
 import org.apache.flink.streaming.api.operators.{OneInputStreamOperator, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.scala.DataStream
-import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, KeyedTwoInputStreamOperatorTestHarness, TestHarnessUtil}
@@ -104,24 +104,21 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
     testHarness
   }
 
-//  def createTwoInputHarnessTester[IN1, IN2, OUT, K](
-//    operator: TwoInputStreamOperator[IN1, IN2, OUT],
-//    leftKeySelector: KeySelector[IN1, K],
-//    rightKeySelector: KeySelector[IN2, K],
-//    typeSerializer1: TypeSerializer[IN1],
-//    typeSerializer2: TypeSerializer[IN2])
-//  : KeyedTwoInputStreamOperatorTestHarness[K, IN1, IN2, OUT] = {
-//    val testHarness =
-//      new KeyedTwoInputStreamOperatorTestHarness(
-//        operator,
-//        leftKeySelector,
-//        rightKeySelector,
-//        rightKeySelector.asInstanceOf[ResultTypeQueryable[K]].getProducedType,
-//        1, 1, 0)
-//    operator.setup
-//    testHarness.setStateBackend(getStateBackend)
-//    testHarness
-//  }
+
+  def createTwoInputHarnessTester(
+    ds: DataStream[_],
+    prefixOperatorName: String)
+  : KeyedTwoInputStreamOperatorTestHarness[BaseRow, BaseRow, BaseRow, BaseRow] = {
+
+    val trans = extractExpectedTwoInputTransformation(
+      ds.javaStream.getTransformation,
+      prefixOperatorName)
+    val processOperator = trans.getOperator
+      .asInstanceOf[TwoInputStreamOperator[BaseRow, BaseRow, BaseRow]]
+    val keySelector1 = trans.getStateKeySelector1.asInstanceOf[KeySelector[BaseRow, BaseRow]]
+    val keySelector2 = trans.getStateKeySelector2.asInstanceOf[KeySelector[BaseRow, BaseRow]]
+    createTwoInputHarnessTester(processOperator, keySelector1, keySelector2)
+  }
 
   def verify(
     expected: JQueue[Object],
@@ -157,6 +154,22 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
         } else {
           extractExpectedTransformation(one.getInput, prefixOperatorName)
         }
+      case _ => throw new Exception("Can not find the expected transformation")
+    }
+  }
+
+  private def extractExpectedTwoInputTransformation(
+      t: StreamTransformation[_],
+      prefixOperatorName: String): TwoInputTransformation[_, _, _] = {
+    t match {
+      case two: TwoInputTransformation[_, _, _] =>
+        if (two.getName.startsWith(prefixOperatorName)) {
+          two
+        } else {
+          throw new Exception("Can not find the expected transformation")
+        }
+      case one: OneInputTransformation[_, _] =>
+        extractExpectedTwoInputTransformation(one.getInput, prefixOperatorName)
       case _ => throw new Exception("Can not find the expected transformation")
     }
   }

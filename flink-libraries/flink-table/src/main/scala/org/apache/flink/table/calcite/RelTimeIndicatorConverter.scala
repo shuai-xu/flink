@@ -28,7 +28,7 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions}
-import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalTableValuedAggregate, LogicalWatermarkAssigner, LogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.calcite._
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.validate.BasicOperatorTable
 
@@ -117,6 +117,17 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
         lastRow.getTraitSet,
         input,
         lastRow.uniqueKeys)
+
+    case coTVAgg: LogicalCoTableValuedAggregate =>
+      val left = coTVAgg.getLeft.accept(this)
+      val right = coTVAgg.getRight.accept(this)
+      LogicalCoTableValuedAggregate.create(
+        left,
+        right,
+        coTVAgg.lRexCall,
+        coTVAgg.rRexCall,
+        coTVAgg.groupKey1,
+        coTVAgg.groupKey2)
 
     case _ =>
       throw new TableException(s"Unsupported logical operator: ${other.getClass.getSimpleName}")

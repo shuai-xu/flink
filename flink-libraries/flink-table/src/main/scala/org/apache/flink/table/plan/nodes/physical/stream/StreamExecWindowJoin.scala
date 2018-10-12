@@ -26,10 +26,9 @@ import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.functions.{FlatMapFunction, MapFunction}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
-import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
-import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoInputStreamOperator}
-import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation,
-  TwoInputTransformation, UnionTransformation}
+import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
+import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap}
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation, TwoInputTransformation, UnionTransformation}
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -39,7 +38,7 @@ import org.apache.flink.table.plan.nodes.common.CommonJoin
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{StreamExecUtil, UpdatingPlanChecker}
 import org.apache.flink.table.runtime.join._
-import org.apache.flink.table.runtime.operator.KeyedCoProcessOperatorWithWatermarkDelay
+import org.apache.flink.table.runtime.operator.{KeyedCoProcessOperator, KeyedCoProcessOperatorWithWatermarkDelay}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging

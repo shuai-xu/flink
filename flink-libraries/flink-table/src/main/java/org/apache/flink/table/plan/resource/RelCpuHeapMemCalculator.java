@@ -25,6 +25,7 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -172,6 +173,12 @@ public class RelCpuHeapMemCalculator implements BatchExecRelVisitor<Void> {
 	@Override
 	public Void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		calculateDefaultRel(sortMergeJoin);
+		return null;
+	}
+
+	@Override
+	public Void visit(BatchExecCoGroupTableValuedAggregate coAgg) {
+		calculateDefaultRel(coAgg);
 		return null;
 	}
 

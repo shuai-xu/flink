@@ -29,7 +29,7 @@ import org.apache.calcite.sql.{SqlBinaryOperator, SqlKind}
 import org.apache.calcite.util.Util
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnInterval
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
+import org.apache.flink.table.plan.nodes.calcite.{CoTableValuedAggregate, Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecGroupWindowAggregate, StreamExecLocalGroupAggregate}
@@ -571,6 +571,21 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     } else {
       val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
       fmq.getColumnInterval(expand.getInput, index)
+    }
+  }
+
+  /**
+    * Gets intervals of the given column of coTableValuedAgg.
+    */
+  def getColumnInterval(coAgg: CoTableValuedAggregate, mq: RelMetadataQuery, index: Int)
+  : ValueInterval = {
+    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
+    val leftGroupSet = coAgg.groupKey1.map(e => e.asInstanceOf[RexInputRef].getIndex)
+    if (index < leftGroupSet.size) {
+      val sourceFieldIndex = leftGroupSet(index)
+      fmq.getColumnInterval(coAgg.leftNode, sourceFieldIndex)
+    } else {
+      null
     }
   }
 

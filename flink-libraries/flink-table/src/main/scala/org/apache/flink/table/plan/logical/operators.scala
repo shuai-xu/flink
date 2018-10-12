@@ -32,7 +32,7 @@ import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowCountLiteral
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{TableFunction, TableValuedAggregateFunction}
-import org.apache.flink.table.functions.utils.{TableSqlFunction, TableValuedAggSqlFunction, UserDefinedFunctionUtils}
+import org.apache.flink.table.functions.utils._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.schema.TypedFlinkTableFunction
 import org.apache.flink.table.sinks.TableSink
@@ -40,6 +40,7 @@ import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 case class Project(projectList: Seq[NamedExpression], child: LogicalNode) extends UnaryNode {
@@ -422,8 +423,6 @@ case class Join(
   override def output: Seq[Attribute] = {
     left.output ++ right.output
   }
-
-
 
   override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
     val node = super.resolveExpressions(tableEnv).asInstanceOf[Join]
@@ -822,7 +821,7 @@ case class LogicalTableValuedAggregateCall(
     child: LogicalNode)
   extends UnaryNode {
 
-  private val (generatedNames, fieldIndexes, fieldTypes) =
+  private val (generatedNames, _, fieldTypes) =
     getFieldInfo(tableValuedAggFunctionCall.externalResultType)
 
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
@@ -863,4 +862,88 @@ case class LogicalTableValuedAggregateCall(
   override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
     super.resolveExpressions(tableEnv).asInstanceOf[LogicalTableValuedAggregateCall]
   }
+}
+
+/**
+  * LogicalNode for calling a user-defined co-table-valued aggregate function.
+  */
+case class LogicalCoTableValuedAggregateCall(
+    left: LogicalNode,
+    right: LogicalNode,
+    groupKey1: Seq[Expression],
+    groupKey2: Seq[Expression],
+    tCall: CoTableValuedAggFunctionCall) extends BinaryNode {
+
+  private val (generatedNames, _, fieldTypes) = getFieldInfo(tCall.externalResultType)
+
+  override def output: Seq[Attribute] = {
+    groupKey1.map {
+      case jf: JoinFieldReference => ResolvedFieldReference(jf.name, jf.resultType)
+      case a => a.asInstanceOf[Attribute]
+    } ++ generatedNames.zip(fieldTypes).map {
+      case (n, t) => ResolvedFieldReference(n, t)
+    }
+  }
+
+  override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
+    val node = super.resolveExpressions(tableEnv).asInstanceOf[LogicalCoTableValuedAggregateCall]
+    val partialFunction: PartialFunction[Expression, Expression] = {
+      case field: ResolvedFieldReference => JoinFieldReference(
+        field.name,
+        field.resultType,
+        left,
+        right)
+    }
+
+    val resolvedLeft = node.tCall.left.postOrderTransform(partialFunction)
+    val resolvedRight = node.tCall.right.postOrderTransform(partialFunction)
+    val newCall = CoTableValuedAggFunctionCall(
+      node.tCall.function,
+      node.tCall.externalResultType,
+      node.tCall.externalAccType,
+      resolvedLeft,
+      resolvedRight)
+
+    val resolvedKey1 = node.groupKey1.map(_.postOrderTransform(partialFunction))
+    val resolvedKey2 = node.groupKey2.map(_.postOrderTransform(partialFunction))
+    LogicalCoTableValuedAggregateCall(node.left, node.right, resolvedKey1, resolvedKey2, newCall)
+  }
+
+  override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
+    val flinkRelBuilder = relBuilder.asInstanceOf[FlinkRelBuilder]
+    left.construct(flinkRelBuilder)
+    right.construct(flinkRelBuilder)
+
+    flinkRelBuilder.coTableValuedAggregate(
+      getRexCall(flinkRelBuilder, tCall, tCall.left, true),
+      getRexCall(flinkRelBuilder, tCall, tCall.right, false),
+      groupKey1.map(_.toRexNode(flinkRelBuilder)),
+      groupKey2.map(_.toRexNode(flinkRelBuilder))
+    )
+  }
+
+  def getRexCall(
+    flinkRelBuilder: FlinkRelBuilder,
+    coTCall: CoTableValuedAggFunctionCall,
+    singleChild: Expression,
+    isLeft: Boolean): RexCall = {
+    val typeFactory = flinkRelBuilder.getTypeFactory
+
+    val sqlFunction = new CoTableValuedAggSqlFunction(
+      coTCall.function.functionIdentifier(),
+      coTCall.function.toString,
+      coTCall.function,
+      coTCall.externalResultType,
+      coTCall.externalAccType,
+      isLeft,
+      typeFactory
+    )
+
+    flinkRelBuilder
+      .call(sqlFunction, singleChild.children.map(_.toRexNode(flinkRelBuilder)))
+      .asInstanceOf[RexCall]
+  }
+
+  override def accept[T](logicalSqlVisitor: LogicalNodeVisitor[T]): T =
+    logicalSqlVisitor.visit(this)
 }

@@ -30,7 +30,7 @@ import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.util.AggregateInfoList
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext, SubKeyedAggsHandleFunction, TableValuedAggHandleFunction}
+import org.apache.flink.table.runtime.functions._
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
@@ -41,12 +41,15 @@ import org.apache.flink.util.Collector
 class AggsHandlerCodeGenerator(
     ctx: CodeGeneratorContext,
     relBuilder: RelBuilder,
-    inputFieldTypes: Seq[InternalType],
     needRetract: Boolean,
     needMerge: Boolean,
     nullCheck: Boolean) {
 
-  private  val inputType = new BaseRowType(classOf[BaseRow], inputFieldTypes: _*)
+  /** co table aggregate function contains two inputs **/
+  private var input1Type: BaseRowType = _
+  private var input1FieldTypes: Seq[InternalType] = _
+  private var input2Type: BaseRowType = _
+  private var input2FieldTypes: Seq[InternalType] = _
 
   /** constant expressions that act like a second input in the parameter indices. */
   private var constantExprs: Seq[GeneratedExpression] = Seq()
@@ -109,6 +112,24 @@ class AggsHandlerCodeGenerator(
     */
   private var aggActionCodeGens: Array[AggCodeGen] = _
 
+  /**
+    * Bind the input information, should be called before generating expression.
+    */
+  def bindInput(inputType: Seq[InternalType]): AggsHandlerCodeGenerator = {
+    input1FieldTypes = inputType
+    input1Type = new BaseRowType(classOf[BaseRow], inputType: _*)
+    this
+  }
+
+  /**
+    * In some cases, the expression will have two inputs (e.g. co table valued function). We should
+    * bind second input information before use.
+    */
+  def bindSecondInput(inputType: Seq[InternalType]): AggsHandlerCodeGenerator = {
+    input2FieldTypes = inputType
+    input2Type = new BaseRowType(classOf[BaseRow], inputType: _*)
+    this
+  }
 
   /**
     * Adds constant expressions that act like a second input in the parameter indices.
@@ -140,11 +161,109 @@ class AggsHandlerCodeGenerator(
   }
 
   /**
+    * Generate [[GeneratedAggsHandleFunction]] with the given function name and aggregate infos
+    * and window properties.
+    */
+  def generateSubKeyedAggsHandler[N](
+      name: String,
+      aggInfoList: AggregateInfoList,
+      windowProperties: Seq[WindowProperty],
+      windowClass: Class[N]): GeneratedSubKeyedAggsHandleFunction[N] = {
+
+    initialWindowProperties(windowProperties, windowClass)
+    initialAggregateInformation(aggInfoList)
+
+    // generates all methods body first to add necessary reuse code to context
+    val createAccumulatorsCode = genCreateAccumulators()
+    val getAccumulatorsCode = genGetAccumulators()
+    val setAccumulatorsCode = genSetAccumulators()
+    val accumulateCode = genAccumulate()
+    val retractCode = genRetract()
+    val mergeCode = genMerge()
+    val getValueCode = genGetValue()
+
+    val functionName = newName(name)
+
+    val functionCode =
+      j"""
+        public final class $functionName
+          implements $SUB_KEYED_AGGS_HANDLER_FUNCTION<$namespaceClassName> {
+
+          private $EXECUTION_CONTEXT $CONTEXT_TERM;
+          ${ctx.reuseMemberCode()}
+
+          public $functionName(Object[] references) throws Exception {
+            ${ctx.reuseInitCode()}
+          }
+
+          @Override
+          public void open($EXECUTION_CONTEXT ctx) throws Exception {
+            this.$CONTEXT_TERM = ctx;
+            ${ctx.reuseOpenCode()}
+          }
+
+          @Override
+          public void accumulate($BASE_ROW $ACCUMULATE_INPUT_TERM) throws Exception {
+            $accumulateCode
+          }
+
+          @Override
+          public void retract($BASE_ROW $RETRACT_INPUT_TERM) throws Exception {
+            $retractCode
+          }
+
+          @Override
+          public void merge(Object ns, $BASE_ROW $MERGED_ACC_TERM) throws Exception {
+            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
+            $mergeCode
+          }
+
+          @Override
+          public void setAccumulators(Object ns, $BASE_ROW $ACC_TERM)
+          throws Exception {
+            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
+            $setAccumulatorsCode
+          }
+
+          @Override
+          public $BASE_ROW getAccumulators() throws Exception {
+            $getAccumulatorsCode
+          }
+
+          @Override
+          public $BASE_ROW createAccumulators() throws Exception {
+            $createAccumulatorsCode
+          }
+
+          @Override
+          public $BASE_ROW getValue(Object ns) throws Exception {
+            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
+            $getValueCode
+          }
+
+          @Override
+          public void cleanup(Object ns) throws Exception {
+            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
+            $BASE_ROW $CURRENT_KEY = ctx.currentKey();
+            ${ctx.reuseCleanupCode()}
+          }
+
+          @Override
+          public void close() throws Exception {
+            ${ctx.reuseCloseCode()}
+          }
+        }
+      """.stripMargin
+
+    GeneratedSubKeyedAggsHandleFunction(functionName, functionCode, ctx.references.toArray)
+  }
+
+  /**
     * Adds window properties such as window_start, window_end
     */
-  private  def initialWindowProperties(
-    windowProperties: Seq[WindowProperty],
-    windowClass: Class[_]): Unit = {
+  private def initialWindowProperties(
+      windowProperties: Seq[WindowProperty],
+      windowClass: Class[_]): Unit = {
     this.windowProperties = windowProperties
     this.namespaceClassName = windowClass.getCanonicalName
     this.hasNamespace = true
@@ -166,9 +285,9 @@ class AggsHandlerCodeGenerator(
     }
 
     val aggCodeGens = aggInfoList.aggInfos.map { aggInfo =>
-      val filterExpr = if(null==aggInfo.agg){
+      val filterExpr = if (null == aggInfo.agg) {
         None
-      }else{
+      } else {
         createFilterExpression(
           aggInfo.agg.filterArg,
           aggInfo.aggIndex,
@@ -184,7 +303,7 @@ class AggsHandlerCodeGenerator(
             mergedAccOffset,
             aggBufferOffset,
             aggBufferSize,
-            inputFieldTypes,
+            input1FieldTypes,
             constantExprs,
             relBuilder)
         case _: UserDefinedAggregateFunction[_] =>
@@ -195,7 +314,8 @@ class AggsHandlerCodeGenerator(
             mergedAccOffset,
             aggBufferOffset,
             aggBufferSize,
-            inputFieldTypes,
+            input1FieldTypes,
+            Some(input2FieldTypes),
             constantExprs,
             relBuilder,
             hasNamespace,
@@ -260,18 +380,18 @@ class AggsHandlerCodeGenerator(
 
     if (filterArg > 0) {
       val name = s"agg_${aggIndex}_filter"
-      val filterType = inputFieldTypes(filterArg)
+      val filterType = input1FieldTypes(filterArg)
       if (filterType != DataTypes.BOOLEAN) {
         throw new TableException(s"filter arg must be boolean, but is $filterType, " +
                                    s"the aggregate is $aggName.")
       }
-      Some(ResolvedAggInputReference(name, filterArg, inputFieldTypes(filterArg)))
+      Some(ResolvedAggInputReference(name, filterArg, input1FieldTypes(filterArg)))
     } else {
       None
     }
   }
 
-  private  def genCreateAccumulators(): String = {
+  private def genCreateAccumulators(): String = {
     val methodName = "createAccumulators"
     ctx.startNewFieldStatements(methodName)
 
@@ -292,7 +412,7 @@ class AggsHandlerCodeGenerator(
     """.stripMargin
   }
 
-  private  def genGetAccumulators(): String = {
+  private def genGetAccumulators(): String = {
     val methodName = "getAccumulators"
     ctx.startNewFieldStatements(methodName)
 
@@ -314,7 +434,7 @@ class AggsHandlerCodeGenerator(
     """.stripMargin
   }
 
-  private  def genSetAccumulators(): String = {
+  private def genSetAccumulators(): String = {
     val methodName = "setAccumulators"
     ctx.startNewFieldStatements(methodName)
 
@@ -330,7 +450,7 @@ class AggsHandlerCodeGenerator(
     """.stripMargin
   }
 
-  private  def genAccumulate(): String = {
+  private def genAccumulate(): String = {
     // validation check
     checkNeededMethods(needAccumulate = true)
 
@@ -339,7 +459,7 @@ class AggsHandlerCodeGenerator(
 
     // bind input1 as inputRow
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
-      .bindInput(inputType, inputTerm = ACCUMULATE_INPUT_TERM)
+      .bindInput(input1Type, inputTerm = ACCUMULATE_INPUT_TERM)
     val body = aggActionCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
     s"""
        |${ctx.reuseFieldCode(methodName)}
@@ -348,7 +468,42 @@ class AggsHandlerCodeGenerator(
     """.stripMargin
   }
 
-  private  def genRetract(): String = {
+  private def genCoAccumulate(): (String, String) = {
+    // validation check
+    checkNeededMethods(needAccumulate = true)
+
+    val methodName1 = "accumulateLeft"
+    ctx.startNewFieldStatements(methodName1)
+
+    // bind input1 as inputRow
+    val exprGenerator1 = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
+      .bindInput(input1Type, inputTerm = ACCUMULATE_LEFT_INPUT_TERM)
+    val body1 =
+      aggActionCodeGens.map(_.accumulate(exprGenerator1)).mkString("\n")
+    val ret1 = s"""
+       |${ctx.reuseFieldCode(methodName1)}
+       |${ctx.reuseInputUnboxingCode(Set(ACCUMULATE_LEFT_INPUT_TERM))}
+       |$body1
+    """.stripMargin
+
+    val methodName2 = "accumulateRight"
+    ctx.startNewFieldStatements(methodName2)
+
+    // bind input2 as inputRow
+    val exprGenerator2 = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
+      .bindInput(input2Type, inputTerm = ACCUMULATE_RIGHT_INPUT_TERM)
+    val body2 =
+      aggActionCodeGens.map(_.accumulate(exprGenerator2)).mkString("\n")
+    val ret2 = s"""
+      |${ctx.reuseFieldCode(methodName2)}
+      |${ctx.reuseInputUnboxingCode(Set(ACCUMULATE_RIGHT_INPUT_TERM))}
+      |$body2
+    """.stripMargin
+
+    (ret1, ret2)
+  }
+
+  private def genRetract(): String = {
     if (needRetract) {
       // validation check
       checkNeededMethods(needRetract = true)
@@ -358,7 +513,7 @@ class AggsHandlerCodeGenerator(
 
       // bind input1 as inputRow
       val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
-        .bindInput(inputType, inputTerm = RETRACT_INPUT_TERM)
+        .bindInput(input1Type, inputTerm = RETRACT_INPUT_TERM)
       val body = aggActionCodeGens.map(_.retract(exprGenerator)).mkString("\n")
       s"""
          |${ctx.reuseFieldCode(methodName)}
@@ -371,7 +526,45 @@ class AggsHandlerCodeGenerator(
     }
   }
 
-  private  def genMerge(): String = {
+  private def genCoRetract(): (String, String) = {
+    if (needRetract) {
+      // validation check
+      checkNeededMethods(needRetract = true)
+
+      val methodName1 = "retractLeft"
+      ctx.startNewFieldStatements(methodName1)
+
+      // bind input1 as inputRow
+      val exprGenerator1 = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
+        .bindInput(input1Type, inputTerm = RETRACT_LEFT_INPUT_TERM)
+      val body1 = aggActionCodeGens.map(_.retract(exprGenerator1)).mkString("\n")
+      val ret1 = s"""
+         |${ctx.reuseFieldCode(methodName1)}
+         |${ctx.reuseInputUnboxingCode(Set(RETRACT_LEFT_INPUT_TERM))}
+         |$body1
+      """.stripMargin
+
+      val methodName2 = "retractRight"
+      ctx.startNewFieldStatements(methodName2)
+
+      // bind input2 as inputRow
+      val exprGenerator2 = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
+        .bindInput(input2Type, inputTerm = RETRACT_RIGHT_INPUT_TERM)
+      val body2 = aggActionCodeGens.map(_.retract(exprGenerator2)).mkString("\n")
+      val ret2 = s"""
+         |${ctx.reuseFieldCode(methodName2)}
+         |${ctx.reuseInputUnboxingCode(Set(RETRACT_RIGHT_INPUT_TERM))}
+         |$body2
+      """.stripMargin
+      (ret1, ret2)
+    } else {
+      val errorMessage = genThrowException(
+        "This function not require retract method, but the retract method is called.")
+      (errorMessage, errorMessage)
+    }
+  }
+
+  private def genMerge(): String = {
     if (needMerge) {
       // validation check
       checkNeededMethods(needMerge = true)
@@ -405,23 +598,7 @@ class AggsHandlerCodeGenerator(
     }
   }
 
-  private  def checkNeededMethods(
-    needAccumulate: Boolean = false,
-    needRetract: Boolean = false,
-    needMerge: Boolean = false,
-    needReset: Boolean = false): Unit = {
-    // check and validate the needed methods
-    aggBufferCodeGens
-    .foreach(_.checkNeededMethods(needAccumulate, needRetract, needMerge, needReset))
-  }
-
-  private  def genThrowException(msg: String): String = {
-    s"""
-       |throw new java.lang.RuntimeException("$msg");
-     """.stripMargin
-  }
-
-   def genGetValue(): String = {
+  private def genGetValue(): String = {
     val methodName = "getValue"
     ctx.startNewFieldStatements(methodName)
 
@@ -475,7 +652,7 @@ class AggsHandlerCodeGenerator(
     """.stripMargin
   }
 
-  def genEmitValue(): String = {
+  private def genEmitValue(): String = {
     val methodName = "EmitValue"
     ctx.startNewFieldStatements(methodName)
 
@@ -585,8 +762,8 @@ class AggsHandlerCodeGenerator(
   }
 
   def generateTableValuedAggHandler(
-      name: String,
-      aggInfoList: AggregateInfoList): GeneratedTableValuedAggHandleFunction = {
+    name: String,
+    aggInfoList: AggregateInfoList): GeneratedTableValuedAggHandleFunction = {
 
     initialAggregateInformation(aggInfoList)
 
@@ -697,101 +874,151 @@ class AggsHandlerCodeGenerator(
   }
 
   /**
-    * Generate [[GeneratedAggsHandleFunction]] with the given function name and aggregate infos
-    * and window properties.
+    * Generate [[GeneratedCoTableValuedAggHandleFunction]] with the given function name and
+    * aggregate infos.
     */
-  def generateSubKeyedAggsHandler[N](
+  def generateCoTableValuedAggHandler(
     name: String,
-    aggInfoList: AggregateInfoList,
-    windowProperties: Seq[WindowProperty],
-    windowClass: Class[N]): GeneratedSubKeyedAggsHandleFunction[N] = {
+    aggInfoList: AggregateInfoList): GeneratedCoTableValuedAggHandleFunction = {
 
-    initialWindowProperties(windowProperties, windowClass)
     initialAggregateInformation(aggInfoList)
 
     // generates all methods body first to add necessary reuse code to context
     val createAccumulatorsCode = genCreateAccumulators()
     val getAccumulatorsCode = genGetAccumulators()
     val setAccumulatorsCode = genSetAccumulators()
-    val accumulateCode = genAccumulate()
-    val retractCode = genRetract()
+    val (accumulateLeftCode, accumulateRightCode) = genCoAccumulate()
+    val (retractLeftCode, retractRightCode) = genCoRetract()
     val mergeCode = genMerge()
-    val getValueCode = genGetValue()
+    val emitValueCode = genEmitValue()
 
     val functionName = newName(name)
 
-    val functionCode =
+    val baseRowConverterCode = CodeGenUtils.convertToBaseRow(
+      ctx,
+      CONVERTER_RESULT_TERM,
+      "record",
+      aggInfoList.aggInfos.head.externalResultType,
+      true,
+      true)
+
+    val code =
       j"""
-        public final class $functionName
-          implements $SUB_KEYED_AGGS_HANDLER_FUNCTION<$namespaceClassName> {
+       public final class $functionName implements $COTABLEVALUED_AGG_HANDLER_FUNCTION {
 
-          private  $EXECUTION_CONTEXT $CONTEXT_TERM;
-          ${ctx.reuseMemberCode()}
+         private $EXECUTION_CONTEXT $CONTEXT_TERM;
+         private $CONVERT_COLLECTOR_TYPE_TERM $MEMBER_COLLECTOR_TERM;
+        ${ctx.reuseMemberCode()}
 
-          public $functionName(Object[] references) throws Exception {
-            ${ctx.reuseInitCode()}
-          }
-
-          @Override
-          public void open($EXECUTION_CONTEXT ctx) throws Exception {
-            this.$CONTEXT_TERM = ctx;
-            ${ctx.reuseOpenCode()}
-          }
-
-          @Override
-          public void accumulate($BASE_ROW $ACCUMULATE_INPUT_TERM) throws Exception {
-            $accumulateCode
-          }
-
-          @Override
-          public void retract($BASE_ROW $RETRACT_INPUT_TERM) throws Exception {
-            $retractCode
-          }
-
-          @Override
-          public void merge(Object ns, $BASE_ROW $MERGED_ACC_TERM) throws Exception {
-            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
-            $mergeCode
-          }
-
-          @Override
-          public void setAccumulators(Object ns, $BASE_ROW $ACC_TERM)
-          throws Exception {
-            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
-            $setAccumulatorsCode
-          }
-
-          @Override
-          public $BASE_ROW getAccumulators() throws Exception {
-            $getAccumulatorsCode
-          }
-
-          @Override
-          public $BASE_ROW createAccumulators() throws Exception {
-            $createAccumulatorsCode
-          }
-
-          @Override
-          public $BASE_ROW getValue(Object ns) throws Exception {
-            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
-            $getValueCode
-          }
-
-          @Override
-          public void cleanup(Object ns) throws Exception {
-            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
-            $BASE_ROW $CURRENT_KEY = ctx.currentKey();
-            ${ctx.reuseCleanupCode()}
-          }
-
-          @Override
-          public void close() throws Exception {
-            ${ctx.reuseCloseCode()}
-          }
+        public $functionName(java.lang.Object[] references) throws Exception {
+          ${ctx.reuseInitCode()}
+          $MEMBER_COLLECTOR_TERM = new $CONVERT_COLLECTOR_TYPE_TERM(references);
         }
-      """.stripMargin
 
-    GeneratedSubKeyedAggsHandleFunction(functionName, functionCode, ctx.references.toArray)
+        @Override
+        public void open($EXECUTION_CONTEXT ctx) throws Exception {
+          this.$CONTEXT_TERM = ctx;
+          ${ctx.reuseOpenCode()}
+        }
+
+        @Override
+        public void accumulateLeft($BASE_ROW $ACCUMULATE_LEFT_INPUT_TERM) throws Exception {
+         $accumulateLeftCode
+        }
+
+        @Override
+        public void accumulateRight($BASE_ROW $ACCUMULATE_RIGHT_INPUT_TERM) throws Exception {
+         $accumulateRightCode
+        }
+
+        @Override
+        public void retractLeft($BASE_ROW $RETRACT_LEFT_INPUT_TERM) throws Exception {
+          $retractLeftCode
+        }
+
+        @Override
+        public void retractRight($BASE_ROW $RETRACT_RIGHT_INPUT_TERM) throws Exception {
+          $retractRightCode
+        }
+
+        @Override
+        public void merge($BASE_ROW $MERGED_ACC_TERM) throws Exception {
+          $mergeCode
+        }
+
+        @Override
+        public void setAccumulators($BASE_ROW $ACC_TERM) throws Exception {
+          $setAccumulatorsCode
+        }
+
+        @Override
+        public $BASE_ROW getAccumulators() throws Exception {
+          $getAccumulatorsCode
+        }
+
+        @Override
+        public $BASE_ROW createAccumulators() throws Exception {
+          $createAccumulatorsCode
+        }
+
+        @Override
+        public void emitValue($COLLECTOR<$BASE_ROW> $COLLECTOR_TERM) throws Exception {
+          $MEMBER_COLLECTOR_TERM.out = $COLLECTOR_TERM;
+          $emitValueCode
+        }
+
+        @Override
+        public void cleanup() throws Exception {
+          $BASE_ROW $CURRENT_KEY = ctx.currentKey();
+          ${ctx.reuseCleanupCode()}
+        }
+
+        @Override
+        public void close() throws Exception {
+          ${ctx.reuseCloseCode()}
+        }
+
+        public static class $CONVERT_COLLECTOR_TYPE_TERM implements $COLLECTOR {
+
+           public $COLLECTOR<$BASE_ROW> out;
+           ${ctx.reuseMemberCode()}
+
+           public $CONVERT_COLLECTOR_TYPE_TERM (java.lang.Object[] references)
+           throws Exception {
+               ${ctx.reuseInitCode()}
+           }
+
+           @Override
+           public void collect(Object record) throws Exception {
+                 ${baseRowConverterCode}
+                 out.collect($CONVERTER_RESULT_TERM);
+           }
+
+           @Override
+           public void close() {
+            out.close();
+           }
+        }
+     }
+     """.stripMargin
+
+    GeneratedCoTableValuedAggHandleFunction(functionName, code, ctx.references.toArray)
+  }
+
+  private def checkNeededMethods(
+      needAccumulate: Boolean = false,
+      needRetract: Boolean = false,
+      needMerge: Boolean = false,
+      needReset: Boolean = false): Unit = {
+    // check and validate the needed methods
+    aggActionCodeGens.foreach(
+      _.checkNeededMethods(needAccumulate, needRetract, needMerge, needReset))
+  }
+
+  private def genThrowException(msg: String): String = {
+    s"""
+       |throw new java.lang.RuntimeException("$msg");
+     """.stripMargin
   }
 
 }
@@ -802,6 +1029,7 @@ object AggsHandlerCodeGenerator {
   val GENERIC_ROW: String = className[GenericRow]
   val AGGS_HANDLER_FUNCTION: String = className[AggsHandleFunction]
   val TABLEVALUED_AGG_HANDLER_FUNCTION: String = className[TableValuedAggHandleFunction]
+  val COTABLEVALUED_AGG_HANDLER_FUNCTION: String = className[CoTableValuedAggHandleFunction]
   val SUB_KEYED_AGGS_HANDLER_FUNCTION: String = className[SubKeyedAggsHandleFunction[_]]
   val EXECUTION_CONTEXT:String = className[ExecutionContext]
 
@@ -812,7 +1040,11 @@ object AggsHandlerCodeGenerator {
   val ACC_TERM = "acc"
   val MERGED_ACC_TERM = "otherAcc"
   val ACCUMULATE_INPUT_TERM = "accInput"
+  val ACCUMULATE_LEFT_INPUT_TERM = "accLeftInput"
+  val ACCUMULATE_RIGHT_INPUT_TERM = "accRightInput"
   val RETRACT_INPUT_TERM = "retractInput"
+  val RETRACT_LEFT_INPUT_TERM = "retractLeftInput"
+  val RETRACT_RIGHT_INPUT_TERM = "retractRightInput"
   val DISTINCT_KEY_TERM = "distinctKey"
 
   val NAMESPACE_TERM = "namespace"
@@ -884,6 +1116,26 @@ object AggsHandlerCodeGenerator {
         """.stripMargin
       }
       ctx.addReusableCleanupStatement(cleanupCode)
+    }
+  }
+
+  def getMethodName(inputTerm: String, defaultName: String): String = {
+    inputTerm match {
+      case AggsHandlerCodeGenerator.ACCUMULATE_INPUT_TERM => "accumulate"
+      case AggsHandlerCodeGenerator.ACCUMULATE_LEFT_INPUT_TERM => "accumulateLeft"
+      case AggsHandlerCodeGenerator.ACCUMULATE_RIGHT_INPUT_TERM => "accumulateRight"
+      case AggsHandlerCodeGenerator.RETRACT_INPUT_TERM => "retract"
+      case AggsHandlerCodeGenerator.RETRACT_LEFT_INPUT_TERM => "retractLeft"
+      case AggsHandlerCodeGenerator.RETRACT_RIGHT_INPUT_TERM => "retractRight"
+      case _ => defaultName
+    }
+  }
+
+  def isRightMethod(inputTerm: String): Boolean = {
+    inputTerm match {
+      case AggsHandlerCodeGenerator.ACCUMULATE_RIGHT_INPUT_TERM => true
+      case AggsHandlerCodeGenerator.RETRACT_RIGHT_INPUT_TERM => true
+      case _ => false
     }
   }
 }

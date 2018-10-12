@@ -814,7 +814,6 @@ abstract class StreamTableEnvironment(
     withProctime
   }
 
-
   /**
     * Generates the optimized [[RelNode]] tree from the original relational node tree.
     *

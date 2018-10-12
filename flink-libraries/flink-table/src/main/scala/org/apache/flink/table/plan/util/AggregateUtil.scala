@@ -498,7 +498,8 @@ object AggregateUtil {
 }
 
 /**
-  * The information about aggregate function call
+  * The information about aggregate function call.
+  *
   * @param agg  calcite agg call
   * @param function AggregateFunction or DeclarativeAggregateFunction
   * @param aggIndex the index of the aggregate call in the aggregation list
@@ -515,6 +516,36 @@ case class AggregateInfo(
   externalAccTypes: Array[DataType],
   viewSpecs: Array[DataViewSpec],
   externalResultType: DataType)
+
+/**
+  * The information about co-aggregate function call.
+  *
+  * @param agg  calcite agg call
+  * @param function AggregateFunction or DeclarativeAggregateFunction
+  * @param aggIndex the index of the aggregate call in the aggregation list
+  * @param argIndexes1 the first aggregate arguments indexes in the input
+  * @param argIndexes2 the secodn aggregate arguments indexes in the input
+  * @param externalAccTypes  accumulator types
+  * @param viewSpecs  data view specs
+  * @param externalResultType the result type of aggregate
+  */
+class CoAggregateInfo(
+  override val agg: AggregateCall,
+  override val function: UserDefinedFunction,
+  override val aggIndex: Int,
+  val argIndexes1: Array[Int],
+  val argIndexes2: Array[Int],
+  override val externalAccTypes: Array[DataType],
+  override val viewSpecs: Array[DataViewSpec],
+  override val externalResultType: DataType)
+  extends AggregateInfo(
+    agg,
+    function,
+    aggIndex,
+    argIndexes1,
+    externalAccTypes,
+    viewSpecs,
+    externalResultType)
 
 /**
   * The information about shared distinct of the aggregates. It indicates which aggregates are

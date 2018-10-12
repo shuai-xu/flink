@@ -24,6 +24,7 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -177,24 +178,35 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	@Override
 	public Void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		visitChildren(sortMergeJoin);
+		visitSortMergeJoin(sortMergeJoin, sortMergeJoin.getExternalBufferNum());
+		return null;
+	}
+
+	@Override
+	public Void visit(BatchExecCoGroupTableValuedAggregate coAgg) {
+		visitChildren(coAgg);
+		visitSortMergeJoin(coAgg, 0);
+		return null;
+	}
+
+	public void visitSortMergeJoin(RowBatchExecRel biRel, int externalBufferNum) {
 		int externalBufferMemoryMb = BatchExecResourceUtil.getExternalBufferManagedMemory(
-				tConfig) * sortMergeJoin.getExternalBufferNum();
-		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(sortMergeJoin);
+			tConfig) * externalBufferNum;
+		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(biRel);
 		Tuple3<Integer, Integer, Integer> managedMem = BatchExecResourceUtil.reviseAndGetInferManagedMem(
-				tConfig,
-				(int) (memoryInBytes / BatchExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(sortMergeJoin)));
+			tConfig,
+			(int) (memoryInBytes / BatchExecResourceUtil.SIZE_IN_MB / getResultPartitionCount(biRel)));
 		int reservedMemory = managedMem.f0 + externalBufferMemoryMb;
 		int preferMemory = managedMem.f1 + externalBufferMemoryMb;
 		int configMinMemory = BatchExecResourceUtil.getOperatorMinManagedMem(tConfig);
 		int minSortMemory = (int) (SORTER_MIN_NUM_SORT_MEM * 2 / BatchExecResourceUtil.SIZE_IN_MB) + 1;
 		Preconditions.checkArgument(configMinMemory >= externalBufferMemoryMb + minSortMemory,
-				SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB +
-						" should >= externalBufferMemoryMb(" +
-						externalBufferMemoryMb +
-						"), minSortMemory(" +
-						minSortMemory + ").");
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, managedMem.f2);
-		return null;
+			SQL_EXEC_INFER_RESOURCE_OPERATOR_MIN_MEMORY_MB +
+				" should >= externalBufferMemoryMb(" +
+				externalBufferMemoryMb +
+				"), minSortMemory(" +
+				minSortMemory + ").");
+		relResMap.get(biRel).setManagedMem(reservedMemory, preferMemory, managedMem.f2);
 	}
 
 	@Override

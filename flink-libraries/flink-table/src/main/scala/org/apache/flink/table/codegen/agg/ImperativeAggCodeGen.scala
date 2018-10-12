@@ -27,12 +27,13 @@ import org.apache.flink.table.api.dataview.{ListView, MapView}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.functions.CoTableValuedAggregateFunction
 import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
 import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
 import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.plan.util.AggregateInfo
+import org.apache.flink.table.plan.util.{AggregateInfo, CoAggregateInfo}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.{genToExternal, genToInternal}
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeUtils
@@ -49,7 +50,8 @@ import org.apache.flink.table.typeutils.TypeUtils
   *                        this is the first buffer offset in the row
   * @param aggBufferOffset  the offset in the buffers of this aggregate
   * @param aggBufferSize  the total size of aggregate buffers
-  * @param inputTypes   the input field type infos
+  * @param input1Types   the first input field type infos
+  * @param input2Types   the second input field type infos
   * @param constantExprs  the constant expressions
   * @param relBuilder  the rel builder to translate expressions to calcite rex nodes
   * @param hasNamespace  whether the accumulators state has namespace
@@ -61,7 +63,8 @@ class ImperativeAggCodeGen(
       mergedAccOffset: Int,
       aggBufferOffset: Int,
       aggBufferSize: Int,
-      inputTypes: Seq[InternalType],
+      input1Types: Seq[InternalType],
+      input2Types: Option[Seq[InternalType]] = None,
       constantExprs: Seq[GeneratedExpression],
       relBuilder: RelBuilder,
       hasNamespace: Boolean,
@@ -76,6 +79,8 @@ class ImperativeAggCodeGen(
     case _: AggregateFunction[_, _] =>  aggInfo.function.asInstanceOf[AggregateFunction[_, _]]
     case _: TableValuedAggregateFunction[_, _] =>
       aggInfo.function.asInstanceOf[TableValuedAggregateFunction[_, _]]
+    case _: CoTableValuedAggregateFunction[_, _] =>
+      aggInfo.function.asInstanceOf[CoTableValuedAggregateFunction[_, _]]
     case _ =>
       throw new TableException(s"Unsupported UserDefinedAggregateFunction: ${
         aggInfo.function
@@ -108,11 +113,18 @@ class ImperativeAggCodeGen(
   }
   val accTypeExternalTerm: String = externalBoxedTermForType(externalAccType)
 
-  val argTypes: Array[InternalType] = {
-    val types = inputTypes ++ constantExprs.map(_.resultType)
+  val arg1Types: Array[InternalType] = {
+    val types = input1Types ++ constantExprs.map(_.resultType)
     aggInfo.argIndexes.map(types(_))
   }
-
+  val arg2Types: Array[InternalType] = {
+    aggInfo match {
+      case coinfo: CoAggregateInfo =>
+        val types = input2Types.get ++ constantExprs.map(_.resultType)
+        coinfo.argIndexes2.map(types(_))
+      case _ => Array[InternalType]()
+    }
+  }
   val resultType: DataType = aggInfo.externalResultType
 
   val viewSpecs: Array[DataViewSpec] = aggInfo.viewSpecs
@@ -227,8 +239,9 @@ class ImperativeAggCodeGen(
   }
 
   def accumulate(generator: ExprCodeGenerator): String = {
-    val parameters = aggParametersCode(generator)
-    val call = s"$functionTerm.accumulate($parameters);"
+    val name = getMethodName(generator.input1Term, "accumulate")
+    val parameters = aggParametersCode(generator, name)
+    val call = s"$functionTerm.$name($parameters);"
     filterExpression match {
       case None => call
       case Some(expr) =>
@@ -242,8 +255,9 @@ class ImperativeAggCodeGen(
   }
 
   def retract(generator: ExprCodeGenerator): String = {
-    val parameters = aggParametersCode(generator)
-    val call = s"$functionTerm.retract($parameters);"
+    val name = getMethodName(generator.input1Term, "retract")
+    val parameters = aggParametersCode(generator, name)
+    val call = s"$functionTerm.$name($parameters);"
     filterExpression match {
       case None => call
       case Some(expr) =>
@@ -320,20 +334,30 @@ class ImperativeAggCodeGen(
     code
   }
 
-  private def aggParametersCode(generator: ExprCodeGenerator): String = {
+  private def aggParametersCode(
+    generator: ExprCodeGenerator,
+    methodName: String = "accumulate"): String = {
+
+    val (argtype, argIndexs, inputType) = if (isRightMethod(generator.input1Term)) {
+      (arg2Types, aggInfo.asInstanceOf[CoAggregateInfo].argIndexes2, input2Types.get)
+    } else {
+      (arg1Types, aggInfo.argIndexes, input1Types)
+    }
+
     val externalUDITypes = getAggUserDefinedInputTypes(
       function,
       externalAccType,
-      argTypes)
-    val inputFields = aggInfo.argIndexes.zipWithIndex.map { case (f, index) =>
-      if (f >= inputTypes.length) {
+      argtype,
+      methodName)
+    val inputFields = argIndexs.zipWithIndex.map { case (f, index) =>
+      if (f >= inputType.length) {
         // index to constant
-        val expr = constantExprs(f - inputTypes.length)
+        val expr = constantExprs(f - inputType.length)
         s"${expr.nullTerm} ? null : ${
           genToExternal(ctx, externalUDITypes(index), expr.resultTerm)}"
       } else {
         // index to input field
-        val inputRef = ResolvedAggInputReference(f.toString, f, inputTypes(f))
+        val inputRef = ResolvedAggInputReference(f.toString, f, inputType(f))
         val inputExpr = generator.generateExpression(inputRef.toRexNode(relBuilder))
         var term = s"${genToExternal(ctx, externalUDITypes(index), inputExpr.resultTerm)}"
         if (needCloneRefForDataType(externalUDITypes(index))) {
@@ -423,7 +447,7 @@ class ImperativeAggCodeGen(
                    |$fieldTerm = null;
                    |if (!${newExpr.nullTerm}) {
                    |  $fieldTerm = new $UPDATABLE_ROW(${newExpr.resultTerm}, ${
-                  DataTypes.getArity(fieldType)});
+                        DataTypes.getArity(fieldType)});
                    |  ${generateDataViewFieldSetter(fieldTerm, viewSpecs, useBackupDataView)}
                    |}
                 """.stripMargin
@@ -479,34 +503,67 @@ class ImperativeAggCodeGen(
     setters.mkString("\n")
   }
 
-
-
   def checkNeededMethods(
     needAccumulate: Boolean = false,
     needRetract: Boolean = false,
     needMerge: Boolean = false,
     needReset: Boolean = false): Unit = {
 
-    val methodSignatures = typesToClasses(argTypes)
+    val methodSignatures = typesToClasses(arg1Types)
+    val isCoFunction = aggInfo.isInstanceOf[CoAggregateInfo]
 
     if (needAccumulate) {
-      getAggFunctionUDIMethod(function, "accumulate", externalAccType, argTypes)
-      .getOrElse(
-        throw new CodeGenException(
-          s"No matching accumulate method found for AggregateFunction " +
-            s"'${function.getClass.getCanonicalName}'" +
-            s"with parameters '${signatureToString(methodSignatures)}'.")
-      )
+      if (isCoFunction) {
+        getAggFunctionUDIMethod(function, "accumulateLeft", externalAccType, arg1Types)
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching accumulateLeft method found for AggregateFunction " +
+                s"'${function.getClass.getCanonicalName}'" +
+                s" with parameters '${signatureToString(methodSignatures)}'.")
+          )
+        getAggFunctionUDIMethod(function, "accumulateRight", externalAccType, arg2Types)
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching accumulateRight method found for AggregateFunction " +
+                s"'${function.getClass.getCanonicalName}'" +
+                s" with parameters '${signatureToString(typesToClasses(arg2Types))}'.")
+          )
+      } else {
+        getAggFunctionUDIMethod(function, "accumulate", externalAccType, arg1Types)
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching accumulate method found for AggregateFunction " +
+                s"'${function.getClass.getCanonicalName}'" +
+                s" with parameters '${signatureToString(methodSignatures)}'.")
+          )
+      }
     }
 
     if (needRetract) {
-      getAggFunctionUDIMethod(function, "retract", externalAccType, argTypes)
-      .getOrElse(
-        throw new CodeGenException(
-          s"No matching retract method found for AggregateFunction " +
-            s"'${function.getClass.getCanonicalName}'" +
-            s"with parameters '${signatureToString(methodSignatures)}'.")
-      )
+      if (aggInfo.isInstanceOf[CoAggregateInfo]) {
+        getAggFunctionUDIMethod(function, "retractLeft", externalAccType, arg1Types)
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching retractLeft method found for AggregateFunction " +
+                s"'${function.getClass.getCanonicalName}'" +
+                s" with parameters '${signatureToString(methodSignatures)}'.")
+          )
+        getAggFunctionUDIMethod(function, "retractRight", externalAccType, arg2Types)
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching retractRight method found for AggregateFunction " +
+                s"'${function.getClass.getCanonicalName}'" +
+                s" with parameters '${signatureToString(methodSignatures)}'.")
+          )
+      } else {
+        getAggFunctionUDIMethod(function, "retract", externalAccType, arg1Types)
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching retract method found for AggregateFunction " +
+                s"'${function.getClass.getCanonicalName}'" +
+                  s" with parameters '${signatureToString(methodSignatures)}'.")
+          )
+      }
     }
 
     if (needMerge) {
@@ -544,5 +601,4 @@ class ImperativeAggCodeGen(
       )
     }
   }
-
 }

@@ -21,6 +21,7 @@ package org.apache.flink.table.plan;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -188,6 +189,11 @@ public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel
 	@Override
 	public BatchExecRel<?> visit(BatchExecJoinTable joinTable) {
 		return visitInputs(joinTable);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecCoGroupTableValuedAggregate coAgg) {
+		return visitInputs(coAgg);
 	}
 
 	@Override

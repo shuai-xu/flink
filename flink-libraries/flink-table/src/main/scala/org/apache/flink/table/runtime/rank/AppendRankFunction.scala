@@ -31,7 +31,7 @@ import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.aggregate.CollectionBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
-import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
+import org.apache.flink.table.runtime.functions.ProcessFunctionBase.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{LRUMap, Logging}

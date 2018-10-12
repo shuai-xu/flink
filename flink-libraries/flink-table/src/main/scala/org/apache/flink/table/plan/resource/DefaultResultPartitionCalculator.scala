@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.resource
 
-import org.apache.calcite.rel.{RelDistribution, RelNode, SingleRel}
+import org.apache.calcite.rel.{BiRel, RelDistribution, RelNode, SingleRel}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.physical.batch._
@@ -74,15 +74,15 @@ class DefaultResultPartitionCalculator(
         getOperatorDefaultParallelism(tConfig)
   }
 
-  def calculate(joinBatchExec: BatchExecJoinBase): Unit = {
-    if (joinBatchExec.resultPartitionCount > 0) return
-    visitChildren(joinBatchExec)
+  private def calculateBiRel[T <: BiRel with RowBatchExecRel](biRel: T): Unit = {
+    if (biRel.resultPartitionCount > 0) return
+    visitChildren(biRel)
     val rightResultPartitionCount =
-      joinBatchExec.getRight.asInstanceOf[RowBatchExecRel].resultPartitionCount
+      biRel.getRight.asInstanceOf[RowBatchExecRel].resultPartitionCount
     val leftResultPartitionCount =
-      joinBatchExec.getLeft.asInstanceOf[RowBatchExecRel].resultPartitionCount
+      biRel.getLeft.asInstanceOf[RowBatchExecRel].resultPartitionCount
 
-    joinBatchExec.resultPartitionCount = joinBatchExec.getLeft match {
+    biRel.resultPartitionCount = biRel.getLeft match {
       case exchange: BatchExecExchange => {
         exchange.distribution.getType match {
           case RelDistribution.Type.RANDOM_DISTRIBUTED => leftResultPartitionCount
@@ -93,6 +93,8 @@ class DefaultResultPartitionCalculator(
       case _ => leftResultPartitionCount
     }
   }
+
+  def calculate(joinBatchExec: BatchExecJoinBase): Unit = calculateBiRel(joinBatchExec)
 
   def calculate(exchangeBatchExec: BatchExecExchange): Unit = {
     if (exchangeBatchExec.resultPartitionCount > 0) return
@@ -181,6 +183,8 @@ class DefaultResultPartitionCalculator(
   override def visit(rank: BatchExecRank): Unit = {
     calculate(rank)
   }
+
+  override def visit(coAgg: BatchExecCoGroupTableValuedAggregate): Unit = calculateBiRel(coAgg)
 
   override def visit(batchExec: BatchExecRel[_]): Unit = {
     throw new TableException(s"could not reach here: ${batchExec.getClass}")

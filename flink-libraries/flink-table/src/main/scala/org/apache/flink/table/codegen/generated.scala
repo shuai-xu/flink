@@ -25,7 +25,7 @@ import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, SubKeyedAggsHandleFunction, TableValuedAggHandleFunction}
+import org.apache.flink.table.runtime.functions.{AggsHandleFunction, CoProcessFunction, CoTableValuedAggHandleFunction, ProcessFunction, SubKeyedAggsHandleFunction, TableValuedAggHandleFunction}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.types.InternalType
 
@@ -126,7 +126,7 @@ case class GeneratedCollector(name: String, code: String)
   */
 case class GeneratedIterativeCondition(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[IterativeCondition[BaseRow]]
 
@@ -138,7 +138,7 @@ case class GeneratedIterativeCondition(
   */
 case class GeneratedPatternSelectFunction(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[PatternSelectFunction[BaseRow, BaseRow]]
 
@@ -150,7 +150,7 @@ case class GeneratedPatternSelectFunction(
   */
 case class GeneratedPatternTimeoutFunction(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[PatternTimeoutFunction[BaseRow, BaseRow]]
 
@@ -162,7 +162,7 @@ case class GeneratedPatternTimeoutFunction(
   */
 case class GeneratedPatternFlatSelectFunction(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[PatternFlatSelectFunction[BaseRow, BaseRow]]
 
@@ -174,7 +174,7 @@ case class GeneratedPatternFlatSelectFunction(
   */
 case class GeneratedPatternFlatTimeoutFunction(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[PatternFlatTimeoutFunction[BaseRow, BaseRow]]
 
@@ -200,7 +200,7 @@ case class GeneratedNormalizedKeyComputer(name: String, code: String)
   * @param name class name of the generated RecordComparator.
   * @param code code of the generated RecordComparator.
   */
-case class GeneratedRecordComparator(name: String, code: String)
+case class GeneratedRecordComparator(name: String, var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.table.codegen.Projection]].
@@ -211,7 +211,7 @@ case class GeneratedRecordComparator(name: String, code: String)
   * @param inputMapping mapping to projection.
   */
 case class GeneratedProjection(
-    name: String, code: String, expr: GeneratedExpression, inputMapping: Array[Int])
+    name: String, var code: String, expr: GeneratedExpression, inputMapping: Array[Int])
 
 /**
   * Describes the members of generated sort.
@@ -248,7 +248,24 @@ case class GeneratedHashFunc(name: String, code: String)
   * @param name class name of the generated ProcessFunction.
   * @param code code of the generated ProcessFunction.
   */
-case class GeneratedProcessFunction(name: String, code: String)
+case class GeneratedProcessFunction[IN, OUT](
+  name: String,
+  var code: String,
+  references: Array[AnyRef])
+  extends GeneratedClass[ProcessFunction[IN, OUT]]
+
+/**
+  * Describes a generated [[org.apache.flink.table.runtime.functions.CoProcessFunction]]
+  * or [[org.apache.flink.table.runtime.functions.ProcessFunction]].
+  *
+  * @param name class name of the generated ProcessFunction.
+  * @param code code of the generated ProcessFunction.
+  */
+case class GeneratedCoProcessFunction[IN1, IN2, OUT](
+  name: String,
+  var code: String,
+  references: Array[AnyRef])
+  extends GeneratedClass[CoProcessFunction[IN1, IN2, OUT]]
 
 /**
   * default implementation of GeneratedSplittable
@@ -276,7 +293,7 @@ case class GeneratedBoundComparator(name: String, code: String)
   * @param name class name of the generated Function.
   * @param code code of the generated Function.
   */
-case class GeneratedAggsHandleFunction(name: String, code: String, references: Array[AnyRef])
+case class GeneratedAggsHandleFunction(name: String, var code: String, references: Array[AnyRef])
   extends GeneratedClass[AggsHandleFunction]
 
 /**
@@ -287,10 +304,21 @@ case class GeneratedAggsHandleFunction(name: String, code: String, references: A
   */
 case class GeneratedTableValuedAggHandleFunction(
     name: String,
-    code: String,
-    references:
-    Array[AnyRef])
+    var code: String,
+    references: Array[AnyRef])
   extends GeneratedClass[TableValuedAggHandleFunction]
+
+/**
+  * Describes a generated co-table-valued aggregate helper function
+  *
+  * @param name class name of the generated Function.
+  * @param code code of the generated Function.
+  */
+case class GeneratedCoTableValuedAggHandleFunction(
+    name: String,
+    var code: String,
+    references: Array[AnyRef])
+  extends GeneratedClass[CoTableValuedAggHandleFunction]
 
 /**
   * Describes a generated subkeyed aggregate helper function
@@ -300,7 +328,7 @@ case class GeneratedTableValuedAggHandleFunction(
   */
 case class GeneratedSubKeyedAggsHandleFunction[N](
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[SubKeyedAggsHandleFunction[N]]
 
@@ -312,7 +340,7 @@ case class GeneratedSubKeyedAggsHandleFunction[N](
   */
 case class GeneratedRecordEqualiser(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[RecordEqualiser]
 
@@ -324,7 +352,7 @@ case class GeneratedRecordEqualiser(
   */
 case class GeneratedFieldExtractor(
     name: String,
-    code: String,
+    var code: String,
     references: Array[AnyRef])
   extends GeneratedClass[FieldAccess[_,_]]
 

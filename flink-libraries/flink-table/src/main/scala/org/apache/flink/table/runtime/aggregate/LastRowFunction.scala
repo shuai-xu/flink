@@ -22,7 +22,8 @@ import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunction}
+import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
+import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunctionBase}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
@@ -54,7 +55,7 @@ class LastRowFunction(
 
   override def processElement(
      input: BaseRow,
-     ctx: ProcessFunction.Context,
+     ctx: Context,
      out: Collector[BaseRow]): Unit = {
 
     val currentTime = ctx.timerService().currentProcessingTime()
@@ -78,7 +79,7 @@ class LastRowFunction(
 
   override def onTimer(
       timestamp: Long,
-      ctx: ProcessFunction.OnTimerContext,
+      ctx: ProcessFunctionBase.OnTimerContext,
       out: Collector[BaseRow]): Unit = {
 
     if (needToCleanupState(timestamp)) {

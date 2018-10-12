@@ -259,10 +259,10 @@ class StreamExecGlobalGroupAggregate(
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(config, supportReference = true),
       relBuilder,
-      aggInputSchema.fieldTypes,
       needRetract = false,
       needMerge = true,
       config.getNullCheck)
+      .bindInput(aggInputSchema.fieldTypes)
 
     generator
       .withMerging(mergedAccOffset, mergedAccOnHeap, mergedAccExternalTypes)

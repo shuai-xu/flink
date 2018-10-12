@@ -23,6 +23,7 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -165,15 +166,26 @@ public class DefaultRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	@Override
 	public Void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		visitChildren(sortMergeJoin);
+		visitSortMergeJoin(sortMergeJoin, sortMergeJoin.getExternalBufferNum());
+		return null;
+	}
+
+	@Override
+	public Void visit(BatchExecCoGroupTableValuedAggregate coAgg) {
+		visitChildren(coAgg);
+		visitSortMergeJoin(coAgg, 0);
+		return null;
+	}
+
+	private void visitSortMergeJoin(RowBatchExecRel biRel, int externalBufferNum) {
 		int externalBufferMemoryMb = BatchExecResourceUtil.getExternalBufferManagedMemory(
-				tConfig) * sortMergeJoin.getExternalBufferNum();
+			tConfig) * externalBufferNum;
 		int sortMemory = BatchExecResourceUtil.getSortBufferManagedMemory(tConfig);
 		int reservedMemory = sortMemory * 2 + externalBufferMemoryMb;
 		int preferSortMemory = BatchExecResourceUtil.getSortBufferManagedPreferredMemory(
-				tConfig);
+			tConfig);
 		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, preferMemory);
-		return null;
+		relResMap.get(biRel).setManagedMem(reservedMemory, preferMemory, preferMemory);
 	}
 
 	@Override

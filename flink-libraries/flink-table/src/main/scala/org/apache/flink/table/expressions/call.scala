@@ -67,6 +67,32 @@ case class Call(functionName: String, args: Seq[Expression]) extends Expression 
 }
 
 /**
+  * General expression for unresolved function co-calls.
+  */
+case class CoCall(functionName: String, args1: Seq[Expression], args2: Seq[Expression])
+  extends BinaryExpression {
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    throw UnresolvedException(s"trying to convert UnresolvedFunction $functionName to RexNode")
+  }
+
+  override def toString = s"\\$functionName(${args1.mkString(", ")})(${args2.mkString(", ")})"
+
+  override private[flink] def resultType =
+    throw UnresolvedException(s"calling resultType on UnresolvedFunction $functionName")
+
+  override private[flink] def validateInput(): ValidationResult =
+    ValidationFailure(s"Unresolved function call: $functionName")
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+
+  override private[flink] def left = ExpressionList(args1)
+
+  override private[flink] def right = ExpressionList(args2)
+}
+
+/**
   * Over call with unresolved alias for over window.
   *
   * @param agg The aggregation of the over call.
@@ -501,6 +527,18 @@ case class TableFunctionCall(
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
+}
+
+case class ExpressionList(expressions: Seq[Expression])
+  extends Expression {
+
+  override private[flink] def resultType = null
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T = {
+    logicalExprVisitor.visit(this)
+  }
+
+  override private[flink] def children = expressions
 }
 
 case class ThrowException(msg: Expression, tp: InternalType) extends UnaryExpression {

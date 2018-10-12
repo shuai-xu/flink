@@ -27,9 +27,9 @@ import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
-import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction, TableValuedAggSqlFunction}
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, TableValuedAggregateFunction}
-import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, StringSplit, MultiKeyValue}
+import org.apache.flink.table.functions.utils._
+import org.apache.flink.table.functions._
+import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, MultiKeyValue, StringSplit}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.mutable
@@ -113,6 +113,25 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
           externalResultType,
           externalAccType,
           children)
+
+      // user-defined co-table-valued aggregate function call
+      case ctvaf if classOf[CoTableValuedAggregateFunction[_, _]].isAssignableFrom(ctvaf) =>
+        val coTableValuedAggregateFunction = sqlFunctions
+          .find(f =>
+            f.getName.equalsIgnoreCase(name) && f.isInstanceOf[CoTableValuedAggSqlFunction])
+          .getOrElse(
+            throw ValidationException(s"Undefined co-table-valued aggregate function: $name"))
+          .asInstanceOf[CoTableValuedAggSqlFunction]
+        val function = coTableValuedAggregateFunction.getFunction
+        val externalResultType = coTableValuedAggregateFunction.externalResultType
+        val externalAccType = coTableValuedAggregateFunction.externalAccType
+        CoTableValuedAggFunctionCall(
+          function,
+          externalResultType,
+          externalAccType,
+          children(0),
+          children(1)
+        )
 
       // general expression call
       case expression if classOf[Expression].isAssignableFrom(expression) =>

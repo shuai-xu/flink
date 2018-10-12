@@ -158,6 +158,8 @@ class ResultPartitionCalculatorOnStatistics(
 
   override def visit(rank: BatchExecRank): Unit = calculateSingle(rank)
 
+  override def visit(coAgg: BatchExecCoGroupTableValuedAggregate): Unit = calculateBiRel(coAgg)
+
   override def visit(batchExec: BatchExecRel[_]): Unit = {
     throw new TableException("could not reach here. " + batchExec.getClass)
   }
