@@ -42,7 +42,8 @@ class CodeGenCommonSubexpressionEliminationITCase {
   val albumsData = List(
     ("Pink Floyd", "The Dark Side of the Moon"),
     ("Pink Floyd", "Wish You Were Here"),
-    ("Dead Can Dance", "Aion")
+    ("Dead Can Dance", "Aion"),
+    ("Nirvana", "Nevermind")
   )
 
   @Before
@@ -319,6 +320,42 @@ class CodeGenCommonSubexpressionEliminationITCase {
       )
       assertEquals(expected.sorted, sink.getAppendResults.sorted)
     })
+  }
+
+  @Test
+  def testMapArray(): Unit = {
+    val config = new TableConfig()
+    config.setMaxGeneratedCodeLength(1)
+
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env, config)
+
+    val t1 = env.fromCollection(albumsData)
+      .toTable(tEnv)
+      .as('band, 'album)
+
+    tEnv.registerTable("T1", t1)
+
+    val sqlQuery =
+    """
+      | SELECT a['band'], a['album'], CARDINALITY(a), CARDINALITY(a), ELEMENT(arr), ELEMENT(arr)
+      | FROM (
+      |   SELECT STR_TO_MAP('band=Nirvana,album=Nevermind') as a,
+      |           band, album, array['Nirvana'] as arr
+      |   FROM T1
+      | )
+      | WHERE a['band'] = band AND a['album'] = album AND CARDINALITY(a) = 2
+    """.stripMargin
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "Nirvana,Nevermind,2,2,Nirvana,Nirvana"
+    )
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
 }

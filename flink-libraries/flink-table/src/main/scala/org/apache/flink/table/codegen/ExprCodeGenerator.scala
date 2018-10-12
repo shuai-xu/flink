@@ -650,8 +650,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       return generateRowtimeAccess(contextTerm, ctx)
     }
 
-    val isIdempotent = call.getOperator.isDeterministic && (!call.getOperator.isDynamicFunction)
-    if (isIdempotent) {
+    if (reusedRexCall(call)) {
       val key = getReusableExpressionKey(call)
       ctx.getReusableExpression(key) match {
         case Some(expr) => return expr
@@ -677,12 +676,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
         // Note: 'IF' function was introduced by Blink, it is a scalar function,
         // without specific SqlKind info. Here we have to use the 'name'
         // 'IF' function does create new variable scope(see #IfCallGen)
-        val newScope = idx > 0 &&
-          (call.getKind == SqlKind.AND
-            || call.getKind == SqlKind.OR
-            || call.getKind == SqlKind.CASE
-            || call.getKind == SqlKind.COALESCE
-            || call.op.getName == "IF")
+        val newScope = idx > 0 && rexCallHasNewScope(call)
         if (newScope) {
           ctx.enterScope()
         }
@@ -696,10 +690,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
     val expr = generateCallExpression(
       ctx, call.getOperator, operands, resultType, nullCheck)
 
-
-    // only reuse scalar function right now.
-    if (isIdempotent && call.getKind == SqlKind.OTHER_FUNCTION) {
-      // remove the code. it will be executed only once.
+    if (reusedRexCall(call)) {
       val reusedExpr = GeneratedExpression(expr.resultTerm, expr.nullTerm, "", expr.resultType)
       val key = getReusableExpressionKey(call)
       ctx.addReusableExpression(key, reusedExpr)
@@ -719,4 +710,20 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
 
   private def getReusableExpressionKey(call: RexCall): String =
     call.toString + " | " + call.`type`.getFullTypeString
+
+  private def rexCallHasNewScope(call: RexCall): Boolean = {
+    (call.getKind == SqlKind.AND
+      || call.getKind == SqlKind.OR
+      || call.getKind == SqlKind.CASE
+      || call.getKind == SqlKind.COALESCE
+      || call.op.getName == "IF")
+  }
+
+  private def reusedRexCall(call: RexCall): Boolean = {
+    (call.getOperator.isDeterministic
+      && (!call.getOperator.isDynamicFunction)
+      && call.getKind == SqlKind.OTHER_FUNCTION
+      && !(call.op.getName == "ITEM"))
+  }
+
 }
