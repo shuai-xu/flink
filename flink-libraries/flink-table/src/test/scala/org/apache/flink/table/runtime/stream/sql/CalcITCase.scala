@@ -228,4 +228,42 @@ class CalcITCase extends StreamingTestBase {
         assertEquals(i.toString, row.getField(1))
     }
   }
+
+  @Test
+  def testIn(): Unit = {
+    val sqlQuery = "SELECT * FROM MyTable WHERE b in (1,3,4,5,6)"
+
+    val t = env.fromCollection(StreamTestData.get3TupleData)
+      .toTable(tEnv).as('a, 'b, 'c)
+    tEnv.registerTable("MyTable", t)
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List(
+      "1,1,Hi", "4,3,Hello world, how are you?", "5,3,I am fine.", "6,3,Luke Skywalker",
+      "7,4,Comment#1", "8,4,Comment#2", "9,4,Comment#3", "10,4,Comment#4", "11,5,Comment#5",
+      "12,5,Comment#6", "13,5,Comment#7", "14,5,Comment#8", "15,5,Comment#9", "16,6,Comment#10",
+      "17,6,Comment#11", "18,6,Comment#12", "19,6,Comment#13", "20,6,Comment#14", "21,6,Comment#15")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testNotIn(): Unit = {
+    val sqlQuery = "SELECT * FROM MyTable WHERE b not in (1,3,4,5,6)"
+
+    val t = env.fromCollection(StreamTestData.get3TupleData)
+      .toTable(tEnv).as('a, 'b, 'c)
+    tEnv.registerTable("MyTable", t)
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    val sink = new TestingAppendSink
+    result.addSink(sink)
+    env.execute()
+
+    val expected = List("2,2,Hello", "3,2,Hello world")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
 }

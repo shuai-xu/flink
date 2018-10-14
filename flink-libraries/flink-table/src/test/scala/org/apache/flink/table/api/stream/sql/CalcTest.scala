@@ -40,4 +40,20 @@ class CalcTest extends TableTestBase {
     val sql = s"SELECT d, e, f FROM $table2 UNION ALL SELECT a, b, c FROM $table1"
     util.verifyPlan(sql)
   }
+
+  @Test
+  def testIn(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
+    val sql = s"SELECT * FROM $table WHERE b in (1,3,4,5,6) and c = 'xx'"
+    util.verifyPlan(sql)
+  }
+
+  @Test
+  def testNotIn(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
+    val sql = s"SELECT * FROM $table WHERE b not in (1,3,4,5,6) or c = 'xx'"
+    util.verifyPlan(sql)
+  }
 }

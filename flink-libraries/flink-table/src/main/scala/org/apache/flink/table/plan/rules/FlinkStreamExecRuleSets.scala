@@ -270,7 +270,10 @@ object FlinkStreamExecRuleSets {
 
           // rules to convert catalog table to normal table.
           CatalogTableRules.STREAM_TABLE_SCAN_RULE,
-          CatalogTableRules.DIM_TABLE_SCAN_RULE
+          CatalogTableRules.DIM_TABLE_SCAN_RULE,
+
+          MergeMultiEqualsToInRule.INSTANCE,
+          MergeMultiNotEqualsToNotInRule.INSTANCE
         )
       ).asJava)
 
