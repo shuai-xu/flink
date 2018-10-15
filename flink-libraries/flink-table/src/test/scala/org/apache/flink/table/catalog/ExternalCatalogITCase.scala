@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.catalog
 
+import java.sql.Timestamp
 import java.util
 
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.types.{DataType, DataTypes, IntType}
 import org.apache.flink.types.Row
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.table.api.{RichTableSchema, TableConfig, TableEnvironment, TableSchema}
-import org.apache.flink.table.expressions.{Cast, Proctime, ResolvedFieldReference}
-
+import org.apache.flink.table.api._
+import org.apache.flink.table.expressions.{Proctime, ResolvedFieldReference}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
+import org.apache.flink.table.functions.TableFunction
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.mockito.Mockito
@@ -95,6 +96,93 @@ class ExternalCatalogITCase {
     assertEquals(expected, CollectionTableFactory.RESULT)
 
   }
+
+  @Test
+  def testSourceParser(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
+    tableEnv.registerExternalCatalog(
+      tableEnv.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+    val rowTypeInfo =
+      new RowTypeInfo(Array[TypeInformation[_]](
+        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
+    val data = new util.LinkedList[Row]
+    data.add(toRow(new Integer(1), new Integer(2)))
+    data.add(toRow(new Integer(1), new Integer(3)))
+    val schema =
+      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+    val richTableSchema =
+      new RichTableSchema(schema.getColumnNames, schema.getTypes)
+
+    CollectionTableFactory.initData(
+      rowTypeInfo, data)
+    val parameters = new util.LinkedList[String]()
+    parameters.add("b")
+    parameters.add("a")
+    CollectionTableFactory.parser = new TableSourceParser(new Parser(), parameters)
+
+    tableEnv.registerExternalTable(
+      null,
+      "t1",
+      ExternalCatalogTable(
+        "collection",
+        schema,
+        new util.HashMap[String, String](),
+        richTableSchema
+      ),
+      false)
+    tableEnv.sqlUpdate(s"insert into hive.t1  select * from hive.t1 ")
+    tableEnv.execute()
+    val expected = new util.LinkedList[Row]()
+    expected.add(toRow(new Integer(2), new Integer(1)))
+    expected.add(toRow(new Integer(3), new Integer(1)))
+    assertEquals(expected, CollectionTableFactory.RESULT)
+  }
+
+  @Test
+  def testSourceParserInBatch(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
+    tableEnv.registerExternalCatalog(
+      tableEnv.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+    val rowTypeInfo =
+      new RowTypeInfo(Array[TypeInformation[_]](
+        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
+    val data = new util.LinkedList[Row]
+    data.add(toRow(new Integer(1), new Integer(2)))
+    data.add(toRow(new Integer(1), new Integer(3)))
+    val schema =
+      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+    val richTableSchema =
+      new RichTableSchema(schema.getColumnNames, schema.getTypes)
+
+    CollectionTableFactory.initData(
+      rowTypeInfo, data)
+    val parameters = new util.LinkedList[String]()
+    parameters.add("b")
+    parameters.add("a")
+    CollectionTableFactory.parser = new TableSourceParser(new Parser(), parameters)
+
+    tableEnv.registerExternalTable(
+      null,
+      "t1",
+      ExternalCatalogTable(
+        "collection",
+        schema,
+        new util.HashMap[String, String](),
+        richTableSchema
+      ),
+      false)
+    tableEnv.sqlUpdate(s"insert into hive.t1  select * from hive.t1 ")
+    tableEnv.execute()
+    val expected = new util.LinkedList[Row]()
+    expected.add(toRow(new Integer(2), new Integer(1)))
+    expected.add(toRow(new Integer(3), new Integer(1)))
+    assertEquals(expected, CollectionTableFactory.RESULT)
+  }
+
 
   @Test
   def testComputedColumn(): Unit = {
@@ -229,12 +317,13 @@ class ExternalCatalogITCase {
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
-        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
+        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO, SqlTimeTypeInfo.TIMESTAMP),
+        Array[String]("a", "b", "c"))
     val data = new util.LinkedList[Row]
-    data.add(toRow(new Integer(1), new Integer(1)))
-    data.add(toRow(new Integer(1), new Integer(2)))
-    data.add(toRow(new Integer(1), new Integer(3)))
-    data.add(toRow(new Integer(1), new Integer(4)))
+    data.add(toRow(new Integer(1), new Integer(1), new Timestamp(1)))
+    data.add(toRow(new Integer(1), new Integer(2), new Timestamp(2)))
+    data.add(toRow(new Integer(1), new Integer(3), new Timestamp(3)))
+    data.add(toRow(new Integer(1), new Integer(4), new Timestamp(4)))
     val physicalSchema =
       TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
     val richTableSchema =
@@ -242,19 +331,20 @@ class ExternalCatalogITCase {
     richTableSchema.setPrimaryKey("a")
     val tableSchemaBuilder = TableSchema.builder()
     physicalSchema.getColumns.foreach(
-      column => tableSchemaBuilder.field(column.name, column.internalType))
-    tableSchemaBuilder.field("c", DataTypes.ROWTIME_INDICATOR, false)
-    val computedColumn = new util.HashMap[String, RexNode]()
+      column =>
+        column.name match {
+          case "c" =>
+            tableSchemaBuilder.field("c", DataTypes.ROWTIME_INDICATOR, false)
+          case _ =>
+            tableSchemaBuilder.field(column.name, column.internalType)
+        }
+    )
     val mockRelNode = Mockito.mock(classOf[RelNode])
     Mockito.when(mockRelNode.getRowType).thenReturn(
       tableEnv.getTypeFactory.buildRelDataType(
         physicalSchema.getColumnNames, physicalSchema.getTypes))
     val relBuilder = tableEnv.getRelBuilder
     relBuilder.push(mockRelNode)
-    computedColumn.put("a", ResolvedFieldReference("a", DataTypes.INT).toRexNode(relBuilder))
-    computedColumn.put("b", ResolvedFieldReference("b", DataTypes.INT).toRexNode(relBuilder))
-    computedColumn.put("c",
-      Cast(ResolvedFieldReference("b", DataTypes.INT), DataTypes.TIMESTAMP).toRexNode(relBuilder))
     CollectionTableFactory.initData(
       rowTypeInfo, data)
     tableEnv.registerExternalTable(
@@ -269,20 +359,160 @@ class ExternalCatalogITCase {
         "",
         null,
         false,
-        computedColumn,
+        null,
         "c",
         1L
       ),
       false)
     tableEnv.sqlUpdate("" +
-        "insert into hive.t1(a, b) " +
-        "select sum(a), sum(b) from hive.t1 group by TUMBLE(c, INTERVAL '2' Second)")
+        "insert into hive.t1(a, b, c) " +
+        "select sum(a), sum(b), max(to_timestamp(b)) " +
+        "from hive.t1 group by TUMBLE(c, INTERVAL '2' Second)")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
-    expected.add(toRow(new Integer(1), new Integer(1)))
-    expected.add(toRow(new Integer(2), new Integer(5)))
-    expected.add(toRow(new Integer(1), new Integer(4)))
+    expected.add(toRow(new Integer(4), new Integer(10), new Timestamp(4)))
     assertEquals(expected, CollectionTableFactory.RESULT)
   }
 
+  @Test
+  def testProctimeInBatch(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
+    tableEnv.registerExternalCatalog(
+      tableEnv.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+
+    val rowTypeInfo =
+      new RowTypeInfo(Array[TypeInformation[_]](
+        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
+    val data = new util.LinkedList[Row]
+    data.add(toRow(new Integer(1), new Integer(1)))
+    data.add(toRow(new Integer(1), new Integer(2)))
+    data.add(toRow(new Integer(1), new Integer(3)))
+    data.add(toRow(new Integer(1), new Integer(4)))
+    val physicalSchema =
+      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+    val richTableSchema =
+      new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
+    richTableSchema.setPrimaryKey("a")
+    val tableSchemaBuilder = TableSchema.builder()
+    physicalSchema.getColumns.foreach(
+      column => tableSchemaBuilder.field(column.name, column.internalType))
+    tableSchemaBuilder.field("c", DataTypes.PROCTIME_INDICATOR, false)
+    val computedColumn = new util.HashMap[String, RexNode]()
+    val mockRelNode = Mockito.mock(classOf[RelNode])
+    Mockito.when(mockRelNode.getRowType).thenReturn(
+      tableEnv.getTypeFactory.buildRelDataType(
+        physicalSchema.getColumnNames, physicalSchema.getTypes))
+    val relBuilder = tableEnv.getRelBuilder
+    relBuilder.push(mockRelNode)
+    computedColumn.put("a", ResolvedFieldReference("a", DataTypes.INT).toRexNode(relBuilder))
+    computedColumn.put("b", ResolvedFieldReference("b", DataTypes.STRING).toRexNode(relBuilder))
+    computedColumn.put("c", Proctime().toRexNode(relBuilder))
+    CollectionTableFactory.initData(
+      rowTypeInfo, data)
+    tableEnv.registerExternalTable(
+      null,
+      "t1",
+      ExternalCatalogTable(
+        "collection",
+        tableSchemaBuilder.build(),
+        new util.HashMap[String, String](),
+        richTableSchema,
+        null,
+        "",
+        null,
+        false,
+        computedColumn
+      ),
+      false)
+    tableEnv.sqlUpdate("" +
+        "insert into hive.t1(a, b) " +
+        "select a, cast(c as int) from hive.t1")
+    tableEnv.execute()
+    assertEquals(4, CollectionTableFactory.RESULT.size())
+  }
+
+  @Test
+  def testRowtimeInBatch(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
+    tableEnv.registerExternalCatalog(
+      tableEnv.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+
+    val rowTypeInfo =
+      new RowTypeInfo(Array[TypeInformation[_]](
+        BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO, SqlTimeTypeInfo.TIMESTAMP),
+        Array[String]("a", "b", "c"))
+    val data = new util.LinkedList[Row]
+    data.add(toRow(new Integer(1), new Integer(1), new Timestamp(1)))
+    data.add(toRow(new Integer(1), new Integer(2), new Timestamp(2)))
+    data.add(toRow(new Integer(1), new Integer(3), new Timestamp(3)))
+    data.add(toRow(new Integer(1), new Integer(4), new Timestamp(4)))
+    val physicalSchema =
+      TableSchema.fromDataType(DataTypes.of(rowTypeInfo))
+    val richTableSchema =
+      new RichTableSchema(physicalSchema.getColumnNames, physicalSchema.getTypes)
+    richTableSchema.setPrimaryKey("a")
+    val tableSchemaBuilder = TableSchema.builder()
+    physicalSchema.getColumns.foreach(
+      column =>
+        column.name match {
+          case "c" =>
+            tableSchemaBuilder.field("c", DataTypes.ROWTIME_INDICATOR, false)
+          case _ =>
+            tableSchemaBuilder.field(column.name, column.internalType)
+        }
+    )
+    val mockRelNode = Mockito.mock(classOf[RelNode])
+    Mockito.when(mockRelNode.getRowType).thenReturn(
+      tableEnv.getTypeFactory.buildRelDataType(
+        physicalSchema.getColumnNames, physicalSchema.getTypes))
+    val relBuilder = tableEnv.getRelBuilder
+    relBuilder.push(mockRelNode)
+    CollectionTableFactory.initData(
+      rowTypeInfo, data)
+    tableEnv.registerExternalTable(
+      null,
+      "t1",
+      ExternalCatalogTable(
+        "collection",
+        tableSchemaBuilder.build(),
+        new util.HashMap[String, String](),
+        richTableSchema,
+        null,
+        "",
+        null,
+        false,
+        null,
+        "c",
+        1L
+      ),
+      false)
+    tableEnv.sqlUpdate("" +
+        "insert into hive.t1(a, b, c) " +
+        "select a, b, c from hive.t1")
+    tableEnv.execute()
+    val expected = new util.LinkedList[Row]()
+    expected.add(toRow(new Integer(1), new Integer(1), new Timestamp(1)))
+    expected.add(toRow(new Integer(1), new Integer(2), new Timestamp(2)))
+    expected.add(toRow(new Integer(1), new Integer(3), new Timestamp(3)))
+    expected.add(toRow(new Integer(1), new Integer(4), new Timestamp(4)))
+    assertEquals(expected, CollectionTableFactory.RESULT)
+  }
+}
+
+class Parser extends TableFunction[Row] with Serializable {
+  def eval(a: Integer, b: Integer): Unit = {
+    val row = new Row(2)
+    row.setField(0, a)
+    row.setField(1, b)
+    collect(row)
+  }
+
+  override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType =
+    DataTypes.createRowType(
+      Array[DataType](IntType.INSTANCE, IntType.INSTANCE), Array[String]("a", "b"))
 }

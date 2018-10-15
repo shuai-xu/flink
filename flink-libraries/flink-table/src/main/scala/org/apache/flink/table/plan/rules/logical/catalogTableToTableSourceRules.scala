@@ -32,7 +32,7 @@ import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList
-import org.apache.flink.table.api.{TableException, TableSchema}
+import org.apache.flink.table.api.{Column, TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.TableFunction
@@ -166,6 +166,16 @@ class CatalogTableToBatchTableSourceRule
               oldRel.getRowType.getField(name, true, false).getType, expr))
         case _ =>
       }
+    } else if (catalogTable.table.rowTimeField != null) {
+       catalogTable.table.schema.getColumns.foreach {
+         case column: Column if column.name.equals(catalogTable.table.rowTimeField) =>
+           computedColumns.put(
+             column.name, oldRel.getCluster.getRexBuilder.makeCast(
+               oldRel.getRowType.getField(column.name, true, false).getType,
+               call.builder().push(newRel).field(column.name)))
+         case column: Column =>
+           computedColumns.put(column.name, call.builder().push(newRel).field(column.name))
+       }
     }
 
     call.transformTo(CatalogTableRules.appendComputedColumns(

@@ -303,14 +303,17 @@ public class CollectionTableFactory implements TableFactory {
 	 */
 	public static class UnsafeMemorySinkFunction extends RichSinkFunction<Row> {
 
+		private TypeSerializer<Row> serializer;
+
 		@Override
 		public void open(Configuration param) {
 			RESULT.clear();
+			serializer = rowType.createSerializer(new ExecutionConfig());
 		}
 
 		@Override
 		public void invoke(Row row) throws Exception {
-			RESULT.add(Row.copy(row));
+			RESULT.add(serializer.copy(row));
 		}
 	}
 
