@@ -63,6 +63,12 @@ object TypeCheckUtils {
 
   def isInteger(dataType: InternalType): Boolean = dataType == DataTypes.INT
 
+  def isIntegerFamily(dataType: InternalType): Boolean =
+    dataType == DataTypes.INT ||
+        dataType == DataTypes.BYTE ||
+        dataType == DataTypes.LONG ||
+        dataType == DataTypes.SHORT
+
   def isLong(dataType: InternalType): Boolean = dataType == DataTypes.LONG
 
   def isIntervalMonths(dataType: InternalType): Boolean = dataType == DataTypes.INTERVAL_MONTHS

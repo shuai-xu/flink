@@ -25,7 +25,7 @@ import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions._
-import org.apache.flink.table.functions.sql.{ScalarSqlFunctions, StreamRecordTimestampSqlFunction}
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
 import org.apache.flink.table.types._
 
@@ -404,6 +404,18 @@ object FunctionGenerator {
     Seq(DataTypes.DOUBLE, ANY_DEC_TYPE),
     DataTypes.DOUBLE,
     BuiltInMethods.LOG_WITH_BASE_DOU_DEC)
+
+  addSqlFunctionMethod(
+    ScalarSqlFunctions.HEX,
+    Seq(DataTypes.LONG),
+    DataTypes.STRING,
+    BuiltInMethods.HEX_LONG)
+
+  addSqlFunctionMethod(
+    ScalarSqlFunctions.HEX,
+    Seq(DataTypes.STRING),
+    DataTypes.STRING,
+    BuiltInMethods.HEX_STRING)
 
   // ----------------------------------------------------------------------------------------------
   // Temporal functions

@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.codegen.calls
 
+import java.lang.reflect.Method
 import java.lang.{Byte => JByte, Integer => JInteger, Long => JLong, Short => JShort}
 import java.util.{TimeZone, Date => JDate}
 import java.sql.Time
@@ -341,6 +342,9 @@ object BuiltInMethods {
     classOf[BuildInScalarFunctions],
     "fromBase64",
     classOf[String])
+
+  val HEX_LONG: Method = Types.lookupMethod(classOf[ScalarFunctions], "hex", classOf[Long])
+  val HEX_STRING: Method = Types.lookupMethod(classOf[ScalarFunctions], "hex", classOf[String])
 
   val UUID = Types.lookupMethod(
     classOf[BuildInScalarFunctions],

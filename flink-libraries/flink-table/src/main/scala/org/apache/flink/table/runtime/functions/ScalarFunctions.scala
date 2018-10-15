@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.functions
 
 import java.io.UnsupportedEncodingException
+import java.lang.{Long => JLong}
 import java.sql.Timestamp
 import java.util.{Calendar, Date, TimeZone}
 import java.text.{ParseException, SimpleDateFormat}
@@ -878,4 +879,15 @@ object ScalarFunctions {
       if (pos == 0) 0 else str.numChars() + 2 - pos - subString.numChars()
     }
   }
+
+  /**
+    * Returns the hex string of a long argument.
+    */
+  def hex(x: Long): String = JLong.toHexString(x).toUpperCase()
+
+  /**
+    * Returns the hex string of a string argument.
+    */
+  def hex(x: String): String = Hex.encodeHexString(x.getBytes).toUpperCase()
+
 }

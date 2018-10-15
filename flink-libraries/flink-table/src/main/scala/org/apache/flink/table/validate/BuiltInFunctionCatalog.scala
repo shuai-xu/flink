@@ -282,6 +282,7 @@ object BuiltInFunctionCatalog {
     "rand" -> classOf[Rand],
     "randInteger" -> classOf[RandInteger],
     "bin" -> classOf[Bin],
+    "hex" -> classOf[Hex],
 
     // temporal functions
     "extract" -> classOf[Extract],
@@ -510,6 +511,7 @@ class BasicOperatorTable extends ReflectiveSqlOperatorTable {
     SqlStdOperatorTable.PI,
     ScalarSqlFunctions.E,
     SqlStdOperatorTable.RAND,
+    ScalarSqlFunctions.HEX,
     SqlStdOperatorTable.RAND_INTEGER,
     ScalarSqlFunctions.CONCAT,
     ScalarSqlFunctions.CONCAT_WS,

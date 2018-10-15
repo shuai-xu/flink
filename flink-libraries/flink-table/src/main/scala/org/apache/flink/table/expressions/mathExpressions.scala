@@ -20,8 +20,6 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo.DOUBLE_TYPE_INFO
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -487,5 +485,27 @@ case class Bin(child: Expression) extends UnaryExpression {
   }
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+case class Hex(child: Expression) extends UnaryExpression {
+  override private[flink] def resultType: InternalType = DataTypes.STRING
+
+  override private[flink] def validateInput(): ValidationResult = {
+    if (TypeCheckUtils.isIntegerFamily(child.resultType) ||
+        TypeCheckUtils.isString(child.resultType)) {
+      ValidationSuccess
+    } else {
+      ValidationFailure(s"hex() requires an integer or string input but was '${child.resultType}'.")
+    }
+  }
+
+  override def toString: String = s"hex($child)"
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.HEX, child.toRexNode)
+  }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]) =
     logicalExprVisitor.visit(this)
 }

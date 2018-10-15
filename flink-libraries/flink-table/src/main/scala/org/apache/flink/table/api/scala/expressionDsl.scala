@@ -27,8 +27,10 @@ import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilli
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.CoTableValuedAggregateFunction
-import org.apache.flink.table.expressions.{Atan2, Literal, UDTVAGGExpression, _}
-import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
+import org.apache.flink.table.expressions.UDTVAGGExpression
+import org.apache.flink.table.functions.TableValuedAggregateFunction
+import org.apache.flink.table.expressions.{Atan2, Hex, Literal, _}
+import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
 import scala.language.implicitConversions
@@ -465,6 +467,15 @@ trait ImplicitExpressionOperations {
     * numeric is null. E.g. "4" leads to "100", "12" leads to "1100".
     */
   def bin() = Bin(expr)
+
+  /**
+    * Returns a string representation of an integer numeric value or a string in hex format. Returns
+    * null if numeric or string is null.
+    *
+    * E.g. a numeric 20 leads to "14", a numeric 100 leads to "64", and a string "hello,world" leads
+    * to "68656c6c6f2c776f726c64".
+    */
+  def hex() = Hex(expr)
 
   // String operations
 
