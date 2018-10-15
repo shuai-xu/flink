@@ -163,6 +163,7 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi("SUBSTR('hello world', 2, 300)", "ello world")
     testSqlApi("SUBSTR('hello world', 0, 3)", "hel")
     testSqlApi("INITCAP('hello world')", "Hello World")
+    testSqlApi("REGEXP_REPLACE('foobar', 'oo|ar', '')", "fb")
   }
 
   @Test

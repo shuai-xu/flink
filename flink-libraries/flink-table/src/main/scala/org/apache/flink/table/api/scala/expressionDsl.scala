@@ -27,10 +27,9 @@ import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilli
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.CoTableValuedAggregateFunction
-import org.apache.flink.table.expressions.UDTVAGGExpression
-import org.apache.flink.table.functions.TableValuedAggregateFunction
-import org.apache.flink.table.expressions.{Atan2, Hex, Literal, _}
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.expressions.{Hex, _}
+import org.apache.flink.table.expressions.{Atan2, Literal, RegexpReplace, UDTVAGGExpression, _}
+import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
 import scala.language.implicitConversions
@@ -669,6 +668,13 @@ trait ImplicitExpressionOperations {
     */
   def overlay(newString: Expression, starting: Expression, length: Expression) =
     Overlay(expr, newString, starting, length)
+
+  /**
+    * Returns a string with all substrings that match the regular expression consecutively
+    * being replaced.
+    */
+  def regexpReplace(regex: Expression, replacement: Expression) =
+    RegexpReplace(expr, regex, replacement)
 
   /**
     * Returns the position of string in an other string starting at 1.

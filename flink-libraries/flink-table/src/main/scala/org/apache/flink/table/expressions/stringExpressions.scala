@@ -626,3 +626,30 @@ case class Rpad(text: Expression, len: Expression, pad: Expression)
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
 }
+
+/**
+  * Returns a string with all substrings that match the regular expression consecutively
+  * being replaced.
+  */
+case class RegexpReplace(str: Expression, regex: Expression, replacement: Expression)
+    extends Expression with InputTypeSpec {
+
+  override private[flink] def resultType: InternalType = DataTypes.STRING
+
+  override private[flink] def expectedTypes: Seq[InternalType] =
+    Seq(
+      DataTypes.STRING,
+      DataTypes.STRING,
+      DataTypes.STRING)
+
+  override private[flink] def children: Seq[Expression] = Seq(str, regex, replacement)
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.REGEXP_REPLACE, children.map(_.toRexNode))
+  }
+
+  override def toString: String = s"($str).regexp_replace($regex, $replacement)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}

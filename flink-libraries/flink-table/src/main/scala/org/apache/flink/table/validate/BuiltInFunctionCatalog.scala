@@ -219,6 +219,7 @@ object BuiltInFunctionCatalog {
     "first_value" -> classOf[FirstValue],
     "last_value" -> classOf[LastValue],
     "concat_agg" -> classOf[ConcatAgg],
+    "regexpReplace" -> classOf[RegexpReplace],
 
     // string functions
     "charLength" -> classOf[CharLength],
