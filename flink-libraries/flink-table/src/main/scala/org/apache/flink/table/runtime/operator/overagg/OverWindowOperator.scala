@@ -118,6 +118,7 @@ class BufferDataOverWindowOperator(
       })
       rowIndex += 1
     }
+    bufferIterator.close()
   }
 
   override def close(): Unit = {

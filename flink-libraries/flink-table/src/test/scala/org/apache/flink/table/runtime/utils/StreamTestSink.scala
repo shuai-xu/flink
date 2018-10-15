@@ -23,21 +23,21 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.functions.MapFunction
+import org.apache.flink.api.common.io.OutputFormat
 import org.apache.flink.api.common.state.{ListState, ListStateDescriptor}
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.common.io.OutputFormat
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.runtime.state.{FunctionInitializationContext, FunctionSnapshotContext}
-import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.table.api._
 import org.apache.flink.table.connector.DefinedDistribution
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.sinks._
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.runtime.conversion.InternalTypeConverters
+import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
+import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, _}
 import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, UpsertStreamTableSink}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.types.Row
@@ -240,10 +240,15 @@ class TestingJavaRetractSink extends RetractSinkBase[JTuple2[JBoolean, Row]] {
 
 }
 final class TestingUpsertSink(keys: Array[Int])
-  extends AbstractExactlyOnceSink[JTuple2[JBoolean, Row]] {
+  extends AbstractExactlyOnceSink[BaseRow] {
 
   private var upsertResultsState: ListState[String] = _
   private var localUpsertResults: mutable.Map[String, String] = _
+  private var fieldTypes: Array[DataType] = _
+
+  def configureTypes(fieldTypes: Array[DataType]): Unit = {
+    this.fieldTypes = fieldTypes
+  }
 
   override def initializeState(context: FunctionInitializationContext): Unit = {
     super.initializeState(context)
@@ -285,7 +290,15 @@ final class TestingUpsertSink(keys: Array[Int])
     }
   }
 
-  def invoke(v: JTuple2[JBoolean, Row]): Unit = {
+  def invoke(row: BaseRow): Unit = {
+
+    val wrapRow = new GenericRow(2)
+    wrapRow.update(0, BaseRowUtil.isAccumulateMsg(row))
+    wrapRow.update(1, row)
+    val converter = InternalTypeConverters.createToExternalConverter(
+      DataTypes.createTupleType(DataTypes.BOOLEAN, DataTypes.createRowType(fieldTypes: _*)))
+    val v = converter.apply(wrapRow).asInstanceOf[JTuple2[Boolean, Row]]
+
     val tupleString = v.toString
     localResults += tupleString
     val keyString = Row.project(v.f1, keys).toString
@@ -401,7 +414,7 @@ class TestingOutputFormat[T]
 }
 
 final class TestingUpsertTableSink(keys: Array[Int])
-  extends UpsertStreamTableSink[Row] {
+  extends BaseUpsertStreamTableSink[BaseRow] {
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _
   var sink = new TestingUpsertSink(keys)
@@ -414,9 +427,10 @@ final class TestingUpsertTableSink(keys: Array[Int])
     // ignore
   }
 
-  override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
+  override def getOutputType: DataType =
+    DataTypes.createBaseRowType(fTypes.map(DataTypes.internal), fNames)
 
-  override def emitDataStream(dataStream: DataStream[JTuple2[JBoolean, Row]]): Unit = {
+  override def emitDataStream(dataStream: DataStream[BaseRow]): Unit = {
     dataStream.addSink(sink)
       .name(s"TestingUpsertTableSink(keys=${
         if (keys != null) {
@@ -435,10 +449,11 @@ final class TestingUpsertTableSink(keys: Array[Int])
   override def configure(
     fieldNames: Array[String],
     fieldTypes: Array[DataType])
-  : TableSink[JTuple2[JBoolean, Row]] = {
+  : TableSink[BaseRow] = {
     val copy = new TestingUpsertTableSink(keys)
     copy.fNames = fieldNames
     copy.fTypes = fieldTypes
+    sink.configureTypes(fieldTypes)
     copy.sink = sink
     copy
   }
@@ -491,7 +506,7 @@ final class TestingAppendTableSink extends AppendStreamTableSink[Row]
 }
 
 final class TestingRetractTableSink extends RetractStreamTableSink[Row]
-  with BatchExecCompatibleStreamTableSink with DefinedDistribution {
+  with BatchExecCompatibleStreamTableSink[JTuple2[JBoolean, Row]] with DefinedDistribution {
 
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _

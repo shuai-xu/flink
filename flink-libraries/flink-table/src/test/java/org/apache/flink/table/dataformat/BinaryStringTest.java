@@ -21,7 +21,6 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.util.StringUtf8Utils;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -32,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.flink.table.dataformat.BinaryString.EMPTY_UTF8;
@@ -39,6 +39,7 @@ import static org.apache.flink.table.dataformat.BinaryString.blankString;
 import static org.apache.flink.table.dataformat.BinaryString.concat;
 import static org.apache.flink.table.dataformat.BinaryString.concatWs;
 import static org.apache.flink.table.dataformat.BinaryString.fromBytes;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -74,19 +75,21 @@ public class BinaryStringTest {
 			return string;
 		} else {
 			int numBytes = string.numBytes();
-			int segSize = numBytes / 2 + 1;
+			int pad = new Random().nextInt(5);
+			int numBytesWithPad = numBytes + pad;
+			int segSize = numBytesWithPad / 2 + 1;
 			byte[] bytes1 = new byte[segSize];
 			byte[] bytes2 = new byte[segSize];
-			if (numBytes - segSize > 0) {
+			if (segSize - pad > 0 && numBytes >= segSize - pad) {
 				string.getSegments()[0].get(
-						0, bytes1, segSize * 2 - numBytes, numBytes - segSize);
+						0, bytes1, pad, segSize - pad);
 			}
-			string.getSegments()[0].get(numBytes - segSize, bytes2, 0, segSize);
+			string.getSegments()[0].get(segSize - pad, bytes2, 0, numBytes - segSize + pad);
 			return BinaryString.fromAddress(
 					new MemorySegment[] {
 							MemorySegmentFactory.wrap(bytes1),
 							MemorySegmentFactory.wrap(bytes2)
-					}, segSize * 2 - numBytes, numBytes);
+					}, pad, numBytes);
 		}
 	}
 
@@ -118,6 +121,11 @@ public class BinaryStringTest {
 		checkBasic("hello world", 11);
 		checkBasic("Flink中文社区", 9);
 		checkBasic("中 文 社 区", 7);
+
+		checkBasic("¡", 1); // 2 bytes char
+		checkBasic("ку", 2); // 2 * 2 bytes chars
+		checkBasic("︽﹋％", 3); // 3 * 3 bytes chars
+		checkBasic("\uD83E\uDD19", 1); // 4 bytes char
 	}
 
 	@Test
@@ -580,12 +588,12 @@ public class BinaryStringTest {
 		// Tis char array has some illegal character, such as 55357
 		// the jdk ignores theses character and cast them to '?'
 		// which StringUtf8Utils'encodeUTF8 should follow
-		char []chars = new char[] { 20122, 40635, 124, 38271, 34966,
+		char[] chars = new char[] { 20122, 40635, 124, 38271, 34966,
 			124, 36830, 34915, 35033, 124, 55357, 124, 56407 };
 
 		String str = new String(chars);
 
-		Assert.assertArrayEquals(
+		assertArrayEquals(
 			str.getBytes("UTF-8"),
 			StringUtf8Utils.encodeUTF8(str)
 		);
@@ -683,5 +691,53 @@ public class BinaryStringTest {
 							fromString("|").getByte(0),
 							fromString(":").getByte(0),
 							fromString("k2")));
+	}
+
+	@Test
+	public void testDecodeWithIllegalUtf8Bytes() throws UnsupportedEncodingException {
+
+		// illegal utf-8 bytes
+		byte[] bytes = new byte[] {(byte) 20122, (byte) 40635, 124, (byte) 38271, (byte) 34966,
+				124, (byte) 36830, (byte) 34915, (byte) 35033, 124, (byte) 55357, 124, (byte) 56407 };
+
+		String str = new String(bytes);
+		assertEquals(str, StringUtf8Utils.decodeUTF8(bytes, 0, bytes.length));
+		assertEquals(str, StringUtf8Utils.decodeUTF8(MemorySegmentFactory.wrap(bytes), 0, bytes.length));
+
+		byte[] newBytes = new byte[bytes.length + 5];
+		System.arraycopy(bytes, 0, newBytes, 5, bytes.length);
+		assertEquals(str, StringUtf8Utils.decodeUTF8(MemorySegmentFactory.wrap(newBytes), 5, bytes.length));
+	}
+
+	@Test
+	public void skipWrongFirstByte() {
+		int[] wrongFirstBytes = {
+				0x80, 0x9F, 0xBF, // Skip Continuation bytes
+				0xC0, 0xC2, // 0xC0..0xC1 - disallowed in UTF-8
+				// 0xF5..0xFF - disallowed in UTF-8
+				0xF5, 0xF6, 0xF7, 0xF8, 0xF9,
+				0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
+		};
+		byte[] c = new byte[1];
+
+		for (int wrongFirstByte : wrongFirstBytes) {
+			c[0] = (byte) wrongFirstByte;
+			assertEquals(fromBytes(c).numChars(), 1);
+		}
+	}
+
+	@Test
+	public void testSplit() {
+		assertArrayEquals(BinaryString.EMPTY_STRING_ARRAY,
+				fromString("").splitByWholeSeparatorPreserveAllTokens(fromString("")));
+		assertArrayEquals(new BinaryString[] {fromString("ab"), fromString("de"), fromString("fg")},
+				fromString("ab de fg").splitByWholeSeparatorPreserveAllTokens(null));
+		assertArrayEquals(new BinaryString[] {fromString("ab"), fromString(""), fromString(""),
+						fromString("de"), fromString("fg")},
+				fromString("ab   de fg").splitByWholeSeparatorPreserveAllTokens(null));
+		assertArrayEquals(new BinaryString[] {fromString("ab"), fromString("cd"), fromString("ef")},
+				fromString("ab:cd:ef").splitByWholeSeparatorPreserveAllTokens(fromString(":")));
+		assertArrayEquals(new BinaryString[] {fromString("ab"), fromString("cd"), fromString("ef")},
+				fromString("ab-!-cd-!-ef").splitByWholeSeparatorPreserveAllTokens(fromString("-!-")));
 	}
 }

@@ -597,7 +597,7 @@ public class ResettableExternalBufferTest {
 		BinaryRowSerializer serializer) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
 
-		RowIterator<BinaryRow> iterator;
+		ResettableExternalBuffer.BufferIterator iterator;
 		iterator = buffer.newIterator(0);
 		assertFalse(iterator.advanceNext());
 		iterator = buffer.newIterator(random.nextInt(Integer.MAX_VALUE));
@@ -615,7 +615,7 @@ public class ResettableExternalBufferTest {
 		assertEquals(buffer.size(), number);
 		assertMultiColumnRandomAccess(expected, buffer, 0);
 
-		RowIterator<BinaryRow> iterator;
+		ResettableExternalBuffer.BufferIterator iterator;
 		iterator = buffer.newIterator(number);
 		assertFalse(iterator.advanceNext());
 		iterator = buffer.newIterator(number + random.nextInt(Integer.MAX_VALUE));
@@ -717,7 +717,7 @@ public class ResettableExternalBufferTest {
 	}
 
 	private void assertMultiColumnRandomAccess(List<RowData> expected, ResettableExternalBuffer buffer, int begin) {
-		RowIterator<BinaryRow> iterator = buffer.newIterator(begin);
+		ResettableExternalBuffer.BufferIterator iterator = buffer.newIterator(begin);
 		for (int i = begin; i < buffer.size(); i++) {
 			assertTrue(iterator.advanceNext());
 			expected.get(i).checkSame(iterator.getRow());

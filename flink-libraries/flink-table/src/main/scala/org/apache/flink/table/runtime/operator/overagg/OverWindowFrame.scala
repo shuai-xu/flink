@@ -23,7 +23,7 @@ import java.util
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedAggsHandleFunction, GeneratedBoundComparator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.util.{ResettableExternalBuffer, RowIterator}
+import org.apache.flink.table.util.ResettableExternalBuffer
 
 /**
  * A window frame calculates the results for those records belong to a window frame.
@@ -40,7 +40,7 @@ abstract class OverWindowFrame(aggsHandleFunction: GeneratedAggsHandleFunction)
 }
 
 object OverWindowFrame {
-  def getNextOrNull(iterator: RowIterator[BinaryRow]): BinaryRow = {
+  def getNextOrNull(iterator: ResettableExternalBuffer#BufferIterator): BinaryRow = {
     if (iterator.advanceNext()) iterator.getRow.copy() else null
   }
 }

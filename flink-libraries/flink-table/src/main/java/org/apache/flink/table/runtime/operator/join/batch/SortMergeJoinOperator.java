@@ -44,7 +44,6 @@ import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.ResettableExternalBuffer;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
 
@@ -304,12 +303,13 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 			while (((SortMergeInnerJoinIterator) joinIterator2).nextInnerJoin()) {
 				BinaryRow probeRow = joinIterator2.getProbeRow();
 				boolean matched = false;
-				RowIterator<BinaryRow> iter = joinIterator2.getMatchBuffer().newIterator();
-				while (iter.advanceNext()) {
-					BaseRow row = iter.getRow();
-					if (condFunc.apply(probeRow, row)) {
-						matched = true;
-						break;
+				try (ResettableExternalBuffer.BufferIterator iter = joinIterator2.getMatchBuffer().newIterator()) {
+					while (iter.advanceNext()) {
+						BaseRow row = iter.getRow();
+						if (condFunc.apply(probeRow, row)) {
+							matched = true;
+							break;
+						}
 					}
 				}
 				if (matched) {
@@ -325,12 +325,13 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 				ResettableExternalBuffer matchBuffer = joinIterator2.getMatchBuffer();
 				boolean matched = false;
 				if (matchBuffer != null) {
-					RowIterator<BinaryRow> iter = matchBuffer.newIterator();
-					while (iter.advanceNext()) {
-						BaseRow row = iter.getRow();
-						if (condFunc.apply(probeRow, row)) {
-							matched = true;
-							break;
+					try (ResettableExternalBuffer.BufferIterator iter = matchBuffer.newIterator()) {
+						while (iter.advanceNext()) {
+							BaseRow row = iter.getRow();
+							if (condFunc.apply(probeRow, row)) {
+								matched = true;
+								break;
+							}
 						}
 					}
 				}
@@ -353,10 +354,11 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 			SortMergeInnerJoinIterator iterator, boolean reverseInvoke) throws Exception {
 		while (iterator.nextInnerJoin()) {
 			BinaryRow probeRow = iterator.getProbeRow();
-			RowIterator<BinaryRow> iter = iterator.getMatchBuffer().newIterator();
-			while (iter.advanceNext()) {
-				BaseRow row = iter.getRow();
-				joinWithCondition(probeRow, row, reverseInvoke);
+			try (ResettableExternalBuffer.BufferIterator iter = iterator.getMatchBuffer().newIterator()) {
+				while (iter.advanceNext()) {
+					BaseRow row = iter.getRow();
+					joinWithCondition(probeRow, row, reverseInvoke);
+				}
 			}
 		}
 	}
@@ -394,10 +396,11 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 			boolean found = false;
 
 			if (iterator.getMatchKey() != null) {
-				RowIterator<BinaryRow> iter = iterator.getMatchBuffer().newIterator();
-				while (iter.advanceNext()) {
-					BaseRow row = iter.getRow();
-					found |= joinWithCondition(probeRow, row, reverseInvoke);
+				try (ResettableExternalBuffer.BufferIterator iter = iterator.getMatchBuffer().newIterator()) {
+					while (iter.advanceNext()) {
+						BaseRow row = iter.getRow();
+						found |= joinWithCondition(probeRow, row, reverseInvoke);
+					}
 				}
 			}
 
@@ -418,47 +421,52 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 			ResettableExternalBuffer buffer2 = iterator.getBuffer2();
 
 			if (matchKey == null && buffer1.size() > 0) { // left outer join.
-				RowIterator<BinaryRow> iter = buffer1.newIterator();
-				while (iter.advanceNext()) {
-					BaseRow row1 = iter.getRow();
-					collector.collect(joinedRow.replace(row1, rightNullRow));
+				try (ResettableExternalBuffer.BufferIterator iter = buffer1.newIterator()) {
+					while (iter.advanceNext()) {
+						BaseRow row1 = iter.getRow();
+						collector.collect(joinedRow.replace(row1, rightNullRow));
+					}
 				}
 			} else if (matchKey == null && buffer2.size() > 0) { // right outer join.
-				RowIterator<BinaryRow> iter = buffer2.newIterator();
-				while (iter.advanceNext()) {
-					BaseRow row2 = iter.getRow();
-					collector.collect(joinedRow.replace(leftNullRow, row2));
+				try (ResettableExternalBuffer.BufferIterator iter = buffer2.newIterator()) {
+					while (iter.advanceNext()) {
+						BaseRow row2 = iter.getRow();
+						collector.collect(joinedRow.replace(leftNullRow, row2));
+					}
 				}
 			} else if (matchKey != null) { // match join.
-				RowIterator<BinaryRow> iter1 = buffer1.newIterator();
-				while (iter1.advanceNext()) {
-					BaseRow row1 = iter1.getRow();
-					boolean found = false;
-					int index = 0;
-					RowIterator<BinaryRow> iter2 = buffer2.newIterator();
-					while (iter2.advanceNext()) {
-						BaseRow row2 = iter2.getRow();
-						if (condFunc.apply(row1, row2)) {
-							collector.collect(joinedRow.replace(row1, row2));
-							found = true;
-							bitSet.set(index);
+				try (ResettableExternalBuffer.BufferIterator iter1 = buffer1.newIterator()) {
+					while (iter1.advanceNext()) {
+						BaseRow row1 = iter1.getRow();
+						boolean found = false;
+						int index = 0;
+						try (ResettableExternalBuffer.BufferIterator iter2 = buffer2.newIterator()) {
+							while (iter2.advanceNext()) {
+								BaseRow row2 = iter2.getRow();
+								if (condFunc.apply(row1, row2)) {
+									collector.collect(joinedRow.replace(row1, row2));
+									found = true;
+									bitSet.set(index);
+								}
+								index++;
+							}
 						}
-						index++;
-					}
-					if (!found) {
-						collector.collect(joinedRow.replace(row1, rightNullRow));
+						if (!found) {
+							collector.collect(joinedRow.replace(row1, rightNullRow));
+						}
 					}
 				}
 
 				// row2 outer
 				int index = 0;
-				RowIterator<BinaryRow> iter2 = buffer2.newIterator();
-				while (iter2.advanceNext()) {
-					BaseRow row2 = iter2.getRow();
-					if (!bitSet.get(index)) {
-						collector.collect(joinedRow.replace(leftNullRow, row2));
+				try (ResettableExternalBuffer.BufferIterator iter2 = buffer2.newIterator()) {
+					while (iter2.advanceNext()) {
+						BaseRow row2 = iter2.getRow();
+						if (!bitSet.get(index)) {
+							collector.collect(joinedRow.replace(leftNullRow, row2));
+						}
+						index++;
 					}
-					index++;
 				}
 			} else { // bug...
 				throw new RuntimeException("There is a bug.");

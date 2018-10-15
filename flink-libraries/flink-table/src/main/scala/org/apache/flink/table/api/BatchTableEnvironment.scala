@@ -206,7 +206,7 @@ class BatchTableEnvironment(
           val outputType = sink.getOutputType
           val result = translate[T](table, outputType, sink, batchQueryConfig)
           transformations.add(emitBoundedStreamSink(batchExecTableSink, result).getTransformation)
-        case compatibleTableSink: BatchExecCompatibleStreamTableSink =>
+        case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
           val result = translate[T](table, compatibleTableSink.getOutputType, sink,
             batchQueryConfig, withChangeFlag = true)
           transformations.add(emitBoundedStreamSink(compatibleTableSink, result).getTransformation)
@@ -277,7 +277,7 @@ class BatchTableEnvironment(
     val boundedStream: DataStream[_] = blockLogicalPlan match {
       case n: SinkNode =>
         n.sink match {
-          case compatibleTableSink: BatchExecCompatibleStreamTableSink =>
+          case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
             translate(batchExecPlan, relNode.getRowType, withChangeFlag = true,
               compatibleTableSink.getOutputType, compatibleTableSink, queryConfig)
           case _ =>
@@ -318,9 +318,9 @@ class BatchTableEnvironment(
         val boundedSink = sinkBatch.emitBoundedStream(boundedStream, config, streamEnv.getConfig)
         assignDefaultResourceAndParallelism(boundedStream, boundedSink)
         boundedSink
-      case compatible: BatchExecCompatibleStreamTableSink =>
+      case compatible: BatchExecCompatibleStreamTableSink[T] =>
         val boundedSink = compatible.emitBoundedStream(
-          boundedStream.asInstanceOf[DataStream[JTuple2[JBool, Row]]])
+          boundedStream.asInstanceOf[DataStream[T]])
         assignDefaultResourceAndParallelism(boundedStream, boundedSink)
         boundedSink
       case _ => throw new TableException("BatchExecTableSink or " +
@@ -737,7 +737,7 @@ class BatchTableEnvironment(
       case batchExecTableSink: BatchExecTableSink[_] =>
         val configuredSink = batchExecTableSink.configure(fieldNames, fieldTypes)
         registerTableInternal(name, new TableSinkTable(configuredSink))
-      case compatibleTableSink: BatchExecCompatibleStreamTableSink =>
+      case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
         val configuredSink = compatibleTableSink.configure(fieldNames, fieldTypes)
         registerTableInternal(name, new TableSinkTable(configuredSink))
       case _ =>

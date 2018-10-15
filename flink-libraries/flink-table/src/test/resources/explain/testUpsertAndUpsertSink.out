@@ -79,22 +79,14 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
 								ship_strategy : FORWARD
 
 								 : Operator
-									content : SinkConversion to Tuple2
+									content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 									ship_strategy : FORWARD
 
-									 : Operator
-										content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
+									 : Data Sink
+										content : Sink: TestingUpsertTableSink(keys=(0))
 										ship_strategy : FORWARD
 
-										 : Operator
-											content : SinkConversion to Tuple2
+										 : Data Sink
+											content : Sink: TestingUpsertTableSink(keys=())
 											ship_strategy : FORWARD
-
-											 : Data Sink
-												content : Sink: TestingUpsertTableSink(keys=(0))
-												ship_strategy : FORWARD
-
-												 : Data Sink
-													content : Sink: TestingUpsertTableSink(keys=())
-													ship_strategy : FORWARD
 

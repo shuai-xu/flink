@@ -98,11 +98,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
 										content : Calc(select: (id1, num, text1))
 										ship_strategy : FORWARD
 
-										 : Operator
-											content : SinkConversion to Tuple2
+										 : Data Sink
+											content : Sink: TestingUpsertTableSink(keys=())
 											ship_strategy : FORWARD
-
-											 : Data Sink
-												content : Sink: TestingUpsertTableSink(keys=())
-												ship_strategy : FORWARD
 

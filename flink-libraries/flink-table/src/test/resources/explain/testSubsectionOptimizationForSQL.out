@@ -30,11 +30,7 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
 				ship_strategy : HASH
 
-				 : Operator
-					content : SinkConversion to Tuple2
+				 : Data Sink
+					content : Sink: TestingUpsertTableSink(keys=(0))
 					ship_strategy : FORWARD
-
-					 : Data Sink
-						content : Sink: TestingUpsertTableSink(keys=(0))
-						ship_strategy : FORWARD
 

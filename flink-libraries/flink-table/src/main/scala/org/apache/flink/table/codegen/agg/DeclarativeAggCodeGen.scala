@@ -91,7 +91,7 @@ class DeclarativeAggCodeGen(
         ctx.addReusableMember(s"private $typeTerm $memberName;")
         ctx.addReusableMember(s"private boolean $memberNullTerm;")
         s"""
-           |$memberName = ${access.resultTerm};
+           |${access.copyResultTermToTargetIfChanged(memberName)};
            |$memberNullTerm = ${access.nullTerm};
          """.stripMargin
     }

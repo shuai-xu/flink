@@ -162,7 +162,7 @@ abstract class StreamTableEnvironment(
       blockPlan.foreach {
         sinkBlock =>
           val retractionFromSink = sinkBlock.outputNode match {
-            case n: SinkNode => n.sink.isInstanceOf[RetractStreamTableSink[_]]
+            case n: SinkNode => n.sink.isInstanceOf[BaseRetractStreamTableSink[_]]
             case _ => false
           }
           sinkBlock.setUpdateAsRetraction(retractionFromSink)
@@ -316,9 +316,9 @@ abstract class StreamTableEnvironment(
 
     tableSink match {
       case streamTableSink@(
-        _: AppendStreamTableSink[_] |
-        _: UpsertStreamTableSink[_] |
-        _: RetractStreamTableSink[_]) =>
+          _: AppendStreamTableSink[_] |
+          _: BaseUpsertStreamTableSink[_] |
+          _: BaseRetractStreamTableSink[_]) =>
 
         val configuredSink = streamTableSink.configure(fieldNames, fieldTypes)
         registerTableInternal(name, new TableSinkTable(configuredSink))
@@ -1299,7 +1299,7 @@ abstract class StreamTableEnvironment(
 
     sink match {
 
-      case retractSink: RetractStreamTableSink[_] =>
+      case _: BaseRetractStreamTableSink[_] =>
         // retraction sink can always be used
         val outputType = sink.getOutputType
         // translate the Table into a DataStream and provide the type that the TableSink expects.
@@ -1317,7 +1317,7 @@ abstract class StreamTableEnvironment(
 
         (dataStream, dataStreamPlan)
 
-      case upsertSink: UpsertStreamTableSink[_] =>
+      case upsertSink: BaseUpsertStreamTableSink[_] =>
         // optimize plan
         val optimizedPlan = optimize(
           table.getRelNode, updatesAsRetraction = false, streamQueryConfig)
@@ -1396,15 +1396,15 @@ abstract class StreamTableEnvironment(
   private def emitDataStream[T](sink: TableSink[T], dataStream: DataStream[T]): Unit = {
     sink match {
 
-      case retractSink: RetractStreamTableSink[_] =>
+      case retractSink: BaseRetractStreamTableSink[_] =>
         // Give the DataStream to the TableSink to emit it.
-        retractSink.asInstanceOf[RetractStreamTableSink[Any]]
-          .emitDataStream(dataStream.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
+        retractSink.asInstanceOf[BaseRetractStreamTableSink[Any]]
+          .emitDataStream(dataStream.asInstanceOf[DataStream[Any]])
 
-      case upsertSink: UpsertStreamTableSink[_] =>
+      case upsertSink: BaseUpsertStreamTableSink[_] =>
         // Give the DataStream to the TableSink to emit it.
-        upsertSink.asInstanceOf[UpsertStreamTableSink[Any]]
-          .emitDataStream(dataStream.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
+        upsertSink.asInstanceOf[BaseUpsertStreamTableSink[Any]]
+          .emitDataStream(dataStream.asInstanceOf[DataStream[Any]])
 
       case appendSink: AppendStreamTableSink[_] =>
         // Give the DataStream to the TableSink to emit it.

@@ -157,14 +157,14 @@ public class StringUtf8Utils {
 
 	public static String decodeUTF8(byte[] input, int offset, int byteLen) {
 		char[] chars = allocateChars(byteLen);
-		int len = decodeUTF8(input, offset, byteLen, chars);
+		int len = decodeUTF8Strict(input, offset, byteLen, chars);
 		if (len < 0) {
-			throw new RuntimeException("decodeUTF8 error");
+			return defaultDecodeUTF8(input, offset, byteLen);
 		}
 		return new String(chars, 0, len);
 	}
 
-	public static int decodeUTF8(byte[] sa, int sp, int len, char[] da) {
+	public static int decodeUTF8Strict(byte[] sa, int sp, int len, char[] da) {
 		final int sl = sp + len;
 		int dp = 0;
 		int dlASCII = Math.min(len, da.length);
@@ -243,14 +243,16 @@ public class StringUtf8Utils {
 
 	public static String decodeUTF8(MemorySegment input, int offset, int byteLen) {
 		char[] chars = allocateChars(byteLen);
-		int len = decodeUTF8(input, offset, byteLen, chars);
+		int len = decodeUTF8Strict(input, offset, byteLen, chars);
 		if (len < 0) {
-			throw new RuntimeException("decodeUTF8 error");
+			byte[] bytes = allocateBytes(byteLen);
+			input.get(offset, bytes, 0, byteLen);
+			return defaultDecodeUTF8(bytes, 0, byteLen);
 		}
 		return new String(chars, 0, len);
 	}
 
-	public static int decodeUTF8(MemorySegment segment, int sp, int len, char[] da) {
+	public static int decodeUTF8Strict(MemorySegment segment, int sp, int len, char[] da) {
 		final int sl = sp + len;
 		int dp = 0;
 		int dlASCII = Math.min(len, da.length);
@@ -325,5 +327,13 @@ public class StringUtf8Utils {
 			}
 		}
 		return dp;
+	}
+
+	public static String defaultDecodeUTF8(byte[] bytes, int offset, int len) {
+		try {
+			return new String(bytes, offset, len, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException("encodeUTF8 error", e);
+		}
 	}
 }

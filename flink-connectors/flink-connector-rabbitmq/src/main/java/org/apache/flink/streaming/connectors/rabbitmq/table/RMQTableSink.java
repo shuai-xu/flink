@@ -40,8 +40,8 @@ import java.io.Serializable;
 /**
  * Rabbit MQ table sink which publishes message directly to a queue.
  */
-public class RMQTableSink
-		implements UpsertStreamTableSink<Row>, BatchExecCompatibleStreamTableSink, Serializable {
+public class RMQTableSink implements UpsertStreamTableSink<Row>,
+		BatchExecCompatibleStreamTableSink<Tuple2<Boolean, Row>>, Serializable {
 
 	private RMQConnectionConfig connectionConfig;
 

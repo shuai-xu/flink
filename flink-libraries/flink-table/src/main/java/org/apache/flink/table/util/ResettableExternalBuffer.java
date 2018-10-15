@@ -209,7 +209,7 @@ public class ResettableExternalBuffer implements Closeable {
 	/**
 	 * Iterator of external buffer.
 	 */
-	public class BufferIterator implements RowIterator<BinaryRow>, Closeable {
+	public class BufferIterator implements Closeable {
 
 		MutableObjectIterator<BinaryRow> currentIterator;
 		BlockChannelReader<MemorySegment> fileReader;
@@ -297,7 +297,6 @@ public class ResettableExternalBuffer implements Closeable {
 			}
 		}
 
-		@Override
 		public boolean advanceNext() {
 			validateIterator();
 
@@ -339,7 +338,6 @@ public class ResettableExternalBuffer implements Closeable {
 			return true;
 		}
 
-		@Override
 		public BinaryRow getRow() {
 			validateIterator();
 			return row;

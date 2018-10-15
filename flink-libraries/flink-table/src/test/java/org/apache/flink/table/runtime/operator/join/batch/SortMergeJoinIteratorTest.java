@@ -33,7 +33,6 @@ import org.apache.flink.table.runtime.sort.NormalizedKeyComputer;
 import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.ResettableExternalBuffer;
-import org.apache.flink.table.util.RowIterator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.junit.Before;
@@ -192,7 +191,7 @@ public class SortMergeJoinIteratorTest {
 			int id = 0;
 			while (iterator.nextInnerJoin()) {
 				BinaryRow probe = iterator.getProbeRow();
-				RowIterator<BinaryRow> iter = iterator.getMatchBuffer().newIterator();
+				ResettableExternalBuffer.BufferIterator iter = iterator.getMatchBuffer().newIterator();
 				while (iter.advanceNext()) {
 					BaseRow row = iter.getRow();
 					Tuple2<BinaryRow, BinaryRow> expected = compare.get(id++);
@@ -238,7 +237,7 @@ public class SortMergeJoinIteratorTest {
 						assertEquals(expected, new Tuple2<>(probe, null));
 					}
 				} else {
-					RowIterator<BinaryRow> iter = iterator.getMatchBuffer().newIterator();
+					ResettableExternalBuffer.BufferIterator iter = iterator.getMatchBuffer().newIterator();
 					while (iter.advanceNext()) {
 						BaseRow row = iter.getRow();
 						Tuple2<BinaryRow, BinaryRow> expected = compare.get(id++);
@@ -276,24 +275,24 @@ public class SortMergeJoinIteratorTest {
 				ResettableExternalBuffer buffer2 = iterator.getBuffer2();
 
 				if (matchKey == null && buffer1.size() > 0) { // left outer join.
-					RowIterator<BinaryRow> iter = buffer1.newIterator();
+					ResettableExternalBuffer.BufferIterator iter = buffer1.newIterator();
 					while (iter.advanceNext()) {
 						BaseRow row = iter.getRow();
 						Tuple2<BinaryRow, BinaryRow> expected = compare.get(id++);
 						assertEquals(expected, new Tuple2<>(row, null));
 					}
 				} else if (matchKey == null && buffer2.size() > 0) { // right outer join.
-					RowIterator<BinaryRow> iter = buffer2.newIterator();
+					ResettableExternalBuffer.BufferIterator iter = buffer2.newIterator();
 					while (iter.advanceNext()) {
 						BaseRow row = iter.getRow();
 						Tuple2<BinaryRow, BinaryRow> expected = compare.get(id++);
 						assertEquals(expected, new Tuple2<>(null, row));
 					}
 				} else if (matchKey != null) { // match join.
-					RowIterator<BinaryRow> iter1 = buffer1.newIterator();
+					ResettableExternalBuffer.BufferIterator iter1 = buffer1.newIterator();
 					while (iter1.advanceNext()) {
 						BaseRow row1 = iter1.getRow();
-						RowIterator<BinaryRow> iter2 = buffer2.newIterator();
+						ResettableExternalBuffer.BufferIterator iter2 = buffer2.newIterator();
 						while (iter2.advanceNext()) {
 							BaseRow row2 = iter2.getRow();
 							Tuple2<BinaryRow, BinaryRow> expected = compare.get(id++);

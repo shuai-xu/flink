@@ -31,6 +31,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -48,6 +49,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	public static final BinaryString COMMA_UTF8 = BinaryString.fromString(",");
 	public static final BinaryString EMPTY_UTF8 = BinaryString.fromString("");
 	public static final BinaryString SPACE_UTF8 = BinaryString.fromString(" ");
+	public static final BinaryString[] EMPTY_STRING_ARRAY = new BinaryString[0];
 
 	private static final double[] FAST_POW10 = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
 
@@ -162,7 +164,9 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			// 4 bytes, 21 bits: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 			return 4;
 		} else {
-			throw new UnsupportedOperationException();
+			// throw new IllegalArgumentException();
+			// Skip the first byte disallowed in UTF-8
+			return 1;
 		}
 	}
 
@@ -368,13 +372,13 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		return MultiSegUtil.getBytes(segments, offset, numBytes);
 	}
 
-	private int decodeUTF8(char[] chars) {
+	private int decodeUTF8Strict(char[] chars) {
 		if (segments.length == 1) {
-			return StringUtf8Utils.decodeUTF8(segments[0], offset, numBytes, chars);
+			return StringUtf8Utils.decodeUTF8Strict(segments[0], offset, numBytes, chars);
 		} else {
 			byte[] bytes = StringUtf8Utils.allocateBytes(numBytes);
 			copyTo(bytes);
-			return StringUtf8Utils.decodeUTF8(bytes, 0, numBytes, chars);
+			return StringUtf8Utils.decodeUTF8Strict(bytes, 0, numBytes, chars);
 		}
 	}
 
@@ -1692,7 +1696,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		// As BigDecimal(char[], int, int) is faster than BigDecimal(String, int, int),
 		// we extract char[] from the memory segment and pass it to the constructor of BigDecimal.
 		char[] chars = StringUtf8Utils.allocateChars(numBytes);
-		int len = decodeUTF8(chars);
+		int len = decodeUTF8Strict(chars);
 
 		if (len < 0) {
 			throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
@@ -1779,5 +1783,76 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 
 	private BinaryString toLowerCaseSlow() {
 		return fromString(toString().toLowerCase());
+	}
+
+	/**
+	 * <p>Splits the provided text into an array, separator string specified. </p>
+	 *
+	 * <p>The separator is not included in the returned String array.
+	 * Adjacent separators are treated as separators for empty tokens.</p>
+	 *
+	 * <p>A {@code null} separator splits on whitespace.</p>
+	 *
+	 * <pre>
+	 * "".splitByWholeSeparatorPreserveAllTokens(*)                 = []
+	 * "ab de fg".splitByWholeSeparatorPreserveAllTokens(null)      = ["ab", "de", "fg"]
+	 * "ab   de fg".splitByWholeSeparatorPreserveAllTokens(null)    = ["ab", "", "", "de", "fg"]
+	 * "ab:cd:ef".splitByWholeSeparatorPreserveAllTokens(":")       = ["ab", "cd", "ef"]
+	 * "ab-!-cd-!-ef".splitByWholeSeparatorPreserveAllTokens("-!-") = ["ab", "cd", "ef"]
+	 * </pre>
+	 *
+	 * <p>Note: return BinaryStrings is reuse MemorySegments from this.</p>
+	 *
+	 * @param separator  String containing the String to be used as a delimiter,
+	 *  {@code null} splits on whitespace
+	 * @return an array of parsed Strings, {@code null} if null String was input
+	 * @since 2.4
+	 */
+	public BinaryString[] splitByWholeSeparatorPreserveAllTokens(BinaryString separator) {
+		final int len = numBytes;
+
+		if (len == 0) {
+			return EMPTY_STRING_ARRAY;
+		}
+
+		if (separator == null || EMPTY_UTF8.equals(separator)) {
+			// Split on whitespace.
+			return splitByWholeSeparatorPreserveAllTokens(SPACE_UTF8);
+		}
+
+		final int separatorLength = separator.numBytes;
+
+		final ArrayList<BinaryString> substrings = new ArrayList<>();
+		int beg = 0;
+		int end = 0;
+		while (end < len) {
+			end = BinaryRowUtil.find(
+					segments, offset + beg, numBytes - beg,
+					separator.segments, separator.offset, separator.numBytes) - offset;
+
+			if (end > -1) {
+				if (end > beg) {
+
+					// The following is OK, because String.substring( beg, end ) excludes
+					// the character at the position 'end'.
+					substrings.add(BinaryString.fromAddress(segments, offset + beg, end - beg));
+
+					// Set the starting point for the next search.
+					// The following is equivalent to beg = end + (separatorLength - 1) + 1,
+					// which is the right calculation:
+					beg = end + separatorLength;
+				} else {
+					// We found a consecutive occurrence of the separator.
+					substrings.add(EMPTY_UTF8);
+					beg = end + separatorLength;
+				}
+			} else {
+				// String.substring( beg ) goes from 'beg' to the end of the String.
+				substrings.add(BinaryString.fromAddress(segments, offset + beg, numBytes - beg));
+				end = len;
+			}
+		}
+
+		return substrings.toArray(new BinaryString[substrings.size()]);
 	}
 }

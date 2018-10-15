@@ -739,6 +739,33 @@ class AggregateITCase(
   }
 
   @Test
+  def testBigDataOfMinMaxWithBinaryString(): Unit = {
+    env.setParallelism(1)
+
+    val data = new mutable.MutableList[(Int, Long, String)]
+    for (i <- 0 until 100) {
+      data.+=((i % 10, i, i.toString))
+    }
+
+    val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("T", t)
+
+    val sql =
+      """
+        |SELECT a, min(b), max(c), min(c) FROM T GROUP BY a
+      """.stripMargin
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = List("0,0,90,0", "1,1,91,1", "2,2,92,12", "3,3,93,13",
+      "4,4,94,14", "5,5,95,15", "6,6,96,16", "7,7,97,17",
+      "8,8,98,18", "9,9,99,19")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
   def testAggWithFilterClause(): Unit = {
     val data = new mutable.MutableList[(Int, Long, String, Boolean)]
     data.+=((1, 5L, "B", true))
