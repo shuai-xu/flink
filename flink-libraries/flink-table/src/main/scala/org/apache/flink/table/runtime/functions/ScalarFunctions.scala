@@ -429,13 +429,21 @@ object ScalarFunctions {
         val mr: MatchResult = m.toMatchResult
         return mr.group(extractIndex.toInt)
       }
-      ""
+      null
     } catch {
       case e: Exception => {
         LOG.error("Exception when compile and match", e)
         null
       }
     }
+  }
+
+  /**
+    * Returns a string extracted with a specified regular expression and
+    * a optional regex match group index.
+    */
+  def regExpExtract(str: String, regex: String): String = {
+    regExpExtract(str, regex, 0)
   }
 
   def keyValue(

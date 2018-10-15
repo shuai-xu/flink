@@ -320,8 +320,11 @@ object ScalarSqlFunctions {
     SqlKind.OTHER_FUNCTION,
     VARCHAR_2000_NULLABLE,
     null,
-    OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
-    SqlFunctionCategory.STRING)
+    OperandTypes.or(OperandTypes.STRING_STRING_INTEGER,
+      OperandTypes.STRING_STRING
+    ),
+    SqlFunctionCategory.STRING
+  )
 
   val KEYVALUE = new SqlFunction(
     "KEYVALUE",

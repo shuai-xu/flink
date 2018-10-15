@@ -509,4 +509,10 @@ object BuiltInMethods {
     classOf[DateTimeFunctions],
     "convertTz",
     classOf[String], classOf[String], classOf[String], classOf[String])
+
+  val REGEXP_EXTRACT_WITHOUT_INDEX = Types.lookupMethod(
+    classOf[ScalarFunctions],
+    "regExpExtract",
+    classOf[String],
+    classOf[String])
 }

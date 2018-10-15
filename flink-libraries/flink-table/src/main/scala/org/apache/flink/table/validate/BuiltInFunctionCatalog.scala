@@ -230,6 +230,7 @@ object BuiltInFunctionCatalog {
     "lower" -> classOf[Lower],
     "lowerCase" -> classOf[Lower],
     "similar" -> classOf[Similar],
+    "regexpExtract" -> classOf[RegexpExtract],
     "substring" -> classOf[Substring],
     "left" -> classOf[Left],
     "right" -> classOf[Right],

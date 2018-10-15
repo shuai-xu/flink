@@ -653,3 +653,45 @@ case class RegexpReplace(str: Expression, regex: Expression, replacement: Expres
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
 }
+
+  /**
+  * Returns a string extracted with a specified regular expression and a regex match group index.
+  */
+case class RegexpExtract(str: Expression, regex: Expression, extractIndex: Expression)
+    extends Expression with InputTypeSpec {
+  def this(str: Expression, regex: Expression) = this(str, regex, null)
+
+  override private[flink] def resultType: InternalType = DataTypes.STRING
+
+  override private[flink] def expectedTypes: Seq[InternalType] = {
+    if (extractIndex == null) {
+      Seq(DataTypes.STRING, DataTypes.STRING)
+    } else {
+      Seq(
+        DataTypes.STRING,
+        DataTypes.STRING,
+        DataTypes.INT)
+    }
+  }
+
+  override private[flink] def children: Seq[Expression] = {
+    if (extractIndex == null) {
+      Seq(str, regex)
+    } else {
+      Seq(str, regex, extractIndex)
+    }
+  }
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.REGEXP_EXTRACT, children.map(_.toRexNode))
+  }
+
+  override def toString: String = s"($str).regexp_extract($regex, $extractIndex)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+object RegexpExtract {
+  def apply(str: Expression, regex: Expression): RegexpExtract = RegexpExtract(str, regex, null)
+}

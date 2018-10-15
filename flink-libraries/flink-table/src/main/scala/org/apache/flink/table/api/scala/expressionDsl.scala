@@ -28,7 +28,8 @@ import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.CoTableValuedAggregateFunction
 import org.apache.flink.table.expressions.{Hex, _}
-import org.apache.flink.table.expressions.{Atan2, Literal, RegexpReplace, UDTVAGGExpression, _}
+import org.apache.flink.table.expressions.{RegexpReplace, _}
+import org.apache.flink.table.expressions.{Atan2, Literal, RegexpExtract, UDTVAGGExpression, _}
 import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -652,6 +653,18 @@ trait ImplicitExpressionOperations {
         "The over method can only using with aggregation expression.")
     }
   }
+
+  /**
+    * Returns a string extracted with a specified regular expression and a regex match group index.
+    */
+  def regexpExtract(regex: Expression, extractIndex: Expression) =
+    RegexpExtract(expr, regex, extractIndex)
+
+  /**
+    * Returns a string extracted with a specified regular expression.
+    */
+  def regexpExtract(regex: Expression) =
+    RegexpExtract(expr, regex, null)
 
   /**
     * Replaces a substring of string with a string starting at a position (starting at 1).
