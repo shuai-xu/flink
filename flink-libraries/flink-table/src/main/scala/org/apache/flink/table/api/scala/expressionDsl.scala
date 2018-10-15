@@ -29,7 +29,8 @@ import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.CoTableValuedAggregateFunction
 import org.apache.flink.table.expressions.{Hex, _}
 import org.apache.flink.table.expressions.{RegexpReplace, _}
-import org.apache.flink.table.expressions.{Atan2, Literal, RegexpExtract, UDTVAGGExpression, _}
+import org.apache.flink.table.expressions.{RegexpExtract, _}
+import org.apache.flink.table.expressions.{Atan2, Literal, Repeat, UDTVAGGExpression, _}
 import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -554,6 +555,11 @@ trait ImplicitExpressionOperations {
     * @return trimmed string
     */
   def rtrim(character: Expression = TrimConstants.TRIM_DEFAULT_CHAR) = Rtrim(expr, character)
+
+  /**
+    * Returns a string that repeats the base string n times.
+    */
+  def repeat(n: Expression) = Repeat(expr, n)
 
   /**
     * Returns the length of a string.

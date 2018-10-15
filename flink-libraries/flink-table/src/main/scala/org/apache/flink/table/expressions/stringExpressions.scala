@@ -695,3 +695,34 @@ case class RegexpExtract(str: Expression, regex: Expression, extractIndex: Expre
 object RegexpExtract {
   def apply(str: Expression, regex: Expression): RegexpExtract = RegexpExtract(str, regex, null)
 }
+
+/**
+  * Returns a string that repeats the base str n times.
+  */
+case class Repeat(str: Expression, n: Expression) extends Expression with InputTypeSpec {
+
+  override private[flink] def resultType: InternalType = DataTypes.STRING
+
+  override private[flink] def expectedTypes: Seq[InternalType] =
+    Seq(DataTypes.STRING, DataTypes.INT)
+
+  override private[flink] def children: Seq[Expression] = Seq(str, n)
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.REPEAT, str.toRexNode, n.toRexNode)
+  }
+
+  override private[flink] def validateInput(): ValidationResult = {
+    if (str.resultType == DataTypes.STRING && n.resultType == DataTypes.INT) {
+      ValidationSuccess
+    } else {
+      ValidationFailure(s"Repeat operator requires (String, Int) input, " +
+          s"but ($str, $n) is of type (${str.resultType}, ${n.resultType})")
+    }
+  }
+
+  override def toString: String = s"($str).repeat($n)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}

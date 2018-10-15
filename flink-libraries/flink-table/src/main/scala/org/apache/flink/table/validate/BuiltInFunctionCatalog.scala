@@ -237,6 +237,7 @@ object BuiltInFunctionCatalog {
     "trim" -> classOf[Trim],
     "ltrim" -> classOf[Ltrim],
     "rtrim" -> classOf[Rtrim],
+    "repeat" -> classOf[Repeat],
     "upper" -> classOf[Upper],
     "upperCase" -> classOf[Upper],
     "position" -> classOf[Position],

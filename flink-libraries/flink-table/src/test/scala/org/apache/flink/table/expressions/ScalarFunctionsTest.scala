@@ -987,13 +987,41 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
 
   @Test
   def testRepeat(): Unit = {
-    testSqlApi("repeat(f35, 2)", "aa")
-    testSqlApi("repeat(f35, 0)", "")
-    testSqlApi("repeat(f40, 2)", "null")
-    testSqlApi("repeat('hi', 2)", "hihi")
-    testSqlApi("repeat('hi', 0)", "")
-    testSqlApi("repeat('hi', CAST(null as INT))", "null")
-    testSqlApi("repeat(CAST(null as VARCHAR), 2)", "null")
+    testAllApis(
+      'f0.repeat(1),
+      "f0.repeat(1)",
+      "REPEAT(f0, 1)",
+      "This is a test String.")
+
+    testAllApis(
+      'f0.repeat(2),
+      "f0.repeat(2)",
+      "REPEAT(f0, 2)",
+      "This is a test String.This is a test String.")
+
+    testAllApis(
+      'f0.repeat(0),
+      "f0.repeat(0)",
+      "REPEAT(f0, 0)",
+      "")
+
+    testAllApis(
+      'f0.repeat(-1),
+      "f0.repeat(-1)",
+      "REPEAT(f0, -1)",
+      "")
+
+    testAllApis(
+      'f33.repeat(2),
+      "f33.repeat(2)",
+      "REPEAT(f33, 2)",
+      "null")
+
+    testAllApis(
+      "".repeat(1),
+      "''.repeat(1)",
+      "REPEAT('', 2)",
+      "")
   }
 
   @Test
