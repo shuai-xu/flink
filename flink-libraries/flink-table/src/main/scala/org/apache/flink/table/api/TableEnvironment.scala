@@ -90,8 +90,6 @@ import _root_.scala.collection.mutable
   */
 abstract class TableEnvironment(val config: TableConfig) {
 
-  val DEFAULT_SCHEMA: String = "hive"
-
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
   private val internalSchema: CalciteSchema = CalciteSchema.createRootSchema(true, false)
@@ -1200,7 +1198,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   protected[flink] def isRegistered(name: String): Boolean = {
     val memContains: Boolean = rootSchema.getTableNames.contains(name)
     if (!memContains) {
-      val schemaPaths = Array(DEFAULT_SCHEMA)
+      val schemaPaths = Array(TableEnvironment.DEFAULT_SCHEMA)
       val schema = getSchema(schemaPaths)
       if (schema != null) {
         return schema.getTable(name) != null
@@ -1217,7 +1215,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
       // Second, try to get the table from the external catalog
       if (null == table) {
-        val schemaPaths = Array(DEFAULT_SCHEMA)
+        val schemaPaths = Array(TableEnvironment.DEFAULT_SCHEMA)
         val schema = getSchema(schemaPaths)
         if (schema != null) {
           table = schema.getTable(tablePath.head)
@@ -1238,7 +1236,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   def getExternalCatalog(catalogPaths: Array[String]): ExternalCatalog = {
     val externalCatalog = if (null == catalogPaths || catalogPaths.length == 0) {
-      getRegisteredExternalCatalog(DEFAULT_SCHEMA)
+      getRegisteredExternalCatalog(TableEnvironment.DEFAULT_SCHEMA)
     } else {
       val rootCatalog = getRegisteredExternalCatalog(catalogPaths.head)
       val leafCatalog = catalogPaths.slice(1, catalogPaths.length).foldLeft(rootCatalog) {
@@ -1690,6 +1688,11 @@ abstract class TableEnvironment(val config: TableConfig) {
   * environment.
   */
 object TableEnvironment {
+
+  /**
+    * The key for external catalog
+    */
+  val DEFAULT_SCHEMA: String = "hive"
 
   /**
     * The key mapping query plan in GlobalJobParameters.

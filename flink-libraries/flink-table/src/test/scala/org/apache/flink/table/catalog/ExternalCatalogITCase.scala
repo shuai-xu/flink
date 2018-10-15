@@ -58,8 +58,8 @@ class ExternalCatalogITCase {
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
     CollectionTableFactory.checkParam = true
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
         BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
@@ -102,8 +102,8 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
         BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
@@ -145,8 +145,8 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
         BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
@@ -189,8 +189,8 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -251,8 +251,8 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -312,8 +312,8 @@ class ExternalCatalogITCase {
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableEnv = TableEnvironment.getTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -379,8 +379,8 @@ class ExternalCatalogITCase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -439,8 +439,8 @@ class ExternalCatalogITCase {
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig())
     tableEnv.registerExternalCatalog(
-      tableEnv.DEFAULT_SCHEMA,
-      new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA))
+      TableEnvironment.DEFAULT_SCHEMA,
+      new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](

@@ -88,4 +88,6 @@ public final class PropertyStrings {
 	public static final String DEPLOYMENT_GATEWAY_ADDRESS = "gateway-address";
 
 	public static final String DEPLOYMENT_GATEWAY_PORT = "gateway-port";
+
+	public static final String EXECUTION_EXTERNAL_CATALOG = "external-catalog";
 }

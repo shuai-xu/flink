@@ -183,4 +183,8 @@ public class Execution {
 	public String getAttachMode() {
 		return properties.getOrDefault(PropertyStrings.EXECUTION_ATTACH_MODE, null);
 	}
+
+	public String getExternalCatalogType() {
+		return properties.getOrDefault(PropertyStrings.EXECUTION_EXTERNAL_CATALOG, "in-memory");
+	}
 }

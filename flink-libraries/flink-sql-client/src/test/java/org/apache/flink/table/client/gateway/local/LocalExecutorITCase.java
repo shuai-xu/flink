@@ -201,8 +201,7 @@ public class LocalExecutorITCase extends TestLogger {
 			// start job and retrieval
 			final ResultDescriptor desc = executor.executeQuery(
 				session,
-				//"SELECT scalarUDF(IntegerField1), StringField1 FROM TableNumber1");
-				"SELECT integerfield1, stringfield1 FROM hive.TableNumber1");
+				"SELECT scalarUDF(IntegerField1), StringField1 FROM hive.TableNumber1");
 			assertFalse(desc.isMaterialized());
 
 			final List<String> actualResults =
@@ -262,8 +261,7 @@ public class LocalExecutorITCase extends TestLogger {
 		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
 		replaceVars.put("$VAR_MAX_ROWS", "1");
 
-//		final String query = "SELECT COUNT(*), StringField1 FROM hive.TableNumber1 GROUP BY StringField1";
-		final String query = "SELECT COUNT(*), stringfield1 FROM hive.TableNumber1 GROUP BY stringfield1";
+		final String query = "SELECT COUNT(*), StringField1 FROM hive.TableNumber1 GROUP BY StringField1";
 
 		final List<String> expectedResults = new ArrayList<>();
 		expectedResults.add("5,Hello World");
@@ -272,7 +270,7 @@ public class LocalExecutorITCase extends TestLogger {
 		executeStreamQueryTable(replaceVars, query, expectedResults);
 	}
 
-	@Test(timeout = 300_000L)
+	@Test(timeout = 30_000L)
 	public void testBatchQueryExecution() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
@@ -416,8 +414,8 @@ public class LocalExecutorITCase extends TestLogger {
 								");";
 		executor.createTable(session, ddlTableNumber1);
 
-//		String ddlScalarUDF = "CREATE FUNCTION scalarUDF AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF';";
-//		executor.createFunction(session, ddlScalarUDF);
+		String ddlScalarUDF = "CREATE FUNCTION scalarUDF AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF';";
+		executor.createFunction(session, ddlScalarUDF);
 		return executor;
 	}
 

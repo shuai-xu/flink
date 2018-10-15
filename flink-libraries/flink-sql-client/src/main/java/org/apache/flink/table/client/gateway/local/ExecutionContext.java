@@ -28,6 +28,7 @@ import org.apache.flink.client.deployment.ClusterDescriptor;
 import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.externalcatalog.hive.HiveExternalCatalog;
 import org.apache.flink.optimizer.plan.FlinkPlan;
 import org.apache.flink.runtime.execution.librarycache.FlinkUserCodeClassLoaders;
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -38,6 +39,7 @@ import org.apache.flink.table.api.BatchQueryConfig;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.catalog.ExternalCatalog;
 import org.apache.flink.table.catalog.InMemoryExternalCatalog;
 import org.apache.flink.table.client.cli.SingleJobMode;
 import org.apache.flink.table.client.config.Deployment;
@@ -49,6 +51,7 @@ import org.apache.flink.util.FlinkException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
+import org.apache.hadoop.hive.conf.HiveConf;
 
 import java.net.URL;
 import java.util.List;
@@ -76,6 +79,8 @@ public class ExecutionContext<T> {
 	private final boolean needAttach;
 	private final boolean needShareEnv;
 
+	private ExternalCatalog externalCatalog = null;
+
 	public ExecutionContext(
 			Environment defaultEnvironment,
 			SessionContext sessionContext,
@@ -100,6 +105,8 @@ public class ExecutionContext<T> {
 		runOptions = createRunOptions(commandLine);
 		clusterId = activeCommandLine.getClusterId(commandLine);
 		clusterSpec = createClusterSpecification(activeCommandLine, commandLine);
+
+		externalCatalog = createExternalCatalog(this.mergedEnv.getExecution().getExternalCatalogType());
 
 		this.needAttach = this.needAttach(this.mergedEnv.getExecution());
 
@@ -227,6 +234,20 @@ public class ExecutionContext<T> {
 		throw new RuntimeException("Can not determine whether to share environment");
 	}
 
+	private ExternalCatalog createExternalCatalog(String externalCatalogType) {
+		if (externalCatalogType.equalsIgnoreCase("in-memory")) {
+			return new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA());
+		} else if (externalCatalogType.equalsIgnoreCase("hive")) {
+			HiveConf hiveConf = new HiveConf();
+			// TODO pass these from the configurations
+			hiveConf.setBoolVar(HiveConf.ConfVars.METASTORE_SCHEMA_VERIFICATION, false);
+			hiveConf.setBoolean("datanucleus.schema.autoCreateTables", true);
+			hiveConf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, "file:///tmp/hive");
+			return new HiveExternalCatalog(HiveExternalCatalog.DEFAULT, hiveConf);
+		} else {
+			throw new RuntimeException("No such external catalog supported: " + externalCatalogType);
+		}
+	}
 	// --------------------------------------------------------------------------------------------
 
 	/**
@@ -258,8 +279,8 @@ public class ExecutionContext<T> {
 
 			// TODO: use hive catalog when storing ExternalCatalogTable supported.
 			tableEnv.registerExternalCatalog(
-					tableEnv.DEFAULT_SCHEMA(),
-					new InMemoryExternalCatalog(tableEnv.DEFAULT_SCHEMA()));
+					TableEnvironment.DEFAULT_SCHEMA(),
+					externalCatalog);
 		}
 
 		public QueryConfig getQueryConfig() {
