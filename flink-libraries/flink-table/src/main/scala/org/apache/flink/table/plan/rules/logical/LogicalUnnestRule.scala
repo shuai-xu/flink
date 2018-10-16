@@ -23,6 +23,7 @@ import java.util.Collections
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.hep.HepRelVertex
+import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.rel.`type`.{RelDataTypeFieldImpl, RelRecordType, StructKind}
 import org.apache.calcite.rel.RelNode
@@ -47,11 +48,22 @@ class LogicalUnnestRule(
     val right = join.getRight.asInstanceOf[HepRelVertex].getCurrentRel
 
     right match {
+      // a filter is pushed above the table function
+      case filter: LogicalFilter =>
+        filter.getInput.asInstanceOf[HepRelVertex].getCurrentRel match {
+          case u: Uncollect => !u.withOrdinality
+          case p: LogicalProject => p.getInput.asInstanceOf[HepRelVertex].getCurrentRel match {
+            case u: Uncollect => !u.withOrdinality
+            case _ => false
+          }
+          case _ => false
+        }
       case project: LogicalProject =>
         project.getInput.asInstanceOf[HepRelVertex].getCurrentRel match {
           case u: Uncollect => !u.withOrdinality
           case _ => false
         }
+      case u: Uncollect => !u.withOrdinality
       case _ => false
     }
   }
@@ -68,6 +80,11 @@ class LogicalUnnestRule(
           convert(rs.getCurrentRel)
 
         case f: LogicalProject =>
+          f.copy(
+            f.getTraitSet,
+            ImmutableList.of(convert(f.getInput.asInstanceOf[HepRelVertex].getCurrentRel)))
+
+        case f: LogicalFilter =>
           f.copy(
             f.getTraitSet,
             ImmutableList.of(convert(f.getInput.asInstanceOf[HepRelVertex].getCurrentRel)))
