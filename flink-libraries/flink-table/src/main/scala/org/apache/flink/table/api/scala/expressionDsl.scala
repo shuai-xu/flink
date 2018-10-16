@@ -33,7 +33,8 @@ import org.apache.flink.table.expressions.{RegexpExtract, _}
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
 import org.apache.flink.table.expressions.{TimestampDiff, _}
 import org.apache.flink.table.expressions.{Repeat, _}
-import org.apache.flink.table.expressions.{Atan2, Cosh, Literal, UDTVAGGExpression, _}
+import org.apache.flink.table.expressions.{Cosh, _}
+import org.apache.flink.table.expressions.{Atan2, Literal, Replace, UDTVAGGExpression, _}
 import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -568,6 +569,13 @@ trait ImplicitExpressionOperations {
     * Returns a string that repeats the base string n times.
     */
   def repeat(n: Expression) = Repeat(expr, n)
+
+  /**
+    * Returns a new string which replaces all the occurrences of the search target
+    * with the replacement string (non-overlapping).
+    */
+  def replace(search: Expression, replacement: Expression) =
+    Replace(expr, search, replacement)
 
   /**
     * Returns the length of a string.

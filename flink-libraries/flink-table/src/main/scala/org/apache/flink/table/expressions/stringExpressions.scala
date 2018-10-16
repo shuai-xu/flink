@@ -727,6 +727,33 @@ case class Repeat(str: Expression, n: Expression) extends Expression with InputT
     logicalExprVisitor.visit(this)
 }
 
+/**
+* Returns a new string which replaces all the occurrences of the search target
+* with the replacement string (non-overlapping).
+*/
+case class Replace(str: Expression,
+    search: Expression,
+    replacement: Expression) extends Expression with InputTypeSpec {
+
+  def this(str: Expression, begin: Expression) = this(str, begin, CharLength(str))
+
+  override private[flink] def children: Seq[Expression] = str :: search :: replacement :: Nil
+
+  override private[flink] def resultType: InternalType = DataTypes.STRING
+
+  override private[flink] def expectedTypes: Seq[InternalType] =
+    Seq(DataTypes.STRING, DataTypes.STRING, DataTypes.STRING)
+
+  override def toString: String = s"($str).replace($search, $replacement)"
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.REPLACE, children.map(_.toRexNode))
+  }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
 case class UUID() extends LeafExpression {
   override private[flink] def resultType = DataTypes.STRING
 

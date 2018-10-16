@@ -169,6 +169,7 @@ class SqlExpressionTest extends ExpressionTestBase {
     testSqlApi(
       "REPEAT('This is a test String.', 2)",
       "This is a test String.This is a test String.")
+    testSqlApi("REPLACE('hello world', 'world', 'flink')", "hello flink")
   }
 
   @Test

@@ -363,6 +363,39 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
   }
 
   @Test
+  def testReplace(): Unit = {
+    testAllApis(
+      'f0.replace(" ", "_"),
+      "f0.replace(' ', '_')",
+      "REPLACE(f0, ' ', '_')",
+      "This_is_a_test_String.")
+
+    testAllApis(
+      'f0.replace("i", ""),
+      "f0.replace('i', '')",
+      "REPLACE(f0, 'i', '')",
+      "Ths s a test Strng.")
+
+    testAllApis(
+      'f33.replace("i", ""),
+      "f33.replace('i', '')",
+      "REPLACE(f33, 'i', '')",
+      "null")
+
+    testAllApis(
+      'f0.replace(Null(DataTypes.STRING), ""),
+      "f0.replace(Null(STRING), '')",
+      "REPLACE(f0, NULLIF('', ''), '')",
+      "null")
+
+    testAllApis(
+      'f0.replace(" ", Null(DataTypes.STRING)),
+      "f0.replace(' ', Null(STRING))",
+      "REPLACE(f0, ' ', NULLIF('', ''))",
+      "null")
+  }
+
+  @Test
   def testTrim(): Unit = {
     testAllApis(
       'f8.trim(),
@@ -1031,19 +1064,6 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
     testSqlApi("reverse('hi')", "ih")
     testSqlApi("reverse('hhhi')", "ihhh")
     testSqlApi("reverse(CAST(null as VARCHAR))", "null")
-  }
-
-  @Test
-  def testReplace(): Unit = {
-    testSqlApi("replace(f38, 'A', 'a')", "aQIDBa==")
-    testSqlApi("replace(f38, 'Z', 'a')", "AQIDBA==")
-    testSqlApi("replace(f38, CAST(null as VARCHAR), 'a')", "null")
-    testSqlApi("replace(f38, 'A', CAST(null as VARCHAR))", "null")
-    testSqlApi("replace(f40, 'A', 'a')", "null")
-    testSqlApi("replace('Test', 'T', 't')", "test")
-    testSqlApi("replace(CAST(null as VARCHAR), 'T', 't')", "null")
-    testSqlApi("replace('Test', CAST(null as VARCHAR), 't')", "null")
-    testSqlApi("replace('Test', 'T', CAST(null as VARCHAR))", "null")
   }
 
   @Test

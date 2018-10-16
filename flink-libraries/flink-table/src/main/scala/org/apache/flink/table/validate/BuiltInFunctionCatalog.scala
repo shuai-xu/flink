@@ -232,6 +232,7 @@ object BuiltInFunctionCatalog {
     "similar" -> classOf[Similar],
     "regexpExtract" -> classOf[RegexpExtract],
     "substring" -> classOf[Substring],
+    "replace" -> classOf[Replace],
     "left" -> classOf[Left],
     "right" -> classOf[Right],
     "trim" -> classOf[Trim],
