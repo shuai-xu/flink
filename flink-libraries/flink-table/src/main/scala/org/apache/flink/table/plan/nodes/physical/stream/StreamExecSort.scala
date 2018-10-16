@@ -98,7 +98,7 @@ class StreamExecSort(
       tableEnv: StreamTableEnvironment,
       queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
 
-    if (!queryConfig.getNonTemporalSort) {
+    if (!queryConfig.isNonTemporalSortEnabled) {
       throw TableException("Sort on a non-time-attribute field is not supported.")
     }
 

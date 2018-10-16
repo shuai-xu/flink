@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.util.{Map => JMap}
-
 import _root_.java.io.Serializable
+import _root_.java.lang.{Boolean => JBoolean, Long => JLong}
+import _root_.java.util.{Map => JMap}
 
 import org.apache.flink.annotation.Experimental
 import org.apache.flink.api.common.time.Time
@@ -65,18 +65,6 @@ class StreamQueryConfig extends QueryConfig {
   private val parameters = GlobalConfiguration.loadConfiguration()
 
   /**
-    * The minimum time until state which was not updated will be retained.
-    * State might be cleared and removed if it was not updated for the defined period of time.
-    */
-  private var minIdleStateRetentionTime: Long = Long.MinValue
-
-  /**
-    * The maximum time until state which was not updated will be retained.
-    * State will be cleared and removed if it was not updated for the defined period of time.
-    */
-  private var maxIdleStateRetentionTime: Long = Long.MinValue
-
-  /**
     * The early firing interval in milli second, early fire is the emit strategy
     * before watermark advanced to end of window.
     *
@@ -100,42 +88,8 @@ class StreamQueryConfig extends QueryConfig {
 
   private var microBatchEnabled: Boolean = false
 
-  private var microBatchTriggerTime: Long = Long.MinValue
-
   private var miniBatchEnabled: Boolean = false
 
-  private var miniBatchTriggerTime: Long = Long.MinValue
-
-  private var miniBatchTriggerSize: Long = Long.MinValue
-
-  private var localAggEnabled: Boolean = false
-
-  private var partialAggEnabled: Boolean = false
-
-  private var miniBatchJoinEnabled: Boolean = false
-
-  private var topnCacheSize: Long = 10000
-
-  private var topnApproxEnabled: Boolean = false
-
-  private var topnApproxBufferMultiplier: Long = 2
-
-  private var topnApproxBufferMinSize: Long = 400
-
-  /**
-    * Set whether to enable universal sort for stream.
-    * When it is false, universal sort can't use for stream, default false.
-    * Just for testing.
-    */
-  private var nonTemporalSort: Boolean = false
-
-  /**
-    * Whether support values source input
-    *
-    * The reason for disabling this feature is that checkpoint will not work properly when
-    * source finished
-    */
-  private var valuesSourceInputEnabled: Boolean = false
 
   /**
     * Stores managed table name to aggregate state writer mapping.
@@ -207,8 +161,8 @@ class StreamQueryConfig extends QueryConfig {
     if (maxTime.toMilliseconds < minTime.toMilliseconds) {
       throw new IllegalArgumentException("maxTime may not be smaller than minTime.")
     }
-    minIdleStateRetentionTime = minTime.toMilliseconds
-    maxIdleStateRetentionTime = maxTime.toMilliseconds
+    this.parameters.setLong(BLINK_STATE_TTL_MS, minTime.toMilliseconds)
+    this.parameters.setLong(BLINK_STATE_TTL_MAX_MS, maxTime.toMilliseconds)
     this
   }
 
@@ -242,31 +196,29 @@ class StreamQueryConfig extends QueryConfig {
     this
   }
 
-  def withPartialBucketNum(buckets: Integer): StreamQueryConfig = {
-    if (buckets <= 0) {
-      throw new RuntimeException("partialAgg buckets number must be positive!")
-    }
-    this.parameters.setInteger(SQL_EXEC_AGG_PARTIAL_BUCKET_NUM, buckets)
-    this
-  }
-
-  def getPartialBucketNum: Integer = {
-    this.parameters.getInteger(SQL_EXEC_AGG_PARTIAL_BUCKET_NUM)
-  }
-
   def getMinIdleStateRetentionTime: Long = {
-    minIdleStateRetentionTime
+    this.parameters.getLong(BLINK_STATE_TTL_MS)
   }
 
   def getMaxIdleStateRetentionTime: Long = {
-    maxIdleStateRetentionTime
+    // only min idle ttl provided.
+    if (this.parameters.contains(BLINK_STATE_TTL_MS)
+      && !this.parameters.contains(BLINK_STATE_TTL_MAX_MS)) {
+      this.parameters.setLong(BLINK_STATE_TTL_MAX_MS, getMinIdleStateRetentionTime * 2)
+    }
+    this.parameters.getLong(BLINK_STATE_TTL_MAX_MS)
   }
 
   def getEarlyFireInterval: Long = earlyFireInterval
 
   def getLateFireInterval: Long = lateFireInterval
 
-  def isMiniBatchEnabled: Boolean = miniBatchEnabled
+  def isMiniBatchEnabled: Boolean = {
+    if (this.parameters.contains(BLINK_MINIBATCH_ALLOW_LATENCY)) {
+      miniBatchEnabled = true
+    }
+    miniBatchEnabled
+  }
 
   def enableMiniBatch: StreamQueryConfig = {
     miniBatchEnabled = true
@@ -278,7 +230,12 @@ class StreamQueryConfig extends QueryConfig {
     this
   }
 
-  def isMicroBatchEnabled: Boolean = microBatchEnabled
+  def isMicroBatchEnabled: Boolean = {
+    if (this.parameters.contains(BLINK_MICROBATCH_ALLOW_LATENCY)) {
+      microBatchEnabled = true
+    }
+    microBatchEnabled
+  }
 
   def enableMicroBatch: StreamQueryConfig = {
     microBatchEnabled = true
@@ -294,47 +251,54 @@ class StreamQueryConfig extends QueryConfig {
     if (triggerTime <= 0L) {
       throw new RuntimeException("triggerTime must be positive")
     }
-    microBatchTriggerTime = triggerTime
+    this.parameters.setLong(BLINK_MICROBATCH_ALLOW_LATENCY, triggerTime)
     this
   }
 
-  def getMicroBatchTriggerTime: Long = microBatchTriggerTime
+  def getMicroBatchTriggerTime: Long = {
+    this.parameters.getLong(BLINK_MICROBATCH_ALLOW_LATENCY)
+  }
 
-  def isLocalAggEnabled: Boolean = localAggEnabled
+  def isLocalAggEnabled: Boolean = parameters.getBoolean(SQL_EXEC_AGG_LOCAL_ENABLED)
 
-  def isPartialAggEnabled: Boolean = partialAggEnabled
+  def isPartialAggEnabled: Boolean = parameters.getBoolean(SQL_EXEC_AGG_PARTIAL_ENABLED)
 
-  def isMiniBatchJoinEnabled: Boolean = miniBatchJoinEnabled
+  def isMiniBatchJoinEnabled: Boolean = {
+    // enable miniBatch Join by default if miniBatch is enabled.
+    isMiniBatchEnabled && this.parameters.getBoolean(BLINK_MINIBATCH_JOIN_ENABLED)
+  }
 
-  def isValuesSourceInputEnabled: Boolean = valuesSourceInputEnabled
+  def isValuesSourceInputEnabled: Boolean = {
+    this.parameters.getBoolean(BLINK_VALUES_SOURCE_INPUT_ENABLED)
+  }
 
   def enableLocalAgg: StreamQueryConfig = {
-    localAggEnabled = true
+    this.parameters.setBoolean(SQL_EXEC_AGG_LOCAL_ENABLED, true)
     this
   }
 
   def disableLocalAgg: StreamQueryConfig = {
-    localAggEnabled = false
+    this.parameters.setBoolean(SQL_EXEC_AGG_LOCAL_ENABLED, false)
     this
   }
 
   def enablePartialAgg: StreamQueryConfig = {
-    partialAggEnabled = true
+    this.parameters.setBoolean(SQL_EXEC_AGG_PARTIAL_ENABLED, true)
     this
   }
 
   def disablePartialAgg: StreamQueryConfig = {
-    partialAggEnabled = false
+    this.parameters.setBoolean(SQL_EXEC_AGG_PARTIAL_ENABLED, false)
     this
   }
 
   def enableMiniBatchJoin: StreamQueryConfig = {
-    miniBatchJoinEnabled = true
+    this.parameters.setBoolean(BLINK_MINIBATCH_JOIN_ENABLED, true)
     this
   }
 
   def disableMiniBatchJoin: StreamQueryConfig = {
-    miniBatchJoinEnabled = false
+    this.parameters.setBoolean(BLINK_MINIBATCH_JOIN_ENABLED, false)
     this
   }
 
@@ -342,7 +306,7 @@ class StreamQueryConfig extends QueryConfig {
     if (triggerTime <= 0L) {
       throw new RuntimeException("triggerTime must be positive")
     }
-    miniBatchTriggerTime = triggerTime
+    this.parameters.setLong(BLINK_MINIBATCH_ALLOW_LATENCY, triggerTime)
     this
   }
 
@@ -350,13 +314,17 @@ class StreamQueryConfig extends QueryConfig {
     if (triggerSize <= 0L) {
       throw new RuntimeException("triggerSize must be positive")
     }
-    miniBatchTriggerSize = triggerSize
+    this.parameters.setLong(BLINK_MINIBATCH_SIZE, triggerSize)
     this
   }
 
-  def getMiniBatchTriggerTime: Long = miniBatchTriggerTime
+  def getMiniBatchTriggerTime: Long = {
+    this.parameters.getLong(BLINK_MINIBATCH_ALLOW_LATENCY)
+  }
 
-  def getMiniBatchTriggerSize: Long = miniBatchTriggerSize
+  def getMiniBatchTriggerSize: Long = {
+    this.parameters.getLong(BLINK_MINIBATCH_SIZE)
+  }
 
   def addQueryableState2AggFunctionMapping(queryableName: String, udagg: JTuple2[String,
     AggregateFunction[_, _]]) = {
@@ -371,73 +339,82 @@ class StreamQueryConfig extends QueryConfig {
     if (cacheSize <= 0L) {
       throw new IllegalArgumentException("cacheSize must be positive")
     }
-    this.topnCacheSize = cacheSize
+    this.parameters.setLong(BLINK_TOPN_CACHE_SIZE, cacheSize)
     this
   }
 
-  def getTopNCacheSize: Long = topnCacheSize
+  def getTopNCacheSize: Long = {
+    this.parameters.getLong(BLINK_TOPN_CACHE_SIZE)
+  }
 
   def enableTopNApprox: StreamQueryConfig = {
-    this.topnApproxEnabled = true
+    this.parameters.setBoolean(BLINK_TOPN_APPROXIMATE_ENABLED, true)
     this
   }
 
   def disableTopNApprox: StreamQueryConfig = {
-    this.topnApproxEnabled = false
+    this.parameters.setBoolean(BLINK_TOPN_APPROXIMATE_ENABLED, false)
     this
   }
 
-  def isTopNApproxEnabled: Boolean = topnApproxEnabled
+  def isTopNApproxEnabled: Boolean = {
+    this.parameters.getBoolean(BLINK_TOPN_APPROXIMATE_ENABLED)
+  }
 
   def withTopNApproxBufferMultiplier(topnApproxBufferMultiplier: Long): StreamQueryConfig = {
-    this.topnApproxBufferMultiplier = topnApproxBufferMultiplier
+    if (topnApproxBufferMultiplier <= 0L) {
+      throw new IllegalArgumentException("topnApproxBufferMultiplier must be positive")
+    }
+    this.parameters.setLong(BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER, topnApproxBufferMultiplier)
     this
   }
 
-  def getTopNApproxBufferMultiplier: Long = topnApproxBufferMultiplier
+  def getTopNApproxBufferMultiplier: Long = {
+    this.parameters.getLong(BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER)
+  }
 
   def withTopNApproxBufferMinSize(topnApproxBufferMinSize: Long): StreamQueryConfig = {
-    this.topnApproxBufferMinSize = topnApproxBufferMinSize
+    if (topnApproxBufferMinSize < 0L) {
+      throw new IllegalArgumentException("topnApproxBufferMinSize must be positive")
+    }
+    this.parameters.setLong(BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE, topnApproxBufferMinSize)
     this
   }
 
-  def getTopNApproxBufferMinSize: Long = topnApproxBufferMinSize
+  def getTopNApproxBufferMinSize: Long = {
+    this.parameters.getLong(BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE)
+  }
 
   def enableValuesSourceInput: StreamQueryConfig = {
-    valuesSourceInputEnabled = true
+    this.parameters.setBoolean(BLINK_VALUES_SOURCE_INPUT_ENABLED, true)
     this
   }
 
   def disableValuesSourceInput: StreamQueryConfig = {
-    valuesSourceInputEnabled = false
+    this.parameters.setBoolean(BLINK_VALUES_SOURCE_INPUT_ENABLED, false)
     this
   }
 
   def enableNonTemporalSort: StreamQueryConfig = {
-    nonTemporalSort = true
+    this.parameters.setBoolean(BLINK_NON_TEMPORAL_SORT_ENABLED, true)
     this
   }
 
-  def getNonTemporalSort: Boolean = nonTemporalSort
+  def isNonTemporalSortEnabled: Boolean = {
+    this.parameters.getBoolean(BLINK_NON_TEMPORAL_SORT_ENABLED)
+  }
 
-  def copy: StreamQueryConfig = {
-    val newCopy = new StreamQueryConfig
-    newCopy.minIdleStateRetentionTime = this.minIdleStateRetentionTime
-    newCopy.maxIdleStateRetentionTime = this.maxIdleStateRetentionTime
-    newCopy.miniBatchEnabled = this.miniBatchEnabled
-    newCopy.miniBatchTriggerTime = this.miniBatchTriggerTime
-    newCopy.miniBatchTriggerSize = this.miniBatchTriggerSize
-    newCopy.localAggEnabled = this.localAggEnabled
-    newCopy.miniBatchJoinEnabled = this.miniBatchJoinEnabled
-    newCopy.earlyFireInterval = this.earlyFireInterval
-    newCopy.lateFireInterval = this.lateFireInterval
-    newCopy.topnCacheSize = this.topnCacheSize
-    newCopy.topnApproxEnabled = this.topnApproxEnabled
-    newCopy.topnApproxBufferMultiplier = this.topnApproxBufferMultiplier
-    newCopy.topnApproxBufferMinSize = this.topnApproxBufferMinSize
-    newCopy.valuesSourceInputEnabled = this.valuesSourceInputEnabled
-    newCopy.nonTemporalSort = this.nonTemporalSort
-    newCopy
+  def withPartialBucketNum(buckets: Integer): StreamQueryConfig = {
+    this.parameters.setInteger(SQL_EXEC_AGG_PARTIAL_BUCKET_NUM, buckets)
+    this
+  }
+
+  def getPartialBucketNum: Integer = {
+    val bucketNum = this.parameters.getInteger(SQL_EXEC_AGG_PARTIAL_BUCKET_NUM)
+    if (bucketNum <= 0) {
+      throw new RuntimeException("Bucket number in Partial Agg must be positive!")
+    }
+    bucketNum
   }
 }
 
@@ -448,4 +425,94 @@ object StreamQueryConfig {
     .key("sql.exec.partialAgg.bucket.num")
     .defaultValue(256)
 
+  /** microbatch allow latency (ms) */
+  val BLINK_MICROBATCH_ALLOW_LATENCY: ConfigOption[JLong] = ConfigOptions
+    .key("blink.microBatch.allowLatencyMs")
+    .defaultValue(Long.MinValue)
+
+  /** minibatch allow latency(ms) */
+  val BLINK_MINIBATCH_ALLOW_LATENCY: ConfigOption[JLong] = ConfigOptions
+    .key("blink.miniBatch.allowLatencyMs")
+    .defaultValue(Long.MinValue)
+
+  /** minibatch size, default 100 */
+  val BLINK_MINIBATCH_SIZE: ConfigOption[JLong] = ConfigOptions
+    .key("blink.miniBatch.size")
+    .defaultValue(Long.MinValue)
+
+  /** whether to enable local agg */
+  val SQL_EXEC_AGG_LOCAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.localAgg.enabled")
+    .defaultValue(true)
+
+  /** whether to enable partial agg */
+  val SQL_EXEC_AGG_PARTIAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.partialAgg.enabled")
+    .defaultValue(false)
+
+  /** whether to enable miniBatch join */
+  val BLINK_MINIBATCH_JOIN_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.miniBatch.join.enabled")
+    .defaultValue(true)
+
+  /** switch on/off topn approximate update rank operator, default is false */
+  val BLINK_TOPN_APPROXIMATE_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.topn.approximate.enabled")
+    .defaultValue(false)
+
+  /** cache size of every topn task, default is 10000 */
+  val BLINK_TOPN_CACHE_SIZE: ConfigOption[JLong] = ConfigOptions
+    .key("blink.topn.cache.size")
+    .defaultValue(10000L)
+
+  /** in-memory sort map size multiplier (x2, for example) for topn update rank
+    * when approximation is enabled, default is 2. NOTE, We should make sure
+    * sort map size limit * blink.topn.approximate.buffer.multiplier < blink.topn.cache.size.
+    */
+  val BLINK_TOPN_APPROXIMATE_BUFFER_MULTIPLIER: ConfigOption[JLong] = ConfigOptions
+    .key("blink.topn.approximate.buffer.multiplier")
+    .defaultValue(2L)
+
+  /** in-memory sort map size low minimal size. default is 400, and 0 meaning no low limit
+    * for each topn job, if buffer.multiplier * topn < buffer.minsize, then buffer is set
+    * to buffer.minsize.
+    */
+  val BLINK_TOPN_APPROXIMATE_BUFFER_MINSIZE: ConfigOption[JLong] = ConfigOptions
+    .key("blink.topn.approximate.buffer.minsize")
+    .defaultValue(400L)
+
+  /**
+    * Whether support values source input
+    *
+    * The reason for disabling this feature is that checkpoint will not work properly when
+    * source finished
+    */
+  val BLINK_VALUES_SOURCE_INPUT_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.values.source.input.enabled")
+    .defaultValue(false)
+
+  /** switch on/off stream sort without temporal or limit
+    * Set whether to enable universal sort for stream.
+    * When it is false, universal sort can't use for stream, default false.
+    * Just for testing.
+    */
+  val BLINK_NON_TEMPORAL_SORT_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.non-temporal-sort.enabled")
+    .defaultValue(false)
+
+  /**
+    * The minimum time until state which was not updated will be retained.
+    * State might be cleared and removed if it was not updated for the defined period of time.
+    */
+  val BLINK_STATE_TTL_MS: ConfigOption[JLong] = ConfigOptions
+    .key("blink.state.ttl.ms")
+    .defaultValue(Long.MinValue)
+
+  /**
+    * The maximum time until state which was not updated will be retained.
+    * State will be cleared and removed if it was not updated for the defined period of time.
+    */
+  val BLINK_STATE_TTL_MAX_MS: ConfigOption[JLong] = ConfigOptions
+    .key("blink.state.ttl.max.ms")
+    .defaultValue(Long.MinValue)
 }
