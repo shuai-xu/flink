@@ -40,7 +40,27 @@ StreamExecCalc(select=[a, b, name])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testJoinOnDifferentKeyTypes">
+	<TestCase name="testJoinOnDifferentKeyTypesForTableAPI">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
+  StreamExecJoinTable(join=[a, b, c, proc, rt, b0, id, name, age], on=[[5-0]], joinType=[InnerJoin], period=[$3])
+    StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+    <TestCase name="testJoinOnDifferentKeyTypes">
+        <Resource name="plan">
+            <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
+  StreamExecJoinTable(join=[a, b, c, proc, rt, b0, id, name, age], on=[[5-0]], joinType=[InnerJoin], period=[$cor0.proc])
+    StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+        </Resource>
+    </TestCase>
+  <TestCase name="testJoinStaticTable">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
@@ -88,6 +108,15 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
 ]]>
     </Resource>
   </TestCase>
+	<TestCase name="testLeftJoinTemporalTableForTableAPI">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
+  StreamExecJoinTable(join=[a, b, c, proc, rt, id, name, age], on=[[0-0]], joinType=[LeftOuterJoin], period=[$3])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
   <TestCase name="testJoinTemporalTableWithProjectionPushDown">
     <Resource name="plan">
       <![CDATA[

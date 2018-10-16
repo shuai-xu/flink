@@ -46,4 +46,18 @@ class CalcValidationTest extends TableTestBase {
     .groupBy('w)
     .select('w.end.rowtime, 'int.count as 'int) // no rowtime on non-window reference
   }
+
+  @Test(expected = classOf[ValidationException])
+  def testAsof(): Unit = {
+    val util = streamTestUtil()
+    util.addTable[(String)]("MyTable", 'string)
+      .asof(proctime()) // Only temporary table can set the data version.
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testAsofEmptyVersion(): Unit = {
+    val util = streamTestUtil()
+    util.addTable[(String)]("MyTable", 'string)
+    .asof("") // The dataVersion of temporal table can not be empty.
+  }
 }

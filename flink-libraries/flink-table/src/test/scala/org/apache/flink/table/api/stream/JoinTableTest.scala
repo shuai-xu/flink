@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.api.stream.sql
+package org.apache.flink.table.api.stream
 
 import java.util
 
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.async.AsyncFunction
+import org.apache.flink.table.api._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{SqlParserException, TableException, TableSchema, ValidationException}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.utils.TestingAppendSink
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
@@ -33,10 +34,17 @@ import org.junit.Test
 
 class JoinTableTest extends TableTestBase {
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
-  streamUtil.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c, 'proc.proctime, 'rt.rowtime)
-  streamUtil.addTable[(Int, String, Long, Double)]("T1", 'a, 'b, 'c, 'd)
+  private val t = streamUtil.addTable[(Int, String, Long)](
+    "MyTable", 'a, 'b, 'c, 'proc.proctime, 'rt.rowtime)
+  private val t1 = streamUtil.addTable[(Int, String, Long, Double)](
+    "T1", 'a, 'b, 'c, 'd)
   streamUtil.tableEnv.registerTableSource("dimTemporal", new TestDimensionTable(true))
   streamUtil.tableEnv.registerTableSource("dimStatic", new TestDimensionTable(false))
+
+  private val dimTemporal = streamUtil.tableEnv.scan("dimTemporal")
+  private val dimStatic = streamUtil.tableEnv.scan("dimStatic")
+
+  private val sink = new TestingAppendSink
 
   @Test
   def testJoinInvalidJoinTemporalTable(): Unit = {
@@ -53,6 +61,11 @@ class JoinTableTest extends TableTestBase {
       "Currently only support join temporal table as of on left table's proctime field",
       classOf[AssertionError])
 
+    tableExpectExceptionThrown(
+      t.join(dimTemporal.asof('rt), 'a === 'id).select("*"),
+      "Currently only support join temporal table as of on left table's proctime field",
+      classOf[ValidationException])
+
     // can't query a dim table directly
     expectExceptionThrown(
       "SELECT * FROM dimTemporal FOR SYSTEM_TIME AS OF TIMESTAMP '2017-08-09 14:36:11'",
@@ -68,6 +81,13 @@ class JoinTableTest extends TableTestBase {
         "unique key(s) or index field(s).",
       classOf[AssertionError]
     )
+
+    tableExpectExceptionThrown(
+      t.join(dimTemporal.asof(proctime()), 'a === 'age)
+      .select('age).addSink(sink),
+      "Join Dimension table requires an equality condition on ALL of table's " +
+        "primary key(s) or unique key(s) or index field(s).",
+      classOf[AssertionError])
 
     // only support left or inner join
     expectExceptionThrown(
@@ -91,7 +111,12 @@ class JoinTableTest extends TableTestBase {
   def testJoinOnDifferentKeyTypes(): Unit = {
     // Will do implicit type coercion.
     streamUtil.verifyPlan("SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal "
-      + "FOR SYSTEM_TIME AS OF T.proc AS D ON T.b = D.id")
+                            + "FOR SYSTEM_TIME AS OF T.proc AS D ON T.b = D.id")
+  }
+
+  @Test
+  def testJoinOnDifferentKeyTypesForTableAPI(): Unit = {
+    streamUtil.verifyPlan(t.join(dimTemporal.asof('proc), 'b.cast(DataTypes.INT) === 'id))
   }
 
   @Test
@@ -124,6 +149,11 @@ class JoinTableTest extends TableTestBase {
       "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.a = D.id"
 
     streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testLeftJoinTemporalTableForTableAPI(): Unit = {
+    streamUtil.verifyPlan(t.leftOuterJoin(dimTemporal.asof('proc), 'a === 'id))
   }
 
   @Test
@@ -193,17 +223,17 @@ class JoinTableTest extends TableTestBase {
 
     val sql2 =
       s"""
-        |SELECT T.* FROM ($sql1) AS T
-        |JOIN LATERAL dimTemporal FOR SYSTEM_TIME AS OF PROCTIME() AS D
-        |ON T.a = D.id
-        |WHERE D.age > 10
+         |SELECT T.* FROM ($sql1) AS T
+         |JOIN LATERAL dimTemporal FOR SYSTEM_TIME AS OF PROCTIME() AS D
+         |ON T.a = D.id
+         |WHERE D.age > 10
       """.stripMargin
 
     val sql =
       s"""
-        |SELECT b, count(a), sum(c), sum(d)
-        |FROM ($sql2) AS T
-        |GROUP BY b
+         |SELECT b, count(a), sum(c), sum(d)
+         |FROM ($sql2) AS T
+         |GROUP BY b
       """.stripMargin
 
     streamUtil.verifyPlan(sql)
@@ -218,6 +248,27 @@ class JoinTableTest extends TableTestBase {
   : Unit = {
     try {
       streamUtil.tableEnv.explain(streamUtil.tableEnv.sqlQuery(sql))
+      fail(s"Expected a $clazz, but no exception is thrown.")
+    } catch {
+      case e if e.getClass == clazz =>
+        if (keywords != null) {
+          assertTrue(
+            s"The exception message '${e.getMessage}' doesn't contain keyword '$keywords'",
+            e.getMessage.contains(keywords))
+        }
+      case e: Throwable =>
+        e.printStackTrace()
+        fail(s"Expected throw ${clazz.getSimpleName}, but is $e.")
+    }
+  }
+
+  private def tableExpectExceptionThrown(
+    function: => Unit,
+    keywords: String,
+    clazz: Class[_ <: Throwable] = classOf[ValidationException])
+  : Unit = {
+    try {
+      function
       fail(s"Expected a $clazz, but no exception is thrown.")
     } catch {
       case e if e.getClass == clazz =>
@@ -257,7 +308,7 @@ class JoinTableTest extends TableTestBase {
     override def isAsync: Boolean = false
 
     override def getAsyncLookupFunction(
-        index: IndexKey): AsyncFunction[BaseRow, BaseRow] = {
+      index: IndexKey): AsyncFunction[BaseRow, BaseRow] = {
       null
     }
 
