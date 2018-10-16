@@ -251,6 +251,7 @@ object BuiltInFunctionCatalog {
     "encode" -> classOf[Encode],
     "decode" -> classOf[Decode],
     "instr" -> classOf[Instr],
+    "uuid" -> classOf[UUID],
 
     // math functions
     "plus" -> classOf[Plus],

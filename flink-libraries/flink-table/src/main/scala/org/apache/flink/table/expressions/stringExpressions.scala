@@ -726,3 +726,16 @@ case class Repeat(str: Expression, n: Expression) extends Expression with InputT
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
 }
+
+case class UUID() extends LeafExpression {
+  override private[flink] def resultType = DataTypes.STRING
+
+  override def toString: String = s"uuid()"
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.UUID)
+  }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}

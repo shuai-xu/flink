@@ -79,6 +79,16 @@ class NonDeterministicTests extends ExpressionTestBase {
       "PLEASE CHECK MANUALLY")
   }
 
+  @Ignore
+  @Test
+  def testUUID(): Unit = {
+    testAllApis(
+      uuid(),
+      "uuid()",
+      "UUID()",
+      "PLEASE CHECK MANUALLY")
+  }
+
   // ----------------------------------------------------------------------------------------------
 
   override def rowTestData: Row = new Row(0)
