@@ -20,7 +20,7 @@ package org.apache.flink.table.codegen.calls
 
 import java.lang.reflect.Method
 
-import org.apache.calcite.avatica.util.TimeUnitRange
+import org.apache.calcite.avatica.util.{TimeUnit, TimeUnitRange}
 import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
@@ -456,6 +456,29 @@ object FunctionGenerator {
     Seq(new GenericType(classOf[TimeUnitRange]), DataTypes.INTERVAL_MONTHS),
     DataTypes.LONG,
     BuiltInMethods.EXTRACT_YEAR_MONTH)
+
+  addSqlFunction(
+    TIMESTAMP_DIFF,
+    Seq(
+      new GenericType(classOf[TimeUnit]),
+      DataTypes.TIMESTAMP,
+      DataTypes.TIMESTAMP),
+    new TimestampDiffCallGen)
+
+  addSqlFunction(
+    TIMESTAMP_DIFF,
+    Seq(new GenericType(classOf[TimeUnit]), DataTypes.TIMESTAMP, DataTypes.DATE),
+    new TimestampDiffCallGen)
+
+  addSqlFunction(
+    TIMESTAMP_DIFF,
+    Seq(new GenericType(classOf[TimeUnit]), DataTypes.DATE, DataTypes.TIMESTAMP),
+    new TimestampDiffCallGen)
+
+  addSqlFunction(
+    TIMESTAMP_DIFF,
+    Seq(new GenericType(classOf[TimeUnit]), DataTypes.DATE, DataTypes.DATE),
+    new TimestampDiffCallGen)
 
   addSqlFunction(
     FLOOR,

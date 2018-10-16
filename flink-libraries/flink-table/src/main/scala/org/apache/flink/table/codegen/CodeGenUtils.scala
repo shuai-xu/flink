@@ -548,7 +548,7 @@ object CodeGenUtils {
         val right = operands(1)
         requireTemporal(left, operator.getName)
         requireTemporal(right, operator.getName)
-        generateTemporalPlusMinus(ctx, plus = true, nullCheck, left, right)
+        generateTemporalPlusMinus(ctx, plus = true, nullCheck, resultType, left, right)
 
       case MINUS if isNumeric(resultType) =>
         val left = operands.head
@@ -562,7 +562,7 @@ object CodeGenUtils {
         val right = operands(1)
         requireTemporal(left, operator.getName)
         requireTemporal(right, operator.getName)
-        generateTemporalPlusMinus(ctx, plus = false, nullCheck, left, right)
+        generateTemporalPlusMinus(ctx, plus = false, nullCheck, resultType, left, right)
 
       case MULTIPLY if isNumeric(resultType) =>
         val left = operands.head

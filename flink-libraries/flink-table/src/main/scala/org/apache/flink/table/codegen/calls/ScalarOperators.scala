@@ -1171,6 +1171,7 @@ object ScalarOperators {
       ctx: CodeGeneratorContext,
       plus: Boolean,
       nullCheck: Boolean,
+      resultType: InternalType,
       left: GeneratedExpression,
       right: GeneratedExpression)
     : GeneratedExpression = {
@@ -1178,6 +1179,7 @@ object ScalarOperators {
     val op = if (plus) "+" else "-"
 
     (left.resultType, right.resultType) match {
+      // arithmetic of time point and time interval
       case (DataTypes.INTERVAL_MONTHS, DataTypes.INTERVAL_MONTHS) |
            (DataTypes.INTERVAL_MILLIS, DataTypes.INTERVAL_MILLIS) =>
         generateArithmeticOperator(ctx, op, nullCheck, left.resultType, left, right)
@@ -1205,6 +1207,39 @@ object ScalarOperators {
       case (DataTypes.TIMESTAMP, DataTypes.INTERVAL_MONTHS) =>
         generateOperatorIfNotNull(ctx, nullCheck, DataTypes.TIMESTAMP, left, right) {
           (l, r) => s"${qualifyMethod(BuiltInMethod.ADD_MONTHS.method)}($l, $op($r))"
+        }
+
+      // minus arithmetic of time points (i.e. for TIMESTAMPDIFF)
+      case (DataTypes.TIMESTAMP | DataTypes.TIME | DataTypes.DATE, DataTypes.TIMESTAMP |
+            DataTypes.TIME | DataTypes.DATE) if !plus =>
+        resultType match {
+          case DataTypes.INTERVAL_MONTHS =>
+            generateOperatorIfNotNull(ctx, nullCheck, resultType, left, right) {
+              (ll, rr) => (left.resultType, right.resultType) match {
+                case (DataTypes.TIMESTAMP, DataTypes.DATE) =>
+                  s"${qualifyMethod(BuiltInMethod.SUBTRACT_MONTHS.method)}" +
+                      s"($ll, $rr * ${MILLIS_PER_DAY}L)"
+                case (DataTypes.DATE, DataTypes.TIMESTAMP) =>
+                  s"${qualifyMethod(BuiltInMethod.SUBTRACT_MONTHS.method)}" +
+                      s"($ll * ${MILLIS_PER_DAY}L, $rr)"
+                case _ =>
+                  s"${qualifyMethod(BuiltInMethod.SUBTRACT_MONTHS.method)}($ll, $rr)"
+              }
+            }
+
+          case DataTypes.INTERVAL_MILLIS =>
+            generateOperatorIfNotNull(ctx, nullCheck, resultType, left, right) {
+              (ll, rr) => (left.resultType, right.resultType) match {
+                case (DataTypes.TIMESTAMP, DataTypes.TIMESTAMP) =>
+                  s"$ll $op $rr"
+                case (DataTypes.DATE, DataTypes.DATE) =>
+                  s"($ll * ${MILLIS_PER_DAY}L) $op ($rr * ${MILLIS_PER_DAY}L)"
+                case (DataTypes.TIMESTAMP, DataTypes.DATE) =>
+                  s"$ll $op ($rr * ${MILLIS_PER_DAY}L)"
+                case (DataTypes.DATE, DataTypes.TIMESTAMP) =>
+                  s"($ll * ${MILLIS_PER_DAY}L) $op $rr"
+              }
+            }
         }
 
       case _ =>

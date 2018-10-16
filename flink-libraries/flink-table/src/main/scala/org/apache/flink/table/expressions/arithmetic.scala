@@ -44,11 +44,10 @@ abstract class BinaryArithmetic extends BinaryExpression {
         throw new RuntimeException("This should never happen.")
     }
 
-  // TODO: tighten this rule once we implemented type coercion rules during validation
   override private[flink] def validateInput(): ValidationResult = {
     if (!isNumeric(DataTypes.internal(left.resultType)) ||
         !isNumeric(DataTypes.internal(right.resultType))) {
-      ValidationFailure(s"$this requires both operands Numeric, get " +
+      ValidationFailure(s"$this requires both operands to be numeric, but was " +
         s"$left : ${left.resultType} and $right : ${right.resultType}")
     } else {
       ValidationSuccess

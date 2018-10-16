@@ -31,6 +31,8 @@ import org.apache.flink.table.expressions.{Hex, _}
 import org.apache.flink.table.expressions.{RegexpReplace, _}
 import org.apache.flink.table.expressions.{RegexpExtract, _}
 import org.apache.flink.table.expressions.{Atan2, Literal, Repeat, UDTVAGGExpression, _}
+import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
+import org.apache.flink.table.expressions.{Atan2, Literal, TimestampDiff, UDTVAGGExpression, _}
 import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -1298,6 +1300,34 @@ object row {
     */
   def apply(head: Expression, tail: Expression*): Expression = {
     RowConstructor(head +: tail.toSeq)
+  }
+}
+
+/**
+  * Returns the (signed) number of [[TimePointUnit]] between timePoint1 and timePoint2.
+  *
+  * For example, timestampDiff(TimePointUnit.DAY, '2016-06-15'.toDate, '2016-06-18'.toDate leads
+  * to 3.
+  */
+object timestampDiff {
+
+  /**
+    * Returns the (signed) number of [[TimePointUnit]] between timePoint1 and timePoint2.
+    *
+    * For example, timestampDiff(TimePointUnit.DAY, '2016-06-15'.toDate, '2016-06-18'.toDate leads
+    * to 3.
+    *
+    * @param timePointUnit The unit to compute diff.
+    * @param timePoint1 The first point in time.
+    * @param timePoint2 The second point in time.
+    * @return The number of intervals as integer value.
+    */
+  def apply(
+      timePointUnit: TimePointUnit,
+      timePoint1: Expression,
+      timePoint2: Expression)
+  : Expression = {
+    TimestampDiff(timePointUnit, timePoint1, timePoint2)
   }
 }
 

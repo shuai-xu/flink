@@ -375,3 +375,60 @@ case class DateFormat(timestamp: Expression, format: Expression) extends Express
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
 }
+
+case class TimestampDiff(
+    timePointUnit: Expression,
+    timePoint1: Expression,
+    timePoint2: Expression)
+    extends Expression {
+
+  override private[flink] def children: Seq[Expression] =
+    timePointUnit :: timePoint1 :: timePoint2 :: Nil
+
+  override private[flink] def validateInput(): ValidationResult = {
+    if (!TypeCheckUtils.isTimePoint(timePoint1.resultType)) {
+      return ValidationFailure(
+        s"$this requires an input time point type, " +
+            s"but timePoint1 is of type '${timePoint1.resultType}'.")
+    }
+
+    if (!TypeCheckUtils.isTimePoint(timePoint2.resultType)) {
+      return ValidationFailure(
+        s"$this requires an input time point type, " +
+            s"but timePoint2 is of type '${timePoint2.resultType}'.")
+    }
+
+    timePointUnit match {
+      case SymbolExpression(TimePointUnit.YEAR)
+           | SymbolExpression(TimePointUnit.QUARTER)
+           | SymbolExpression(TimePointUnit.MONTH)
+           | SymbolExpression(TimePointUnit.WEEK)
+           | SymbolExpression(TimePointUnit.DAY)
+           | SymbolExpression(TimePointUnit.HOUR)
+           | SymbolExpression(TimePointUnit.MINUTE)
+           | SymbolExpression(TimePointUnit.SECOND)
+        if timePoint1.resultType == DataTypes.DATE
+            || timePoint1.resultType == DataTypes.TIMESTAMP
+            || timePoint2.resultType == DataTypes.DATE
+            || timePoint2.resultType == DataTypes.TIMESTAMP =>
+        ValidationSuccess
+
+      case _ =>
+        ValidationFailure(s"$this operator does not support unit '$timePointUnit'" +
+            s" for input of type ('${timePoint1.resultType}', '${timePoint2.resultType}').")
+    }
+  }
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder
+        .getRexBuilder
+        .makeCall(SqlStdOperatorTable.TIMESTAMP_DIFF,
+          Seq(timePointUnit.toRexNode, timePoint2.toRexNode, timePoint1.toRexNode))
+  }
+
+  override def toString: String = s"timestampDiff(${children.mkString(", ")})"
+
+  override private[flink] def resultType = DataTypes.INT
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
