@@ -51,7 +51,7 @@ object OverWindowFrame {
  */
 class UnboundedPrecedingOverWindowFrame(
     aggsHandleFunction: GeneratedAggsHandleFunction,
-    boundComparator: GeneratedBoundComparator)
+    var boundComparator: GeneratedBoundComparator)
   extends OverWindowFrame(aggsHandleFunction) {
 
   private[this] var processor: AggsHandleFunction = _
@@ -78,6 +78,7 @@ class UnboundedPrecedingOverWindowFrame(
     rbound = CodeGenUtils.compile(// currentThread must be user class loader.
       Thread.currentThread.getContextClassLoader, boundComparator.name, boundComparator.code)
         .newInstance.asInstanceOf[BoundComparator]
+    boundComparator = null
   }
 
   override def resetBuffer(rows: ResettableExternalBuffer): Unit = {
@@ -118,7 +119,7 @@ class UnboundedPrecedingOverWindowFrame(
  */
 class UnboundedFollowingOverWindowFrame(
     aggsHandleFunction: GeneratedAggsHandleFunction,
-    boundComparator: GeneratedBoundComparator)
+    var boundComparator: GeneratedBoundComparator)
   extends OverWindowFrame(aggsHandleFunction) {
 
   private[this] var processor: AggsHandleFunction = _
@@ -140,6 +141,7 @@ class UnboundedFollowingOverWindowFrame(
     lbound = CodeGenUtils.compile(// currentThread must be user class loader.
       Thread.currentThread.getContextClassLoader, boundComparator.name,
       boundComparator.code).newInstance.asInstanceOf[BoundComparator]
+    boundComparator = null
   }
 
   /** Prepare the frame for calculating a new partition. */
@@ -225,8 +227,8 @@ class UnboundedOverWindowFrame(
  */
 class SlidingOverWindowFrame(
     aggsHandleFunction: GeneratedAggsHandleFunction,
-    lboundComparator: GeneratedBoundComparator,
-    rboundComparator: GeneratedBoundComparator)
+    var lboundComparator: GeneratedBoundComparator,
+    var rboundComparator: GeneratedBoundComparator)
   extends OverWindowFrame(aggsHandleFunction) {
 
   private[this] var processor: AggsHandleFunction = _
@@ -263,6 +265,8 @@ class SlidingOverWindowFrame(
     rbound = CodeGenUtils.compile(// currentThread must be user class loader.
       Thread.currentThread.getContextClassLoader, rboundComparator.name, rboundComparator.code)
         .newInstance.asInstanceOf[BoundComparator]
+    lboundComparator = null
+    rboundComparator = null
   }
 
   /** Prepare the frame for calculating a new partition. Reset all variables. */

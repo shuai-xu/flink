@@ -44,6 +44,7 @@ import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isNumeric, isTemporal, isTimeInterval}
 import org.apache.flink.table.typeutils._
+import org.apache.flink.table.util.Logging.CODE_LOG
 import org.codehaus.commons.compiler.CompileException
 import org.codehaus.janino.SimpleCompiler
 
@@ -1079,6 +1080,7 @@ object CodeGenUtils {
 
   @throws(classOf[CompileException])
   def compile[T](cl: ClassLoader, name: String, code: String): Class[T] = {
+    CODE_LOG.debug(s"Compiling: $name \n\n Code:\n$code")
     require(cl != null, "Classloader must not be null.")
     val compiler = new SimpleCompiler()
     compiler.setParentClassLoader(cl)

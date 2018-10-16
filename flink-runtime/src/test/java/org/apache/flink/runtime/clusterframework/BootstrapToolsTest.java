@@ -123,7 +123,7 @@ public class BootstrapToolsTest {
 		final String jvmmem = "-Xms768m -Xmx768m -XX:MaxDirectMemorySize=256m";
 		final String jvmOpts = "-Djvm"; // if set
 		final String tmJvmOpts = "-DtmJvm"; // if set
-		final String logfile = "-Dlog.file=./logs/taskmanager.log"; // if set
+		final String logfile = "-Dlog.file=./logs/taskmanager.log -Dcode.file=./logs/code.log"; // if set
 		final String logback =
 			"-Dlogback.configurationFile=file:./conf/logback.xml"; // if set
 		final String log4j =

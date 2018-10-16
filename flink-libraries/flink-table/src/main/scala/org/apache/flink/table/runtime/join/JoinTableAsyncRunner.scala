@@ -37,7 +37,7 @@ import scala.collection.JavaConverters._
 class JoinTableAsyncRunner(
     fetcher: AsyncFunction[BaseRow, BaseRow],
     collectorName: String,
-    collectorCode: String,
+    var collectorCode: String,
     objectReuse: Boolean,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
@@ -68,6 +68,7 @@ class JoinTableAsyncRunner(
       getRuntimeContext.getUserCodeClassLoader,
       collectorName,
       collectorCode).asInstanceOf[Class[TableAsyncCollector[BaseRow]]]
+    collectorCode = null
 
     LOG.debug("Instantiating TableAsyncCollector.")
     // trying to instantiating

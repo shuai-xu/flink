@@ -26,7 +26,7 @@ import scala.collection.mutable
 
 abstract class SubstituteStreamOperator[OUT <: Any](
     name: String,
-    @transient code: String,
+    @transient var code: String,
     var chainingStrategy: ChainingStrategy = ChainingStrategy.ALWAYS,
     val references: mutable.ArrayBuffer[AnyRef] = new mutable.ArrayBuffer[AnyRef]())
   extends StreamOperator[OUT]
@@ -35,7 +35,7 @@ abstract class SubstituteStreamOperator[OUT <: Any](
 
   private var relID: Int = _
 
-  private val rewritedCode = JavaSourceManipulator.rewrite(code)
+  private var rewritedCode = JavaSourceManipulator.rewrite(code)
 
   private val hasRewrited = JavaSourceManipulator.isRewriteEnable
 
@@ -43,6 +43,8 @@ abstract class SubstituteStreamOperator[OUT <: Any](
     LOG.debug(s"Compiling StreamOperator: $name \n\n Code:\n$rewritedCode.")
     LOG.debug(s"StreamOperator code has been rewrited: $hasRewrited")
     val clazz = compile(cl, name, rewritedCode)
+    code = null
+    rewritedCode = null
     LOG.debug("Instantiating StreamOperator.")
     val streamOperator = clazz match {
       case cls if classOf[WithReferences].isAssignableFrom(cls) =>

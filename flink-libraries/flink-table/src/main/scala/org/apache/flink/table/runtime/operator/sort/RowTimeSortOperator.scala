@@ -42,7 +42,7 @@ import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo,
   */
 class RowTimeSortOperator(
     private val inputRowType: BaseRowTypeInfo[BaseRow],
-    private val gSorter: GeneratedSorter,
+    private var gSorter: GeneratedSorter,
     private val rowtimeIdx: Int,
     private val memorySize: Double)
   extends SortBaseOperator {
@@ -91,6 +91,8 @@ class RowTimeSortOperator(
       0,
       0)
     sorter = new QuickSort()
+
+    gSorter = null
   }
 
 

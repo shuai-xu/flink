@@ -89,8 +89,9 @@ id=$([ -f "$pid" ] && echo $(wc -l < "$pid") || echo "0")
 FLINK_LOG_PREFIX="${FLINK_LOG_DIR}/flink-${FLINK_IDENT_STRING}-${DAEMON}-${id}-${HOSTNAME}"
 log="${FLINK_LOG_PREFIX}.log"
 out="${FLINK_LOG_PREFIX}.out"
+code="${FLINK_LOG_PREFIX}.code"
 
-log_setting=("-Dlog.file=${log}" "-Dlog4j.configuration=file:${FLINK_CONF_DIR}/log4j.properties" "-Dlogback.configurationFile=file:${FLINK_CONF_DIR}/logback.xml")
+log_setting=("-Dlog.file=${log}" "-Dcode.file=${code}" "-Dlog4j.configuration=file:${FLINK_CONF_DIR}/log4j.properties" "-Dlogback.configurationFile=file:${FLINK_CONF_DIR}/logback.xml")
 
 JAVA_VERSION=$(${JAVA_RUN} -version 2>&1 | sed 's/.*version "\(.*\)\.\(.*\)\..*"/\1\2/; 1q')
 

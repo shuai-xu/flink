@@ -34,9 +34,9 @@ import org.apache.flink.util.Collector
   */
 class CorrelateProcessRunner(
   processName: String,
-  processCode: String,
+  var processCode: String,
   collectorName: String,
-  collectorCode: String,
+  var collectorCode: String,
   @transient var returnType: BaseRowTypeInfo[BaseRow])
   extends ProcessFunction[BaseRow, BaseRow]
     with ResultTypeQueryable[BaseRow]
@@ -49,11 +49,13 @@ class CorrelateProcessRunner(
   override def open(parameters: Configuration): Unit = {
     LOG.debug(s"Compiling TableFunctionCollector: $collectorName \n\n Code:\n$collectorCode")
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, collectorName, collectorCode)
+    collectorCode = null
     LOG.debug("Instantiating TableFunctionCollector.")
     collector = clazz.newInstance().asInstanceOf[TableFunctionCollector[_]]
 
     LOG.debug(s"Compiling ProcessFunction: $processName \n\n Code:\n$processCode")
     val processClazz = compile(getRuntimeContext.getUserCodeClassLoader, processName, processCode)
+    processCode = null
     val constructor = processClazz.getConstructor(classOf[TableFunctionCollector[_]])
     LOG.debug("Instantiating ProcessFunction.")
     function = constructor.newInstance(collector).asInstanceOf[ProcessFunction[BaseRow, BaseRow]]

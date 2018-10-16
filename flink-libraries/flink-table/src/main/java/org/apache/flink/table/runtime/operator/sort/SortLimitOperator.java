@@ -42,7 +42,7 @@ public class SortLimitOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 	private final boolean isGlobal;
 	private final long limitStart;
 	private final long limitEnd;
-	private final GeneratedSorter gSorter;
+	private GeneratedSorter gSorter;
 
 	private transient PriorityQueue<BaseRow> heap;
 	private transient Collector<BaseRow> collector;
@@ -64,6 +64,7 @@ public class SortLimitOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 				getContainingTask().getUserCodeClassLoader(),
 				gSorter.comparator().name(), gSorter.comparator().code()).newInstance();
 		comparator.init(gSorter.serializers(), gSorter.comparators());
+		gSorter = null;
 
 		// reverse the comparision.
 		heap = new PriorityQueue<>((int) limitEnd, new Comparator<BaseRow>() {

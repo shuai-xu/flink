@@ -51,7 +51,7 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 	private final long reservedMemorySize;
 	private final long maxMemorySize;
 	private final long perRequestMemorySize;
-	private final GeneratedSorter gSorter;
+	private GeneratedSorter gSorter;
 	private static final Logger LOG = LoggerFactory.getLogger(SortOperator.class);
 
 	// cooked classes
@@ -92,6 +92,7 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 				maxMemorySize, perRequestMemorySize, ioManager, inputSerializer, binarySerializer,
 				computer, comparator);
 		this.sorter.startThreads();
+		gSorter = null;
 
 		collector = new StreamRecordCollector<>(output);
 

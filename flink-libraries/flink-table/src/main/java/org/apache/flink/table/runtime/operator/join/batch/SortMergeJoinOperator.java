@@ -72,11 +72,11 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 
 	// generated code to cook
 	private GeneratedJoinConditionFunction condFuncCode;
-	private final GeneratedProjection projectionCode1;
-	private final GeneratedProjection projectionCode2;
-	private final GeneratedSorter gSorter1;
-	private final GeneratedSorter gSorter2;
-	private final GeneratedSorter keyGSorter;
+	private GeneratedProjection projectionCode1;
+	private GeneratedProjection projectionCode2;
+	private GeneratedSorter gSorter1;
+	private GeneratedSorter gSorter2;
+	private GeneratedSorter keyGSorter;
 	private final boolean[] filterNulls;
 
 	private transient CookedClasses classes;
@@ -95,6 +95,7 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 	private transient Collector<BaseRow> collector;
 	private transient boolean[] isFinished;
 	private transient JoinConditionFunction condFunc;
+	private transient RecordComparator keyComparator;
 
 	private transient BaseRow leftNullRow;
 	private transient BaseRow rightNullRow;
@@ -162,12 +163,20 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 		this.ioManager = this.getContainingTask().getEnvironment().getIOManager();
 
 		initSorter();
+		initKeyComparator();
 
 		this.condFunc = classes.condFuncClass.newInstance();
 
 		this.leftNullRow = new GenericRow(serializer1.getNumFields());
 		this.rightNullRow = new GenericRow(serializer2.getNumFields());
 		this.joinedRow = new JoinedRow();
+
+		condFuncCode = null;
+		keyGSorter = null;
+		projectionCode1 = null;
+		projectionCode2 = null;
+		gSorter1 = null;
+		gSorter2 = null;
 
 		getMetricGroup().gauge("memoryUsedSizeInBytes", new Gauge<Long>() {
 			@Override
@@ -211,6 +220,11 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 				preferredSortMemory2, perRequestMemory, ioManager, inputSerializer2, serializer2, computer2,
 				comparator2);
 		this.sorter2.startThreads();
+	}
+
+	private void initKeyComparator() throws Exception {
+		keyComparator = classes.keyComparatorClass.newInstance();
+		keyComparator.init(keyGSorter.serializers(), keyGSorter.comparators());
 	}
 
 	protected CookedClasses cookGeneratedClasses(ClassLoader cl) throws CompileException {
@@ -265,8 +279,6 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 		Projection projection2 = classes.projectionClass2.newInstance();
 		MutableObjectIterator<BinaryRow> iterator1 = sorter1.getIterator();
 		MutableObjectIterator<BinaryRow> iterator2 = sorter2.getIterator();
-		RecordComparator keyComparator = classes.keyComparatorClass.newInstance();
-		keyComparator.init(keyGSorter.serializers(), keyGSorter.comparators());
 
 		if (type.equals(FlinkJoinRelType.INNER)) {
 			if (!leftIsSmaller) {

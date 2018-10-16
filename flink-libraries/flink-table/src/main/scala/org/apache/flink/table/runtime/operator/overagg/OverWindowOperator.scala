@@ -39,7 +39,7 @@ import org.apache.flink.table.util.ResettableExternalBuffer
 class BufferDataOverWindowOperator(
     memorySize: Int,
     overWindowFrames: Array[OverWindowFrame],
-    groupingSorter: GeneratedSorter)
+    var groupingSorter: GeneratedSorter)
   extends AbstractStreamOperatorWithMetrics[BaseRow]
   with OneInputStreamOperator[BaseRow, BaseRow] {
 
@@ -76,6 +76,7 @@ class BufferDataOverWindowOperator(
       groupingSorter.comparator.name,
       groupingSorter.comparator.code).newInstance.asInstanceOf[RecordComparator]
     partitionComparator.init(groupingSorter.serializers, groupingSorter.comparators)
+    groupingSorter = null
     overWindowFrames.foreach(_.open(new ExecutionContextImpl(this, getRuntimeContext)))
 
     collector = new StreamRecordCollector[BaseRow](output)
@@ -134,7 +135,7 @@ class BufferDataOverWindowOperator(
 class OverWindowOperator(
     aggsHandles: Array[GeneratedAggsHandleFunction],
     resetAccs: Array[Boolean] ,
-    groupingSorter: GeneratedSorter)
+    var groupingSorter: GeneratedSorter)
     extends AbstractStreamOperatorWithMetrics[BaseRow]
     with OneInputStreamOperator[BaseRow, BaseRow] {
 
@@ -156,6 +157,7 @@ class OverWindowOperator(
       groupingSorter.comparator.name,
       groupingSorter.comparator.code).newInstance.asInstanceOf[RecordComparator]
     partitionComparator.init(groupingSorter.serializers, groupingSorter.comparators)
+    groupingSorter = null
 
     processors = aggsHandles.map(_.newInstance(Thread.currentThread.getContextClassLoader))
 

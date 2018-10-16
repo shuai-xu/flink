@@ -83,7 +83,7 @@ public abstract class BatchJoinStreamOperator
 	protected final BaseRowTypeInfo<BaseRow> leftType;
 	protected final BaseRowTypeInfo<BaseRow> rightType;
 
-	protected final GeneratedJoinConditionFunction condFuncCode;
+	protected GeneratedJoinConditionFunction condFuncCode;
 
 	protected final KeySelector<BaseRow, BaseRow> leftKeySelector;
 	protected final KeySelector<BaseRow, BaseRow> rightKeySelector;
@@ -91,8 +91,8 @@ public abstract class BatchJoinStreamOperator
 	protected final BaseRowTypeInfo<BaseRow> leftKeyType;
 	protected final BaseRowTypeInfo<BaseRow> rightKeyType;
 
-	protected final GeneratedProjection leftPkProjectCode;
-	protected final GeneratedProjection rightPkProjectCode;
+	protected GeneratedProjection leftPkProjectCode;
+	protected GeneratedProjection rightPkProjectCode;
 
 	protected final JoinStateHandler.Type leftJoinStateType;
 	protected final JoinStateHandler.Type rightJoinStateType;
@@ -175,6 +175,7 @@ public abstract class BatchJoinStreamOperator
 		LOG.debug("Compiling JoinConditionFunction: {} \n\n Code:\n {}", condFuncCode.name(), condFuncCode.code());
 		Class<JoinConditionFunction> condFuncClass = CodeGenUtils.compile(
 				getContainingTask().getUserCodeClassLoader(), condFuncCode.name(), condFuncCode.code());
+		condFuncCode = null;
 		this.condFunc = condFuncClass.newInstance();
 
 		this.collector = new TimestampedCollector<>(output);
@@ -182,6 +183,9 @@ public abstract class BatchJoinStreamOperator
 		this.joinedRow = new JoinedRow();
 
 		initAllStates();
+
+		leftPkProjectCode = null;
+		rightPkProjectCode = null;
 	}
 
 	private boolean isNotNullSafe() {

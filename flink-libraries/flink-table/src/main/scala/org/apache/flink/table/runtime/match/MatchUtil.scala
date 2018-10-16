@@ -268,6 +268,7 @@ object MatchUtil {
         val code = gSorter.comparator.code
         LOG.debug(s"Compiling Sorter: $name \n\n Code:\n$code")
         val clazz = compile(Thread.currentThread().getContextClassLoader, name, code)
+        gSorter.comparator.code = null
         LOG.debug("Instantiating Sorter.")
         val comparator = clazz.newInstance()
         comparator.init(gSorter.serializers, gSorter.comparators)

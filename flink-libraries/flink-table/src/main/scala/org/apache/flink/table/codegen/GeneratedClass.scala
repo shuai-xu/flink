@@ -27,13 +27,19 @@ trait GeneratedClass[T] {
 
   def name: String
 
-  def code: String
+  /**
+    * 'var' type makes sure we can set it as null after the code is compiled to be GC friendly.
+    */
+  var code: String
 
   def references: Array[AnyRef]
 
   @throws(classOf[CompileException])
-  def compile(cl: ClassLoader): Class[T] = {
-    CodeGenUtils.compile(cl, name, code)
+  private def compile(cl: ClassLoader): Class[T] = {
+    val ret: Class[T] = CodeGenUtils.compile(cl, name, code)
+    // Set the code as null to be GC friendly
+    code = null
+    ret
   }
 
   @throws(classOf[CompileException])

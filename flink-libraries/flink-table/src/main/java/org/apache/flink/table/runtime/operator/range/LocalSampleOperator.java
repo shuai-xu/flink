@@ -59,6 +59,7 @@ public class LocalSampleOperator extends AbstractStreamOperatorWithMetrics<Inter
 				getUserCodeClassloader(),
 				localSampleProjection.name(),
 				localSampleProjection.code());
+		localSampleProjection = null;
 		sampler.setProjection(buildProjectionClass.newInstance());
 	}
 

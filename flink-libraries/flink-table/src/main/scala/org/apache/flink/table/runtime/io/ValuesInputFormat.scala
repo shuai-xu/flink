@@ -28,7 +28,7 @@ import org.apache.flink.table.util.Logging
 
 class ValuesInputFormat(
     name: String,
-    code: String,
+    var code: String,
     @transient var returnType: BaseRowTypeInfo[BaseRow])
   extends GenericInputFormat[BaseRow]
   with NonParallelInput
@@ -41,6 +41,7 @@ class ValuesInputFormat(
   override def open(split: GenericInputSplit): Unit = {
     LOG.debug(s"Compiling GenericInputFormat: $name \n\n Code:\n$code")
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
+    code = null
     LOG.debug("Instantiating GenericInputFormat.")
     format = clazz.newInstance()
   }

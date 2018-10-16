@@ -47,7 +47,6 @@ import java.util.Arrays;
  */
 public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<T> {
 
-	private final GeneratedProjection gProjection;
 	protected BinaryRowSerializer binarySerializer;
 	private Class<T> rowType;
 
@@ -73,7 +72,6 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 		super(types);
 		this.rowType = rowType;
 		this.binarySerializer = new BinaryRowSerializer(types);
-		this.gProjection = genProjection(types);
 	}
 
 	public static GeneratedProjection genProjection(TypeInformation[] types) {
@@ -93,6 +91,7 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 	public Projection<BaseRow, BinaryRow> getProjection() throws IOException {
 		if (projection == null) {
 			try {
+				GeneratedProjection gProjection = genProjection(types);
 				projection = (Projection<BaseRow, BinaryRow>) CodeGenUtils.compile(
 						// currentThread must be user class loader.
 						Thread.currentThread().getContextClassLoader(),

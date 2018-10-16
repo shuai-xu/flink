@@ -134,6 +134,9 @@ public abstract class HashJoinOperator extends AbstractStreamOperatorWithMetrics
 				cl, parameter.buildProjectionCode.name(), parameter.buildProjectionCode.code());
 		probeProjectionClass = CodeGenUtils.compile(
 				cl, parameter.probeProjectionCode.name(), parameter.probeProjectionCode.code());
+		parameter.condFuncCode = null;
+		parameter.buildProjectionCode = null;
+		parameter.probeProjectionCode = null;
 		long endTime = System.currentTimeMillis();
 		LOG.info("Compiling generated codes, used time: " + (endTime - startTime) + "ms.");
 	}

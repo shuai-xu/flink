@@ -439,6 +439,7 @@ public class BootstrapTools {
 		String logging = "";
 		if (hasLogback || hasLog4j) {
 			logging = "-Dlog.file=" + logDirectory + "/taskmanager.log";
+			logging += " -Dcode.file=" + logDirectory + "/code.log";
 			if (hasLogback) {
 				logging +=
 					" -Dlogback.configurationFile=file:" + configDirectory +

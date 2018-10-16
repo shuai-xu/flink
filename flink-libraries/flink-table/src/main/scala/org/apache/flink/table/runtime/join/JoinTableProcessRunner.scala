@@ -39,7 +39,7 @@ import scala.collection.JavaConverters._
 class JoinTableProcessRunner(
     fetcher: FlatMapFunction[BaseRow, BaseRow],
     collectorName: String,
-    collectorCode: String,
+    var collectorCode: String,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
     rightKeysInDefineOrder: List[Int],
@@ -68,6 +68,7 @@ class JoinTableProcessRunner(
   override def open(parameters: Configuration): Unit = {
     LOG.debug(s"Compiling TableFunctionCollector: $collectorName \n\n Code:\n$collectorCode")
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, collectorName, collectorCode)
+    collectorCode = null
     LOG.debug("Instantiating TableFunctionCollector.")
     collector = clazz.newInstance().asInstanceOf[TableFunctionCollector[BaseRow]]
 

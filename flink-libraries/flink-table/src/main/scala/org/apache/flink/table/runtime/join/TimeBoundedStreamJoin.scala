@@ -57,7 +57,7 @@ abstract class TimeBoundedStreamJoin(
     private val leftType: TypeInformation[BaseRow],
     private val rightType: TypeInformation[BaseRow],
     private val genJoinFuncName: String,
-    private val genJoinFuncCode: String
+    private var genJoinFuncCode: String
 ) extends CoProcessFunction[BaseRow, BaseRow, BaseRow]
   with Compiler[FlatJoinFunction[BaseRow, BaseRow, BaseRow]]
   with Logging {
@@ -108,6 +108,7 @@ abstract class TimeBoundedStreamJoin(
       genJoinFuncName,
       genJoinFuncCode
     )
+    genJoinFuncCode = null
     LOG.debug("Instantiating JoinFunction.")
     joinFunction = clazz.newInstance()
 

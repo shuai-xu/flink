@@ -47,9 +47,13 @@ class BinaryRowKeySelector(
       DataTypes.internal(returnType).asInstanceOf[BaseRowType],
       keyFields)
 
-  @transient lazy private val projection: Projection[BaseRow, BinaryRow] = CodeGenUtils.compile(
-    Thread.currentThread.getContextClassLoader, gProjection.name, gProjection.code)
-    .newInstance.asInstanceOf[Projection[BaseRow, BinaryRow]]
+  @transient lazy private val projection: Projection[BaseRow, BinaryRow] = {
+    val ret = CodeGenUtils.compile(
+      Thread.currentThread.getContextClassLoader, gProjection.name, gProjection.code)
+      .newInstance.asInstanceOf[Projection[BaseRow, BinaryRow]]
+    gProjection.code = null
+    ret
+  }
 
   // check if type implements proper equals/hashCode
   validateEqualsHashCode("grouping", returnType)

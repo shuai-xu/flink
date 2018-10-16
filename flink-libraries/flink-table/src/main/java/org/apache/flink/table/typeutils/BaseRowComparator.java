@@ -46,7 +46,7 @@ import scala.Tuple2;
 @Deprecated
 public class BaseRowComparator extends TypeComparator<BaseRow> {
 
-	private final GeneratedRecordComparator genComparator;
+	private GeneratedRecordComparator genComparator;
 	private final Tuple2<TypeComparator<?>[], TypeSerializer<?>[]> comAndSers;
 	private final boolean order;
 	private RecordComparator comparator;
@@ -75,6 +75,7 @@ public class BaseRowComparator extends TypeComparator<BaseRow> {
 					// currentThread must be user class loader.
 					Thread.currentThread().getContextClassLoader(),
 					genComparator.name(), genComparator.code()).newInstance();
+			genComparator = null;
 			comparator.init(comAndSers._2, comAndSers._1);
 		}
 		return comparator;

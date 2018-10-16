@@ -40,7 +40,7 @@ import java.util.Arrays;
 public class BinaryHashPartitioner extends StreamPartitioner<BaseRow> {
 
 	private final int[] returnArray = new int[1];
-	private final GeneratedHashFunc genHashFunc;
+	private GeneratedHashFunc genHashFunc;
 	private final String[] hashFieldNames;
 
 	private transient HashFunc hashFunc;
@@ -76,6 +76,7 @@ public class BinaryHashPartitioner extends StreamPartitioner<BaseRow> {
 						// currentThread must be user class loader.
 						Thread.currentThread().getContextClassLoader(),
 						genHashFunc.name(), genHashFunc.code()).newInstance();
+				genHashFunc = null;
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

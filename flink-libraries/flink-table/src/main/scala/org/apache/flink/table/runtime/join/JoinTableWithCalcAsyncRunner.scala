@@ -31,7 +31,7 @@ import org.apache.flink.util.Collector
 class JoinTableWithCalcAsyncRunner(
     fetcher: AsyncFunction[BaseRow, BaseRow],
     calcFunctionName: String,
-    calcFunctionCode: String,
+    var calcFunctionCode: String,
     collectorName: String,
     collectorCode: String,
     objectReuse: Boolean,
@@ -63,6 +63,7 @@ class JoinTableWithCalcAsyncRunner(
       getRuntimeContext.getUserCodeClassLoader,
       calcFunctionName,
       calcFunctionCode).asInstanceOf[Class[FlatMapFunction[BaseRow, BaseRow]]]
+    calcFunctionCode = null
 
     LOG.debug("Instantiating CalcFunction.")
     // trying to instantiating

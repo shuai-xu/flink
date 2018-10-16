@@ -37,7 +37,7 @@ import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo,
   */
 class ProcTimeSortOperator(
     private val inputRowType: BaseRowTypeInfo[BaseRow],
-    private val gSorter: GeneratedSorter,
+    private var gSorter: GeneratedSorter,
     private val memorySize: Double) extends SortBaseOperator {
 
   @transient private var dataState: KeyedListState[VoidNamespace, BaseRow] = _
@@ -80,6 +80,8 @@ class ProcTimeSortOperator(
       0,
       0)
     sorter = new QuickSort()
+
+    gSorter = null
   }
 
 

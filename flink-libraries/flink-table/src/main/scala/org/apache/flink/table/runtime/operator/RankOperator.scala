@@ -25,8 +25,8 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.sort.RecordComparator
 
 class RankOperator(
-    partitionByGeneratedSorter: GeneratedSorter,
-    orderByGeneratedSorter: GeneratedSorter,
+    var partitionByGeneratedSorter: GeneratedSorter,
+    var orderByGeneratedSorter: GeneratedSorter,
     rankStart: Long,
     rankEnd: Long,
     outputRankFunColumn: Boolean)
@@ -68,6 +68,9 @@ class RankOperator(
       orderByGeneratedSorter.comparator.code).newInstance.asInstanceOf[RecordComparator]
     orderBySorter.init(
       partitionByGeneratedSorter.serializers, partitionByGeneratedSorter.comparators)
+
+    partitionByGeneratedSorter = null
+    orderByGeneratedSorter = null
 
     if (outputRankFunColumn) {
       joinedRow = new JoinedRow()

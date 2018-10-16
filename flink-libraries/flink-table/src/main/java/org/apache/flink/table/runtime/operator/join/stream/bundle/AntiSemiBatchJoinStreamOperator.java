@@ -87,16 +87,21 @@ public class AntiSemiBatchJoinStreamOperator extends BatchJoinStreamOperator {
 	@Override
 	public void open() throws Exception {
 		super.open();
-		this.leftMatchStateHandler = createMatchStateHandler(
-				leftType, leftMatchStateType, leftKeyType, "LeftMatchHandler", leftPkProjectCode);
-		this.rightMatchStateHandler = createMatchStateHandler(
-				rightType, rightMatchStateType, rightKeyType, "RightMatchHandler", rightPkProjectCode);
 		this.leftSideNullRow = new GenericRow(leftType.getArity());
 		this.rightSideNullRow = new GenericRow(rightType.getArity());
 		LOG.info("Init AntiSemiBatchJoinStreamOperator.");
 		LOG.info("leftJoinStateType {}, rightJoinStateType {}, leftMatchStateType {}, rightMatchStateType {}",
 				leftJoinStateType, rightJoinStateType, leftMatchStateType, rightMatchStateType);
 		LOG.info("isSemi: " + isSemi + ", isEqualJoin: " + isEqual);
+	}
+
+	protected void initAllStates() throws Exception {
+		super.initAllStates();
+
+		this.leftMatchStateHandler = createMatchStateHandler(
+			leftType, leftMatchStateType, leftKeyType, "LeftMatchHandler", leftPkProjectCode);
+		this.rightMatchStateHandler = createMatchStateHandler(
+			rightType, rightMatchStateType, rightKeyType, "RightMatchHandler", rightPkProjectCode);
 	}
 
 	@Override

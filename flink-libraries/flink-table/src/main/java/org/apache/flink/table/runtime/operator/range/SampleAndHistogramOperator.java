@@ -46,8 +46,8 @@ public class SampleAndHistogramOperator extends AbstractStreamOperatorWithMetric
 		implements OneInputStreamOperator<IntermediateSampleData<BaseRow>, Object[][]> {
 
 	private final ReservoirSamplerWithoutReplacement sampler;
-	private final GeneratedSorter genSorter;
-	private final GeneratedProjection projection;
+	private GeneratedSorter genSorter;
+	private GeneratedProjection projection;
 	private final int rangesNum;
 	private final KeyExtractor keyExtractor;
 
@@ -79,6 +79,8 @@ public class SampleAndHistogramOperator extends AbstractStreamOperatorWithMetric
 		this.collector = new StreamRecordCollector<>(output);
 		this.comparator = comparatorClass.newInstance();
 		comparator.init(genSorter.serializers(), genSorter.comparators());
+		genSorter = null;
+		projection = null;
 	}
 
 	@Override

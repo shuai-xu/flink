@@ -43,7 +43,7 @@ import org.apache.flink.util.Collector
 class RetractRankFunction(
     inputRowType: BaseRowTypeInfo[_],
     sortKeyType: BaseRowTypeInfo[_],
-    gSorter: GeneratedSorter,
+    var gSorter: GeneratedSorter,
     sortKeySelector: KeySelector[BaseRow, BaseRow],
     outputArity: Int,
     rankKind: SqlKind,
@@ -92,6 +92,8 @@ class RetractRankFunction(
         BasicTypeInfo.LONG_TYPE_INFO,
         sortKeyComparator))
     treeMap = ctx.getKeyedValueState(valueStateDescriptor)
+
+    gSorter = null
   }
 
   override def processElement(

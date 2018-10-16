@@ -29,7 +29,7 @@ import org.apache.flink.util.Collector
 class JoinTableWithCalcProcessRunner(
     fetcher: FlatMapFunction[BaseRow, BaseRow],
     calcFunctionName: String,
-    calcFunctionCode: String,
+    var calcFunctionCode: String,
     collectorName: String,
     collectorCode: String,
     leftOuterJoin: Boolean,
@@ -60,6 +60,7 @@ class JoinTableWithCalcProcessRunner(
       getRuntimeContext.getUserCodeClassLoader,
       calcFunctionName,
       calcFunctionCode)
+    calcFunctionCode = null
 
     LOG.debug("Instantiating CalcFunction.")
     calc = clazz.newInstance().asInstanceOf[FlatMapFunction[BaseRow, BaseRow]]

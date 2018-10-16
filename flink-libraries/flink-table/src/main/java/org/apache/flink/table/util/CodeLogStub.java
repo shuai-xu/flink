@@ -16,17 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
-
-import org.slf4j.{Logger, LoggerFactory}
+package org.apache.flink.table.util;
 
 /**
-  * Helper class to ensure the logger is never serialized.
-  */
-trait Logging {
-  @transient lazy val LOG: Logger = LoggerFactory.getLogger(getClass)
-}
-
-object Logging {
-  @transient lazy val CODE_LOG: Logger = LoggerFactory.getLogger(classOf[CodeLogStub])
+ * Stub class used for logging the generated code.
+ */
+public final class CodeLogStub {
 }
