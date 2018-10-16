@@ -248,6 +248,14 @@ object ScalarSqlFunctions {
     OperandTypes.or(OperandTypes.CHARACTER, OperandTypes.NUMERIC),
     SqlFunctionCategory.NUMERIC)
 
+  val COSH = new SqlFunction(
+    "COSH",
+    SqlKind.OTHER_FUNCTION,
+    ReturnTypes.DOUBLE_NULLABLE,
+    null,
+    OperandTypes.NUMERIC,
+    SqlFunctionCategory.NUMERIC)
+
   val CHR = new SqlFunction(
     "CHR",
     SqlKind.OTHER_FUNCTION,

@@ -509,3 +509,20 @@ case class Hex(child: Expression) extends UnaryExpression {
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]) =
     logicalExprVisitor.visit(this)
 }
+
+case class Cosh(child: Expression) extends UnaryExpression {
+
+  override private[flink] def resultType: InternalType = DataTypes.DOUBLE
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder) = {
+    relBuilder.call(ScalarSqlFunctions.COSH, child.toRexNode)
+  }
+
+  override private[flink] def validateInput(): ValidationResult =
+    TypeCheckUtils.assertNumericExpr(child.resultType, "Cosh")
+
+  override def toString = s"cosh($child)"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}

@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions._
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions.{COSH, _}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
 import org.apache.flink.table.types._
@@ -558,6 +559,18 @@ object FunctionGenerator {
     Seq(ANY_DEC_TYPE),
     DataTypes.DOUBLE,
     BuiltInMethods.LOG2_DEC)
+
+  addSqlFunctionMethod(
+    COSH,
+    Seq(DataTypes.DOUBLE),
+    DataTypes.DOUBLE,
+    BuiltInMethods.COSH)
+
+  addSqlFunctionMethod(
+    COSH,
+    Seq(DecimalType.DEFAULT),
+    DataTypes.DOUBLE,
+    BuiltInMethods.COSH_DEC)
 
   addSqlFunctionMethod(
     ScalarSqlFunctions.BITAND,

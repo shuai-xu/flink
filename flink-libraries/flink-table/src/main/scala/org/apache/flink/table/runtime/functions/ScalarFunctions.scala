@@ -88,6 +88,13 @@ object ScalarFunctions {
     Math.pow(a.doubleValue(), b)
   }
 
+  /**
+    * Returns the hyperbolic cosine of a big decimal value.
+    */
+  def cosh(x: Decimal): Double = {
+    Math.cosh(x.doubleValue())
+  }
+
   def acos(b0: Decimal): Double = {
     Math.acos(b0.doubleValue())
   }
