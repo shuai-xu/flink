@@ -619,6 +619,12 @@ object TableConfig {
   val SQL_EXEC_SINK_MEM = "sql.exec.sink.default-memory-mb"
   val SQL_EXEC_SINK_MEM_DEFAULT = 100
 
+  /**
+    * Sets sink parallelism if [[SQL_EXEC_SINK_PARALLELISM]] is set. If it is not set,
+    * sink nodes will chain with ahead nodes as far as possible.
+    */
+  val SQL_EXEC_SINK_PARALLELISM = "sql.exec.sink.parallelism"
+
   // =================================== Miscellaneous ===================================
   /**
     * Mainly for testing.

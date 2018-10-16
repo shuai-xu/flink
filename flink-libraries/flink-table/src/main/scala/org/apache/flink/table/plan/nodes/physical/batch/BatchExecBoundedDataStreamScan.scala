@@ -24,11 +24,15 @@ import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.api.common.operators.ResourceSpec
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.schema.DataStreamTable
+
+import java.lang.{Boolean => JBoolean}
+import java.lang.{Integer => JInteger}
 
 import scala.collection.JavaConverters._
 
@@ -89,8 +93,8 @@ class BatchExecBoundedDataStreamScan(
   }
 
   override private[flink] def getTableSourceResultPartitionNum(
-    tableEnv: BatchTableEnvironment): (Boolean, Int) = {
-    (boundedStreamTable.dataStream.getTransformation.isParallelismLocked,
+      tableEnv: BatchTableEnvironment): JTuple[JBoolean, JInteger] = {
+    new JTuple(boundedStreamTable.dataStream.getTransformation.isParallelismLocked,
       boundedStreamTable.dataStream.getParallelism)
   }
 
@@ -103,5 +107,4 @@ class BatchExecBoundedDataStreamScan(
     hasTimeAttributeField(boundedStreamTable.fieldIndexes) ||
         needsConversion(boundedStreamTable.dataType)
   }
-
 }

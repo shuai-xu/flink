@@ -117,6 +117,49 @@ public class RelResource {
 	}
 
 	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		RelResource resource = (RelResource) o;
+
+		if (Double.compare(resource.cpu, cpu) != 0) {
+			return false;
+		}
+		if (heapMem != resource.heapMem) {
+			return false;
+		}
+		if (isReservedManagedFinal != resource.isReservedManagedFinal) {
+			return false;
+		}
+		if (reservedManagedMem != resource.reservedManagedMem) {
+			return false;
+		}
+		if (preferManagedMem != resource.preferManagedMem) {
+			return false;
+		}
+		return maxManagedMem == resource.maxManagedMem;
+	}
+
+	@Override
+	public int hashCode() {
+		int result;
+		long temp;
+		temp = Double.doubleToLongBits(cpu);
+		result = (int) (temp ^ (temp >>> 32));
+		result = 31 * result + heapMem;
+		result = 31 * result + (isReservedManagedFinal ? 1 : 0);
+		result = 31 * result + reservedManagedMem;
+		result = 31 * result + preferManagedMem;
+		result = 31 * result + maxManagedMem;
+		return result;
+	}
+
+	@Override
 	public String toString() {
 		return "RelResource{" +
 				"cpu=" + cpu +

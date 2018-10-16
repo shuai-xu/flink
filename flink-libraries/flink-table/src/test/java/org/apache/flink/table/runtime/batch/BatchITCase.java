@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.batch.table;
+package org.apache.flink.table.runtime.batch;
 
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.BatchTableEnvironment;
@@ -54,8 +54,9 @@ import static org.junit.Assert.assertTrue;
 /**
  * Integration tests for {@link BatchExecTableSource}.
  */
-public class BatchTableITCase extends AbstractTestBase {
+public class BatchITCase extends AbstractTestBase {
 	private File tmpFile = new File("/tmp/123");
+	private File finalizedFile = new File("/tmp/finalized");
 	private StreamExecutionEnvironment env;
 	private BatchTableEnvironment tableEnv;
 
@@ -65,20 +66,31 @@ public class BatchTableITCase extends AbstractTestBase {
 		tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		tableEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(),
 				BatchExecResourceUtil.InferMode.ONLY_SOURCE.toString());
-		if (tmpFile.exists()) {
-			tmpFile.delete();
-		}
+		deleteFiles();
 	}
 
 	@After
 	public void tearDown() {
+		deleteFiles();
+	}
+
+	private void deleteFiles() {
 		if (tmpFile.exists()) {
+			if (tmpFile.isDirectory() && tmpFile.listFiles() != null) {
+				for (File subFile : tmpFile.listFiles()) {
+					subFile.delete();
+				}
+			}
 			tmpFile.delete();
+		}
+		if (finalizedFile.exists()) {
+			finalizedFile.delete();
 		}
 	}
 
 	@Test
 	public void testBatchExecCollect() throws Exception {
+
 		CsvTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
@@ -152,7 +164,6 @@ public class BatchTableITCase extends AbstractTestBase {
 
 	@Test
 	public void testIOVertex() throws IOException {
-
 		env.setParallelism(1);
 		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
 
@@ -162,7 +173,7 @@ public class BatchTableITCase extends AbstractTestBase {
 				.select("first, last, score");
 
 		FinalizeCsvSink sink = new FinalizeCsvSink(
-				tmpFile.getPath(), "|", "/tmp/finalized");
+				tmpFile.getPath(), "|", finalizedFile.getAbsolutePath());
 		table.writeToSink(sink);
 		tableEnv.execute();
 
@@ -177,6 +188,24 @@ public class BatchTableITCase extends AbstractTestBase {
 		assertEquals(expected, sb.toString());
 
 		// Test whether the finalizeGlobal() is called
-		assertTrue((new File("/tmp/finalized")).exists());
+		assertTrue((finalizedFile).exists());
+	}
+
+	@Test
+	public void testSinkParallelism() throws IOException {
+		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 5);
+		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
+
+		tableEnv.registerTableSource("persons", csvTable);
+
+		Table table = tableEnv.scan("persons")
+				.select("first, last, score");
+
+		FinalizeCsvSink sink = new FinalizeCsvSink(
+				tmpFile.getPath(), "|", finalizedFile.getAbsolutePath());
+		table.writeToSink(sink);
+		tableEnv.execute();
+
+		assertEquals(5, tmpFile.listFiles().length);
 	}
 }

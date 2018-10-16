@@ -197,6 +197,11 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 	@Override
 	public void onResultPartitionConsumable(ResultPartitionConsumableEvent event) {
 		JobVertexID producerJobVertexID = jobGraph.getResultProducerID(event.getResultID());
+		produceResultPartition(producerJobVertexID);
+		checkScheduleNewRunningUnit();
+	}
+
+	private void produceResultPartition(JobVertexID producerJobVertexID) {
 		Set<LogicalJobVertexRunningUnit> runningUnitList = inputRunningUnitMap.get(producerJobVertexID);
 		for (LogicalJobVertexRunningUnit jobVertexRunningUnit : runningUnitList) {
 			jobVertexRunningUnit.receiveInput(producerJobVertexID);
@@ -204,12 +209,22 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 				addToScheduleQueue(jobVertexRunningUnit);
 			}
 		}
-		checkScheduleNewRunningUnit();
 	}
 
 	@Override
 	public void onExecutionVertexFailover(ExecutionVertexFailoverEvent event) {
-		// TODO
+		scheduleQueue.clear();
+		currentScheduledUnit = null;
+		scheduledRunningUnitSet.clear();
+		event.getAffectedExecutionVertexIDs().forEach(t -> logicalJobVertices.get(t.getJobVertexID()).failoverTask());
+		runningUnitMap.values().forEach(LogicalJobVertexRunningUnit::reset);
+		logicalJobVertices.values().stream().filter(LogicalJobVertex::allTasksDeploying).forEach(j -> {
+			allTaskDeploying(j);
+			for (int i = 0; i < j.getParallelism(); i++) {
+				produceResultPartition(j.getJobVertexID());
+			}
+		});
+		onSchedulingStarted();
 	}
 
 	private synchronized void checkScheduleNewRunningUnit() {
@@ -254,11 +269,17 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 		if (event.getNewExecutionState() == ExecutionState.DEPLOYING) {
 			LogicalJobVertex jobVertex = logicalJobVertices.get(event.getExecutionVertexID().getJobVertexID());
 			jobVertex.deployingTask();
-			jobVertex.getRunningUnitSet().stream()
-					.filter(LogicalJobVertexRunningUnit::allTasksDeploying)
-					.forEach(this::runningUnitAllDeploying);
+			if (jobVertex.allTasksDeploying()) {
+				allTaskDeploying(jobVertex);
+			}
 			checkScheduleNewRunningUnit();
 		}
+	}
+
+	private synchronized void allTaskDeploying(LogicalJobVertex jobVertex) {
+		jobVertex.getRunningUnitSet().stream()
+				.filter(LogicalJobVertexRunningUnit::allTasksDeploying)
+				.forEach(this::runningUnitAllDeploying);
 	}
 
 	private synchronized void runningUnitAllDeploying(LogicalJobVertexRunningUnit jobVertexRunningUnit) {

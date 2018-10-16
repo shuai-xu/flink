@@ -335,8 +335,13 @@ class BatchTableEnvironment(
       val resource = BatchExecResourceUtil.getResourceSpec(getConfig, heapMem)
       sinkTransformation.setResources(resource, resource)
     }
-    if (!sinkTransformation.isParallelismLocked && streamTransformation.getParallelism > 0) {
-      sinkTransformation.setParallelism(streamTransformation.getParallelism)
+    if (!sinkTransformation.isParallelismLocked) {
+      val configSinkParallelism = BatchExecResourceUtil.getSinkParallelism(getConfig)
+      if (configSinkParallelism > 0) {
+        sinkTransformation.setParallelism(configSinkParallelism)
+      } else if (streamTransformation.getParallelism > 0) {
+        sinkTransformation.setParallelism(streamTransformation.getParallelism)
+      }
     }
   }
 

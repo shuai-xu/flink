@@ -23,6 +23,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableException}
@@ -33,6 +34,9 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource, TableSourceUtil}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
+
+import java.lang.{Boolean => JBoolean}
+import java.lang.{Integer => JInteger}
 
 /**
   * Flink RelNode to read data from an external source defined by a [[BatchExecTableSource]].
@@ -124,12 +128,12 @@ class BatchExecTableSourceScan(
   }
 
   override private[flink] def getTableSourceResultPartitionNum(
-    tableEnv: BatchTableEnvironment): (Boolean, Int) = {
+      tableEnv: BatchTableEnvironment): JTuple[JBoolean, JInteger] = {
     tableSource match {
-      case source: LimitableTableSource if source.isLimitPushedDown => (true, 1)
+      case source: LimitableTableSource if source.isLimitPushedDown => new JTuple(true, 1)
       case _ =>
         val transformation = getSourceTransformation(tableEnv.streamEnv)
-        (transformation.isParallelismLocked, transformation.getParallelism)
+        new JTuple(transformation.isParallelismLocked, transformation.getParallelism)
     }
   }
 

@@ -36,7 +36,11 @@ public class LogicalJobVertexRunningUnit {
 	// input depend on the jobVertexSet.
 	private final Set<JobVertexID> inputDependSet = new HashSet<>();
 
+	private final Set<JobVertexID> receivedInputDependSet = new HashSet<>();
+
 	private final Set<LogicalJobVertexRunningUnit> joinDependSet = new HashSet<>();
+
+	private final Set<LogicalJobVertexRunningUnit> haveJoinedDependSet = new HashSet<>();
 
 	public void addJoinDepend(LogicalJobVertexRunningUnit runningUnit) {
 		joinDependSet.add(runningUnit);
@@ -66,11 +70,11 @@ public class LogicalJobVertexRunningUnit {
 	}
 
 	public void receiveInput(JobVertexID jobVertexID) {
-		inputDependSet.remove(jobVertexID);
+		receivedInputDependSet.add(jobVertexID);
 	}
 
 	public void joinDependDeploying(LogicalJobVertexRunningUnit runningUnit) {
-		joinDependSet.remove(runningUnit);
+		haveJoinedDependSet.add(runningUnit);
 	}
 
 	public Set<LogicalJobVertex> getJobVertexSet() {
@@ -78,6 +82,12 @@ public class LogicalJobVertexRunningUnit {
 	}
 
 	public boolean allDependReady() {
-		return inputDependSet.isEmpty() && joinDependSet.isEmpty();
+		return receivedInputDependSet.size() == inputDependSet.size()
+				&& haveJoinedDependSet.size() == joinDependSet.size();
+	}
+
+	public void reset() {
+		receivedInputDependSet.clear();
+		haveJoinedDependSet.clear();
 	}
 }

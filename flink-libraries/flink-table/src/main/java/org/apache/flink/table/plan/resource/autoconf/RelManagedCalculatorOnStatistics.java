@@ -53,7 +53,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.plan.resource.RelResource;
-import org.apache.flink.table.plan.resource.RunningUnitKeeper;
+import org.apache.flink.table.plan.resource.ShuffleStage;
 import org.apache.flink.table.util.BatchExecResourceUtil;
 import org.apache.flink.util.Preconditions;
 
@@ -72,22 +72,22 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 
 	private final Map<RowBatchExecRel, RelResource> relResMap;
 	private final TableConfig tConfig;
-	private final RunningUnitKeeper runningUnitKeeper;
+	private final Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap;
 	private final RelMetadataQuery mq;
 
 	public RelManagedCalculatorOnStatistics(
 			TableConfig tConfig,
-			RunningUnitKeeper runningUnitKeeper,
+			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap,
 			RelMetadataQuery mq,
 			Map<RowBatchExecRel, RelResource> relResMap) {
 		this.tConfig = tConfig;
-		this.runningUnitKeeper = runningUnitKeeper;
+		this.relShuffleStageMap = relShuffleStageMap;
 		this.mq = mq;
 		this.relResMap = relResMap;
 	}
 
 	private int getResultPartitionCount(RowBatchExecRel batchExecRel) {
-		return runningUnitKeeper.getRelShuffleStage(batchExecRel).getResultParallelism();
+		return relShuffleStageMap.get(batchExecRel).getResultParallelism();
 	}
 
 	private void calculateNoManagedMem(RowBatchExecRel batchExecRel) {

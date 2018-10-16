@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -29,6 +30,9 @@ import org.apache.flink.table.plan.schema.FlinkTable
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.Logging
+
+import java.lang.{Boolean => JBoolean}
+import java.lang.{Integer => JInteger}
 
 trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logging {
 
@@ -46,8 +50,8 @@ trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logg
 
   // get resultPartitionNum set on source transformation. The returned type (left, right)
   // represents isParallelismLocked and the current set parallelism.
-  private[flink] def getTableSourceResultPartitionNum(tableEnv: BatchTableEnvironment):
-    (Boolean, Int)
+  private[flink] def getTableSourceResultPartitionNum(
+      tableEnv: BatchTableEnvironment): JTuple[JBoolean, JInteger]
 
   // get resourceSpec set on source transformation.
   private[flink] def getTableSourceResource(tableEnv: BatchTableEnvironment): ResourceSpec

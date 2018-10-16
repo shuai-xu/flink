@@ -62,6 +62,10 @@ public class LogicalJobVertex {
 		return runningUnitSet;
 	}
 
+	public void failoverTask() {
+		deployedNum.decrementAndGet();
+	}
+
 	@Override
 	public String toString() {
 		return jobVertex.getName();

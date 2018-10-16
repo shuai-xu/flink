@@ -77,8 +77,7 @@ public class RelReservedManagedMemAdjusterTest {
 		setRelParallelism(3, 400);
 		setRelParallelism(4, 400);
 
-		RelReservedManagedMemAdjuster adjuster = new RelReservedManagedMemAdjuster(totalMem, relResourceMap, relParallelismMap, minManagedMemory);
-		adjuster.adjust(relRunningUnitMap);
+		RelReservedManagedMemAdjuster.adjust(totalMem, relResourceMap, relParallelismMap, minManagedMemory, relRunningUnitMap);
 
 		assertEquals(0, relResourceMap.get(relList.get(0)).getReservedManagedMem());
 		assertEquals(98, relResourceMap.get(relList.get(1)).getReservedManagedMem());
@@ -106,8 +105,7 @@ public class RelReservedManagedMemAdjusterTest {
 		setRelParallelism(0, 2);
 		setRelParallelism(1, 2);
 
-		RelReservedManagedMemAdjuster adjuster = new RelReservedManagedMemAdjuster(totalMem, relResourceMap, relParallelismMap, minManagedMemory);
-		adjuster.adjust(relRunningUnitMap);
+		RelReservedManagedMemAdjuster.adjust(totalMem, relResourceMap, relParallelismMap, minManagedMemory, relRunningUnitMap);
 
 		assertEquals(30, relResourceMap.get(relList.get(0)).getReservedManagedMem());
 		assertEquals(20, relResourceMap.get(relList.get(1)).getReservedManagedMem());

@@ -24,10 +24,18 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.plan.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.plan.resource.autoconf.RelManagedCalculatorOnStatistics;
 import org.apache.flink.table.plan.resource.autoconf.RelParallelismAdjuster;
 import org.apache.flink.table.plan.resource.autoconf.RelReservedManagedMemAdjuster;
+import org.apache.flink.table.plan.resource.calculator.DefaultParallelismCalculator;
+import org.apache.flink.table.plan.resource.calculator.DefaultRelManagedCalculator;
+import org.apache.flink.table.plan.resource.calculator.DefaultResultPartitionCalculator;
+import org.apache.flink.table.plan.resource.calculator.ParallelismCalculatorOnStatistics;
+import org.apache.flink.table.plan.resource.calculator.RelCpuHeapMemCalculator;
+import org.apache.flink.table.plan.resource.calculator.RelFinalParallelismSetter;
+import org.apache.flink.table.plan.resource.calculator.ShuffleStageParallelismCalculator;
 import org.apache.flink.table.plan.resource.schedule.RunningUnitGraphManagerPlugin;
 import org.apache.flink.table.util.BatchExecResourceUtil;
 import org.apache.flink.table.util.BatchExecResourceUtil.InferMode;
@@ -59,8 +67,7 @@ public class RunningUnitKeeper {
 	private final Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
 	// rel --> shuffleStage
 	private final Map<RowBatchExecRel, Set<BatchExecRelStage>> relStagesMap = new LinkedHashMap<>();
-	private  Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap;
-	private boolean useRunningUnit = true;
+	private boolean supportRunningUnit = true;
 
 	public RunningUnitKeeper(BatchTableEnvironment tableEnv) {
 		this.tableConfig = tableEnv.getConfig();
@@ -71,22 +78,15 @@ public class RunningUnitKeeper {
 		if (runningUnits != null) {
 			runningUnits.clear();
 		}
-		if (relShuffleStageMap != null) {
-			relShuffleStageMap.clear();
-		}
 		relRunningUnitMap.clear();
 		relStagesMap.clear();
-	}
-
-	public ShuffleStage getRelShuffleStage(RowBatchExecRel rowBatchExecRel) {
-		return relShuffleStageMap.get(rowBatchExecRel);
 	}
 
 	public void buildRUs(RowBatchExecRel rootNode) {
 		// not support subsectionOptimization or external shuffle temporarily
 		if (tableConfig.getSubsectionOptimization()
 				|| tableConfig.enableRangePartition()) {
-			useRunningUnit = false;
+			supportRunningUnit = false;
 			return;
 		}
 		RunningUnitGenerator visitor = new RunningUnitGenerator(tableConfig);
@@ -97,12 +97,13 @@ public class RunningUnitKeeper {
 				relRunningUnitMap.computeIfAbsent(rel, k -> new LinkedHashSet<>()).add(runningUnit);
 			}
 		}
-		relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
 		buildRelStagesMap();
 	}
 
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
-		if (useRunningUnit && BatchExecResourceUtil.enableRunningUnitSchedule(tableConfig)) {
+		if (supportRunningUnit &&
+				BatchExecResourceUtil.enableRunningUnitSchedule(tableConfig) &&
+				!tableConfig.enableBatchExternalShuffle()) {
 			context.getConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, RunningUnitGraphManagerPlugin.class.getName());
 			try {
 				InstantiationUtil.writeObjectToConfig(runningUnits, context.getConfiguration(), RUNNING_UNIT_CONF_KEY);
@@ -114,45 +115,71 @@ public class RunningUnitKeeper {
 
 	public void calculateRelResource(RowBatchExecRel rootNode) {
 		Map<RowBatchExecRel, RelResource> relResourceMap = new LinkedHashMap<>();
-		InferMode inferMode = BatchExecResourceUtil.getInferMode(tableConfig);
-		if (!useRunningUnit || !inferMode.equals(InferMode.ALL)) {
+		RelCpuHeapMemCalculator.calculate(tableEnv, relResourceMap, rootNode);
+		if (!supportRunningUnit) {
 			// if runningUnit cannot be build, or no statics, we set resource according to config.
 			// we are not able to set resource according to statics when runningUnits are not build.
-			rootNode.accept(new DefaultResultPartitionCalculator(tableConfig, tableEnv));
-			rootNode.accept(new RelCpuHeapMemCalculator(tableConfig, tableEnv, relResourceMap));
+			DefaultResultPartitionCalculator.calculate(tableEnv, rootNode);
 			rootNode.accept(new DefaultRelManagedCalculator(tableConfig, relResourceMap));
 			for (Map.Entry<RowBatchExecRel, RelResource> entry : relResourceMap.entrySet()) {
 				entry.getKey().setResource(entry.getValue());
 				LOG.info(entry.getKey() + " resource: " + entry.getValue());
 			}
-		} else {
-			RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
-			rootNode.accept(new ResultPartitionCalculatorOnStatistics(tableConfig, tableEnv, this, mq));
-			rootNode.accept(new RelCpuHeapMemCalculator(tableConfig, tableEnv, relResourceMap));
-			Tuple2<Double, Long> resourceLimit = BatchExecResourceUtil.getRunningUnitResourceLimit(tableConfig);
-			if (resourceLimit != null) {
-				RelParallelismAdjuster.adjustParallelism(resourceLimit.f0, relResourceMap, relRunningUnitMap, relShuffleStageMap);
-			}
-			rootNode.accept(new RelManagedCalculatorOnStatistics(tableConfig, this, mq, relResourceMap));
-			if (resourceLimit != null) {
-				int minManagedMemory = BatchExecResourceUtil.getOperatorMinManagedMem(tableConfig);
-				Map<RowBatchExecRel, Integer> relParallelismMap = new HashMap<>();
-				for (Map.Entry<RowBatchExecRel, ShuffleStage> entry : relShuffleStageMap.entrySet()) {
-					relParallelismMap.put(entry.getKey(), entry.getValue().getResultParallelism());
-				}
-				RelReservedManagedMemAdjuster adjuster = new RelReservedManagedMemAdjuster(resourceLimit.f1, relResourceMap, relParallelismMap, minManagedMemory);
-				adjuster.adjust(relRunningUnitMap);
-			}
-			for (RowBatchExecRel rel : relShuffleStageMap.keySet()) {
-				rel.setResultPartitionCount(relShuffleStageMap.get(rel).getResultParallelism());
-				rel.setResource(relResourceMap.get(rel));
-				LOG.info(rel + " resource: " + relResourceMap.get(rel));
-			}
+			return;
+		}
+		InferMode inferMode = BatchExecResourceUtil.getInferMode(tableConfig);
+		RelFinalParallelismSetter.calculate(tableEnv, rootNode);
+		Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
+		RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
+		getShuffleStageParallelismCalculator(mq, tableConfig, inferMode).calculate(relShuffleStageMap.values());
+		Tuple2<Double, Long> resourceLimit = BatchExecResourceUtil.getRunningUnitResourceLimit(tableConfig);
+		if (resourceLimit != null) {
+			RelParallelismAdjuster.adjustParallelism(resourceLimit.f0, relResourceMap, relRunningUnitMap, relShuffleStageMap);
+		}
+		rootNode.accept(getRelManagedCalculator(relShuffleStageMap, inferMode, mq, relResourceMap));
+		if (resourceLimit != null) {
+			adjustReservedManagedMem(relShuffleStageMap, relResourceMap, resourceLimit.f1);
+		}
+		for (RowBatchExecRel rel : relShuffleStageMap.keySet()) {
+			rel.setResultPartitionCount(relShuffleStageMap.get(rel).getResultParallelism());
+			rel.setResource(relResourceMap.get(rel));
+			LOG.info(rel + " resource: " + relResourceMap.get(rel));
 		}
 	}
 
+	private ShuffleStageParallelismCalculator getShuffleStageParallelismCalculator(
+			RelMetadataQuery mq,
+			TableConfig tableConfig,
+			InferMode inferMode) {
+		if (inferMode.equals(InferMode.ALL)) {
+			return new ParallelismCalculatorOnStatistics(mq, tableConfig);
+		} else {
+			return new DefaultParallelismCalculator(mq, tableConfig);
+		}
+	}
+
+	private BatchExecRelVisitor<Void> getRelManagedCalculator(
+			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap,
+			InferMode inferMode, RelMetadataQuery mq,
+			Map<RowBatchExecRel, RelResource> relResourceMap) {
+		if (inferMode.equals(InferMode.ALL)) {
+			return new RelManagedCalculatorOnStatistics(tableConfig, relShuffleStageMap, mq, relResourceMap);
+		} else {
+			return new DefaultRelManagedCalculator(tableConfig, relResourceMap);
+		}
+	}
+
+	private void adjustReservedManagedMem(Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap, Map<RowBatchExecRel, RelResource> relResourceMap, long totalMem) {
+		int minManagedMemory = BatchExecResourceUtil.getOperatorMinManagedMem(tableConfig);
+		Map<RowBatchExecRel, Integer> relParallelismMap = new HashMap<>();
+		for (Map.Entry<RowBatchExecRel, ShuffleStage> entry : relShuffleStageMap.entrySet()) {
+			relParallelismMap.put(entry.getKey(), entry.getValue().getResultParallelism());
+		}
+		RelReservedManagedMemAdjuster.adjust(totalMem, relResourceMap, relParallelismMap, minManagedMemory, relRunningUnitMap);
+	}
+
 	public void addTransformation(RowBatchExecRel rel, StreamTransformation<?> transformation) {
-		if (!useRunningUnit || !relStagesMap.containsKey(rel)) {
+		if (!supportRunningUnit || !relStagesMap.containsKey(rel)) {
 			return;
 		}
 		for (BatchExecRelStage relStage : relStagesMap.get(rel)) {

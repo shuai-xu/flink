@@ -184,6 +184,18 @@ public class BatchExecResourceUtil {
 	}
 
 	/**
+	 * Gets the config parallelism for sink. If it is not set, return -1.
+	 * @param tConfig TableConfig.
+	 * @return the config parallelism for sink.
+	 */
+	public static int getSinkParallelism(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_SINK_PARALLELISM(),
+				-1
+		);
+	}
+
+	/**
 	 * Gets the config memory for sink.
 	 * @param tConfig TableConfig.
 	 * @return the config memory for sink.

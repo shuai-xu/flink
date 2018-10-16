@@ -40,6 +40,10 @@ public class ShuffleStage {
 		batchExecRelSet.addAll(rowBatchExecRelSet);
 	}
 
+	public void removeRel(RowBatchExecRel rowBatchExecRel) {
+		this.batchExecRelSet.remove(rowBatchExecRel);
+	}
+
 	public Set<RowBatchExecRel> getBatchExecRelSet() {
 		return this.batchExecRelSet;
 	}

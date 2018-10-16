@@ -25,11 +25,15 @@ import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 
 import org.apache.calcite.rel.RelNode;
 
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 
 /**
@@ -42,6 +46,11 @@ public class ShuffleStageGenerator {
 	public static Map<RowBatchExecRel, ShuffleStage> generate(RowBatchExecRel rootRel) {
 		ShuffleStageGenerator generator = new ShuffleStageGenerator();
 		generator.buildShuffleStages(rootRel);
+		Map<RowBatchExecRel, ShuffleStage> result = generator.getRelShuffleStageMap();
+		result.values().forEach(s -> {
+			List<RowBatchExecRel> virtualRelList = s.getBatchExecRelSet().stream().filter(ShuffleStageGenerator::isVirtualRel).collect(toList());
+			virtualRelList.forEach(s::removeRel);
+		});
 		return generator.getRelShuffleStageMap().entrySet().stream()
 				.filter(x -> !isVirtualRel(x.getKey()))
 				.collect(Collectors.toMap(Map.Entry::getKey,
@@ -63,44 +72,63 @@ public class ShuffleStageGenerator {
 			// source rel
 			ShuffleStage shuffleStage = new ShuffleStage();
 			shuffleStage.addRel(rowBatchExecRel);
+			if (rowBatchExecRel.resultPartitionCount() > 0) {
+				shuffleStage.setResultParallelism(rowBatchExecRel.resultPartitionCount(), true);
+			}
 			relShuffleStageMap.put(rowBatchExecRel, shuffleStage);
 		} else if (!(rowBatchExecRel instanceof BatchExecExchange)) {
-			ShuffleStage inputShuffleStage = getInputShuffleStage(rowBatchExecRel);
-			if (inputShuffleStage == null) {
-				inputShuffleStage = new ShuffleStage();
-			}
-			if (!isVirtualRel(rowBatchExecRel)) {
-				inputShuffleStage.addRel(rowBatchExecRel);
-			}
+			Set<ShuffleStage> inputShuffleStages = getInputShuffleStages(rowBatchExecRel);
+			ShuffleStage inputShuffleStage = mergeInputShuffleStages(inputShuffleStages, rowBatchExecRel.resultPartitionCount());
+			inputShuffleStage.addRel(rowBatchExecRel);
 			relShuffleStageMap.put(rowBatchExecRel, inputShuffleStage);
 		}
 	}
 
-	private ShuffleStage getInputShuffleStage(RowBatchExecRel rel) {
-		ShuffleStage resultShuffleStage = null;
-		for (RelNode input : rel.getInputs()) {
-			RowBatchExecRel inputRel = (RowBatchExecRel) input;
-			ShuffleStage oneInputShuffleStage = relShuffleStageMap.get(inputRel);
-			if (oneInputShuffleStage != null) {
-				if (resultShuffleStage == null) {
-					resultShuffleStage = oneInputShuffleStage;
-				} else {
-					Set<RowBatchExecRel> oneInputRelSet = oneInputShuffleStage.getBatchExecRelSet();
-					resultShuffleStage.addRelSet(oneInputRelSet);
-					for (RowBatchExecRel oneInputRel : oneInputRelSet) {
-						relShuffleStageMap.put(oneInputRel, resultShuffleStage);
-					}
+	private ShuffleStage mergeInputShuffleStages(Set<ShuffleStage> shuffleStageSet, int relParallelism) {
+		if (relParallelism > 0) {
+			ShuffleStage resultShuffleStage = new ShuffleStage();
+			resultShuffleStage.setResultParallelism(relParallelism, true);
+			for (ShuffleStage shuffleStage : shuffleStageSet) {
+				if (!shuffleStage.isParallelismFinal() || shuffleStage.getResultParallelism() == relParallelism) {
+					mergeShuffleStage(resultShuffleStage, shuffleStage);
 				}
 			}
+			return resultShuffleStage;
+		} else {
+			ShuffleStage resultShuffleStage = shuffleStageSet.stream()
+					.filter(ShuffleStage::isParallelismFinal)
+					.max(Comparator.comparing(ShuffleStage::getResultParallelism))
+					.orElse(new ShuffleStage());
+			for (ShuffleStage shuffleStage : shuffleStageSet) {
+				if (!shuffleStage.isParallelismFinal() || shuffleStage.getResultParallelism() == resultShuffleStage.getResultParallelism()) {
+					mergeShuffleStage(resultShuffleStage, shuffleStage);
+				}
+			}
+			return resultShuffleStage;
 		}
-		return resultShuffleStage;
+	}
+
+	private void mergeShuffleStage(ShuffleStage shuffleStage, ShuffleStage other) {
+		Set<RowBatchExecRel> relSet = other.getBatchExecRelSet();
+		shuffleStage.addRelSet(relSet);
+		for (RowBatchExecRel r : relSet) {
+			relShuffleStageMap.put(r, shuffleStage);
+		}
+	}
+
+	private Set<ShuffleStage> getInputShuffleStages(RowBatchExecRel rel) {
+		Set<ShuffleStage> shuffleStageList = new HashSet<>();
+		for (RelNode input : rel.getInputs()) {
+			ShuffleStage oneInputShuffleStage = relShuffleStageMap.get((RowBatchExecRel) input);
+			if (oneInputShuffleStage != null) {
+				shuffleStageList.add(oneInputShuffleStage);
+			}
+		}
+		return shuffleStageList;
 	}
 
 	private static boolean isVirtualRel(RowBatchExecRel rel) {
-		if (rel instanceof BatchExecUnion || rel instanceof BatchExecReused) {
-			return true;
-		}
-		return false;
+		return (rel instanceof BatchExecUnion || rel instanceof BatchExecReused);
 	}
 
 	private Map<RowBatchExecRel, ShuffleStage> getRelShuffleStageMap() {

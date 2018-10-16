@@ -44,7 +44,7 @@ public class RelReservedManagedMemAdjuster {
 
 	private final int minManagedMemory;
 
-	public RelReservedManagedMemAdjuster(long totalMem,
+	private RelReservedManagedMemAdjuster(long totalMem,
 			Map<RowBatchExecRel, RelResource> relResourceMap,
 			Map<RowBatchExecRel, Integer> relParallelismMap,
 			int minManagedMemory) {
@@ -54,7 +54,15 @@ public class RelReservedManagedMemAdjuster {
 		this.minManagedMemory = minManagedMemory;
 	}
 
-	public void adjust(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap) {
+	public static void adjust(long totalMem,
+			Map<RowBatchExecRel, RelResource> relResourceMap,
+			Map<RowBatchExecRel, Integer> relParallelismMap,
+			int minManagedMemory,
+			Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap) {
+		new RelReservedManagedMemAdjuster(totalMem, relResourceMap, relParallelismMap, minManagedMemory).adjust(relRunningUnitMap);
+	}
+
+	private void adjust(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap) {
 
 		for (Map.Entry<RowBatchExecRel, Set<RelRunningUnit>> entry : relRunningUnitMap.entrySet()) {
 			RowBatchExecRel rel = entry.getKey();
