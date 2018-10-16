@@ -23,7 +23,7 @@ import java.net.URL
 import org.apache.commons.configuration.{ConfigurationException, ConversionException, PropertiesConfiguration}
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.table.annotation.TableType
-import org.apache.flink.table.api.{AmbiguousTableSourceConverterException, NoMatchedTableSourceConverterException}
+import org.apache.flink.table.api.{NoMatchedTableSourceConverterException}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.{BatchExecTableSource, DimensionTableSource, StreamTableSource, TableSource}

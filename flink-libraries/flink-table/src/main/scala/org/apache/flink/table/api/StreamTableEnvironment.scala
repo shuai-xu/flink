@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.lang.{Boolean => JBool}
 import _root_.java.util
 
 import org.apache.calcite.plan._
@@ -29,7 +28,6 @@ import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.flink.annotation.InterfaceStability
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
@@ -45,7 +43,7 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory, FlinkRelMetadataQuery}
-import org.apache.flink.table.plan.logical.{LogicalNode, LogicalRelNode, SinkNode}
+import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
 import org.apache.flink.table.plan.optimize.StreamOptimizeContext
@@ -58,7 +56,7 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
-import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, StateUtil, WatermarkUtils}
+import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, StateUtil}
 import org.apache.flink.util.Preconditions
 
 import _root_.scala.collection.JavaConversions._
@@ -200,19 +198,22 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers an external [[StreamTableSource]] in this [[TableEnvironment]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
+    * Registers an internal [[StreamTableSource]] in this [[TableEnvironment]]'s catalog without
+    * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
     * @param tableSource The [[TableSource]] to register.
     */
-  override def registerTableSource(name: String, tableSource: TableSource): Unit = {
-    checkValidTableName(name)
+  override protected def registerTableSourceInternal(
+    name: String,
+    tableSource: TableSource,
+    statistic: FlinkStatistic)
+  : Unit = {
 
-    // check if event-time is enabled
+    // check that event-time is enabled if table source includes rowtime attributes
     tableSource match {
       case tableSource: TableSource if TableSourceUtil.hasRowtimeAttribute(tableSource) &&
-          execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime =>
+        execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime =>
 
         throw TableException(
           s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
@@ -221,18 +222,60 @@ abstract class StreamTableEnvironment(
     }
 
     tableSource match {
+
+      // check for proper stream table source
       case streamTableSource: StreamTableSource[_] =>
-        registerTableInternal(name,
-          new StreamTableSourceTable(streamTableSource))
-      case dimensionTableSource: DimensionTableSource[_] =>
-        if (dimensionTableSource.isTemporal) {
-          registerTableInternal(name, new TemporalDimensionTableSourceTable(dimensionTableSource))
-        } else {
-          registerTableInternal(name, new DimensionTableSourceTable(dimensionTableSource))
+        // register
+        getTable(name) match {
+
+          // check if a table (source or sink) is registered
+          case Some(table: TableSourceSinkTable[_]) => table.tableSourceTable match {
+
+            // wrapper contains source
+            case Some(_: TableSourceTable) =>
+              throw new TableException(s"Table '$name' already exists. " +
+                s"Please choose a different name.")
+
+            // wrapper contains only sink (not source)
+            case Some(_: StreamTableSourceTable[_]) =>
+              val enrichedTable = new TableSourceSinkTable(
+                Some(new StreamTableSourceTable(streamTableSource)),
+                table.tableSinkTable)
+              replaceRegisteredTable(name, enrichedTable)
+          }
+
+          // no table is registered
+          case _ =>
+            val newTable = new TableSourceSinkTable(
+              Some(new StreamTableSourceTable(streamTableSource)),
+              None)
+            registerTableInternal(name, newTable)
         }
+
+      // check for proper dimension table source
+      case dimensionTableSource: DimensionTableSource[_] =>
+        // register
+        getTable(name) match {
+
+          // a dimension table is already registered
+          case Some(_: TableSourceTable) =>
+            throw new TableException(s"Table '$name' already exists. " +
+              s"Please choose a different name.")
+
+          // no table is registered
+          case _ =>
+            val dimTableSourceTable =  if (dimensionTableSource.isTemporal) {
+              new TemporalDimensionTableSourceTable(dimensionTableSource)
+            } else {
+              new DimensionTableSourceTable(dimensionTableSource)
+            }
+            registerTableInternal(name, dimTableSourceTable)
+        }
+
+      // not a stream table source
       case _ =>
-        throw new TableException("Only StreamTableSource can be registered in " +
-            "StreamTableEnvironment")
+        throw new TableException("Only StreamTableSource and DimensionTableSource " +
+          "can be registered in StreamTableEnvironment")
     }
   }
 
@@ -314,19 +357,8 @@ abstract class StreamTableEnvironment(
       throw new TableException("Same number of field names and types required.")
     }
 
-    tableSink match {
-      case streamTableSink@(
-          _: AppendStreamTableSink[_] |
-          _: BaseUpsertStreamTableSink[_] |
-          _: BaseRetractStreamTableSink[_]) =>
-
-        val configuredSink = streamTableSink.configure(fieldNames, fieldTypes)
-        registerTableInternal(name, new TableSinkTable(configuredSink))
-      case _ =>
-        throw new TableException(
-          "Only AppendStreamTableSink, UpsertStreamTableSink, and RetractStreamTableSink can be " +
-            "registered in StreamTableEnvironment.")
-    }
+    val configuredSink = tableSink.configure(fieldNames, fieldTypes)
+    registerTableSinkInternal(name, configuredSink)
   }
 
   /**
@@ -364,7 +396,7 @@ abstract class StreamTableEnvironment(
         getTable(name) match {
 
           // table source and/or sink is registered
-          case table: TableSourceSinkTable[_] => table.tableSinkTable match {
+          case Some(table: TableSourceSinkTable[_]) => table.tableSinkTable match {
 
             // wrapper contains sink
             case Some(_: TableSinkTable[_]) =>

@@ -27,7 +27,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.{Func15, SplitUDF}
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.util.MemoryTableSinkUtil
+import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._
@@ -519,7 +519,7 @@ class SqlITCase extends StreamingTestBase {
 
   @Test
   def testInsertIntoMemoryTable(): Unit = {
-    MemoryTableSinkUtil.clear
+    MemoryTableSourceSinkUtil.clear
 
     val t = StreamTestData.getSmall3TupleDataStream(env)
         .assignAscendingTimestamps(x => x._2)
@@ -528,7 +528,7 @@ class SqlITCase extends StreamingTestBase {
 
     val fieldNames = Array("d", "e", "f")
     val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.LONG, DataTypes.STRING)
-    val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     val sql = "INSERT INTO targetTable SELECT a, b, c FROM sourceTable"
@@ -539,7 +539,7 @@ class SqlITCase extends StreamingTestBase {
       "1,1,Hi",
       "2,2,Hello",
       "3,2,Hello world")
-    assertEquals(expected.sorted, MemoryTableSinkUtil.results.sorted)
+    assertEquals(expected.sorted, MemoryTableSourceSinkUtil.results.sorted)
   }
 
   @Ignore

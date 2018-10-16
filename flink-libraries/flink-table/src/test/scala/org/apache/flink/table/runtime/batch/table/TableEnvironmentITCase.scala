@@ -25,7 +25,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase
 import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSinkUtil}
+import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSourceSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Assert.assertEquals
 import org.junit._
@@ -125,14 +125,14 @@ class TableEnvironmentITCase extends QueryTest {
 
   @Test
   def testInsertIntoMemoryTable(): Unit = {
-    MemoryTableSinkUtil.clear
+    MemoryTableSourceSinkUtil.clear
 
     val t = CollectionBatchExecTable.getSmall3TupleDataSet(tEnv).as('a, 'b, 'c)
     tEnv.registerTable("sourceTable", t)
 
     val fieldNames = Array("d", "e", "f")
     val fieldTypes = tEnv.scan("sourceTable").getSchema.getTypes.asInstanceOf[Array[DataType]]
-    val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     tEnv.scan("sourceTable")
@@ -141,7 +141,7 @@ class TableEnvironmentITCase extends QueryTest {
     tEnv.execute()
 
     val expected = List("1,1,Hi", "2,2,Hello", "3,2,Hello world")
-    assertEquals(expected.sorted, MemoryTableSinkUtil.results.sorted)
+    assertEquals(expected.sorted, MemoryTableSourceSinkUtil.results.sorted)
   }
 
   @Test

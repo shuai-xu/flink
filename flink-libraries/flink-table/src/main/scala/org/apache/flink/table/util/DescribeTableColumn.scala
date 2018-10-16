@@ -51,10 +51,11 @@ object DescribeTableColumn extends Logging {
       tablePath: Array[String],
       isRich: Boolean): util.List[Row] = {
     val tableName = tablePath.mkString(".")
-    val table = tableEnv.getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = tableEnv.getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '$tableName' was not found.")
     }
+    val table = tableOpt.get
     val data = new mutable.ArrayBuffer[Row]
     val rowType = table.getRowType(tableEnv.getTypeFactory)
     rowType.getFieldList.foreach { f =>
@@ -91,10 +92,11 @@ object DescribeTableColumn extends Logging {
       column: String,
       isRich: Boolean): util.List[Row] = {
     val tableName = tablePath.mkString(".")
-    val table = tableEnv.getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = tableEnv.getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '$tableName' was not found.")
     }
+    val table = tableOpt.get
     val data = new mutable.ArrayBuffer[Row]
     val field = table.getRowType(tableEnv.getTypeFactory).getFieldList
         .find(_.getName.equalsIgnoreCase(column))

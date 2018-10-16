@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.util.{MemoryTableSinkUtil, TableTestBatchExecBase}
+import org.apache.flink.table.util.{MemoryTableSourceSinkUtil, TableTestBatchExecBase}
 import org.junit._
 
 class InsertIntoValidationTest extends TableTestBatchExecBase {
@@ -34,7 +34,7 @@ class InsertIntoValidationTest extends TableTestBatchExecBase {
 
     val fieldNames = Array("d", "e")
     val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.LONG)
-    val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
     util.tableEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     // must fail because TableSink accepts fewer fields.
@@ -51,7 +51,7 @@ class InsertIntoValidationTest extends TableTestBatchExecBase {
     val fieldNames = Array("d", "e", "f")
     val fieldTypes: Array[DataType] =
       Array(DataTypes.STRING, DataTypes.INT, DataTypes.LONG)
-    val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
     util.tableEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     // must fail because types of result and TableSink do not match.

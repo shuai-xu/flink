@@ -27,7 +27,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.util.MemoryTableSinkUtil
+import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Test
 
@@ -39,13 +39,13 @@ class TableSinkITCase extends StreamingTestBase {
 
   @Test
   def testInsertIntoRegisteredTableSink(): Unit = {
-    MemoryTableSinkUtil.clear
+    MemoryTableSourceSinkUtil.clear
 
     val input = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(r => r._2)
     val fieldNames = Array("d", "e", "t")
     val fieldTypes: Array[DataType] = Array(DataTypes.STRING, DataTypes.TIMESTAMP, DataTypes.LONG)
-    val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     input.toTable(tEnv, 'a, 'b, 'c, 't.rowtime)
@@ -60,7 +60,7 @@ class TableSinkITCase extends StreamingTestBase {
       "Comment#14,1970-01-01 00:00:00.006,6",
       "Comment#15,1970-01-01 00:00:00.006,6").mkString("\n")
 
-    TestBaseUtils.compareResultAsText(MemoryTableSinkUtil.results.asJava, expected)
+    TestBaseUtils.compareResultAsText(MemoryTableSourceSinkUtil.results.asJava, expected)
   }
 
   @Test

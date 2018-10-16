@@ -497,7 +497,7 @@ class LogicalNodeBlock(val outputNode: LogicalNode, tEnv: TableEnvironment) {
             case complexDimTVF: ComplexDimTVF =>
               val uniqueId = complexDimTVF.dimTable.hashCode() & 0xfffffff
               val newTableName = s"${complexDimTVF.dimTable.explainSource()}_$uniqueId"
-              if (null == tEnv.getTable(newTableName)) {
+              if (tEnv.getTable(newTableName).isEmpty) {
                 tEnv.registerTableSource(newTableName, complexDimTVF.dimTable)
               }
 

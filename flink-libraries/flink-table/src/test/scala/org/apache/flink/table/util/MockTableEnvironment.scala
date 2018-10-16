@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.table.api.{QueryConfig, Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory}
+import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.types.DataType
@@ -73,4 +74,7 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
   override def explain(table: Table): String = ???
 
   override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
+
+  override protected def registerTableSourceInternal(name: String, tableSource: TableSource,
+    statistic: FlinkStatistic): Unit = ???
 }

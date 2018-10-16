@@ -146,7 +146,7 @@ class AnalyzeStatisticTest extends QueryTest {
     assertEquals(expectedTableStats, tableStats)
   }
 
-  @Test
+  @Test(expected = classOf[TableException]) // Table 'My.Table' was not found
   def testGenerateTableStats_TableNameWithDot(): Unit = {
     val ds = CollectionBatchExecTable.get3TupleDataSet(tEnv, "a, b, c")
     tEnv.registerTable("My.Table", ds)

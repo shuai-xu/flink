@@ -510,7 +510,21 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param name        The name under which the [[TableSource]] is registered.
     * @param tableSource The [[TableSource]] to register.
     */
-  def registerTableSource(name: String, tableSource: TableSource): Unit
+  def registerTableSource(name: String, tableSource: TableSource): Unit = {
+    checkValidTableName(name)
+    registerTableSourceInternal(name, tableSource, FlinkStatistic.UNKNOWN)
+  }
+
+  /**
+    * Registers an internal [[TableSource]] in this [[TableEnvironment]]'s catalog without
+    * name checking. Registered tables can be referenced in SQL queries.
+    *
+    * @param name        The name under which the [[TableSource]] is registered.
+    * @param tableSource The [[TableSource]] to register.
+    * @param statistics  The [[FlinkStatistic]] passed
+    */
+  protected def registerTableSourceInternal(name: String, tableSource: TableSource,
+    statistics: FlinkStatistic): Unit
 
   /**
     * Gets the statistics of a table.
@@ -538,19 +552,29 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @return Statistics of a table if the statistics is available, else return null.
     */
   def getTableStats(tablePath: Array[String]): TableStats = {
-    val table = getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
     }
+    val table = tableOpt.get
     val tableName = tablePath.last
     val stats = if (tablePath.length == 1) {
       table match {
         case t: FlinkTable =>
           // call statistic instead of getStatistics of FlinkTable to fetch the original statistics.
-          if (t.getStatistic == null) {
+          val statistics = t.getStatistic
+          if (statistics == null) {
             None
           } else {
-            Option(t.getStatistic.getTableStats)
+            Option(statistics.getTableStats)
+          }
+        // Only source table extends FlinkTable now
+        case sourceSinkTable: TableSourceSinkTable[_] if sourceSinkTable.isSourceTable =>
+          val statistics = sourceSinkTable.tableSourceTable.get.getStatistic
+          if (statistics == null) {
+            None
+          } else {
+            Option(statistics.getTableStats)
           }
         case _ => None
       }
@@ -612,18 +636,19 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param tableStats The [[TableStats]] to update.
     */
   def alterTableStats(tablePath: Array[String], tableStats: Option[TableStats]): Unit = {
-    val table = getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
     }
 
+    val table = tableOpt.get
     val tableName = tablePath.last
     if (tablePath.length == 1) {
       // table in calcite root schema
       val statistic = table match {
         // call statistic instead of getStatistics of TableSourceTable
         // to fetch the original statistics.
-        case t: TableSourceTable => t.statistic
+        case t: TableSourceSinkTable[_] if t.isSourceTable => t.tableSourceTable.get.statistic
         case t: FlinkTable => t.getStatistic
         case _ => throw new TableException(
           s"alter TableStats operation is not supported for ${table.getClass}.")
@@ -667,18 +692,19 @@ abstract class TableEnvironment(val config: TableConfig) {
   private def alterSkewInfo(
       tablePath: Array[String],
       skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
-    val table = getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
     }
 
+    val table = tableOpt.get
     val tableName = tablePath.last
     if (tablePath.length == 1) {
       // table in calcite root schema
       val statistic = table match {
         // call statistic instead of getStatistics of TableSourceTable
         // to fetch the original statistics.
-        case t: TableSourceTable => t.statistic
+        case t: TableSourceSinkTable[_] if t.isSourceTable => t.tableSourceTable.get.statistic
         case t: FlinkTable => t.getStatistic
         case _ => throw new TableException(
           s"alter SkewInfo operation is not supported for ${table.getClass}.")
@@ -700,18 +726,19 @@ abstract class TableEnvironment(val config: TableConfig) {
   def alterUniqueKeys(
       tablePath: Array[String],
       uniqueKeys: util.Set[util.Set[String]]): Unit = {
-    val table = getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
     }
 
+    val table = tableOpt.get
     val tableName = tablePath.last
     if (tablePath.length == 1) {
       // table in calcite root schema
       val statistic = table match {
         // call statistic instead of getStatistics of TableSourceTable
         // to fetch the original statistics.
-        case t: TableSourceTable => t.statistic
+        case t: TableSourceSinkTable[_] if t.isSourceTable => t.tableSourceTable.get.statistic
         case t: FlinkTable => t.getStatistic
         case _ => throw new TableException(
           s"alter UniqueKeys operation is not supported for ${table.getClass}.")
@@ -816,9 +843,9 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   private[flink] def scanInternal(tablePath: Array[String]): Option[Table] = {
-    val table = getTable(tablePath: _*)
-    if (table != null) {
-      Some(new Table(this, CatalogNode(tablePath, table.getRowType(typeFactory))))
+    val tableOpt = getTable(tablePath)
+    if (tableOpt.nonEmpty) {
+      Some(new Table(this, CatalogNode(tablePath, tableOpt.get.getRowType(typeFactory))))
     } else {
       None
     }
@@ -1004,7 +1031,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       case insert: SqlInsert =>
         if (insert.getTargetTable.isInstanceOf[SqlIdentifier] &&
             insert.getTargetTable.asInstanceOf[SqlIdentifier].toString.equals("console") &&
-            getTable("console") == null) {
+            getTable("console").isEmpty) {
           val source = flinkPlanner.validate(insert.getSource)
           val queryResult = new Table(this, LogicalRelNode(flinkPlanner.rel(source).rel))
           val schema = queryResult.getSchema
@@ -1089,7 +1116,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     if (!isRegistered(sinkTableName)) {
       throw TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
     }
-    val targetTable = getTable(sinkTableName)
+    val targetTable = getTable(sinkTableName).get
 
     insertInto(table, targetTable, sinkTableName, conf)
   }
@@ -1102,6 +1129,8 @@ abstract class TableEnvironment(val config: TableConfig) {
     val tableSink = targetTable match {
       case s: CatalogTable => s.tableSink
       case s: TableSinkTable[_] => s.tableSink
+      case s: TableSourceSinkTable[_] if s.tableSinkTable.isDefined =>
+        s.tableSinkTable.get.tableSink
       case _ =>
         throw TableException(TableErrors.INST.sqlNotTableSinkError(targetTableName))
 
@@ -1207,31 +1236,49 @@ abstract class TableEnvironment(val config: TableConfig) {
     memContains
   }
 
-  private[flink] def getTable(tablePath: String*): org.apache.calcite.schema.Table = {
-    require(tablePath != null && tablePath.nonEmpty, "tablePath must not be null or empty.")
-    if (tablePath.length == 1) {
-      // First, try to get the table from the memory
-      var table = rootSchema.getTable(tablePath.head)
+  /**
+    * Get a table from either internal or external catalogs.
+    *
+    * @param name The name of the table.
+    * @return The table registered either internally or externally, None otherwise.
+    */
+  def getTable(paths: Array[String]): Option[org.apache.calcite.schema.Table] = {
+    getTable(paths.mkString("."))
+  }
 
-      // Second, try to get the table from the external catalog
-      if (null == table) {
-        val schemaPaths = Array(TableEnvironment.DEFAULT_SCHEMA)
-        val schema = getSchema(schemaPaths)
-        if (schema != null) {
-          table = schema.getTable(tablePath.head)
-        }
-      }
-      table
-    } else {
-      val schemaPaths = tablePath.slice(0, tablePath.length - 1)
-      val schema = getSchema(schemaPaths.toArray)
-      if (schema != null) {
-        val tableName = tablePath(tablePath.length - 1)
-        schema.getTable(tableName)
-      } else {
-        null
+  /**
+    * Get a table from either internal or external catalogs.
+    *
+    * @param name The name of the table.
+    * @return The table registered either internally or externally, None otherwise.
+    */
+  def getTable(name: String): Option[org.apache.calcite.schema.Table] = {
+
+    // recursively fetches a table from a schema.
+    def getTableFromSchema(
+      schema: SchemaPlus,
+      path: List[String]): Option[org.apache.calcite.schema.Table] = {
+
+      path match {
+        case tableName :: Nil =>
+          // look up table
+          Option(schema.getTable(tableName))
+        case subschemaName :: remain =>
+          // look up subschema
+          val subschema = Option(schema.getSubSchema(subschemaName))
+          subschema match {
+            case Some(s) =>
+              // search for table in subschema
+              getTableFromSchema(s, remain)
+            case None =>
+              // subschema does not exist
+              None
+          }
       }
     }
+
+    val pathNames = name.split('.').toList
+    getTableFromSchema(rootSchema, pathNames)
   }
 
   def getExternalCatalog(catalogPaths: Array[String]): ExternalCatalog = {
@@ -1289,7 +1336,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   /** Returns a unique table name according to the internal naming pattern. */
   private[flink] def createUniqueTableName(): String = {
     var res = tableNamePrefix + tableNameCntr.getAndIncrement()
-    while (getTable(res) != null) {
+    while (getTable(res).nonEmpty) {
       res = tableNamePrefix + tableNameCntr.getAndIncrement()
     }
     res

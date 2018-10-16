@@ -78,11 +78,12 @@ object AnalyzeStatistic extends Logging {
     require(columnNames != null, "columnNames must not be null")
 
     val tableName = tablePath.mkString(".")
-    val table = tableEnv.getTable(tablePath: _*)
-    if (table == null) {
+    val tableOpt = tableEnv.getTable(tablePath)
+    if (tableOpt.isEmpty) {
       throw new TableException(s"Table '$tableName' was not found.")
     }
     // TODO handle partitionable table
+    val table = tableOpt.get
     val rowType = table.getRowType(tableEnv.getTypeFactory)
     val allFieldNames = rowType.getFieldNames.asScala
 

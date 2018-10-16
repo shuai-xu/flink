@@ -36,7 +36,7 @@ import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink}
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.FlinkRelOptUtil
-import org.apache.flink.table.util.MemoryTableSinkUtil
+import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._
@@ -1018,7 +1018,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
       DataTypes.STRING, DataTypes.STRING, DataTypes.BYTE, DataTypes.SHORT,
       DataTypes.INT, DataTypes.LONG, DataTypes.BYTE_ARRAY,
       DataTypes.DOUBLE, DataTypes.DATE, DataTypes.TIMESTAMP)
-    val sink = new MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     val sqlQuery = "INSERT INTO targetTable SELECT " +

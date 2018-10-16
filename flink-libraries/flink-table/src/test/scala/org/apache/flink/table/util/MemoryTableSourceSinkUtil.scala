@@ -18,26 +18,83 @@
 
 package org.apache.flink.table.util
 
+import java.util
+
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.io.RichOutputFormat
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
-import org.apache.flink.streaming.api.operators.StreamSink
-import org.apache.flink.streaming.api.transformations.SinkTransformation
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.streaming.api.functions.source.SourceFunction
+import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
+import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchExecTableSink, TableSinkBase}
+import org.apache.flink.table.sources._
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object MemoryTableSinkUtil {
+object MemoryTableSourceSinkUtil {
+  val tableData: mutable.ListBuffer[Row] = mutable.ListBuffer[Row]()
   var results: mutable.MutableList[String] = mutable.MutableList.empty[String]
 
   def clear = {
-    MemoryTableSinkUtil.results.clear()
+    MemoryTableSourceSinkUtil.results.clear()
+  }
+
+  class UnsafeMemoryTableSource(
+    tableSchema: TableSchema,
+    returnType: DataType,
+    rowtimeAttributeDescriptor: util.List[RowtimeAttributeDescriptor],
+    proctime: String,
+    val terminationCount: Int)
+    extends BatchExecTableSource[Row]
+      with StreamTableSource[Row]
+      with DefinedProctimeAttribute
+      with DefinedRowtimeAttributes {
+
+    override def getReturnType: DataType = returnType
+
+    override def getTableSchema: TableSchema = tableSchema
+
+    override def getBoundedStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = {
+      execEnv.fromCollection(tableData.asJava,
+        DataTypes.toTypeInfo(returnType).asInstanceOf[TypeInformation[Row]])
+    }
+
+    final class InMemorySourceFunction(var count: Int = terminationCount)
+      extends SourceFunction[Row] {
+
+      override def cancel(): Unit = throw new UnsupportedOperationException()
+
+      override def run(ctx: SourceContext[Row]): Unit = {
+        while (count > 0) {
+          tableData.synchronized {
+            if (tableData.nonEmpty) {
+              val r = tableData.remove(0)
+              ctx.collect(r)
+              count -= 1
+            }
+          }
+        }
+      }
+    }
+
+    override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = {
+      execEnv.addSource(new InMemorySourceFunction,
+        DataTypes.toTypeInfo(returnType).asInstanceOf[TypeInformation[Row]])
+    }
+
+    override def getProctimeAttribute: String = proctime
+
+    override def getRowtimeAttributeDescriptors: util.List[RowtimeAttributeDescriptor] = {
+      rowtimeAttributeDescriptor
+    }
   }
 
   final class UnsafeMemoryAppendTableSink

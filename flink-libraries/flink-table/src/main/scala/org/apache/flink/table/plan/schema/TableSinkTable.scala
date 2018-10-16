@@ -26,11 +26,11 @@ import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.types.DataTypes
 
-/** Table which defines an external table via a [[TableSink]] */
+/** Class which implements the logic to convert a [[TableSink]] to Calcite Table */
 class TableSinkTable[T](
     val tableSink: TableSink[T],
     val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
-  extends AbstractTable {
+  extends FlinkTable {
 
   override def getRowType(typeFactory: RelDataTypeFactory): RelDataType = {
     val flinkTypeFactory = typeFactory.asInstanceOf[FlinkTypeFactory]
@@ -44,5 +44,8 @@ class TableSinkTable[T](
     *
     * @return statistics of current table
     */
-  override def getStatistic: Statistic = statistic
+  override def getStatistic: FlinkStatistic = statistic
+
+  override def copy(statistic: FlinkStatistic): FlinkTable =
+    new TableSinkTable[T](tableSink, statistic)
 }

@@ -29,7 +29,7 @@ import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.types.DataTypes.{PROCTIME_INDICATOR => PROCTIME}
 import org.apache.flink.table.types.DataTypes.{ROWTIME_INDICATOR => ROWTIME}
 import org.apache.flink.table.types.DataTypes._
-import org.apache.flink.table.util.MemoryTableSinkUtil.UnsafeMemoryAppendTableSink
+import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.TableTestBase
 import org.apache.flink.types.Row
 import org.junit.Test

@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.lang.{Boolean => JBool}
 import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
 
 import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
@@ -31,7 +30,6 @@ import org.apache.flink.annotation.InterfaceStability
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
@@ -54,12 +52,11 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources._
+import org.apache.flink.table.sources.{BatchExecTableSource, _}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelOptUtil, PlanUtil}
 import org.apache.flink.table.util.PlanUtil._
-import org.apache.flink.types.Row
 import org.apache.flink.util.{AbstractID, Preconditions}
 
 import _root_.scala.collection.JavaConversions._
@@ -601,31 +598,6 @@ class BatchTableEnvironment(
   }
 
   /**
-   * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
-   * Registered tables can be referenced in SQL queries.
-   *
-   * @param name        The name under which the [[TableSource]] is registered.
-   * @param tableSource The [[TableSource]] to register.
-   */
-  override def registerTableSource(name: String, tableSource: TableSource): Unit = {
-    checkValidTableName(name)
-
-    tableSource match {
-      case execTableSource: BatchExecTableSource[_] =>
-        registerTableInternal(name, new BatchTableSourceTable(execTableSource))
-      case dimensionTableSource: DimensionTableSource[_] =>
-        if (dimensionTableSource.isTemporal) {
-          registerTableInternal(name, new TemporalDimensionTableSourceTable(dimensionTableSource))
-        } else {
-          registerTableInternal(name, new DimensionTableSourceTable(dimensionTableSource))
-        }
-      case _ =>
-        throw new TableException("Only BatchExecTableSource/DimensionTableSource " +
-            "can be registered in BatchExecTableEnvironment")
-    }
-  }
-
-  /**
     * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
@@ -668,22 +640,77 @@ class BatchTableEnvironment(
       FlinkStatistic.UNKNOWN
     }
 
+    registerTableSourceInternal(name, tableSource, statistic)
+  }
+
+  /**
+    * Registers an internal [[BatchExecTableSource]] in this [[TableEnvironment]]'s catalog without
+    * name checking. Registered tables can be referenced in SQL queries.
+    *
+    * @param name        The name under which the [[TableSource]] is registered.
+    * @param tableSource The [[TableSource]] to register.
+    */
+  override protected def registerTableSourceInternal(
+    name: String,
+    tableSource: TableSource,
+    statistic: FlinkStatistic)
+  : Unit = {
+
     tableSource match {
-      case execTableSource: BatchExecTableSource[_] =>
-        val tableSourceTable =
-          new BatchTableSourceTable(execTableSource, statistic)
-        registerTableInternal(name, tableSourceTable)
-      case dimensionTableSource: DimensionTableSource[_] =>
-        if (dimensionTableSource.isTemporal) {
-          registerTableInternal(
-            name, new TemporalDimensionTableSourceTable(dimensionTableSource, statistic))
-        } else {
-          registerTableInternal(
-            name, new DimensionTableSourceTable(dimensionTableSource, statistic))
+
+      // check for proper batch table source
+      case batchTableSource: BatchExecTableSource[_] =>
+        // check if a table (source or sink) is registered
+        getTable(name) match {
+
+          // table source and/or sink is registered
+          case Some(table: TableSourceSinkTable[_]) => table.tableSourceTable match {
+
+            // wrapper contains source
+            case Some(_: TableSourceTable) =>
+              throw new TableException(s"Table '$name' already exists. " +
+                s"Please choose a different name.")
+
+            // wrapper contains only sink (not source)
+            case _ =>
+              val enrichedTable = new TableSourceSinkTable(
+                Some(new BatchTableSourceTable(batchTableSource, statistic)),
+                table.tableSinkTable)
+              replaceRegisteredTable(name, enrichedTable)
+          }
+
+          // no table is registered
+          case _ =>
+            val newTable = new TableSourceSinkTable(
+              Some(new BatchTableSourceTable(batchTableSource, statistic)),
+              None)
+            registerTableInternal(name, newTable)
         }
+
+      // check for proper dim table source
+      case dimTableSource: DimensionTableSource[_] =>
+        // check if a table (source or sink) is registered
+        getTable(name) match {
+
+          // dimension table source is already registered
+          case Some(_: TableSourceTable) =>
+            throw new TableException(s"Table '$name' already exists. " +
+              s"Please choose a different name.")
+
+          // no table is registered
+          case _ =>
+            val dimTableSourceTable = if (dimTableSource.isTemporal) {
+              new TemporalDimensionTableSourceTable(dimTableSource, statistic)
+            } else {
+              new DimensionTableSourceTable(dimTableSource, statistic)
+            }
+            registerTableInternal(name, dimTableSourceTable)
+        }
+
+      // not a batch table source
       case _ =>
-        throw new TableException("Only BatchExecTableSource/DimensionTableSource " +
-            "can be registered in BatchExecTableEnvironment")
+        throw new TableException("Only BatchTableSource and DimensionTableSource can be " +
+          "registered in BatchTableEnvironment.")
     }
   }
 
@@ -733,17 +760,9 @@ class BatchTableEnvironment(
       throw new TableException("Same number of field names and types required.")
     }
 
-    tableSink match {
-      case batchExecTableSink: BatchExecTableSink[_] =>
-        val configuredSink = batchExecTableSink.configure(fieldNames, fieldTypes)
-        registerTableInternal(name, new TableSinkTable(configuredSink))
-      case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
-        val configuredSink = compatibleTableSink.configure(fieldNames, fieldTypes)
-        registerTableInternal(name, new TableSinkTable(configuredSink))
-      case _ =>
-        throw new TableException("Only BatchExecTableSink|CompatibleStreamTableSink can be " +
-            "registered in BatchExecTableEnvironment")
-    }
+    // configure and register
+    val configuredSink = tableSink.configure(fieldNames, fieldTypes)
+    registerTableSinkInternal(name, configuredSink)
   }
 
   /**
@@ -775,13 +794,13 @@ class BatchTableEnvironment(
     configuredSink match {
 
       // check for proper batch table sink
-      case _: BatchExecTableSink[_] =>
+      case _: BatchExecTableSink[_] | _: BatchExecCompatibleStreamTableSink[_] =>
 
         // check if a table (source or sink) is registered
         getTable(name) match {
 
           // table source and/or sink is registered
-          case table: TableSourceSinkTable[_] => table.tableSinkTable match {
+          case Some(table: TableSourceSinkTable[_]) => table.tableSinkTable match {
 
             // wrapper contains sink
             case Some(_: TableSinkTable[_]) =>

@@ -25,7 +25,7 @@ import java.util.{List => JList}
 
 import org.apache.calcite.config.CalciteConnectionConfig
 import org.apache.calcite.prepare.Prepare.PreparingTable
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, FlinkTable}
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, FlinkTable, TableSourceSinkTable}
 
 /**
   * Flink specific [[CalciteCatalogReader]] that changes the RelOptTable which wrapped a
@@ -43,7 +43,17 @@ class FlinkCalciteCatalogReader(
     if (originRelOptTable == null) {
       originRelOptTable
     } else {
-      val table = originRelOptTable.unwrap(classOf[FlinkTable])
+      val sourceSinkTable = originRelOptTable.unwrap(classOf[TableSourceSinkTable[_]])
+      val table = if (sourceSinkTable != null) {
+        // unwrap the TableSourceSinkTable to TableSourceTable/TableSinkTable, cause we do not want
+        // to have mixed table type in Calcite plans, that means, we only want to see
+        // TableSourceTable/TableSinkTable in query plan.
+        sourceSinkTable.tableSourceTable
+          .getOrElse(sourceSinkTable.tableSinkTable.orNull)
+      } else {
+        originRelOptTable.unwrap(classOf[FlinkTable])
+      }
+
       if (table != null) {
         FlinkRelOptTable.create(
           originRelOptTable.getRelOptSchema,

@@ -19,11 +19,13 @@
 package org.apache.flink.table.api
 
 import org.apache.calcite.rel.RelNode
+import org.apache.calcite.schema.TemporalTable
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.{Alias, Asc, CoTableValuedAggFunctionCall, Expression, ExpressionList, ExpressionParser, Literal, NamedExpression, Ordering, TableValuedAggFunctionCall, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
+import org.apache.flink.table.plan.schema.{TableSourceSinkTable, TableSourceTable}
 import org.apache.flink.table.plan.logical.{LogicalTableValuedAggregateCall, Minus, _}
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink, TableSink}
@@ -86,10 +88,18 @@ class Table(
   }
 
   private lazy val tableSchema: TableSchema = logicalPlan match {
-    case CatalogNode(tablePath, _) if tableEnv.getTable(tablePath.toArray : _*)
-        .isInstanceOf[TableSourceTable] =>
-      tableEnv.getTable(tablePath.toArray : _*).asInstanceOf[TableSourceTable].tableSource
-          .getTableSchema
+    case CatalogNode(tablePath, _) if tableEnv.getTable(tablePath.toArray)
+      .exists(_.isInstanceOf[TableSourceSinkTable[_]]) =>
+      val tableSourceSinkTable = tableEnv.getTable(tablePath.toArray).get
+        .asInstanceOf[TableSourceSinkTable[_]]
+      if (tableSourceSinkTable.isSourceTable) {
+        tableSourceSinkTable.tableSourceTable.get.tableSource.getTableSchema
+      } else {
+        new TableSchema(
+          logicalPlan.output.map(_.name).toArray,
+          logicalPlan.output.map(expression => DataTypes.internal(expression.resultType)).toArray,
+          getRelNode.getRowType.getFieldList.map(_.getType.isNullable).toArray)
+      }
     case _ =>
       new TableSchema(
         logicalPlan.output.map(_.name).toArray,

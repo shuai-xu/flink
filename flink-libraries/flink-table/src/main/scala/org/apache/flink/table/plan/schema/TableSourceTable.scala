@@ -26,7 +26,8 @@ import org.apache.flink.table.sources.TableSource
 
 import scala.collection.mutable.ArrayBuffer
 
-/** Table which defines an external table via a [[TableSource]] */
+/** Abstract class which define the interfaces required to convert a [[TableSource]] to
+  * a Calcite Table */
 abstract class TableSourceTable(
     val tableSource: TableSource,
     val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
