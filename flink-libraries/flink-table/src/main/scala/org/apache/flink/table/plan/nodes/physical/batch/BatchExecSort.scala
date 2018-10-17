@@ -111,6 +111,7 @@ class BatchExecSort(
       reservedMangedMemorySize,
       preferMangedMemorySize,
       perRequestSize.toLong,
+      tableEnv.getConfig.getParameters.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES),
       GeneratedSorter(
         codeGen.generateNormalizedKeyComputer("SortBatchExecComputer"),
         codeGen.generateRecordComparator("SortBatchExecComparator"),

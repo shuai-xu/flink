@@ -188,10 +188,10 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 			final Object owner, MemoryManager memoryManager, long reservedMemorySize, long maxMemorySize,
 			long perRequestMemorySize, IOManager ioManager, TypeSerializer<BaseRow> inputSerializer,
 			BinaryRowSerializer serializer, NormalizedKeyComputer normalizedKeyComputer,
-			RecordComparator comparator) throws IOException {
+			RecordComparator comparator, int maxNumFileHandles) throws IOException {
 		this(owner, memoryManager, reservedMemorySize, maxMemorySize, perRequestMemorySize, ioManager,
 				inputSerializer, serializer, normalizedKeyComputer, comparator,
-				ConfigConstants.DEFAULT_SPILLING_MAX_FAN, ConfigConstants.DEFAULT_SORT_SPILLING_THRESHOLD);
+				maxNumFileHandles, ConfigConstants.DEFAULT_SORT_SPILLING_THRESHOLD);
 	}
 
 	public BinaryExternalSorter(

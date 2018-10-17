@@ -340,7 +340,7 @@ public class RandomSortMergeInnerJoinTest {
 					null, null, null,
 					new GeneratedSorter(null, null, null, null),
 					new GeneratedSorter(null, null, null, null),
-					new GeneratedSorter(null, null, null, null), new boolean[]{true});
+					new GeneratedSorter(null, null, null, null), new boolean[]{true}, 128);
 		}
 
 		@Override

@@ -19,7 +19,7 @@ package org.apache.flink.table.api
 
 import _root_.java.util.TimeZone
 
-import org.apache.flink.configuration.{Configuration, GlobalConfiguration}
+import org.apache.flink.configuration.{ConfigOption, ConfigOptions, Configuration, GlobalConfiguration}
 import org.apache.flink.streaming.api.graph.ShuffleProperties
 import org.apache.flink.table.api.OperatorType.OperatorType
 import org.apache.flink.table.calcite.CalciteConfig
@@ -454,6 +454,13 @@ object TableConfig {
    * The default value for the sort's reserved and prefer buffer.
    */
   val SQL_EXEC_SORT_BUFFER_MEM_DEFAULT = 256
+
+  val SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES: ConfigOption[Integer] =
+    ConfigOptions.key("sql.exec.sort.max-num-file-handles")
+        .defaultValue(new Integer(128))
+        .withDescription(
+          "Sort merge's maximum number of roads, too many roads, may cause too many files to be" +
+              " read at the same time, resulting in excessive use of memory.")
 
   // =================================== Join ===================================
   /**

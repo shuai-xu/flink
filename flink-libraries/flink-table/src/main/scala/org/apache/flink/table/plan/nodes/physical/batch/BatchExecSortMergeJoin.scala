@@ -27,6 +27,9 @@ import org.apache.flink.streaming.api.transformations.{StreamTransformation, Two
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ProjectionCodeGenerator}
+import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkRelMetadataQuery}
@@ -207,7 +210,8 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       newGeneratedSorter(leftAllKey.toArray, leftType),
       newGeneratedSorter(rightAllKey.toArray, rightType),
       newGeneratedSorter(leftAllKey.indices.toArray, keyType),
-      filterNulls)
+      filterNulls,
+      tableEnv.getConfig.getParameters.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES))
 
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftInput,

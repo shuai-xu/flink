@@ -167,7 +167,7 @@ public class Int2SortMergeJoinOperatorTest {
 					new GeneratedSorter(null, null, null, null),
 					new GeneratedSorter(null, null, null, null),
 					new GeneratedSorter(null, null, null, null),
-					new boolean[]{true});
+					new boolean[]{true}, 128);
 		}
 
 		@Override

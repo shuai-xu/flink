@@ -137,7 +137,7 @@ public class SortOperatorTest {
 		};
 
 		public TestSortOperator() {
-			super(32 * 32 * 1024, 32 * 32 * 1024, 0, new GeneratedSorter(null, null, null, null));
+			super(32 * 32 * 1024, 32 * 32 * 1024, 0, 128, new GeneratedSorter(null, null, null, null));
 		}
 
 		@Override
