@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.varargs
 import java.lang.StringBuilder
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 import org.apache.commons.codec.binary.Hex
@@ -903,6 +904,6 @@ object ScalarFunctions {
   /**
     * Returns the hex string of a string argument.
     */
-  def hex(x: String): String = Hex.encodeHexString(x.getBytes).toUpperCase()
+  def hex(x: String): String = Hex.encodeHexString(x.getBytes(StandardCharsets.UTF_8)).toUpperCase()
 
 }

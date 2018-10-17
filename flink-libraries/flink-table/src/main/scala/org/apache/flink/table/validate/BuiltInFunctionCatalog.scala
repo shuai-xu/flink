@@ -253,6 +253,8 @@ object BuiltInFunctionCatalog {
     "decode" -> classOf[Decode],
     "instr" -> classOf[Instr],
     "uuid" -> classOf[UUID],
+    "fromBase64" -> classOf[FromBase64],
+    "toBase64" -> classOf[ToBase64],
 
     // math functions
     "plus" -> classOf[Plus],

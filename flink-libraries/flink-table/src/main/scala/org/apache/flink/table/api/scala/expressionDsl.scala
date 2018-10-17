@@ -27,9 +27,7 @@ import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilli
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.CoTableValuedAggregateFunction
-import org.apache.flink.table.expressions.{Hex, _}
-import org.apache.flink.table.expressions.{RegexpReplace, _}
-import org.apache.flink.table.expressions.{RegexpExtract, _}
+import org.apache.flink.table.expressions.{Hex, RegexpExtract, RegexpReplace, ToBase64, _}
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
 import org.apache.flink.table.expressions.{TimestampDiff, _}
 import org.apache.flink.table.expressions.{Repeat, _}
@@ -715,6 +713,16 @@ trait ImplicitExpressionOperations {
     */
   def overlay(newString: Expression, starting: Expression, length: Expression) =
     Overlay(expr, newString, starting, length)
+
+  /**
+    * Returns the base string decoded with base64.
+    */
+  def fromBase64() = FromBase64(expr)
+
+  /**
+    * Returns the base64-encoded result of the input string.
+    */
+  def toBase64() = ToBase64(expr)
 
   /**
     * Returns a string with all substrings that match the regular expression consecutively

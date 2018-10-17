@@ -766,3 +766,60 @@ case class UUID() extends LeafExpression {
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
     logicalExprVisitor.visit(this)
 }
+
+/**
+  * Returns the base byte array decoded with base64.
+  * Returns NULL If the input string is NULL.
+  */
+case class FromBase64(child: Expression) extends UnaryExpression with InputTypeSpec {
+
+  override private[flink] def expectedTypes: Seq[InternalType] = Seq(DataTypes.STRING)
+
+  override private[flink] def resultType: InternalType = DataTypes.BYTE_ARRAY
+
+  override private[flink] def validateInput(): ValidationResult = {
+    if (child.resultType == DataTypes.STRING) {
+      ValidationSuccess
+    } else {
+      ValidationFailure(s"FromBase64 operator requires String input, " +
+          s"but $child is of type ${child.resultType}")
+    }
+  }
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.FROM_BASE64, child.toRexNode)
+  }
+
+  override def toString: String = s"($child).fromBase64"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+/**
+  * Returns the base64-encoded result of the input byte array.
+  */
+case class ToBase64(child: Expression) extends UnaryExpression with InputTypeSpec {
+
+  override private[flink] def expectedTypes: Seq[InternalType] = Seq(DataTypes.BYTE_ARRAY)
+
+  override private[flink] def resultType: InternalType = DataTypes.STRING
+
+  override private[flink] def validateInput(): ValidationResult = {
+    if (child.resultType == DataTypes.BYTE_ARRAY) {
+      ValidationSuccess
+    } else {
+      ValidationFailure(s"ToBase64 operator requires a ByteArray input, " +
+          s"but $child is of type ${child.resultType}")
+    }
+  }
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    relBuilder.call(ScalarSqlFunctions.TO_BASE64, child.toRexNode)
+  }
+
+  override def toString: String = s"($child).toBase64"
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
