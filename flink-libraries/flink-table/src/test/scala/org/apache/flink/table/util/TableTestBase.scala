@@ -113,6 +113,8 @@ abstract class TableTestUtil {
 
   def explainSql(query: String): String
 
+  def explain(resultTable: Table): String
+
   def verifySchema(resultTable: Table, fields: Seq[(String, InternalType)]): Unit = {
     val actual = resultTable.getSchema
     val expected = new TableSchema(fields.map(_._1).toArray, fields.map(_._2).toArray)
@@ -258,6 +260,10 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val relNode = tableEnv.sqlQuery(query).getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     RelOptUtil.toString(optimized)
+  }
+
+  def explain(resultTable: Table): String = {
+    tableEnv.explain(resultTable)
   }
 
   private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {
