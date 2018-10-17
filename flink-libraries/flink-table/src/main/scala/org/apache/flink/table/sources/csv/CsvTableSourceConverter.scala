@@ -21,8 +21,10 @@ package org.apache.flink.table.sources.csv
 import java.util.{Set => JSet}
 
 import com.google.common.collect.ImmutableSet
+import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.table.annotation.TableType
 import org.apache.flink.table.catalog.{ExternalCatalogTable, TableSourceConverter}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
@@ -32,6 +34,8 @@ import scala.collection.JavaConverters._
   */
 @TableType(value = "csv")
 class CsvTableSourceConverter extends TableSourceConverter[CsvTableSource] {
+
+  private val LOG: Logger = LoggerFactory.getLogger(this.getClass)
 
   private val required: JSet[String] = ImmutableSet.of("path", "fieldDelim", "rowDelim")
 
@@ -43,8 +47,10 @@ class CsvTableSourceConverter extends TableSourceConverter[CsvTableSource] {
     val csvTableSourceBuilder = new CsvTableSource.Builder
 
     params.get("path").foreach(csvTableSourceBuilder.path)
-    params.get("fieldDelim").foreach(csvTableSourceBuilder.fieldDelimiter)
-    params.get("rowDelim").foreach(csvTableSourceBuilder.lineDelimiter)
+    params.get("fieldDelim").foreach(
+      delim => csvTableSourceBuilder.fieldDelimiter(getJavaEscapedDelim(delim)))
+    params.get("rowDelim").foreach(
+      delim => csvTableSourceBuilder.lineDelimiter(getJavaEscapedDelim(delim)))
     params.get("quoteCharacter").foreach(quoteStr =>
       if (quoteStr.length != 1) {
         throw new IllegalArgumentException("the value of param must only contain one character!")
@@ -72,6 +78,14 @@ class CsvTableSourceConverter extends TableSourceConverter[CsvTableSource] {
       .foreach(field => csvTableSourceBuilder.field(field._1, field._2))
 
     csvTableSourceBuilder.build()
+  }
+
+  def getJavaEscapedDelim(delim: String): String = {
+    val unescapedDelim = StringEscapeUtils.unescapeJava(delim)
+    if (delim != null && !(delim == unescapedDelim)) {
+      LOG.info(s"Delimiter unescaped from {$delim} to {$unescapedDelim}.")
+    }
+    unescapedDelim
   }
 
 }

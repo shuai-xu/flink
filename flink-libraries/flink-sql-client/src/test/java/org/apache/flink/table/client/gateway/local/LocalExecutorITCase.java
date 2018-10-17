@@ -305,7 +305,6 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
-	@Ignore
 	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionSink() throws Exception {
 		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
@@ -322,9 +321,61 @@ public class LocalExecutorITCase extends TestLogger {
 
 		try {
 			// start job
-			final ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+			ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
 				session,
-				"INSERT INTO TableSourceSink SELECT IntegerField1 = 42, StringField1 FROM TableNumber1");
+				"INSERT INTO hive.TableSourceSink SELECT IntegerField1 = 42, StringField1 FROM hive.TableNumber1");
+
+			ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(session);
+			if (executionContext.isNeedShareEnv()) {
+				targetDescriptor = executor.submitJob(executionContext);
+			}
+
+			// wait for job completion and verify result
+			boolean isRunning = true;
+			while (isRunning) {
+				Thread.sleep(50); // slow the processing down
+				final JobStatus jobStatus = clusterClient.getJobStatus(JobID.fromHexString(targetDescriptor.getJobId())).get();
+				switch (jobStatus) {
+					case CREATED:
+					case RUNNING:
+						continue;
+					case FINISHED:
+						isRunning = false;
+						verifySinkResult(csvOutputPath);
+						break;
+					default:
+						fail("Unexpected job status.");
+				}
+			}
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testBatchQueryExecutionSink() throws Exception {
+		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_0", url.getPath());
+		replaceVars.put("$VAR_2", "batch");
+		replaceVars.put("$VAR_4", csvOutputPath);
+		replaceVars.put("$VAR_UPDATE_MODE", "");
+
+		final SessionContext session = new SessionContext("test-session", new Environment());
+		final Executor executor = createModifiedExecutor(clusterClient, session, replaceVars);
+
+		try {
+			// start job
+			ProgramTargetDescriptor targetDescriptor = executor.executeUpdate(
+				session,
+				"INSERT INTO hive.TableSourceSink SELECT IntegerField1 = 42, StringField1 FROM hive.TableNumber1");
+
+			ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(session);
+			if (executionContext.isNeedShareEnv()) {
+				targetDescriptor = executor.submitJob(executionContext);
+			}
 
 			// wait for job completion and verify result
 			boolean isRunning = true;
@@ -413,6 +464,18 @@ public class LocalExecutorITCase extends TestLogger {
 								"  ignoreComments = '#'" +
 								");";
 		executor.createTable(session, ddlTableNumber1);
+
+		final String csvOutputPath = replaceVars.get("$VAR_4");
+		String ddlTableSourceSink = "CREATE TABLE TableSourceSink (" +
+								" BooleanField BOOLEAN, " +
+								" StringField VARCHAR" +
+								") WITH (" +
+								" path = '" + csvOutputPath + "', " +
+								" type = 'csv', " +
+								" fieldDelim = ',', " +
+								" rowDelim = '\n'" +
+								");";
+		executor.createTable(session, ddlTableSourceSink);
 
 		String ddlScalarUDF = "CREATE FUNCTION scalarUDF AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF';";
 		executor.createFunction(session, ddlScalarUDF);
