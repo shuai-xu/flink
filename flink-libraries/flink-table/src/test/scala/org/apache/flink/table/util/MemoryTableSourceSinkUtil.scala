@@ -43,7 +43,7 @@ object MemoryTableSourceSinkUtil {
   val tableData: mutable.ListBuffer[Row] = mutable.ListBuffer[Row]()
   var results: mutable.MutableList[String] = mutable.MutableList.empty[String]
 
-  def clear = {
+  def clear(): Unit = {
     MemoryTableSourceSinkUtil.results.clear()
   }
 
@@ -115,6 +115,8 @@ object MemoryTableSourceSinkUtil {
 
     override def emitDataStream(dataStream: DataStream[Row]): Unit = {
       dataStream.addSink(new MemoryAppendSink)
+        .setParallelism(dataStream.getParallelism)
+        .name(TableConnectorUtil.generateRuntimeName(this.getClass, getFieldNames))
     }
 
     private var pk: String = null
@@ -132,7 +134,8 @@ object MemoryTableSourceSinkUtil {
       boundedStream: DataStream[Row],
       tableConfig: TableConfig,
       executionConfig: ExecutionConfig): DataStreamSink[Row] = {
-      val ret = boundedStream.addSink(new MemoryAppendSink).name("MemorySink")
+      val ret = boundedStream.addSink(new MemoryAppendSink)
+        .name(TableConnectorUtil.generateRuntimeName(this.getClass, getFieldNames))
       ret.setParallelism(1)
       ret.getTransformation.setParallelismLocked(true)
       ret

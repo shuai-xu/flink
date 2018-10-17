@@ -27,7 +27,7 @@ import org.apache.flink.table.api.Table
   *
   * @tparam T Type of records that this [[TableSink]] expects and supports.
   */
-trait BaseRetractStreamTableSink[T] extends TableSink[T] {
+trait BaseRetractStreamTableSink[T] extends StreamTableSink[T] {
 
   /** Emits the DataStream. */
   def emitDataStream(dataStream: DataStream[T]): Unit

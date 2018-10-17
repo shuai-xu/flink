@@ -40,7 +40,7 @@ import org.apache.flink.table.types.{DataType, DataTypes}
   *
   * @tparam T Type of records that this [[TableSink]] expects and supports.
   */
-trait BaseUpsertStreamTableSink[T] extends TableSink[T] {
+trait BaseUpsertStreamTableSink[T] extends StreamTableSink[T] {
 
   /**
     * Configures the unique key fields of the [[Table]] to write.

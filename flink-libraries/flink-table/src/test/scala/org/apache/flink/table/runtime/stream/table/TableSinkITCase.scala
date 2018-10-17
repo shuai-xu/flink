@@ -19,19 +19,27 @@
 package org.apache.flink.table.runtime.stream.table
 
 import java.io.File
+import java.lang.{Boolean => JBool}
 import java.util.TimeZone
 
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase}
+import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, UpsertStreamTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.test.util.TestBaseUtils
+import org.apache.flink.types.Row
+import org.junit.Assert.{assertEquals, assertFalse, assertNull}
 import org.junit.Test
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 class TableSinkITCase extends StreamingTestBase {
 
@@ -39,7 +47,7 @@ class TableSinkITCase extends StreamingTestBase {
 
   @Test
   def testInsertIntoRegisteredTableSink(): Unit = {
-    MemoryTableSourceSinkUtil.clear
+    MemoryTableSourceSinkUtil.clear()
 
     val input = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(r => r._2)
@@ -93,5 +101,135 @@ class TableSinkITCase extends StreamingTestBase {
       "Comment#15,1970-01-01 00:00:00.006").mkString("\n")
 
     TestBaseUtils.compareResultsByLinesInMemory(expected, path)
+  }
+}
+
+private[flink] class TestRetractSink extends RetractStreamTableSink[Row] {
+
+  var fNames: Array[String] = _
+  var fTypes: Array[DataType] = _
+
+  override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]): Unit = {
+    s.addSink(new RowSink)
+  }
+
+  override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
+
+  override def getFieldNames: Array[String] = fNames
+
+  override def getFieldTypes: Array[DataType] = fTypes
+
+  override def configure(
+    fieldNames: Array[String],
+    fieldTypes: Array[DataType]): TableSink[JTuple2[JBool, Row]] = {
+    val copy = new TestRetractSink
+    copy.fNames = fieldNames
+    copy.fTypes = fieldTypes
+    copy
+  }
+
+}
+
+private[flink] class TestUpsertSink(
+  expectedKeys: Array[String],
+  expectedIsAppendOnly: Boolean)
+  extends UpsertStreamTableSink[Row] {
+
+  var fNames: Array[String] = _
+  var fTypes: Array[DataType] = _
+
+  override def setKeyFields(keys: Array[String]): Unit =
+    if (keys != null) {
+      assertEquals("Provided key fields do not match expected keys",
+        expectedKeys.sorted.mkString(","),
+        keys.sorted.mkString(","))
+    } else {
+      assertNull("Provided key fields should not be null.", expectedKeys)
+    }
+
+  override def setIsAppendOnly(isAppendOnly: JBool): Unit =
+    assertEquals(
+      "Provided isAppendOnly does not match expected isAppendOnly",
+      expectedIsAppendOnly,
+      isAppendOnly)
+
+  override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
+
+  override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]): Unit = {
+    s.addSink(new RowSink)
+  }
+
+  override def getFieldNames: Array[String] = fNames
+
+  override def getFieldTypes: Array[DataType] = fTypes
+
+  override def configure(
+    fieldNames: Array[String],
+    fieldTypes: Array[DataType]): TableSink[JTuple2[JBool, Row]] = {
+    val copy = new TestUpsertSink(expectedKeys, expectedIsAppendOnly)
+    copy.fNames = fieldNames
+    copy.fTypes = fieldTypes
+    copy
+  }
+}
+
+class RowSink extends SinkFunction[JTuple2[JBool, Row]] {
+  override def invoke(value: JTuple2[JBool, Row]): Unit = RowCollector.addValue(value)
+}
+
+object RowCollector {
+  private val sink: mutable.ArrayBuffer[JTuple2[JBool, Row]] =
+    new mutable.ArrayBuffer[JTuple2[JBool, Row]]()
+
+  def addValue(value: JTuple2[JBool, Row]): Unit = {
+
+    // make a copy
+    val copy = new JTuple2[JBool, Row](value.f0, Row.copy(value.f1))
+    sink.synchronized {
+      sink += copy
+    }
+  }
+
+  def getAndClearValues: List[JTuple2[JBool, Row]] = {
+    val out = sink.toList
+    sink.clear()
+    out
+  }
+
+  /** Converts a list of retraction messages into a list of final results. */
+  def retractResults(results: List[JTuple2[JBool, Row]]): List[String] = {
+
+    val retracted = results
+      .foldLeft(Map[String, Int]()){ (m: Map[String, Int], v: JTuple2[JBool, Row]) =>
+        val cnt = m.getOrElse(v.f1.toString, 0)
+        if (v.f0) {
+          m + (v.f1.toString -> (cnt + 1))
+        } else {
+          m + (v.f1.toString -> (cnt - 1))
+        }
+      }.filter{ case (_, c: Int) => c != 0 }
+
+    assertFalse(
+      "Received retracted rows which have not been accumulated.",
+      retracted.exists{ case (_, c: Int) => c < 0})
+
+    retracted.flatMap { case (r: String, c: Int) => (0 until c).map(_ => r) }.toList
+  }
+
+  /** Converts a list of upsert messages into a list of final results. */
+  def upsertResults(results: List[JTuple2[JBool, Row]], keys: Array[Int]): List[String] = {
+
+    def getKeys(r: Row): Row = Row.project(r, keys)
+
+    val upserted = results.foldLeft(Map[Row, String]()){ (o: Map[Row, String], r) =>
+      val key = getKeys(r.f1)
+      if (r.f0) {
+        o + (key -> r.f1.toString)
+      } else {
+        o - key
+      }
+    }
+
+    upserted.values.toList
   }
 }

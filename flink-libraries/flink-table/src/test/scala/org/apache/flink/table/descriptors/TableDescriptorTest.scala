@@ -19,7 +19,7 @@
 package org.apache.flink.table.descriptors
 
 import org.apache.flink.api.java.typeutils.TypeExtractor
-import org.apache.flink.table.api.{TableException, Types}
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.utils.CommonTestData.Person
 import org.apache.flink.table.util.TableTestBase
 import org.junit.Assert.assertEquals
@@ -32,14 +32,12 @@ import scala.collection.JavaConverters._
   */
 class TableDescriptorTest extends TableTestBase {
 
-  @Test(expected = classOf[TableException])
-  // A string representation for map types is not supported yet.
+  @Test
   def testStreamTableSourceDescriptor(): Unit = {
     testTableSourceDescriptor(true)
   }
 
-  @Test(expected = classOf[TableException])
-  // A string representation for map types is not supported yet.
+  @Test
   def testBatchTableSourceDescriptor(): Unit = {
     testTableSourceDescriptor(false)
   }
@@ -105,7 +103,7 @@ class TableDescriptorTest extends TableTestBase {
       "format.fields.4.type" -> "PRIMITIVE_ARRAY<SMALLINT>",
       "format.fields.5.name" -> "myfield6",
       "format.fields.5.type" ->
-        "OBJECT_ARRAY<POJO<org.apache.flink.table.runtime.utils.CommonTestData$Person>>",
+        "OBJECT_ARRAY<POJO(org.apache.flink.table.runtime.utils.CommonTestData$Person)>",
       "format.field-delimiter" -> "#",
       "schema.0.name" -> "myfield",
       "schema.0.type" -> "VARCHAR",
@@ -119,7 +117,7 @@ class TableDescriptorTest extends TableTestBase {
       "schema.4.type" -> "PRIMITIVE_ARRAY<SMALLINT>",
       "schema.5.name" -> "myfield6",
       "schema.5.type" ->
-        "OBJECT_ARRAY<POJO<org.apache.flink.table.runtime.utils.CommonTestData$Person>>"
+        "OBJECT_ARRAY<POJO(org.apache.flink.table.runtime.utils.CommonTestData$Person)>"
     )
 
     val expectedProperties = if (isStreaming) {

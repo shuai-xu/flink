@@ -517,31 +517,6 @@ class SqlITCase extends StreamingTestBase {
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  @Test
-  def testInsertIntoMemoryTable(): Unit = {
-    MemoryTableSourceSinkUtil.clear
-
-    val t = StreamTestData.getSmall3TupleDataStream(env)
-        .assignAscendingTimestamps(x => x._2)
-      .toTable(tEnv, 'a, 'b, 'c)
-    tEnv.registerTable("sourceTable", t)
-
-    val fieldNames = Array("d", "e", "f")
-    val fieldTypes: Array[DataType] = Array(DataTypes.INT, DataTypes.LONG, DataTypes.STRING)
-    val sink = new MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
-    tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
-
-    val sql = "INSERT INTO targetTable SELECT a, b, c FROM sourceTable"
-    tEnv.sqlUpdate(sql)
-    env.execute()
-
-    val expected = List(
-      "1,1,Hi",
-      "2,2,Hello",
-      "3,2,Hello world")
-    assertEquals(expected.sorted, MemoryTableSourceSinkUtil.results.sorted)
-  }
-
   @Ignore
   @Test
   def testPrintSink(): Unit = {

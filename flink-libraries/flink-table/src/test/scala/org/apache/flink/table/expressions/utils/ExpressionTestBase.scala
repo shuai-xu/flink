@@ -31,6 +31,7 @@ import org.apache.flink.api.common.TaskInfo
 import org.apache.flink.api.common.accumulators.{AbstractAccumulatorRegistry, Accumulator}
 import org.apache.flink.api.common.functions._
 import org.apache.flink.api.common.functions.util.RuntimeUDFContext
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment

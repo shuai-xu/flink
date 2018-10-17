@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.TypeExtractor
-import org.apache.flink.table.api.{TableSchemaBuilder, Types, ValidationException}
+import org.apache.flink.table.api.{TableSchema, Types, ValidationException}
 import org.apache.flink.table.types.DataTypes
 import org.junit.Test
 
@@ -59,11 +59,11 @@ class CsvTest extends DescriptorTestBase {
         Array[String]("test", "row"),
         Array[TypeInformation[_]](Types.INT, Types.STRING)))
       .lineDelimiter("^")
-    val schema = new TableSchemaBuilder().field("test", DataTypes.INT)
-      .field("row", DataTypes.STRING).build()
 
     val desc2 = Csv()
-      .schema(schema)
+      .schema(TableSchema.builder()
+        .field("test", DataTypes.INT)
+        .field("row", DataTypes.STRING).build())
       .quoteCharacter('#')
       .ignoreFirstLine()
 
