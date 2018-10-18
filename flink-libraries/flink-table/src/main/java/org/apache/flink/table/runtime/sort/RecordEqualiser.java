@@ -32,4 +32,10 @@ public interface RecordEqualiser extends Serializable {
 	 * and {@code false} otherwise.
 	 */
 	boolean equals(BaseRow row1, BaseRow row2);
+
+	/**
+	 * Returns {@code true} if the rows are equal to each other without header compare
+	 * and {@code false} otherwise.
+	 */
+	boolean equalsWithoutHeader(BaseRow row1, BaseRow row2);
 }

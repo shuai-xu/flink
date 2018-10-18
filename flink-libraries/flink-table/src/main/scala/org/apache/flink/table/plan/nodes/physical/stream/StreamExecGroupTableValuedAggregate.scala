@@ -29,7 +29,7 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedTableValuedAggHandleFunction}
-import org.apache.flink.table.dataformat.{BinaryRow, BaseRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.dataview.DataViewUtils.useNullSerializerForStateViewFieldsFromAccType
 import org.apache.flink.table.functions.utils.TableValuedAggSqlFunction
 import org.apache.flink.table.plan.nodes.common.CommonTableValuedAggregate
@@ -179,7 +179,7 @@ class StreamExecGroupTableValuedAggregate(
       }
 
       // input element are all binary row as they are came from network
-      val inputType = new BaseRowTypeInfo(classOf[BinaryRow], inputRowType.getFieldTypes: _*)
+      val inputType = new BaseRowTypeInfo(classOf[BaseRow], inputRowType.getFieldTypes: _*)
         .asInstanceOf[BaseRowTypeInfo[BaseRow]]
       // minibatch group agg stores list of input as bundle buffer value
       val valueType = new ListTypeInfo[BaseRow](inputType)

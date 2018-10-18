@@ -25,7 +25,7 @@ import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunctionBase.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -100,7 +100,7 @@ class RowTimeBoundedRowsOver(
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BinaryRow],
+      classOf[BaseRow],
       inputFieldTypes.map(DataTypes.toTypeInfo): _*)
       .asInstanceOf[BaseRowTypeInfo[BaseRow]]
     val rowListTypeInfo = new ListTypeInfo[BaseRow](inputType)

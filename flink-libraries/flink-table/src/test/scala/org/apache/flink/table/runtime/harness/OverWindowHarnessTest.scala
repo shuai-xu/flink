@@ -72,42 +72,42 @@ class OverWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode
     testHarness.setProcessingTime(1)
 
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "aaa", 1L: JLong)))
+      binaryRow(1L: JLong, "aaa", 1L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "bbb", 10L: JLong)))
+      binaryRow(1L: JLong, "bbb", 10L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "aaa", 2L: JLong)))
+      binaryRow(1L: JLong, "aaa", 2L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "aaa", 3L: JLong)))
+      binaryRow(1L: JLong, "aaa", 3L: JLong, hasProcTime = true)))
 
     // register cleanup timer with 4100
     testHarness.setProcessingTime(1100)
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "bbb", 20L: JLong)))
+      binaryRow(1L: JLong, "bbb", 20L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "aaa", 4L: JLong)))
+      binaryRow(1L: JLong, "aaa", 4L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "aaa", 5L: JLong)))
+      binaryRow(1L: JLong, "aaa", 5L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "aaa", 6L: JLong)))
+      binaryRow(1L: JLong, "aaa", 6L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(1L: JLong, "bbb", 30L: JLong)))
+      binaryRow(1L: JLong, "bbb", 30L: JLong, hasProcTime = true)))
 
     // register cleanup timer with 6001
     testHarness.setProcessingTime(3001)
     testHarness.processElement(new StreamRecord(
-      binaryRow(2L: JLong, "aaa", 7L: JLong)))
+      binaryRow(2L: JLong, "aaa", 7L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(2L: JLong, "aaa", 8L: JLong)))
+      binaryRow(2L: JLong, "aaa", 8L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(2L: JLong, "aaa", 9L: JLong)))
+      binaryRow(2L: JLong, "aaa", 9L: JLong, hasProcTime = true)))
 
     // trigger cleanup timer and register cleanup timer with 9002
     testHarness.setProcessingTime(6002)
     testHarness.processElement(new StreamRecord(
-        binaryRow(2L: JLong, "aaa", 10L: JLong)))
+        binaryRow(2L: JLong, "aaa", 10L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(2L: JLong, "bbb", 40L: JLong)))
+      binaryRow(2L: JLong, "bbb", 40L: JLong, hasProcTime = true)))
 
     val result = testHarness.getOutput
 
@@ -180,51 +180,51 @@ class OverWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode
     // register cleanup timer with 3003
     testHarness.setProcessingTime(3)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 1L: JLong)))
+      binaryRow(0L: JLong, "aaa", 1L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 10L: JLong)))
+      binaryRow(0L: JLong, "bbb", 10L: JLong, hasProcTime = true)))
 
     testHarness.setProcessingTime(4)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 2L: JLong)))
+      binaryRow(0L: JLong, "aaa", 2L: JLong, hasProcTime = true)))
 
     // trigger cleanup timer and register cleanup timer with 6003
     testHarness.setProcessingTime(3003)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 3L: JLong)))
+      binaryRow(0L: JLong, "aaa", 3L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 20L: JLong)))
+      binaryRow(0L: JLong, "bbb", 20L: JLong, hasProcTime = true)))
 
     testHarness.setProcessingTime(5)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 4L: JLong)))
+      binaryRow(0L: JLong, "aaa", 4L: JLong, hasProcTime = true)))
 
     // register cleanup timer with 9002
     testHarness.setProcessingTime(6002)
 
     testHarness.setProcessingTime(7002)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 5L: JLong)))
+      binaryRow(0L: JLong, "aaa", 5L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 6L: JLong)))
+      binaryRow(0L: JLong, "aaa", 6L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 30L: JLong)))
+      binaryRow(0L: JLong, "bbb", 30L: JLong, hasProcTime = true)))
 
     // register cleanup timer with 14002
     testHarness.setProcessingTime(11002)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 7L: JLong)))
+      binaryRow(0L: JLong, "aaa", 7L: JLong, hasProcTime = true)))
 
     testHarness.setProcessingTime(11004)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 8L: JLong)))
+      binaryRow(0L: JLong, "aaa", 8L: JLong, hasProcTime = true)))
 
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 9L: JLong)))
+      binaryRow(0L: JLong, "aaa", 9L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 10L: JLong)))
+      binaryRow(0L: JLong, "aaa", 10L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 40L: JLong)))
+      binaryRow(0L: JLong, "bbb", 40L: JLong, hasProcTime = true)))
 
     testHarness.setProcessingTime(11006)
 
@@ -310,36 +310,36 @@ class OverWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode
     testHarness.setProcessingTime(1003)
 
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 1L: JLong)))
+      binaryRow(0L: JLong, "aaa", 1L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 10L: JLong)))
+      binaryRow(0L: JLong, "bbb", 10L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 2L: JLong)))
+      binaryRow(0L: JLong, "aaa", 2L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 3L: JLong)))
+      binaryRow(0L: JLong, "aaa", 3L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 20L: JLong)))
+      binaryRow(0L: JLong, "bbb", 20L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 4L: JLong)))
+      binaryRow(0L: JLong, "aaa", 4L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 5L: JLong)))
+      binaryRow(0L: JLong, "aaa", 5L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 6L: JLong)))
+      binaryRow(0L: JLong, "aaa", 6L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 30L: JLong)))
+      binaryRow(0L: JLong, "bbb", 30L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 7L: JLong)))
+      binaryRow(0L: JLong, "aaa", 7L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 8L: JLong)))
+      binaryRow(0L: JLong, "aaa", 8L: JLong, hasProcTime = true)))
 
     // trigger cleanup timer and register cleanup timer with 8003
     testHarness.setProcessingTime(5003)
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 9L: JLong)))
+      binaryRow(0L: JLong, "aaa", 9L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "aaa", 10L: JLong)))
+      binaryRow(0L: JLong, "aaa", 10L: JLong, hasProcTime = true)))
     testHarness.processElement(new StreamRecord(
-      binaryRow(0L: JLong, "bbb", 40L: JLong)))
+      binaryRow(0L: JLong, "bbb", 40L: JLong, hasProcTime = true)))
 
     val result = testHarness.getOutput
 
@@ -957,13 +957,23 @@ class OverWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode
     testHarness.close()
   }
 
-  private def binaryRow(rowtime: JLong, b: String, c: JLong): BinaryRow = {
-    val row = new BinaryRow(4)
+  private def binaryRow(
+      rowtime: JLong,
+      b: String,
+      c: JLong,
+      hasProcTime: Boolean = false): BinaryRow = {
+    val row = if (hasProcTime) {
+      new BinaryRow(4)
+    } else {
+      new BinaryRow(3)
+    }
     val writer = new BinaryRowWriter(row)
     writer.writeLong(0, rowtime)
     writer.writeString(1, b)
     writer.writeLong(2, c)
-    writer.setNullAt(3)
+    if (hasProcTime) {
+      writer.setNullAt(3)
+    }
     writer.complete()
     row
   }

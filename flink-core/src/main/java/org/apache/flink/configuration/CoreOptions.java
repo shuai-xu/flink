@@ -205,6 +205,11 @@ public class CoreOptions {
 		.withDescription("The default stream partitioner, used when the upstream and downstream parallelisms are" +
 			"  not equal and partitioner is not specified. Possible values are 'RESCALE' and 'REBALANCE'.");
 
+	public static final ConfigOption<Boolean> CHAIN_EAGERLY_ENABLED = ConfigOptions
+		.key("chain.eagerly.enabled")
+		.defaultValue(false)
+		.withDescription("Whether operators are chained more eagerly when the parallelism is one");
+
 	// ------------------------------------------------------------------------
 	//  file systems
 	// ------------------------------------------------------------------------

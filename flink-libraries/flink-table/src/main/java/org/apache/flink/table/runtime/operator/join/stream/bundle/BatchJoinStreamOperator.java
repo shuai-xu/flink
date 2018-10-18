@@ -75,7 +75,7 @@ import java.util.OptionalInt;
  */
 @Internal
 public abstract class BatchJoinStreamOperator
-		extends KeyedCoBundleOperator<BaseRow, BaseRow, BaseRow, BaseRow>
+		extends KeyedCoBundleOperator
 		implements Triggerable<BaseRow, Byte> {
 
 	private static final long serialVersionUID = 1L;

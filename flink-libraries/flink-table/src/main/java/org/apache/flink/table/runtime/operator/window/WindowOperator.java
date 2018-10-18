@@ -455,7 +455,7 @@ public class WindowOperator<K, W extends Window>
 			// has emitted result for the window
 			if (previousAggResult != null) {
 				// current agg is not equal to the previous emitted, should emit retract
-				if (!equaliser.equals(aggResult, previousAggResult)) {
+				if (!equaliser.equalsWithoutHeader(aggResult, previousAggResult)) {
 					reuseOutput.replace((BaseRow) getCurrentKey(), previousAggResult);
 					BaseRowUtil.setRetract(reuseOutput);
 					// send retraction

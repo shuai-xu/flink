@@ -1313,6 +1313,13 @@ public class WindowOperatorTest {
 		public boolean equals(BaseRow row1, BaseRow row2) {
 			GenericRow left = BaseRowUtil.toGenericRow(row1, fieldTypes);
 			GenericRow right = BaseRowUtil.toGenericRow(row2, fieldTypes);
+			return left.equals(right);
+		}
+
+		@Override
+		public boolean equalsWithoutHeader(BaseRow row1, BaseRow row2) {
+			GenericRow left = BaseRowUtil.toGenericRow(row1, fieldTypes);
+			GenericRow right = BaseRowUtil.toGenericRow(row2, fieldTypes);
 			return left.equalsWithoutHeader(right);
 		}
 	}

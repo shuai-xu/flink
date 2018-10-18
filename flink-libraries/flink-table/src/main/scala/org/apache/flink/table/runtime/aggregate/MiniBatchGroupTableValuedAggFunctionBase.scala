@@ -23,10 +23,10 @@ import java.util.{ArrayList => JArrayList, List => JList, Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.codegen.GeneratedTableValuedAggHandleFunction
-import org.apache.flink.table.dataformat.{GenericRow, BaseRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
 import org.apache.flink.table.runtime.functions.{ExecutionContext, TableValuedAggHandleFunction}
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction
-import org.apache.flink.table.types.{DataTypes, DataType}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{BinaryRowUtil, Logging}
 import org.apache.flink.util.Collector
@@ -83,7 +83,12 @@ abstract class MiniBatchGroupTableValuedAggFunctionBase(
     } else {
       value
     }
-    acc.add(input)
+    val inputCopied = if (input.isInstanceOf[BinaryRow]) {
+      input
+    } else {
+      input.copy()
+    }
+    acc.add(inputCopied)
     acc
   }
 

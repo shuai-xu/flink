@@ -1083,7 +1083,7 @@ public class StreamingJobGraphGenerator {
 			boolean isChainable;
 
 			if (streamGraph.isMultiHeadChainMode()) {
-				isChainable = isEdgeChainableOnMultiHeadMode(edge);
+				isChainable = isEdgeChainableOnMultiHeadMode(edge, streamGraph.isChainEagerlyEnabled());
 
 				/*
 				  Checks whether exists paths conflict for dynamic selection reading,
@@ -1111,7 +1111,7 @@ public class StreamingJobGraphGenerator {
 					}
 				}
 			} else {
-				isChainable = isEdgeChainable(edge);
+				isChainable = isEdgeChainable(edge, streamGraph.isChainEagerlyEnabled());
 			}
 
 			if (isChainable) {
@@ -1153,14 +1153,14 @@ public class StreamingJobGraphGenerator {
 			}
 		}
 
-		private boolean isEdgeChainable(StreamEdge edge) {
+		private boolean isEdgeChainable(StreamEdge edge, boolean chainEagerlyEnabled) {
 			StreamNode downStreamNode = edge.getTargetVertex();
 
 			return downStreamNode.getInEdges().size() == 1
-				&& isEdgeChainableOnMultiHeadMode(edge);
+				&& isEdgeChainableOnMultiHeadMode(edge, chainEagerlyEnabled);
 		}
 
-		private boolean isEdgeChainableOnMultiHeadMode(StreamEdge edge) {
+		private boolean isEdgeChainableOnMultiHeadMode(StreamEdge edge, boolean chainEagerlyEnabled) {
 			StreamNode downStreamNode = edge.getTargetVertex();
 			StreamNode upstreamNode = edge.getSourceVertex();
 
@@ -1173,7 +1173,8 @@ public class StreamingJobGraphGenerator {
 				&& downstreamOperator.getChainingStrategy() == ChainingStrategy.ALWAYS
 				&& (upstreamOperator.getChainingStrategy() == ChainingStrategy.HEAD ||
 				upstreamOperator.getChainingStrategy() == ChainingStrategy.ALWAYS)
-				&& (edge.getPartitioner() instanceof ForwardPartitioner)
+				&& (edge.getPartitioner() instanceof ForwardPartitioner ||
+					(downStreamNode.getParallelism() == 1 && chainEagerlyEnabled))
 				&& downStreamNode.getParallelism() == upstreamNode.getParallelism()
 				&& !edge.getResultPartitionType().isBlocking();
 		}

@@ -204,6 +204,7 @@ class StreamExecGlobalGroupAggregate(
       tableEnv.getRelBuilder)
 
     val globalAccTypes = globalAggInfoList.getAccTypes.map(DataTypes.internal)
+    val globalAggValueTypes = globalAggInfoList.getActualValueTypes.map(DataTypes.internal)
     val inputCountIndex = globalAggInfoList.getCount1AccIndex
 
     val operator = if (queryConfig.isMiniBatchEnabled || queryConfig.isMicroBatchEnabled) {
@@ -211,6 +212,7 @@ class StreamExecGlobalGroupAggregate(
         localAggsHandler,
         globalAggsHandler,
         globalAccTypes,
+        globalAggValueTypes,
         inputCountIndex,
         generateRetraction,
         groupings.isEmpty)

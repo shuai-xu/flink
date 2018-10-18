@@ -89,7 +89,7 @@ class RowTimeBoundedRangeOver(
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BinaryRow],
+      classOf[BaseRow],
       inputFieldTypes.map(DataTypes.toTypeInfo): _*)
       .asInstanceOf[BaseRowTypeInfo[BaseRow]]
     val rowListTypeInfo = new ListTypeInfo[BaseRow](inputType)

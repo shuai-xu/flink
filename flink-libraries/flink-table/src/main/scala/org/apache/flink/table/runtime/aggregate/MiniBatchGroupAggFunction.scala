@@ -21,10 +21,11 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, M
 
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
-import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
+import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction
+import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{BaseRowUtil, BinaryRowUtil, Logging}
@@ -35,17 +36,19 @@ import org.apache.flink.util.Collector
   *
   * @param genAggsHandler  the generated aggregate handler
   * @param accTypes        the accumulator types
+  * @param aggValueTypes   the aggregate value types
   * @param inputCountIndex None when the input not contains retraction.
   *                        Some when input contains retraction and
   *                        the index represents the count1 agg index.
   * @param generateRetraction whether this operator will generate retraction
   */
 class MiniBatchGroupAggFunction(
-  genAggsHandler: GeneratedAggsHandleFunction,
-  accTypes: Array[InternalType],
-  inputCountIndex: Option[Int],
-  generateRetraction: Boolean,
-  groupWithoutKey: Boolean)
+    genAggsHandler: GeneratedAggsHandleFunction,
+    accTypes: Array[InternalType],
+    aggValueTypes: Array[InternalType],
+    inputCountIndex: Option[Int],
+    generateRetraction: Boolean,
+    groupWithoutKey: Boolean)
   extends BundleFunction[BaseRow, JList[BaseRow], BaseRow, BaseRow]
   with Logging {
 
@@ -61,6 +64,9 @@ class MiniBatchGroupAggFunction(
 
   protected var resultRow: JoinedRow = _
 
+  @transient
+  private var equaliser: RecordEqualiser = _
+
   override def open(ctx: ExecutionContext): Unit = {
     super.open(ctx)
     LOG.debug(s"Compiling AggsHandleFunction: ${genAggsHandler.name} \n\n " +
@@ -72,6 +78,10 @@ class MiniBatchGroupAggFunction(
     val accTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], accTypes.map(DataTypes.toTypeInfo): _*)
     val accDesc = new ValueStateDescriptor("accState", accTypeInfo)
     accState = ctx.getKeyedValueState(accDesc)
+
+    val generator = new EqualiserCodeGenerator(aggValueTypes)
+    val generatedEqualiser = generator.generateRecordEqualiser("GroupAggValueEqualiser")
+    equaliser = generatedEqualiser.newInstance(ctx.getRuntimeContext.getUserCodeClassLoader)
 
     resultRow = new JoinedRow()
   }
@@ -89,7 +99,12 @@ class MiniBatchGroupAggFunction(
     } else {
       value
     }
-    acc.add(input)
+    val inputCopied = if (input.isInstanceOf[BinaryRow]) {
+      input
+    } else {
+      input.copy()
+    }
+    acc.add(inputCopied)
     acc
   }
 
@@ -147,7 +162,7 @@ class MiniBatchGroupAggFunction(
 
         // if this was not the first row and we have to emit retractions
         if (!firstRow) {
-          if (!prevAggValue.equalsWithoutHeader(newAggValue)) {
+          if (!equaliser.equalsWithoutHeader(prevAggValue, newAggValue)) {
             // new row is not same with prev row
             if (generateRetraction) {
               out.collect(prevResultRow(currentKey))

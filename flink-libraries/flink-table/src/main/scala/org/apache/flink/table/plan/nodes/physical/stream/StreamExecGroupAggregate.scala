@@ -38,7 +38,7 @@ import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil, StreamExecUtil}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
@@ -209,18 +209,20 @@ class StreamExecGroupAggregate(
 
     val aggsHandler = generator.generateAggsHandler("GroupAggsHandler", aggInfoList)
     val accTypes = aggInfoList.getAccTypes.map(DataTypes.internal)
+    val aggValueTypes = aggInfoList.getActualValueTypes.map(DataTypes.internal)
     val inputCountIndex = aggInfoList.getCount1AccIndex
 
     val operator = if (queryConfig.isMiniBatchEnabled || queryConfig.isMicroBatchEnabled) {
       val aggFunction = new MiniBatchGroupAggFunction(
         aggsHandler,
         accTypes,
+        aggValueTypes,
         inputCountIndex,
         generateRetraction,
         groupings.isEmpty)
 
       // input element are all binary row as they are came from network
-      val inputType = new BaseRowTypeInfo(classOf[BinaryRow], inputRowType.getFieldTypes: _*)
+      val inputType = new BaseRowTypeInfo(classOf[BaseRow], inputRowType.getFieldTypes: _*)
         .asInstanceOf[BaseRowTypeInfo[BaseRow]]
       // minibatch group agg stores list of input as bundle buffer value
       val valueType = new ListTypeInfo[BaseRow](inputType)
@@ -233,6 +235,7 @@ class StreamExecGroupAggregate(
       val aggFunction = new GroupAggFunction(
         aggsHandler,
         accTypes,
+        aggValueTypes,
         inputCountIndex,
         generateRetraction,
         groupings.isEmpty,

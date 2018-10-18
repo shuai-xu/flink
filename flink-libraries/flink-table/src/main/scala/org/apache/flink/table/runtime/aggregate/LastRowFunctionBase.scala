@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.util.Collector
 
@@ -33,6 +34,7 @@ trait LastRowFunctionBase {
     rowtimeIndex: Int,
     stateCleaningEnabled: Boolean,
     pkRow: KeyedValueState[BaseRow, BaseRow],
+    equaliser: RecordEqualiser,
     out: Collector[BaseRow]): Unit = {
 
     // ignore record with timestamp smaller than preRow
@@ -42,7 +44,8 @@ trait LastRowFunctionBase {
 
     if (BaseRowUtil.isAccumulateMsg(currentRow)) {
       // ignore same record
-      if (!stateCleaningEnabled && preRow != null && preRow.equalsWithoutHeader(currentRow)) {
+      if (!stateCleaningEnabled && preRow != null &&
+        equaliser.equalsWithoutHeader(preRow, currentRow)) {
         return
       }
 

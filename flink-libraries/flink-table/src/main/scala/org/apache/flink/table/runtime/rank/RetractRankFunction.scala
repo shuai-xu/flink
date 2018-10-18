@@ -31,7 +31,7 @@ import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
 import org.apache.flink.table.plan.util.RankRange
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.LazyBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
@@ -53,6 +53,7 @@ class RetractRankFunction(
   extends AbstractRankFunction(
     queryConfig,
     rankRange,
+    inputRowType,
     inputRowType.getArity,
     outputArity,
     generateRetraction)
@@ -79,7 +80,7 @@ class RetractRankFunction(
         inputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
     val mapStateDescriptor = new MapStateDescriptor[BaseRow, JList[BaseRow]](
       "data-state",
-      new BaseRowTypeInfo(classOf[BinaryRow], sortKeyType.getFieldTypes: _*)
+      new BaseRowTypeInfo(classOf[BaseRow], sortKeyType.getFieldTypes: _*)
         .asInstanceOf[BaseRowTypeInfo[BaseRow]],
       valueTypeInfo)
     dataState = ctx.getKeyedMapState(mapStateDescriptor)
@@ -87,7 +88,7 @@ class RetractRankFunction(
     val valueStateDescriptor = new ValueStateDescriptor[util.SortedMap[BaseRow, Long]](
       "sorted-map",
       new SortedMapTypeInfo(
-        new BaseRowTypeInfo(classOf[BinaryRow], sortKeyType.getFieldTypes: _*)
+        new BaseRowTypeInfo(classOf[BaseRow], sortKeyType.getFieldTypes: _*)
           .asInstanceOf[BaseRowTypeInfo[BaseRow]],
         BasicTypeInfo.LONG_TYPE_INFO,
         sortKeyComparator))
@@ -206,7 +207,7 @@ class RetractRankFunction(
           while (inputIter.hasNext && isInRankEnd(curRank)) {
             curRank += 1
             val prevRow = inputIter.next()
-            if (!needUpdate && prevRow.equalsWithoutHeader(inputRow)) {
+            if (!needUpdate && equaliser.equalsWithoutHeader(prevRow, inputRow)) {
               delete(out, prevRow, curRank)
               curRank -= 1
               needUpdate = true

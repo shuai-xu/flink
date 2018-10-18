@@ -95,6 +95,7 @@ public class StreamGraph extends StreamingPlan {
 
 	private boolean chaining;
 	private boolean isMultiHeadChainMode;
+	private boolean chainEagerlyEnabled;
 
 	private Map<Integer, StreamNode> streamNodes;
 	private Set<Integer> sources;
@@ -195,6 +196,10 @@ public class StreamGraph extends StreamingPlan {
 		this.cachedFiles.addAll(cachedFiles);
 	}
 
+	public void setChainEagerlyEnabled(boolean chainEagerlyEnabled) {
+		this.chainEagerlyEnabled = chainEagerlyEnabled;
+	}
+
 	public StateBackend getStateBackend() {
 		return this.stateBackend;
 	}
@@ -223,6 +228,10 @@ public class StreamGraph extends StreamingPlan {
 
 	public boolean isIterative() {
 		return !vertexIDtoLoopTimeout.isEmpty();
+	}
+
+	public boolean isChainEagerlyEnabled() {
+		return chainEagerlyEnabled;
 	}
 
 	public <IN, OUT> void addSource(Integer vertexID,

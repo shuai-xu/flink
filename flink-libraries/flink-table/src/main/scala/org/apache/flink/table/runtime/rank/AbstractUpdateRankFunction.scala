@@ -33,7 +33,7 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
 import org.apache.flink.table.plan.util.RankRange
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.CollectionBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.ProcessFunctionBase.OnTimerContext
@@ -56,6 +56,7 @@ abstract class AbstractUpdateRankFunction(
   extends AbstractRankFunction(
     queryConfig,
     rankRange,
+    inputRowType,
     inputRowType.getArity,
     outputArity,
     generateRetraction)
@@ -98,7 +99,7 @@ abstract class AbstractUpdateRankFunction(
     val valueTypeInfo = new TupleTypeInfo[Tuple2[BaseRow, JInt]](inputRowType, Types.INT)
     val mapStateDescriptor = new MapStateDescriptor[BaseRow, Tuple2[BaseRow, JInt]](
       "data-state-with-update",
-      new BaseRowTypeInfo(classOf[BinaryRow], rowKeyType.getFieldTypes: _*)
+      new BaseRowTypeInfo(classOf[BaseRow], rowKeyType.getFieldTypes: _*)
         .asInstanceOf[BaseRowTypeInfo[BaseRow]],
       valueTypeInfo)
     dataState = ctx.getKeyedMapState(mapStateDescriptor)

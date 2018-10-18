@@ -133,6 +133,7 @@ public class StreamGraphGenerator {
 		this.streamGraph.setCachedFiles(context.getCacheFiles());
 		this.streamGraph.setChaining(context.isChainingEnabled());
 		this.streamGraph.setMultiHeadChainMode(context.isMultiHeadChainMode());
+		this.streamGraph.setChainEagerlyEnabled(context.isChainEagerlyEnabled());
 		this.streamGraph.setStateBackend(context.getStateBackend());
 		this.alreadyTransformed = new HashMap<>();
 	}
@@ -720,6 +721,7 @@ public class StreamGraphGenerator {
 		private StateBackend stateBackend;
 		private boolean chainingEnabled;
 		private boolean isMultiHeadChainMode;
+		private boolean chainEagerlyEnabled;
 		private String jobName = StreamExecutionEnvironment.DEFAULT_JOB_NAME;
 		private List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cacheFile = new ArrayList<>();
 		private ScheduleMode scheduleMode;
@@ -750,6 +752,12 @@ public class StreamGraphGenerator {
 			Configuration globalConf = GlobalConfiguration.loadConfiguration();
 			context.setDefaultPartitioner(globalConf.getString(CoreOptions.DEFAULT_PARTITIONER));
 
+			if (globalConf.contains(CoreOptions.CHAIN_EAGERLY_ENABLED)) {
+				context.setChainEagerlyEnabled(globalConf.getBoolean(CoreOptions.CHAIN_EAGERLY_ENABLED));
+			} else {
+				context.setChainEagerlyEnabled(false);
+			}
+
 			return context;
 		}
 
@@ -775,6 +783,12 @@ public class StreamGraphGenerator {
 
 				Configuration globalConf = GlobalConfiguration.loadConfiguration();
 				context.setDefaultPartitioner(globalConf.getString(CoreOptions.DEFAULT_PARTITIONER));
+
+				if (globalConf.contains(CoreOptions.CHAIN_EAGERLY_ENABLED)) {
+					context.setChainEagerlyEnabled(globalConf.getBoolean(CoreOptions.CHAIN_EAGERLY_ENABLED));
+				} else {
+					context.setChainEagerlyEnabled(false);
+				}
 
 				return context;
 			} catch (IOException e) {
@@ -896,5 +910,12 @@ public class StreamGraphGenerator {
 			isMultiHeadChainMode = multiHeadChainMode;
 		}
 
+		public boolean isChainEagerlyEnabled() {
+			return chainEagerlyEnabled;
+		}
+
+		public void setChainEagerlyEnabled(boolean chainEagerlyEnabled) {
+			this.chainEagerlyEnabled = chainEagerlyEnabled;
+		}
 	}
 }

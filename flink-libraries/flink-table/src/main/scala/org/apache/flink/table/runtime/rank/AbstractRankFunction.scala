@@ -24,16 +24,21 @@ import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.metrics.{Counter, Gauge}
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
+import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedRecordEqualiser}
 import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, VariableRankRange}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.aggregate.ProcessFunctionWithCleanupState
 import org.apache.flink.table.runtime.functions.ExecutionContext
+import org.apache.flink.table.runtime.sort.RecordEqualiser
+import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.util.Collector
 
 abstract class AbstractRankFunction(
     queryConfig: StreamQueryConfig,
     rankRange: RankRange,
+    inputRowType: BaseRowTypeInfo[_],
     inputArity: Int,
     outputArity: Int,
     generateRetraction: Boolean)
@@ -50,6 +55,8 @@ abstract class AbstractRankFunction(
   private var outputRow: JoinedRow = _
 
   protected val isRowNumberAppend: Boolean = inputArity + 1 == outputArity
+
+  protected var equaliser: RecordEqualiser = _
 
   // metrics
   protected var hitCount: Long = 0L
@@ -72,6 +79,9 @@ abstract class AbstractRankFunction(
         val rankStateDesc = new ValueStateDescriptor[JLong]("rankEnd", Types.LONG)
         rankEndState = ctx.getKeyedValueState(rankStateDesc)
     }
+
+    val generatedEqualiser = createEqualiser(inputRowType)
+    equaliser = generatedEqualiser.newInstance(getRuntimeContext.getUserCodeClassLoader)
 
     invalidCounter = ctx.getRuntimeContext.getMetricGroup.counter(
       "topn.invalidTopSize")
@@ -248,4 +258,9 @@ abstract class AbstractRankFunction(
     */
   protected def getMaxSortMapSize: Long
 
+  private def createEqualiser(inputRowType: BaseRowTypeInfo[_]): GeneratedRecordEqualiser = {
+    val inputTypes = inputRowType.getFieldTypes.map(DataTypes.internal)
+    val generator = new EqualiserCodeGenerator(inputTypes)
+    generator.generateRecordEqualiser("RankValueEqualiser")
+  }
 }

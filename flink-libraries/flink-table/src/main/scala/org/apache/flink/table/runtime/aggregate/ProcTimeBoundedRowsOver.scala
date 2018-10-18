@@ -72,7 +72,7 @@ class ProcTimeBoundedRowsOver(
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BinaryRow],
+      classOf[BaseRow],
       inputFieldTypes.map(DataTypes.toTypeInfo): _*)
       .asInstanceOf[BaseRowTypeInfo[BaseRow]]
     // We keep the elements received in a Map state keyed

@@ -33,6 +33,8 @@ import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
+import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
@@ -46,25 +48,25 @@ import java.util.Objects;
 /**
  * Used for MiniBatch Join.
  */
-public abstract class KeyedCoBundleOperator<K, L, R, OUT>
-	extends AbstractStreamOperator<OUT>
-	implements TwoInputStreamOperator<L, R, OUT>, BundleTriggerCallback {
+public abstract class KeyedCoBundleOperator
+	extends AbstractStreamOperator<BaseRow>
+	implements TwoInputStreamOperator<BaseRow, BaseRow, BaseRow>, BundleTriggerCallback {
 
 	private static final String LEFT_STATE_NAME = "_keyed_co_bundle_operator_left_state_";
 
 	private static final String RIGHT_STATE_NAME = "_keyed_co_bundle_operator_right_state_";
 
-	private final CoBundleTrigger<L, R> coBundleTrigger;
+	private final CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger;
 
 	private transient Object checkpointingLock;
 
-	private transient StreamRecordCollector<OUT> collector;
+	private transient StreamRecordCollector<BaseRow> collector;
 
-	private transient Map<K, List<L>> leftBuffer;
-	private transient Map<K, List<R>> rightBuffer;
+	private transient Map<BaseRow, List<BaseRow>> leftBuffer;
+	private transient Map<BaseRow, List<BaseRow>> rightBuffer;
 
-	private transient KeyedValueState<K, List<L>> leftBufferState;
-	private transient KeyedValueState<K, List<R>> rightBufferState;
+	private transient KeyedValueState<BaseRow, List<BaseRow>> leftBufferState;
+	private transient KeyedValueState<BaseRow, List<BaseRow>> rightBufferState;
 
 	// We keep track of watermarks from both inputs, the combined input is the minimum
 	// Once the minimum advances we emit a new watermark for downstream operators
@@ -72,37 +74,43 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 	private long input2Watermark = Long.MIN_VALUE;
 	private long currentWatermark = Long.MIN_VALUE;
 
-	private TypeSerializer<L> lTypeSerializer;
-	private TypeSerializer<R> rTypeSerializer;
+	private TypeSerializer<BaseRow> lTypeSerializer;
+	private TypeSerializer<BaseRow> rTypeSerializer;
 	private transient volatile boolean isInFinishingBundle = false;
 
-	public KeyedCoBundleOperator(CoBundleTrigger<L, R> coBundleTrigger) {
+	public KeyedCoBundleOperator(CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger) {
 		Preconditions.checkNotNull(coBundleTrigger, "coBundleTrigger is null");
 		this.coBundleTrigger = coBundleTrigger;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void processElement1(StreamRecord<L> element) throws Exception {
+	public void processElement1(StreamRecord<BaseRow> element) throws Exception {
 		while (isInFinishingBundle) {
 			checkpointingLock.wait();
 		}
-		K key = (K) getCurrentKey();
-		L row = element.getValue();
-		List<L> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
+		BaseRow key = (BaseRow) getCurrentKey();
+		BaseRow row = element.getValue();
+		List<BaseRow> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
+		if (!(row instanceof BinaryRow)) {
+			row = row.copy();
+		}
 		records.add(row);
 		coBundleTrigger.onLeftElement(row);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void processElement2(StreamRecord<R> element) throws Exception {
+	public void processElement2(StreamRecord<BaseRow> element) throws Exception {
 		while (isInFinishingBundle) {
 			checkpointingLock.wait();
 		}
-		K key = (K) getCurrentKey();
-		R row = element.getValue();
-		List<R> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
+		BaseRow key = (BaseRow) getCurrentKey();
+		BaseRow row = element.getValue();
+		List<BaseRow> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
+		if (!(row instanceof BinaryRow)) {
+			row = row.copy();
+		}
 		records.add(row);
 		coBundleTrigger.onRightElement(row);
 	}
@@ -171,18 +179,18 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 	}
 
 	protected abstract void processBundles(
-		Map<K, List<L>> left,
-		Map<K, List<R>> right,
-		Collector<OUT> out) throws Exception;
+		Map<BaseRow, List<BaseRow>> left,
+		Map<BaseRow, List<BaseRow>> right,
+		Collector<BaseRow> out) throws Exception;
 
 	@Override
-	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<OUT>> output) {
+	public void setup(StreamTask<?, ?> containingTask, StreamConfig config, Output<StreamRecord<BaseRow>> output) {
 		super.setup(containingTask, config, output);
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 	}
 
 	@VisibleForTesting
-	public void setupTypeSerializer(TypeSerializer<L> lSerializer, TypeSerializer<R> rSerializer) {
+	public void setupTypeSerializer(TypeSerializer<BaseRow> lSerializer, TypeSerializer<BaseRow> rSerializer) {
 		Objects.requireNonNull(lSerializer);
 		Objects.requireNonNull(rSerializer);
 		this.lTypeSerializer = lSerializer;
@@ -194,27 +202,27 @@ public abstract class KeyedCoBundleOperator<K, L, R, OUT>
 		super.open();
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 		this.collector = new StreamRecordCollector<>(output);
-		TypeSerializer<L> leftSerializer = this.lTypeSerializer == null
+		TypeSerializer<BaseRow> leftSerializer = this.lTypeSerializer == null
 			? config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader())
 			: this.lTypeSerializer;
-		TypeSerializer<R> rightSerializer = this.rTypeSerializer == null
+		TypeSerializer<BaseRow> rightSerializer = this.rTypeSerializer == null
 			? config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader())
 			: this.rTypeSerializer;
 
 		// create & restore state
 		//noinspection unchecked
-		KeyedValueStateDescriptor<K, List<L>> leftBufferStateDesc = new KeyedValueStateDescriptor<>(
+		KeyedValueStateDescriptor<BaseRow, List<BaseRow>> leftBufferStateDesc = new KeyedValueStateDescriptor<>(
 			LEFT_STATE_NAME,
-			(TypeSerializer<K>) getKeySerializer(),
+			(TypeSerializer) getKeySerializer(),
 			new ListSerializer<>(leftSerializer));
 		this.leftBufferState = getKeyedState(leftBufferStateDesc);
 		this.leftBuffer = new HashMap<>();
 		this.leftBuffer.putAll(leftBufferState.getAll());
 
 		//noinspection unchecked
-		KeyedValueStateDescriptor<K, List<R>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
+		KeyedValueStateDescriptor<BaseRow, List<BaseRow>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
 			RIGHT_STATE_NAME,
-			(TypeSerializer<K>) getKeySerializer(),
+			(TypeSerializer) getKeySerializer(),
 			new ListSerializer<>(rightSerializer));
 		this.rightBufferState = getKeyedState(rightBufferStateDesc);
 		this.rightBuffer = new HashMap<>();

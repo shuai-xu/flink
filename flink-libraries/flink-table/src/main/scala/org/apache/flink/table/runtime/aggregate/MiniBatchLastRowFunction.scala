@@ -23,9 +23,12 @@ import java.util.{Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.StreamQueryConfig
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.codegen.EqualiserCodeGenerator
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction
+import org.apache.flink.table.runtime.sort.RecordEqualiser
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
@@ -49,16 +52,27 @@ class MiniBatchLastRowFunction(
 
   protected var pkRow: KeyedValueState[BaseRow, BaseRow] = _
 
+  @transient
+  private var equaliser: RecordEqualiser = _
+
   override def open(ctx: ExecutionContext): Unit = {
     super.open(ctx)
     val rowStateDesc = new ValueStateDescriptor("rowState", rowTypeInfo)
     pkRow = ctx.getKeyedValueState(rowStateDesc)
+
+    val generator = new EqualiserCodeGenerator(rowTypeInfo.getFieldTypes.map(DataTypes.internal))
+    val generatedEqualiser = generator.generateRecordEqualiser("LastRowValueEqualiser")
+    equaliser = generatedEqualiser.newInstance(ctx.getRuntimeContext.getUserCodeClassLoader)
   }
 
   override def addInput(value: BaseRow, input: BaseRow): BaseRow = {
     if (isLastRow(value, input, rowtimeIndex)) {
       // put the input into buffer
-      input
+      if (input.isInstanceOf[BinaryRow]) {
+        input
+      } else {
+        input.copy()
+      }
     } else {
       // the input is not last row, ignore it
       value
@@ -82,6 +96,7 @@ class MiniBatchLastRowFunction(
         rowtimeIndex,
         stateCleaningEnabled = false,
         pkRow,
+        equaliser,
         out)
     }
   }

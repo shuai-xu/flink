@@ -56,6 +56,7 @@ class AppendRankFunction(
   extends AbstractRankFunction(
     queryConfig,
     rankRange,
+    inputRowType,
     inputRowType.getArity,
     outputArity,
     generateRetraction)
@@ -84,7 +85,7 @@ class AppendRankFunction(
       inputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
     val mapStateDescriptor = new MapStateDescriptor[BaseRow, JList[BaseRow]](
       "data-state-with-append",
-      new BaseRowTypeInfo[BinaryRow](classOf[BinaryRow], sortKeyType.getFieldTypes: _*)
+      new BaseRowTypeInfo(classOf[BaseRow], sortKeyType.getFieldTypes: _*)
         .asInstanceOf[BaseRowTypeInfo[BaseRow]],
       valueTypeInfo)
     dataState = ctx.getKeyedMapState(mapStateDescriptor)

@@ -486,6 +486,59 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, mapSinkVertex.getInputs().get(0).getSource().getResultType());
 	}
 
+	@Test
+	public void testParallelismOneChained() {
+
+		// --------- the program ---------
+
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(1);
+
+		DataStream<Tuple2<String, String>> input = env
+			.fromElements("a", "b", "c", "d", "e", "f")
+			.map(new MapFunction<String, Tuple2<String, String>>() {
+
+				@Override
+				public Tuple2<String, String> map(String value) {
+					return new Tuple2<>(value, value);
+				}
+			});
+
+		DataStream<Tuple2<String, String>> result = input
+			.keyBy(0)
+			.map(new MapFunction<Tuple2<String, String>, Tuple2<String, String>>() {
+
+				@Override
+				public Tuple2<String, String> map(Tuple2<String, String> value) {
+					return value;
+				}
+			});
+
+		result.addSink(new SinkFunction<Tuple2<String, String>>() {
+
+			@Override
+			public void invoke(Tuple2<String, String> value) {}
+		}).setParallelism(2);
+
+		// --------- the job graph ---------
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		streamGraph.setJobName("test job");
+		streamGraph.setChainEagerlyEnabled(true);
+		JobGraph jobGraph = streamGraph.getJobGraph();
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+		assertEquals(2, jobGraph.getNumberOfVertices());
+		assertEquals(1, verticesSorted.get(0).getParallelism());
+		assertEquals(2, verticesSorted.get(1).getParallelism());
+
+		JobVertex sourceVertex = verticesSorted.get(0);
+		JobVertex sinkVertex = verticesSorted.get(1);
+
+		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
+		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sinkVertex.getInputs().get(0).getSource().getResultType());
+	}
+
 	/**
 	 * Tests that disabled checkpointing sets the checkpointing interval to Long.MAX_VALUE.
 	 */

@@ -78,7 +78,7 @@ abstract class RowTimeUnboundedOver(
 
     // input element are all binary row as they are came from network
     val rowListTypeInfo = new ListTypeInfo[BaseRow](DataTypes.toTypeInfo(
-      new BaseRowType(classOf[BinaryRow], inputFieldTypes: _*))
+      new BaseRowType(classOf[BaseRow], inputFieldTypes: _*))
         .asInstanceOf[BaseRowTypeInfo[BaseRow]])
     val inputStateDesc = new MapStateDescriptor[JLong, JList[BaseRow]](
       "inputState",

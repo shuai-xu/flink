@@ -20,13 +20,14 @@ package org.apache.flink.table.codegen
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.types._
 
 class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
 
   private val BASE_ROW = className[BaseRow]
+  private val BINARY_ROW = className[BinaryRow]
   private val RECORD_EQUALISER = className[RecordEqualiser]
   private val LEFT_INPUT = "left"
   private val RIGHT_INPUT = "right"
@@ -35,6 +36,13 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
     // ignore time zone
     val ctx = CodeGeneratorContext(new TableConfig, supportReference = true)
     val className = newName(name)
+    val header =
+      s"""
+         |if ($LEFT_INPUT.getHeader() != $RIGHT_INPUT.getHeader()) {
+         |  return false;
+         |}
+       """.stripMargin
+
     val codes = for (i <- fieldTypes.indices) yield {
       val fieldType = fieldTypes(i)
       val fieldTypeTerm = primitiveTypeTermForType(fieldType)
@@ -45,6 +53,22 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
       val rightFieldTerm = "rightField$" + i
       val equalsCode = if (isInternalPrimitive(fieldType)) {
         s"$leftFieldTerm == $rightFieldTerm"
+      } else if (isBaseRow(fieldType)) {
+        val equaliserGenerator =
+          new EqualiserCodeGenerator(fieldType.asInstanceOf[BaseRowType].getFieldTypes)
+        val generatedEqualiser = equaliserGenerator
+          .generateRecordEqualiser("field$" + i + "GeneratedEqualiser")
+        val generatedEqualiserTerm = ctx.addReusableObject(
+          generatedEqualiser, "field$" + i + "GeneratedEqualiser")
+        val equaliserTypeTerm = classOf[RecordEqualiser].getCanonicalName
+        val equaliserTerm = newName("equaliser")
+        ctx.addReusableMember(
+          s"private $equaliserTypeTerm $equaliserTerm = null;",
+          s"""
+             |$equaliserTerm = ($equaliserTypeTerm)
+             |  $generatedEqualiserTerm.newInstance(Thread.currentThread().getContextClassLoader());
+             |""".stripMargin)
+        s"$equaliserTerm.equalsWithoutHeader($leftFieldTerm, $rightFieldTerm)"
       } else {
         s"$leftFieldTerm.equals($rightFieldTerm)"
       }
@@ -75,15 +99,31 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
 
           ${ctx.reuseMemberCode()}
 
-          public $className(Object[] references) {
+          public $className(Object[] references) throws Exception {
             ${ctx.reuseInitCode()}
           }
 
           @Override
           public boolean equals($BASE_ROW $LEFT_INPUT, $BASE_ROW $RIGHT_INPUT) {
-            ${ctx.reuseFieldCode()}
-            ${codes.mkString("\n")}
-            return true;
+            if ($LEFT_INPUT instanceof $BINARY_ROW && $RIGHT_INPUT instanceof $BINARY_ROW) {
+              return $LEFT_INPUT.equals($RIGHT_INPUT);
+            } else {
+              $header
+              ${ctx.reuseFieldCode()}
+              ${codes.mkString("\n")}
+              return true;
+            }
+          }
+
+          @Override
+          public boolean equalsWithoutHeader($BASE_ROW $LEFT_INPUT, $BASE_ROW $RIGHT_INPUT) {
+            if ($LEFT_INPUT instanceof $BINARY_ROW && $RIGHT_INPUT instanceof $BINARY_ROW) {
+              return $LEFT_INPUT.equalsWithoutHeader($RIGHT_INPUT);
+            } else {
+              ${ctx.reuseFieldCode()}
+              ${codes.mkString("\n")}
+              return true;
+            }
           }
         }
       """.stripMargin
@@ -101,4 +141,8 @@ class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
     case _ => false
   }
 
+  private def isBaseRow(t: InternalType): Boolean = t match {
+    case _: BaseRowType => true
+    case _ => false
+  }
 }

@@ -70,7 +70,7 @@ class ProcTimeBoundedRangeOver(
 
     // input element are all binary row as they are came from network
     val inputType = new BaseRowTypeInfo(
-      classOf[BinaryRow],
+      classOf[BaseRow],
       inputFieldTypes.map(DataTypes.toTypeInfo): _*)
       .asInstanceOf[BaseRowTypeInfo[BaseRow]]
     // we keep the elements received in a map state indexed based on their ingestion time

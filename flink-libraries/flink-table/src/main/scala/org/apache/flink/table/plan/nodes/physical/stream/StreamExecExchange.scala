@@ -27,7 +27,7 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.common.CommonExchange
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._
@@ -59,7 +59,7 @@ class StreamExecExchange(
     : StreamTransformation[BaseRow] = {
     val input = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
+    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
 
     relDistribution.getType match {
       case RelDistribution.Type.SINGLETON =>
