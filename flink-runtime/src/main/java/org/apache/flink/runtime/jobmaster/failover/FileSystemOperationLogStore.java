@@ -28,6 +28,7 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -36,10 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 /**
  * Implementation of {@link OperationLogStore} that store all {@link OperationLog}
@@ -57,7 +58,7 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 
 	private Path filePath;
 
-	private ObjectOutputStream outputStream;
+	private DataOutputStream outputStream;
 
 	private FileFlusher fileFlusher;
 
@@ -125,7 +126,7 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 				Path file = new Path(workingDir, logNamePrefix + i);
 
 				if (!fileSystem.exists(file)) {
-					outputStream = new ObjectOutputStream(fileSystem.create(file, WriteMode.NO_OVERWRITE));
+					outputStream = new DataOutputStream(fileSystem.create(file, WriteMode.NO_OVERWRITE));
 					filePath = file;
 					assert !fileSystem.exists(new Path(workingDir, logNamePrefix + (i + 1)));
 					LOG.info("Operation log will be written to {}.", filePath);
@@ -206,7 +207,9 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 
 		try {
 			if (!currupted) {
-				outputStream.writeObject(opLog);
+				byte[] bytes = InstantiationUtil.serializeObject(opLog);
+				outputStream.writeInt(bytes.length);
+				outputStream.write(bytes);
 			}
 		} catch (Exception e) {
 			LOG.warn("Write log meet error, will not record log any more.", e);
@@ -224,14 +227,14 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 
 	class FileSystemOperationLogReader {
 
-		private ObjectInputStream inputStream;
+		private DataInputStream inputStream;
 
 		private int index = 1;
 
 		FileSystemOperationLogReader() {
 			try {
 				Path file = new Path(workingDir, logNamePrefix + index++);
-				inputStream = new ObjectInputStream(fileSystem.open(file));
+				inputStream = new DataInputStream(fileSystem.open(file));
 			} catch (IOException e) {
 				throw new FlinkRuntimeException("Cannot init filesystem opLog store.");
 			}
@@ -239,21 +242,30 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 
 		public OperationLog read() {
 			try {
-				Object obj = null;
-				while (obj == null) {
+				OperationLog operationLog = null;
+				while (operationLog == null) {
 					try {
-						obj = inputStream.readObject();
+						int logLength = inputStream.readInt();
+						byte[] logByte = new byte[logLength];
+						int logReadLen = inputStream.read(logByte);
+						if (logReadLen == logLength) {
+							operationLog = InstantiationUtil.deserializeObject(logByte, ClassLoader.getSystemClassLoader());
+						} else {
+							String message = String.format("Fail to read log from %s%s, expected %, only read %s",
+									logNamePrefix, index, logLength, logReadLen);
+							throw new IOException(message);
+						}
 					} catch (EOFException eof) {
 						Path file = new Path(workingDir, logNamePrefix + index++);
 						if (fileSystem.exists(file)) {
 							inputStream.close();
-							inputStream = new ObjectInputStream(fileSystem.open(file));
+							inputStream = new DataInputStream(fileSystem.open(file));
 						} else {
 							break;
 						}
 					}
 				}
-				return obj == null ? null : (OperationLog) obj;
+				return operationLog == null ? null : operationLog;
 			} catch (Exception e) {
 				throw new FlinkRuntimeException("Cannot read next opLog from opLog store.", e);
 			}
