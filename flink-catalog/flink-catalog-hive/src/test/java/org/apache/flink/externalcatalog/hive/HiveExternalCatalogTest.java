@@ -142,7 +142,7 @@ public class HiveExternalCatalogTest {
 		InternalType[] types = new InternalType[8];
 		types[0] = IntType.INSTANCE;
 		types[1] = DateType.DATE;
-		types[2] = DecimalType.DEFAULT;
+		types[2] = DecimalType.SYSTEM_DEFAULT;
 		types[3] = TimeType.INSTANCE;
 		types[4] = TimestampType.TIMESTAMP;
 		types[5] = DateType.DATE;

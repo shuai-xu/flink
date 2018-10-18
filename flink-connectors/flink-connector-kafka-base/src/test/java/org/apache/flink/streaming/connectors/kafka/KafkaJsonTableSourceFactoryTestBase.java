@@ -129,7 +129,7 @@ public abstract class KafkaJsonTableSourceFactoryTestBase {
 				.withSchema(
 					TableSchema.builder()
 						.field("fruit-name", DataTypes.STRING)
-						.field("count", DecimalType.DEFAULT)
+						.field("count", DecimalType.SYSTEM_DEFAULT)
 						.field("event-time", DataTypes.TIMESTAMP)
 						.field("proc-time", DataTypes.TIMESTAMP)
 						.build())

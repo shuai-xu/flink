@@ -667,7 +667,9 @@ object ScalarOperators {
 
     // special case: cast from TimeIndicatorTypeInfo to SqlTimeTypeInfo
     case (DataTypes.PROCTIME_INDICATOR, DataTypes.TIMESTAMP) |
-         (DataTypes.ROWTIME_INDICATOR, DataTypes.TIMESTAMP) =>
+         (DataTypes.ROWTIME_INDICATOR, DataTypes.TIMESTAMP) |
+         (DataTypes.TIMESTAMP, DataTypes.PROCTIME_INDICATOR) |
+         (DataTypes.TIMESTAMP, DataTypes.ROWTIME_INDICATOR) =>
       operand.copy(resultType = DataTypes.TIMESTAMP) // just replace the DataType
 
     // identity casting

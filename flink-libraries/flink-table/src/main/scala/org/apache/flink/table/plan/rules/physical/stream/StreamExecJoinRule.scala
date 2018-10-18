@@ -81,7 +81,7 @@ class StreamExecJoinRule
       val distribution = if (columns.size() == 0) {
         FlinkRelDistribution.SINGLETON
       } else {
-        FlinkRelDistribution.hash(columns, requireStrict = true)
+        FlinkRelDistribution.hash(columns)
       }
       inputTraitSets.
         replace(FlinkConventions.STREAMEXEC).

@@ -338,7 +338,7 @@ class CsvTableSourceITCase extends QueryTest {
           .field("f8", DataTypes.FLOAT)
           .field("f9", DataTypes.LONG)
           .field("f10", DataTypes.BYTE)
-          .field("f11", DecimalType.DEFAULT)
+          .field("f11", DecimalType.SYSTEM_DEFAULT)
       builder
     }
 
@@ -410,7 +410,7 @@ class CsvTableSourceITCase extends QueryTest {
           .field("f8", DataTypes.FLOAT)
           .field("f9", DataTypes.LONG)
           .field("f10", DataTypes.BYTE)
-          .field("f11", DecimalType.DEFAULT)
+          .field("f11", DecimalType.SYSTEM_DEFAULT)
       builder
     }
 
@@ -462,7 +462,7 @@ class CsvTableSourceITCase extends QueryTest {
     lastColumnAsNull(DataTypes.FLOAT)
     lastColumnAsNull(DataTypes.LONG)
     lastColumnAsNull(DataTypes.BYTE)
-    lastColumnAsNull(DecimalType.DEFAULT)
+    lastColumnAsNull(DecimalType.SYSTEM_DEFAULT)
   }
 
   @Test
@@ -494,6 +494,6 @@ class CsvTableSourceITCase extends QueryTest {
     lastTwoColumnAsNull(DataTypes.FLOAT)
     lastTwoColumnAsNull(DataTypes.LONG)
     lastTwoColumnAsNull(DataTypes.BYTE)
-    lastTwoColumnAsNull(DecimalType.DEFAULT)
+    lastTwoColumnAsNull(DecimalType.SYSTEM_DEFAULT)
   }
 }

@@ -40,7 +40,7 @@ class ScalaSubqueryITCase extends QueryTest {
     DataTypes.LONG,
     DataTypes.FLOAT,
     DataTypes.DOUBLE,
-    DecimalType.DEFAULT,
+    DecimalType.USER_DEFAULT,
     DataTypes.TIMESTAMP,
     DataTypes.DATE).toArray
 

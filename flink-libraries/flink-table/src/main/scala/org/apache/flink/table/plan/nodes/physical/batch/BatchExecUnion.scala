@@ -64,7 +64,7 @@ class BatchExecUnion(
       case RANDOM_DISTRIBUTED | ROUND_ROBIN_DISTRIBUTED | BROADCAST_DISTRIBUTED =>
         requiredDistribution
       // apply strict hash distribution of each child to avoid inconsistent of shuffle of each child
-      case HASH_DISTRIBUTED => FlinkRelDistribution.hash(requiredDistribution.getKeys, true)
+      case HASH_DISTRIBUTED => FlinkRelDistribution.hash(requiredDistribution.getKeys)
       // range distribution cannot push down because partition's [lower, upper]  of each union child
       // may be different
       case RANGE_DISTRIBUTED => null

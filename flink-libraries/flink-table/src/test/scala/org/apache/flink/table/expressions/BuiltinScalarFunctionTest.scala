@@ -84,17 +84,21 @@ class BuiltinScalarFunctionTest extends ExpressionTestBase {
     testSqlNullable("STR_TO_MAP(f20)")
   }
 
-  @Test // Will do implicit type coercion.
+  @Test
   def testInvalidIf(): Unit = {
-    // test IF(BOOL, STRING, BOOLEAN), not supported expression
+    // test IF(BOOL, STRING, BOOLEAN), will do implicit type coercion.
     testSqlApi(
       "IF(f7 > 5, f0, f1)",
       "true")
 
-    // test IF(BOOL, INT, BIGINT), not supported expression
+    // test IF(BOOL, INT, BIGINT), will do implicit type coercion.
     testSqlApi(
       "IF(f7 > 5, f14, f4)",
       "44")
+    // test input with null
+    testSqlApi(
+      "IF(f7 < 5, cast(null as int), f4)",
+      "null")
   }
 
   @Test
@@ -194,6 +198,10 @@ class BuiltinScalarFunctionTest extends ExpressionTestBase {
     testSqlApi(
       "to_timestamp(f15)",
       "1969-12-31 23:59:58.769")
+    // test with null input
+    testSqlApi(
+      "to_timestamp(cast(null as varchar))",
+      "null")
   }
 
   @Test
@@ -221,6 +229,10 @@ class BuiltinScalarFunctionTest extends ExpressionTestBase {
     testSqlApi(
       "from_unixtime(f15)",
       "1969-12-31 23:39:29")
+    // test with null input
+    testSqlApi(
+      "from_unixtime(cast(null as int))",
+      "null")
   }
 
 

@@ -65,7 +65,7 @@ final class ExistingField(val field: String) extends TimestampExtractor {
           Div(
             fieldAccess,
             Literal(new java.math.BigDecimal(1000),
-              DecimalType.DEFAULT)),
+              DecimalType.SYSTEM_DEFAULT)),
           DataTypes.TIMESTAMP)
       case _: TimestampType =>
         fieldAccess

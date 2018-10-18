@@ -677,7 +677,7 @@ public class MetaConverter {
 			case serdeConstants.TIMESTAMP_TYPE_NAME:
 				return TimestampType.TIMESTAMP;
 			case serdeConstants.DECIMAL_TYPE_NAME:
-				return DecimalType.DEFAULT;
+				return DecimalType.SYSTEM_DEFAULT;
 			default:
 				throw new UnsupportedOperationException("Unsupported field schema: name="
 						+ fieldSchema.getName() + ", type=" + fieldSchema.getType());

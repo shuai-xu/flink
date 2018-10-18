@@ -192,7 +192,7 @@ class BatchExecWindowAggregateRule
       val distributionFields = if (agg.getGroupCount != 0) {
         // global agg should use groupSet's indices as distribution fields
         val globalGroupSet = groupSet.indices
-        FlinkRelDistribution.hash(globalGroupSet.map(Integer.valueOf))
+        FlinkRelDistribution.hash(globalGroupSet.map(Integer.valueOf), requireStrict = false)
       } else {
         FlinkRelDistribution.SINGLETON
       }
@@ -253,7 +253,7 @@ class BatchExecWindowAggregateRule
       // distribute by grouping keys
       requiredTraitSet = if (agg.getGroupCount != 0) {
         requiredTraitSet.replace(
-          FlinkRelDistribution.hash(groupSet.map(Integer.valueOf).toList))
+          FlinkRelDistribution.hash(groupSet.map(Integer.valueOf).toList, requireStrict = false))
       } else {
         requiredTraitSet.replace(FlinkRelDistribution.SINGLETON)
       }

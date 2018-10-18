@@ -132,7 +132,7 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
       val newHashJoin = super.visit(hashJoin).asInstanceOf[BatchExecHashJoinBase]
       val joinInfo = hashJoin.joinInfo
       val columns = if (hashJoin.leftIsBuild) joinInfo.rightKeys else joinInfo.leftKeys
-      val distribution = FlinkRelDistribution.hash(columns, requireStrict = true)
+      val distribution = FlinkRelDistribution.hash(columns)
       rewriteJoin(newHashJoin, newHashJoin.leftIsBuild, distribution)
     }
 

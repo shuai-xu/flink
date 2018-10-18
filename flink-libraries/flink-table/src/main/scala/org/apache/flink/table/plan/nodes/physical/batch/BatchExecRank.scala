@@ -137,7 +137,7 @@ class BatchExecRank(
         val partitionKeyList = ImmutableIntList.of(partitionKey.toArray: _*)
         if (requiredDistribution.requireStrict) {
           if (shuffleKeys == partitionKeyList) {
-            FlinkRelDistribution.hash(partitionKeyList, requireStrict = true)
+            FlinkRelDistribution.hash(partitionKeyList)
           } else {
             null
           }
@@ -145,13 +145,13 @@ class BatchExecRank(
           // If required distribution is not strict, Hash[a] can satisfy Hash[a, b].
           // If partitionKeys satisfies shuffleKeys (the shuffle between this node and
           // its output is not necessary), just push down partitionKeys into input.
-          FlinkRelDistribution.hash(partitionKeyList)
+          FlinkRelDistribution.hash(partitionKeyList, requireStrict = false)
         } else {
           val tableConfig = FlinkRelOptUtil.getTableConfig(this)
           if (tableConfig.rankShuffleByPartialKeyEnabled &&
             partitionKeyList.containsAll(shuffleKeys)) {
             // If partialKey is enabled, push down partialKey requirement into input.
-            FlinkRelDistribution.hash(shuffleKeys.map(partitionKeyList(_)))
+            FlinkRelDistribution.hash(shuffleKeys.map(partitionKeyList(_)), requireStrict = false)
           } else {
             null
           }

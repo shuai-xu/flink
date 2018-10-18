@@ -122,7 +122,7 @@ class BatchExecOverAggregate(
     var selfProvidedTraitSet = getTraitSet
     // provided distribution
     val providedDistribution = if (grouping.nonEmpty) {
-      FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList)
+      FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList, requireStrict = false)
     } else {
       FlinkRelDistribution.SINGLETON
     }

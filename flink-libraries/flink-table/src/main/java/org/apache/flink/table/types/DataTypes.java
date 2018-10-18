@@ -83,9 +83,6 @@ public class DataTypes {
 
 	public static final List<PrimitiveType> FRACTIONAL_TYPES = Arrays.asList(FLOAT, DOUBLE);
 
-	public static final List<InternalType> NUMERIC_TYPES = Arrays.asList(BYTE, SHORT, INT, LONG,
-		FLOAT, DOUBLE, DecimalType.DEFAULT);
-
 	/**
 	 * The special field index indicates that this is a row time field.
 	 */

@@ -106,9 +106,8 @@ object CallGenerator {
       else {
         primitiveTypeTermForType(returnType)
       }
-    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
-      Seq("result", "isNull"),
-      Seq(resultTypeTerm, "boolean"))
+    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
     val defaultValue = primitiveDefaultValue(returnType)
     val nullResultCode = if (nullCheck
       && isReference(returnType)
@@ -161,16 +160,20 @@ object CallGenerator {
       ctx: CodeGeneratorContext,
       nullCheck: Boolean,
       returnType: InternalType,
-      operands: Seq[GeneratedExpression])
+      operands: Seq[GeneratedExpression],
+      primitiveNullable: Boolean = false)
       (call: Seq[String] => String): GeneratedExpression = {
 
-    val resultTypeTerm = primitiveTypeTermForType(returnType)
+    val resultTypeTerm = if (primitiveNullable) {
+      boxedTypeTermForType(returnType)
+    } else {
+      primitiveTypeTermForType(returnType)
+    }
     val defaultValue = primitiveDefaultValue(returnType)
 
-    val Seq(resultTerm, nullTerm) = ctx.newReusableFields(
-      Seq("result", "isNull"),
-      Seq(resultTypeTerm, "boolean"))
-    val nullCode = if (nullCheck && isReference(returnType)) {
+    val nullTerm = ctx.newReusableField("isNull", "boolean")
+    val resultTerm = ctx.newReusableField("result", resultTypeTerm)
+    val nullCode = if (nullCheck && (isReference(returnType) || primitiveNullable)) {
       s"$nullTerm = $resultTerm == null;"
     } else {
       s"$nullTerm = false;"

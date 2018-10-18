@@ -23,13 +23,11 @@ import java.util
 
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.plan.RelOptPlanner
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.{RexBuilder, RexNode}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.api.common.accumulators.{DoubleCounter, Histogram, IntCounter, LongCounter}
 import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.metrics.MetricGroup
 import org.apache.flink.table.api.TableConfig

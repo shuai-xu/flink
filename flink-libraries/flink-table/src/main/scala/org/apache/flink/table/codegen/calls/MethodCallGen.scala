@@ -18,11 +18,14 @@
 
 package org.apache.flink.table.codegen.calls
 
+import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Short => JShort,
+  Integer => JInt, Long => JLong, Float => JFloat, Double => JDouble}
 import java.lang.reflect.Method
 
 import org.apache.flink.table.codegen.CodeGenUtils.qualifyMethod
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
-import org.apache.flink.table.codegen.calls.CallGenerator.{generateCallIfArgsNotNull, generateCallIfArgsNullable}
+import org.apache.flink.table.codegen.calls.CallGenerator.{generateCallIfArgsNotNull,
+  generateCallIfArgsNullable}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -32,6 +35,8 @@ import org.apache.flink.table.types.{DataTypes, InternalType}
 class MethodCallGen(
     method: Method,
     argNotNull: Boolean = true) extends CallGenerator {
+  val boxedTypes = Seq(classOf[JByte], classOf[JShort], classOf[JInt],
+    classOf[JLong], classOf[JFloat], classOf[JDouble], classOf[JBoolean], classOf[JChar])
 
   override def generate(
       ctx: CodeGeneratorContext,
@@ -70,10 +75,20 @@ class MethodCallGen(
       call
     }
 
-    if (argNotNull) {
-      generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands)(resultCall)
-    } else {
-      generateCallIfArgsNullable(ctx, nullCheck, returnType, operands)(resultCall)
+    val returnBoxedType = isReturnTypeBoxed(method)
+    (argNotNull, returnBoxedType) match {
+      case (true, true) => generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands,
+        primitiveNullable = true)(resultCall)
+      case (true, false) => generateCallIfArgsNotNull(ctx, nullCheck, returnType,
+        operands)(resultCall)
+      case (false, true) => generateCallIfArgsNullable(ctx, nullCheck, returnType, operands,
+        primitiveNullable = true)(resultCall)
+      case (false, false) => generateCallIfArgsNullable(ctx, nullCheck, returnType,
+        operands)(resultCall)
     }
+  }
+
+  def isReturnTypeBoxed(method: Method): Boolean = {
+    boxedTypes.contains(method.getReturnType)
   }
 }

@@ -22,7 +22,8 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
-import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink, TestingRetractTableSink, TestingUpsertTableSink}
+import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink,
+  TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.TableFunc1
 import org.apache.flink.test.util.AbstractTestBase
@@ -416,6 +417,27 @@ class ExplainTest extends AbstractTestBase {
     val actual = replaceString(tEnv.explain())
 
     val source = readFromResource("testSubsectionOptimizationWithUdtf.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testUnionAggWithDifferentGroupings(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+
+    val query = "SELECT a, b, c FROM t1"
+    val table = tEnv.sqlQuery(query)
+    val result1 = table.groupBy('a, 'b, 'c).select('a, 'b, 'c, 'a.sum as 'a_sum)
+    val result2 = table.groupBy('b, 'c).select(1 as 'a, 'b, 'c, 'a.sum as 'a_sum)
+    val result3 = result1.unionAll(result2)
+    result3.writeToSink(new TestingUpsertTableSink(Array()))
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testUnionAggWithDifferentGroupings.out")
     val expected = replaceString(source)
     assertEquals(expected, actual)
   }

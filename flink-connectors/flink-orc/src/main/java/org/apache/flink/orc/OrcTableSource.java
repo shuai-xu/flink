@@ -424,7 +424,7 @@ public class OrcTableSource
 			return PredicateLeaf.Type.TIMESTAMP;
 		} else if (type == DataTypes.DATE) {
 			return PredicateLeaf.Type.DATE;
-		} else if (type == DecimalType.DEFAULT) {
+		} else if (type == DecimalType.SYSTEM_DEFAULT) {
 			return PredicateLeaf.Type.DECIMAL;
 		} else {
 			// unsupported type

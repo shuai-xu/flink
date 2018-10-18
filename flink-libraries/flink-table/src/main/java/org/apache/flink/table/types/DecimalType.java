@@ -33,8 +33,11 @@ public class DecimalType extends AtomicType {
 
 	private final int precision;
 	private final int scale;
+	// Default to be same with Integer.
+	public static final DecimalType USER_DEFAULT = new DecimalType(10, 0);
 
-	public static final DecimalType DEFAULT = new DecimalType(38, 18);
+	// Mainly used for implicitly type cast and test.
+	public static final DecimalType SYSTEM_DEFAULT = new DecimalType(MAX_PRECISION, MAX_SCALE);
 
 	public DecimalType(int precision, int scale) {
 

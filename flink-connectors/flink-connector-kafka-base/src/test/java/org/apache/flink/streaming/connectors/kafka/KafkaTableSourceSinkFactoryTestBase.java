@@ -109,7 +109,7 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 
 		final TableSchema schema = TableSchema.builder()
 			.field(FRUIT_NAME, DataTypes.STRING)
-			.field(COUNT, DecimalType.DEFAULT)
+			.field(COUNT, DecimalType.SYSTEM_DEFAULT)
 			.field(EVENT_TIME, DataTypes.TIMESTAMP)
 			.field(PROC_TIME, DataTypes.TIMESTAMP)
 			.build();
@@ -130,7 +130,7 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 		final TestDeserializationSchema deserializationSchema = new TestDeserializationSchema(
 			DataTypes.toTypeInfo(TableSchema.builder()
 				.field(NAME, DataTypes.STRING)
-				.field(COUNT, DecimalType.DEFAULT)
+				.field(COUNT, DecimalType.SYSTEM_DEFAULT)
 				.field(TIME, DataTypes.TIMESTAMP)
 				.build()
 				.toRowType())
@@ -190,7 +190,7 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 
 		final TableSchema schema = TableSchema.builder()
 			.field(FRUIT_NAME, DataTypes.STRING)
-			.field(COUNT, DecimalType.DEFAULT)
+			.field(COUNT, DecimalType.SYSTEM_DEFAULT)
 			.field(EVENT_TIME, DataTypes.TIMESTAMP)
 			.build();
 

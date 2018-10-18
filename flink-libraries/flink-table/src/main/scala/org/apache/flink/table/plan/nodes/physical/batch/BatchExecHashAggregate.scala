@@ -90,7 +90,7 @@ class BatchExecHashAggregate(
         val groupKeysList = ImmutableIntList.of(grouping.indices.toArray: _*)
         if (requiredDistribution.requireStrict) {
           if (shuffleKeys == groupKeysList) {
-            FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList, requireStrict = true)
+            FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList)
           } else {
             null
           }
@@ -98,14 +98,14 @@ class BatchExecHashAggregate(
           // If required distribution is not strict, Hash[a] can satisfy Hash[a, b].
           // If partitionKeys satisfies shuffleKeys (the shuffle between this node and
           // its output is not necessary), just push down partitionKeys into input.
-          FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList)
+          FlinkRelDistribution.hash(grouping.map(Integer.valueOf).toList, requireStrict = false)
         } else {
           val tableConfig = FlinkRelOptUtil.getTableConfig(this)
           if (tableConfig.aggregateShuffleByPartialKeyEnabled &&
               groupKeysList.containsAll(shuffleKeys)) {
             // If partialKey is enabled, push down partialKey requirement into input.
            FlinkRelDistribution.hash(
-             shuffleKeys.map(k => Integer.valueOf(grouping(k))))
+             shuffleKeys.map(k => Integer.valueOf(grouping(k))), requireStrict = false)
           } else {
             null
           }

@@ -73,8 +73,8 @@ trait BatchExecSortAggRuleBase extends BatchExecAggRuleBase {
         val globalGroupSet = groupSet.indices
         val distributionFields = globalGroupSet.map(Integer.valueOf)
         Seq(
-          FlinkRelDistribution.hash(distributionFields, true),
-          FlinkRelDistribution.hash(distributionFields))
+          FlinkRelDistribution.hash(distributionFields),
+          FlinkRelDistribution.hash(distributionFields, requireStrict = false))
       } else {
         Seq(FlinkRelDistribution.SINGLETON)
       }
@@ -106,8 +106,8 @@ trait BatchExecSortAggRuleBase extends BatchExecAggRuleBase {
       val requiredDistributions = if (groupSet.nonEmpty) {
         val distributionFields = groupSet.map(Integer.valueOf).toList
         Seq(
-          FlinkRelDistribution.hash(distributionFields, true),
-          FlinkRelDistribution.hash(distributionFields))
+          FlinkRelDistribution.hash(distributionFields),
+          FlinkRelDistribution.hash(distributionFields, requireStrict = false))
       } else {
         Seq(FlinkRelDistribution.SINGLETON)
       }

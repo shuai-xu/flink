@@ -28,11 +28,11 @@ class FlinkRelDistributionTest {
 
   @Test
   def testSatisfy(): Unit = {
-    val hash1 = FlinkRelDistribution.hash(ImmutableIntList.of(1))
-    val hash2 = FlinkRelDistribution.hash(ImmutableIntList.of(2))
-    val hash12 = FlinkRelDistribution.hash(ImmutableIntList.of(1, 2))
-    val hash21 = FlinkRelDistribution.hash(ImmutableIntList.of(2, 1))
-    val strictHash21 = FlinkRelDistribution.hash(ImmutableIntList.of(2, 1), true)
+    val hash1 = FlinkRelDistribution.hash(ImmutableIntList.of(1), requireStrict = false)
+    val hash2 = FlinkRelDistribution.hash(ImmutableIntList.of(2), requireStrict = false)
+    val hash12 = FlinkRelDistribution.hash(ImmutableIntList.of(1, 2), requireStrict = false)
+    val hash21 = FlinkRelDistribution.hash(ImmutableIntList.of(2, 1), requireStrict = false)
+    val strictHash21 = FlinkRelDistribution.hash(ImmutableIntList.of(2, 1))
     assertTrue(hash1.satisfies(hash1))
     assertFalse(hash1.satisfies(hash2))
     assertTrue(hash1.satisfies(hash12))
@@ -62,7 +62,7 @@ class FlinkRelDistributionTest {
     assertTrue(range12.satisfies(range123))
     assertFalse(range12.satisfies(rangeAsc1))
 
-    val hash = FlinkRelDistribution.hash(ImmutableIntList.of(0))
+    val hash = FlinkRelDistribution.hash(ImmutableIntList.of(0), requireStrict = false)
     val range = FlinkRelDistribution.range(new RelFieldCollation(0))
     val random = FlinkRelDistribution.RANDOM_DISTRIBUTED
     val roundrobin = FlinkRelDistribution.ROUND_ROBIN_DISTRIBUTED
@@ -133,16 +133,18 @@ class FlinkRelDistributionTest {
     mapping.set(6, 0)
     mapping.set(2, 1)
     val finalMapping = mapping.inverse()
-    val hash1 = FlinkRelDistribution.hash(ImmutableIntList.of(1))
-    assertEquals(FlinkRelDistribution.hash(ImmutableIntList.of(2)), hash1.apply(finalMapping))
-    val hash2 = FlinkRelDistribution.hash(ImmutableIntList.of(2))
+    val hash1 = FlinkRelDistribution.hash(ImmutableIntList.of(1), requireStrict = false)
+    assertEquals(FlinkRelDistribution.hash(ImmutableIntList.of(2), requireStrict = false),
+      hash1.apply(finalMapping))
+    val hash2 = FlinkRelDistribution.hash(ImmutableIntList.of(2), requireStrict = false)
     assertEquals(FlinkRelDistribution.ANY, hash2.apply(finalMapping))
-    val hash12 = FlinkRelDistribution.hash(ImmutableIntList.of(1, 2))
+    val hash12 = FlinkRelDistribution.hash(ImmutableIntList.of(1, 2), requireStrict = false)
     assertEquals(FlinkRelDistribution.ANY, hash12.apply(finalMapping))
-    val hash01 = FlinkRelDistribution.hash(ImmutableIntList.of(0, 1))
-    assertEquals(FlinkRelDistribution.hash(ImmutableIntList.of(6, 2)), hash01.apply(finalMapping))
-    val strictHash01 = FlinkRelDistribution.hash(ImmutableIntList.of(0, 1), true)
-    assertEquals(FlinkRelDistribution.hash(ImmutableIntList.of(6, 2), true),
+    val hash01 = FlinkRelDistribution.hash(ImmutableIntList.of(0, 1), requireStrict = false)
+    assertEquals(FlinkRelDistribution.hash(ImmutableIntList.of(6, 2), requireStrict = false),
+      hash01.apply(finalMapping))
+    val strictHash01 = FlinkRelDistribution.hash(ImmutableIntList.of(0, 1))
+    assertEquals(FlinkRelDistribution.hash(ImmutableIntList.of(6, 2)),
       strictHash01.apply(finalMapping))
 
     val rangeAsc1 = FlinkRelDistribution.range(new RelFieldCollation(1, Direction.ASCENDING))

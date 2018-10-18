@@ -54,6 +54,7 @@ object InternalTypeConverters {
       case DataTypes.STRING => StringConverter
       case DataTypes.INTERVAL_MILLIS => LongConverter
       case DataTypes.INTERVAL_MONTHS => IntConverter
+      case DataTypes.PROCTIME_INDICATOR | DataTypes.ROWTIME_INDICATOR => LongConverter
       case _: TimestampType => TimestampConverter
       case _: DateType => DateConverter
       case DataTypes.TIME => TimeConverter

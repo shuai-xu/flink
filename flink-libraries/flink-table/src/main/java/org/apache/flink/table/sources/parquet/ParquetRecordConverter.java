@@ -56,7 +56,7 @@ public class ParquetRecordConverter extends GroupConverter {
 	private final List<Converter> fieldConverters;
 
 	// as a key to match any Decimal(p,s)
-	private static final DecimalType ANY_DEC_TYPE = DecimalType.DEFAULT;
+	private static final DecimalType ANY_DEC_TYPE = DecimalType.SYSTEM_DEFAULT;
 
 	/**
 	 * Currently supported {@link InternalType}s.

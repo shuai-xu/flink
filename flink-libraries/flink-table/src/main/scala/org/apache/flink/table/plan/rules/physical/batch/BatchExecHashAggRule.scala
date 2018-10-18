@@ -85,8 +85,8 @@ class BatchExecHashAggRule
         val globalGroupSet = groupSet.indices
         val distributionFields = globalGroupSet.map(Integer.valueOf).toList
         Seq(
-          FlinkRelDistribution.hash(distributionFields, true),
-          FlinkRelDistribution.hash(distributionFields))
+          FlinkRelDistribution.hash(distributionFields),
+          FlinkRelDistribution.hash(distributionFields, requireStrict = false))
       } else {
         Seq(FlinkRelDistribution.SINGLETON)
       }
@@ -111,8 +111,8 @@ class BatchExecHashAggRule
       val requiredDistributions = if (agg.getGroupCount != 0) {
         val distributionFields = groupSet.map(Integer.valueOf).toList
         Seq(
-          FlinkRelDistribution.hash(distributionFields),
-          FlinkRelDistribution.hash(distributionFields, true))
+          FlinkRelDistribution.hash(distributionFields, requireStrict = false),
+          FlinkRelDistribution.hash(distributionFields))
       } else {
         Seq(FlinkRelDistribution.SINGLETON)
       }

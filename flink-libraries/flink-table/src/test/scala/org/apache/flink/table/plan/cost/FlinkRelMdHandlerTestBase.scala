@@ -23,7 +23,6 @@ import java.util.{List => JList}
 
 import com.google.common.collect.{ImmutableList, Lists}
 import org.apache.calcite.plan.{Convention, ConventionTraitDef, RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.RelFieldCollation.Direction
 import org.apache.calcite.rel._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core._
@@ -397,12 +396,12 @@ class FlinkRelMdHandlerTestBase {
       grouping,
       auxGrouping = Array())
     val toTrait = localAgg.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAgg,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
 
     // global aggregate: count(id) as c group by score
     val globalAgg = new BatchExecHashAggregate(
@@ -467,12 +466,12 @@ class FlinkRelMdHandlerTestBase {
       grouping,
       auxGrouping)
     val toTrait = localAggWithAuxGrouping.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAggWithAuxGrouping,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
 
     // global aggregate: max(score) as s group by id, age
     val globalAggWithAuxGrouping = new BatchExecHashAggregate(
@@ -534,12 +533,12 @@ class FlinkRelMdHandlerTestBase {
       auxGrouping = Array())
 
     val toTrait = localAgg.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAgg,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
 
     // global aggregate: count(age) as min_age group by id, which has local aggregate
     val globalAggWithLocalAgg = new BatchExecHashAggregate(
@@ -603,12 +602,12 @@ class FlinkRelMdHandlerTestBase {
       grouping,
       auxGrouping = Array())
     val toTrait = localAgg.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAgg,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val rowTypeOfglobalAgg = typeFactory.builder
       .add("id", typeFactory.createTypeFromTypeInfo(
         BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
@@ -679,12 +678,12 @@ class FlinkRelMdHandlerTestBase {
       grouping,
       auxGrouping)
     val toTrait = localAggWithAuxGrouping.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAggWithAuxGrouping,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val rowTypeOfglobalAgg = typeFactory.builder
       .add("id", typeFactory.createTypeFromTypeInfo(
         BasicTypeInfo.INT_TYPE_INFO, isNullable = false))
@@ -1123,12 +1122,14 @@ class FlinkRelMdHandlerTestBase {
       Array(0, 1),
       Array())
     val toTrait = localAgg.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0), Integer.valueOf(1))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0), Integer.valueOf(1)),
+        requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAgg,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0), Integer.valueOf(1))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0), Integer.valueOf(1)),
+        requireStrict = false))
     val globalAgg = new BatchExecHashWindowAggregate(
       tublingGroupWindow,
       2,
@@ -1149,7 +1150,8 @@ class FlinkRelMdHandlerTestBase {
       cluster,
       toTrait,
       calc,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0), Integer.valueOf(1))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0), Integer.valueOf(1)),
+        requireStrict = false))
     val globalAggWithoutLocal = new BatchExecHashWindowAggregate(
       tublingGroupWindow,
       2,
@@ -1221,12 +1223,12 @@ class FlinkRelMdHandlerTestBase {
       Array(0),
       Array(1))
     val toTrait = localAggWithAuxGrouping.getTraitSet.replace(
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val exchange = new BatchExecExchange(
       cluster,
       toTrait,
       localAggWithAuxGrouping,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val globalAggWithAuxGrouping = new BatchExecHashWindowAggregate(
       tublingGroupWindow,
       2,
@@ -1247,7 +1249,7 @@ class FlinkRelMdHandlerTestBase {
       cluster,
       toTrait,
       calc,
-      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0))))
+      FlinkRelDistribution.hash(ImmutableList.of(Integer.valueOf(0)), requireStrict = false))
     val globalAggWithoutLocalWithAuxGrouping = new BatchExecHashWindowAggregate(
       tublingGroupWindow,
       2,

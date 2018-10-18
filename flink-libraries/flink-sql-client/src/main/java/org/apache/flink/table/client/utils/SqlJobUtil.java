@@ -366,7 +366,7 @@ public class SqlJobUtil {
 				if (type.getPrecision() >= 0) {
 					return DecimalType.of(type.getPrecision(), type.getScale());
 				}
-				return DecimalType.DEFAULT;
+				return DecimalType.SYSTEM_DEFAULT;
 			case DOUBLE:
 				return DataTypes.DOUBLE;
 			case DATE:

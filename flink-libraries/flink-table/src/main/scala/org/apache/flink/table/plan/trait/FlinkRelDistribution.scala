@@ -37,15 +37,17 @@ import scala.collection.JavaConversions._
  * NOTE: it's intended to have a private constructor for this class.
  */
 class FlinkRelDistribution private (
-    private val `type`: RelDistribution.Type,
+    private val distributionType: RelDistribution.Type,
     private val keys: ImmutableIntList,
     private val fieldCollations: Option[ImmutableList[RelFieldCollation]] = None,
-    val requireStrict: Boolean = false)
+    val requireStrict: Boolean = true)
   extends RelDistribution {
 
-  require((`type` == Type.HASH_DISTRIBUTED) || (`type` == Type.RANGE_DISTRIBUTED) || keys.isEmpty)
+  require((distributionType == Type.HASH_DISTRIBUTED)
+    || (distributionType == Type.RANGE_DISTRIBUTED)
+    || keys.isEmpty)
 
-  require((`type` != Type.RANGE_DISTRIBUTED) || fieldCollations.nonEmpty)
+  require((distributionType != Type.RANGE_DISTRIBUTED) || fieldCollations.nonEmpty)
 
   private val ORDERING = Ordering.natural[Integer].lexicographical[Integer]
 
@@ -53,16 +55,16 @@ class FlinkRelDistribution private (
 
   override def getKeys: ImmutableIntList = keys
 
-  override def getType: RelDistribution.Type = `type`
+  override def getType: RelDistribution.Type = distributionType
 
   override def getTraitDef: FlinkRelDistributionTraitDef = FlinkRelDistributionTraitDef.INSTANCE
 
-  override def satisfies(`trait`: RelTrait): Boolean = `trait` match {
+  override def satisfies(relTrait: RelTrait): Boolean = relTrait match {
     case other: FlinkRelDistribution =>
       if (this == other || other.getType == Type.ANY) {
         true
-      } else if (`type` == other.`type`) {
-        if (`type` == Type.HASH_DISTRIBUTED) {
+      } else if (distributionType == other.distributionType) {
+        if (distributionType == Type.HASH_DISTRIBUTED) {
           if (other.requireStrict) {
             // Join and union require strict satisfy.
             // First: Hash[x] does not satisfy Hash[x, y],
@@ -75,16 +77,16 @@ class FlinkRelDistribution private (
             // Second: Hash[x, y] satisfy Hash[y, x]
             other.keys.containsAll(keys)
           }
-        } else if (`type` == Type.RANGE_DISTRIBUTED) {
+        } else if (distributionType == Type.RANGE_DISTRIBUTED) {
           Util.startsWith(other.fieldCollations.get, fieldCollations.get)
         } else {
           true
         }
-      } else if (other.`type` == Type.RANDOM_DISTRIBUTED) {
+      } else if (other.distributionType == Type.RANDOM_DISTRIBUTED) {
         // RANDOM is satisfied by HASH, ROUND-ROBIN, RANDOM, RANGE;
-        `type` == Type.HASH_DISTRIBUTED ||
-            `type` == Type.ROUND_ROBIN_DISTRIBUTED ||
-            `type` == Type.RANGE_DISTRIBUTED
+        distributionType == Type.HASH_DISTRIBUTED ||
+            distributionType == Type.ROUND_ROBIN_DISTRIBUTED ||
+            distributionType == Type.RANGE_DISTRIBUTED
       } else {
         false
       }
@@ -92,7 +94,7 @@ class FlinkRelDistribution private (
   }
 
   override def apply(mapping: Mappings.TargetMapping): FlinkRelDistribution = {
-    if (`type` == Type.HASH_DISTRIBUTED) {
+    if (distributionType == Type.HASH_DISTRIBUTED) {
       val newKeys = new JArrayList[Integer]
       keys.foreach { key =>
         try {
@@ -107,7 +109,7 @@ class FlinkRelDistribution private (
         }
       }
       FlinkRelDistribution.hash(newKeys, requireStrict)
-    } else if (`type` == Type.RANGE_DISTRIBUTED) {
+    } else if (distributionType == Type.RANGE_DISTRIBUTED) {
       val newFieldCollations = new JArrayList[RelFieldCollation]
       fieldCollations.get.foreach { fieldCollation =>
         try {
@@ -132,40 +134,41 @@ class FlinkRelDistribution private (
   def canEqual(other: Any): Boolean = other.isInstanceOf[FlinkRelDistribution]
 
   override def equals(other: Any): Boolean = other match {
-    case that: FlinkRelDistribution => (that canEqual this) && `type` == that.`type` &&
+    case that: FlinkRelDistribution => (that canEqual this) &&
+        distributionType == that.distributionType &&
         keys == that.keys && fieldCollations == that.fieldCollations &&
         requireStrict == that.requireStrict
     case _ => false
   }
 
   override def hashCode(): Int = {
-    val state = Seq(`type`, keys, fieldCollations, requireStrict)
+    val state = Seq(distributionType, keys, fieldCollations, requireStrict)
     state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
   }
 
   override def toString: String = {
     if (keys.isEmpty) {
-      `type`.shortName
+      distributionType.shortName
     } else if (fieldCollations.nonEmpty) {
-      `type`.shortName + fieldCollations.get.asList + requireStrict
+      distributionType.shortName + fieldCollations.get.asList + requireStrict
     } else {
-      `type`.shortName + keys + requireStrict
+      distributionType.shortName + keys + requireStrict
     }
   }
 
-  override def isTop: Boolean = `type` == Type.ANY
+  override def isTop: Boolean = distributionType == Type.ANY
 
   // here we only need to define a determinate order between RelMultipleTraits
   override def compareTo(o: RelMultipleTrait): Int = o match {
     case other: FlinkRelDistribution =>
       if (this.equals(other)) {
         0
-      } else if (`type` == other.`type`) {
-        if (`type` == Type.HASH_DISTRIBUTED) {
+      } else if (distributionType == other.distributionType) {
+        if (distributionType == Type.HASH_DISTRIBUTED) {
           ORDERING.compare(
             Ordering.natural().sortedCopy(keys),
             Ordering.natural().sortedCopy(other.keys))
-        } else if (`type` == Type.RANGE_DISTRIBUTED) {
+        } else if (distributionType == Type.RANGE_DISTRIBUTED) {
           val collations1 = fieldCollations.get.asList()
           val collations2 = other.fieldCollations.get.asList()
           for (i <- 0 until math.min(collations1.size(), collations2.size())) {
@@ -183,7 +186,7 @@ class FlinkRelDistribution private (
           0
         }
       } else {
-        `type`.compareTo(other.getType)
+        distributionType.compareTo(other.getType)
       }
     case _ => -1
   }
@@ -210,7 +213,7 @@ object FlinkRelDistribution {
   val ROUND_ROBIN_DISTRIBUTED: RelDistribution = new FlinkRelDistribution(
     RelDistribution.Type.ROUND_ROBIN_DISTRIBUTED, EMPTY)
 
-  def hash(columns: util.Collection[_ <: Number], requireStrict: Boolean = false)
+  def hash(columns: util.Collection[_ <: Number], requireStrict: Boolean = true)
   : FlinkRelDistribution = {
     val list = ImmutableIntList.copyOf(columns)
     canonize(
@@ -224,8 +227,8 @@ object FlinkRelDistribution {
       keys.add(field.getFieldIndex)
     }
     val fieldCollations = ImmutableList.copyOf[RelFieldCollation](collations)
-    canonize(new FlinkRelDistribution(
-      RelDistribution.Type.RANGE_DISTRIBUTED, ImmutableIntList.copyOf(keys), Some(fieldCollations)))
+    canonize(new FlinkRelDistribution(RelDistribution.Type.RANGE_DISTRIBUTED,
+      ImmutableIntList.copyOf(keys), Some(fieldCollations)))
   }
 
   def range(collations: RelFieldCollation*): FlinkRelDistribution = range(collations)

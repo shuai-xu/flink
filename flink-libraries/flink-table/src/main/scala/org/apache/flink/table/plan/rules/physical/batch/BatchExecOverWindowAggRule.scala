@@ -86,7 +86,7 @@ class BatchExecOverWindowAggRule extends RelOptRule(
         lastGroup.orderKeys.getFieldCollations)
 
       val requiredDistribution = if (groupSet.nonEmpty) {
-        FlinkRelDistribution.hash(groupSet.map(Integer.valueOf).toList)
+        FlinkRelDistribution.hash(groupSet.map(Integer.valueOf).toList, requireStrict = false)
       } else {
         FlinkRelDistribution.SINGLETON
       }

@@ -142,7 +142,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
       val toHashTraitByColumns = (columns: util.Collection[_ <: Number]) =>
         join.getCluster.getPlanner.emptyTraitSet.
             replace(FlinkConventions.BATCHEXEC).
-            replace(FlinkRelDistribution.hash(columns, true))
+            replace(FlinkRelDistribution.hash(columns))
       transformToEquiv(
         toHashTraitByColumns(joinInfo.leftKeys),
         toHashTraitByColumns(joinInfo.rightKeys))

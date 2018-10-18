@@ -275,13 +275,13 @@ class DecimalTypeTest extends ExpressionTestBase {
     testAllApis(
       'f1 === BigDecimal("123456789123456789123456789"),
       "f1 === 123456789123456789123456789p",
-      "f1 = CAST('123456789123456789123456789' AS DECIMAL)",
+      "f1 = CAST('123456789123456789123456789' AS DECIMAL(30, 0))",
       "true")
 
     testAllApis(
       'f1 !== BigDecimal("123456789123456789123456789"),
       "f1 !== 123456789123456789123456789p",
-      "f1 <> CAST('123456789123456789123456789' AS DECIMAL)",
+      "f1 <> CAST('123456789123456789123456789' AS DECIMAL(30, 0))",
       "false")
 
     testAllApis(

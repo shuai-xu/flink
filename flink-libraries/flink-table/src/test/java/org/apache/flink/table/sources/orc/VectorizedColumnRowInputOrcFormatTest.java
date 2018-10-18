@@ -63,7 +63,7 @@ public class VectorizedColumnRowInputOrcFormatTest {
 			FloatType.INSTANCE,
 			DoubleType.INSTANCE,
 			StringType.INSTANCE,
-			DecimalType.DEFAULT,
+			DecimalType.SYSTEM_DEFAULT,
 			DateType.DATE,
 			TimestampType.TIMESTAMP};
 		final String[] fieldNames = new String[]{

@@ -1,0 +1,70 @@
+== Abstract Syntax Tree ==
+LogicalUnion(all=[true])
+  LogicalProject(a=[$0], b=[$1], c=[$2], a_sum=[AS($3, 'a_sum')])
+    LogicalAggregate(group=[{0, 1, 2}], TMP_0=[SUM($0)])
+      LogicalProject(a=[$0], b=[$1], c=[$2])
+        LogicalProject(a=[$0], b=[$1], c=[$2])
+          LogicalTableScan(table=[[t1]])
+  LogicalProject(a=[AS(1, 'a')], b=[$0], c=[$1], a_sum=[AS($2, 'a_sum')])
+    LogicalAggregate(group=[{0, 1}], TMP_1=[SUM($2)])
+      LogicalProject(b=[$1], c=[$2], a=[$0])
+        LogicalProject(a=[$0], b=[$1], c=[$2])
+          LogicalTableScan(table=[[t1]])
+
+== Optimized Logical Plan ==
+[[IntermediateTable=_DataStreamTable_2]]
+StreamExecScan(table=[[t1]])
+StreamExecScan(retract=[true], accMode=[Acc])
+
+[[IntermediateTable=_DataStreamTable_3]]
+StreamExecScan(table=[[_DataStreamTable_2]])
+StreamExecScan(retract=[true], accMode=[Acc])
+
+[[Sink]]
+StreamExecUnion(all=[true], union=[a, b, c, a_sum])
+  StreamExecCalc(select=[a, b, c, TMP_0 AS a_sum])
+    StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c, SUM(a) AS TMP_0])
+      StreamExecExchange(distribution=[hash[a, b, c]])
+        StreamExecScan(table=[[_DataStreamTable_3]])
+  StreamExecCalc(select=[CAST(1) AS a, b, c, TMP_1 AS a_sum])
+    StreamExecGroupAggregate(groupBy=[b, c], select=[b, c, SUM(a) AS TMP_1])
+      StreamExecExchange(distribution=[hash[b, c]])
+        StreamExecScan(table=[[_DataStreamTable_3]])
+StreamExecUnion(retract=[false], accMode=[Acc])
+  StreamExecCalc(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+  StreamExecCalc(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[t1], fields:(a, b, c))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : GroupAggregate(groupBy: (a, b, c), select: (a, b, c, SUM(a) AS TMP_0))
+			ship_strategy : HASH
+
+			 : Operator
+				content : Calc(select: (a, b, c, TMP_0 AS a_sum))
+				ship_strategy : FORWARD
+
+				 : Operator
+					content : GroupAggregate(groupBy: (b, c), select: (b, c, SUM(a) AS TMP_1))
+					ship_strategy : HASH
+
+					 : Operator
+						content : Calc(select: (CAST(1) AS a, b, c, TMP_1 AS a_sum))
+						ship_strategy : FORWARD
+
+						 : Data Sink
+							content : Sink: TestingUpsertTableSink(keys=())
+							ship_strategy : FORWARD
+

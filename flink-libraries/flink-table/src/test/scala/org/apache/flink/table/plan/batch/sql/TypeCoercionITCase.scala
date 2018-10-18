@@ -25,6 +25,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.junit.{Before, Test}
 import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTimestamp}
 
@@ -53,7 +54,7 @@ class TypeCoercionITCase extends QueryTest {
       Seq(row(null, "abc d".getBytes, "123 4".getBytes,
         128L, 32768L, 2147483648L, new java.math.BigDecimal("9223372036854775808"),
         -129L, -32769L, -2147483649L, new java.math.BigDecimal("-9223372036854775809"),
-        1.1, UTCTimestamp("2018-06-08 00:00:00"), UTCDate("1996-11-10"))),
+        1.1f, 1.1, UTCTimestamp("2018-06-08 00:00:00"), UTCDate("1996-11-10"), 123L, 123L)),
       new RowTypeInfo(
         INT_TYPE_INFO,
         BYTE_PRIMITIVE_ARRAY_TYPE_INFO,
@@ -66,13 +67,19 @@ class TypeCoercionITCase extends QueryTest {
         LONG_TYPE_INFO,
         LONG_TYPE_INFO,
         BIG_DEC_TYPE_INFO,
+        FLOAT_TYPE_INFO,
         DOUBLE_TYPE_INFO,
         Types.SQL_TIMESTAMP,
-        Types.SQL_DATE),
+        Types.SQL_DATE,
+        TimeIndicatorTypeInfo.PROCTIME_INDICATOR,
+        TimeIndicatorTypeInfo.ROWTIME_INDICATOR),
     "x,y,z," +
       "tinyintMax,smallintMax,intMax,bigintMax," +
-      "tinyintMin,smallintMin,intMin,bigintMin,f,a,b",
-      Seq(true, true, true, true, true, true, true, true, true, true, true, true, true, true)
+      "tinyintMin,smallintMin,intMin,bigintMin," +
+      "floatField,doubleField,a,b," +
+      "procIndicator,rowIndicator",
+      Seq(true, true, true, true, true, true, true,
+        true, true, true, true, true, true, true, true, false, false)
     )
     registerCollection(
       "t6",
@@ -198,6 +205,46 @@ class TypeCoercionITCase extends QueryTest {
       """
         |select if(1>0, date '2018-06-08', timestamp '2018-06-07 17:00:00.0') from t4
       """.stripMargin, Seq(row("2018-06-08")))
+  }
+
+  @Test
+  def testIfFuncNumericArgs(): Unit = {
+    val numericTypes = Seq(
+      "tinyint",
+      "smallint",
+      "integer",
+      "bigint",
+      "decimal(5, 3)",
+      "float",
+      "double"
+    )
+
+    for (t1 <- numericTypes) {
+      for (t2 <- numericTypes) {
+        val result =
+          if (t1 == "float" || t1 == "double" || t2 == "float" || t2 == "double") "1.0"
+          else if (t1 == "decimal(5, 3)" || t2 == "decimal(5, 3)") "1.000"
+          else "1"
+        checkResult(s"select if(1 > 0, cast(1 as $t1), cast(0 as $t2)) from t4",
+          Seq(row(result)))
+      }
+    }
+  }
+
+  @Test
+  def testIfFuncDecimalArgs(): Unit = {
+    checkResult(
+      "select if(1 > 0, cast(111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
+      Seq(row("111.000")))
+    checkResult(
+      "select if(1 < 0, cast(111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
+      Seq(row("0.222")))
+    checkResult(
+      "select if(1 > 0, cast(-111 as decimal(5, 2)), cast(0.222 as decimal(3, 3))) from t4",
+      Seq(row("-111.000")))
+    checkResult(
+      "select if(1 < 0, cast(111 as decimal(5, 2)), cast(-0.222 as decimal(3, 3))) from t4",
+      Seq(row("-0.222")))
   }
 
   @Test
@@ -567,11 +614,11 @@ class TypeCoercionITCase extends QueryTest {
         |SELECT CAST(CAST('123' AS BINARY) AS VARCHAR)
       """.stripMargin, Seq(row("123"))
     )
-//    checkResult(
-//      """
-//        |SELECT CAST('123' AS BINARY) UNION SELECT '2'
-//      """.stripMargin, Seq(row("123"), row("2"))
-//    )
+    checkResult(
+      """
+        |SELECT CAST('123' AS BINARY) UNION SELECT '2'
+      """.stripMargin, Seq(row("123"), row("2"))
+    )
   }
 
   @Test
@@ -1012,7 +1059,7 @@ class TypeCoercionITCase extends QueryTest {
         )
         checkResult(
           s"""
-             |SELECT CAST(f AS $i) from t5
+             |SELECT CAST(floatField AS $i) from t5
            """.stripMargin, Seq(row(1))
         )
     }
@@ -1393,6 +1440,36 @@ class TypeCoercionITCase extends QueryTest {
   }
 
   @Test
+  def testStringToFloat(): Unit = {
+    val floatList = List("floatField", "doubleField")
+    val typeList = List("float", "double")
+    val strList = List("\'1.abc\'", "\'abc\'", "\'\\\\n\'", "\'\'")
+    val opList = List("<>", "<", ">", "=")
+
+    typeList.foreach { i =>
+      strList.foreach { str =>
+        val sqlQuery =
+          s"""
+             |SELECT CAST($str AS $i) FROM t5
+           """.stripMargin
+        checkResult(sqlQuery, Seq(row(null)))
+      }
+    }
+
+    floatList.foreach { i =>
+      strList.foreach { str =>
+        opList.foreach { op =>
+          val sqlQuery =
+            s"""
+               |SELECT $i FROM t5 WHERE $i $op $str
+           """.stripMargin
+          checkResult(sqlQuery, Seq())
+        }
+      }
+    }
+  }
+
+  @Test
   def testConcatImplicitCast(): Unit = {
     checkResult(
       """
@@ -1410,23 +1487,6 @@ class TypeCoercionITCase extends QueryTest {
         |TO_TIMESTAMP('2018-08-08 00:00:00'), CAST(NULL as VARCHAR))
       """.stripMargin,
       Seq(row("#hello#123#123.45#true#2018-08-08#2018-08-08 00:00:00.000"))
-    )
-  }
-
-  @Test
-  def testCallReuse(): Unit = {
-    checkResult(
-      s"""
-         |SELECT
-         |  IF(TRUE, 1, 2),
-         |  IF(FALSE, 1, 2),
-         |  IF(FALSE, 1.0, 2.0),
-         |  IF(FALSE, CAST(1 AS BIGINT), CAST(2 AS BIGINT)),
-         |  IF(FALSE, CAST(1 AS INT), CAST(2 AS INT)),
-         |  IF(FALSE, CAST(1 AS DOUBLE), CAST(2 AS DOUBLE)),
-         |  IF(FALSE, CAST(1 AS FLOAT), CAST(2 AS FLOAT))
-       """.stripMargin,
-      Seq(row(1, 2, 2.0, 2, 2, 2.0, 2.0))
     )
   }
 
@@ -1501,5 +1561,32 @@ class TypeCoercionITCase extends QueryTest {
         )
       }
     }
+  }
+
+  @Test
+  def testCallReuse(): Unit = {
+    checkResult(
+      s"""
+         |SELECT
+         |  IF(TRUE, 1, 2),
+         |  IF(FALSE, 1, 2),
+         |  IF(FALSE, 1.0, 2.0),
+         |  IF(FALSE, CAST(1 AS BIGINT), CAST(2 AS BIGINT)),
+         |  IF(FALSE, CAST(1 AS INT), CAST(2 AS INT)),
+         |  IF(FALSE, CAST(1 AS DOUBLE), CAST(2 AS DOUBLE)),
+         |  IF(FALSE, CAST(1 AS FLOAT), CAST(2 AS FLOAT))
+       """.stripMargin,
+      Seq(row(1, 2, 2.0, 2, 2, 2.0, 2.0))
+    )
+  }
+
+  @Test
+  def testTimeIndicatorToTimestamp(): Unit = {
+    checkResult(
+      s"""
+         |SELECT procIndicator <> to_timestamp(0), rowIndicator <> to_timestamp(0) from t5
+       """.stripMargin,
+      Seq(row(true, true))
+    )
   }
 }

@@ -79,7 +79,7 @@ class BatchExecRankRule
     val globalRequiredDistribution = if (rank.partitionKey.isEmpty) {
       FlinkRelDistribution.SINGLETON
     } else {
-      FlinkRelDistribution.hash(rank.partitionKey.toList)
+      FlinkRelDistribution.hash(rank.partitionKey.toList, requireStrict = false)
     }
 
     val globalRequiredTraitSet = emptyBatchExecTraits

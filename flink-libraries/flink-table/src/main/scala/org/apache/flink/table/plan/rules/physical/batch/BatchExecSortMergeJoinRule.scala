@@ -71,13 +71,12 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
     def transformToEquiv(
         leftRequiredShuffleKeys: ImmutableIntList,
         rightRequiredShuffleKeys: ImmutableIntList): Unit = {
-      val requireStrict = true
       val leftRequiredTrait = join.getTraitSet
           .replace(FlinkConventions.BATCHEXEC)
-          .replace(FlinkRelDistribution.hash(leftRequiredShuffleKeys, requireStrict))
+          .replace(FlinkRelDistribution.hash(leftRequiredShuffleKeys))
       val rightRequiredTrait = join.getTraitSet
           .replace(FlinkConventions.BATCHEXEC)
-          .replace(FlinkRelDistribution.hash(rightRequiredShuffleKeys, requireStrict))
+          .replace(FlinkRelDistribution.hash(rightRequiredShuffleKeys))
 
       val newLeft = RelOptRule.convert(left, leftRequiredTrait)
       val newRight = RelOptRule.convert(right, rightRequiredTrait)

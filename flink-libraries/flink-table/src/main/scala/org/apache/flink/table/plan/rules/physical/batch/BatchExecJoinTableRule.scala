@@ -50,7 +50,8 @@ class BatchExecJoinTableRule extends ConverterRule(
       case partitionSource: DefinedDistribution if partitionSource.getPartitionField() != null &&
           join.lookupKeyPairs.nonEmpty =>
         requiredTraitSet = requiredTraitSet.plus(
-          FlinkRelDistribution.hash(join.lookupKeyPairs.map(pair => Integer.valueOf(pair.source))))
+          FlinkRelDistribution.hash(join.lookupKeyPairs.map(pair => Integer.valueOf(pair.source)),
+            requireStrict = false))
       case _ =>
     }
 

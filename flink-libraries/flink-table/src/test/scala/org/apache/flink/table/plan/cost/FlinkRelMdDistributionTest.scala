@@ -81,7 +81,7 @@ class FlinkRelMdDistributionTest extends FlinkRelMdHandlerTestBase {
   private def createDistribution(int: Array[Int]): FlinkRelDistribution = {
     val fields = new JArrayList[Integer]()
     for (field <- int) fields.add(field)
-    FlinkRelDistribution.hash(fields)
+    FlinkRelDistribution.hash(fields, requireStrict = false)
   }
 }
 

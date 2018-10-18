@@ -24,7 +24,6 @@ import org.apache.calcite.avatica.util.{TimeUnit, TimeUnitRange}
 import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions._
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions.{COSH, _}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
@@ -39,7 +38,7 @@ import scala.collection.mutable
 object FunctionGenerator {
 
   // as a key to match any Decimal(p,s)
-  val ANY_DEC_TYPE: DecimalType = DecimalType.DEFAULT
+  val ANY_DEC_TYPE: DecimalType = DecimalType.SYSTEM_DEFAULT
 
   private val sqlFunctions: mutable.Map[(SqlOperator, Seq[InternalType]), CallGenerator] =
     mutable.Map()
@@ -568,7 +567,7 @@ object FunctionGenerator {
 
   addSqlFunctionMethod(
     COSH,
-    Seq(DecimalType.DEFAULT),
+    Seq(DecimalType.SYSTEM_DEFAULT),
     DataTypes.DOUBLE,
     BuiltInMethods.COSH_DEC)
 
@@ -787,7 +786,7 @@ object FunctionGenerator {
     DataTypes.SHORT,
     DataTypes.INT,
     DataTypes.LONG,
-    DecimalType.DEFAULT,
+    DecimalType.SYSTEM_DEFAULT,
     DataTypes.FLOAT,
     DataTypes.DOUBLE)
 
@@ -920,7 +919,7 @@ object FunctionGenerator {
 
   addSqlFunction(
     HASH_CODE,
-    Seq(DecimalType.DEFAULT),
+    Seq(DecimalType.SYSTEM_DEFAULT),
     new HashCodeCallGen())
 
   addSqlFunctionMethod(
@@ -942,7 +941,7 @@ object FunctionGenerator {
       BuiltInMethods.DOUBLE_TO_TIMESTAMP))
 
   addSqlFunctionMethod(ScalarSqlFunctions.TO_TIMESTAMP,
-    Seq(DecimalType.DEFAULT),
+    Seq(DecimalType.SYSTEM_DEFAULT),
     DataTypes.TIMESTAMP,
     BuiltInMethods.DECIMAL_TO_TIMESTAMP)
 
@@ -1005,7 +1004,7 @@ object FunctionGenerator {
 
   addSqlFunctionMethod(
     ScalarSqlFunctions.FROM_UNIXTIME,
-    Seq(DecimalType.DEFAULT),
+    Seq(DecimalType.SYSTEM_DEFAULT),
     DataTypes.STRING,
     BuiltInMethods.FROM_UNIXTIME_AS_DECIMAL)
 

@@ -31,13 +31,12 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, _}
 import org.apache.flink.api.common.typeinfo._
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.ValueTypeInfo._
-import org.apache.flink.api.java.typeutils.{
-  MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, RowTypeInfo, PojoField => _}
+import org.apache.flink.api.java.typeutils.{MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, RowTypeInfo, PojoField => _}
 import org.apache.flink.table.api.{TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory.typeInfoToSqlTypeName
 import org.apache.flink.table.dataformat.{BaseRow, Decimal}
 import org.apache.flink.table.plan.schema._
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
+import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.types.Row
 
@@ -303,6 +302,18 @@ class FlinkTypeFactory(typeSystem: RelDataTypeSystem) extends JavaTypeFactoryImp
       createSqlType(typeName, getTypeSystem.getDefaultPrecision(typeName))
     } else {
       super.createSqlType(typeName, precision)
+    }
+  }
+
+  override def createSqlType(typeName: SqlTypeName): RelDataType = {
+    if (typeName == DECIMAL) {
+      // if we got here, the precision and scale are not specified, here we
+      // keep precision/scale in sync with our type system's default value,
+      // see DecimalType.USER_DEFAULT.
+      createSqlType(typeName, DecimalType.USER_DEFAULT.precision(),
+        DecimalType.USER_DEFAULT.scale())
+    } else {
+      super.createSqlType(typeName)
     }
   }
 

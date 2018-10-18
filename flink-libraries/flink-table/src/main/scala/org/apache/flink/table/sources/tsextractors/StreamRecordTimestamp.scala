@@ -43,7 +43,7 @@ final class StreamRecordTimestamp extends TimestampExtractor {
     Cast(
       Div(
         org.apache.flink.table.expressions.StreamRecordTimestamp(),
-        Literal(new java.math.BigDecimal(1000), DecimalType.DEFAULT)
+        Literal(new java.math.BigDecimal(1000), DecimalType.SYSTEM_DEFAULT)
       ),
       DataTypes.TIMESTAMP)
 
