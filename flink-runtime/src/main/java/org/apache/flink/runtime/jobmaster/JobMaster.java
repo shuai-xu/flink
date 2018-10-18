@@ -403,18 +403,22 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	public void reconcile() throws Exception {
 
 		if (executionGraph.getState() != JobStatus.CREATED) {
+			clearExecutionGraphFields();
+
 			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
 			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
-
 			assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);
 		}
+
 		graphManager.enterReconcile();
 
 		try {
 			operationLogManager.replay();
 		} catch (Throwable t) {
 			log.warn("Fail to replay log for {}, will start the job as a new one.", executionGraph.getJobID(), t);
+
 			operationLogManager.clear();
+			clearExecutionGraphFields();
 
 			final JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
 			final ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);
@@ -1400,19 +1404,18 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	private void suspendExecutionGraph(Exception cause) {
 		executionGraph.suspend(cause);
+	}
 
+	private void clearExecutionGraphFields() {
 		if (jobManagerJobMetricGroup != null) {
 			jobManagerJobMetricGroup.close();
+			jobManagerJobMetricGroup = null;
 		}
 
 		if (jobStatusListener != null) {
 			jobStatusListener.stop();
+			jobStatusListener = null;
 		}
-	}
-
-	private void clearExecutionGraphFields() {
-		jobManagerJobMetricGroup = null;
-		jobStatusListener = null;
 	}
 
 	private GraphManager createGraphManager() {

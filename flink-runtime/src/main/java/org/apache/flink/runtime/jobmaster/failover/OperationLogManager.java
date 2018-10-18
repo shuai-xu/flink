@@ -94,7 +94,7 @@ public class OperationLogManager {
 	 */
 	public void replay() {
 		replaying = true;
-		OperationLog opLog = null;
+		OperationLog opLog;
 		while ((opLog = operationLogStore.readOpLog()) != null) {
 			Replayable replayHandler = opLogTypeToReplayHandlers.get(opLog.getType());
 			if (replayHandler != null) {

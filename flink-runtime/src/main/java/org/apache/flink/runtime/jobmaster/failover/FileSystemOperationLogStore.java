@@ -94,13 +94,14 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 		@Nonnull Configuration configuration
 	) {
 		// build working dir
-		final String rootPath = configuration.getValue(HighAvailabilityOptions.HA_STORAGE_PATH)
-				+ "/" + configuration.getString(HighAvailabilityOptions.HA_CLUSTER_ID);
+		String rootPath = configuration.getValue(HighAvailabilityOptions.HA_STORAGE_PATH);
 		if (rootPath == null || StringUtils.isBlank(rootPath)) {
 			throw new IllegalConfigurationException(
 				String.format("Missing high-availability storage path for storing operation logs." +
 					" Specify via configuration key '%s'.", HighAvailabilityOptions.HA_STORAGE_PATH));
 		}
+
+		rootPath += configuration.getString(HighAvailabilityOptions.HA_CLUSTER_ID);
 
 		this.workingDir = new Path(new Path(rootPath, jobID.toString()), "jobmaster-oplog");
 		this.flushIntervalInMs = configuration.getInteger(JobManagerOptions.OPLOG_FLUSH_INTERVAL);
@@ -236,7 +237,7 @@ public class FileSystemOperationLogStore implements OperationLogStore {
 				Path file = new Path(workingDir, logNamePrefix + index++);
 				inputStream = new DataInputStream(fileSystem.open(file));
 			} catch (IOException e) {
-				throw new FlinkRuntimeException("Cannot init filesystem opLog store.");
+				throw new FlinkRuntimeException("Cannot init filesystem opLog store.", e);
 			}
 		}
 

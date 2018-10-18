@@ -224,7 +224,7 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 	// --------------------------------------------------------------------------------------------
 
 	@Override
-	public void replayOpLog(OperationLog opLog){
+	public void replayOpLog(OperationLog opLog) {
 		checkArgument(isReconciling && JobStatus.CREATED.equals(executionGraph.getState()),
 				"Job is in " + executionGraph.getState() + " while replaying log.");
 

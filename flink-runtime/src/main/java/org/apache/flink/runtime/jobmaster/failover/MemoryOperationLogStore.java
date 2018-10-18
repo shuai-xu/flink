@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmaster.failover;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,9 +36,14 @@ public class MemoryOperationLogStore implements OperationLogStore {
 
 	private static List<OperationLog> operationLogs;
 
+	@VisibleForTesting
+	public static void disable() {
+		operationLogs = null;
+	}
+
 	private int readIndex;
 
-	public MemoryOperationLogStore() {
+	MemoryOperationLogStore() {
 	}
 
 	public void start() {
