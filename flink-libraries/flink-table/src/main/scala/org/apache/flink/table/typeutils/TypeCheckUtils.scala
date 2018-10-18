@@ -69,6 +69,12 @@ object TypeCheckUtils {
         dataType == DataTypes.LONG ||
         dataType == DataTypes.SHORT
 
+  /**
+    * Types that can be easily converted into a string without ambiguity.
+    */
+  def isSimpleStringRepresentation(dataType: InternalType): Boolean =
+    isNumeric(dataType) || isString(dataType) || isTemporal(dataType) || isBoolean(dataType)
+
   def isLong(dataType: InternalType): Boolean = dataType == DataTypes.LONG
 
   def isIntervalMonths(dataType: InternalType): Boolean = dataType == DataTypes.INTERVAL_MONTHS
