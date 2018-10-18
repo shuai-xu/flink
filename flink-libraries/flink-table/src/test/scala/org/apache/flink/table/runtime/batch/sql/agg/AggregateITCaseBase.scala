@@ -325,7 +325,7 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
 
   @Test
   def testGroupByRegexp(): Unit = {
-    val expr = "regexp_extract(f0, '([a-z]+)\\\\[', 1)"
+    val expr = "regexp_extract(f0, '([a-z]+)\\[', 1)"
     checkQuery(
       Seq(("some[thing]", "random-string")),
       s"select $expr, count(*) from TableName group by $expr",

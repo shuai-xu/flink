@@ -1853,7 +1853,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
     tEnv.registerFunction("udf1", udf1)
     tEnv.registerFunction("udf2", udf2)
 
-    val sqlQuery = "SELECT udf0('\"\\\\') as str1, " +
+    val sqlQuery = "SELECT udf0('\"\\') as str1, " +
       "udf1('\u0001xyz') as str2, " +
       "udf2('\u0001\u0012') as str3 from T1"
 
