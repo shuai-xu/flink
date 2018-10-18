@@ -118,15 +118,6 @@ case class Literal(value: Any, resultType: InternalType) extends LeafExpression 
           SqlParserPos.ZERO)
         relBuilder.getRexBuilder.makeIntervalLiteral(interval, intervalQualifier)
 
-      case DataTypes.STRING =>
-        val strValue = value match {
-          case s: NlsString => s.getValue
-          case _ => value.asInstanceOf[String]
-        }
-        relBuilder.getRexBuilder.makeLiteral(
-          StringEscapeUtils.escapeJava(strValue)
-        )
-
       case DataTypes.BYTE =>
         relBuilder.getRexBuilder.makeExactLiteral(
           java.math.BigDecimal.valueOf(value.asInstanceOf[Number].byteValue()),
@@ -136,6 +127,13 @@ case class Literal(value: Any, resultType: InternalType) extends LeafExpression 
         relBuilder.getRexBuilder.makeExactLiteral(
           java.math.BigDecimal.valueOf(value.asInstanceOf[Number].shortValue()),
           relBuilder.getTypeFactory.createSqlType(SqlTypeName.SMALLINT))
+
+      case DataTypes.STRING =>
+        val strValue = value match {
+          case s: NlsString => s.getValue
+          case _ => value.asInstanceOf[String]
+        }
+        relBuilder.literal(strValue)
 
       case _ => relBuilder.literal(value)
     }

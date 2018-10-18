@@ -117,12 +117,6 @@ class ExpressionReducer(config: TableConfig)
              SqlTypeName.MAP |
              SqlTypeName.MULTISET =>
           reducedValues.add(unreduced)
-        case SqlTypeName.VARCHAR | SqlTypeName.CHAR =>
-          val escapeVarchar = StringEscapeUtils
-            .escapeJava(
-              BinaryString.safeToString(reduced.getField(reducedIdx).asInstanceOf[BinaryString]))
-          reducedValues.add(maySkipNullLiteralReduce(rexBuilder, escapeVarchar, unreduced))
-          reducedIdx += 1
         case SqlTypeName.VARBINARY | SqlTypeName.BINARY =>
           val reducedValue = reduced.getField(reducedIdx)
           val value = if (null != reducedValue) {
@@ -168,11 +162,18 @@ class ExpressionReducer(config: TableConfig)
       return unreduced
     }
 
+    // used for table api to '+' of two strings.
+    val valueArg = if (SqlTypeName.CHAR_TYPES.contains(unreduced.getType.getSqlTypeName) &&
+        value != null) {
+      value.toString
+    } else {
+      value
+    }
     rexBuilder.makeLiteral(
-      value,
+      valueArg,
       unreduced.getType,
       true)
-  }
+    }
 }
 
 /**

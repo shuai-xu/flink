@@ -550,9 +550,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
           nullCheck)
 
       case VARCHAR | CHAR =>
-        val escapedValue = StringEscapeUtils.escapeJava(
-          StringEscapeUtils.unescapeJava(value.toString)
-        )
+        val escapedValue = StringEscapeUtils.ESCAPE_JAVA.translate(value.toString)
         val field = ctx.addReusableStringConstants(escapedValue)
         generateNonNullLiteral(
           resultType,

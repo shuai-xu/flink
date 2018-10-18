@@ -812,22 +812,22 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
 
   @Test
   def testRegex(): Unit = {
-    testSqlApi("regexp_replace('100-200', '(\\\\d+)', 'num')", "num-num")
-    testSqlApi("regexp_replace('100-200', '(\\\\d+)-(\\\\d+)', '400')", "400")
-    testSqlApi("regexp_replace('100-200', '(\\\\d+)', '400')", "400-400")
+    testSqlApi("regexp_replace('100-200', '(\\d+)', 'num')", "num-num")
+    testSqlApi("regexp_replace('100-200', '(\\d+)-(\\d+)', '400')", "400")
+    testSqlApi("regexp_replace('100-200', '(\\d+)', '400')", "400-400")
     testSqlApi("regexp_replace('100-200', '', '400')", "100-200")
-    testSqlApi("regexp_replace(f40, '(\\\\d+)', '400')", "null")
-    testSqlApi("regexp_replace(CAST(null as VARCHAR), '(\\\\d+)', 'num')", "null")
+    testSqlApi("regexp_replace(f40, '(\\d+)', '400')", "null")
+    testSqlApi("regexp_replace(CAST(null as VARCHAR), '(\\d+)', 'num')", "null")
     testSqlApi("regexp_replace('100-200', CAST(null as VARCHAR), '400')", "null")
-    testSqlApi("regexp_replace('100-200', '(\\\\d+)', CAST(null as VARCHAR))", "null")
+    testSqlApi("regexp_replace('100-200', '(\\d+)', CAST(null as VARCHAR))", "null")
 
-    testSqlApi("regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 1)", "100")
+    testSqlApi("regexp_extract('100-200', '(\\d+)-(\\d+)', 1)", "100")
     testSqlApi("regexp_extract('100-200', '', 1)", "null")
-    testSqlApi("regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', -1)", "null")
-    testSqlApi("regexp_extract(f40, '(\\\\d+)-(\\\\d+)', 1)", "null")
-    testSqlApi("regexp_extract(CAST(null as VARCHAR), '(\\\\d+)-(\\\\d+)', 1)", "null")
+    testSqlApi("regexp_extract('100-200', '(\\d+)-(\\d+)', -1)", "null")
+    testSqlApi("regexp_extract(f40, '(\\d+)-(\\d+)', 1)", "null")
+    testSqlApi("regexp_extract(CAST(null as VARCHAR), '(\\d+)-(\\d+)', 1)", "null")
     testSqlApi("regexp_extract('100-200', CAST(null as VARCHAR), 1)", "null")
-    testSqlApi("regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', CAST(null as BIGINT))", "null")
+    testSqlApi("regexp_extract('100-200', '(\\d+)-(\\d+)', CAST(null as BIGINT))", "null")
   }
 
   @Test
@@ -1089,13 +1089,13 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
     testAllApis(
       "foothebar".regexpExtract("foo([\\w]+)", 1),
       "'foothebar'.regexpExtract('foo([\\w]+)', 1)",
-      "REGEXP_EXTRACT('foothebar', 'foo([\\\\w]+)', 1)",
+      "REGEXP_EXTRACT('foothebar', 'foo([\\w]+)', 1)",
       "thebar")
 
     testAllApis(
       "foothebar".regexpExtract("foo([\\d]+)", 1),
       "'foothebar'.regexpExtract('foo([\\d]+)', 1)",
-      "REGEXP_EXTRACT('foothebar', 'foo([\\\\d]+)', 1)",
+      "REGEXP_EXTRACT('foothebar', 'foo([\\d]+)', 1)",
       "null")
 
     testAllApis(
@@ -1177,7 +1177,7 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
 
   @Test
   def testRegexp(): Unit = {
-    testSqlApi("regexp('100-200', '(\\\\d+)')", "true")
+    testSqlApi("regexp('100-200', '(\\d+)')", "true")
     testSqlApi("regexp('abc-def', '(\\\\d+)')", "false")
     testSqlApi("regexp(f35, 'a')", "true")
     testSqlApi("regexp(f40, '(\\\\d+)')", "null")
@@ -1370,25 +1370,25 @@ class ScalarFunctionsTest extends ScalarTypesTestBase {
     testAllApis(
       "foo1bar2".regexpReplace("\\d", ""),
       "'foo1bar2'.regexpReplace('\\d', '')",
-      "regexp_replace('foobar', '\\\\d', '')",
+      "regexp_replace('foobar', '\\d', '')",
       "foobar")
 
     testAllApis(
       "foobar".regexpReplace("\\w", ""),
       "'foobar'.regexpReplace('\\w', '')",
-      "regexp_replace('foobar', '\\\\w', '')",
+      "regexp_replace('foobar', '\\w', '')",
       "")
 
     testAllApis(
       "fooobar".regexpReplace("oo", "\\$"),
       "'fooobar'.regexpReplace('oo', '\\$')",
-      "regexp_replace('fooobar', 'oo', '\\\\$')",
+      "regexp_replace('fooobar', 'oo', '\\$')",
       "f$obar")
 
     testAllApis(
       "foobar".regexpReplace("oo", "\\\\"),
       "'foobar'.regexpReplace('oo', '\\\\')",
-      "regexp_replace('foobar', 'oo', '\\\\\\\\')",
+      "regexp_replace('foobar', 'oo', '\\\\')",
       "f\\bar")
 
     testAllApis(

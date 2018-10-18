@@ -22,11 +22,11 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.functions.{Monotonicity, ScalarFunction}
-import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, DataViewTestAgg}
+import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, DataViewTestAgg, WeightedAvg}
+import org.apache.flink.table.runtime.utils.{JavaUserDefinedAggFunctions, StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
-import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
@@ -45,6 +45,64 @@ class AggregateITCase(
     minibatch: MiniBatchMode,
     backend: StateBackendMode)
   extends StreamingWithAggTestBase(aggMode, minibatch, backend) {
+
+  @Test
+  def testDistinctUDAGG(): Unit = {
+    val testAgg = new DataViewTestAgg
+    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+        .groupBy('e)
+        .select('e, testAgg.distinct('d, 'e))
+
+    val sink = new TestingRetractSink
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = mutable.MutableList("1,10", "2,21", "3,12")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testDistinctUDAGGMixedWithNonDistinctUsage(): Unit = {
+    val testAgg = new WeightedAvg
+    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+        .groupBy('e)
+        .select('e, testAgg.distinct('a, 'a), testAgg('a, 'a))
+
+    val sink = new TestingRetractSink
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = mutable.MutableList("1,3,3", "2,3,4", "3,4,4")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testDistinctAggregate(): Unit = {
+    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+        .groupBy('e)
+        .select('e, 'a.count.distinct)
+
+    val sink = new TestingRetractSink
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = mutable.MutableList("1,4", "2,4", "3,2")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testDistinctAggregateMixedWithNonDistinct(): Unit = {
+    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+        .groupBy('e)
+        .select('e, 'a.count.distinct, 'b.count)
+
+    val sink = new TestingRetractSink
+    t.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = mutable.MutableList("1,4,5", "2,4,7", "3,2,3")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
 
   @Test
   def testSimpleLogical(): Unit = {

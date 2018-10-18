@@ -579,40 +579,6 @@ class SqlITCase extends StreamingTestBase {
   }
 
   @Test
-  def testUdfWithUnicodeParameter(): Unit = {
-    val data = List(
-      ("a\u0001b", "c\"d", "e\\\"\u0004f"),
-      ("x\u0001y", "y\"z", "z\\\"\u0004z")
-    )
-
-    val splitUDF0 = new SplitUDF(deterministic = true)
-    val splitUDF1 = new SplitUDF(deterministic = false)
-
-    tEnv.registerFunction("splitUDF0", splitUDF0)
-    tEnv.registerFunction("splitUDF1", splitUDF1)
-
-    // user have to specify '\' with '\\' in SQL
-    val sqlQuery = "SELECT " +
-      "splitUDF0(a, '\u0001', 0) as a0, " +
-      "splitUDF1(a, '\u0001', 0) as a1, " +
-      "splitUDF0(b, '\"', 1) as b0, " +
-      "splitUDF1(b, '\"', 1) as b1, " +
-      "splitUDF0(c, '\\\\\"\u0004', 0) as c0, " +
-      "splitUDF1(c, '\\\\\"\u0004', 0) as c1 from T1"
-
-    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
-
-    tEnv.registerTable("T1", t1)
-
-    val sink = new TestingAppendSink
-    tEnv.sqlQuery(sqlQuery).toAppendStream[Row].addSink(sink)
-    env.execute()
-
-    val expected = List("a,a,d,d,e,e", "x,x,z,z,z,z")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-  }
-
-  @Test
   def testUDFWithLongVarargs(): Unit = {
     tEnv.registerFunction("func15", Func15)
 

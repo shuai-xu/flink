@@ -43,7 +43,7 @@ import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecScan}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryString}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.types.Row

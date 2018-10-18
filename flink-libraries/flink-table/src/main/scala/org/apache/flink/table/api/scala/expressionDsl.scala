@@ -26,14 +26,10 @@ import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, Unb
 import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRangeInterval, toRowInterval}
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
-import org.apache.flink.table.functions.CoTableValuedAggregateFunction
-import org.apache.flink.table.expressions.{Hex, RegexpExtract, RegexpReplace, ToBase64, _}
+import org.apache.flink.table.expressions.{ToBase64, _}
+import org.apache.flink.table.functions.{AggregateFunction, CoTableValuedAggregateFunction, DistinctAggregateFunction, TableValuedAggregateFunction}
+import org.apache.flink.table.expressions.{Atan2, Cosh, DistinctAgg, Hex, Literal, RegexpExtract, RegexpReplace, Repeat, Replace, TimestampDiff, UDTVAGGExpression, _}
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
-import org.apache.flink.table.expressions.{TimestampDiff, _}
-import org.apache.flink.table.expressions.{Repeat, _}
-import org.apache.flink.table.expressions.{Cosh, _}
-import org.apache.flink.table.expressions.{Atan2, Literal, Replace, UDTVAGGExpression, _}
-import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
 import scala.language.implicitConversions
@@ -1192,6 +1188,10 @@ trait ImplicitExpressionConversions {
   (udctvagg: CoTableValuedAggregateFunction[T, ACC]): UDCTVAGGExpression[T, ACC] = {
     new UDCTVAGGExpression[T, ACC](udctvagg)
   }
+  implicit def toDistinct(agg: Aggregation): DistinctAgg = DistinctAgg(agg)
+  implicit def toDistinct[T: TypeInformation, ACC: TypeInformation]
+  (agg: AggregateFunction[T, ACC]): DistinctAggregateFunction[T, ACC] =
+    DistinctAggregateFunction(agg)
 }
 
 // ------------------------------------------------------------------------------------------------

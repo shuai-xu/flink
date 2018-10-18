@@ -20,11 +20,37 @@ package org.apache.flink.table.api.stream.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvg
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 
 class AggregateTest extends TableTestBase {
+
+  @Test
+  def testGroupDistinctAggregate(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
+
+    val resultTable = table
+        .groupBy('b)
+        .select('a.sum.distinct, 'c.count.distinct)
+
+    util.verifyPlan(resultTable)
+  }
+
+  @Test
+  def testGroupDistinctAggregateWithUDAGG(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
+    val weightedAvg = new WeightedAvg
+
+    val resultTable = table
+        .groupBy('c)
+        .select(weightedAvg.distinct('a, 'b), weightedAvg('a, 'b))
+
+    util.verifyPlan(resultTable)
+  }
 
   @Test
   def testGroupAggregate(): Unit = {

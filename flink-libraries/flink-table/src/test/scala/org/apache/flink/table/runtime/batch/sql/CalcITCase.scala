@@ -26,9 +26,9 @@ import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIV
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.{DATE, TIME, TIMESTAMP}
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
-import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3}
+import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
@@ -669,6 +669,41 @@ class CalcITCase extends QueryTest {
         assertEquals(i, baseRow.getLong(1))
         assertEquals(i.toString, row.getField(1))
     }
+  }
+
+  @Test
+  def testFunctionWithUnicodeParameters(): Unit = {
+    val data = List(
+      ("a\u0001b", "c\"d", "e\\\"\u0004f"), // uses Java/Scala escaping
+      ("x\u0001y", "y\"z", "z\\\"\u0004z")
+    )
+
+    val splitUDF0 = new SplitUDF(deterministic = true)
+    val splitUDF1 = new SplitUDF(deterministic = false)
+
+    tEnv.registerFunction("splitUDF0", splitUDF0)
+    tEnv.registerFunction("splitUDF1", splitUDF1)
+
+    // uses SQL escaping (be aware that even Scala multi-line strings parse backslash!)
+    val sqlQuery = s"""
+                      |SELECT
+                      |  splitUDF0(a, U&'${'\\'}0001', 0) AS a0,
+                      |  splitUDF1(a, U&'${'\\'}0001', 0) AS a1,
+                      |  splitUDF0(b, U&'"', 1) AS b0,
+                      |  splitUDF1(b, U&'"', 1) AS b1,
+                      |  splitUDF0(c, U&'${'\\'}${'\\'}"${'\\'}0004', 0) AS c0,
+                      |  splitUDF1(c, U&'${'\\'}"#0004' UESCAPE '#', 0) AS c1
+                      |FROM T1
+                      |""".stripMargin
+
+    val t1 = tEnv.fromCollection(data, "a,b,c")
+
+    tEnv.registerTable("T1", t1)
+
+    val results = tEnv.sqlQuery(sqlQuery).collect()
+
+    val expected = List("a,a,d,d,e,e", "x,x,z,z,z,z").mkString("\n")
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 }
 

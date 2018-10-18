@@ -28,6 +28,19 @@ import org.junit._
 class AggregateStringExpressionTest extends TableTestBatchExecBase {
 
   @Test
+  def testDistinctAggregationTypes(): Unit = {
+    val util = batchTestUtil()
+    val t = util.addTable[(Int, Long, String)]("Table3", '_1, '_2, '_3)
+
+    val t1 = t.select('_1.sum.distinct, '_1.count.distinct, '_1.avg.distinct)
+    val t2 = t.select("_1.sum.distinct, _1.count.distinct, _1.avg.distinct")
+    val t3 = t.select("sum.distinct(_1), count.distinct(_1), avg.distinct(_1)")
+
+    verifyTableEquals(t1, t2)
+    verifyTableEquals(t1, t3)
+  }
+
+  @Test
   def testAggregationTypes(): Unit = {
     val util = batchTestUtil()
     val t = util.addTable[(Int, Long, String)]("Table3", '_1, '_2, '_3)
@@ -131,6 +144,19 @@ class AggregateStringExpressionTest extends TableTestBatchExecBase {
     val t2 = t.groupBy("b").select("b, a.sum")
 
     verifyTableEquals(t1, t2)
+  }
+
+  @Test
+  def testDistinctGroupedAggregate(): Unit = {
+    val util = batchTestUtil()
+    val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
+
+    val t1 = t.groupBy('b).select('b, 'a.sum.distinct, 'a.sum)
+    val t2 = t.groupBy("b").select("b, a.sum.distinct, a.sum")
+    val t3 = t.groupBy("b").select("b, sum.distinct(a), sum(a)")
+
+    verifyTableEquals(t1, t2)
+    verifyTableEquals(t1, t3)
   }
 
   @Test
@@ -256,6 +282,46 @@ class AggregateStringExpressionTest extends TableTestBatchExecBase {
 
     val t1 = t.select(myCnt('a) as 'aCnt, myWeightedAvg('b, 'a) as 'wAvg)
     val t2 = t.select("myCnt(a) as aCnt, myWeightedAvg(b, a) as wAvg")
+
+    verifyTableEquals(t1, t2)
+  }
+
+  @Test
+  def testDistinctAggregateWithUDAGG(): Unit = {
+    val util = batchTestUtil()
+    val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
+
+    val myCnt = new CountAggFunction
+    util.tableEnv.registerFunction("myCnt", myCnt)
+    val myWeightedAvg = new WeightedAvgWithMergeAndReset
+    util.tableEnv.registerFunction("myWeightedAvg", myWeightedAvg)
+
+    val t1 = t.select(myCnt.distinct('a) as 'aCnt, myWeightedAvg.distinct('b, 'a) as 'wAvg)
+    val t2 = t.select("myCnt.distinct(a) as aCnt, myWeightedAvg.distinct(b, a) as wAvg")
+
+    verifyTableEquals(t1, t2)
+  }
+
+  @Test
+  def testDistinctGroupedAggregateWithUDAGG(): Unit = {
+    val util = batchTestUtil()
+    val t = util.addTable[(Int, Long, String)]("Table3", 'a, 'b, 'c)
+
+
+    val myCnt = new CountAggFunction
+    util.tableEnv.registerFunction("myCnt", myCnt)
+    val myWeightedAvg = new WeightedAvgWithMergeAndReset
+    util.tableEnv.registerFunction("myWeightedAvg", myWeightedAvg)
+
+    val t1 = t.groupBy('b)
+        .select('b,
+          myCnt.distinct('a) + 9 as 'aCnt,
+          myWeightedAvg.distinct('b, 'a) * 2 as 'wAvg,
+          myWeightedAvg.distinct('a, 'a) as 'distAgg,
+          myWeightedAvg('a, 'a) as 'agg)
+    val t2 = t.groupBy("b")
+        .select("b, myCnt.distinct(a) + 9 as aCnt, myWeightedAvg.distinct(b, a) * 2 as wAvg, " +
+            "myWeightedAvg.distinct(a, a) as distAgg, myWeightedAvg(a, a) as agg")
 
     verifyTableEquals(t1, t2)
   }
