@@ -126,7 +126,7 @@ public abstract class ElasticsearchUpsertTableSinkFactoryTestBase extends TestLo
 		return TableSchema.builder()
 			.field(FIELD_KEY, DataTypes.LONG)
 			.field(FIELD_FRUIT_NAME, DataTypes.STRING)
-			.field(FIELD_COUNT, DecimalType.DEFAULT)
+			.field(FIELD_COUNT, DecimalType.SYSTEM_DEFAULT)
 			.field(FIELD_TS, DataTypes.TIMESTAMP)
 			.build();
 	}
