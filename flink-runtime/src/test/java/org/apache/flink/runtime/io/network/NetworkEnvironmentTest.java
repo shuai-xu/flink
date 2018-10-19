@@ -109,15 +109,15 @@ public class NetworkEnvironmentTest {
 		// result partitions
 		InternalResultPartition rp1 = createResultPartition(ResultPartitionType.PIPELINED, 2);
 		InternalResultPartition rp2 = createResultPartition(ResultPartitionType.BLOCKING, 2);
-		InternalResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 2);
-		InternalResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 8);
+		InternalResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED, 2);
+		InternalResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED, 8);
 		final InternalResultPartition[] internalResultPartitions = new InternalResultPartition[] {rp1, rp2, rp3, rp4};
 
 		// input gates
 		SingleInputGate ig1 = createSingleInputGate(ResultPartitionType.PIPELINED, 2);
 		SingleInputGate ig2 = createSingleInputGate(ResultPartitionType.BLOCKING, 2);
-		SingleInputGate ig3 = createSingleInputGate(ResultPartitionType.PIPELINED_BOUNDED, 2);
-		SingleInputGate ig4 = createSingleInputGate(ResultPartitionType.PIPELINED_BOUNDED, 8);
+		SingleInputGate ig3 = createSingleInputGate(ResultPartitionType.PIPELINED, 2);
+		SingleInputGate ig4 = createSingleInputGate(ResultPartitionType.PIPELINED, 8);
 		final SingleInputGate[] inputGates = new SingleInputGate[] {ig1, ig2, ig3, ig4};
 
 		// overall task to register
@@ -145,8 +145,8 @@ public class NetworkEnvironmentTest {
 		assertEquals(enableCreditBasedFlowControl ? 0 : 2, ig3.getBufferPool().getNumberOfRequiredMemorySegments());
 		assertEquals(enableCreditBasedFlowControl ? 0 : 8, ig4.getBufferPool().getNumberOfRequiredMemorySegments());
 
-		assertEquals(enableCreditBasedFlowControl ? 8 : Integer.MAX_VALUE, ig1.getBufferPool().getMaxNumberOfMemorySegments());
-		assertEquals(enableCreditBasedFlowControl ? 8 : Integer.MAX_VALUE, ig2.getBufferPool().getMaxNumberOfMemorySegments());
+		assertEquals(enableCreditBasedFlowControl ? 8 : 2 * 2 + 8, ig1.getBufferPool().getMaxNumberOfMemorySegments());
+		assertEquals(enableCreditBasedFlowControl ? 8 : 2 * 2 + 8, ig2.getBufferPool().getMaxNumberOfMemorySegments());
 		assertEquals(enableCreditBasedFlowControl ? 8 : 2 * 2 + 8, ig3.getBufferPool().getMaxNumberOfMemorySegments());
 		assertEquals(enableCreditBasedFlowControl ? 8 : 8 * 2 + 8, ig4.getBufferPool().getMaxNumberOfMemorySegments());
 
@@ -236,15 +236,15 @@ public class NetworkEnvironmentTest {
 		// result partitions
 		InternalResultPartition rp1 = createResultPartition(ResultPartitionType.PIPELINED, 2);
 		InternalResultPartition rp2 = createResultPartition(ResultPartitionType.BLOCKING, 2);
-		InternalResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 2);
-		InternalResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED_BOUNDED, 4);
+		InternalResultPartition rp3 = createResultPartition(ResultPartitionType.PIPELINED, 2);
+		InternalResultPartition rp4 = createResultPartition(ResultPartitionType.PIPELINED, 4);
 		final InternalResultPartition[] internalResultPartitions = new InternalResultPartition[] {rp1, rp2, rp3, rp4};
 
 		// input gates
 		SingleInputGate ig1 = createSingleInputGate(ResultPartitionType.PIPELINED, 2);
 		SingleInputGate ig2 = createSingleInputGate(ResultPartitionType.BLOCKING, 2);
-		SingleInputGate ig3 = createSingleInputGate(ResultPartitionType.PIPELINED_BOUNDED, 2);
-		SingleInputGate ig4 = createSingleInputGate(ResultPartitionType.PIPELINED_BOUNDED, 4);
+		SingleInputGate ig3 = createSingleInputGate(ResultPartitionType.PIPELINED, 2);
+		SingleInputGate ig4 = createSingleInputGate(ResultPartitionType.PIPELINED, 4);
 		final SingleInputGate[] inputGates = new SingleInputGate[] {ig1, ig2, ig3, ig4};
 
 		// set up remote input channels for the exclusive buffers of the credit-based flow control
@@ -285,8 +285,8 @@ public class NetworkEnvironmentTest {
 		assertEquals(enableCreditBasedFlowControl ? 0 : 2, ig3.getBufferPool().getNumberOfRequiredMemorySegments());
 		assertEquals(enableCreditBasedFlowControl ? 0 : 4, ig4.getBufferPool().getNumberOfRequiredMemorySegments());
 
-		assertEquals(enableCreditBasedFlowControl ? 8 : Integer.MAX_VALUE, ig1.getBufferPool().getMaxNumberOfMemorySegments());
-		assertEquals(enableCreditBasedFlowControl ? 8 : Integer.MAX_VALUE, ig2.getBufferPool().getMaxNumberOfMemorySegments());
+		assertEquals(enableCreditBasedFlowControl ? 8 : 2 * 2 + 8, ig1.getBufferPool().getMaxNumberOfMemorySegments());
+		assertEquals(enableCreditBasedFlowControl ? 8 : 2 * 2 + 8, ig2.getBufferPool().getMaxNumberOfMemorySegments());
 		assertEquals(enableCreditBasedFlowControl ? 8 : 2 * 2 + 8, ig3.getBufferPool().getMaxNumberOfMemorySegments());
 		assertEquals(enableCreditBasedFlowControl ? 8 : 4 * 2 + 8, ig4.getBufferPool().getMaxNumberOfMemorySegments());
 

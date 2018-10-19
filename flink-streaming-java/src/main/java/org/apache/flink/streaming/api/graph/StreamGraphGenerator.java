@@ -742,7 +742,7 @@ public class StreamGraphGenerator {
 			context.setChainingEnabled(env.isChainingEnabled());
 			context.setCacheFiles(env.getCachedFiles());
 			context.setBufferTimeout(env.getBufferTimeout());
-			context.setPipelineResultPartitionType(ResultPartitionType.PIPELINED_BOUNDED);
+			context.setPipelineResultPartitionType(ResultPartitionType.PIPELINED);
 			context.setDefaultParallelism(env.getParallelism());
 			context.setMultiHeadChainMode(env.isMultiHeadChainMode());
 

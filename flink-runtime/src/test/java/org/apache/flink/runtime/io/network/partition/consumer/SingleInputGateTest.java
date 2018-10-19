@@ -414,7 +414,7 @@ public class SingleInputGateTest {
 	@Test
 	public void testRequestBuffersWithRemoteInputChannel() throws Exception {
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, 1);
-		final SingleInputGate inputGate = createInputGate(1, ResultPartitionType.PIPELINED_BOUNDED, partitionRequestManager);
+		final SingleInputGate inputGate = createInputGate(1, ResultPartitionType.PIPELINED, partitionRequestManager);
 
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
@@ -458,7 +458,7 @@ public class SingleInputGateTest {
 	@Test
 	public void testRequestBuffersWithUnknownInputChannel() throws Exception {
 		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, 1);
-		final SingleInputGate inputGate = createInputGate(1, ResultPartitionType.PIPELINED_BOUNDED, partitionRequestManager);
+		final SingleInputGate inputGate = createInputGate(1, ResultPartitionType.PIPELINED, partitionRequestManager);
 		int buffersPerChannel = 2;
 		int extraNetworkBuffersPerGate = 8;
 		final NetworkEnvironment network = createNetworkEnvironment(buffersPerChannel, extraNetworkBuffersPerGate, 128, 0, 2, 0, 0);

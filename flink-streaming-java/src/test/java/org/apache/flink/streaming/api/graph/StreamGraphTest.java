@@ -39,7 +39,7 @@ public class StreamGraphTest {
 			new CheckpointConfig(),
 			3,
 			1234L,
-			ResultPartitionType.PIPELINED_BOUNDED,
+			ResultPartitionType.PIPELINED,
 			DataPartitionerType.REBALANCE);
 
 		streamGraph.addNode(999, null, null, null, null);
@@ -58,7 +58,7 @@ public class StreamGraphTest {
 		streamGraph.addEdge(56, 444, 0, null);
 
 		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(999, 111).get(0).getResultPartitionType());
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, streamGraph.getStreamEdges(999, 222).get(0).getResultPartitionType());
+		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(999, 222).get(0).getResultPartitionType());
 		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(888, 333).get(0).getResultPartitionType());
 		assertEquals(ResultPartitionType.BLOCKING, streamGraph.getStreamEdges(888, 444).get(0).getResultPartitionType());
 	}
@@ -71,7 +71,7 @@ public class StreamGraphTest {
 				new CheckpointConfig(),
 				3,
 				1234L,
-				ResultPartitionType.PIPELINED_BOUNDED,
+				ResultPartitionType.PIPELINED,
 				DataPartitionerType.REBALANCE);
 
 			streamGraph.addNode(999, null, null, null, null);
@@ -92,7 +92,7 @@ public class StreamGraphTest {
 				new CheckpointConfig(),
 				3,
 				1234L,
-				ResultPartitionType.PIPELINED_BOUNDED,
+				ResultPartitionType.PIPELINED,
 				DataPartitionerType.RESCALE);
 
 			streamGraph.addNode(999, null, null, null, null);

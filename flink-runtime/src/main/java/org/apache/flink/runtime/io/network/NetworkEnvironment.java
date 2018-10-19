@@ -257,9 +257,8 @@ public class NetworkEnvironment {
 					bufferPool = networkBufferPool.createBufferPool(0, extraNetworkBuffersPerGate);
 				}
 			} else {
-				maxNumberOfMemorySegments = gate.getConsumedPartitionType().isBounded() ?
-					gate.getNumberOfInputChannels() * networkBuffersPerChannel +
-						extraNetworkBuffersPerGate : Integer.MAX_VALUE;
+				maxNumberOfMemorySegments = gate.getNumberOfInputChannels() * networkBuffersPerChannel
+					+ extraNetworkBuffersPerGate;
 
 				bufferPool = networkBufferPool.createBufferPool(gate.getNumberOfInputChannels(),
 					maxNumberOfMemorySegments);

@@ -149,7 +149,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		{
 			JobVertex sourceVertex = verticesSorted.get(0);
 
-			assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
+			assertEquals(ResultPartitionType.PIPELINED, sourceVertex.getProducedDataSets().get(0).getResultType());
 			assertEquals(0, sourceVertex.getInputs().size());
 			assertEquals(MultiInputOutputFormatVertex.class, sourceVertex.getClass());
 
@@ -179,7 +179,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		{
 			JobVertex map1FilterVertex = verticesSorted.get(1);
 
-			assertEquals(ResultPartitionType.PIPELINED_BOUNDED, map1FilterVertex.getInputs().get(0).getSource().getResultType());
+			assertEquals(ResultPartitionType.PIPELINED, map1FilterVertex.getInputs().get(0).getSource().getResultType());
 			assertEquals(1, map1FilterVertex.getInputs().size());
 			assertEquals(MultiInputOutputFormatVertex.class, map1FilterVertex.getClass());
 
@@ -482,8 +482,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		JobVertex sourceVertex = verticesSorted.get(0);
 		JobVertex mapSinkVertex = verticesSorted.get(1);
 
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, mapSinkVertex.getInputs().get(0).getSource().getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, sourceVertex.getProducedDataSets().get(0).getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, mapSinkVertex.getInputs().get(0).getSource().getResultType());
 	}
 
 	@Test
@@ -535,8 +535,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		JobVertex sourceVertex = verticesSorted.get(0);
 		JobVertex sinkVertex = verticesSorted.get(1);
 
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sinkVertex.getInputs().get(0).getSource().getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, sourceVertex.getProducedDataSets().get(0).getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, sinkVertex.getInputs().get(0).getSource().getResultType());
 	}
 
 	/**
@@ -549,7 +549,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			env.getCheckpointConfig(),
 			env.getParallelism(),
 			env.getBufferTimeout(),
-			ResultPartitionType.PIPELINED_BOUNDED,
+			ResultPartitionType.PIPELINED,
 			DataPartitionerType.REBALANCE);
 		assertFalse("Checkpointing enabled", streamGraph.getCheckpointConfig().isCheckpointingEnabled());
 
@@ -582,8 +582,8 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		JobVertex sourceVertex = verticesSorted.get(0);
 		JobVertex mapPrintVertex = verticesSorted.get(1);
 
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, sourceVertex.getProducedDataSets().get(0).getResultType());
-		assertEquals(ResultPartitionType.PIPELINED_BOUNDED, mapPrintVertex.getInputs().get(0).getSource().getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, sourceVertex.getProducedDataSets().get(0).getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, mapPrintVertex.getInputs().get(0).getSource().getResultType());
 
 		ClassLoader cl = getClass().getClassLoader();
 

@@ -216,7 +216,7 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 			new NoOpTaskActions(),
 			jobId,
 			partitionId,
-			ResultPartitionType.PIPELINED_BOUNDED,
+			ResultPartitionType.PIPELINED,
 			channels,
 			1,
 			environment.getResultPartitionManager(),
@@ -249,7 +249,7 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 
 			final InputGateDeploymentDescriptor gateDescriptor = new InputGateDeploymentDescriptor(
 				dataSetID,
-				ResultPartitionType.PIPELINED_BOUNDED,
+				ResultPartitionType.PIPELINED,
 				channel,
 				channelDescriptors);
 

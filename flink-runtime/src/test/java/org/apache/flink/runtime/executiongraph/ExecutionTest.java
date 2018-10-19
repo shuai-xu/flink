@@ -482,7 +482,7 @@ public class ExecutionTest extends TestLogger {
 
 		jobVertex4.connectDataSetAsInput(jobVertex1, dataSet1.getId(), distributionPattern, ResultPartitionType.BLOCKING);
 
-		jobVertex4.connectDataSetAsInput(jobVertex2, dataSet2.getId(), distributionPattern, ResultPartitionType.PIPELINED_BOUNDED);
+		jobVertex4.connectDataSetAsInput(jobVertex2, dataSet2.getId(), distributionPattern, ResultPartitionType.PIPELINED);
 
 		jobVertex4.connectDataSetAsInput(jobVertex3, dataSet3.getId(), distributionPattern, ResultPartitionType.BLOCKING);
 

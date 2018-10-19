@@ -75,7 +75,7 @@ public class StreamEdge implements Serializable {
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag) {
 		this(sourceVertex, targetVertex, typeNumber, selectedNames, outputPartitioner, outputTag,
-			ResultPartitionType.PIPELINED_BOUNDED);
+			ResultPartitionType.PIPELINED);
 	}
 
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,

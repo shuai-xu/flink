@@ -690,7 +690,7 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		sink.setInvokableClass(NoOpInvokable.class);
 		sink.setParallelism(parallelism);
 		sink.setSlotSharingGroup(sharingGroup);
-		sink.connectNewDataSetAsInput(source, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED_BOUNDED);
+		sink.connectNewDataSetAsInput(source, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
 
 		final JobGraph jobGraph = new JobGraph(source, sink);
 		jobGraph.setScheduleMode(ScheduleMode.EAGER);
@@ -752,7 +752,7 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		sink.setInvokableClass(NoOpInvokable.class);
 		sink.setParallelism(parallelism);
 		sink.setSlotSharingGroup(sharingGroup);
-		sink.connectNewDataSetAsInput(source, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED_BOUNDED);
+		sink.connectNewDataSetAsInput(source, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
 
 		final JobGraph jobGraph = new JobGraph(source, sink);
 		jobGraph.setScheduleMode(ScheduleMode.EAGER);
