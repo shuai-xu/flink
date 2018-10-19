@@ -28,7 +28,6 @@ import org.junit.runners.Parameterized;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -55,23 +54,42 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class BinaryStringTest {
 
-	private final boolean varSeg;
+	private final Mode mode;
 
-	public BinaryStringTest(boolean varSeg) {
-		this.varSeg = varSeg;
+	public BinaryStringTest(Mode mode) {
+		this.mode = mode;
 	}
 
-	@Parameterized.Parameters
-	public static List<Boolean> getVarSeg() {
-		List<Boolean> result = new ArrayList<>();
-		result.add(true);
-		result.add(false);
-		return result;
+	@Parameterized.Parameters(name = "{0}")
+	public static List<Mode> getVarSeg() {
+		return Arrays.asList(Mode.ONE_SEG, Mode.MULTI_SEGS, Mode.STRING, Mode.RANDOM);
+	}
+
+	private enum Mode {
+		ONE_SEG, MULTI_SEGS, STRING, RANDOM
 	}
 
 	private BinaryString fromString(String str) {
 		BinaryString string = BinaryString.fromString(str);
-		if (!varSeg || string.numBytes() < 2) {
+
+		Mode mode = this.mode;
+
+		if (mode == Mode.RANDOM) {
+			int rnd = new Random().nextInt(3);
+			if (rnd == 0) {
+				mode = Mode.ONE_SEG;
+			} else if (rnd == 1) {
+				mode = Mode.MULTI_SEGS;
+			} else if (rnd == 2) {
+				mode = Mode.STRING;
+			}
+		}
+
+		if (mode == Mode.STRING) {
+			return string;
+		}
+		if (mode == Mode.ONE_SEG || string.numBytes() < 2) {
+			string.ensureEncoded();
 			return string;
 		} else {
 			int numBytes = string.numBytes();

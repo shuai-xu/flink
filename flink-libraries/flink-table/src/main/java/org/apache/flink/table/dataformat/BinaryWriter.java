@@ -103,12 +103,16 @@ public abstract class BinaryWriter {
 	}
 
 	public void writeBinaryString(int pos, BinaryString input) {
-		if (input.numBytes() <= 7) {
-			byte[] bytes = StringUtf8Utils.allocateBytes(input.numBytes());
-			input.copyTo(bytes);
-			writeLittleBytes(segment, getFieldOffset(pos), bytes, input.numBytes());
+		if (input.isEncoded()) {
+			if (input.numBytes() <= 7) {
+				byte[] bytes = StringUtf8Utils.allocateBytes(input.numBytes());
+				input.copyTo(bytes);
+				writeLittleBytes(segment, getFieldOffset(pos), bytes, input.numBytes());
+			} else {
+				writeBigBinaryString(pos, input);
+			}
 		} else {
-			writeBigBinaryString(pos, input);
+			writeString(pos, input.toString());
 		}
 	}
 

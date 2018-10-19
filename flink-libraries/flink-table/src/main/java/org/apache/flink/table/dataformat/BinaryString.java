@@ -58,32 +58,47 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	private int numBytes;
 
 	/** Cache the java string for the binary string to avoid redundant decode. */
-	private transient String javaString;
+	private String javaString;
 
-	public BinaryString() {}
-
-	private BinaryString(MemorySegment[] segments, int offset, int numBytes) {
-		this.segments = segments;
-		this.offset = offset;
-		this.numBytes = numBytes;
+	public BinaryString() {
+		pointTo(null, -1, -1, null);
 	}
 
-	public void pointTo(MemorySegment[] segments, int offset, int numBytes) {
-		this.segments = segments;
-		this.offset = offset;
-		this.numBytes = numBytes;
-		this.javaString = null;
+	private BinaryString(String str) {
+		pointToString(str);
+	}
+
+	private BinaryString(MemorySegment[] segments, int offset, int numBytes) {
+		pointTo(segments, offset, numBytes);
+	}
+
+	private BinaryString(MemorySegment[] segments, int offset, int numBytes, String javaString) {
+		pointTo(segments, offset, numBytes, javaString);
 	}
 
 	public void pointTo(byte[] bytes, int offset, int numBytes) {
+		MemorySegment[] segments = this.segments;
 		if (segments != null && segments.length == 1) {
 			segments[0].pointTo(bytes);
 		} else {
 			segments = new MemorySegment[] {MemorySegmentFactory.wrap(bytes)};
 		}
+		pointTo(segments, offset, numBytes);
+	}
+
+	public void pointTo(MemorySegment[] segments, int offset, int numBytes) {
+		pointTo(segments, offset, numBytes, null);
+	}
+
+	private void pointToString(String javaString) {
+		pointTo(null, -1, -1, javaString);
+	}
+
+	private void pointTo(MemorySegment[] segments, int offset, int numBytes, String javaString) {
+		this.segments = segments;
 		this.offset = offset;
 		this.numBytes = numBytes;
-		this.javaString = null;
+		this.javaString = javaString;
 	}
 
 	/**
@@ -103,9 +118,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	private static BinaryString fromNonNullString(String str) {
-		BinaryString ret = fromBytes(StringUtf8Utils.encodeUTF8(str));
-		ret.javaString = str;
-		return ret;
+		return new BinaryString(str);
 	}
 
 	public static BinaryString fromString(BinaryString str) {
@@ -133,8 +146,12 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public static BinaryString fromBytes(byte[] bytes, int offset, int numBytes) {
+		return fromBytes(bytes, offset, numBytes, null);
+	}
+
+	public static BinaryString fromBytes(byte[] bytes, int offset, int numBytes, String javaString) {
 		return new BinaryString(
-				new MemorySegment[]{MemorySegmentFactory.wrap(bytes)}, offset, numBytes);
+				new MemorySegment[]{MemorySegmentFactory.wrap(bytes)}, offset, numBytes, javaString);
 	}
 
 	/**
@@ -170,26 +187,32 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 	}
 
+	public void ensureEncoded() {
+		if (!isEncoded()) {
+			encodeToBytes();
+		}
+	}
+
+	private void encodeToBytes() {
+		byte[] bytes = StringUtf8Utils.encodeUTF8(javaString);
+		pointTo(bytes, 0, bytes.length);
+	}
+
 	public int getOffset() {
+		ensureEncoded();
 		return offset;
 	}
 
 	public MemorySegment[] getSegments() {
+		ensureEncoded();
 		return segments;
-	}
-
-	public void setOffset(int offset) {
-		this.offset = offset;
-	}
-
-	public void setNumBytes(int numBytes) {
-		this.numBytes = numBytes;
 	}
 
 	/**
 	 * Returns the number of bytes.
 	 */
 	public int numBytes() {
+		ensureEncoded();
 		return numBytes;
 	}
 
@@ -197,6 +220,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * Returns the number of code points in it.
 	 */
 	public int numChars() {
+		ensureEncoded();
 		if (inOneSeg()) {
 			int len = 0;
 			for (int i = 0; i < numBytes; i += numBytesForFirstByte(getByteOneSeg(i))) {
@@ -223,6 +247,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public byte getByte(int i) {
+		ensureEncoded();
 		int globalOffset = offset + i;
 		int size = segments[0].size();
 		if (globalOffset < size) {
@@ -232,7 +257,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 	}
 
-	public byte getByteOneSeg(int i) {
+	private byte getByteOneSeg(int i) {
 		return segments[0].get(offset + i);
 	}
 
@@ -240,6 +265,12 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	public boolean equals(final Object o) {
 		if (o != null && o instanceof BinaryString) {
 			BinaryString other = (BinaryString) o;
+			if (javaString != null && other.javaString != null) {
+				return javaString.equals(other.javaString);
+			}
+
+			ensureEncoded();
+			other.ensureEncoded();
 			return numBytes == other.numBytes &&
 					BinaryRowUtil.equals(segments, offset, other.segments, other.offset, numBytes);
 		} else {
@@ -250,6 +281,12 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	@Override
 	public int compareTo(BinaryString other) {
 
+		if (javaString != null && other.javaString != null) {
+			return javaString.compareTo(other.javaString);
+		}
+
+		ensureEncoded();
+		other.ensureEncoded();
 		if (segments.length == 1 && other.segments.length == 1) {
 
 			int len = Math.min(numBytes, other.numBytes);
@@ -369,21 +406,13 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public byte[] getBytes() {
+		ensureEncoded();
 		return MultiSegUtil.getBytes(segments, offset, numBytes);
-	}
-
-	private int decodeUTF8Strict(char[] chars) {
-		if (segments.length == 1) {
-			return StringUtf8Utils.decodeUTF8Strict(segments[0], offset, numBytes, chars);
-		} else {
-			byte[] bytes = StringUtf8Utils.allocateBytes(numBytes);
-			copyTo(bytes);
-			return StringUtf8Utils.decodeUTF8Strict(bytes, 0, numBytes, chars);
-		}
 	}
 
 	@Override
 	public int hashCode() {
+		ensureEncoded();
 		if (segments.length == 1) {
 			return Murmur32.hashBytes(segments[0], offset, numBytes, 42);
 		} else {
@@ -396,10 +425,11 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public long hash64() {
+		ensureEncoded();
 		if (segments.length == 1) {
 			return Murmur32.hash64(segments[0], offset, numBytes, 42);
 		} else {
-			return hashSlow();
+			return hash64Slow();
 		}
 	}
 
@@ -408,19 +438,32 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public BinaryString copy() {
-		byte[] copy = BinaryRowUtil.copy(segments, offset, numBytes);
-		return BinaryString.fromBytes(copy);
+		if (segments == null) {
+			return new BinaryString(javaString);
+		} else {
+			byte[] copy = BinaryRowUtil.copy(segments, offset, numBytes);
+			return BinaryString.fromBytes(copy, 0, copy.length, javaString);
+		}
 	}
 
 	public BinaryString cloneReference() {
-		MemorySegment[] cloneSegs = new MemorySegment[segments.length];
-		for (int i = 0; i < segments.length; i++) {
-			cloneSegs[i] = segments[i].cloneReference();
+		if (segments == null) {
+			return new BinaryString(javaString);
+		} else {
+			MemorySegment[] cloneSegs = new MemorySegment[segments.length];
+			for (int i = 0; i < segments.length; i++) {
+				cloneSegs[i] = segments[i].cloneReference();
+			}
+			return new BinaryString(cloneSegs, offset, numBytes, javaString);
 		}
-		return BinaryString.fromAddress(cloneSegs, offset, numBytes);
+	}
+
+	public boolean isEncoded() {
+		return segments != null;
 	}
 
 	public void copyTo(byte[] bytes) {
+		ensureEncoded();
 		BinaryRowUtil.copy(segments, offset, bytes, 0, numBytes);
 	}
 
@@ -429,6 +472,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 */
 	@Override
 	public void write(Kryo kryo, Output output) {
+		ensureEncoded();
 		byte[] copy = BinaryRowUtil.copy(segments, offset, numBytes);
 		output.writeInt(numBytes);
 		output.writeBytes(copy);
@@ -436,11 +480,9 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 
 	@Override
 	public void read(Kryo kryo, Input input) {
-		numBytes = input.readInt();
+		int numBytes = input.readInt();
 		byte[] bytes = input.readBytes(numBytes);
-		segments = new MemorySegment[1];
-		segments[0] = MemorySegmentFactory.wrap(bytes);
-		offset = 0;
+		pointTo(bytes, 0, numBytes);
 	}
 
 	public static String safeToString(BinaryString str) {
@@ -451,7 +493,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 	}
 
-	public boolean inOneSeg() {
+	private boolean inOneSeg() {
 		return numBytes + offset <= segments[0].size();
 	}
 
@@ -463,6 +505,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		if (length < 0) {
 			return null;
 		}
+		ensureEncoded();
 		if (equals(EMPTY_UTF8)) {
 			return EMPTY_UTF8;
 		}
@@ -499,7 +542,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @param until the position after last code point, exclusive.
 	 */
 	public BinaryString substring(final int start, final int until) {
-		if (until <= start || start >= numBytes) {
+		ensureEncoded();
+		if (until <= start || start >= numBytes()) {
 			return EMPTY_UTF8;
 		}
 		if (inOneSeg()) {
@@ -571,7 +615,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		int totalLength = 0;
 		for (BinaryString input : inputs) {
 			if (input != null) {
-				totalLength += input.numBytes;
+				input.ensureEncoded();
+				totalLength += input.numBytes();
 			}
 		}
 
@@ -604,11 +649,13 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		if (null == separator || EMPTY_UTF8.equals(separator)) {
 			return concat(inputs);
 		}
+		separator.ensureEncoded();
 
 		int numInputBytes = 0;  // total number of bytes from the inputs
 		int numInputs = 0;      // number of non-null inputs
 		for (BinaryString input : inputs) {
 			if (input != null) {
+				input.ensureEncoded();
 				numInputBytes += input.numBytes;
 				numInputs++;
 			}
@@ -647,6 +694,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * Same to like '%substring%'.
 	 */
 	public boolean contains(final BinaryString substring) {
+		ensureEncoded();
+		substring.ensureEncoded();
 		if (substring.numBytes == 0) {
 			return true;
 		}
@@ -674,6 +723,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * Same to like 'prefix%'.
 	 */
 	public boolean startsWith(final BinaryString prefix) {
+		ensureEncoded();
+		prefix.ensureEncoded();
 		return matchAt(prefix, 0);
 	}
 
@@ -681,6 +732,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * Same to like '%suffix'.
 	 */
 	public boolean endsWith(final BinaryString suffix) {
+		ensureEncoded();
+		suffix.ensureEncoded();
 		return matchAt(suffix, numBytes - suffix.numBytes);
 	}
 
@@ -699,6 +752,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public BinaryString trim() {
+		ensureEncoded();
 		if (inOneSeg()) {
 			int s = 0;
 			int e = this.numBytes - 1;
@@ -761,6 +815,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public BinaryString trimLeft() {
+		ensureEncoded();
 		if (inOneSeg()) {
 			int s = 0;
 			// skip all of the space (0x20) in the left side
@@ -805,9 +860,11 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * trim string.
 	 */
 	public BinaryString trimLeft(BinaryString trimStr) {
+		ensureEncoded();
 		if (trimStr == null) {
 			return null;
 		}
+		trimStr.ensureEncoded();
 		if (SPACE_UTF8.equals(trimStr)) {
 			return trimLeft();
 		}
@@ -858,6 +915,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public BinaryString trimRight() {
+		ensureEncoded();
 		if (inOneSeg()) {
 			int e = numBytes - 1;
 			// skip all of the space (0x20) in the right side
@@ -904,9 +962,11 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * trim string.
 	 */
 	public BinaryString trimRight(BinaryString trimStr) {
+		ensureEncoded();
 		if (trimStr == null) {
 			return null;
 		}
+		trimStr.ensureEncoded();
 		if (SPACE_UTF8.equals(trimStr)) {
 			return trimRight();
 		}
@@ -990,6 +1050,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public BinaryString trim(boolean leading, boolean trailing, BinaryString seek) {
+		ensureEncoded();
 		if (seek == null) {
 			return null;
 		}
@@ -1019,7 +1080,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @return target value.
 	 */
 	public BinaryString keyValue(byte split1, byte split2, BinaryString keyName) {
-		if (keyName == null || keyName.numBytes == 0) {
+		ensureEncoded();
+		if (keyName == null || keyName.numBytes() == 0) {
 			return null;
 		}
 		if (inOneSeg() && keyName.inOneSeg()) {
@@ -1129,6 +1191,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @return the position of the first occurence of substring. Return -1 if not found.
 	 */
 	public int indexOf(BinaryString subStr, int start) {
+		ensureEncoded();
+		subStr.ensureEncoded();
 		if (subStr.numBytes == 0) {
 			return 0;
 		}
@@ -1195,6 +1259,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @return a new string which character order is reverse to current string.
 	 */
 	public BinaryString reverse() {
+		ensureEncoded();
 		if (inOneSeg()) {
 			byte[] result = new byte[this.numBytes];
 			// position in byte
@@ -1341,6 +1406,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @return Long value if the parsing was successful else null.
 	 */
 	public Long toLong() {
+		ensureEncoded();
 		if (numBytes == 0) {
 			return null;
 		}
@@ -1433,6 +1499,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @return Integer value if the parsing was successful else null.
 	 */
 	public Integer toInt() {
+		ensureEncoded();
 		if (numBytes == 0) {
 			return null;
 		}
@@ -1555,13 +1622,14 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @throws NumberFormatException if the parsing failed.
 	 */
 	public Decimal toDecimal(int precision, int scale) {
+		ensureEncoded();
 		if (precision > Decimal.MAX_LONG_DIGITS || this.numBytes > Decimal.MAX_LONG_DIGITS) {
 			return toDecimalSlow(precision, scale);
 		}
 
 		// Data in Decimal is stored by one long value if `precision` <= Decimal.MAX_LONG_DIGITS.
 		// In this case we can directly extract the value from memory segment.
-		int size = segments[0].size();
+		int size = getSegments()[0].size();
 		SegmentAndOffset segmentAndOffset = startSegmentAndOffset(size);
 		int totalOffset = 0;
 
@@ -1696,7 +1764,14 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		// As BigDecimal(char[], int, int) is faster than BigDecimal(String, int, int),
 		// we extract char[] from the memory segment and pass it to the constructor of BigDecimal.
 		char[] chars = StringUtf8Utils.allocateChars(numBytes);
-		int len = decodeUTF8Strict(chars);
+		int len;
+		if (segments.length == 1) {
+			len = StringUtf8Utils.decodeUTF8Strict(segments[0], offset, numBytes, chars);
+		} else {
+			byte[] bytes = StringUtf8Utils.allocateBytes(numBytes);
+			copyTo(bytes);
+			len = StringUtf8Utils.decodeUTF8Strict(bytes, 0, numBytes, chars);
+		}
 
 		if (len < 0) {
 			throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
@@ -1725,6 +1800,9 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * Returns the upper case of this string.
 	 */
 	public BinaryString toUpperCase() {
+		if (javaString != null) {
+			return toUpperCaseSlow();
+		}
 		if (numBytes == 0) {
 			return EMPTY_UTF8;
 		}
@@ -1757,6 +1835,9 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * Returns the lower case of this string.
 	 */
 	public BinaryString toLowerCase() {
+		if (javaString != null) {
+			return toLowerCaseSlow();
+		}
 		if (numBytes == 0) {
 			return EMPTY_UTF8;
 		}
@@ -1809,6 +1890,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	 * @since 2.4
 	 */
 	public BinaryString[] splitByWholeSeparatorPreserveAllTokens(BinaryString separator) {
+		ensureEncoded();
 		final int len = numBytes;
 
 		if (len == 0) {
@@ -1819,6 +1901,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			// Split on whitespace.
 			return splitByWholeSeparatorPreserveAllTokens(SPACE_UTF8);
 		}
+		separator.ensureEncoded();
 
 		final int separatorLength = separator.numBytes;
 

@@ -166,6 +166,15 @@ class StringITCase() extends QueryTest {
 
     tEnv.execute()
   }
+
+  @Test
+  def testNestUdf(): Unit = {
+    registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfData3)
+    tEnv.registerFunction("func", MyStringFunc)
+    checkResult(
+      "SELECT func(func(func(c))) FROM SmallTable3",
+      Seq(row("Hello worldhahahahahaha"), row("Hellohahahahahaha"), row("Hihahahahahaha")))
+  }
 }
 
 object MyStringFunc extends ScalarFunction {
