@@ -30,6 +30,8 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.FormatUtil;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
@@ -80,7 +82,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.apache.flink.util.Preconditions.checkState;
@@ -725,6 +726,30 @@ public class StreamingJobGraphGenerator {
 		return nameBuffer.toString();
 	}
 
+	private ResultPartitionType getEdgeResultPartitionType(DataExchangeMode dataExchangeMode) {
+		switch (dataExchangeMode) {
+			case AUTO:
+				switch (streamGraph.getExecutionConfig().getExecutionMode()) {
+					case PIPELINED:
+						return ResultPartitionType.PIPELINED;
+					case BATCH:
+						return ResultPartitionType.BLOCKING;
+					default:
+						throw new UnsupportedOperationException("Unknown execution mode " +
+							streamGraph.getExecutionConfig().getExecutionMode() + ".");
+				}
+			case PIPELINED:
+				return ResultPartitionType.PIPELINED;
+			case BATCH:
+				return ResultPartitionType.BLOCKING;
+			case PIPELINE_WITH_BATCH_FALLBACK:
+				throw new UnsupportedOperationException("Data exchange mode " +
+					dataExchangeMode + " is not supported.");
+			default:
+				throw new UnsupportedOperationException("Unknown data exchange mode " + dataExchangeMode + ".");
+		}
+	}
+
 	private void connectEdges() {
 		for (StreamEdge edge : transitiveOutEdges) {
 			JobVertex upstreamVertex = nodeToJobVertexMap.get(edge.getSourceId());
@@ -738,13 +763,13 @@ public class StreamingJobGraphGenerator {
 					upstreamVertex,
 					dataSetID,
 					DistributionPattern.POINTWISE,
-					edge.getResultPartitionType());
+					getEdgeResultPartitionType(edge.getDataExchangeMode()));
 			} else {
 				jobEdge = downstreamVertex.connectDataSetAsInput(
 					upstreamVertex,
 					dataSetID,
 					DistributionPattern.ALL_TO_ALL,
-					edge.getResultPartitionType());
+					getEdgeResultPartitionType(edge.getDataExchangeMode()));
 			}
 			// set strategy name so that web interface can show it.
 			jobEdge.setShipStrategyName(partitioner.toString());
@@ -1176,7 +1201,7 @@ public class StreamingJobGraphGenerator {
 				&& (edge.getPartitioner() instanceof ForwardPartitioner ||
 					(downStreamNode.getParallelism() == 1 && chainEagerlyEnabled))
 				&& downStreamNode.getParallelism() == upstreamNode.getParallelism()
-				&& !edge.getResultPartitionType().isBlocking();
+				&& edge.getDataExchangeMode() != DataExchangeMode.BATCH;
 		}
 	}
 

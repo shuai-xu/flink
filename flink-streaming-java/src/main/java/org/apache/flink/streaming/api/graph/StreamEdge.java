@@ -19,7 +19,7 @@ package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.jobgraph.EdgeID;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.util.OutputTag;
@@ -67,27 +67,27 @@ public class StreamEdge implements Serializable {
 	private StreamPartitioner<?> outputPartitioner;
 
 	/**
-	 * The {@link ResultPartitionType} on this {@link StreamEdge}.
+	 * The {@link DataExchangeMode} on this {@link StreamEdge}.
 	 */
-	private ResultPartitionType resultPartitionType;
+	private DataExchangeMode dataExchangeMode;
 
 	@VisibleForTesting
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag) {
 		this(sourceVertex, targetVertex, typeNumber, selectedNames, outputPartitioner, outputTag,
-			ResultPartitionType.PIPELINED);
+			DataExchangeMode.PIPELINED);
 	}
 
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag,
-			ResultPartitionType resultPartitionType) {
+			DataExchangeMode dataExchangeMode) {
 		this.sourceVertex = sourceVertex;
 		this.targetVertex = targetVertex;
 		this.typeNumber = typeNumber;
 		this.selectedNames = selectedNames;
 		this.outputPartitioner = outputPartitioner;
 		this.outputTag = outputTag;
-		this.resultPartitionType = resultPartitionType;
+		this.dataExchangeMode = dataExchangeMode;
 
 		this.edgeID = new EdgeID();
 
@@ -131,16 +131,16 @@ public class StreamEdge implements Serializable {
 		return outputPartitioner;
 	}
 
-	public ResultPartitionType getResultPartitionType() {
-		return resultPartitionType;
+	public DataExchangeMode getDataExchangeMode() {
+		return dataExchangeMode;
 	}
 
 	public void setPartitioner(StreamPartitioner<?> partitioner) {
 		this.outputPartitioner = partitioner;
 	}
 
-	public void setResultPartitionType(ResultPartitionType resultPartitionType) {
-		this.resultPartitionType = resultPartitionType;
+	public void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
+		this.dataExchangeMode = dataExchangeMode;
 	}
 
 	@Override
@@ -166,6 +166,6 @@ public class StreamEdge implements Serializable {
 	public String toString() {
 		return "(" + sourceVertex + " -> " + targetVertex + ", typeNumber=" + typeNumber
 				+ ", selectedNames=" + selectedNames + ", outputPartitioner=" + outputPartitioner
-				+ ", outputTag=" + outputTag + ", resultPartitionType" + resultPartitionType + ", edgeID=" + edgeID + ')';
+				+ ", outputTag=" + outputTag + ", dataExchangeMode" + dataExchangeMode + ", edgeID=" + edgeID + ')';
 	}
 }

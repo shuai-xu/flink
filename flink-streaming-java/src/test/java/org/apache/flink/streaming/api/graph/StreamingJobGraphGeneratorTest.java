@@ -17,6 +17,7 @@
 
 package org.apache.flink.streaming.api.graph;
 
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -28,9 +29,11 @@ import org.apache.flink.api.common.io.SerializedOutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.FormatUtil.FormatType;
 import org.apache.flink.runtime.jobgraph.FormatUtil.MultiFormatStub;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.MultiInputOutputFormatVertex;
@@ -361,7 +364,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			}
 			List<StreamEdge> streamEdges = streamNodeMap.get("map1").getOutEdges();
 			assertEquals(1, streamEdges.size());
-			streamEdges.get(0).setResultPartitionType(ResultPartitionType.BLOCKING);
+			streamEdges.get(0).setDataExchangeMode(DataExchangeMode.BATCH);
 
 			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
 
@@ -549,7 +552,6 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			env.getCheckpointConfig(),
 			env.getParallelism(),
 			env.getBufferTimeout(),
-			ResultPartitionType.PIPELINED,
 			DataPartitionerType.REBALANCE);
 		assertFalse("Checkpointing enabled", streamGraph.getCheckpointConfig().isCheckpointingEnabled());
 
@@ -753,6 +755,114 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				assertTrue(jobVertex.getMinResources().equals(resource5));
 			}
 		}
+	}
+
+	/**
+	 * Verifies whether generated JobEdge ResultPartitionType is as correctly set with configured
+	 * StreamEdge DataExchangeMode and Job ExecutionMode=PIPELINED.
+	 */
+	@Test
+	public void testEdgeResultPartitionTypeAssignmentInPipelinedMode() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.getConfig().setExecutionMode(ExecutionMode.PIPELINED);
+
+		DataStream<Integer> sourceMap = env.fromElements(1, 2, 3).name("source1")
+			.map((value) -> value).name("map1").setParallelism(10);
+
+		DataStream<Integer> filter1 = sourceMap.filter((value) -> false).name("filter1").setParallelism(2);
+		DataStream<Integer> filter2 = sourceMap.filter((value) -> false).name("filter2").setParallelism(3);
+
+		filter1.connect(filter2).map(new CoMapFunction<Integer, Integer, Integer>() {
+			@Override
+			public Integer map1(Integer value) {
+				return value;
+			}
+
+			@Override
+			public Integer map2(Integer value) {
+				return value;
+			}
+		}).name("map2").setParallelism(4).print().name("print1").setParallelism(5);
+		filter2.print().name("print2").setParallelism(6);
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		for (StreamNode node : streamGraph.getStreamNodes()) {
+			if (node.getOutEdges().size() > 0) {
+				node.getOutEdges().get(0).setDataExchangeMode(DataExchangeMode.BATCH);
+				break;
+			}
+		}
+
+		JobGraph jobGraph = streamGraph.getJobGraph();
+		int pipelinedEdges = 0;
+		int blockingEdges = 0;
+		int edges = 0;
+		for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+			for (IntermediateDataSet dataSet : vertex.getProducedDataSets()) {
+				edges++;
+				if (dataSet.getResultType() == ResultPartitionType.PIPELINED) {
+					pipelinedEdges++;
+				} else if (dataSet.getResultType() == ResultPartitionType.BLOCKING) {
+					blockingEdges++;
+				}
+			}
+		}
+		assertEquals(edges, pipelinedEdges + blockingEdges);
+		assertEquals(1, blockingEdges);
+	}
+
+	/**
+	 * Verifies whether generated JobEdge ResultPartitionType is as correctly set with configured
+	 * StreamEdge DataExchangeMode and Job ExecutionMode=BATCH.
+	 */
+	@Test
+	public void testEdgeResultPartitionTypeAssignmentInBatchMode() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.getConfig().setExecutionMode(ExecutionMode.BATCH);
+
+		DataStream<Integer> sourceMap = env.fromElements(1, 2, 3).name("source1")
+			.map((value) -> value).name("map1").setParallelism(10);
+
+		DataStream<Integer> filter1 = sourceMap.filter((value) -> false).name("filter1").setParallelism(2);
+		DataStream<Integer> filter2 = sourceMap.filter((value) -> false).name("filter2").setParallelism(3);
+
+		filter1.connect(filter2).map(new CoMapFunction<Integer, Integer, Integer>() {
+			@Override
+			public Integer map1(Integer value) {
+				return value;
+			}
+
+			@Override
+			public Integer map2(Integer value) {
+				return value;
+			}
+		}).name("map2").setParallelism(4).print().name("print1").setParallelism(5);
+		filter2.print().name("print2").setParallelism(6);
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		for (StreamNode node : streamGraph.getStreamNodes()) {
+			if (node.getOutEdges().size() > 0) {
+				node.getOutEdges().get(0).setDataExchangeMode(DataExchangeMode.PIPELINED);
+				break;
+			}
+		}
+
+		JobGraph jobGraph = streamGraph.getJobGraph();
+		int pipelinedEdges = 0;
+		int blockingEdges = 0;
+		int edges = 0;
+		for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+			for (IntermediateDataSet dataSet : vertex.getProducedDataSets()) {
+				edges++;
+				if (dataSet.getResultType() == ResultPartitionType.PIPELINED) {
+					pipelinedEdges++;
+				} else if (dataSet.getResultType() == ResultPartitionType.BLOCKING) {
+					blockingEdges++;
+				}
+			}
+		}
+		assertEquals(edges, pipelinedEdges + blockingEdges);
+		assertEquals(1, pipelinedEdges);
 	}
 
 	// ------------------------------------------------------------------------

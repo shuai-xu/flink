@@ -18,9 +18,9 @@
 
 package org.apache.flink.yarn.failover;
 
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
@@ -49,6 +49,7 @@ public class BatchCaseWithFinishedTask {
 		final String casename = params.get("casename");
 
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.getConfig().setExecutionMode(ExecutionMode.BATCH);
 
 		env.addSource(new FiniteSourceFunction())
 			.setParallelism(2)
@@ -70,7 +71,6 @@ public class BatchCaseWithFinishedTask {
 		List<StreamTransformation<?>> transformations = (List<StreamTransformation<?>>) field.get(env);
 
 		Context context = Context.buildBatchProperties(env);
-		context.setPipelineResultPartitionType(ResultPartitionType.BLOCKING);
 		StreamGraph streamGraph = StreamGraphGenerator.generate(context, transformations);
 		streamGraph.setJobName(casename);
 

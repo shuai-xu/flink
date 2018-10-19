@@ -26,8 +26,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
-import org.apache.flink.runtime.io.network.DataExchangeMode;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.StateBackend;
@@ -125,7 +123,6 @@ public class StreamGraphGenerator {
 			context.getCheckpointConfig(),
 			context.getDefaultParallelism(),
 			context.getBufferTimeout(),
-			context.getPipelineResultPartitionType(),
 			DataPartitionerType.valueOf(context.getDefaultPartitioner()));
 		this.streamGraph.setJobName(context.getJobName());
 		this.streamGraph.getCustomConfiguration().setString(ScheduleMode.class.getName(), context.getScheduleMode().toString());
@@ -271,31 +268,11 @@ public class StreamGraphGenerator {
 		Collection<Integer> transformedIds = transform(input);
 		for (Integer transformedId: transformedIds) {
 			int virtualId = StreamTransformation.getNewNodeId();
-			streamGraph.addVirtualPartitionNode(transformedId, virtualId, partition.getPartitioner(), getResultPartitionType(partition.getDataExchangeMode()));
+			streamGraph.addVirtualPartitionNode(transformedId, virtualId, partition.getPartitioner(), partition.getDataExchangeMode());
 			resultIds.add(virtualId);
 		}
 
 		return resultIds;
-	}
-
-	private ResultPartitionType getResultPartitionType(
-			DataExchangeMode dataExchangeMode) {
-		if (dataExchangeMode == null) {
-			return context.getPipelineResultPartitionType();
-		}
-		switch (dataExchangeMode) {
-			case PIPELINED:
-				return context.getPipelineResultPartitionType();
-			case BATCH:
-				return ResultPartitionType.BLOCKING;
-
-			case PIPELINE_WITH_BATCH_FALLBACK:
-				throw new UnsupportedOperationException("Data exchange mode " +
-						dataExchangeMode + " currently not supported.");
-
-			default:
-				throw new UnsupportedOperationException("Unknown data exchange mode.");
-		}
 	}
 
 	/**
@@ -726,7 +703,6 @@ public class StreamGraphGenerator {
 		private List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cacheFile = new ArrayList<>();
 		private ScheduleMode scheduleMode;
 		private long bufferTimeout;
-		private ResultPartitionType pipelineResultPartitionType;
 		private Configuration configuration = new Configuration();
 
 		private int defaultParallelism;
@@ -742,7 +718,6 @@ public class StreamGraphGenerator {
 			context.setChainingEnabled(env.isChainingEnabled());
 			context.setCacheFiles(env.getCachedFiles());
 			context.setBufferTimeout(env.getBufferTimeout());
-			context.setPipelineResultPartitionType(ResultPartitionType.PIPELINED);
 			context.setDefaultParallelism(env.getParallelism());
 			context.setMultiHeadChainMode(env.isMultiHeadChainMode());
 
@@ -775,7 +750,6 @@ public class StreamGraphGenerator {
 				context.setChainingEnabled(true);
 				context.setCacheFiles(env.getCachedFiles());
 				context.setBufferTimeout(-1L);
-				context.setPipelineResultPartitionType(ResultPartitionType.PIPELINED);
 				context.setMultiHeadChainMode(env.isMultiHeadChainMode());
 
 				// For finite stream job, by default schedule tasks in lazily from sources mode
@@ -868,14 +842,6 @@ public class StreamGraphGenerator {
 
 		public void setBufferTimeout(long bufferTimeout) {
 			this.bufferTimeout = bufferTimeout;
-		}
-
-		public ResultPartitionType getPipelineResultPartitionType() {
-			return pipelineResultPartitionType;
-		}
-
-		public void setPipelineResultPartitionType(ResultPartitionType pipelineResultPartitionType) {
-			this.pipelineResultPartitionType = pipelineResultPartitionType;
 		}
 
 		public Configuration getConfiguration() {

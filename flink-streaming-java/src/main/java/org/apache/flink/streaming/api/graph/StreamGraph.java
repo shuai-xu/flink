@@ -32,7 +32,7 @@ import org.apache.flink.api.java.typeutils.InputTypeConfigurable;
 import org.apache.flink.api.java.typeutils.MissingTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.optimizer.plan.StreamingPlan;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -59,7 +59,6 @@ import org.apache.flink.streaming.runtime.tasks.StreamIterationHead;
 import org.apache.flink.streaming.runtime.tasks.StreamIterationTail;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.util.OutputTag;
-import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +101,7 @@ public class StreamGraph extends StreamingPlan {
 	private Set<Integer> sinks;
 	private Map<Integer, Tuple2<Integer, List<String>>> virtualSelectNodes;
 	private Map<Integer, Tuple2<Integer, OutputTag>> virtualSideOutputNodes;
-	private Map<Integer, Tuple3<Integer, StreamPartitioner<?>, ResultPartitionType>> virtualPartitionNodes;
+	private Map<Integer, Tuple3<Integer, StreamPartitioner<?>, DataExchangeMode>> virtualPartitionNodes;
 
 	protected Map<Integer, String> vertexIDtoBrokerID;
 	protected Map<Integer, Long> vertexIDtoLoopTimeout;
@@ -117,21 +116,18 @@ public class StreamGraph extends StreamingPlan {
 
 	private final transient int defaultParallelism;
 	private final transient long defaultBufferTimeout;
-	private final transient ResultPartitionType defaultResultPartitionType;
 	private final transient DataPartitionerType defaultPartitionerType;
 
 	public StreamGraph(ExecutionConfig executionConfig,
 		CheckpointConfig checkpointConfig,
 		int defaultParallelism,
 		long defaultBufferTimeout,
-		ResultPartitionType defaultResultPartitionType,
 		DataPartitionerType defaultPartitionerType) {
 
 		this.executionConfig = executionConfig;
 		this.checkpointConfig = checkpointConfig;
 		this.defaultParallelism = defaultParallelism;
 		this.defaultBufferTimeout = defaultBufferTimeout;
-		this.defaultResultPartitionType = defaultResultPartitionType;
 		this.defaultPartitionerType = defaultPartitionerType;
 
 		// set default schedule mode
@@ -420,14 +416,13 @@ public class StreamGraph extends StreamingPlan {
 	public void addVirtualPartitionNode(Integer originalId,
 		Integer virtualId,
 		StreamPartitioner<?> partitioner,
-		@Nullable ResultPartitionType resultPartitionType) {
+		@Nullable DataExchangeMode dataExchangeMode) {
 
 		if (virtualPartitionNodes.containsKey(virtualId)) {
 			throw new IllegalStateException("Already has virtual partition node with id " + virtualId);
 		}
 
-		virtualPartitionNodes.put(virtualId,
-				new Tuple3<>(originalId, partitioner, resultPartitionType));
+		virtualPartitionNodes.put(virtualId, new Tuple3<>(originalId, partitioner, dataExchangeMode));
 	}
 
 	/**
@@ -463,7 +458,7 @@ public class StreamGraph extends StreamingPlan {
 	public void addEdge(Integer upStreamVertexID,
 		Integer downStreamVertexID,
 		int typeNumber,
-		@Nullable ResultPartitionType resultPartitionType) {
+		@Nullable DataExchangeMode dataExchangeMode) {
 
 		addEdgeInternal(upStreamVertexID,
 				downStreamVertexID,
@@ -471,7 +466,7 @@ public class StreamGraph extends StreamingPlan {
 				null,
 				new ArrayList<String>(),
 				null,
-				resultPartitionType);
+				dataExchangeMode);
 
 	}
 
@@ -481,7 +476,7 @@ public class StreamGraph extends StreamingPlan {
 			StreamPartitioner<?> partitioner,
 			List<String> outputNames,
 			OutputTag outputTag,
-			ResultPartitionType resultPartitionType) {
+			DataExchangeMode dataExchangeMode) {
 
 		if (virtualSideOutputNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
@@ -489,7 +484,7 @@ public class StreamGraph extends StreamingPlan {
 			if (outputTag == null) {
 				outputTag = virtualSideOutputNodes.get(virtualId).f1;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, null, outputTag, resultPartitionType);
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, null, outputTag, dataExchangeMode);
 		} else if (virtualSelectNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualSelectNodes.get(virtualId).f0;
@@ -497,17 +492,17 @@ public class StreamGraph extends StreamingPlan {
 				// selections that happen downstream override earlier selections
 				outputNames = virtualSelectNodes.get(virtualId).f1;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, resultPartitionType);
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode);
 		} else if (virtualPartitionNodes.containsKey(upStreamVertexID)) {
 			int virtualId = upStreamVertexID;
 			upStreamVertexID = virtualPartitionNodes.get(virtualId).f0;
 			if (partitioner == null) {
 				partitioner = virtualPartitionNodes.get(virtualId).f1;
 			}
-			if (resultPartitionType == null) {
-				resultPartitionType = virtualPartitionNodes.get(virtualId).f2;
+			if (dataExchangeMode == null) {
+				dataExchangeMode = virtualPartitionNodes.get(virtualId).f2;
 			}
-			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, resultPartitionType);
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, typeNumber, partitioner, outputNames, outputTag, dataExchangeMode);
 		} else {
 			StreamNode upstreamNode = getStreamNode(upStreamVertexID);
 			StreamNode downstreamNode = getStreamNode(downStreamVertexID);
@@ -536,12 +531,10 @@ public class StreamGraph extends StreamingPlan {
 			}
 
 			// If no partition type was specified, use the default value.
-			if (resultPartitionType == null) {
-				resultPartitionType = defaultResultPartitionType;
+			if (dataExchangeMode == null) {
+				dataExchangeMode = DataExchangeMode.AUTO;
 			}
-			Preconditions.checkNotNull(resultPartitionType, "resultPartitionType is null");
-
-			StreamEdge edge = new StreamEdge(upstreamNode, downstreamNode, typeNumber, outputNames, partitioner, outputTag, resultPartitionType);
+			StreamEdge edge = new StreamEdge(upstreamNode, downstreamNode, typeNumber, outputNames, partitioner, outputTag, dataExchangeMode);
 
 			getStreamNode(edge.getSourceId()).addOutEdge(edge);
 			getStreamNode(edge.getTargetId()).addInEdge(edge);

@@ -18,7 +18,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
@@ -39,7 +39,6 @@ public class StreamGraphTest {
 			new CheckpointConfig(),
 			3,
 			1234L,
-			ResultPartitionType.PIPELINED,
 			DataPartitionerType.REBALANCE);
 
 		streamGraph.addNode(999, null, null, null, null);
@@ -50,17 +49,17 @@ public class StreamGraphTest {
 		streamGraph.addNode(444, null, null, null, null);
 
 		streamGraph.addVirtualPartitionNode(999, 87, null, null);
-		streamGraph.addVirtualPartitionNode(888, 56, null, ResultPartitionType.BLOCKING);
+		streamGraph.addVirtualPartitionNode(888, 56, null, DataExchangeMode.BATCH);
 
-		streamGraph.addEdge(87, 111, 0, ResultPartitionType.PIPELINED);
+		streamGraph.addEdge(87, 111, 0, DataExchangeMode.PIPELINED);
 		streamGraph.addEdge(87, 222, 0, null);
-		streamGraph.addEdge(56, 333, 0, ResultPartitionType.PIPELINED);
+		streamGraph.addEdge(56, 333, 0, DataExchangeMode.PIPELINED);
 		streamGraph.addEdge(56, 444, 0, null);
 
-		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(999, 111).get(0).getResultPartitionType());
-		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(999, 222).get(0).getResultPartitionType());
-		assertEquals(ResultPartitionType.PIPELINED, streamGraph.getStreamEdges(888, 333).get(0).getResultPartitionType());
-		assertEquals(ResultPartitionType.BLOCKING, streamGraph.getStreamEdges(888, 444).get(0).getResultPartitionType());
+		assertEquals(DataExchangeMode.PIPELINED, streamGraph.getStreamEdges(999, 111).get(0).getDataExchangeMode());
+		assertEquals(DataExchangeMode.AUTO, streamGraph.getStreamEdges(999, 222).get(0).getDataExchangeMode());
+		assertEquals(DataExchangeMode.PIPELINED, streamGraph.getStreamEdges(888, 333).get(0).getDataExchangeMode());
+		assertEquals(DataExchangeMode.BATCH, streamGraph.getStreamEdges(888, 444).get(0).getDataExchangeMode());
 	}
 
 	@Test
@@ -71,7 +70,6 @@ public class StreamGraphTest {
 				new CheckpointConfig(),
 				3,
 				1234L,
-				ResultPartitionType.PIPELINED,
 				DataPartitionerType.REBALANCE);
 
 			streamGraph.addNode(999, null, null, null, null);
@@ -92,7 +90,6 @@ public class StreamGraphTest {
 				new CheckpointConfig(),
 				3,
 				1234L,
-				ResultPartitionType.PIPELINED,
 				DataPartitionerType.RESCALE);
 
 			streamGraph.addNode(999, null, null, null, null);
