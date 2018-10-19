@@ -1859,7 +1859,7 @@ object ScalarOperators {
     // must endInput because close will be invoke in failover.
     ctx.addReusableEndInputStatement(
       s"""
-         |$accField.add(new $serializedValue($bfField.toBytes($bf)));
+         |$accField.add($serializedValue.fromBytes($bfField.toBytes($bf)));
          |getRuntimeContext().commitPreAggregatedAccumulator($quotaBid);
        """.stripMargin)
 
