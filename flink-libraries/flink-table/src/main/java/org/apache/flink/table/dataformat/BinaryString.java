@@ -197,8 +197,10 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	private void encodeToBytes() {
-		byte[] bytes = StringUtf8Utils.encodeUTF8(javaString);
-		pointTo(bytes, 0, bytes.length);
+		if (javaString != null) {
+			byte[] bytes = StringUtf8Utils.encodeUTF8(javaString);
+			pointTo(bytes, 0, bytes.length);
+		}
 	}
 
 	public int getOffset() {
