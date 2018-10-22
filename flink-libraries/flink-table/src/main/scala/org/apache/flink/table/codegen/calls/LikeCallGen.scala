@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 
 import org.apache.calcite.runtime.SqlFunctions
 import org.apache.flink.table.codegen.CodeGenUtils.newName
+import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNotNull
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -35,66 +36,115 @@ class LikeCallGen extends CallGenerator {
   /**
     * Accepts simple LIKE patterns like "abc%".
     */
-  private val BEGIN_PATTERN = Pattern.compile("([^_%]+)%")
+  private val BEGIN_PATTERN = Pattern.compile("([^%]+)%")
 
   /**
     * Accepts simple LIKE patterns like "%abc".
     */
-  private val END_PATTERN = Pattern.compile("%([^_%]+)")
+  private val END_PATTERN = Pattern.compile("%([^%]+)")
 
   /**
     * Accepts simple LIKE patterns like "%abc%".
     */
-  private val MIDDLE_PATTERN = Pattern.compile("%([^_%]+)%")
+  private val MIDDLE_PATTERN = Pattern.compile("%([^%]+)%")
 
   /**
     * Accepts simple LIKE patterns like "abc".
     */
-  private val NONE_PATTERN = Pattern.compile("[^%_]+")
+  private val NONE_PATTERN = Pattern.compile("[^%]+")
 
   override def generate(
       ctx: CodeGeneratorContext,
       operands: Seq[GeneratedExpression],
       returnType: InternalType,
       nullCheck: Boolean): GeneratedExpression = {
-    if (operands.size == 2 && operands(1).literal) {
+    if ((operands.size == 2 && operands(1).literal) ||
+        (operands.size == 3 && operands(1).literal && operands(2).literal)) {
       generateCallIfArgsNotNull(ctx, nullCheck, returnType, operands) {
         (terms) =>
           val pattern = operands(1).literalValue.toString
-          val noneMatcher = NONE_PATTERN.matcher(pattern)
-          val beginMatcher = BEGIN_PATTERN.matcher(pattern)
-          val endMatcher = END_PATTERN.matcher(pattern)
-          val middleMatcher = MIDDLE_PATTERN.matcher(pattern)
+          var newPattern: String = pattern
+          val allowQuick = if (operands.length == 2) {
+            !pattern.contains("_")
+          } else {
+            val escape = operands(2).literalValue.toString
+            if (escape.length != 1) {
+              throw FlinkLike.invalidEscapeCharacter(escape)
+            }
+            val escapeChar = escape.charAt(0)
+            var matched = true
+            var i = 0
+            val newBuilder = new StringBuilder
+            while (i < pattern.length && matched) {
+              val c = pattern.charAt(i)
+              if (c == escapeChar) {
+                if (i == (pattern.length - 1)) {
+                  throw FlinkLike.invalidEscapeSequence(pattern, i)
+                }
+                val nextChar = pattern.charAt(i + 1)
+                if (nextChar == '%') {
+                  matched = false
+                } else if ((nextChar == '_') || (nextChar == escapeChar)) {
+                  newBuilder.append(nextChar)
+                  i += 1
+                } else {
+                  throw FlinkLike.invalidEscapeSequence(pattern, i)
+                }
+              } else if (c == '_') {
+                matched = false
+              } else {
+                newBuilder.append(c)
+              }
+              i += 1
+            }
 
-          if (noneMatcher.matches()) {
-            s"${terms.head}.equals(${operands(1).resultTerm})"
-          } else if (beginMatcher.matches()) {
-            val field = ctx.addReusableStringConstants(beginMatcher.group(1))
-            s"${terms.head}.startsWith($field)"
-          } else if (endMatcher.matches()) {
-            val field = ctx.addReusableStringConstants(endMatcher.group(1))
-            s"${terms.head}.endsWith($field)"
-          } else if (middleMatcher.matches()) {
-            val field = ctx.addReusableStringConstants(middleMatcher.group(1))
-            s"${terms.head}.contains($field)"
+            if (matched) {
+              newPattern = newBuilder.toString
+            }
+            matched
           }
-          // '_' is a special char for like, so we skip it.
-          // Accepts chained LIKE patterns without escaping like "abc%def%ghi%".
-          else if (!pattern.contains("_") && pattern.contains('%')) {
-            val field = classOf[StringLikeChainChecker].getCanonicalName
-            val checker = newName("likeChainChecker")
-            ctx.addReusableMember(s"$field $checker = new $field(${"\""}$pattern${"\""});")
-            s"$checker.check(${terms.head})"
+
+          if (allowQuick) {
+            val noneMatcher = NONE_PATTERN.matcher(newPattern)
+            val beginMatcher = BEGIN_PATTERN.matcher(newPattern)
+            val endMatcher = END_PATTERN.matcher(newPattern)
+            val middleMatcher = MIDDLE_PATTERN.matcher(newPattern)
+
+            if (noneMatcher.matches()) {
+              val reusePattern = ctx.addReusableStringConstants(newPattern)
+              s"${terms.head}.equals($reusePattern)"
+            } else if (beginMatcher.matches()) {
+              val field = ctx.addReusableStringConstants(beginMatcher.group(1))
+              s"${terms.head}.startsWith($field)"
+            } else if (endMatcher.matches()) {
+              val field = ctx.addReusableStringConstants(endMatcher.group(1))
+              s"${terms.head}.endsWith($field)"
+            } else if (middleMatcher.matches()) {
+              val field = ctx.addReusableStringConstants(middleMatcher.group(1))
+              s"${terms.head}.contains($field)"
+            } else {
+              val field = classOf[StringLikeChainChecker].getCanonicalName
+              val checker = newName("likeChainChecker")
+              ctx.addReusableMember(s"$field $checker = new $field(${"\""}$newPattern${"\""});")
+              s"$checker.check(${terms.head})"
+            }
           } else {
             // Complex
             val patternClass = classOf[Pattern].getName
             val likeClass = classOf[FlinkLike].getName
             val patternName = newName("pattern")
+            val escape = if (operands.size == 2) {
+              "null"
+            } else {
+              s"""
+                 |"${operands(2).literalValue}"
+               """.stripMargin
+            }
             ctx.addReusableMember(
               s"""
                  |$patternClass $patternName =
                  |  $patternClass.compile(
-                 |    $likeClass.sqlToRegexLike(${operands(1).resultTerm}.toString(), null));
+                 |    $likeClass.sqlToRegexLike("${operands(1).literalValue}", $escape));
                  |""".stripMargin)
             s"$patternName.matcher(${terms.head}.toString()).matches()"
           }

@@ -103,12 +103,12 @@ public class FlinkLike {
 		return javaPattern.toString();
 	}
 
-	private static RuntimeException invalidEscapeCharacter(String s) {
+	public static RuntimeException invalidEscapeCharacter(String s) {
 		return new RuntimeException(
 				"Invalid escape character '" + s + "'");
 	}
 
-	private static RuntimeException invalidEscapeSequence(String s, int i) {
+	public static RuntimeException invalidEscapeSequence(String s, int i) {
 		return new RuntimeException(
 				"Invalid escape sequence '" + s + "', " + i);
 	}

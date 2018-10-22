@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.TypeExtractor
+import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.ScalarFunction
@@ -69,6 +70,48 @@ class StringITCase() extends QueryTest {
     checkResult(
       "SELECT a FROM Table3 WHERE c LIKE '%omm%nt#12'",
       Seq(row(18)))
+  }
+
+  @Test
+  def testLikeWithEscape(): Unit = {
+
+    val rows = Seq(
+      (1, "ha_ha"),
+      (2, "ffhaha_hahaff"),
+      (3, "aaffhaha_hahaffaa"),
+      (4, "aaffhaaa_aahaffaa"),
+      (5, "a%_ha")
+    )
+
+    tEnv.registerCollection("MyT", rows, "a, b")
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE '%ha?_ha%' ESCAPE '?'",
+      Seq(row(1), row(2), row(3)))
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE '%ha?_ha' ESCAPE '?'",
+      Seq(row(1)))
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE 'ha?_ha%' ESCAPE '?'",
+      Seq(row(1)))
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE 'ha?_ha' ESCAPE '?'",
+      Seq(row(1)))
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE '%affh%ha?_ha%' ESCAPE '?'",
+      Seq(row(3)))
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE 'a?%?_ha' ESCAPE '?'",
+      Seq(row(5)))
+
+    checkResult(
+      "SELECT a FROM MyT WHERE b LIKE 'h_?_ha' ESCAPE '?'",
+      Seq(row(1)))
   }
 
   @Test
