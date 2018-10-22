@@ -20,14 +20,17 @@ package org.apache.flink.table.functions.utils
 
 import java.util
 
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelDataTypeFactoryImpl}
 import org.apache.calcite.schema.impl.ReflectiveFunctionBase
 import org.apache.calcite.sql._
 import org.apache.calcite.sql.`type`.SqlOperandTypeChecker.Consistency
 import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.sql.validate.{SqlUserDefinedTableFunction, SqlUserDefinedTableMacro}
+import org.apache.calcite.util.NlsString
+import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.schema.FlinkTableFunction
 import org.apache.flink.table.api.ValidationException
@@ -94,7 +97,16 @@ class TableSqlFunction(
       case (parameter, relType) =>
         try {
           val o = SqlUserDefinedTableMacro.getValue(relType)
-          SqlUserDefinedTableMacro.coerce(o, parameter.getType(typeFactory))
+          // TODO Type should convert to internal
+          val t = parameter.getType(typeFactory)
+          if (o != null && o.isInstanceOf[NlsString] &&
+              t.isInstanceOf[RelDataTypeFactoryImpl#JavaType] &&
+              t.asInstanceOf[RelDataTypeFactoryImpl#JavaType].getJavaClass
+                  == classOf[BinaryString]) {
+            o.asInstanceOf[NlsString].getValue
+          } else {
+            SqlUserDefinedTableMacro.coerce(o, t)
+          }
         } catch {
           case e: SqlUserDefinedTableMacro.NonLiteralException =>
             null

@@ -24,6 +24,7 @@ import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
 import org.apache.flink.table.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.batch.sql.StringSplit
@@ -33,6 +34,7 @@ import org.apache.flink.table.runtime.utils.JavaUserDefinedTableFunctions.JavaTa
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.table.util._
+import org.apache.flink.types.Row
 import org.junit.{Before, Test}
 
 import scala.collection.Seq
@@ -486,6 +488,19 @@ class TableFunctionITCase extends QueryTest {
       Seq(row(2, 2), row(2, 3), row(3, 4)))
   }
 
+  @Test
+  def testTableFunctionWithBinaryString(): Unit = {
+    tEnv.registerFunction("func", new BinaryStringTableFunc)
+    checkResult(
+      "select c, s1, s2 from inputT, LATERAL TABLE(func(c, 'haha')) as T(s1, s2)",
+      Seq(
+        row("Jack#22", "Jack#22", "haha"),
+        row("John#19", "John#19", "haha"),
+        row("nosharp", "nosharp", "haha"),
+        row("Anna#44", "Anna#44", "haha")
+      ))
+  }
+
 }
 
 object StringUdFunc extends ScalarFunction {
@@ -540,4 +555,12 @@ class GenericTableFunc[T](t: DataType) extends TableFunction[T] {
   }
 
   override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType = t
+}
+
+class BinaryStringTableFunc extends TableFunction[Row] {
+  def eval(s: BinaryString, cons: BinaryString): Unit = collect(Row.of(s, cons))
+  override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType = {
+    arguments(1).asInstanceOf[String].toLowerCase
+    DataTypes.createRowType(DataTypes.STRING, DataTypes.STRING)
+  }
 }
