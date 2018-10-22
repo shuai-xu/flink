@@ -494,63 +494,50 @@ object BinaryStringCallGen {
 
   def generateMd5(
       ctx: CodeGeneratorContext,
+      operands: Seq[GeneratedExpression]): GeneratedExpression =
+    generateHashInternal(ctx, "MD5", operands)
+
+  def generateHashInternal(
+      ctx: CodeGeneratorContext,
+      algorithm: String,
       operands: Seq[GeneratedExpression]): GeneratedExpression = {
-    val className = classOf[ScalarFunctions].getCanonicalName
-    val digestTerm = ctx.addReusableMessageDigest("MD5")
-    generateReturnStringCallIfArgsNotNull(ctx, operands) {
-      terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
+    val digestTerm = ctx.addReusableMessageDigest(algorithm)
+    if (operands.length == 1) {
+      generateCallIfArgsNotNull(ctx, nullCheck = true, DataTypes.STRING, operands) {
+        terms =>s"${terms.head}.hash($digestTerm)"
+      }
+    } else {
+      val className = classOf[ScalarFunctions].getCanonicalName
+      generateReturnStringCallIfArgsNotNull(ctx, operands) {
+        terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
+      }
     }
   }
 
   def generateSha1(
       ctx: CodeGeneratorContext,
-      operands: Seq[GeneratedExpression]): GeneratedExpression = {
-    val className = classOf[ScalarFunctions].getCanonicalName
-    val digestTerm = ctx.addReusableMessageDigest("SHA")
-    generateReturnStringCallIfArgsNotNull(ctx, operands) {
-      terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
-    }
-  }
+      operands: Seq[GeneratedExpression]): GeneratedExpression =
+    generateHashInternal(ctx, "SHA", operands)
 
   def generateSha224(
       ctx: CodeGeneratorContext,
-      operands: Seq[GeneratedExpression]): GeneratedExpression = {
-    val className = classOf[ScalarFunctions].getCanonicalName
-    val digestTerm = ctx.addReusableMessageDigest("SHA-224")
-    generateReturnStringCallIfArgsNotNull(ctx, operands) {
-      terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
-    }
-  }
+      operands: Seq[GeneratedExpression]): GeneratedExpression =
+    generateHashInternal(ctx, "SHA-224", operands)
 
   def generateSha256(
       ctx: CodeGeneratorContext,
-      operands: Seq[GeneratedExpression]): GeneratedExpression = {
-    val className = classOf[ScalarFunctions].getCanonicalName
-    val digestTerm = ctx.addReusableMessageDigest("SHA-256")
-    generateReturnStringCallIfArgsNotNull(ctx, operands) {
-      terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
-    }
-  }
+      operands: Seq[GeneratedExpression]): GeneratedExpression =
+    generateHashInternal(ctx, "SHA-256", operands)
 
   def generateSha384(
       ctx: CodeGeneratorContext,
-      operands: Seq[GeneratedExpression]): GeneratedExpression = {
-    val className = classOf[ScalarFunctions].getCanonicalName
-    val digestTerm = ctx.addReusableMessageDigest("SHA-384")
-    generateReturnStringCallIfArgsNotNull(ctx, operands) {
-      terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
-    }
-  }
+      operands: Seq[GeneratedExpression]): GeneratedExpression =
+    generateHashInternal(ctx, "SHA-384", operands)
 
   def generateSha512(
       ctx: CodeGeneratorContext,
-      operands: Seq[GeneratedExpression]): GeneratedExpression = {
-    val className = classOf[ScalarFunctions].getCanonicalName
-    val digestTerm = ctx.addReusableMessageDigest("SHA-512")
-    generateReturnStringCallIfArgsNotNull(ctx, operands) {
-      terms => s"$className.hash($digestTerm, ${toStringTerms(terms, operands)})"
-    }
-  }
+      operands: Seq[GeneratedExpression]): GeneratedExpression =
+    generateHashInternal(ctx, "SHA-512", operands)
 
   def generateSha2(
       ctx: CodeGeneratorContext,
@@ -558,16 +545,29 @@ object BinaryStringCallGen {
     val className = classOf[ScalarFunctions].getCanonicalName
     if (operands.last.literal) {
       val digestTerm = ctx.addReusableSha2MessageDigest(operands.last, nullCheck = true)
-      generateReturnStringCallIfArgsNotNull(ctx, operands) {
-        terms =>
-          s"$className.hash($digestTerm," +
-            s"${toStringTerms(terms.dropRight(1), operands.dropRight(1))})"
+      if (operands.length == 2) {
+        generateCallIfArgsNotNull(ctx, nullCheck = true, DataTypes.STRING, operands) {
+          terms =>s"${terms.head}.hash($digestTerm)"
+        }
+      } else {
+        generateReturnStringCallIfArgsNotNull(ctx, operands) {
+          terms =>
+            s"$className.hash($digestTerm," +
+                s"${toStringTerms(terms.dropRight(1), operands.dropRight(1))})"
+        }
       }
     } else {
-      generateReturnStringCallIfArgsNotNull(ctx, operands) {
-        terms => {
-          val strTerms = toStringTerms(terms.dropRight(1), operands.dropRight(1))
-          s"""$className.hash("SHA-" + ${terms.last}, $strTerms)"""
+      if (operands.length == 2) {
+        generateCallIfArgsNotNull(ctx, nullCheck = true, DataTypes.STRING, operands) {
+          terms =>
+            s"""${terms.head}.hash("SHA-" + ${terms.last})"""
+        }
+      } else {
+        generateReturnStringCallIfArgsNotNull(ctx, operands) {
+          terms => {
+            val strTerms = toStringTerms(terms.dropRight(1), operands.dropRight(1))
+            s"""$className.hash("SHA-" + ${terms.last}, $strTerms)"""
+          }
         }
       }
     }

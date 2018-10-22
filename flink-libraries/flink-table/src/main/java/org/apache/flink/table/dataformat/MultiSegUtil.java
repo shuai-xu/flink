@@ -496,6 +496,9 @@ public class MultiSegUtil {
 		segment.put(segOffset, (byte) (LITTLE_ENDIAN ? b2 : b1));
 	}
 
+	/**
+	 * Maybe not copied, if want copy, please use copyTo.
+	 */
 	public static byte[] getBytes(MemorySegment[] segments, int baseOffset, int sizeInBytes) {
 		// avoid copy if `base` is `byte[]`
 		if (segments.length == 1) {

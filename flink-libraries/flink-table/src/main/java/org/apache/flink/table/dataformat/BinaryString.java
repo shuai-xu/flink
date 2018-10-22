@@ -29,8 +29,11 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import org.apache.commons.codec.binary.Hex;
 
 import java.math.BigDecimal;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -405,6 +408,9 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		return str;
 	}
 
+	/**
+	 * Maybe not copied, if want copy, please use copyTo.
+	 */
 	public byte[] getBytes() {
 		ensureEncoded();
 		return MultiSegUtil.getBytes(segments, offset, numBytes);
@@ -1937,5 +1943,16 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 
 		return substrings.toArray(new BinaryString[substrings.size()]);
+	}
+
+	/**
+	 * Calculate the hash value of a given string use {@link MessageDigest}.
+	 */
+	public BinaryString hash(MessageDigest md) {
+		return fromString(Hex.encodeHexString(md.digest(getBytes())));
+	}
+
+	public BinaryString hash(String algorithm) throws NoSuchAlgorithmException {
+		return hash(MessageDigest.getInstance(algorithm));
 	}
 }
