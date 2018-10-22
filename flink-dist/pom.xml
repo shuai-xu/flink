@@ -369,6 +369,13 @@ under the License.
 		</dependency>
 
 		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-launcher</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-s3-fs-hadoop</artifactId>
 			<version>${project.version}</version>

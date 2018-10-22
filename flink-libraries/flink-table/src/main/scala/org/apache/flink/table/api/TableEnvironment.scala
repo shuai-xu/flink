@@ -1329,6 +1329,11 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /** Returns a unique temporary attribute name. */
+  def createUniqueAttributeName(prefix: String): String = {
+    prefix + attrNameCntr.getAndIncrement()
+  }
+
+  /** Returns a unique temporary attribute name. */
   private[flink] def createUniqueAttributeName(): String = {
     "TMP_" + attrNameCntr.getAndIncrement()
   }

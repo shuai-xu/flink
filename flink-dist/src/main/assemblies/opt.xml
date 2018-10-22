@@ -184,5 +184,12 @@
 			<destName>flink-streaming-python_${scala.binary.version}-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
+
+		<file>
+			<source>../blink-launcher/target/blink-launcher-${project.version}.jar</source>
+			<outputDirectory>lib/</outputDirectory>
+			<destName>blink-launcher-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 </assembly>
