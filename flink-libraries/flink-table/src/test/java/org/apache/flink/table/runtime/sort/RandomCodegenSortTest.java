@@ -258,7 +258,7 @@ public class RandomCodegenSortTest {
 		} else if (type.equals(CHAR_TYPE_INFO)) {
 			return '1';
 		} else if (type.equals(STRING_TYPE_INFO)) {
-			return BinaryString.EMPTY_UTF8;
+			return BinaryString.fromString("");
 		} else if (type.equals(tupleInt)) {
 			return converter.apply(new Tuple1<>(Integer.MIN_VALUE));
 		} else if (type.equals(tupleIntString)) {

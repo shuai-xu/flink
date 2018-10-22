@@ -49,12 +49,13 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 @TypeInfo(BinaryStringTypeFactory.class)
 public final class BinaryString implements Comparable<BinaryString>, Cloneable, KryoSerializable {
 
-	public static final BinaryString COMMA_UTF8 = BinaryString.fromString(",");
+	// TODO remove it for thread safe.
 	public static final BinaryString EMPTY_UTF8 = BinaryString.fromString("");
-	public static final BinaryString SPACE_UTF8 = BinaryString.fromString(" ");
-	public static final BinaryString[] EMPTY_STRING_ARRAY = new BinaryString[0];
+	static {
+		EMPTY_UTF8.ensureEncoded();
+	}
 
-	private static final double[] FAST_POW10 = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
+	static final BinaryString[] EMPTY_STRING_ARRAY = new BinaryString[0];
 
 	private MemorySegment[] segments;
 	private int offset;
@@ -64,7 +65,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	private String javaString;
 
 	public BinaryString() {
-		pointTo(null, -1, -1, null);
+		pointTo((MemorySegment[]) null, -1, -1, null);
 	}
 
 	private BinaryString(String str) {
@@ -80,13 +81,17 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	public void pointTo(byte[] bytes, int offset, int numBytes) {
+		pointTo(bytes, offset, numBytes, null);
+	}
+
+	public void pointTo(byte[] bytes, int offset, int numBytes, String javaString) {
 		MemorySegment[] segments = this.segments;
 		if (segments != null && segments.length == 1) {
 			segments[0].pointTo(bytes);
 		} else {
 			segments = new MemorySegment[] {MemorySegmentFactory.wrap(bytes)};
 		}
-		pointTo(segments, offset, numBytes);
+		pointTo(segments, offset, numBytes, javaString);
 	}
 
 	public void pointTo(MemorySegment[] segments, int offset, int numBytes) {
@@ -94,7 +99,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	}
 
 	private void pointToString(String javaString) {
-		pointTo(null, -1, -1, javaString);
+		pointTo((MemorySegment[]) null, -1, -1, javaString);
 	}
 
 	private void pointTo(MemorySegment[] segments, int offset, int numBytes, String javaString) {
@@ -190,6 +195,14 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 	}
 
+	public boolean isSpaceString() {
+		if (javaString != null) {
+			return javaString.equals(" ");
+		} else {
+			return getByte(0) == ' ';
+		}
+	}
+
 	public void ensureEncoded() {
 		if (!isEncoded()) {
 			encodeToBytes();
@@ -199,7 +212,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 	private void encodeToBytes() {
 		if (javaString != null) {
 			byte[] bytes = StringUtf8Utils.encodeUTF8(javaString);
-			pointTo(bytes, 0, bytes.length);
+			pointTo(bytes, 0, bytes.length, javaString);
 		}
 	}
 
@@ -873,7 +886,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			return null;
 		}
 		trimStr.ensureEncoded();
-		if (SPACE_UTF8.equals(trimStr)) {
+		if (trimStr.isSpaceString()) {
 			return trimLeft();
 		}
 		if (inOneSeg()) {
@@ -975,7 +988,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			return null;
 		}
 		trimStr.ensureEncoded();
-		if (SPACE_UTF8.equals(trimStr)) {
+		if (trimStr.isSpaceString()) {
 			return trimRight();
 		}
 		if (inOneSeg()) {
@@ -1907,7 +1920,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 
 		if (separator == null || EMPTY_UTF8.equals(separator)) {
 			// Split on whitespace.
-			return splitByWholeSeparatorPreserveAllTokens(SPACE_UTF8);
+			return splitByWholeSeparatorPreserveAllTokens(fromString(" "));
 		}
 		separator.ensureEncoded();
 

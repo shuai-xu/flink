@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Random;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.flink.table.dataformat.BinaryString.EMPTY_UTF8;
 import static org.apache.flink.table.dataformat.BinaryString.blankString;
 import static org.apache.flink.table.dataformat.BinaryString.concat;
 import static org.apache.flink.table.dataformat.BinaryString.concatWs;
@@ -53,6 +52,8 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(Parameterized.class)
 public class BinaryStringTest {
+
+	private BinaryString empty = fromString("");
 
 	private final Mode mode;
 
@@ -148,10 +149,10 @@ public class BinaryStringTest {
 
 	@Test
 	public void emptyStringTest() {
-		assertEquals(EMPTY_UTF8, fromString(""));
-		assertEquals(EMPTY_UTF8, fromBytes(new byte[0]));
-		assertEquals(0, EMPTY_UTF8.numChars());
-		assertEquals(0, EMPTY_UTF8.numBytes());
+		assertEquals(empty, fromString(""));
+		assertEquals(empty, fromBytes(new byte[0]));
+		assertEquals(0, empty.numChars());
+		assertEquals(0, empty.numBytes());
 	}
 
 	@Test
@@ -222,29 +223,29 @@ public class BinaryStringTest {
 
 	@Test
 	public void concatTest() {
-		assertEquals(EMPTY_UTF8, concat());
-		assertEquals(EMPTY_UTF8, concat((BinaryString) null));
-		assertEquals(EMPTY_UTF8, concat(EMPTY_UTF8));
+		assertEquals(empty, concat());
+		assertEquals(empty, concat((BinaryString) null));
+		assertEquals(empty, concat(empty));
 		assertEquals(fromString("ab"), concat(fromString("ab")));
 		assertEquals(fromString("ab"), concat(fromString("a"), fromString("b")));
 		assertEquals(fromString("abc"), concat(fromString("a"), fromString("b"), fromString("c")));
 		assertEquals(fromString("ac"), concat(fromString("a"), null, fromString("c")));
 		assertEquals(fromString("a"), concat(fromString("a"), null, null));
-		assertEquals(EMPTY_UTF8, concat(null, null, null));
+		assertEquals(empty, concat(null, null, null));
 		assertEquals(fromString("数据砖头"), concat(fromString("数据"), fromString("砖头")));
 	}
 
 	@Test
 	public void concatWsTest() {
-		// Returns EMPTY_UTF8 if the separator is null
-		assertEquals(EMPTY_UTF8, concatWs(null, (BinaryString) null));
+		// Returns empty if the separator is null
+		assertEquals(empty, concatWs(null, (BinaryString) null));
 		assertEquals(fromString("a"), concatWs(null, fromString("a")));
 
 		// If separator is null, concatWs should skip all null inputs and never return null.
 		BinaryString sep = fromString("哈哈");
 		assertEquals(
-				EMPTY_UTF8,
-				concatWs(sep, EMPTY_UTF8));
+				empty,
+				concatWs(sep, empty));
 		assertEquals(
 				fromString("ab"),
 				concatWs(sep, fromString("ab")));
@@ -261,7 +262,7 @@ public class BinaryStringTest {
 				fromString("a"),
 				concatWs(sep, fromString("a"), null, null));
 		assertEquals(
-				EMPTY_UTF8,
+				empty,
 				concatWs(sep, null, null, null));
 		assertEquals(
 				fromString("数据哈哈砖头"),
@@ -270,7 +271,7 @@ public class BinaryStringTest {
 
 	@Test
 	public void contains() {
-		assertTrue(EMPTY_UTF8.contains(EMPTY_UTF8));
+		assertTrue(empty.contains(empty));
 		assertTrue(fromString("hello").contains(fromString("ello")));
 		assertFalse(fromString("hello").contains(fromString("vello")));
 		assertFalse(fromString("hello").contains(fromString("hellooo")));
@@ -281,7 +282,7 @@ public class BinaryStringTest {
 
 	@Test
 	public void startsWith() {
-		assertTrue(EMPTY_UTF8.startsWith(EMPTY_UTF8));
+		assertTrue(empty.startsWith(empty));
 		assertTrue(fromString("hello").startsWith(fromString("hell")));
 		assertFalse(fromString("hello").startsWith(fromString("ell")));
 		assertFalse(fromString("hello").startsWith(fromString("hellooo")));
@@ -292,7 +293,7 @@ public class BinaryStringTest {
 
 	@Test
 	public void endsWith() {
-		assertTrue(EMPTY_UTF8.endsWith(EMPTY_UTF8));
+		assertTrue(empty.endsWith(empty));
 		assertTrue(fromString("hello").endsWith(fromString("ello")));
 		assertFalse(fromString("hello").endsWith(fromString("ellov")));
 		assertFalse(fromString("hello").endsWith(fromString("hhhello")));
@@ -303,7 +304,7 @@ public class BinaryStringTest {
 
 	@Test
 	public void substring() {
-		assertEquals(EMPTY_UTF8, fromString("hello").substring(0, 0));
+		assertEquals(empty, fromString("hello").substring(0, 0));
 		assertEquals(fromString("el"), fromString("hello").substring(1, 3));
 		assertEquals(fromString("数"), fromString("数据砖头").substring(0, 1));
 		assertEquals(fromString("据砖"), fromString("数据砖头").substring(1, 3));
@@ -339,10 +340,10 @@ public class BinaryStringTest {
 		assertEquals(fromString("xxxhell"),
 				fromString("xxxhellox").trimRight(fromString("xoh")));
 
-		assertEquals(EMPTY_UTF8, EMPTY_UTF8.trim());
-		assertEquals(EMPTY_UTF8, fromString("  ").trim());
-		assertEquals(EMPTY_UTF8, fromString("  ").trimLeft());
-		assertEquals(EMPTY_UTF8, fromString("  ").trimRight());
+		assertEquals(empty, empty.trim());
+		assertEquals(empty, fromString("  ").trim());
+		assertEquals(empty, fromString("  ").trimLeft());
+		assertEquals(empty, fromString("  ").trimRight());
 
 		assertEquals(fromString("数据砖头"), fromString("  数据砖头 ").trim());
 		assertEquals(fromString("数据砖头 "), fromString("  数据砖头 ").trimLeft());
@@ -373,12 +374,12 @@ public class BinaryStringTest {
 	public void testSqlSubstring() {
 		assertEquals(fromString("ello"), fromString("hello").substringSQL(2));
 		assertEquals(fromString("ell"), fromString("hello").substringSQL(2, 3));
-		assertEquals(EMPTY_UTF8, EMPTY_UTF8.substringSQL(2, 3));
+		assertEquals(empty, empty.substringSQL(2, 3));
 		assertNull(fromString("hello").substringSQL(0, -1));
-		assertEquals(EMPTY_UTF8, fromString("hello").substringSQL(10));
+		assertEquals(empty, fromString("hello").substringSQL(10));
 		assertEquals(fromString("hel"), fromString("hello").substringSQL(0, 3));
 		assertEquals(fromString("lo"), fromString("hello").substringSQL(-2, 3));
-		assertEquals(EMPTY_UTF8, fromString("hello").substringSQL(-100, 3));
+		assertEquals(empty, fromString("hello").substringSQL(-100, 3));
 	}
 
 	@Test
@@ -386,14 +387,14 @@ public class BinaryStringTest {
 		assertEquals(fromString("olleh"), fromString("hello").reverse());
 		assertEquals(fromString("国中"), fromString("中国").reverse());
 		assertEquals(fromString("国中 ,olleh"), fromString("hello, 中国").reverse());
-		assertEquals(EMPTY_UTF8, EMPTY_UTF8.reverse());
+		assertEquals(empty, empty.reverse());
 	}
 
 	@Test
 	public void indexOf() {
-		assertEquals(0, EMPTY_UTF8.indexOf(EMPTY_UTF8, 0));
-		assertEquals(-1, EMPTY_UTF8.indexOf(fromString("l"), 0));
-		assertEquals(0, fromString("hello").indexOf(EMPTY_UTF8, 0));
+		assertEquals(0, empty.indexOf(empty, 0));
+		assertEquals(-1, empty.indexOf(fromString("l"), 0));
+		assertEquals(0, fromString("hello").indexOf(empty, 0));
 		assertEquals(2, fromString("hello").indexOf(fromString("l"), 0));
 		assertEquals(3, fromString("hello").indexOf(fromString("l"), 3));
 		assertEquals(-1, fromString("hello").indexOf(fromString("a"), 0));
@@ -757,5 +758,15 @@ public class BinaryStringTest {
 				fromString("ab:cd:ef").splitByWholeSeparatorPreserveAllTokens(fromString(":")));
 		assertArrayEquals(new BinaryString[] {fromString("ab"), fromString("cd"), fromString("ef")},
 				fromString("ab-!-cd-!-ef").splitByWholeSeparatorPreserveAllTokens(fromString("-!-")));
+	}
+
+	@Test
+	public void testLazy() {
+		String javaStr = "haha";
+		BinaryString str = BinaryString.fromString(javaStr);
+		str.ensureEncoded();
+
+		// check reference same.
+		assertTrue(str.toString() == javaStr);
 	}
 }
