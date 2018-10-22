@@ -21,7 +21,7 @@ StreamExecScan(table=[[_DataStreamTable_2]])
 StreamExecScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
-StreamExecUnion(union all=[a, b, c, a_sum])
+StreamExecUnion(all=[true], union all=[a, b, c, a_sum])
   StreamExecCalc(select=[a, b, c, TMP_0 AS a_sum])
     StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c, SUM(a) AS TMP_0])
       StreamExecExchange(distribution=[hash[a, b, c]])

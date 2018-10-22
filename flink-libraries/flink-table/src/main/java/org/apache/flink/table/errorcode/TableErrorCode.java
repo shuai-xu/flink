@@ -469,22 +469,22 @@ public interface TableErrorCode {
 	@ErrCode(
 		codeId = "SQL-00060001",
 		cause = "Union All: Cannot union streams of different type length.\n" +
-			"Left:  {0}\n" +
-			"Right: {1}\n",
+			"First:  {0}\n" +
+			"Mismatch: {1}\n",
 		details = "",
 		action = "please re-check union all statement according to the description above"
 	)
-	String sqlUnionAllFieldsLenMismatch(String leftFields, String rightFields);
+	String sqlUnionAllFieldsCntMismatch(String firstFields, String mismatchFields);
 
 	@ErrCode(
 		codeId = "SQL-00060002",
 		cause = "Union All: Cannot union streams of different type(s).\n" +
-			"Left different type(s):  {0}\n" +
-			"Right different type(s): {1}\n",
+			"First different type(s):  {0}\n" +
+			"Mismatch different type(s): {1}\n",
 		details = "",
 		action = "please re-check union all statement according to the description above"
 	)
-	String sqlUnionAllFieldsTypeMismatch(String leftDiff, String rightDiff);
+	String sqlUnionAllFieldsTypeMismatch(String firstDiff, String mismatchDiff);
 
 	/** ----------------------------- sort ----------------------------- .**/
 	@ErrCode(

@@ -18,9 +18,12 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
+import java.util.{List => JList}
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
+import org.apache.calcite.rel.core.{SetOp, Union}
+import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, UnionTransformation}
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -38,21 +41,23 @@ import scala.collection.JavaConverters._
 class StreamExecUnion(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
-    leftNode: RelNode,
-    rightNode: RelNode,
-    outputRowType: RelDataType)
-  extends BiRel(cluster, traitSet, leftNode, rightNode)
+    relList: JList[RelNode],
+    outputRowType: RelDataType,
+    all: Boolean)
+  extends Union(cluster, traitSet, relList, all)
   with StreamExecRel {
+
+  require(all, "Only support union all")
 
   override def deriveRowType(): RelDataType = outputRowType
 
-  override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
+  override def copy(traitSet: RelTraitSet, inputs: JList[RelNode], all: Boolean): SetOp = {
     new StreamExecUnion(
       cluster,
       traitSet,
-      inputs.get(0),
-      inputs.get(1),
-      outputRowType
+      inputs,
+      outputRowType,
+      all
     )
   }
 
@@ -67,28 +72,42 @@ class StreamExecUnion(
   override def translateToPlan(
       tableEnv: StreamTableEnvironment,
       queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
-    val leftFields = leftNode.getRowType.getFieldList.asScala.map(
+    val inputs = getInputs
+    val firstInputRowType = inputs.head.getRowType
+    val firstInputFields = firstInputRowType.getFieldList.asScala.map(
       t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType)))
-    val rightFields = rightNode.getRowType.getFieldList.asScala.map(
-      t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType))
-    )
-
-    if(leftFields.length != rightFields.length) {
+    val firstInputFieldsCnt = firstInputRowType.getFieldCount
+    val fieldsCntMismatchInputs = inputs.drop(1).filter(r =>
+      r.getRowType.getFieldCount != firstInputFieldsCnt)
+    if (fieldsCntMismatchInputs.nonEmpty) {
+      val mismatchFields = fieldsCntMismatchInputs.head.getRowType.getFieldList.asScala.map(
+        t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType))
+      )
       throw new IllegalArgumentException(
-        TableErrors.INST.sqlUnionAllFieldsLenMismatch(
-          leftFields.map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]"),
-          rightFields.map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]")))
-    } else if(!leftFields.map { case (n, t) => t }.equals(rightFields.map { case (n, t) => t })) {
-      val diffFields = leftFields.zip(rightFields).filter{
-        case ((_, type1), (_, type2)) => type1 != type2 }
+        TableErrors.INST.sqlUnionAllFieldsCntMismatch(
+          firstInputFields.map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]"),
+          mismatchFields.map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]")))
+    }
+
+    val fieldsTypeMismatchInputs = inputs.drop(1).filter(r =>
+      !FlinkTypeFactory.toTypeInfo(r.getRowType).equals(
+        FlinkTypeFactory.toTypeInfo(firstInputRowType)))
+    if (fieldsTypeMismatchInputs.nonEmpty) {
+      val mismatchFields = fieldsTypeMismatchInputs.head.getRowType.getFieldList.asScala.map(
+        t => (t.getName, FlinkTypeFactory.toTypeInfo(t.getType))
+      )
+      val diffFields = firstInputFields.zip(mismatchFields).filter {
+        case ((_, type1), (_, type2)) => type1 != type2
+      }
       throw new IllegalArgumentException(
         TableErrors.INST.sqlUnionAllFieldsTypeMismatch(
           diffFields.map(_._1).map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]"),
           diffFields.map(_._2).map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]")))
     }
 
-    val leftInput = getLeft.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
-    val rightInput = getRight.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
-    new UnionTransformation(Array(leftInput, rightInput).toList)
+    val transformations = getInputs.map(_.asInstanceOf[StreamExecRel].translateToPlan(
+      tableEnv, queryConfig))
+    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
+    new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
   }
 }

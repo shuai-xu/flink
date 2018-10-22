@@ -21,12 +21,16 @@ import java.util
 import java.util.Collections
 
 import org.apache.calcite.plan.RelOptRule.{any, none, operand}
+import org.apache.calcite.plan.hep.HepRelVertex
+import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.core.{TableScan, Union}
 import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecMicroBatchAssigner, StreamExecScan, StreamExecTableSourceScan}
 import org.apache.flink.table.plan.schema.IntermediateDataStreamTable
+
+import scala.collection.JavaConversions._
 
 /**
   * A MicroBatchAssignerRule is used to add a MicroBatchAssigner node to generate batch marker.
@@ -35,6 +39,7 @@ object MicroBatchAssignerRules {
 
   val UNARY = new MicroBatchAssignerRuleForUnary
   val BINARY = new MicroBatchAssignerRuleForBinary
+  val UNION = new MicroBatchAssignerRuleForUnion
 
   class MicroBatchAssignerRuleForUnary
     extends RelOptRule(
@@ -107,14 +112,53 @@ object MicroBatchAssignerRules {
     }
   }
 
+  /**
+    * NOTE: MicroBatchAssignerRuleForUnion only support HepPlanner currently
+    */
+  class MicroBatchAssignerRuleForUnion
+    extends RelOptRule(
+      operand(classOf[Union], any()),
+      "MicroBatchAssignerRuleForUnion") {
+
+    override def matches(call: RelOptRuleCall): Boolean = {
+      val union = call.rel[Union](0)
+      union.getInputs.exists {
+        case vertex: HepRelVertex if isScan(vertex.getCurrentRel) => true
+        case node: RelNode if isScan(node) => true
+        case _ => false
+      }
+    }
+
+    override def onMatch(call: RelOptRuleCall): Unit = {
+      val union = call.rel[Union](0)
+      val config = union.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+
+      val newNodes = union.getInputs.map {
+        case vertex: HepRelVertex =>
+          val curNode = vertex.getCurrentRel
+          if (isScan(curNode)) {
+            new StreamExecMicroBatchAssigner(
+              curNode.getCluster,
+              curNode.getTraitSet,
+              curNode,
+              config.getMicroBatchTriggerTime)
+          } else {
+            curNode
+          }
+        case node => node
+      }
+
+      val newUnion = union.copy(union.getTraitSet, newNodes)
+      call.transformTo(newUnion)
+    }
+  }
+
   private def isScan(node: RelNode): Boolean = node match {
     case scan: StreamExecScan =>
       // scan is not an intermediate datastream
       !scan.dataStreamTable.isInstanceOf[IntermediateDataStreamTable[_]]
-    case _: StreamExecTableSourceScan =>
-      true
-    case _ =>
-      false
+    case _: StreamExecTableSourceScan => true
+    case _ => false
   }
 
 }

@@ -179,7 +179,7 @@ object StreamExecRelFactories {
           // the distribution trait, so we have to create StreamExecUnion to
           // calculate the distribution trait
           val union = new StreamExecUnion(
-            cluster, traitSet, inputs.get(0), inputs.get(1), inputs.get(0).getRowType)
+            cluster, traitSet, inputs, inputs.get(0).getRowType, all)
           val newTraitSet = FlinkRelMetadataQuery.traitSet(union).simplify()
           union.copy(newTraitSet, union.getInputs).asInstanceOf[StreamExecUnion]
 

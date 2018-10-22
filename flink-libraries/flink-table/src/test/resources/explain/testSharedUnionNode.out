@@ -27,7 +27,7 @@ StreamExecScan(table=[[_DataStreamTable_3]])
 StreamExecScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_4]]
-StreamExecUnion(union all=[id, num, text])
+StreamExecUnion(all=[true], union all=[id, num, text])
   StreamExecScan(table=[[_DataStreamTable_3]])
   StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
     StreamExecScan(table=[[T]])

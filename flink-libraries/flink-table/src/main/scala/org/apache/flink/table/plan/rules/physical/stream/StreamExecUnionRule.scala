@@ -25,6 +25,8 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecUnion
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalUnion
 
+import scala.collection.JavaConversions._
+
 class StreamExecUnionRule
   extends ConverterRule(
     classOf[FlinkLogicalUnion],
@@ -36,15 +38,14 @@ class StreamExecUnionRule
   def convert(rel: RelNode): RelNode = {
     val union: FlinkLogicalUnion = rel.asInstanceOf[FlinkLogicalUnion]
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val convLeft: RelNode = RelOptRule.convert(union.getInput(0), FlinkConventions.STREAMEXEC)
-    val convRight: RelNode = RelOptRule.convert(union.getInput(1), FlinkConventions.STREAMEXEC)
+    val relNodes = union.getInputs.map(RelOptRule.convert(_, FlinkConventions.STREAMEXEC))
 
     new StreamExecUnion(
       rel.getCluster,
       traitSet,
-      convLeft,
-      convRight,
-      rel.getRowType)
+      relNodes,
+      rel.getRowType,
+      union.all)
   }
 }
 

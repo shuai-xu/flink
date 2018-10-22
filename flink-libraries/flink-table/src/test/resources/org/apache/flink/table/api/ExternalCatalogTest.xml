@@ -19,7 +19,7 @@ limitations under the License.
   <TestCase name="testStreamTableApi">
     <Resource name="plan">
       <![CDATA[
-StreamExecUnion(union all=[_c0, e, _c2])
+StreamExecUnion(all=[true], union all=[_c0, e, _c2])
   StreamExecCalc(select=[*(d, 2) AS _c0, e, UPPER(g) AS _c2], where=[<(d, 3)])
     StreamExecTableSourceScan(table=[[test, db2, tb2, source: [selectedFields=[d, e, g]]]], fields=[d, e, g])
   StreamExecCalc(select=[*(a, 2) AS _c0, b, UPPER(c) AS _c2])
@@ -30,7 +30,7 @@ StreamExecUnion(union all=[_c0, e, _c2])
   <TestCase name="testStreamSQL">
     <Resource name="plan">
       <![CDATA[
-StreamExecUnion(union all=[EXPR$0, e, g])
+StreamExecUnion(all=[true], union all=[EXPR$0, e, g])
   StreamExecCalc(select=[*(d, 2) AS EXPR$0, e, g], where=[<(d, 3)])
     StreamExecTableSourceScan(table=[[test, db2, tb2, source: [selectedFields=[d, e, g]]]], fields=[d, e, g])
   StreamExecCalc(select=[*(a, 2) AS EXPR$0, b, c])

@@ -77,7 +77,7 @@ StreamExecCalc(select=[EXPR$0])
   <TestCase name="testMultiHopWindows">
     <Resource name="plan">
       <![CDATA[
-StreamExecUnion(union all=[EXPR$0, EXPR$1, EXPR$2, EXPR$3])
+StreamExecUnion(all=[true], union all=[EXPR$0, EXPR$1, EXPR$2, EXPR$3])
   StreamExecCalc(select=[w$start AS EXPR$0, w$end AS EXPR$1, EXPR$2, EXPR$3])
     StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 60000.millis)], select=[COUNT(*) AS EXPR$2, SUM(c) AS EXPR$3, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
       StreamExecExchange(distribution=[single])

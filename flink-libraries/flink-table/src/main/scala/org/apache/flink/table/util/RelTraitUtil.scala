@@ -20,8 +20,11 @@ package org.apache.flink.table.util
 
 import java.io.{PrintWriter, StringWriter, Writer}
 
+import org.apache.calcite.rel.core.Union
 import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
+
+import scala.collection.JavaConversions._
 
 object RelTraitUtil {
   def toString(rel: RelNode): String = {
@@ -45,6 +48,8 @@ object RelTraitUtil {
       case b: BiRel =>
         explainTrait(b.getLeft, writer, depth + 1)
         explainTrait(b.getRight, writer, depth + 1)
+      case u: Union =>
+        u.getInputs.map(explainTrait(_, writer, depth + 1))
       case _ => // do nothing
     }
   }

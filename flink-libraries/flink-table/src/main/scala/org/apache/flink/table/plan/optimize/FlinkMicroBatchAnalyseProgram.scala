@@ -45,7 +45,10 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
       // step2: add microbatch assigner node
       val hepProgram = FlinkHepRuleSetProgramBuilder
         .newBuilder[OC]
-        .add(RuleSets.ofList(MicroBatchAssignerRules.UNARY, MicroBatchAssignerRules.BINARY))
+        .add(RuleSets.ofList(
+          MicroBatchAssignerRules.UNARY,
+          MicroBatchAssignerRules.BINARY,
+          MicroBatchAssignerRules.UNION))
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
         .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
         .build()

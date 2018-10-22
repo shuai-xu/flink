@@ -53,9 +53,10 @@ class LocalAggSetOpTransposeRule
     val newSetOp = new StreamExecUnion(
       setOp.getCluster,
       newSetOpTraitSet,
-      newSetOpInputs.get(0),
-      newSetOpInputs.get(1),
-      localAgg.getRowType)
+      newSetOpInputs,
+      localAgg.getRowType,
+      setOp.all
+    )
 
     call.transformTo(newSetOp)
   }

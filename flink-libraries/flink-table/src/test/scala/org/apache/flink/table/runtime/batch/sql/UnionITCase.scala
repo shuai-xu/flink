@@ -128,7 +128,7 @@ class UnionITCase extends QueryTest {
   }
 
   @Test
-  def testMultiUnion(): Unit = {
+  def testUnionOfMultiInputs(): Unit = {
     checkResult(
       "select max(v) as x, min(v) as n from \n" +
         "(values cast(-86.4 as double), cast(-100 as double), cast(2 as double)) as t(v)",
