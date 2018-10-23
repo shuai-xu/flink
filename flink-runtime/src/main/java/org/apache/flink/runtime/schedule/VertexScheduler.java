@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.schedule;
 
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 
 import java.util.Collection;
 
@@ -43,10 +44,27 @@ public interface VertexScheduler {
 	// ------------------------------------------------------------------------
 
 	/**
-	 * Get the status of the execution vertex. Including execution state, whether input data is ready to consume, etc.
+	 * Get the status of the execution vertex.
 	 *
 	 * @param executionVertexID id of the vertex to query
 	 * @return status of the execution vertex
 	 */
 	ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID);
+
+	/**
+	 * Get the status of the result partition.
+	 *
+	 * @param resultID id of the result
+	 * @param partitionNumber number of the partition in the result
+	 * @return status of the result partition
+	 */
+	ResultPartitionStatus getResultPartitionStatus(IntermediateDataSetID resultID, int partitionNumber);
+
+	/**
+	 * Get the ratio of consumable partitions in the result.
+	 *
+	 * @param resultID id of the result
+	 * @return ratio of consumable partitions in the result
+	 */
+	double getResultConsumablePartitionRatio(IntermediateDataSetID resultID);
 }

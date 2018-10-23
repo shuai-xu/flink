@@ -31,6 +31,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionStatusListener;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.executiongraph.IOMetrics;
+import org.apache.flink.runtime.executiongraph.IntermediateResult;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
@@ -49,6 +50,7 @@ import org.apache.flink.runtime.jobmaster.failover.ResultDescriptor;
 import org.apache.flink.runtime.jobmaster.failover.ResultPartitionOperationLog;
 import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
 import org.apache.flink.runtime.schedule.GraphManagerPlugin;
+import org.apache.flink.runtime.schedule.ResultPartitionStatus;
 import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -71,12 +73,10 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class GraphManager implements Replayable, ExecutionStatusListener {
 
-	static final Logger LOG = LoggerFactory.getLogger(ExecutionGraph.class);
+	static final Logger LOG = LoggerFactory.getLogger(GraphManager.class);
 
 	/** The customizable plugin that handles vertex events and schedule vertices. */
 	private final GraphManagerPlugin graphManagerPlugin;
-
-	private final JobMasterGateway jobMasterGateway;
 
 	private final OperationLogManager operationLogManager;
 
@@ -92,7 +92,6 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 			OperationLogManager operationLogManager,
 			ExecutionGraph executionGraph) {
 		this.graphManagerPlugin = checkNotNull(graphManagerPlugin);
-		this.jobMasterGateway = jobMasterGateway;
 		this.operationLogManager = checkNotNull(operationLogManager);
 		this.executionGraph = checkNotNull(executionGraph);
 
@@ -152,6 +151,8 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 	}
 
 	public void startScheduling() {
+		LOG.info("Start scheduling execution graph with graph manager plugin: {}",
+			graphManagerPlugin.getClass().getName());
 		graphManagerPlugin.onSchedulingStarted();
 	}
 
@@ -358,6 +359,31 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 			}
 
 			return vertex.getTaskVertices()[executionVertexID.getSubTaskIndex()].getCurrentStatus();
+		}
+
+		@Override
+		public ResultPartitionStatus getResultPartitionStatus(IntermediateDataSetID resultID, int partitionNumber) {
+			checkNotNull(resultID);
+			IntermediateResult result = executionGraph.getAllIntermediateResults().get(resultID);
+			if (result == null) {
+				throw new IllegalArgumentException("Cannot find any result with id " + resultID);
+			}
+
+			return new ResultPartitionStatus(
+				resultID,
+				partitionNumber,
+				result.getPartitions()[partitionNumber].isConsumable());
+		}
+
+		@Override
+		public double getResultConsumablePartitionRatio(IntermediateDataSetID resultID) {
+			checkNotNull(resultID);
+			IntermediateResult result = executionGraph.getAllIntermediateResults().get(resultID);
+			if (result == null) {
+				throw new IllegalArgumentException("Cannot find any result with id " + resultID);
+			}
+
+			return result.getResultConsumablePartitionRatio();
 		}
 	}
 }

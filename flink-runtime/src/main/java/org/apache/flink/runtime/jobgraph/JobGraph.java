@@ -110,6 +110,9 @@ public class JobGraph implements Serializable {
 	/** List of classpaths required to run this job. */
 	private List<URL> classpaths = Collections.emptyList();
 
+	/** This cache helps to reduce the calculation load of consumer vertices for each result partition */
+	private transient Map<IntermediateDataSetID, Map<Integer, Collection<Collection<ExecutionVertexID>>>> consumerVerticesCache;
+
 	// --------------------------------------------------------------------------------------------
 
 	/**
@@ -408,16 +411,18 @@ public class JobGraph implements Serializable {
 		IntermediateDataSetID resultID,
 		int partitionNumber) {
 
-		// Lazy build the result map if the result is not found, as edges may be late added
-		if (!results.containsKey(resultID)) {
-			for (JobVertex vertex : getVertices()) {
-				for (IntermediateDataSet result : vertex.getProducedDataSets()) {
-					results.put(result.getId(), result);
-				}
+		if (consumerVerticesCache == null) {
+			consumerVerticesCache = new HashMap<>();
+		}
+		if (consumerVerticesCache.containsKey(resultID)) {
+			if (consumerVerticesCache.get(resultID).containsKey(partitionNumber)) {
+				return consumerVerticesCache.get(resultID).get(partitionNumber);
 			}
+		} else {
+			consumerVerticesCache.put(resultID, new HashMap<>());
 		}
 
-		IntermediateDataSet result = results.get(resultID);
+		IntermediateDataSet result = getResult(resultID);
 		if (result == null) {
 			throw new IllegalArgumentException("Cannot find the given result " + resultID + " in job graph");
 		}
@@ -427,18 +432,43 @@ public class JobGraph implements Serializable {
 		}
 
 		Collection<Collection<ExecutionVertexID>> consumerVertices = new ArrayList<>();
-		for (JobEdge edge : results.get(resultID).getConsumers()) {
+		for (JobEdge edge : getResult(resultID).getConsumers()) {
 			consumerVertices.add(edge.getConsumerExecutionVertices(partitionNumber));
 		}
+		consumerVerticesCache.get(resultID).put(partitionNumber, consumerVertices);
 		return consumerVertices;
 	}
 
 	public JobVertexID getResultProducerID(IntermediateDataSetID resultID) {
-		IntermediateDataSet result = results.get(resultID);
+		IntermediateDataSet result = getResult(resultID);
 		if (result == null) {
 			throw new IllegalArgumentException("Cannot find the given result " + resultID + " in job graph");
 		}
 		return result.getProducer().getID();
+	}
+
+	public Collection<IntermediateDataSetID> getResultIDs() {
+		// Lazy build the result map if the result is not found, as edges may be late added
+		for (JobVertex vertex : getVertices()) {
+			for (IntermediateDataSet result : vertex.getProducedDataSets()) {
+				results.put(result.getId(), result);
+			}
+		}
+
+		return results.keySet();
+	}
+
+	public IntermediateDataSet getResult(IntermediateDataSetID resultID) {
+		// Lazy build the result map if the result is not found, as edges may be late added
+		if (!results.containsKey(resultID)) {
+			for (JobVertex vertex : getVertices()) {
+				for (IntermediateDataSet result : vertex.getProducedDataSets()) {
+					results.put(result.getId(), result);
+				}
+			}
+		}
+
+		return results.get(resultID);
 	}
 
 	// --------------------------------------------------------------------------------------------

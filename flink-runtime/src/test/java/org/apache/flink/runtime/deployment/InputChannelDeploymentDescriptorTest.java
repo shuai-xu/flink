@@ -30,6 +30,7 @@ import org.apache.flink.runtime.executiongraph.IntermediateResult;
 import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
 import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -69,12 +70,14 @@ public class InputChannelDeploymentDescriptorTest {
 			// Local partition
 			ExecutionVertex localProducer = mockExecutionVertex(state, consumerResourceId);
 			IntermediateResultPartition localPartition = mockPartition(localProducer);
+			when(localPartition.getResultType()).thenReturn(ResultPartitionType.PIPELINED);
 			ResultPartitionID localPartitionId = new ResultPartitionID(localPartition.getPartitionId(), localProducer.getCurrentExecutionAttempt().getAttemptId());
 			ExecutionEdge localEdge = new ExecutionEdge(localPartition, consumer, 0);
 
 			// Remote partition
 			ExecutionVertex remoteProducer = mockExecutionVertex(state, ResourceID.generate()); // new resource ID
 			IntermediateResultPartition remotePartition = mockPartition(remoteProducer);
+			when(remotePartition.getResultType()).thenReturn(ResultPartitionType.PIPELINED);
 			ResultPartitionID remotePartitionId = new ResultPartitionID(remotePartition.getPartitionId(), remoteProducer.getCurrentExecutionAttempt().getAttemptId());
 			ConnectionID remoteConnectionId = new ConnectionID(remoteProducer.getCurrentAssignedResource().getTaskManagerLocation(), 0);
 			ExecutionEdge remoteEdge = new ExecutionEdge(remotePartition, consumer, 1);
@@ -82,6 +85,7 @@ public class InputChannelDeploymentDescriptorTest {
 			// Unknown partition
 			ExecutionVertex unknownProducer = mockExecutionVertex(state, null); // no assigned resource
 			IntermediateResultPartition unknownPartition = mockPartition(unknownProducer);
+			when(unknownPartition.getResultType()).thenReturn(ResultPartitionType.PIPELINED);
 			ResultPartitionID unknownPartitionId = new ResultPartitionID(unknownPartition.getPartitionId(), unknownProducer.getCurrentExecutionAttempt().getAttemptId());
 			ExecutionEdge unknownEdge = new ExecutionEdge(unknownPartition, consumer, 2);
 
@@ -131,6 +135,7 @@ public class InputChannelDeploymentDescriptorTest {
 		// Unknown partition
 		ExecutionVertex unknownProducer = mockExecutionVertex(ExecutionState.CREATED, null); // no assigned resource
 		IntermediateResultPartition unknownPartition = mockPartition(unknownProducer);
+		when(unknownPartition.getResultType()).thenReturn(ResultPartitionType.PIPELINED);
 		ResultPartitionID unknownPartitionId = new ResultPartitionID(unknownPartition.getPartitionId(), unknownProducer.getCurrentExecutionAttempt().getAttemptId());
 		ExecutionEdge unknownEdge = new ExecutionEdge(unknownPartition, consumer, 2);
 

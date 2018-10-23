@@ -26,9 +26,6 @@ import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,11 +38,11 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 
-	private static final Logger LOG = LoggerFactory.getLogger(StepwiseSchedulingPlugin.class);
-
 	private VertexScheduler scheduler;
 
 	private JobGraph jobGraph;
+
+	private VertexInputTracker inputTracker;
 
 	@Override
 	public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig config) {
@@ -53,6 +50,7 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 
 		this.scheduler = checkNotNull(scheduler);
 		this.jobGraph = checkNotNull(jobGraph);
+		this.inputTracker = new VertexInputTracker(jobGraph, scheduler, config);
 	}
 
 	@Override
@@ -69,7 +67,7 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 	public void onSchedulingStarted() {
 		final List<ExecutionVertexID> verticesToSchedule = new ArrayList<>();
 		for (JobVertex vertex : jobGraph.getVertices()) {
-			if (vertex.getInputs().size() == 0) {
+			if (vertex.isInputVertex()) {
 				for (int i = 0; i < vertex.getParallelism(); i++) {
 					verticesToSchedule.add(new ExecutionVertexID(vertex.getID(), i));
 				}
@@ -85,7 +83,7 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 			.getResultPartitionConsumerExecutionVertices(event.getResultID(), event.getPartitionNumber());
 		for (Collection<ExecutionVertexID> executionVertexIDs : consumerVertices) {
 			for (ExecutionVertexID executionVertexID : executionVertexIDs) {
-				if (scheduler.getExecutionVertexStatus(executionVertexID).getExecutionState() == ExecutionState.CREATED) {
+				if (isReadyToSchedule(executionVertexID)) {
 					verticesToSchedule.add(executionVertexID);
 				}
 			}
@@ -102,11 +100,28 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 	public void onExecutionVertexFailover(ExecutionVertexFailoverEvent event) {
 		final List<ExecutionVertexID> verticesToRestartNow = new ArrayList<>();
 		for (ExecutionVertexID executionVertexID : event.getAffectedExecutionVertexIDs()) {
-			if (scheduler.getExecutionVertexStatus(executionVertexID).isInputDataConsumable()) {
+			if (isReadyToSchedule(executionVertexID)) {
 				verticesToRestartNow.add(executionVertexID);
 			}
 		}
 		scheduleOneByOne(verticesToRestartNow);
+	}
+
+	private boolean isReadyToSchedule(ExecutionVertexID vertexID) {
+		ExecutionVertexStatus vertexStatus = scheduler.getExecutionVertexStatus(vertexID);
+
+		// only CREATED vertices can be scheduled
+		if (vertexStatus.getExecutionState() != ExecutionState.CREATED) {
+			return false;
+		}
+
+		// source vertices can be scheduled at once
+		if (jobGraph.findVertexByID(vertexID.getJobVertexID()).isInputVertex()) {
+			return true;
+		}
+
+		// query whether the inputs are ready overall
+		return inputTracker.areInputsReady(vertexID);
 	}
 
 	/**

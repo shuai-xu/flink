@@ -100,11 +100,13 @@ public class InputChannelDeploymentDescriptor implements Serializable {
 			final ResultPartitionLocation partitionLocation;
 
 			// The producing task needs to be RUNNING or already FINISHED
-			if (consumedPartition.isConsumable() && producerSlot != null &&
-					(producerState == ExecutionState.RUNNING ||
-						producerState == ExecutionState.FINISHED ||
-						producerState == ExecutionState.SCHEDULED ||
-						producerState == ExecutionState.DEPLOYING)) {
+			if ((consumedPartition.getResultType().isPipelined() ||
+					consumedPartition.isConsumable()) &&
+				producerSlot != null &&
+				(producerState == ExecutionState.RUNNING ||
+					producerState == ExecutionState.FINISHED ||
+					producerState == ExecutionState.SCHEDULED ||
+					producerState == ExecutionState.DEPLOYING)) {
 
 				final TaskManagerLocation partitionTaskManagerLocation = producerSlot.getTaskManagerLocation();
 
@@ -123,8 +125,9 @@ public class InputChannelDeploymentDescriptor implements Serializable {
 				throw new ExecutionGraphException(msg);
 			}
 			else {
-				String msg = String.format("Trying to eagerly schedule a task whose inputs " +
-					"are not ready (partition consumable? %s, producer state: %s, producer slot: %s).",
+				String msg = String.format("Trying to eagerly schedule a task whose inputs are not ready " +
+						"(result type: %s, partition consumable: %s, producer state: %s, producer slot: %s).",
+						consumedPartition.getResultType(),
 						consumedPartition.isConsumable(),
 						producerState,
 						producerSlot);

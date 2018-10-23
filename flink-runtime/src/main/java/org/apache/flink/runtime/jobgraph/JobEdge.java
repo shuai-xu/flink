@@ -20,6 +20,8 @@ package org.apache.flink.runtime.jobgraph;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class represent edges (communication channels) in a job graph.
@@ -53,6 +55,9 @@ public class JobEdge implements java.io.Serializable {
 
 	/** Optional description of the caching inside an operator, to be displayed in the JSON plan */
 	private String operatorLevelCachingDescription;
+
+	/** This cache helps to reduce the calculation load of consumer vertices for each partition */
+	private transient Map<Integer, Collection<ExecutionVertexID>> consumerExecutionVerticesCache;
 	
 	/**
 	 * Constructs a new job edge, that connects an intermediate result to a consumer task.
@@ -204,14 +209,26 @@ public class JobEdge implements java.io.Serializable {
 	}
 
 	public Collection<ExecutionVertexID> getConsumerExecutionVertices(int partitionNumber) {
+		if (consumerExecutionVerticesCache == null) {
+			consumerExecutionVerticesCache = new HashMap<>();
+		}
+		if (consumerExecutionVerticesCache.containsKey(partitionNumber)) {
+			return consumerExecutionVerticesCache.get(partitionNumber);
+		}
+
+		Collection<ExecutionVertexID> consumers;
 		switch (distributionPattern) {
 			case POINTWISE:
-				return getConsumerExecutionVerticesPointwise(partitionNumber);
+				consumers = getConsumerExecutionVerticesPointwise(partitionNumber);
+				break;
 			case ALL_TO_ALL:
-				return getConsumerExecutionVerticesAllToAll();
+				consumers = getConsumerExecutionVerticesAllToAll();
+				break;
 			default:
 				throw new RuntimeException("Unrecognized distribution pattern.");
 		}
+		consumerExecutionVerticesCache.put(partitionNumber, consumers);
+		return consumers;
 	}
 
 	private Collection<ExecutionVertexID> getConsumerExecutionVerticesPointwise(int partitionNumber) {

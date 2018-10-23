@@ -32,16 +32,12 @@ public class ExecutionVertexStatus implements Serializable {
 
 	private final ExecutionState executionState;
 
-	private final boolean inputDataConsumable;
-
 	public ExecutionVertexStatus(
 		final ExecutionVertexID executionVertexID,
-		final ExecutionState executionState,
-		final boolean inputDataConsumable) {
+		final ExecutionState executionState) {
 
 		this.executionVertexID = executionVertexID;
 		this.executionState = executionState;
-		this.inputDataConsumable = inputDataConsumable;
 
 	}
 
@@ -61,17 +57,5 @@ public class ExecutionVertexStatus implements Serializable {
 	 */
 	ExecutionState getExecutionState() {
 		return executionState;
-	}
-
-	/**
-	 * The input data of a vertex is consumable when
-	 * 1. it is source vertex(no input).
-	 * 2. one of its source result partition is PIPELINED and has produced data.
-	 * 3. one of its source result is BLOCKING and is FINISHED.
-	 *
-	 * @return whether the input data of this vertex is consumable
-	 */
-	boolean isInputDataConsumable() {
-		return inputDataConsumable;
 	}
 }

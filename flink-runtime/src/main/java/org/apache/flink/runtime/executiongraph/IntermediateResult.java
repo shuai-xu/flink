@@ -47,8 +47,6 @@ public class IntermediateResult {
 
 	private final int numParallelProducers;
 
-	private final AtomicInteger numberOfRunningProducers;
-
 	private int partitionsAssigned;
 
 	private int numConsumers;
@@ -56,6 +54,8 @@ public class IntermediateResult {
 	private final int connectionIndex;
 
 	private final ResultPartitionType resultType;
+
+	private final AtomicInteger numberOfConsumablePartitions = new AtomicInteger();
 
 	public IntermediateResult(
 			IntermediateDataSetID id,
@@ -70,8 +70,6 @@ public class IntermediateResult {
 		this.numParallelProducers = numParallelProducers;
 
 		this.partitions = new IntermediateResultPartition[numParallelProducers];
-
-		this.numberOfRunningProducers = new AtomicInteger(numParallelProducers);
 
 		// we do not set the intermediate result partitions here, because we let them be initialized by
 		// the execution vertex that produces them
@@ -180,21 +178,16 @@ public class IntermediateResult {
 		return connectionIndex;
 	}
 
-	int incrementNumberOfRunningProducersAndGetRemaining() {
-		return numberOfRunningProducers.incrementAndGet();
+	public int incrementNumberOfConsumablePartitions() {
+		return numberOfConsumablePartitions.incrementAndGet();
 	}
 
-	int decrementNumberOfRunningProducersAndGetRemaining() {
-		return numberOfRunningProducers.decrementAndGet();
+	public int decrementNumberOfConsumablePartitions() {
+		return numberOfConsumablePartitions.decrementAndGet();
 	}
 
-	boolean isConsumable() {
-		if (resultType.isPipelined()) {
-			return true;
-		}
-		else {
-			return numberOfRunningProducers.get() == 0;
-		}
+	public double getResultConsumablePartitionRatio() {
+		return 1.0 * numberOfConsumablePartitions.get() / numParallelProducers;
 	}
 
 	@Override

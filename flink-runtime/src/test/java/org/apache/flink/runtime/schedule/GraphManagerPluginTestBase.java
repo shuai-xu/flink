@@ -18,8 +18,10 @@
 
 package org.apache.flink.runtime.schedule;
 
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.util.TestLogger;
 
 import java.util.ArrayList;
@@ -45,11 +47,15 @@ public class GraphManagerPluginTestBase extends TestLogger {
 	 */
 	protected static class TestExecutionVertexScheduler implements VertexScheduler {
 
+		private ExecutionGraph executionGraph;
+
 		private Map<ExecutionVertexID, ExecutionVertex> vertices;
 
 		private Collection<ExecutionVertexID> scheduledVertices = new ArrayList<>();
 
-		public TestExecutionVertexScheduler(Collection<ExecutionVertex> evs) {
+		public TestExecutionVertexScheduler(ExecutionGraph eg, Collection<ExecutionVertex> evs) {
+			this.executionGraph = eg;
+
 			this.vertices = new HashMap<>();
 			for (ExecutionVertex ev : evs) {
 				vertices.put(ev.getExecutionVertexID(), ev);
@@ -64,7 +70,20 @@ public class GraphManagerPluginTestBase extends TestLogger {
 		@Override
 		public ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID) {
 			ExecutionVertex ev = vertices.get(executionVertexID);
-			return new ExecutionVertexStatus(executionVertexID, ev.getExecutionState(), ev.isInputDataConsumable());
+			return new ExecutionVertexStatus(executionVertexID, ev.getExecutionState());
+		}
+
+		@Override
+		public ResultPartitionStatus getResultPartitionStatus(IntermediateDataSetID resultID, int partitionNumber) {
+			boolean consumable = executionGraph.getAllIntermediateResults().get(resultID)
+				.getPartitions()[partitionNumber].isConsumable();
+
+			return new ResultPartitionStatus(resultID, partitionNumber, consumable);
+		}
+
+		@Override
+		public double getResultConsumablePartitionRatio(IntermediateDataSetID resultID) {
+			return executionGraph.getAllIntermediateResults().get(resultID).getResultConsumablePartitionRatio();
 		}
 
 		public Collection<ExecutionVertexID> getScheduledVertices() {

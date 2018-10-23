@@ -1046,7 +1046,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 				if (transitionState(current, FINISHED)) {
 					try {
-						getVertex().finishAllBlockingPartitionsAndNotify();
+						getVertex().finishPartitionsAndNotify();
 
 						updateAccumulatorsAndMetrics(userAccumulators, metrics);
 

@@ -36,10 +36,14 @@ public class IntermediateResultPartition {
 
 	private List<List<ExecutionEdge>> consumers;
 
-	/** Whether the data of this partition has been produced. Applicable to pipelined partition only. */
+	/**
+	 * Whether this partition has data produced. For pipelined results only.
+	 */
 	private boolean dataProduced = false;
 
-	/** Whether this partition is finished. Applicable to blocking partition only. */
+	/**
+	 * Whether this partition is finished.
+	 */
 	private boolean isFinished = false;
 
 	public IntermediateResultPartition(IntermediateResult totalResult, ExecutionVertex producer, int partitionNumber) {
@@ -73,7 +77,7 @@ public class IntermediateResultPartition {
 		return partitionId;
 	}
 
-	ResultPartitionType getResultType() {
+	public ResultPartitionType getResultType() {
 		return totalResult.getResultType();
 	}
 
@@ -81,15 +85,19 @@ public class IntermediateResultPartition {
 		return consumers;
 	}
 
-	void resetForNewExecution() {
-		if (getResultType().isBlocking() && isFinished) {
-			isFinished = false;
-			totalResult.incrementNumberOfRunningProducersAndGetRemaining();
+	public void resetForNewExecution() {
+		if (isConsumable()) {
+			getIntermediateResult().decrementNumberOfConsumablePartitions();
 		}
+
+		isFinished = false;
 		dataProduced = false;
 	}
 
 	public void markDataProduced() {
+		if (!isConsumable()) {
+			getIntermediateResult().incrementNumberOfConsumablePartitions();
+		}
 		dataProduced = true;
 	}
 
@@ -98,7 +106,11 @@ public class IntermediateResultPartition {
 	}
 
 	public boolean isConsumable() {
-		return totalResult.isConsumable();
+		if (getResultType().isPipelined()) {
+			return dataProduced;
+		} else {
+			return isFinished;
+		}
 	}
 
 	int addConsumerGroup() {
@@ -117,25 +129,10 @@ public class IntermediateResultPartition {
 		consumers.get(consumerNumber).add(edge);
 	}
 
-	boolean markFinished() {
-		// Sanity check that this is only called on blocking partitions.
-		if (!getResultType().isBlocking()) {
-			throw new IllegalStateException("Tried to mark a non-blocking result partition as finished");
+	public void markFinished() {
+		if (getResultType().isBlocking() && !isConsumable()) {
+			getIntermediateResult().incrementNumberOfConsumablePartitions();
 		}
-
 		isFinished = true;
-
-		final int refCnt = totalResult.decrementNumberOfRunningProducersAndGetRemaining();
-
-		if (refCnt == 0) {
-			return true;
-		}
-		else if (refCnt  < 0) {
-			throw new IllegalStateException("Decremented number of unfinished producers below 0. "
-					+ "This is most likely a bug in the execution state/intermediate result "
-					+ "partition management.");
-		}
-
-		return false;
 	}
 }

@@ -78,7 +78,7 @@ public class EagerSchedulingPluginTest extends GraphManagerPluginTestBase {
 			}
 		}
 
-		final TestExecutionVertexScheduler scheduler = new TestExecutionVertexScheduler(executionVertices);
+		final TestExecutionVertexScheduler scheduler = new TestExecutionVertexScheduler(eg, executionVertices);
 
 		final GraphManagerPlugin graphManagerPlugin = new EagerSchedulingPlugin();
 		graphManagerPlugin.open(

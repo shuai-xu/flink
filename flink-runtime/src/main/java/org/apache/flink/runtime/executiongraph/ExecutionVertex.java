@@ -363,47 +363,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		return resultPartitions;
 	}
 
-	/**
-	 * The input data of a task is consumable when
-	 * 1. it is source task(no input).
-	 * 2. one of its source result partition is PIPELINED and has produced data.
-	 * 3. one of its source result is BLOCKING and is FINISHED.
-	 *
-	 * @return whether the input data of this task is consumable
-	 */
-	public boolean isInputDataConsumable() {
-		// Always true for source vertex
-		if (jobVertex.getJobVertex().isInputVertex()) {
-			return true;
-		}
-
-		for (ExecutionEdge[] edges : inputEdges) {
-			if (edges.length > 0) {
-				// True if any blocking input result is consumable
-				// Take one partition as a shortcut for blocking input consumable checking
-				if (edges[0].getSource().getResultType().isBlocking()) {
-					if (edges[0].getSource().isConsumable()) {
-						return true;
-					} else {
-						break;
-					}
-				}
-
-				// True if any pipelined input result partition has produced records or is finished
-				for (ExecutionEdge edge : edges) {
-					if (edge.getSource().getResultType().isPipelined() &&
-						edge.getSource().hasDataProduced()) {
-						return true;
-					}
-				}
-			}
-		}
-
-		return false;
-	}
-
 	public ExecutionVertexStatus getCurrentStatus() {
-		return new ExecutionVertexStatus(executionVertexID, getExecutionState(), isInputDataConsumable());
+		return new ExecutionVertexStatus(executionVertexID, getExecutionState());
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -696,16 +657,12 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 	/**
 	 * Finish all blocking result partitions whose receivers can be scheduled/updated and notify.
 	 */
-	void finishAllBlockingPartitionsAndNotify() {
-
-		List<IntermediateResult> finishedResults = new ArrayList<>(resultPartitions.size());
+	void finishPartitionsAndNotify() {
 		for (IntermediateResultPartition partition : resultPartitions.values()) {
-			if (partition.getResultType().isBlocking() && partition.markFinished()) {
-				finishedResults.add(partition.getIntermediateResult());
-			}
-		}
-		for (IntermediateResult rs : finishedResults) {
-			for (IntermediateResultPartition partition : rs.getPartitions()) {
+			partition.markFinished();
+
+			// Blocking partitions are consumable on finished
+			if (partition.getResultType().isBlocking()) {
 				notifyAndUpdateConsumers(partition);
 			}
 		}
