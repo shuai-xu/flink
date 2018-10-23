@@ -213,11 +213,11 @@ class UnarySortUpdateRankFunction[K](
             val row: BaseRow = rowkeyState.get(partitionKey, rowkey)
             if (row == null) {
               // state inconsistent between data state and rowkey state
-              throw new TableException(s"[Unary topn] state inconsistent between data state and " +
-                s"rowkey state! Couldn't retrieve row from rowkey state for row key: $rowkey")
+              LOG.warn(s"[Unary topn] state inconsistent between data state and rowkey state! " +
+                         StateUtil.STATE_CLEARED_WARN_MSG)
+            } else {
+              rowKeyMap.put(rowkey, row)
             }
-
-            rowKeyMap.put(rowkey, row)
           }
 
           // the order is preserved
