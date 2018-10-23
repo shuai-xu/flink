@@ -1,0 +1,72 @@
+== Abstract Syntax Tree ==
+LogicalProject(total_sum=[AS($0, 'total_sum')])
+  LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+    LogicalProject(a=[$0])
+      LogicalUnion(all=[true])
+        LogicalProject(a=[$0], c=[$2])
+          LogicalTableScan(table=[[t1]])
+        LogicalProject(d=[$0], f=[$2])
+          LogicalTableScan(table=[[t2]])
+
+== Optimized Logical Plan ==
+[[Sink]]
+StreamExecCalc(select=[TMP_0 AS total_sum])
+  StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+    StreamExecExchange(distribution=[single])
+      StreamExecUnion(all=[true], union all=[a])
+        StreamExecCalc(select=[a])
+          StreamExecScan(table=[[t1]])
+        StreamExecCalc(select=[d])
+          StreamExecScan(table=[[t2]])
+StreamExecCalc(retract=[true], accMode=[AccRetract])
+  StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
+    StreamExecExchange(retract=[true], accMode=[Acc])
+      StreamExecUnion(retract=[true], accMode=[Acc])
+        StreamExecCalc(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
+        StreamExecCalc(retract=[true], accMode=[Acc])
+          StreamExecScan(retract=[true], accMode=[Acc])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[t1], fields:(a, b, c))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : Calc(select: (a))
+			ship_strategy : FORWARD
+
+			 : Operator
+				content : SourceConversion(table:[t2], fields:(d, e, f))
+				ship_strategy : FORWARD
+
+				 : Operator
+					content : Calc(select: (d))
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : GroupAggregate(select: (SUM(a) AS TMP_0))
+						ship_strategy : GLOBAL
+
+						 : Operator
+							content : Calc(select: (TMP_0 AS total_sum))
+							ship_strategy : FORWARD
+
+							 : Operator
+								content : SinkConversion to Tuple2
+								ship_strategy : FORWARD
+
+								 : Operator
+									content : Map
+									ship_strategy : FORWARD
+
+									 : Data Sink
+										content : Sink: TestingRetractTableSink
+										ship_strategy : FORWARD
+

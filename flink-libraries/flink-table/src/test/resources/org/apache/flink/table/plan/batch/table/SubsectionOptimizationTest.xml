@@ -83,6 +83,344 @@ Calc(select=[TMP_1 AS total_min])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion1">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[SmallTable1]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[IntermediateTable=_DataStreamTable_2]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+
+[[IntermediateTable=_DataStreamTable_3]]
+Calc(select=[d, f])
++- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+
+[[Sink]]
+Calc(select=[TMP_1 AS total_min])
++- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion2">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[SmallTable1]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[IntermediateTable=_DataStreamTable_2]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+
+[[IntermediateTable=_DataStreamTable_3]]
+Calc(select=[d, f])
++- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+
+[[Sink]]
+Calc(select=[TMP_1 AS total_min])
++- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion3">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[SmallTable2]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[SmallTable2]])
+
+LogicalProject(a=[$0])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], c=[$2])
+   :  +- LogicalTableScan(table=[[SmallTable3]])
+   +- LogicalProject(d=[$0], f=[$2])
+      +- LogicalTableScan(table=[[SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[IntermediateTable=_DataStreamTable_3]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+
+[[IntermediateTable=_DataStreamTable_4]]
+Calc(select=[d, f])
++- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+
+[[IntermediateTable=_DataStreamTable_5]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Union(all=[true], union=[a, c])
+               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+
+[[Sink]]
+Calc(select=[TMP_1 AS total_min])
++- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Union(all=[true], union=[a, c])
+               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+
+[[Sink]]
+Calc(select=[a])
++- Union(all=[true], union=[a, c])
+   :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+   +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion4">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], c=[$2])
+   :  +- LogicalTableScan(table=[[SmallTable3]])
+   +- LogicalProject(d=[$0], f=[$2])
+      +- LogicalTableScan(table=[[SmallTable1]])
+
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[SmallTable2]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[SmallTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[IntermediateTable=_DataStreamTable_3]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+
+[[IntermediateTable=_DataStreamTable_4]]
+Calc(select=[d, f])
++- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+
+[[Sink]]
+Calc(select=[a])
++- Union(all=[true], union=[a, c])
+   :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+   +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+
+[[IntermediateTable=_DataStreamTable_5]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Union(all=[true], union=[a, c])
+               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+
+[[Sink]]
+Calc(select=[TMP_1 AS total_min])
++- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Union(all=[true], union=[a, c])
+               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion5">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[SmallTable2]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[SmallTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[IntermediateTable=_DataStreamTable_3]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+
+[[IntermediateTable=_DataStreamTable_4]]
+Calc(select=[d, f])
++- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+
+[[IntermediateTable=_DataStreamTable_5]]
+Calc(select=[a, c])
++- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Union(all=[true], union=[a, c])
+               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+
+[[Sink]]
+Calc(select=[TMP_1 AS total_min])
++- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS TMP_1])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Union(all=[true], union=[a, c])
+               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSingleSink1">
     <Resource name="planBefore">
       <![CDATA[
@@ -148,6 +486,64 @@ Calc(select=[a1, b, c1])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[a AS a2], where=[>=(b, 5)])
                +- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSinkSplitOnUnion1">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Calc(select=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+               +- Calc(select=[d, f])
+                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSinkSplitOnUnion2">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+[[Sink]]
+Calc(select=[TMP_0 AS total_sum])
++- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0])
+   +- Exchange(distribution=[single])
+      +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
+         +- Calc(select=[a])
+            +- Union(all=[true], union=[a, c])
+               :- Calc(select=[a, c])
+               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+               +- Calc(select=[d, f])
+                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>

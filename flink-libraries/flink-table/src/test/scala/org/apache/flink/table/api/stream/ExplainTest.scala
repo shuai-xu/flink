@@ -22,8 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
-import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink,
-  TestingRetractTableSink, TestingUpsertTableSink}
+import org.apache.flink.table.runtime.utils.{StreamTestData, TestingAppendTableSink, TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.TableFunc1
 import org.apache.flink.test.util.AbstractTestBase
@@ -310,6 +309,7 @@ class ExplainTest extends AbstractTestBase {
   def testMultiLevelViewForSQL(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
+    conf.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -352,6 +352,7 @@ class ExplainTest extends AbstractTestBase {
   def testSharedUnionNode(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
+    conf.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
@@ -417,6 +418,180 @@ class ExplainTest extends AbstractTestBase {
     val actual = replaceString(tEnv.explain())
 
     val source = readFromResource("testSubsectionOptimizationWithUdtf.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+
+  @Test
+  def testMultiSinksSplitOnUnion1(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+
+    val t1 = tEnv.scan("t1").select('a, 'c)
+    val t2 = tEnv.scan("t2").select('d, 'f)
+    val table = t1.unionAll(t2)
+    val result1 = table.select('a.sum as 'total_sum)
+    val result2 = table.select('a.min as 'total_min)
+    result1.writeToSink(new TestingUpsertTableSink(Array()))
+    result2.writeToSink(new TestingRetractTableSink)
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testMultiSinksSplitOnUnion1.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testMultiSinksSplitOnUnion2(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+
+    val t1 = tEnv.scan("t1")
+    val t2 = tEnv.scan("t2")
+
+    val query = "SELECT a, c FROM t1  union all SELECT d, f FROM t2"
+    val table = tEnv.sqlQuery(query)
+    val result1 = table.select('a.sum as 'total_sum)
+    val result2 = table.select('a.min as 'total_min)
+    result1.writeToSink(new TestingUpsertTableSink(Array()))
+    result2.writeToSink(new TestingRetractTableSink)
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testMultiSinksSplitOnUnion2.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testMultiSinksSplitOnUnion3(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+    tEnv.registerDataStream("t3", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+
+    val t1 = tEnv.scan("t1")
+    val t2 = tEnv.scan("t2")
+    val t3 = tEnv.scan("t3")
+    val table = t1.unionAll(t2).unionAll(t3)
+    val result1 = table.select('a.sum as 'total_sum)
+    val result2 = table.select('a.min as 'total_min)
+    val result3 = t1.unionAll(t2).select('a)
+    result1.writeToSink(new TestingUpsertTableSink(Array()))
+    result2.writeToSink(new TestingRetractTableSink)
+    result3.writeToSink(new TestingUpsertTableSink(Array()))
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testMultiSinksSplitOnUnion3.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testMultiSinksSplitOnUnion4(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+    tEnv.registerDataStream("t3", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+
+
+    val query = "SELECT a, c FROM t1 union all SELECT d, f FROM t2 "
+    val table = tEnv.sqlQuery(query)
+    val table2 = table.unionAll(tEnv.sqlQuery("select a, c from t3"))
+    val result1 = table.select('a)
+    val result2 = table2.select('a.sum as 'total_sum)
+    val result3 = table2.select('a.min as 'total_min)
+    result1.writeToSink(new TestingAppendTableSink)
+    result2.writeToSink(new TestingRetractTableSink)
+    result3.writeToSink(new TestingUpsertTableSink(Array()))
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testMultiSinksSplitOnUnion4.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testMultiSinksSplitOnUnion5(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+    tEnv.registerDataStream("t3", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+
+    val query = "SELECT a, c FROM t1 union all SELECT d, f FROM t2 " +
+      "union all select a, c from t3"
+    val table = tEnv.sqlQuery(query)
+    val result1 = table.select('a.sum as 'total_sum)
+    val result2 = table.select('a.min as 'total_min)
+    result1.writeToSink(new TestingUpsertTableSink(Array()))
+    result2.writeToSink(new TestingRetractTableSink)
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testMultiSinksSplitOnUnion5.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testSingleSinkSplitOnUnion1(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+
+    val scan1 = tEnv.scan("t1").select('a, 'c)
+    val scan2 = tEnv.scan("t2").select('d, 'f)
+    val table = scan1.unionAll(scan2)
+    val result = table.select('a.sum as 'total_sum)
+    result.writeToSink(new TestingRetractTableSink)
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testSingleSinkSplitOnUnion1.out")
+    val expected = replaceString(source)
+    assertEquals(expected, actual)
+  }
+
+  @Test
+  def testSingleSinkSplitOnUnion2(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.getConfig.forbidUnionAllAsBreakPointInSubsectionOptimization(true)
+
+    tEnv.registerDataStream("t1", StreamTestData.get3TupleDataStream(env), 'a, 'b, 'c)
+    tEnv.registerDataStream("t2", StreamTestData.getSmall3TupleDataStream(env), 'd, 'e, 'f)
+    val query = "SELECT a, c FROM t1  union all SELECT d, f FROM t2"
+    val table = tEnv.sqlQuery(query)
+    val result = table.select('a.sum as 'total_sum)
+    result.writeToSink(new TestingRetractTableSink)
+
+    val actual = replaceString(tEnv.explain())
+    val source = readFromResource("testSingleSinkSplitOnUnion2.out")
     val expected = replaceString(source)
     assertEquals(expected, actual)
   }

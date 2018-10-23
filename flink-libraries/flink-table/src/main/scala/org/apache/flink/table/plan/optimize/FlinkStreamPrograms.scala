@@ -235,7 +235,7 @@ object FlinkStreamPrograms {
     programs.addLast(
       POST,
       FlinkDecorateProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
         .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
         .add(FlinkStreamExecRuleSets.POST)
         .build())

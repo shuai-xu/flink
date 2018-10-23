@@ -356,6 +356,9 @@ object FlinkStreamExecRuleSets {
     StreamExecPushProjectIntoCorrelateRule.INSTANCE,
     //optimize agg rule
     TwoStageOptimizedAggregateRule.INSTANCE,
-    LocalAggSetOpTransposeRule.INSTANCE
+    StreamUnionTransposeRule.LOCAL_GROUP_AGG_INSTANCE,
+    StreamUnionTransposeRule.EXPAND_INSTANCE,
+    StreamUnionTransposeRule.CALC_INSTANCE,
+    CalcMergeRule.INSTANCE
   )
 }

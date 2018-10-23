@@ -90,26 +90,48 @@ object LogicalNodeBlockPlanBuilder {
     }
 
     /**
-      * Traverses recursively from sink node to source node. Creates a new [[LogicalNodeBlock]] if
-      * meets a [[LogicalNode]] which is a [[SinkNode]] or has more than one parent nodes.
+      * Traverses recursively from sink node to source node. Creates a new [[LogicalNodeBlock]]
+      * under the following circumstances:
+      * 1. meets a [[LogicalNode]] which is a [[SinkNode]].
+      * 2. meets a [[LogicalNode]] which has more than one parent nodes. Note: if current node is
+      *    union all node, but unionAll is forbidden as break point based on config,
+      *    try to create a new [[LogicalNodeBlock]] for it's children instead of
+      *    create a new [[LogicalNodeBlock]] for current union node.
       */
     private def buildBlockPlan(
         node: LogicalNode,
-        block: Option[LogicalNodeBlock]): LogicalNodeBlock = {
+        block: Option[LogicalNodeBlock],
+        createNewBlockForChildren: Boolean = false): LogicalNodeBlock = {
 
       val currentBlock = block match {
         case Some(b) => b
         case None => node2Block.getOrElseUpdate(node, new LogicalNodeBlock(node, tEnv))
       }
 
+      val forbidUnionAllAsBreakPoint = tEnv.config
+                                       .isForbidUnionAllAsBreakPointInSubsectionOptimization
+
       node match {
         case LogicalRelNode(rel) =>
-          relNodeBlockBuilder.buildBlock(rel, currentBlock)
+          relNodeBlockBuilder.buildBlock(
+            rel,
+            currentBlock,
+            createNewBlock = false,
+            createNewBlockForChildren = createNewBlockForChildren)
         case _ =>
           node
-            .children
-            .foreach(child =>
-              if (node2Wrapper(child).hasMultipleParents) {
+          .children
+          .foreach(child => {
+            val childHasMultipleParents = node2Wrapper(child).hasMultipleParents
+            if (isUnionAllNode(child) && forbidUnionAllAsBreakPoint) {
+              val createNewBlockForChildrenOfChild = if (childHasMultipleParents) {
+                true
+              } else {
+                createNewBlockForChildren
+              }
+              buildBlockPlan(child, Some(currentBlock), createNewBlockForChildrenOfChild)
+            } else {
+              if (createNewBlockForChildren || childHasMultipleParents) {
                 val childBlock = node2Block.getOrElseUpdate(
                   child,
                   new LogicalNodeBlock(child, tEnv)
@@ -119,9 +141,21 @@ object LogicalNodeBlockPlanBuilder {
               } else {
                 buildBlockPlan(child, Some(currentBlock))
               }
-            )
+            }
+          })
       }
       currentBlock
+    }
+
+    private def isUnionAllNode(node: LogicalNode): Boolean = {
+      node match {
+        case LogicalRelNode(rel) => rel match {
+          case unionRel: org.apache.calcite.rel.core.Union => unionRel.all
+          case _ => false
+        }
+        case union: Union => union.all
+        case _ => false
+      }
     }
   }
 
@@ -208,8 +242,54 @@ object LogicalNodeBlockPlanBuilder {
     val blocks: mutable.ArrayBuffer[(RelNode, LogicalNodeBlock)] =
       new mutable.ArrayBuffer[(RelNode, LogicalNodeBlock)]()
 
-    def buildBlock(node: RelNode, currentBlock: LogicalNodeBlock): Unit = {
-      val relNode = node match {
+    val forbidUnionAllAsBreakPoint = tEnv.config
+                                     .isForbidUnionAllAsBreakPointInSubsectionOptimization
+
+    def buildBlock(
+      node: RelNode,
+      currentBlock: LogicalNodeBlock,
+      createNewBlock: Boolean = false,
+      createNewBlockForChildren: Boolean = false): Unit = {
+      val relNode = convertToRelNode(node)
+      val wrapper = relNodeWrapperVisitor.get(relNode)
+      val hasMultipleParents = wrapper.isDefined && wrapper.get.hasMultipleParents
+      if (isUnionAllNode(relNode) && forbidUnionAllAsBreakPoint) {
+        // Does not create new block for union all node, delay the creation operation to its inputs.
+        val createNewBlockForUnionChildren = if (hasMultipleParents) {
+          true
+        } else {
+          createNewBlockForChildren || createNewBlock
+        }
+        visitChildren(relNode, currentBlock, createNewBlockForUnionChildren)
+      } else {
+        if (createNewBlock || hasMultipleParents) {
+          val childBlock = getOrCreate(relNode)
+          currentBlock.addChild(childBlock)
+          visitChildren(relNode, childBlock, createNewBlockForChildren)
+        } else {
+          visitChildren(relNode, currentBlock, createNewBlockForChildren)
+        }
+      }
+    }
+
+    def visitChildren(
+        node: RelNode,
+        currentBlock: LogicalNodeBlock,
+        createNewBlockForChildren: Boolean = false): Unit = {
+      val relNode = convertToRelNode(node)
+      relNode match {
+        case s: SingleRel =>
+          buildBlock(s.getInput, currentBlock, createNewBlockForChildren)
+        case b: BiRel =>
+          buildBlock(b.getLeft, currentBlock, createNewBlockForChildren)
+          buildBlock(b.getRight, currentBlock, createNewBlockForChildren)
+        case _ =>
+          relNode.getInputs.foreach(buildBlock(_, currentBlock, createNewBlockForChildren))
+      }
+    }
+
+    private def convertToRelNode(node: RelNode): RelNode = {
+      node match {
         case scan: LogicalTableScan =>
           val relTable = scan.getTable.unwrap(classOf[RelTable])
           if (relTable != null) {
@@ -219,26 +299,6 @@ object LogicalNodeBlockPlanBuilder {
           }
         case _ =>
           node
-      }
-      val wrapper = relNodeWrapperVisitor.get(relNode)
-      if (wrapper.isDefined && wrapper.get.hasMultipleParents) {
-        val childBlock = getOrCreate(relNode)
-        currentBlock.addChild(childBlock)
-        visitChildren(relNode, childBlock)
-      } else {
-        visitChildren(relNode, currentBlock)
-      }
-    }
-
-    def visitChildren(node: RelNode, currentBlock: LogicalNodeBlock): Unit = {
-      node match {
-        case s: SingleRel =>
-          buildBlock(s.getInput, currentBlock)
-        case b: BiRel =>
-          buildBlock(b.getLeft, currentBlock)
-          buildBlock(b.getRight, currentBlock)
-        case _ =>
-          node.getInputs.foreach(buildBlock(_, currentBlock))
       }
     }
 
@@ -253,6 +313,10 @@ object LogicalNodeBlockPlanBuilder {
       block
     }
 
+    private def isUnionAllNode(node: RelNode): Boolean = node match {
+      case unionRel: org.apache.calcite.rel.core.Union => unionRel.all
+      case _ => false
+    }
   }
 
 }

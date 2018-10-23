@@ -275,6 +275,23 @@ class TableConfig {
     this.subsectionOptimization = subsectionOptimization
   }
 
+  /**
+    * Returns whether union all is forbidden as breakpoint in subsection optimization.
+    */
+  def isForbidUnionAllAsBreakPointInSubsectionOptimization: Boolean =
+    parameters.getBoolean(SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION,
+                          SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION_DEFAULT)
+
+  /**
+    * Sets whether to forbid union all as breakpoint in subsection optimization. If flag is true,
+    * does not create new [[org.apache.flink.table.plan.LogicalNodeBlock]] at union node even if it
+    * has multiple parents, create new [[org.apache.flink.table.plan.LogicalNodeBlock]] at input
+    * nodes of union node which has multiple parents.
+    */
+  def forbidUnionAllAsBreakPointInSubsectionOptimization(flag: Boolean): Unit = {
+    parameters.setBoolean(SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION, flag)
+  }
+
   def enabledGivenOpType(operator: OperatorType): Boolean = {
     val disableOperators = parameters.getString(
       SQL_PHYSICAL_OPERATORS_DISABLED, SQL_PHYSICAL_OPERATORS_DISABLED_DEFAULT)
@@ -898,4 +915,11 @@ object TableConfig {
     */
   val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE = "sql.exec.sink.parquet.dictionary.enable"
   val SQL_EXEC_SINK_PARQUET_DICTIONARY_ENABLE_DEFAULT: Boolean = true
+
+  /**
+    * Forbid union all as breakpoint in subsection optimization. Default is false.
+    */
+  val SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION =
+    "sql.forbid.unionall.as.breakpoint.in.subsection.optimization"
+  val SQL_FORBID_UNIONALL_AS_BREAKPOINT_IN_SUBSECTION_OPTIMIZATION_DEFAULT: Boolean = false
 }

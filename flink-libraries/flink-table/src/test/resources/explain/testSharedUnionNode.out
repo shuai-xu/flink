@@ -16,51 +16,63 @@ LogicalProject(num=[$0], cnt=[$1])
     LogicalTableScan(table=[[T4]])
 
 == Optimized Logical Plan ==
-[[IntermediateTable=_DataStreamTable_3]]
+[[IntermediateTable=_DataStreamTable_4]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')])
   StreamExecScan(table=[[T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
   StreamExecScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
-StreamExecScan(table=[[_DataStreamTable_3]])
+StreamExecScan(table=[[_DataStreamTable_4]])
 StreamExecScan(retract=[false], accMode=[Acc])
 
-[[IntermediateTable=_DataStreamTable_4]]
-StreamExecUnion(all=[true], union all=[id, num, text])
-  StreamExecScan(table=[[_DataStreamTable_3]])
-  StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
-    StreamExecScan(table=[[T]])
-StreamExecUnion(retract=[true], accMode=[Acc])
-  StreamExecScan(retract=[true], accMode=[Acc])
-  StreamExecCalc(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+[[IntermediateTable=_DataStreamTable_5]]
+StreamExecScan(table=[[_DataStreamTable_4]])
+StreamExecScan(retract=[true], accMode=[Acc])
 
-[[Sink]]
-StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-  StreamExecScan(table=[[_DataStreamTable_4]])
+[[IntermediateTable=_DataStreamTable_6]]
+StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
+  StreamExecScan(table=[[T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
   StreamExecScan(retract=[true], accMode=[Acc])
 
-[[IntermediateTable=_DataStreamTable_5]]
+[[Sink]]
+StreamExecUnion(all=[true], union all=[id, num, text])
+  StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
+    StreamExecScan(table=[[_DataStreamTable_5]])
+  StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
+    StreamExecScan(table=[[_DataStreamTable_6]])
+StreamExecUnion(retract=[true], accMode=[Acc])
+  StreamExecCalc(retract=[true], accMode=[Acc])
+    StreamExecScan(retract=[true], accMode=[Acc])
+  StreamExecCalc(retract=[true], accMode=[Acc])
+    StreamExecScan(retract=[true], accMode=[Acc])
+
+[[IntermediateTable=_DataStreamTable_7]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
-    StreamExecCalc(select=[num, id])
-      StreamExecScan(table=[[_DataStreamTable_4]])
+    StreamExecUnion(all=[true], union all=[num, id])
+      StreamExecCalc(select=[num, id])
+        StreamExecScan(table=[[_DataStreamTable_5]])
+      StreamExecCalc(select=[num, id])
+        StreamExecScan(table=[[_DataStreamTable_6]])
 StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecUnion(retract=[true], accMode=[Acc])
+      StreamExecCalc(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecCalc(retract=[true], accMode=[Acc])
+        StreamExecScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-  StreamExecScan(table=[[_DataStreamTable_5]])
+  StreamExecScan(table=[[_DataStreamTable_7]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
   StreamExecScan(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-  StreamExecScan(table=[[_DataStreamTable_5]])
+  StreamExecScan(table=[[_DataStreamTable_7]])
 StreamExecCalc(retract=[false], accMode=[AccRetract])
   StreamExecScan(retract=[false], accMode=[AccRetract])
 
@@ -93,50 +105,58 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
 							ship_strategy : FORWARD
 
 							 : Operator
-								content : SinkConversion to Tuple2
+								content : Calc(where: (num >= 5), select: (id, num, text))
 								ship_strategy : FORWARD
 
 								 : Operator
-									content : Map
+									content : SinkConversion to Tuple2
 									ship_strategy : FORWARD
 
 									 : Operator
-										content : Calc(select: (num, id))
+										content : Map
 										ship_strategy : FORWARD
 
 										 : Operator
-											content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
-											ship_strategy : HASH
+											content : Calc(select: (num, id))
+											ship_strategy : FORWARD
 
 											 : Operator
-												content : Calc(where: (num < 4), select: (num, cnt))
+												content : Calc(select: (num, id))
 												ship_strategy : FORWARD
 
 												 : Operator
-													content : SinkConversion to Tuple2
-													ship_strategy : FORWARD
+													content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
+													ship_strategy : HASH
 
 													 : Operator
-														content : Map
+														content : Calc(where: (num < 4), select: (num, cnt))
 														ship_strategy : FORWARD
 
 														 : Operator
-															content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
+															content : SinkConversion to Tuple2
 															ship_strategy : FORWARD
 
-															 : Data Sink
-																content : Sink: TestingAppendTableSink
+															 : Operator
+																content : Map
 																ship_strategy : FORWARD
 
-																 : Data Sink
-																	content : Sink: TestingRetractTableSink
+																 : Operator
+																	content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 																	ship_strategy : FORWARD
 
 																	 : Data Sink
-																		content : Sink: TestingRetractTableSink
+																		content : Sink: TestingAppendTableSink
 																		ship_strategy : FORWARD
 
 																		 : Data Sink
-																			content : Sink: TestingUpsertTableSink(keys=())
+																			content : Sink: TestingRetractTableSink
 																			ship_strategy : FORWARD
+
+																			 : Data Sink
+																				content : Sink: TestingRetractTableSink
+																				ship_strategy : FORWARD
+
+																				 : Data Sink
+																					content : Sink: TestingUpsertTableSink(keys=())
+																					ship_strategy : FORWARD
 
