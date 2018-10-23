@@ -309,4 +309,11 @@ public class CoreOptions {
 	public static final ConfigOption<String> MODE = key("mode")
 		.defaultValue(NEW_MODE)
 		.withDescription("Switch to select the execution mode. Possible values are 'new' and 'legacy'.");
+
+	/**
+	 * Disable uploading the user jars.
+	 * In sql cases the main class has been stored in job graph.
+	 */
+	public static final ConfigOption<Boolean> DISABLE_UPLOAD_USER_JARS =
+			key("user-jars.upload.disabled").defaultValue(false);
 }

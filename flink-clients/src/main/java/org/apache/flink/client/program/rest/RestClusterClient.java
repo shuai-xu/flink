@@ -30,6 +30,7 @@ import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.client.program.rest.retry.ExponentialWaitStrategy;
 import org.apache.flink.client.program.rest.retry.WaitStrategy;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.client.JobSubmissionException;
@@ -330,9 +331,13 @@ public class RestClusterClient<T> extends ClusterClient<T> implements NewCluster
 
 			filesToUpload.add(new FileUpload(jobGraphFile, RestConstants.CONTENT_TYPE_BINARY));
 
-			for (Path jar : jobGraph.getUserJars()) {
-				jarFileNames.add(jar.getName());
-				filesToUpload.add(new FileUpload(Paths.get(jar.toUri()), RestConstants.CONTENT_TYPE_JAR));
+			if (flinkConfig.getBoolean(CoreOptions.DISABLE_UPLOAD_USER_JARS)) {
+				log.info("Uploading user-jars is disabled");
+			} else {
+				for (Path jar : jobGraph.getUserJars()) {
+					jarFileNames.add(jar.getName());
+					filesToUpload.add(new FileUpload(Paths.get(jar.toUri()), RestConstants.CONTENT_TYPE_JAR));
+				}
 			}
 
 			final JobSubmitRequestBody requestBody = new JobSubmitRequestBody(
