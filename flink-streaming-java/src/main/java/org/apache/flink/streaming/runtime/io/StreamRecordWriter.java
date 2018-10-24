@@ -21,6 +21,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
+import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
 
 import java.io.IOException;
 
@@ -54,7 +55,7 @@ public class StreamRecordWriter<T> extends RecordWriter<T> {
 			ChannelSelector<T> channelSelector,
 			long timeout,
 			String taskName) {
-		super(writer, channelSelector, timeout == 0);
+		super(writer, channelSelector, channelSelector instanceof BroadcastPartitioner, timeout == 0);
 
 		checkArgument(timeout >= -1);
 

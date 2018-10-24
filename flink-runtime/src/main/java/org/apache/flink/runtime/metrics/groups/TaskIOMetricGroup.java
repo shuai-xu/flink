@@ -40,6 +40,7 @@ import java.util.List;
 public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 
 	private final Counter numBytesOut;
+	private final Counter numBuffersOut;
 	private final Counter numBytesInLocal;
 	private final Counter numBytesInRemote;
 	private final SumCounter numRecordsIn;
@@ -55,6 +56,7 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 		super(parent);
 
 		this.numBytesOut = counter(MetricNames.IO_NUM_BYTES_OUT);
+		this.numBuffersOut = counter(MetricNames.IO_NUM_BUFFERS_OUT);
 		this.numBytesInLocal = counter(MetricNames.IO_NUM_BYTES_IN_LOCAL);
 		this.numBytesInRemote = counter(MetricNames.IO_NUM_BYTES_IN_REMOTE);
 		this.numBytesOutRate = meter(MetricNames.IO_NUM_BYTES_OUT_RATE, new MeterView(numBytesOut, 60));
@@ -75,6 +77,10 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 	// ============================================================================================
 	public Counter getNumBytesOutCounter() {
 		return numBytesOut;
+	}
+
+	public Counter getNumBuffersOutCounter() {
+		return numBuffersOut;
 	}
 
 	public Counter getNumBytesInLocalCounter() {

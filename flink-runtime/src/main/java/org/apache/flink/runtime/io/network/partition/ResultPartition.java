@@ -82,6 +82,8 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 
 	protected Counter numBytesOut = new SimpleCounter();
 
+	protected Counter numBuffersOut = new SimpleCounter();
+
 	protected TypeSerializer typeSerializer;
 
 	protected SerializationDelegate serializationDelegate;
@@ -188,5 +190,6 @@ public abstract class ResultPartition<T> implements ResultPartitionWriter<T> {
 	@Override
 	public void setMetricGroup(TaskIOMetricGroup metrics) {
 		numBytesOut = metrics.getNumBytesOutCounter();
+		numBuffersOut = metrics.getNumBuffersOutCounter();
 	}
 }

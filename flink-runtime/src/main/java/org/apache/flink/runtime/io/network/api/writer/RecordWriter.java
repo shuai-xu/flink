@@ -52,6 +52,8 @@ public class RecordWriter<T> {
 
 	private final boolean flushAlways;
 
+	private final boolean isBroadcast;
+
 	public RecordWriter(ResultPartitionWriter writer) {
 		this(writer, new RoundRobinChannelSelector<T>());
 	}
@@ -62,6 +64,11 @@ public class RecordWriter<T> {
 	}
 
 	public RecordWriter(ResultPartitionWriter writer, ChannelSelector<T> channelSelector, boolean flushAlways) {
+		this(writer, channelSelector, false, flushAlways);
+	}
+
+	public RecordWriter(ResultPartitionWriter writer, ChannelSelector<T> channelSelector, boolean isBroadcast, boolean flushAlways) {
+		this.isBroadcast = isBroadcast;
 		this.flushAlways = flushAlways;
 		this.targetPartition = writer;
 		this.channelSelector = channelSelector;
@@ -74,7 +81,7 @@ public class RecordWriter<T> {
 
 	public void emit(T record) throws IOException, InterruptedException {
 		int[] targetChannels = channelSelector.selectChannels(record, numChannels);
-		targetPartition.addRecord(record, targetChannels, flushAlways);
+		targetPartition.emitRecord(record, targetChannels, isBroadcast, flushAlways);
 	}
 
 	/**
@@ -82,15 +89,15 @@ public class RecordWriter<T> {
 	 * the {@link ChannelSelector}.
 	 */
 	public void broadcastEmit(T record) throws IOException, InterruptedException {
-		targetPartition.addRecord(record, allChannels, flushAlways);
+		targetPartition.emitRecord(record, allChannels, isBroadcast, flushAlways);
 	}
 
 	/**
 	 * This is used to send LatencyMarks to a random target channel.
 	 */
 	public void randomEmit(T record) throws IOException, InterruptedException {
-		int[] targetChannels = new int[] {rng.nextInt(numChannels)};
-		targetPartition.addRecord(record, targetChannels, flushAlways);
+		int targetChannel = rng.nextInt(numChannels);
+		targetPartition.emitRecord(record, targetChannel, isBroadcast, flushAlways);
 	}
 
 	public void broadcastEvent(AbstractEvent event) throws IOException {

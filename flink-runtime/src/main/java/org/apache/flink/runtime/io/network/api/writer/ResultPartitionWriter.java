@@ -43,9 +43,20 @@ public interface ResultPartitionWriter<T> {
 	 *
 	 * @param record         The record to write.
 	 * @param targetChannels The target channels.
+	 * @param isBroadcast    Whether broadcast or not.
 	 * @param flushAlways  Whether flush or not.
 	 */
-	void addRecord(T record, int[] targetChannels, boolean flushAlways) throws IOException, InterruptedException;
+	void emitRecord(T record, int[] targetChannels, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException;
+
+	/**
+	 * Adds a record to a random channel.
+	 *
+	 * @param record         The record to write.
+	 * @param targetChannel The target channel.
+	 * @param flushAlways  Whether flush or not.
+	 */
+	void emitRecord(T record, int targetChannel, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException;
+
 
 	/**
 	 * Broadcasts an event to all subpartitions.

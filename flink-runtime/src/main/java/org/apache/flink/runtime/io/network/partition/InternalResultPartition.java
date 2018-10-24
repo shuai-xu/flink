@@ -183,24 +183,53 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	// ------------------------------------------------------------------------
 
 	@Override
-	public void addRecord(T record, int[] targetChannels, boolean flushAlways) throws IOException, InterruptedException {
+	public void emitRecord(T record, int[] targetChannels, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException {
 		serializationDelegate.setInstance(record);
 
 		serializer.serializeRecord(serializationDelegate);
 
-		for (int targetChannel : targetChannels) {
-			copyToTarget(targetChannel, flushAlways);
+		boolean pruneAfterCopying = false;
+
+		if (isBroadcast) {
+			pruneAfterCopying = copyFromSerializerToTargetChannel(0, true, flushAlways);
+		} else {
+			for (int channel : targetChannels) {
+				if (copyFromSerializerToTargetChannel(channel, false, flushAlways)) {
+					pruneAfterCopying = true;
+				}
+			}
 		}
 
 		// Make sure we don't hold onto the large intermediate serialization buffer for too long
-		serializer.prune();
+		if (pruneAfterCopying) {
+			serializer.prune();
+		}
+	}
+
+	@Override
+	public void emitRecord(T record, int targetChannel, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException {
+		serializationDelegate.setInstance(record);
+
+		serializer.serializeRecord(serializationDelegate);
+
+		if (isBroadcast) {
+			tryFinishCurrentBufferBuilder(targetChannel, true);
+		}
+
+		if (copyFromSerializerToTargetChannel(targetChannel, isBroadcast, flushAlways)) {
+			serializer.prune();
+		}
+
+		if (isBroadcast) {
+			tryFinishCurrentBufferBuilder(targetChannel, true);
+		}
 	}
 
 	@Override
 	public void broadcastEvent(AbstractEvent event, boolean flushAlways) throws IOException {
 		try (BufferConsumer eventBufferConsumer = EventSerializer.toBufferConsumer(event)) {
 			for (int targetChannel = 0; targetChannel < numberOfSubpartitions; targetChannel++) {
-				tryFinishCurrentBufferBuilder(targetChannel);
+				tryFinishCurrentBufferBuilder(targetChannel, false);
 
 				// Retain the buffer so that it can be recycled by each channel of targetPartition
 				addBufferConsumer(eventBufferConsumer.copy(), targetChannel);
@@ -391,12 +420,25 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	}
 
 	@Nonnull
-	private BufferBuilder requestNewBufferBuilder(int targetChannel) throws IOException, InterruptedException {
-		checkState(!bufferBuilders[targetChannel].isPresent());
+	private BufferBuilder requestNewBufferBuilder(int targetChannel, boolean isBroadcast) throws IOException, InterruptedException {
+		checkState(!bufferBuilders[targetChannel].isPresent() || bufferBuilders[targetChannel].get().isFinished());
 
 		BufferBuilder bufferBuilder = getBufferProvider().requestBufferBuilderBlocking();
-		bufferBuilders[targetChannel] = Optional.of(bufferBuilder);
-		addBufferConsumer(bufferBuilder.createBufferConsumer(), targetChannel);
+		if (isBroadcast) {
+			BufferConsumer bufferConsumer = bufferBuilder.createBufferConsumer();
+			addBufferConsumer(bufferConsumer, 0);
+			bufferBuilders[0] = Optional.of(bufferBuilder);
+
+			// copy the buffer consumer to other channels
+			for (int channel = 1; channel < numberOfSubpartitions; channel++) {
+				checkState(!bufferBuilders[channel].isPresent() || bufferBuilders[channel].get().isFinished());
+				addBufferConsumer(bufferConsumer.copy(), channel);
+				bufferBuilders[channel] = Optional.of(bufferBuilder);
+			}
+		} else {
+			addBufferConsumer(bufferBuilder.createBufferConsumer(), targetChannel);
+			bufferBuilders[targetChannel] = Optional.of(bufferBuilder);
+		}
 
 		return bufferBuilder;
 	}
@@ -406,54 +448,72 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	 * request a new one for this target channel.
 	 */
 	@Nonnull
-	private BufferBuilder getBufferBuilder(int targetChannel) throws IOException, InterruptedException {
-		if (bufferBuilders[targetChannel].isPresent()) {
+	private BufferBuilder getBufferBuilder(int targetChannel, boolean isBroadcast) throws IOException, InterruptedException {
+		if (bufferBuilders[targetChannel].isPresent() && !bufferBuilders[targetChannel].get().isFinished()) {
 			return bufferBuilders[targetChannel].get();
 		} else {
-			return requestNewBufferBuilder(targetChannel);
+			return requestNewBufferBuilder(targetChannel, isBroadcast);
 		}
 	}
 
 	/**
 	 * Marks the current {@link BufferBuilder} as finished if exists.
 	 */
-	private void tryFinishCurrentBufferBuilder(int targetChannel) {
+	private void tryFinishCurrentBufferBuilder(int targetChannel, boolean isBroadcast) {
 		if (!bufferBuilders[targetChannel].isPresent()) {
 			return;
 		}
 
 		BufferBuilder bufferBuilder = bufferBuilders[targetChannel].get();
-		bufferBuilders[targetChannel] = Optional.empty();
-		numBytesOut.inc(bufferBuilder.finish());
+		updateMetrics(bufferBuilder, isBroadcast);
 	}
 
-	private void copyToTarget(int targetChannel, boolean flushAlways) throws IOException, InterruptedException {
+	private void updateMetrics(BufferBuilder bufferBuilder, boolean isBroadcast) {
+		if (isBroadcast) {
+			numBytesOut.inc((long) bufferBuilder.finish() * numberOfSubpartitions);
+			numBuffersOut.inc(numberOfSubpartitions);
+		} else {
+			numBytesOut.inc(bufferBuilder.finish());
+			numBuffersOut.inc();
+		}
+	}
+
+	private boolean copyFromSerializerToTargetChannel(int targetChannel, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException {
 		// We should reset the initial position of the intermediate serialization data buffer before
 		// copying, so the serialization results can be copied to many different target buffers.
 		serializer.reset();
 
-		BufferBuilder bufferBuilder = getBufferBuilder(targetChannel);
+		boolean pruneTriggered = false;
+
+		BufferBuilder bufferBuilder = getBufferBuilder(targetChannel, isBroadcast);
 		RecordSerializer.SerializationResult result = serializer.copyToBufferBuilder(bufferBuilder);
 		while (result.isFullBuffer()) {
-			tryFinishCurrentBufferBuilder(targetChannel);
+			updateMetrics(bufferBuilder, isBroadcast);
 
 			// If this was a full record, we are done. Not breaking
 			// out of the loop at this point will lead to another
 			// buffer request before breaking out (that would not be
 			// a problem per se, but it can lead to stalls in the pipeline).
 			if (result.isFullRecord()) {
+				pruneTriggered = true;
 				break;
 			}
 
-			bufferBuilder = requestNewBufferBuilder(targetChannel);
+			bufferBuilder = requestNewBufferBuilder(targetChannel, isBroadcast);
 			result = serializer.copyToBufferBuilder(bufferBuilder);
 		}
 
 		checkState(!serializer.hasSerializedData(), "All data should be written at once");
 
 		if (flushAlways) {
-			flush(targetChannel);
+			if (isBroadcast) {
+				flushAll();
+			} else {
+				flush(targetChannel);
+			}
 		}
+
+		return pruneTriggered;
 	}
 
 	private void closeBufferBuilder(int targetChannel) {

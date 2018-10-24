@@ -231,18 +231,18 @@ public class ExternalResultPartitionReadWriteTest {
 			int skewSubpartition = 0;
 			int emptySubpartition = 1;
 			for (int i = skewSubpartition; i < NUM_PARTITIONS * numRecordsEachPartition; i += NUM_PARTITIONS) {
-				resultPartition.addRecord(i, new int[]{skewSubpartition}, false);
+				resultPartition.emitRecord(i, new int[]{skewSubpartition}, false, false);
 			}
 			for (int i = 0; i < NUM_PARTITIONS * numRecordsEachPartition; i++) {
 				int writePartition = i % NUM_PARTITIONS;
 				if (writePartition != skewSubpartition && writePartition != (NUM_PARTITIONS - 1)) {
-					resultPartition.addRecord(i, new int[]{writePartition}, false);
+					resultPartition.emitRecord(i, new int[]{writePartition}, false, false);
 				}
 			}
 		} else {
 			for (int i = 0; i < NUM_PARTITIONS * numRecordsEachPartition; i++) {
 				int writePartition = i % NUM_PARTITIONS;
-				resultPartition.addRecord(i, new int[]{writePartition}, false);
+				resultPartition.emitRecord(i, new int[]{writePartition}, false, false);
 			}
 		}
 

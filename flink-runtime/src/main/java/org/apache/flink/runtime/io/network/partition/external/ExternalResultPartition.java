@@ -161,7 +161,7 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	}
 
 	@Override
-	public void addRecord(T record, int[] targetChannels, boolean flushAlways) throws IOException, InterruptedException {
+	public void emitRecord(T record, int[] targetChannels, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException {
 		if (!initialized) {
 			initialize();
 		}
@@ -176,8 +176,13 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	}
 
 	@Override
+	public void emitRecord(T record, int targetChannel, boolean isBroadcast, boolean flushAlways) throws IOException {
+		throw new UnsupportedOperationException("Random emit is not supported in external result partition.");
+	}
+
+	@Override
 	public void broadcastEvent(AbstractEvent event, boolean flushAlways) throws IOException {
-		throw new RuntimeException("Event is not supported in external result partition.");
+		throw new UnsupportedOperationException("Event is not supported in external result partition.");
 	}
 
 	@Override
