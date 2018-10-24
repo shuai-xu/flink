@@ -307,6 +307,9 @@ public class CliClient {
 			case CREATE_VIEW:
 				callCreateView();
 				break;
+			case ANALYZE:
+				callAnalyze(cmdCall);
+				break;
 			case SELECT:
 				callSelect(cmdCall);
 				break;
@@ -319,6 +322,10 @@ public class CliClient {
 			default:
 				throw new SqlClientException("Unsupported command: " + cmdCall.command);
 		}
+	}
+
+	private void callAnalyze(SqlCommandCall cmdCall) {
+		executor.analyzeTable(context, cmdCall.operands[0]);
 	}
 
 	private void callCreateView() {

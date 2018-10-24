@@ -67,6 +67,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import scala.Some;
+
+import static org.apache.flink.table.types.DataTypes.INT;
+import static org.apache.flink.table.types.DataTypes.STRING;
+
 
 /**
  * A Test case for HiveExternalCatalog.
@@ -403,10 +408,54 @@ public class HiveExternalCatalogTest {
 		Assert.assertNotEquals(currentPartition, newPartition);
 	}
 
+	@Test
+	public void testAlterTableStats() {
+		String tableName = "t1";
+		ExternalCatalogTable table = createTableInstance();
+		Assert.assertNull(table.stats());
+		catalog.createTable(tableName, table, false);
+
+		TableStats newTableStats = new TableStats(1000L, null);
+		catalog.alterTableStats(tableName, new Some<>(newTableStats), false);
+		ExternalCatalogTable currentTable = catalog.getTable(tableName);
+		Assert.assertNotEquals(table, currentTable);
+		Assert.assertEquals(newTableStats.rowCount(), currentTable.stats().rowCount());
+
+		// update TableStats with None
+		catalog.alterTableStats(tableName, null, false);
+		ExternalCatalogTable currentTable2 = catalog.getTable(tableName);
+		Assert.assertEquals(0L, currentTable2.stats().rowCount().longValue());
+		Assert.assertTrue(currentTable2.stats().colStats().isEmpty());
+	}
+
+	private ExternalCatalogTable createTableInstance() {
+		TableSchema schema = new TableSchema(
+			new String[] {"first", "second"},
+			new InternalType[]{
+				STRING,
+				DataTypes.INT
+			}
+		);
+		return new ExternalCatalogTable(
+			"csv",
+			schema,
+			null,
+			null,
+			null,
+			"",
+			null,
+			false,
+			null,
+			null,
+			null,
+			System.currentTimeMillis(),
+			System.currentTimeMillis());
+	}
+
 	private ExternalCatalogTable createPartitionedTableInstance()  {
 
 		String[] colNames = {"first", "second"};
-		InternalType[] dataTypes = {DataTypes.STRING, DataTypes.INT};
+		InternalType[] dataTypes = {STRING, INT};
 
 		TableSchema schema = new TableSchema(colNames, dataTypes);
 		LinkedHashSet<String> partitions = new LinkedHashSet<>();

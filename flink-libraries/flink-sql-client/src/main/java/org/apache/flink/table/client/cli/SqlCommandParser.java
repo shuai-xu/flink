@@ -76,6 +76,7 @@ public final class SqlCommandParser {
 			case CREATE_FUNCTION:
 			case CREATE_TABLE:
 			case CREATE_VIEW:
+			case ANALYZE:
 				return new String[] {originalCall};
 			default:
 				return new String[] {operands};
@@ -101,6 +102,7 @@ public final class SqlCommandParser {
 		CREATE_FUNCTION("create function"),
 		CREATE_TABLE("create table"),
 		CREATE_VIEW("create view"),
+		ANALYZE("analyze"),
 		SET("set"),
 		RESET("reset"),
 		SOURCE("source");

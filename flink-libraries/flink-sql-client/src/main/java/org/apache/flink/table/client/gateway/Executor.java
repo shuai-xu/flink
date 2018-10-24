@@ -124,4 +124,6 @@ public interface Executor {
 	 * @return Whether succeed or not
 	 */
 	boolean createFunction(SessionContext context, String operand);
+
+	void analyzeTable(SessionContext context, String operand);
 }

@@ -48,7 +48,9 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.BinaryColumnStatsData;
 import org.apache.hadoop.hive.metastore.api.BooleanColumnStatsData;
+import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsDesc;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Date;
 import org.apache.hadoop.hive.metastore.api.DateColumnStatsData;
@@ -245,6 +247,76 @@ public class MetaConverter {
 						statisticsObj, flinkType);
 				colStats.put(statisticsObj.getColName(), columnStats);
 			}
+		}
+	}
+
+	public static ColumnStatistics convertFlinkStatsToHiveStats(
+			String database,
+			String tableName,
+			Map<String, ColumnStats> colStats,
+			List<FieldSchema> fields) {
+
+		ColumnStatisticsDesc statsDesc = new ColumnStatisticsDesc(
+			true, database, tableName);
+
+		if (colStats == null) {
+			colStats = new HashMap<>();
+		}
+
+		List<ColumnStatisticsObj> statsObj = new ArrayList<>();
+		for (FieldSchema field : fields) {
+			String colName = field.getName();  // Hive
+			String colType = field.getType();  // Hive
+			ColumnStats colStat = colStats.get(field.getName());  // Flink
+
+			if (colStat == null) {
+				continue;
+			}
+
+			ColumnStatisticsData statsData = getColumnStatisticsData(colType, colStat);
+			ColumnStatisticsObj columnStatisticsObj = new ColumnStatisticsObj(colName, colType, statsData);
+			statsObj.add(columnStatisticsObj);
+		}
+		return new ColumnStatistics(statsDesc, statsObj);
+	}
+
+	private static ColumnStatisticsData getColumnStatisticsData(String colType, ColumnStats colStat) {
+		switch (colType) {
+			case serdeConstants.BOOLEAN_TYPE_NAME:
+				BooleanColumnStatsData boolStat =
+					new BooleanColumnStatsData(0L, 0L, colStat.nullCount());
+				return ColumnStatisticsData.booleanStats(boolStat);
+			case serdeConstants.TINYINT_TYPE_NAME:
+			case serdeConstants.SMALLINT_TYPE_NAME:
+			case serdeConstants.INT_TYPE_NAME:
+			case serdeConstants.BIGINT_TYPE_NAME:
+				LongColumnStatsData longColumnStatsData =
+					new LongColumnStatsData(colStat.nullCount(), colStat.ndv());
+				return ColumnStatisticsData.longStats(longColumnStatsData);
+			case serdeConstants.FLOAT_TYPE_NAME:
+			case serdeConstants.DOUBLE_TYPE_NAME:
+				DoubleColumnStatsData doubleColumnStatsData =
+					new DoubleColumnStatsData(colStat.nullCount(), colStat.ndv());
+				return ColumnStatisticsData.doubleStats(doubleColumnStatsData);
+			case serdeConstants.STRING_TYPE_NAME:
+			case serdeConstants.CHAR_TYPE_NAME:
+				StringColumnStatsData stringColumnStatsData =
+					new StringColumnStatsData(
+						colStat.maxLen(), colStat.avgLen(), colStat.nullCount(), colStat.ndv());
+				return ColumnStatisticsData.stringStats(stringColumnStatsData);
+			case serdeConstants.DATE_TYPE_NAME:
+			case serdeConstants.DATETIME_TYPE_NAME:
+			case serdeConstants.TIMESTAMP_TYPE_NAME:
+				DateColumnStatsData dateColumnStatsData =
+					new DateColumnStatsData(colStat.nullCount(), colStat.ndv());
+				return ColumnStatisticsData.dateStats(dateColumnStatsData);
+			case serdeConstants.DECIMAL_TYPE_NAME:
+				DecimalColumnStatsData decimalColumnStatsData =
+					new DecimalColumnStatsData(colStat.nullCount(), colStat.ndv());
+				return ColumnStatisticsData.decimalStats(decimalColumnStatsData);
+			default:
+				throw new UnsupportedOperationException("Unsupported field schema type="
+					+ colType + ", when getting the statistics");
 		}
 	}
 

@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.client.utils;
 
+import org.apache.flink.sql.parser.ddl.SqlAnalyzeTable;
 import org.apache.flink.sql.parser.ddl.SqlColumnType;
 import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
@@ -39,6 +40,7 @@ import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.errorcode.TableErrors;
 import org.apache.flink.table.functions.UserDefinedFunction;
+import org.apache.flink.table.plan.stats.AnalyzeStatistic;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
 import org.apache.flink.table.sources.BatchExecTableSource;
@@ -59,6 +61,7 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlProperty;
@@ -340,6 +343,42 @@ public class SqlJobUtil {
 			schema.setIndexes(indexes);
 		}
 		return schema;
+	}
+
+	/**
+	 * Analyze table statistics.
+	 *
+	 * @param tableEnv        the {@link TableEnvironment} of the sql job
+	 * @param sqlNodeInfoList the parsed result of a sql context
+	 */
+	public static void analyzeTableStats(TableEnvironment tableEnv, List<SqlNodeInfo> sqlNodeInfoList) {
+		for (SqlNodeInfo sqlNodeInfo : sqlNodeInfoList) {
+			if (sqlNodeInfo.getSqlNode() instanceof SqlAnalyzeTable) {
+				SqlAnalyzeTable sqlAnalyzeTable = (SqlAnalyzeTable) sqlNodeInfo.getSqlNode();
+				String[] tablePath = sqlAnalyzeTable.getTableName().names.toArray(new String[] {});
+				String[] columnNames = getColumnsToAnalyze(sqlAnalyzeTable);
+				TableStats tableStats = AnalyzeStatistic.generateTableStats(tableEnv, tablePath, columnNames);
+				tableEnv.alterTableStats(tablePath, tableStats);
+			}
+		}
+	}
+
+	private static String[] getColumnsToAnalyze(SqlAnalyzeTable analyzeTable) {
+		if (!analyzeTable.isWithColumns()) {
+			return new String[] {};
+		}
+		SqlNodeList columnList = analyzeTable.getColumnList();
+		int columnCount = columnList.size();
+		// analyze all columns or specified columns.
+		if (columnCount == 0) {
+			return new String[] {"*"};
+		}
+		String[] columnNames = new String[columnCount];
+		for (int i = 0; i < columnCount; i++) {
+			SqlIdentifier column = (SqlIdentifier) columnList.get(i);
+			columnNames[i] = column.getSimple();
+		}
+		return columnNames;
 	}
 
 	/**

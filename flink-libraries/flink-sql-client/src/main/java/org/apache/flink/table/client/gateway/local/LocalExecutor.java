@@ -525,6 +525,19 @@ public class LocalExecutor implements Executor {
 		}
 	}
 
+	@Override
+	public void analyzeTable(SessionContext session, String ddl) {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tableEnv = envInst.getTableEnvironment();
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			SqlJobUtil.analyzeTableStats(tableEnv, sqlNodeList);
+		} catch (Exception e) {
+			throw new SqlExecutionException(e.getMessage(), e);
+		}
+	}
+
 	// --------------------------------------------------------------------------------------------
 
 	private static List<URL> discoverDependencies(List<URL> jars, List<URL> libraries) {

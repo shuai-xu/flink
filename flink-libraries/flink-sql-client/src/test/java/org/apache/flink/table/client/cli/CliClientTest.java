@@ -188,5 +188,9 @@ public class CliClientTest extends TestLogger {
 		public boolean createFunction(SessionContext context, String operand) {
 			return false;
 		}
+
+		@Override
+		public void analyzeTable(SessionContext context, String operand) {
+		}
 	}
 }

@@ -32,14 +32,17 @@ import org.apache.flink.table.catalog.ExternalCatalog;
 import org.apache.flink.table.catalog.ExternalCatalogFunction;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ExternalCatalogTablePartition;
+import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
+import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Function;
@@ -353,7 +356,52 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 			boolean ignoreIfNotExists) throws TableNotExistException {
 		LOG.info("alterTableStats, tableName={}, stats={}", tableName, stats);
 
-		throw new UnsupportedOperationException("Alter Table Statistics is not supported!");
+		try {
+			// Alter table level statistics
+			Table table = getMSC().getTable(database, tableName);
+			List<FieldSchema> fields = table.getSd().getCols();
+
+			if (stats == null || stats.isEmpty()) {
+				// Delete stats
+				table.getParameters().put(
+					StatsSetupConst.ROW_COUNT,
+					"0");
+				getMSC().alter_table(database, tableName, table);
+
+				for (FieldSchema field : fields) {
+					String colName = field.getName();  // Hive
+					try {
+						getMSC().deleteTableColumnStatistics(database, tableName, colName);
+					} catch (NoSuchObjectException e) {
+					}
+				}
+				return;
+			}
+
+			TableStats tableStats = stats.get();
+			table.getParameters().put(
+				StatsSetupConst.ROW_COUNT,
+				tableStats.rowCount().toString());
+			getMSC().alter_table(database, tableName, table);
+
+			Map<String, ColumnStats> colStats = tableStats.colStats();
+
+			if (colStats == null || colStats.isEmpty()) {
+				return;
+			}
+
+			ColumnStatistics columnStatistics =
+				MetaConverter.convertFlinkStatsToHiveStats(
+					database, tableName, colStats, fields);
+			getMSC().updateTableColumnStatistics(columnStatistics);
+
+		} catch (TException e) {
+
+			LOG.error("Exception happens while updating the statistics:", e);
+			if (!ignoreIfNotExists) {
+				throw new TableNotExistException(database, tableName, e);
+			}
+		}
 	}
 
 	@Override
