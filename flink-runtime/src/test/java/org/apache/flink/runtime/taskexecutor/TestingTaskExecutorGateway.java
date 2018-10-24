@@ -20,6 +20,7 @@ package org.apache.flink.runtime.taskexecutor;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.runtime.blob.TransientBlobKey;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -35,13 +36,17 @@ import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.StackTraceSampleResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
+import org.apache.flink.runtime.util.FileOffsetRange;
 import org.apache.flink.util.Preconditions;
 
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 /**
  * Simple {@link TaskExecutorGateway} implementation for testing purposes.
@@ -146,7 +151,16 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
 	}
 
 	@Override
-	public CompletableFuture<TransientBlobKey> requestFileUpload(FileType fileType, Time timeout) {
+	public CompletableFuture<TransientBlobKey> requestFileUpload(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		Time timeout) {
+
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException());
+	}
+
+	@Override
+	public CompletableFuture<Collection<Tuple2<String, Long>>> requestLogList(Time timeout) {
 		return FutureUtils.completedExceptionally(new UnsupportedOperationException());
 	}
 

@@ -21,9 +21,9 @@ package org.apache.flink.runtime.taskexecutor;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.accumulators.AccumulatorSnapshot;
 import org.apache.flink.runtime.blob.BlobCacheService;
-import org.apache.flink.runtime.blob.TransientBlobCache;
 import org.apache.flink.runtime.blob.TransientBlobKey;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
@@ -108,6 +108,8 @@ import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerActions;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+import org.apache.flink.runtime.util.FileOffsetRange;
+import org.apache.flink.shaded.guava18.com.google.common.io.ByteStreams;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 
@@ -117,7 +119,10 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
+import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -834,44 +839,72 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	}
 
 	@Override
-	public CompletableFuture<TransientBlobKey> requestFileUpload(FileType fileType, Time timeout) {
-		log.debug("Request file {} upload.", fileType);
+	public CompletableFuture<TransientBlobKey> requestFileUpload(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		Time timeout) {
 
-		final String filePath;
-
-		switch (fileType) {
-			case LOG:
-				filePath = taskManagerConfiguration.getTaskManagerLogPath();
-				break;
-			case STDOUT:
-				filePath = taskManagerConfiguration.getTaskManagerStdoutPath();
-				break;
-			default:
-				filePath = null;
+		final String logDir = taskManagerConfiguration.getTaskManagerLogDir();
+		if (logDir == null) {
+			return FutureUtils.completedExceptionally(new FlinkException("There is no log file available on the TaskExecutor."));
 		}
 
-		if (filePath != null && !filePath.isEmpty()) {
-			final File file = new File(filePath);
+		final File logFile = new File(logDir, filename);
+		if (!logFile.exists()) {
+			return FutureUtils.completedExceptionally(new FlinkException("The log file " + filename + " is not available on the TaskExecutor."));
+		}
 
-			if (file.exists()) {
-				final TransientBlobCache transientBlobService = blobCacheService.getTransientBlobService();
-				final TransientBlobKey transientBlobKey;
-				try (FileInputStream fileInputStream = new FileInputStream(file)) {
-					transientBlobKey = transientBlobService.putTransient(fileInputStream);
-				} catch (IOException e) {
-					log.debug("Could not upload file {}.", fileType, e);
-					return FutureUtils.completedExceptionally(new FlinkException("Could not upload file " + fileType + '.', e));
-				}
+		final InputStream logFileInputStream;
 
-				return CompletableFuture.completedFuture(transientBlobKey);
+		try {
+			if (fileOffsetRange == null) {
+				logFileInputStream = new FileInputStream(logFile);
 			} else {
-				log.debug("The file {} does not exist on the TaskExecutor {}.", fileType, getResourceID());
-				return FutureUtils.completedExceptionally(new FlinkException("The file " + fileType + " does not exist on the TaskExecutor."));
+				final long offset;
+				if (fileOffsetRange.getStart() < 0) {
+					// Negative starting offset means we want the last part of the file.
+					offset = logFile.length() - Math.abs(fileOffsetRange.getStart());
+				} else {
+					offset = fileOffsetRange.getStart();
+				}
+				final RandomAccessFile randomAccessFile = new RandomAccessFile(logFile, "r");
+				logFileInputStream =
+					ByteStreams.limit(
+						Channels.newInputStream(randomAccessFile.getChannel().position(offset)),
+						fileOffsetRange.getSize());
 			}
-		} else {
-			log.debug("The file {} is unavailable on the TaskExecutor {}.", fileType, getResourceID());
-			return FutureUtils.completedExceptionally(new FlinkException("The file " + fileType + " is not available on the TaskExecutor."));
+
+			final TransientBlobKey transientBlobKey =
+				blobCacheService.getTransientBlobService().putTransient(logFileInputStream);
+
+			logFileInputStream.close();
+
+			return CompletableFuture.completedFuture(transientBlobKey);
+
+		} catch (IOException e) {
+			log.debug("Could not upload file {}.", filename, e);
+			return FutureUtils.completedExceptionally(e);
 		}
+	}
+
+	@Override
+	public CompletableFuture<Collection<Tuple2<String, Long>>> requestLogList(Time timeout) {
+		final String logDir = taskManagerConfiguration.getTaskManagerLogDir();
+		if (logDir != null) {
+			final File[] logFiles = new File(logDir).listFiles();
+
+			if (logFiles == null) {
+				return FutureUtils.completedExceptionally(
+					new FlinkException("The specific log directory is not a valid directory."));
+			}
+
+			final List<Tuple2<String, Long>> logsWithLength = new ArrayList<>(logFiles.length);
+			for (File logFile : logFiles) {
+				logsWithLength.add(Tuple2.of(logFile.getName(), logFile.length()));
+			}
+			return CompletableFuture.completedFuture(logsWithLength);
+		}
+		return FutureUtils.completedExceptionally(new FlinkException("There is no log file available on the TaskExecutor."));
 	}
 
 	// ----------------------------------------------------------------------

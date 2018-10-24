@@ -26,7 +26,6 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.UntypedResponseMessageHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
-import org.apache.flink.runtime.taskexecutor.FileType;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
@@ -55,6 +54,6 @@ public class TaskManagerLogFileHandler extends AbstractTaskManagerFileHandler<Ta
 
 	@Override
 	protected CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, ResourceID taskManagerResourceId) {
-		return resourceManagerGateway.requestTaskManagerFileUpload(taskManagerResourceId, FileType.LOG, timeout);
+		return resourceManagerGateway.requestTaskManagerFileUpload(taskManagerResourceId, "taskmanager.log", null, timeout);
 	}
 }

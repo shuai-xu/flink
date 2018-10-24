@@ -20,6 +20,7 @@ package org.apache.flink.runtime.taskexecutor;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.blob.BlobServer;
 import org.apache.flink.runtime.blob.TransientBlobKey;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -37,8 +38,12 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.rpc.RpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.taskmanager.Task;
+import org.apache.flink.runtime.util.FileOffsetRange;
 
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
+
+import javax.annotation.Nullable;
 
 /**
  * {@link TaskExecutor} RPC gateway interface.
@@ -195,9 +200,20 @@ public interface TaskExecutorGateway extends RpcGateway {
 	/**
 	 * Requests the file upload of the specified type to the cluster's {@link BlobServer}.
 	 *
-	 * @param fileType to upload
+	 * @param filename the file name requested
+	 * @param fileOffsetRange the offset range of this file, it could be null
 	 * @param timeout for the asynchronous operation
 	 * @return Future which is completed with the {@link TransientBlobKey} of the uploaded file.
 	 */
-	CompletableFuture<TransientBlobKey> requestFileUpload(FileType fileType, @RpcTimeout Time timeout);
+	CompletableFuture<TransientBlobKey> requestFileUpload(
+		String filename,
+		@Nullable FileOffsetRange fileOffsetRange,
+		@RpcTimeout Time timeout);
+
+	/**
+	 * Requests for the historical log file names on the TaskManager.
+	 *
+	 * @return A String Array with all historical log file names
+	 */
+	CompletableFuture<Collection<Tuple2<String, Long>>> requestLogList(@RpcTimeout Time timeout);
 }

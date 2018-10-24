@@ -41,9 +41,9 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.ResourceOverview;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerInfo;
-import org.apache.flink.runtime.taskexecutor.FileType;
 import org.apache.flink.runtime.taskexecutor.SlotReport;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorRegistrationSuccess;
+import org.apache.flink.runtime.util.FileOffsetRange;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Collection;
@@ -81,7 +81,7 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 
 	private volatile Function<Tuple4<String, ResourceID, Integer, HardwareDescription>, CompletableFuture<RegistrationResponse>> registerTaskExecutorFunction;
 
-	private volatile Function<Tuple2<ResourceID, FileType>, CompletableFuture<TransientBlobKey>> requestTaskManagerFileUploadFunction;
+	private volatile Function<Tuple2<ResourceID, String>, CompletableFuture<TransientBlobKey>> requestTaskManagerFileUploadFunction;
 
 	private volatile Consumer<Tuple2<ResourceID, Throwable>> disconnectTaskExecutorConsumer;
 
@@ -144,7 +144,7 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 		this.registerTaskExecutorFunction = registerTaskExecutorFunction;
 	}
 
-	public void setRequestTaskManagerFileUploadFunction(Function<Tuple2<ResourceID, FileType>, CompletableFuture<TransientBlobKey>> requestTaskManagerFileUploadFunction) {
+	public void setRequestTaskManagerFileUploadFunction(Function<Tuple2<ResourceID, String>, CompletableFuture<TransientBlobKey>> requestTaskManagerFileUploadFunction) {
 		this.requestTaskManagerFileUploadFunction = requestTaskManagerFileUploadFunction;
 	}
 
@@ -314,14 +314,23 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 	}
 
 	@Override
-	public CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(ResourceID taskManagerId, FileType fileType, Time timeout) {
-		final Function<Tuple2<ResourceID, FileType>, CompletableFuture<TransientBlobKey>> function = requestTaskManagerFileUploadFunction;
+	public CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(
+		ResourceID taskManagerId,
+		String filename,
+		FileOffsetRange fileOffsetRange,
+		Time timeout) {
 
+		final Function<Tuple2<ResourceID, String>, CompletableFuture<TransientBlobKey>> function = requestTaskManagerFileUploadFunction;
 		if (function != null) {
-			return function.apply(Tuple2.of(taskManagerId, fileType));
+			return function.apply(Tuple2.of(taskManagerId, filename));
 		} else {
 			return CompletableFuture.completedFuture(new TransientBlobKey());
 		}
+	}
+
+	@Override
+	public CompletableFuture<Collection<Tuple2<String, Long>>> requestTaskManagerLogList(ResourceID taskManagerId, Time timeout) {
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException("Not yet implemented"));
 	}
 
 	@Override

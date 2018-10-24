@@ -21,12 +21,17 @@ package org.apache.flink.runtime.taskexecutor;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
+import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.testutils.OneShotLatch;
 import org.apache.flink.runtime.blob.BlobCacheService;
+import org.apache.flink.runtime.blob.PermanentBlobCache;
+import org.apache.flink.runtime.blob.TransientBlobCache;
+import org.apache.flink.runtime.blob.TransientBlobKey;
 import org.apache.flink.runtime.blob.VoidBlobStore;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
@@ -93,9 +98,11 @@ import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerActions;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
+import org.apache.flink.runtime.util.FileOffsetRange;
 import org.apache.flink.runtime.util.TestingFatalErrorHandler;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
+import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.TestLogger;
 
@@ -118,10 +125,16 @@ import scala.concurrent.duration.FiniteDuration;
 import javax.annotation.Nonnull;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -138,6 +151,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -2041,6 +2055,110 @@ public class TaskExecutorTest extends TestLogger {
 		}
 	}
 
+	@Test
+	public void testRequestLogList() throws Exception {
+		final File logDir = tmp.newFolder();
+		final String logFileName = "taskmanager.log";
+		final File logFile = new File(logDir, logFileName);
+		assertTrue(logFile.createNewFile());
+
+		final String stdoutFileName = "taskmanager.out";
+		final byte[] stdoutContent = "Hello World!".getBytes("UTF-8");
+		final File stdoutFile = new File(logDir, stdoutFileName);
+		try (final FileOutputStream stdoutFileOutputStream = new FileOutputStream(stdoutFile)) {
+			stdoutFileOutputStream.write(stdoutContent);
+		}
+
+		final Configuration forkedConfig = new Configuration(configuration);
+		forkedConfig.setString(ConfigConstants.TASK_MANAGER_LOG_PATH_KEY, logFile.getCanonicalPath());
+
+		final TaskExecutor taskExecutor = new TaskExecutor(
+			rpc,
+			TaskManagerConfiguration.fromConfiguration(forkedConfig),
+			haServices,
+			new TaskManagerServicesBuilder().build(),
+			new HeartbeatServices(1000L, 1000L),
+			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
+			dummyBlobCacheService,
+			testingFatalErrorHandler);
+
+		final CompletableFuture<Collection<Tuple2<String, Long>>> logsWithLengthFuture = taskExecutor.requestLogList(timeout);
+		assertTrue(logsWithLengthFuture.isDone());
+		final List<Tuple2<String, Long>> sortedLogs = new ArrayList<>(logsWithLengthFuture.get());
+		sortedLogs.sort(Comparator.comparing(tuple -> tuple.f0));
+
+		final List<Tuple2<String, Long>> expectedLogs = new ArrayList<>();
+		expectedLogs.add(Tuple2.of(logFileName, 0L));
+		expectedLogs.add(Tuple2.of(stdoutFileName, (long) stdoutContent.length));
+		expectedLogs.sort(Comparator.comparing(tuple -> tuple.f0));
+
+		assertEquals(expectedLogs, sortedLogs);
+	}
+
+	@Test
+	public void testRequestFileUpload() throws Exception {
+		final File logDir = tmp.newFolder();
+		final String logFileName = "taskmanager.log";
+		final File logFile = new File(logDir, logFileName);
+		final byte[] logContent = "Hello World!".getBytes("UTF-8");
+		try (final FileOutputStream stdoutFileOutputStream = new FileOutputStream(logFile)) {
+			stdoutFileOutputStream.write(logContent);
+		}
+
+		final Configuration forkedConfig = new Configuration(configuration);
+		forkedConfig.setString(ConfigConstants.TASK_MANAGER_LOG_PATH_KEY, logFile.getCanonicalPath());
+
+		final FileSystemTransientBlobCache transientBlobCache = new FileSystemTransientBlobCache(configuration);
+		final TaskExecutor taskExecutor = new TaskExecutor(
+			rpc,
+			TaskManagerConfiguration.fromConfiguration(forkedConfig),
+			haServices,
+			new TaskManagerServicesBuilder().build(),
+			new HeartbeatServices(1000L, 1000L),
+			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
+			new BlobCacheService(mock(PermanentBlobCache.class), transientBlobCache),
+			testingFatalErrorHandler);
+
+		{
+			final CompletableFuture<TransientBlobKey> fullFileBlobKeyFuture =
+				taskExecutor.requestFileUpload(logFileName, null, timeout);
+			assertTrue(fullFileBlobKeyFuture.isDone());
+			final byte[] fullFileContent = transientBlobCache.readBlob(fullFileBlobKeyFuture.get());
+			assertArrayEquals(logContent, fullFileContent);
+		}
+
+		{
+			final CompletableFuture<TransientBlobKey> partialFileBlobKeyFuture =
+				taskExecutor.requestFileUpload(logFileName, new FileOffsetRange(1L, 2L), timeout);
+			assertTrue(partialFileBlobKeyFuture.isDone());
+			final byte[] partialFileContent =
+				transientBlobCache.readBlob(partialFileBlobKeyFuture.get());
+			assertArrayEquals(Arrays.copyOfRange(logContent, 1, 3), partialFileContent);
+		}
+
+		{
+			final CompletableFuture<TransientBlobKey> partialFileWithTooLargeSizeBlobKeyFuture =
+				taskExecutor.requestFileUpload(logFileName,
+					new FileOffsetRange(1L, logContent.length + 10086), timeout);
+			assertTrue(partialFileWithTooLargeSizeBlobKeyFuture.isDone());
+			final byte[] partialFileWithTooLargeSizeContent =
+				transientBlobCache.readBlob(partialFileWithTooLargeSizeBlobKeyFuture.get());
+			assertArrayEquals(Arrays.copyOfRange(logContent, 1, logContent.length),
+				partialFileWithTooLargeSizeContent);
+		}
+
+		{
+			final CompletableFuture<TransientBlobKey> negativeFileSizeBlobKeyFuture =
+				taskExecutor.requestFileUpload(logFileName, new FileOffsetRange(-3L, 2), timeout);
+			assertTrue(negativeFileSizeBlobKeyFuture.isDone());
+			final byte[] negativeSizeContent =
+				transientBlobCache.readBlob(negativeFileSizeBlobKeyFuture.get());
+			assertArrayEquals(
+				Arrays.copyOfRange(logContent, logContent.length - 3, logContent.length - 3 + 2),
+				negativeSizeContent);
+		}
+	}
+
 	@Nonnull
 	private TaskExecutor createTaskExecutor(TaskManagerServices taskManagerServices) {
 		return new TaskExecutor(
@@ -2148,6 +2266,42 @@ public class TaskExecutorTest extends TestLogger {
 		public void monitorTarget(ResourceID resourceID, HeartbeatTarget<O> heartbeatTarget) {
 			super.monitorTarget(resourceID, heartbeatTarget);
 			monitoredTargets.offer(resourceID);
+		}
+	}
+
+	/**
+	 * This would store the blob object in local file system.
+	 */
+	private class FileSystemTransientBlobCache extends TransientBlobCache {
+
+		private final File storageDir;
+
+		public FileSystemTransientBlobCache(Configuration blobClientConfig) throws IOException {
+			super(blobClientConfig, null);
+
+			storageDir = tmp.newFolder();
+		}
+
+		@Override
+		public TransientBlobKey putTransient(InputStream inputStream) throws IOException {
+			final TransientBlobKey blobKey = new TransientBlobKey();
+			final File blobFile = new File(storageDir, blobKey.toString());
+
+			try (final FileOutputStream fileOutputStream = new FileOutputStream(blobFile)) {
+				IOUtils.copyBytes(inputStream, fileOutputStream, false);
+				return blobKey;
+			}
+		}
+
+		@Override
+		public File getFile(TransientBlobKey key) throws IOException {
+			return new File(storageDir, key.toString());
+		}
+
+		byte[] readBlob(TransientBlobKey key) throws IOException {
+			try (final FileInputStream fileInputStream = new FileInputStream(getFile(key))) {
+				return org.apache.commons.io.IOUtils.toByteArray(fileInputStream);
+			}
 		}
 	}
 }

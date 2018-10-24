@@ -60,10 +60,10 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerInfo;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
-import org.apache.flink.runtime.taskexecutor.FileType;
 import org.apache.flink.runtime.taskexecutor.SlotReport;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorGateway;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorRegistrationSuccess;
+import org.apache.flink.runtime.util.FileOffsetRange;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 
@@ -593,16 +593,27 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	}
 
 	@Override
-	public CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(ResourceID taskManagerId, FileType fileType, Time timeout) {
-		log.debug("Request file {} upload from TaskExecutor {}.", fileType, taskManagerId);
+	public CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(ResourceID taskManagerId, String filename, FileOffsetRange fileOffsetRange, Time timeout) {
+		log.debug("Request file {} with {} upload from TaskExecutor {}.", filename, fileOffsetRange, taskManagerId);
 
 		final WorkerRegistration<WorkerType> taskExecutor = taskExecutors.get(taskManagerId);
 
 		if (taskExecutor == null) {
-			log.debug("Requested file {} upload from unregistered TaskExecutor {}.", fileType, taskManagerId);
+			log.debug("Requested file {} upload from unregistered TaskExecutor {}.", filename, taskManagerId);
 			return FutureUtils.completedExceptionally(new UnknownTaskExecutorException(taskManagerId));
 		} else {
-			return taskExecutor.getTaskExecutorGateway().requestFileUpload(fileType, timeout);
+			return taskExecutor.getTaskExecutorGateway().requestFileUpload(filename, fileOffsetRange, timeout);
+		}
+	}
+
+	@Override
+	public CompletableFuture<Collection<Tuple2<String, Long>>> requestTaskManagerLogList(ResourceID taskManagerId, Time timeout) {
+		final WorkerRegistration<WorkerType> taskExecutor = taskExecutors.get(taskManagerId);
+		if (taskExecutor == null) {
+			log.debug("Requested historical loglist from unregistered TaskExecutor {}.", taskManagerId);
+			return FutureUtils.completedExceptionally(new UnknownTaskExecutorException(taskManagerId));
+		} else {
+			return taskExecutor.getTaskExecutorGateway().requestLogList(timeout);
 		}
 	}
 

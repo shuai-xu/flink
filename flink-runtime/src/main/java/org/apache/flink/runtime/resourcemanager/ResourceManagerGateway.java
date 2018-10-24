@@ -37,9 +37,9 @@ import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerInfo;
 import org.apache.flink.runtime.rpc.FencedRpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
-import org.apache.flink.runtime.taskexecutor.FileType;
 import org.apache.flink.runtime.taskexecutor.SlotReport;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
+import org.apache.flink.runtime.util.FileOffsetRange;
 
 import javax.annotation.Nullable;
 
@@ -231,10 +231,20 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 	 * corresponding {@link TransientBlobKey} is returned.
 	 *
 	 * @param taskManagerId identifying the {@link TaskExecutor} to upload the specified file
-	 * @param fileType type of the file to upload
+	 * @param filename name of the file to upload
+	 * @param fileOffsetRange the offset of file
 	 * @param timeout for the asynchronous operation
 	 * @return Future which is completed with the {@link TransientBlobKey} after uploading the file to the
 	 * {@link BlobServer}.
 	 */
-	CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(ResourceID taskManagerId, FileType fileType, @RpcTimeout Time timeout);
+	CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(ResourceID taskManagerId, String filename, FileOffsetRange fileOffsetRange, @RpcTimeout Time timeout);
+
+	/**
+	 * Request log list from from the given {@link TaskExecutor}
+	 *
+	 * @param taskManagerId identifying the {@link TaskExecutor} to get log list from
+	 * @param timeout for the asynchronous operation
+	 * @return Future which is completed with the historical log list
+	 */
+	CompletableFuture<Collection<Tuple2<String, Long>>> requestTaskManagerLogList(ResourceID taskManagerId, @RpcTimeout Time timeout);
 }
