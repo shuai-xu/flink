@@ -1,0 +1,8 @@
+<div class="metric-selector">
+  Metric Name:
+  <span *ngIf="!selectedMetricName">No Available Metric</span>
+  <nz-select *ngIf="selectedMetricName" nzSize="small" [(ngModel)]="selectedMetricName" nzShowSearch (ngModelChange)="clearChart()">
+    <nz-option *ngFor="let name of listOfMetricName" [nzLabel]="name" [nzValue]="name"></nz-option>
+  </nz-select>
+</div>
+<div #chart></div>

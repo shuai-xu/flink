@@ -1,0 +1,102 @@
+<div class="name">
+  {{ node.detail.name }}
+</div>
+<div nz-row class="wrapper">
+  <div nz-col [nzSpan]="12">
+    <form nz-form class="small">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Status</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <flink-job-badge [state]="node.detail.status"></flink-job-badge>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Parallelism</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>{{ node.detail.parallelism }}</nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Start Time</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>{{ node.detail['start-time'] | date: 'yyyy-MM-dd HH:mm:ss' }}</nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">End Time</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>{{ node.detail['end-time'] | date: 'yyyy-MM-dd HH:mm:ss' }}</nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Duration</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>{{ node.detail.duration | humanizeDuration }}</nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Records Sent</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['write-records-complete']">{{ node.detail.metrics['write-records'] | number:'1.0-0' }}</span>
+            <span *ngIf="!node.detail.metrics['write-records-complete']">...</span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </div>
+  <div nz-col [nzSpan]="12">
+    <form nz-form class="small">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Task</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <flink-task-badge [tasks]="node.detail.tasks"></flink-task-badge>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">In Queue</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>{{ (node.detail.metrics['buffers.inPoolUsage_max'] | percent) || '-' }}</nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Out Queue</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>{{ (node.detail.metrics['buffers.outPoolUsage_max'] | percent) || '-' }}</nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Bytes Received</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['read-bytes-complete']">{{ node.detail.metrics['read-bytes'] | humanizeBytes }}</span>
+            <span *ngIf="!node.detail.metrics['read-bytes-complete']">...</span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Records Received</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['read-records-complete']">{{ node.detail.metrics['read-records'] | number:'1.0-0' }}</span>
+            <span *ngIf="!node.detail.metrics['read-records-complete']">...</span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Bytes Sent</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['write-bytes-complete']">{{ node.detail.metrics['write-bytes'] | humanizeBytes }}</span>
+            <span *ngIf="!node.detail.metrics['write-bytes-complete']">...</span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+
+    </form>
+  </div>
+</div>

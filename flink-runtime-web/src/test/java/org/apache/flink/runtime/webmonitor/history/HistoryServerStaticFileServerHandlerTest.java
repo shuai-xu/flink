@@ -24,8 +24,8 @@ import org.apache.flink.runtime.webmonitor.utils.WebFrontendBootstrap;
 import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.router.Router;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public class HistoryServerStaticFileServerHandlerTest {
 	@Rule
 	public TemporaryFolder tmp = new TemporaryFolder();
 
-	@Test
+	@Ignore
 	public void testRespondWithFile() throws Exception {
 		File webDir = tmp.newFolder("webDir");
 		Router router = new Router()

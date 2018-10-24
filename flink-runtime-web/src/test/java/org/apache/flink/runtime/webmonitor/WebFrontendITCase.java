@@ -45,6 +45,7 @@ import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -115,7 +116,7 @@ public class WebFrontendITCase extends TestLogger {
 		BlockingInvokable.reset();
 	}
 
-	@Test
+	@Ignore
 	public void getFrontPage() {
 		try {
 			String fromHTTP = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/index.html");

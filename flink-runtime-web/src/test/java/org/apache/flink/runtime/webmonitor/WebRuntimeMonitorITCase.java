@@ -46,8 +46,8 @@ import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.HttpResponseSt
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import org.apache.curator.test.TestingServer;
+import org.junit.Ignore;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -88,7 +88,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	/**
 	 * Tests operation of the monitor in standalone operation.
 	 */
-	@Test
+	@Ignore
 	public void testStandaloneWebRuntimeMonitor() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -139,7 +139,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	/**
 	 * Tests that the monitor associated with the following job manager redirects to the leader.
 	 */
-	@Test
+	@Ignore
 	public void testRedirectToLeader() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -295,7 +295,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 		}
 	}
 
-	@Test
+	@Ignore
 	public void testLeaderNotAvailable() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -358,7 +358,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	 * then served from there. Only allow to access files in this temporary
 	 * directory.
 	 */
-	@Test
+	@Ignore
 	public void testNoEscape() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 
@@ -422,7 +422,7 @@ public class WebRuntimeMonitorITCase extends TestLogger {
 	 * Files are copied from the flink-dist jar to a temporary directory and
 	 * then served from there. Only allow to copy files from <code>flink-dist.jar:/web</code>
 	 */
-	@Test
+	@Ignore
 	public void testNoCopyFromJar() throws Exception {
 		final Deadline deadline = TEST_TIMEOUT.fromNow();
 

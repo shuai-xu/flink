@@ -1,0 +1,8 @@
+<div class="background">
+  <ng-container *ngFor="let status of statusList">
+    <div class="field" *ngIf="tasks[status]">
+      <span class="key">{{status}}:</span>
+      <span class="number" [style.background]="colorMap[status]">{{ tasks[status] }}</span>
+    </div>
+  </ng-container>
+</div>

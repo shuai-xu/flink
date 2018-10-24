@@ -1,0 +1,112 @@
+<ng-container *ngIf="detail">
+  <nz-divider [nzText]="'Memory'"></nz-divider>
+  <nz-divider [nzText]="'JVM (Heap/Non-Heap)'" nzDashed></nz-divider>
+  <nz-table
+    [nzData]="['']"
+    [nzShowPagination]="false"
+    [nzSize]="'small'"
+    class="no-border">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Committed</th>
+        <th>Used</th>
+        <th>Maximum</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Heap</strong></td>
+        <td>{{ detail.metrics.heapCommitted | humanizeBytes }}</td>
+        <td>{{ detail.metrics.heapUsed | humanizeBytes }}</td>
+        <td>{{ detail.metrics.heapMax | humanizeBytes }}</td>
+      </tr>
+      <tr>
+        <td><strong>Non-Heap</strong></td>
+        <td>{{ detail.metrics.nonHeapCommitted | humanizeBytes }}</td>
+        <td>{{ detail.metrics.nonHeapUsed | humanizeBytes }}</td>
+        <td>{{ detail.metrics.nonHeapMax | humanizeBytes }}</td>
+      </tr>
+      <tr>
+        <td><strong>Total</strong></td>
+        <td>{{ (detail.metrics.heapCommitted + detail.metrics.nonHeapCommitted) | humanizeBytes }}</td>
+        <td>{{ (detail.metrics.heapUsed + detail.metrics.nonHeapUsed) | humanizeBytes }}</td>
+        <td>{{ (detail.metrics.heapMax + detail.metrics.nonHeapMax) | humanizeBytes }}</td>
+      </tr>
+    </tbody>
+  </nz-table>
+  <nz-divider [nzText]="'Outside JVM'" nzDashed></nz-divider>
+  <nz-table
+    [nzData]="['']"
+    [nzShowPagination]="false"
+    [nzSize]="'small'"
+    class="no-border">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Count</th>
+        <th>Used</th>
+        <th>Capacity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Direct</strong></td>
+        <td>{{ detail.metrics.directCount | number }}</td>
+        <td>{{ detail.metrics.directUsed | humanizeBytes }}</td>
+        <td>{{ detail.metrics.directMax | humanizeBytes }}</td>
+      </tr>
+      <tr>
+        <td><strong>Mapped</strong></td>
+        <td>{{ detail.metrics.mappedCount | number }}</td>
+        <td>{{ detail.metrics.mappedUsed | humanizeBytes }}</td>
+        <td>{{ detail.metrics.mappedMax | humanizeBytes }}</td>
+      </tr>
+    </tbody>
+  </nz-table>
+  <nz-divider [nzText]="'Network'"></nz-divider>
+  <nz-divider [nzText]="'Memory Segments'" nzDashed></nz-divider>
+  <nz-table
+    [nzData]="['']"
+    [nzShowPagination]="false"
+    [nzSize]="'small'"
+    class="no-border">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Available</strong></td>
+        <td>{{ detail.metrics.memorySegmentsAvailable | number }}</td>
+      </tr>
+      <tr>
+        <td><strong>Total</strong></td>
+        <td>{{ detail.metrics.memorySegmentsTotal | number }}</td>
+      </tr>
+    </tbody>
+  </nz-table>
+  <nz-divider [nzText]="'Garbage Collection'" nzDashed></nz-divider>
+  <nz-table
+    [nzData]="['']"
+    [nzShowPagination]="false"
+    [nzSize]="'small'"
+    class="no-border">
+    <thead>
+      <tr>
+        <th>Collector</th>
+        <th>Count</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody *ngFor="let g of detail.metrics.garbageCollectors">
+      <tr>
+        <td><strong>{{ g.name }}</strong></td>
+        <td>{{ g.count | number }}</td>
+        <td>{{ g.time | number }}</td>
+      </tr>
+    </tbody>
+  </nz-table>
+</ng-container>
