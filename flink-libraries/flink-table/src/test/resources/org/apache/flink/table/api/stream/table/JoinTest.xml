@@ -46,7 +46,7 @@ StreamExecCalc(select=[b, y])
   <TestCase name="testRowTimeInnerJoinWithTimeAccessed">
     <Resource name="plan">
       <![CDATA[
-StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, rrtime), >(lrtime, f))], join=[a, b, c, lrtime, d, e, f, rrtime], joinType=[InnerJoin])
+StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, rrtime), >(lrtime, f))], join=[a, b, c, lrtime, d, e, f, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=-1, leftTimeIndex=3, rightTimeIndex=3])
   StreamExecExchange(distribution=[hash[a]])
     StreamExecScan(table=[[_DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[d]])
@@ -72,7 +72,7 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[FullOuterJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[FullOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lptime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -86,7 +86,7 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lptime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -100,7 +100,7 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), =(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), =(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[InnerJoin], windowBounds=[isRowTime=false, leftLowerBound=0, leftUpperBound=0, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a, lptime]])
       StreamExecCalc(select=[a, lptime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -114,7 +114,7 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[LeftOuterJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[LeftOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lptime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -128,7 +128,7 @@ StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, PROCTIME(lptime) AS lptime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[RightOuterJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lptime, -(rptime, 1000)), <(lptime, rptime))], join=[a, lptime, d, e, rptime], joinType=[RightOuterJoin], windowBounds=[isRowTime=false, leftLowerBound=-1000, leftUpperBound=-1, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lptime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -169,7 +169,7 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lrtime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -197,7 +197,7 @@ StreamExecCalc(select=[b, y])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[FullOuterJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[FullOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lrtime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -211,7 +211,7 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[LeftOuterJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[LeftOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lrtime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -225,7 +225,7 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lrtime])
         StreamExecScan(table=[[_DataStreamTable_0]])
@@ -239,7 +239,7 @@ StreamExecCalc(select=[a, e, lrtime])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, e, lrtime])
-  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[RightOuterJoin])
+  StreamExecWindowJoin(where=[AND(=(a, d), >=(lrtime, -(rrtime, 300000)), <(lrtime, +(rrtime, 3000)))], join=[a, lrtime, d, e, rrtime], joinType=[RightOuterJoin], windowBounds=[isRowTime=true, leftLowerBound=-300000, leftUpperBound=2999, leftTimeIndex=1, rightTimeIndex=2])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecCalc(select=[a, lrtime])
         StreamExecScan(table=[[_DataStreamTable_0]])

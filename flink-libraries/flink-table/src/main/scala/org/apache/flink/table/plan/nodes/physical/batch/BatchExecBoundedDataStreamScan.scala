@@ -53,7 +53,7 @@ class BatchExecBoundedDataStreamScan(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .item("fields", deriveRowType().getFieldNames.asScala.mkString(", "))
+      .item("fields", getRowType.getFieldNames.asScala.mkString(", "))
       .itemIf("reuse_id", getReuseId, isReused)
   }
 
@@ -103,7 +103,7 @@ class BatchExecBoundedDataStreamScan(
     boundedStreamTable.dataStream.getTransformation.getMinResources
   }
 
-  override def needInternalConversion = {
+  override def needInternalConversion: Boolean = {
     hasTimeAttributeField(boundedStreamTable.fieldIndexes) ||
         needsConversion(boundedStreamTable.dataType)
   }

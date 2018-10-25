@@ -92,16 +92,14 @@ class BatchExecCorrelate(
     val rexCall = scan.getCall.asInstanceOf[RexCall]
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
     super.explainTerms(pw)
-        .item("invocation", scan.getCall)
-        .item("correlate", correlateToString(
-          inputNode.getRowType,
-          rexCall, sqlFunction,
-          getExpressionString))
-        .item("select", selectToString(relRowType))
-        .item("rowType", relRowType)
-        .item("joinType", joinType)
-        .itemIf("condition", condition.orNull, condition.isDefined)
-        .itemIf("reuse_id", getReuseId, isReused)
+      .item("invocation", scan.getCall)
+      .item("correlate",
+        correlateToString(inputNode.getRowType, rexCall, sqlFunction, getExpressionString))
+      .item("select", selectToString(relRowType))
+      .item("rowType", relRowType)
+      .item("joinType", joinType)
+      .itemIf("condition", condition.orNull, condition.isDefined)
+      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   /**

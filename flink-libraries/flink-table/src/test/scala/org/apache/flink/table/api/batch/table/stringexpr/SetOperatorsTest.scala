@@ -31,32 +31,8 @@ class SetOperatorsTest extends TableTestBatchExecBase {
   def testInWithFilter(): Unit = {
     val util = batchTestUtil()
     val t = util.addTable[((Int, Int), String, (Int, Int))]("A", 'a, 'b, 'c)
-
     val elements = t.where("b === 'two'").select("a").as("a1")
     val in = t.select("*").where(s"c.in($elements)")
-
-//    val expected = unaryNode(
-//      "DataSetCalc",
-//      binaryNode(
-//        "DataSetJoin",
-//        batchTableNode(0),
-//        unaryNode(
-//          "DataSetDistinct",
-//          unaryNode(
-//            "DataSetCalc",
-//            batchTableNode(0),
-//            term("select", "a AS a1"),
-//            term("where", "=(b, 'two')")
-//          ),
-//          term("distinct", "a1")
-//        ),
-//        term("where", "=(c, a1)"),
-//        term("join", "a", "b", "c", "a1"),
-//        term("joinType", "InnerJoin")
-//      ),
-//      term("select", "a", "b", "c")
-//    )
-
     util.verifyPlan(in)
   }
 
@@ -64,15 +40,7 @@ class SetOperatorsTest extends TableTestBatchExecBase {
   def testInWithProject(): Unit = {
     val util = batchTestUtil()
     val t = util.addTable[(Int, Timestamp, String)]("A", 'a, 'b, 'c)
-
     val in = t.select("b.in('1972-02-22 07:12:00.333'.toTimestamp)").as("b2")
-
-//    val expected = unaryNode(
-//      "DataSetCalc",
-//      batchTableNode(0),
-//      term("select", "IN(b, 1972-02-22 07:12:00.333) AS b2")
-//    )
-
     util.verifyPlan(in)
   }
 }

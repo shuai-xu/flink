@@ -45,6 +45,7 @@ import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.TableConnectorUtil
 
 import scala.collection.JavaConverters._
 
@@ -508,17 +509,20 @@ abstract class CommonJoinTable(
     } else {
       ""
     }
+    var source = tableSource.explainSource()
+    if (source == null || source.isEmpty) {
+      source = TableConnectorUtil.generateRuntimeName(
+        tableSource.getClass, tableSource.getTableSchema.getColumnNames)
+    }
 
-    pw
-        .item("join", joinSelectionToString(inputType))
-        .item("on", lookupKeyPairs)
-        .item("joinType", joinTypeToString)
-        .itemIf("where", condition, !condition.isEmpty)
-        .itemIf("joinCondition",
-          joinConditionToString(inputType, joinCondition.orNull, expression),
-          joinCondition.isDefined)
-        .itemIf("period", period.orNull, period.isDefined)
-
-    pw
+    pw.item("join", joinSelectionToString(inputType))
+      .item("source", source)
+      .item("on", lookupKeyPairs)
+      .item("joinType", joinTypeToString)
+      .itemIf("where", condition, !condition.isEmpty)
+      .itemIf("joinCondition",
+        joinConditionToString(inputType, joinCondition.orNull, expression),
+        joinCondition.isDefined)
+      .itemIf("period", period.orNull, period.isDefined)
   }
 }

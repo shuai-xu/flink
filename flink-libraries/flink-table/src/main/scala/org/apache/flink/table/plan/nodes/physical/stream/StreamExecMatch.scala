@@ -19,18 +19,17 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import java.lang.{Long => JLong}
-import java.util
 import java.math.{BigDecimal => JBigDecimal}
+import java.util
 import java.util.UUID
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelFieldCollation.Direction
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.SqlMatchRecognize.AfterOption
-import org.apache.calcite.sql.SqlMatchRecognize.RowsPerMatchOption
+import org.apache.calcite.sql.SqlMatchRecognize.{AfterOption, RowsPerMatchOption}
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.tools.RelBuilder
@@ -42,21 +41,22 @@ import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCe
 import org.apache.flink.cep.pattern.Pattern
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.operators.co.CoStreamMap
+import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, SideOutputTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.BaseRowRowtimeProcessFunction
 import org.apache.flink.table.runtime.`match`._
 import org.apache.flink.table.runtime.aggregate.SortUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.OutputTag
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.mutable.ListBuffer
 
 /**
   * Flink RelNode which matches along with LogicalMatch.
@@ -114,7 +114,7 @@ class StreamExecMatch(
       }
     }${
       if (!orderKeys.getFieldCollations.isEmpty) {
-        s"ORDER BY: ${orderKeys.getFieldCollations.asScala.map {
+        s"ORDER BY: ${orderKeys.getFieldCollations.map {
           x => inputSchema.fieldNames(x.getFieldIndex)
         }.mkString(", ")}, "
       } else {
@@ -122,7 +122,7 @@ class StreamExecMatch(
       }
     }${
       if (!measures.isEmpty) {
-        s"MEASURES: ${measures.asScala.map {
+        s"MEASURES: ${measures.map {
           case (k, v) => s"${v.toString} AS $k"
         }.mkString(", ")}, "
       } else {
@@ -144,14 +144,14 @@ class StreamExecMatch(
       }
     }${
       if (!subsets.isEmpty) {
-        s"SUBSET: ${subsets.asScala.map {
+        s"SUBSET: ${subsets.map {
           case (k, v) => s"$k = (${v.toArray.mkString(", ")})"
         }.mkString(", ")}, "
       } else {
         ""
       }
     }${
-      s"DEFINE: ${patternDefinitions.asScala.map {
+      s"DEFINE: ${patternDefinitions.map {
         case (k, v) => s"$k AS ${v.toString}"
       }.mkString(", ")}"
     })"
@@ -159,24 +159,13 @@ class StreamExecMatch(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput())
-      .itemIf("partitionBy",
-        partitionKeys.toArray.map(_.toString).mkString(", "),
-        !partitionKeys.isEmpty)
-      .itemIf("orderBy",
-        orderKeys.getFieldCollations.asScala.map {
+      .item("partitionBy", partitionKeys.toArray.map(_.toString).mkString(", "))
+      .item("orderBy",
+        orderKeys.getFieldCollations.map {
           x => inputSchema.fieldNames(x.getFieldIndex)
-        }.mkString(", "),
-        !orderKeys.getFieldCollations.isEmpty)
-      .itemIf("measures",
-        measures.asScala.map { case (k, v) => s"${v.toString} AS $k"}.mkString(", "),
-        !measures.isEmpty)
-      .itemIf("rowsPerMatch",
-        if (rowsPerMatch != null) {
-          rowsPerMatch.toString
-        } else {
-          null
-        },
-        rowsPerMatch != null)
+        }.mkString(", "))
+      .item("outputFields", getRowType.getFieldNames.mkString(", "))
+      .itemIf("rowsPerMatch", rowsPerMatch, rowsPerMatch != null)
       .item("after", after.toString)
       .item("pattern", pattern.toString)
       .itemIf("within interval",
@@ -187,10 +176,10 @@ class StreamExecMatch(
         },
         interval != null)
       .itemIf("subset",
-        subsets.asScala.map { case (k, v) => s"$k = (${v.toArray.mkString(", ")})"}.mkString(", "),
+        subsets.map { case (k, v) => s"$k = (${v.toArray.mkString(", ")})"}.mkString(", "),
         !subsets.isEmpty)
       .item("define",
-        patternDefinitions.asScala.map { case (k, v) => s"$k AS ${v.toString}"}.mkString(", "))
+        patternDefinitions.map { case (k, v) => s"$k AS ${v.toString}"}.mkString(", "))
   }
 
   override def translateToPlan(
@@ -206,8 +195,7 @@ class StreamExecMatch(
       getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
 
     val rowtimeFields = inputSchema.relDataType
-      .getFieldList.asScala
-      .filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
+      .getFieldList.filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
 
     val timestampedInputTransform = if (rowtimeFields.nonEmpty) {
       // copy the rowtime field into the StreamRecord timestamp field
@@ -481,7 +469,7 @@ class StreamExecMatch(
   private def setKeySelector(
       transform: OneInputTransformation[BaseRow, _],
       inputTypeInfo: BaseRowTypeInfo[_]): Unit = {
-    val logicalKeys = partitionKeys.asScala.map {
+    val logicalKeys = partitionKeys.map {
       case inputRef: RexInputRef => inputRef.getIndex
     }.toArray
 

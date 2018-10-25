@@ -30,12 +30,12 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, Ta
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.types.{DataType, DataTypes}
@@ -116,17 +116,17 @@ class StreamExecGlobalGroupAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputNode.getRowType, groupings), !groupings.isEmpty)
+      .itemIf("groupBy", groupingToString(inputNode.getRowType, groupings), groupings.nonEmpty)
       .item("select", aggregationToString(
-          inputNode.getRowType,
-          groupings,
-          Array.empty[Int],
-          getRowType,
-          globalAggInfoList.getActualAggregateCalls,
-          globalAggInfoList.getActualFunctions,
-          isMerge = true,
-          isGlobal = true,
-          globalAggInfoList.distinctInfos))
+        inputNode.getRowType,
+        groupings,
+        Array.empty[Int],
+        getRowType,
+        globalAggInfoList.getActualAggregateCalls,
+        globalAggInfoList.getActualFunctions,
+        isMerge = true,
+        isGlobal = true,
+        globalAggInfoList.distinctInfos))
   }
 
   @VisibleForTesting

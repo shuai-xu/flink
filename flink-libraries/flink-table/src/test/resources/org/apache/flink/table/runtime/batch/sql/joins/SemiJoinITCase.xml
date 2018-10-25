@@ -51,7 +51,7 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
   <TestCase name="testComposedConditionLeftAnti[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
@@ -61,7 +61,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnt
   <TestCase name="testComposedConditionLeftAnti[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], joinType=[ANTI])
+SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -104,7 +104,7 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin]
   <TestCase name="testComposedConditionLeftSemi[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
@@ -114,7 +114,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSem
   <TestCase name="testComposedConditionLeftSemi[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -157,7 +157,7 @@ HashSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin]
   <TestCase name="testComposedUniqueConditionLeftAnti[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- BoundedDataStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
@@ -167,7 +167,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnt
   <TestCase name="testComposedUniqueConditionLeftAnti[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin], joinType=[ANTI])
+SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -178,7 +178,7 @@ SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnti
   <TestCase name="testExistsWithNonEqualityCorrelationCondition[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[>(b, d)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[>(b, d)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[d])
@@ -224,7 +224,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
   <TestCase name="testExistsWithOver1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
@@ -235,7 +235,7 @@ NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=
   <TestCase name="testExistsWithOver1[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
@@ -247,7 +247,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], joinTyp
   <TestCase name="testExistsWithOver2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[>(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[>(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
@@ -304,7 +304,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
   <TestCase name="testExistsWithOver3[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[b])
@@ -318,7 +318,7 @@ NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=
   <TestCase name="testExistsWithOver3[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
@@ -334,7 +334,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], joinTyp
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, d])
-+- NestedLoopJoin(where=[=(d, d0)], join=[c, d, d0], joinType=[InnerJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[=(d, d0)], join=[c, d, d0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
@@ -346,7 +346,7 @@ Calc(select=[c, d])
                      +- Exchange(distribution=[hash[a, d]])
                         +- LocalHashAggregate(groupBy=[a, d], select=[a, d])
                            +- Calc(select=[a, d])
-                              +- NestedLoopJoin(where=[>(b, d)], join=[a, b, d], joinType=[InnerJoin], build=[right], singleRow=[false])
+                              +- NestedLoopJoin(where=[>(b, d)], join=[a, b, d], joinType=[InnerJoin], build=[right])
                                  :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
                                  +- Exchange(distribution=[broadcast])
                                     +- SortAggregate(isMerge=[true], groupBy=[d], select=[d])
@@ -362,7 +362,7 @@ Calc(select=[c, d])
   <TestCase name="testFilterPushDownLeftAnti1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[OR(=(a, c), IS NULL(=(a, c)))], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[OR(=(a, c), IS NULL(=(a, c)))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -374,7 +374,7 @@ NestedLoopSemiJoin(where=[OR(=(a, c), IS NULL(=(a, c)))], join=[a, b], joinType=
   <TestCase name="testFilterPushDownLeftAnti2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[true])
+NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRowJoin=[true])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -427,7 +427,7 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
   <TestCase name="testFilterPushDownLeftAnti3[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -439,7 +439,7 @@ NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a,
   <TestCase name="testFilterPushDownLeftAnti3[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], joinType=[ANTI])
+SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[b]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -490,7 +490,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
   <TestCase name="testFilterPushDownLeftAnti4[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -502,7 +502,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
   <TestCase name="testFilterPushDownLeftAnti4[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], joinType=[ANTI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -553,7 +553,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
   <TestCase name="testFilterPushDownLeftSemi1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -565,7 +565,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
   <TestCase name="testFilterPushDownLeftSemi1[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -578,7 +578,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinTyp
   <TestCase name="testFilterPushDownLeftSemi2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[true])
+NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRowJoin=[true])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -632,7 +632,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
   <TestCase name="testFilterPushDownLeftSemi3[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -644,7 +644,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
   <TestCase name="testFilterPushDownLeftSemi3[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -703,7 +703,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
   <TestCase name="testInWithAggregate1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[EXPR$0, b])
@@ -717,7 +717,7 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
   <TestCase name="testInWithAggregate1[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
@@ -774,7 +774,7 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
   <TestCase name="testInWithAggregate2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -788,7 +788,7 @@ NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftS
   <TestCase name="testInWithAggregate2[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a, b]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
@@ -854,7 +854,7 @@ Calc(select=[c, d])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, d])
-+- NestedLoopSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
++- NestedLoopSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[right])
    :- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
@@ -870,7 +870,7 @@ Calc(select=[c, d])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, d])
-+- SortMergeSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], joinType=[SEMI])
++- SortMergeSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin])
    :- Exchange(distribution=[hash[$f2, d]])
    :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
@@ -918,7 +918,7 @@ HashSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin]
   <TestCase name="testInWithNonEqualityCorrelationCondition1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -928,7 +928,7 @@ NestedLoopSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSem
   <TestCase name="testInWithNonEqualityCorrelationCondition1[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[a]])
@@ -987,7 +987,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
   <TestCase name="testInWithNonEqualityCorrelationCondition2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c, d])
@@ -1003,7 +1003,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSem
   <TestCase name="testInWithNonEqualityCorrelationCondition2[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -1020,7 +1020,7 @@ SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemi
   <TestCase name="testInWithNonEqualityCorrelationCondition3[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[w0$o0 AS c, d])
@@ -1033,7 +1033,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSe
   <TestCase name="testInWithNonEqualityCorrelationCondition4[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[w0$o0 AS c, d])
@@ -1051,7 +1051,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSe
   <TestCase name="testInWithOver1[BroadcastHashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
+HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
@@ -1066,7 +1066,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroad
   <TestCase name="testInWithOver1[HashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left])
+HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
@@ -1082,7 +1082,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
   <TestCase name="testInWithOver1[HashJoin-true]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
+HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
@@ -1098,7 +1098,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
   <TestCase name="testInWithOver1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
@@ -1113,7 +1113,7 @@ NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], b
   <TestCase name="testInWithOver1[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
@@ -1129,7 +1129,7 @@ SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], jo
   <TestCase name="testInWithOver2[BroadcastHashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
+HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
@@ -1147,7 +1147,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], isBroad
   <TestCase name="testInWithOver2[HashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left])
+HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[left], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
@@ -1186,7 +1186,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
   <TestCase name="testInWithOver2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[EXPR$0], select=[EXPR$0])
@@ -1204,7 +1204,7 @@ NestedLoopSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], b
   <TestCase name="testInWithOver2[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
@@ -1267,7 +1267,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
   <TestCase name="testInWithOver3[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
@@ -1281,7 +1281,7 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
   <TestCase name="testInWithOver3[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
@@ -1351,7 +1351,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
   <TestCase name="testInWithOver4[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
@@ -1368,7 +1368,7 @@ NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Le
   <TestCase name="testInWithOver4[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
@@ -1387,7 +1387,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
++- NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
@@ -1400,7 +1400,7 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- NestedLoopSemiJoin(where=[$f2], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
++- NestedLoopSemiJoin(where=[$f2], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
@@ -1452,7 +1452,7 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
++- NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
@@ -1464,7 +1464,7 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], joinType=[ANTI])
++- SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin])
    :- Calc(select=[a, b, >(b, 1) AS $f2])
    :  +- Exchange(distribution=[hash[b]])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -1518,7 +1518,7 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- NestedLoopSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
++- NestedLoopSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], build=[right])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
@@ -1531,7 +1531,7 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- SortMergeSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin], joinType=[ANTI])
++- SortMergeSemiJoin(where=[AND(=(a, c), $f2)], join=[a, b, $f2], joinType=[LeftAntiJoin])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- Exchange(distribution=[hash[a]])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -1582,7 +1582,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
   <TestCase name="testJoinConditionPushDownLeftSemi1[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -1594,7 +1594,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
   <TestCase name="testJoinConditionPushDownLeftSemi1[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -1607,7 +1607,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinTyp
   <TestCase name="testJoinConditionPushDownLeftSemi2[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[true], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[true], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -1658,7 +1658,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
   <TestCase name="testJoinConditionPushDownLeftSemi3[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
@@ -1670,7 +1670,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
   <TestCase name="testJoinConditionPushDownLeftSemi3[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
@@ -1737,11 +1737,11 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- NestedLoopJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[right])
    :- Calc(select=[a, b], where=[>(a, 0)])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- NestedLoopSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+      +- NestedLoopSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], build=[right])
          :- Calc(select=[c])
          :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
          +- Exchange(distribution=[broadcast])
@@ -1754,11 +1754,11 @@ Calc(select=[a, b])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- SortMergeJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], joinType=[INNER])
++- SortMergeJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b], where=[>(a, 0)])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
-   +- SortMergeSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], joinType=[SEMI])
+   +- SortMergeSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin])
       :- Exchange(distribution=[hash[c]])
       :  +- Calc(select=[c])
       :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
@@ -1771,7 +1771,7 @@ Calc(select=[a, b])
   <TestCase name="testSemiWithDistinct[BroadcastHashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
+HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[c], select=[c])
@@ -1783,7 +1783,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
   <TestCase name="testSemiWithDistinct[HashJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
+HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -1796,7 +1796,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
   <TestCase name="testSemiWithDistinct[HashJoin-true]">
     <Resource name="planAfter">
       <![CDATA[
-HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
+HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -1809,7 +1809,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
   <TestCase name="testSemiWithDistinct[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[c], select=[c])
@@ -1821,7 +1821,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
   <TestCase name="testSemiWithDistinct[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -1869,7 +1869,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
   <TestCase name="testSingleConditionLeftAnti[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
@@ -1880,7 +1880,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
   <TestCase name="testSingleConditionLeftAnti[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], joinType=[ANTI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -1931,7 +1931,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
   <TestCase name="testSingleConditionLeftSemi[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[c])
@@ -1942,7 +1942,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
   <TestCase name="testSingleConditionLeftSemi[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], joinType=[SEMI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
@@ -1996,7 +1996,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
   <TestCase name="testSingleUniqueConditionLeftAnti[SortMergeJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], joinType=[ANTI])
+SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])
@@ -2012,7 +2012,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], joinTyp
   <TestCase name="testSingleUniqueConditionLeftAnti[NestedLoopJoin-false]">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
+NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
    +- SortAggregate(isMerge=[true], groupBy=[c], select=[c])

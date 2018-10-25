@@ -31,6 +31,7 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, Ta
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.ExpressionUtils.{isTimeIntervalLiteral, _}
 import org.apache.flink.table.plan.logical._
@@ -39,7 +40,6 @@ import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util._
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.window.{WindowOperator, WindowOperatorBuilder}
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -109,8 +109,9 @@ class StreamExecGroupWindowAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputSchema.relDataType, grouping), !grouping.isEmpty)
+      .itemIf("groupBy", groupingToString(inputSchema.relDataType, grouping), grouping.nonEmpty)
       .item("window", window)
+      .itemIf("properties", namedProperties.map(_.name).mkString(", "), namedProperties.nonEmpty)
       .item(
         "select", aggregationToString(
           inputSchema.relDataType,

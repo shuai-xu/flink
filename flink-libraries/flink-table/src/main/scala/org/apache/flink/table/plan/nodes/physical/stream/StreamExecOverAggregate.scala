@@ -33,13 +33,13 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, Ta
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToStreamAggregateInfoList}
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.functions.ProcessFunction
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
@@ -102,7 +102,7 @@ class StreamExecOverAggregate(
 
     super.explainTerms(pw)
       .itemIf("partitionBy",
-              partitionToString(outputSchema.relDataType, partitionKeys), partitionKeys.nonEmpty)
+        partitionToString(outputSchema.relDataType, partitionKeys), partitionKeys.nonEmpty)
       .item("orderBy",
         orderingToString(outputSchema.relDataType, overWindow.orderKeys.getFieldCollations))
       .item("window", windowRangeToString(logicWindow, overWindow))

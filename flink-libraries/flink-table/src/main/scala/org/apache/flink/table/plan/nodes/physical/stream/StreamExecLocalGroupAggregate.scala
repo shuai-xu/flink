@@ -90,7 +90,7 @@ class StreamExecLocalGroupAggregate(
 
   override def toString: String = {
     s"LocalGroupAggregate(${
-      if (!groupings.isEmpty) {
+      if (groupings.nonEmpty) {
         s"groupBy: (${groupingToString(inputRelDataType, groupings)}), "
       } else {
         ""
@@ -110,7 +110,7 @@ class StreamExecLocalGroupAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputRelDataType, groupings), !groupings.isEmpty)
+      .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
       .item(
         "select", aggregationToString(
           inputRelDataType,

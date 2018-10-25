@@ -84,7 +84,7 @@ abstract class CommonExchange(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-        .item("distribution", distributionToString())
+      .item("distribution", distributionToString())
   }
 
   private def distributionToString(): String = {

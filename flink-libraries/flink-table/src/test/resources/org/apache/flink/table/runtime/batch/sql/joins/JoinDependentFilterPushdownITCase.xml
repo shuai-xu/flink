@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, d])
-+- NestedLoopJoin(where=[OR(AND(=(b, e), =(a, 0)), AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[OR(AND(=(b, e), =(a, 0)), AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b], where=[OR(=(a, 0), =(a, 1), =(a, 2))])
    :     +- BoundedDataStreamScan(table=[[Table3]], fields=[a, b, c])
@@ -46,7 +46,7 @@ Calc(select=[a, d])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, d])
-+- NestedLoopJoin(where=[OR(AND(=(a, 1), =(b, 1), =(d, 2), =(e, 2)), AND(=(a, 2), =(b, 2), =(d, 1), =(e, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[OR(AND(=(a, 1), =(b, 1), =(d, 2), =(e, 2)), AND(=(a, 2), =(b, 2), =(d, 1), =(e, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b], where=[OR(AND(=(a, 1), =(b, 1)), AND(=(a, 2), =(b, 2)))])
    :     +- BoundedDataStreamScan(table=[[Table3]], fields=[a, b, c])
@@ -58,7 +58,7 @@ Calc(select=[a, d])
   <TestCase name="testAndOr">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[AND(OR(AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1))), OR(AND(=(a, 3), =(d, 4)), AND(=(a, 4), =(d, 3))))], join=[a, d], joinType=[InnerJoin], build=[left], singleRow=[false])
+NestedLoopJoin(where=[AND(OR(AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1))), OR(AND(=(a, 3), =(d, 4)), AND(=(a, 4), =(d, 3))))], join=[a, d], joinType=[InnerJoin], build=[left])
 :- Exchange(distribution=[broadcast])
 :  +- Calc(select=[a], where=[AND(OR(=(a, 1), =(a, 2)), OR(=(a, 3), =(a, 4)))])
 :     +- BoundedDataStreamScan(table=[[Table3]], fields=[a, b, c])
@@ -71,7 +71,7 @@ NestedLoopJoin(where=[AND(OR(AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1))), OR(A
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, d])
-+- NestedLoopJoin(where=[OR(AND(=(a, 1), =(b, 1), =(d, 2), =(e, 2)), AND(=(d, 1), =(e, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[OR(AND(=(a, 1), =(b, 1), =(d, 2), =(e, 2)), AND(=(d, 1), =(e, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[right])
    :- Calc(select=[a, b])
    :  +- BoundedDataStreamScan(table=[[Table3]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
@@ -84,7 +84,7 @@ Calc(select=[a, d])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, d])
-+- NestedLoopJoin(where=[OR(=(b, e), AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[OR(=(b, e), AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1)))], join=[a, b, d, e], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b])
    :     +- BoundedDataStreamScan(table=[[SmallTable3]], fields=[a, b, c])
@@ -97,7 +97,7 @@ Calc(select=[a, d])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, d])
-+- NestedLoopJoin(where=[OR(AND(=(a, 1), =(b, 1), =(a0, 2), =(e, 2)), AND(=(a, 2), =(b0, 2), =(d, 1), =(e, 1)))], join=[a, b, a0, b0, d, e], joinType=[InnerJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[OR(AND(=(a, 1), =(b, 1), =(a0, 2), =(e, 2)), AND(=(a, 2), =(b0, 2), =(d, 1), =(e, 1)))], join=[a, b, a0, b0, d, e], joinType=[InnerJoin], build=[right])
    :- Calc(select=[a, b], where=[OR(AND(=(a, 1), =(b, 1)), =(a, 2))])
    :  +- BoundedDataStreamScan(table=[[SmallTable3]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
@@ -113,7 +113,7 @@ Calc(select=[a, d])
   <TestCase name="testSimple">
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[OR(AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1)))], join=[a, d], joinType=[InnerJoin], build=[left], singleRow=[false])
+NestedLoopJoin(where=[OR(AND(=(a, 1), =(d, 2)), AND(=(a, 2), =(d, 1)))], join=[a, d], joinType=[InnerJoin], build=[left])
 :- Exchange(distribution=[broadcast])
 :  +- Calc(select=[a], where=[OR(=(a, 1), =(a, 2))])
 :     +- BoundedDataStreamScan(table=[[Table3]], fields=[a, b, c])

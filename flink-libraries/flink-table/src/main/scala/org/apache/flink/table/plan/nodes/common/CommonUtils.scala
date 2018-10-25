@@ -27,12 +27,13 @@ import scala.collection.JavaConverters._
 
 object CommonUtils {
   def groupingToString(inputType: RelDataType, grouping: Array[Int]): String = {
-
     val inFields = inputType.getFieldNames.asScala
     grouping.map( inFields(_) ).mkString(", ")
   }
 
-  def getMiniBatchTrigger(queryConfig: StreamQueryConfig, useLocalAgg: Boolean) = {
+  def getMiniBatchTrigger(
+      queryConfig: StreamQueryConfig,
+      useLocalAgg: Boolean): CombinedBundleTrigger[BaseRow] = {
     val triggerTime = if (useLocalAgg) {
       queryConfig.getMiniBatchTriggerTime / 2
     } else {

@@ -103,12 +103,18 @@ class StreamExecWindowJoin(
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
+    val windowBounds = s"isRowTime=$isRowTime, leftLowerBound=$leftLowerBound, " +
+      s"leftUpperBound=$leftUpperBound, leftTimeIndex=$leftTimeIndex, " +
+      s"rightTimeIndex=$rightTimeIndex"
+    val writer = super.explainTerms(pw)
     joinExplainTerms(
-      super.explainTerms(pw),
+      writer,
       outputRowSchema.relDataType,
       joinCondition,
       FlinkJoinRelType.toFlinkJoinRelType(joinType),
+      outputRowSchema.relDataType,
       getExpressionString)
+    writer.item("windowBounds", windowBounds)
   }
 
   override def translateToPlan(
@@ -146,15 +152,6 @@ class StreamExecWindowJoin(
       outputRowSchema.relDataType,
       remainCondition,
       ruleDescription)
-
-    val joinOpName =
-      s"where: ( " +
-        s"${
-          joinConditionToString(outputRowSchema.relDataType,
-            joinCondition,
-            getExpressionString)
-        }), " +
-        s"join: (${joinSelectionToString(outputRowSchema.relDataType)}"
 
     val flinkJoinType = FlinkJoinRelType.toFlinkJoinRelType(joinType)
      flinkJoinType match {

@@ -162,8 +162,8 @@ trait BatchExecJoinBase extends Join with CommonJoin with RowBatchExecRel {
       (requiredLeftShuffleKeys, requiredRightShuffleKeys)
     }
     (true,
-        FlinkRelDistribution.hash(ImmutableIntList.of(leftShuffleKeys: _*), true),
-        FlinkRelDistribution.hash(ImmutableIntList.of(rightShuffleKeys: _*), true))
+        FlinkRelDistribution.hash(ImmutableIntList.of(leftShuffleKeys: _*), requireStrict = true),
+        FlinkRelDistribution.hash(ImmutableIntList.of(rightShuffleKeys: _*), requireStrict = true))
   }
 
   /**

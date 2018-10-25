@@ -65,18 +65,18 @@ class BatchExecLocalHashAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-        .itemIf("groupBy", groupingToString(inputType, grouping), grouping.nonEmpty)
-        .itemIf("auxGrouping", groupingToString(inputType, auxGrouping), auxGrouping.nonEmpty)
-        .item("select", aggregationToString(
-          inputType,
-          grouping,
-          auxGrouping,
-          rowRelDataType,
-          aggCallToAggFunction.map(_._1),
-          aggCallToAggFunction.map(_._2),
-          isMerge = false,
-          isGlobal = false))
-        .itemIf("reuse_id", getReuseId, isReused)
+      .itemIf("groupBy", groupingToString(inputType, grouping), grouping.nonEmpty)
+      .itemIf("auxGrouping", groupingToString(inputType, auxGrouping), auxGrouping.nonEmpty)
+      .item("select", aggregationToString(
+        inputType,
+        grouping,
+        auxGrouping,
+        rowRelDataType,
+        aggCallToAggFunction.map(_._1),
+        aggCallToAggFunction.map(_._2),
+        isMerge = false,
+        isGlobal = false))
+      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)

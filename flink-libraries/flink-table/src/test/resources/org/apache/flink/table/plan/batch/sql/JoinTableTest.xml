@@ -51,7 +51,7 @@ HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EX
 +- Exchange(distribution=[hash[b]])
    +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(a) AS count$0, Partial_SUM(c) AS sum$1, Partial_SUM(d) AS sum$2])
       +- Calc(select=[b, a, c, d])
-         +- JoinTable(join=[b, a, c, d, id], on=[[1-0]], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()])
+         +- JoinTable(join=[b, a, c, d, id], source=[TestDimensionTable(id, name, age)], on=[[1-0]], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()])
             +- Calc(select=[b, a, c, d])
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_SUM(sum$0) AS c, Final_SUM(sum$1) AS d])
                   +- Exchange(distribution=[hash[a, b]])
@@ -75,7 +75,7 @@ LogicalProject(a=[$0], b=[$1], name=[$4])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, name])
-+- JoinTable(join=[a, b, id, name], on=[[0-0]], joinType=[InnerJoin])
++- JoinTable(join=[a, b, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin])
    +- Calc(select=[a, b])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
@@ -95,7 +95,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-JoinTable(join=[a, b, c, id, name, age], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
+JoinTable(join=[a, b, c, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
 +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -121,7 +121,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c, id, name, CAST(10) AS age])
-+- JoinTable(join=[a, b, c, id, name], on=[[0-0]], joinType=[InnerJoin], where=[=(age, 10)], period=[PROCTIME()])
++- JoinTable(join=[a, b, c, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[=(age, 10)], period=[PROCTIME()])
    +- Calc(select=[a, b, c], where=[>(c, 1000)])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
@@ -143,7 +143,7 @@ LogicalProject(a=[$0], b=[$1], id=[$2], name=[$3], age=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-JoinTable(join=[a, b, id, name, age], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
+JoinTable(join=[a, b, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
 +- Calc(select=[a, b], where=[>(c, 1000)])
    +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
@@ -163,7 +163,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-JoinTable(join=[a, b, c, id, name, age], on=[[0-0]], joinType=[LeftOuterJoin], period=[PROCTIME()])
+JoinTable(join=[a, b, c, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[LeftOuterJoin], period=[PROCTIME()])
 +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -187,7 +187,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-JoinTable(join=[a, b, c, id], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
+JoinTable(join=[a, b, c, id], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
 +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -318,7 +318,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
             +- HashJoin(where=[=(a, a0)], join=[b, a, $f2, $f3, a0, b0, $f20, EXPR$2], joinType=[InnerJoin], isBroadcast=[true], build=[right])
                :- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
                :  +- Calc(select=[b, a, CAST(CASE(IS NOT NULL(a), 1, 0)) AS $f2, CAST(CASE(IS NOT NULL(id), 1, 0)) AS $f3])
-               :     +- JoinTable(join=[b, a, id], on=[[1-0]], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()], reuse_id=[1])
+               :     +- JoinTable(join=[b, a, id], source=[TestDimensionTable(id, name, age)], on=[[1-0]], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()], reuse_id=[1])
                :        +- Calc(select=[b, a])
                :           +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_SUM(sum$0) AS c, Final_SUM(sum$1) AS d])
                :              +- Exchange(distribution=[hash[a, b]])

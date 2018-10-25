@@ -31,9 +31,9 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3], EXPR$3=[$4], EXPR$4=[TUMBL
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS EXPR$0, CAST(/(-($f3, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1)))) AS EXPR$1, CAST(POWER(/(-($f4, /(*(CAST($f1), CAST($f1)), $f2)), $f2), 0.5)) AS EXPR$2, CAST(POWER(/(-($f5, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1))), 0.5)) AS EXPR$3, CAST(w$start) AS EXPR$4, CAST(w$end) AS EXPR$5])
-+- HashWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[Final_SUM(sum$0) AS $f0, Final_SUM(sum$1) AS $f1, Final_COUNT(count$2) AS $f2, Final_SUM(sum$3) AS $f3, Final_SUM(sum$4) AS $f4, Final_SUM(sum$5) AS $f5])
++- HashWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], properties=[w$start, w$end, w$rowtime], select=[Final_SUM(sum$0) AS $f0, Final_SUM(sum$1) AS $f1, Final_COUNT(count$2) AS $f2, Final_SUM(sum$3) AS $f3, Final_SUM(sum$4) AS $f4, Final_SUM(sum$5) AS $f5])
    +- Exchange(distribution=[single])
-      +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
+      +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
          +- Calc(select=[rowtime, c, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, rowtime])
 ]]>
@@ -76,9 +76,9 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[HOP_START($0)], EXPR$2=[HOP_END($0)])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[EXPR$0, CAST(w$start) AS EXPR$1, CAST(w$end) AS EXPR$2])
-+- HashWindowAggregate(window=[SlidingGroupWindow('w$, 'b, 3000.millis, 3000.millis)], select=[Final_SUM(sum$0) AS EXPR$0])
++- HashWindowAggregate(window=[SlidingGroupWindow('w$, 'b, 3000.millis, 3000.millis)], properties=[w$start, w$end, w$rowtime], select=[Final_SUM(sum$0) AS EXPR$0])
    +- Exchange(distribution=[single])
-      +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'b, 3000.millis, 3000.millis)], select=[Partial_SUM(a) AS sum$0])
+      +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'b, 3000.millis, 3000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_SUM(a) AS sum$0])
          +- Calc(select=[b, a])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>

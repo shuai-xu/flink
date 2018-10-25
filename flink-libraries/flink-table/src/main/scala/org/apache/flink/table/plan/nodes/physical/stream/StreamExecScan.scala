@@ -19,19 +19,17 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig}
-import org.apache.flink.table.plan.schema.DataStreamTable
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Cast
-import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.plan.schema.DataStreamTable
 import org.apache.flink.table.types.DataTypes
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 
 /**
   * Flink RelNode which matches along with DataStreamSource.
@@ -65,13 +63,6 @@ class StreamExecScan(
       relDataType
     )
   }
-
-  /**
-    * Note: Override this method is very important because Calcite will compute relNode's digest
-    * via this method and append a head name base on class name, w/o this overriding, digest header
-    * will be the same parent class name, then may encounter 'weird' problems during optimization...
-    */
-  override def explainTerms(pw: RelWriter): RelWriter = super.explainTerms(pw)
 
   override def translateToPlan(
       tableEnv: StreamTableEnvironment,

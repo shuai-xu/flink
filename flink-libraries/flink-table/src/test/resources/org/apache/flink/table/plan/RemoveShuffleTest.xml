@@ -488,14 +488,14 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7],
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], build=[left], singleRow=[false])
+NestedLoopJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], build=[left])
 :- Exchange(distribution=[broadcast])
-:  +- NestedLoopJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], build=[left], singleRow=[false])
+:  +- NestedLoopJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], build=[left])
 :     :- Exchange(distribution=[broadcast])
 :     :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])
 :     :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 :     +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
-+- NestedLoopJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])
    :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
@@ -881,14 +881,14 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7],
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], joinType=[INNER])
-:- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], joinType=[INNER])
+SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin])
+:- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin])
 :  :- Exchange(distribution=[hash[a]])
 :  :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])
 :  :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 :  +- Exchange(distribution=[hash[d]])
 :     +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
-+- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], joinType=[INNER])
++- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])
    :     +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
@@ -925,16 +925,16 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7],
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], joinType=[INNER])
+SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[FullOuterJoin], joinType=[FULL])
+:  +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[FullOuterJoin])
 :     :- Exchange(distribution=[hash[a]])
 :     :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 :     +- Exchange(distribution=[hash[d]])
 :        +- Calc(select=[d, CAST(2) AS e, f], where=[=(e, 2)])
 :           +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
 +- Exchange(distribution=[hash[d]])
-   +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[FullOuterJoin], joinType=[FULL])
+   +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[FullOuterJoin])
       :- Exchange(distribution=[hash[a]])
       :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
       +- Exchange(distribution=[hash[d]])
@@ -971,15 +971,15 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7],
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], joinType=[INNER])
-:- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[LeftOuterJoin], joinType=[LEFT])
+SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin])
+:- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[LeftOuterJoin])
 :  :- Exchange(distribution=[hash[a]])
 :  :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 :  +- Exchange(distribution=[hash[d]])
 :     +- Calc(select=[d, CAST(2) AS e, f], where=[=(e, 2)])
 :        +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
 +- Exchange(distribution=[hash[d]])
-   +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[LeftOuterJoin], joinType=[LEFT])
+   +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[LeftOuterJoin])
       :- Exchange(distribution=[hash[a]])
       :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
       +- Exchange(distribution=[hash[d]])
@@ -1016,15 +1016,15 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7],
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], joinType=[INNER])
+SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[RightOuterJoin], joinType=[RIGHT])
+:  +- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[RightOuterJoin])
 :     :- Exchange(distribution=[hash[a]])
 :     :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 :     +- Exchange(distribution=[hash[d]])
 :        +- Calc(select=[d, CAST(2) AS e, f], where=[=(e, 2)])
 :           +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
-+- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[RightOuterJoin], joinType=[RIGHT])
++- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[RightOuterJoin])
    :- Exchange(distribution=[hash[a]])
    :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
    +- Exchange(distribution=[hash[d]])
@@ -1054,7 +1054,7 @@ LogicalProject(EXPR$0=[*($0, 0.1)])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[EXPR$0])
-+- NestedLoopJoin(where=[>($f2, $f0)], join=[EXPR$0, $f2, $f0], joinType=[InnerJoin], build=[right], singleRow=[true])
++- NestedLoopJoin(where=[>($f2, $f0)], join=[EXPR$0, $f2, $f0], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- Calc(select=[EXPR$0, $f2])
    :  +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_AVG(sum$0, count$1) AS EXPR$0, Final_SUM(sum$2) AS $f2])
    :     +- Exchange(distribution=[hash[c]])

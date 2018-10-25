@@ -121,7 +121,7 @@ LogicalProject(b=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, c])
-+- NestedLoopSemiJoin(where=[OR(=(b, b0), IS NULL(=(b, b0)))], join=[a, b, c], joinType=[LeftAntiJoin], build=[right], singleRow=[false])
++- NestedLoopSemiJoin(where=[OR(=(b, b0), IS NULL(=(b, b0)))], join=[a, b, c], joinType=[LeftAntiJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])

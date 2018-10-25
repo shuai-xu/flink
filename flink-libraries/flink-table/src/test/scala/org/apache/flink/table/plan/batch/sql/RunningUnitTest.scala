@@ -31,7 +31,7 @@ import org.junit.{Before, Test}
   * Test for RelRunningUnit.
   */
 class RunningUnitTest extends TableTestBatchExecBase {
-  private var util: BatchExecTableTestUtil = _;
+  private var util: BatchExecTableTestUtil = _
 
   @Before
   def before(): Unit = {

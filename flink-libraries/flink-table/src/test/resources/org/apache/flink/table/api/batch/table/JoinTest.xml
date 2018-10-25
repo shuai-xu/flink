@@ -28,7 +28,7 @@ LogicalProject(c=[$7], g=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- NestedLoopJoin(where=[<(b, d)], join=[d, g, b, c], joinType=[FullOuterJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[<(b, d)], join=[d, g, b, c], joinType=[FullOuterJoin], build=[left])
    :- Exchange(distribution=[single])
    :  +- Calc(select=[d, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
@@ -115,7 +115,7 @@ LogicalProject(c=[$7], g=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- NestedLoopJoin(where=[<(b, d)], join=[d, g, b, c], joinType=[LeftOuterJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[<(b, d)], join=[d, g, b, c], joinType=[LeftOuterJoin], build=[right])
    :- Calc(select=[d, g])
    :  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[broadcast])
@@ -198,7 +198,7 @@ LogicalProject(c=[$2], g=[$6])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[true], join=[c, g], joinType=[InnerJoin], build=[right], singleRow=[false])
+NestedLoopJoin(where=[true], join=[c, g], joinType=[InnerJoin], build=[right])
 :- Calc(select=[c])
 :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
@@ -220,7 +220,7 @@ LogicalProject(c=[$2], g=[$6])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- NestedLoopJoin(where=[<(a, d)], join=[a, c, d, g], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[<(a, d)], join=[a, c, d, g], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, c])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
@@ -241,7 +241,7 @@ LogicalProject(c=[$7], g=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- NestedLoopJoin(where=[<(b, d)], join=[d, g, b, c], joinType=[RightOuterJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[<(b, d)], join=[d, g, b, c], joinType=[RightOuterJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[d, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])

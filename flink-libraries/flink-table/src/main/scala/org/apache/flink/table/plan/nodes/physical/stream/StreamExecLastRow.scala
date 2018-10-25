@@ -27,14 +27,16 @@ import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigg
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.{LastRowFunction, MiniBatchLastRowFunction}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import scala.collection.JavaConversions._
 
 /**
   * Flink RelNode which matches along with LogicalLastRow.
@@ -71,19 +73,19 @@ class StreamExecLastRow(
 
   override def needsUpdatesAsRetraction(input: RelNode): Boolean = true
 
-  override def toString: String =
-    s"${getLastRowString(inputSchema, uniqueKeys)}"
-
-  override def explainTerms(pw: RelWriter): RelWriter = {
-    pw.input("input", getInput)
-      .item("LastRow", getLastRowString(inputSchema, uniqueKeys))
+  override def toString: String = {
+    val inputNames = inputSchema.relDataType.getFieldNames
+    val keyNames = uniqueKeys.map(inputNames.get(_)).mkString(", ")
+    val outputNames = outputSchema.relDataType.getFieldNames.mkString(", ")
+    s"LastRow: (key: ($keyNames), select: ($outputNames))"
   }
 
-  def getLastRowString(inputSchema: BaseRowSchema, groupings: Array[Int]): String = {
-    val rowNames = inputSchema.fieldNames
-    val keyNames = rowNames.zipWithIndex.filter(e => groupings.contains(e._2)).map(e => e._1)
-    s"LastRow: " +
-      s"(key: (${keyNames.mkString(", ")}), select: (${rowNames.mkString(", ")}))"
+  override def explainTerms(pw: RelWriter): RelWriter = {
+    val inputNames = inputSchema.relDataType.getFieldNames
+    val outputNames = outputSchema.relDataType.getFieldNames
+    super.explainTerms(pw)
+      .item("key", uniqueKeys.map(inputNames.get(_)).mkString(", "))
+      .item("select", outputNames.mkString(", "))
   }
 
   override def translateToPlan(
@@ -134,7 +136,7 @@ class StreamExecLastRow(
 
     val ret = new OneInputTransformation(
       inputTransform,
-      getLastRowString(inputSchema, uniqueKeys),
+      toString,
       operator,
       rowTypeInfo,
       tableEnv.execEnv.getParallelism

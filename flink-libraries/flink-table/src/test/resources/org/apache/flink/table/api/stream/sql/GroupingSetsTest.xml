@@ -16,6 +16,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
+  <TestCase name="testCube">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[b, c, EXPR$2], where=[>(EXPR$2, 3)])
+  StreamExecGroupAggregate(groupBy=[b, c, $e], select=[b, c, $e, COUNT(*) AS EXPR$2])
+    StreamExecExchange(distribution=[hash[b, c, $e]])
+      StreamExecExpand(projects=[{b, c, 0 AS $e}, {b, null AS c, 1 AS $e}, {null AS b, c, 2 AS $e}, {null AS b, null AS c, 3 AS $e}])
+        StreamExecCalc(select=[b, c])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testGroupingsets">
     <Resource name="plan">
       <![CDATA[
@@ -33,19 +45,7 @@ StreamExecCalc(select=[b, EXPR$1, 0 AS EXPR$2, 0 AS EXPR$3])
 StreamExecCalc(select=[b, c, EXPR$2])
   StreamExecGroupAggregate(groupBy=[b, c, $e], select=[b, c, $e, COUNT(*) AS EXPR$2])
     StreamExecExchange(distribution=[hash[b, c, $e]])
-      StreamExecExpand(expand=[b, c, $e])
-        StreamExecCalc(select=[b, c])
-          StreamExecScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testCube">
-    <Resource name="plan">
-			<![CDATA[
-StreamExecCalc(select=[b, c, EXPR$2], where=[>(EXPR$2, 3)])
-  StreamExecGroupAggregate(groupBy=[b, c, $e], select=[b, c, $e, COUNT(*) AS EXPR$2])
-    StreamExecExchange(distribution=[hash[b, c, $e]])
-      StreamExecExpand(expand=[b, c, $e])
+      StreamExecExpand(projects=[{b, c, 0 AS $e}, {b, null AS c, 1 AS $e}, {null AS b, null AS c, 3 AS $e}])
         StreamExecCalc(select=[b, c])
           StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>

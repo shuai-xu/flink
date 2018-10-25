@@ -19,20 +19,20 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel._
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.runtime.aggregate._
 import org.apache.calcite.rel.RelFieldCollation.Direction
-import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Sort
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.NullBinaryRowKeySelector
+import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.{OnlyRowTimeSortOperator, ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -42,7 +42,6 @@ import _root_.scala.collection.JavaConverters._
 
 /**
  * Flink RelNode which matches along with Sort Rule.
- *
  */
 class StreamExecTemporalSort(
     cluster: RelOptCluster,

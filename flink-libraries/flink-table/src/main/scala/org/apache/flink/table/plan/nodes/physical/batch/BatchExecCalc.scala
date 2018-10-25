@@ -69,9 +69,7 @@ class BatchExecCalc(
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
       .item("select", selectionToString(calcProgram, getExpressionString))
-      .itemIf(
-        "where",
-        conditionToString(calcProgram, getExpressionString),
+      .itemIf("where", conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
       .itemIf("reuse_id", getReuseId, isReused)
   }

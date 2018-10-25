@@ -28,8 +28,8 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.nodes.common.CommonCalc
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.common.CommonCalc
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
 /**

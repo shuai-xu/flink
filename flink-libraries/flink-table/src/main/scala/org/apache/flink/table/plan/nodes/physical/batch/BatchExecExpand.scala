@@ -63,16 +63,13 @@ class BatchExecExpand(
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("expand", rowTypeToString(getRowType))
+    super.explainTerms(pw)
+      .item("projects", projectsToString(projects, input.getRowType, getRowType))
       .itemIf("reuse_id", getReuseId, isReused)
   }
 
-  private def rowTypeToString(rowType: RelDataType): String = {
-    rowType.getFieldList.map(_.getName).mkString(", ")
-  }
-
   private def getOperatorName: String = {
-    s"ExpandBatchExec: ${rowTypeToString(getRowType)}"
+    s"BatchExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 
   override def toString: String = getOperatorName

@@ -20,7 +20,8 @@ package org.apache.flink.table.plan.nodes.common
 
 import java.util
 
-import org.apache.calcite.rex.RexNode
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexNode}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -99,5 +100,27 @@ trait CommonExpand {
     new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
       genOperatorExpression.name,
       genOperatorExpression.code)
+  }
+
+  protected def projectsToString(
+      projects: util.List[util.List[RexNode]],
+      inputRowType: RelDataType,
+      outputRowType: RelDataType): String = {
+    val inFieldNames = inputRowType.getFieldNames
+    val outFieldNames = outputRowType.getFieldNames
+    projects.map { project =>
+      project.zipWithIndex.map {
+        case (r: RexInputRef, i) =>
+          val inputFieldName = inFieldNames.get(r.getIndex)
+          val outputFieldName = outFieldNames.get(i)
+          if (inputFieldName != outputFieldName) {
+            s"$inputFieldName AS $outputFieldName"
+          } else {
+            outputFieldName
+          }
+        case (l: RexLiteral, i) => s"${l.getValue3} AS ${outFieldNames.get(i)}"
+        case (_, i) => outFieldNames.get(i)
+      }.mkString("{", ", ", "}")
+    }.mkString(", ")
   }
 }

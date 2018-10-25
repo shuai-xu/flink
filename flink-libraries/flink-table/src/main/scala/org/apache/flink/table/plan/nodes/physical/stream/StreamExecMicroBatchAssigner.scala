@@ -40,9 +40,7 @@ class StreamExecMicroBatchAssigner(
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
-    pw.item("interval", intervalMs + "ms")
-    pw
+    super.explainTerms(pw).item("interval", intervalMs + "ms")
   }
 
   override def translateToPlan(

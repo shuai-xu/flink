@@ -85,7 +85,8 @@ class BatchExecUnion(
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("union", unionSelectionToString)
+    super.explainTerms(pw)
+      .item("union", unionSelectionToString)
       .itemIf("reuse_id", getReuseId, isReused)
   }
 

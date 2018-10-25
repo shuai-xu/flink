@@ -51,9 +51,8 @@ abstract class WatermarkAssigner(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-    pw.item("fields", getRowType.getFieldNames)
-    pw.item("rowtimeField", rowtimeField)
-    pw.item("watermarkOffset", watermarkOffset)
-    pw
+      .item("fields", getRowType.getFieldNames)
+      .item("rowtimeField", rowtimeField)
+      .item("watermarkOffset", watermarkOffset)
   }
 }

@@ -210,7 +210,7 @@ class JobLauncherSqlTest {
 
     assertEquals(
       "StreamExecLastRow(" +
-      "LastRow=[LastRow: (key: (a1, b1), select: (c, a1, b1))])\n  " +
+      "key=[a1, b1], select=[c, a1, b1])\n  " +
       "StreamExecExchange(distribution=[hash[a1, b1]])\n    " +
       "StreamExecCalc(select=[c, a AS a1, b AS b1])\n      " +
       "StreamExecWatermarkAssigner(" +

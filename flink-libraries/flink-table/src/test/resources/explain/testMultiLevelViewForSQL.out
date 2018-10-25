@@ -25,7 +25,7 @@ StreamExecScan(retract=[false], accMode=[Acc])
 [[IntermediateTable=_DataStreamTable_3]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
-    StreamExecUnion(all=[true], union all=[num, id])
+    StreamExecUnion(all=[true], union=[num, id])
       StreamExecCalc(select=[num, id])
         StreamExecScan(table=[[_DataStreamTable_2]])
       StreamExecCalc(select=[num, id], where=[LIKE(text, '%world%')])

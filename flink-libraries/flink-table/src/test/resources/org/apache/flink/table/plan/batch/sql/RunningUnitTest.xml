@@ -81,7 +81,7 @@ RelRunningUnit{
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])
    :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
@@ -200,7 +200,7 @@ SortAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS EXPR$0])
 +- Exchange(distribution=[single])
    +- LocalSortAggregate(select=[Partial_SUM(b) AS sum$0])
       +- Calc(select=[b])
-         +- SortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin], joinType=[INNER])
+         +- SortMergeJoin(where=[=(a, d)], join=[a, b, d], joinType=[InnerJoin])
             :- Exchange(distribution=[hash[a]])
             :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b]]]], fields=[a, b])
             +- Exchange(distribution=[hash[d]])

@@ -63,7 +63,7 @@ class FlinkLogicalTableSourceScan(
 
     tableSource match {
       case s: StreamTableSource[_] =>
-        TableSourceUtil.getRelDataType(s, None, true, flinkTypeFactory)
+        TableSourceUtil.getRelDataType(s, None, streaming = true, flinkTypeFactory)
       case _: BatchExecTableSource[_] | _: DimensionTableSource[_]=>
         flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, false)
       case _ => throw new TableException("Unknown TableSource type.")

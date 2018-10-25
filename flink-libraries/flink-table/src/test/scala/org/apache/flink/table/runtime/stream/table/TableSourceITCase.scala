@@ -256,7 +256,7 @@ class TableSourceITCase extends StreamingTestBase {
     val expected = mutable.MutableList(
       "Mary,1970-01-01 00:00:00.0,40",
       "Bob,1970-01-01 00:00:00.0,20",
-      "Liz,1970-01-01 00:00:02.0,40")
+      "Liz,1970-01-01 00:00:02.0,40").toList
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 

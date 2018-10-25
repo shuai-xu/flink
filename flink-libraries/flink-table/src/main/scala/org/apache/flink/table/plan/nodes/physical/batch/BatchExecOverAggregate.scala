@@ -225,16 +225,13 @@ class BatchExecOverAggregate(
   override def explainTerms(pw: RelWriter): RelWriter = {
     val partitionKeys: Array[Int] = grouping
     val groups = modeToGroupToAggCallToAggFunction.map(_._2)
-
     val constants: Seq[RexLiteral] = logicWindow.constants
 
     val writer = super.explainTerms(pw)
-        .itemIf(
-          "partitionBy", partitionToString(rowRelDataType, partitionKeys), partitionKeys.nonEmpty)
-        .itemIf(
-          "orderBy",
-          orderingToString(rowRelDataType, groups.head.orderKeys.getFieldCollations),
-          orderKeyIdxs.nonEmpty)
+      .itemIf("partitionBy", partitionToString(rowRelDataType, partitionKeys),
+        partitionKeys.nonEmpty)
+      .itemIf("orderBy", orderingToString(rowRelDataType, groups.head.orderKeys.getFieldCollations),
+        orderKeyIdxs.nonEmpty)
 
     var offset = inputRelDataType.getFieldCount
     groups.zipWithIndex.foreach { case (group, index) =>
@@ -250,9 +247,8 @@ class BatchExecOverAggregate(
       val windowRange = windowRangeToString(logicWindow, group)
       writer.item("window#" + index, select + windowRange)
     }
-    writer.item("select", deriveRowType.getFieldNames.mkString(", "))
+    writer.item("select", getRowType.getFieldNames.mkString(", "))
     writer.itemIf("reuse_id", getReuseId, isReused)
-    writer
   }
 
   /**

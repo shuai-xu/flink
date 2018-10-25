@@ -33,7 +33,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
 +- HashAggregate(isMerge=[true], groupBy=[b, c, $e], select=[b, c, $e, Final_AVG(sum$0, count$1) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -55,7 +55,7 @@ Calc(select=[b, c, a, 0 AS g])
 +- HashAggregate(isMerge=[true], groupBy=[b, c, $e], select=[b, c, $e, Final_AVG(sum$0, count$1) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -77,7 +77,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
 +- HashAggregate(isMerge=[true], groupBy=[b, c, $e], select=[b, c, $e, Final_AVG(sum$0, count$1) AS a])
    +- Exchange(distribution=[hash[b, c, $e]])
       +- LocalHashAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>

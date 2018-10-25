@@ -62,7 +62,7 @@ class StreamExecUnion(
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("union all", outputRowType.getFieldNames.mkString(", "))
+    super.explainTerms(pw).item("union", outputRowType.getFieldNames.mkString(", "))
   }
 
   override def toString: String = {

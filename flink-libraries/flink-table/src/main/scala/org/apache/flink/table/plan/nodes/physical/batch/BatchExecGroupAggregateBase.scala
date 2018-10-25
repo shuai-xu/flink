@@ -247,13 +247,13 @@ abstract class BatchExecGroupAggregateBase(
     }
   }
 
-  protected def getSkewPunishFactor(): Int = {
+  protected def getSkewPunishFactor: Int = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
     tableConfig.getParameters.getInteger(TableConfig.SQL_CBO_SKEW_PUNISH_FACTOR,
                                         TableConfig.SQL_CBO_SKEW_PUNISH_FACTOR_DEFAULT)
   }
 
-  protected def isEnforceTwoStageAgg(): Boolean = {
+  protected def isEnforceTwoStageAgg: Boolean = {
     val tableConfig = FlinkRelOptUtil.getTableConfig(this)
     val aggConfig = tableConfig.getParameters.getString(
       TableConfig.SQL_CBO_AGG_PHASE_ENFORCER,

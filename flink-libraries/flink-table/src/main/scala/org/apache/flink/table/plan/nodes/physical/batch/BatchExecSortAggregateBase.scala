@@ -85,7 +85,7 @@ abstract class BatchExecSortAggregateBase(
       var cpuCost = FUNC_CPU_COST * inputRows * aggCallToAggFunction.size
       // Punish One-phase aggregate if it's input data is skew on groupKeys.
       if (isFinal && !isMerge && isSkewOnGroupKeys(mq)) {
-        cpuCost = cpuCost * getSkewPunishFactor()
+        cpuCost = cpuCost * getSkewPunishFactor
       }
       val averageRowSize: Double = mq.getAverageRowSize(this)
       val memCost = averageRowSize

@@ -29,7 +29,7 @@ LogicalProject(c=[$7], g=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[AND(=(a, d), <(b, h))], join=[a, b, c, d, g, h], joinType=[InnerJoin], joinType=[INNER])
++- SortMergeJoin(where=[AND(=(a, d), <(b, h))], join=[a, b, c, d, g, h], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
    :  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
    +- Exchange(distribution=[hash[d]])
@@ -50,7 +50,7 @@ LogicalProject(c=[$2], g=[$6])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[FullOuterJoin], joinType=[FULL])
++- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[FullOuterJoin])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
@@ -73,7 +73,7 @@ LogicalProject(c=[$2], g=[$6])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[=(a, d)], join=[d, g, a, c], joinType=[InnerJoin], joinType=[INNER])
++- SortMergeJoin(where=[=(a, d)], join=[d, g, a, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[d]])
    :  +- Calc(select=[d, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
@@ -96,7 +96,7 @@ LogicalProject(c=[$7], g=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[=(a, d)], join=[a, c, d, g], joinType=[InnerJoin], joinType=[INNER])
++- SortMergeJoin(where=[=(a, d)], join=[a, c, d, g], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, c])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
@@ -119,7 +119,7 @@ LogicalProject(c=[$2], g=[$6])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[AND(=(a, d), =(b, e))], join=[d, e, g, a, b, c], joinType=[InnerJoin], joinType=[INNER])
++- SortMergeJoin(where=[AND(=(a, d), =(b, e))], join=[d, e, g, a, b, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[d, e]])
    :  +- Calc(select=[d, e, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
@@ -140,7 +140,7 @@ LogicalProject(c=[$2], g=[$6])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[RightOuterJoin], joinType=[RIGHT])
++- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[RightOuterJoin])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
@@ -162,7 +162,7 @@ LogicalProject(c=[$2], g=[$6])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, g])
-+- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[LeftOuterJoin], joinType=[LEFT])
++- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[LeftOuterJoin])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])

@@ -60,7 +60,8 @@ class BatchExecValues(
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("values", valuesFieldsToString)
+    super.explainTerms(pw)
+      .item("values", valuesFieldsToString)
       .itemIf("reuse_id", getReuseId, isReused)
   }
 

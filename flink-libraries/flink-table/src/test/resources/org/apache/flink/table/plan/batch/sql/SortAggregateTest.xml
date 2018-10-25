@@ -542,7 +542,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -564,7 +564,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
 +- SortAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
             +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -586,7 +586,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
 +- SortAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
             +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -610,7 +610,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -634,7 +634,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -700,7 +700,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, =($e, 2), 1, 1) AS 
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -956,7 +956,7 @@ Calc(select=[b, c, a, 0 AS g])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -980,7 +980,7 @@ Calc(select=[b, c, a, 0 AS g])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1002,7 +1002,7 @@ Calc(select=[b, c, a, 0 AS g])
 +- SortAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
             +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1024,7 +1024,7 @@ Calc(select=[b, c, a, 0 AS g])
 +- SortAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
             +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1048,7 +1048,7 @@ Calc(select=[b, c, a, 0 AS g])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1072,7 +1072,7 @@ Calc(select=[b, c, a, 0 AS g])
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, null AS c, 1 AS $e}, {a, null AS b, c, 2 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1096,7 +1096,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1120,7 +1120,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1142,7 +1142,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
 +- SortAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
             +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1164,7 +1164,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
 +- SortAggregate(isMerge=[false], groupBy=[b, c, $e], select=[b, c, $e, AVG(a) AS a])
    +- Sort(orderBy=[b ASC, c ASC, $e ASC])
       +- Exchange(distribution=[hash[b, c, $e]])
-         +- Expand(expand=[a, b, c, $e])
+         +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
             +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1188,7 +1188,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -1212,7 +1212,7 @@ Calc(select=[b, c, a, 0 AS g, CASE(=($e, 0), 0, =($e, 1), 0, 1) AS gb, CASE(=($e
       +- Exchange(distribution=[hash[b, c, $e]])
          +- LocalSortAggregate(groupBy=[b, c, $e], select=[b, c, $e, Partial_AVG(a) AS (sum$0, count$1)])
             +- Sort(orderBy=[b ASC, c ASC, $e ASC])
-               +- Expand(expand=[a, b, c, $e])
+               +- Expand(projects=[{a, b, c, 0 AS $e}, {a, b, null AS c, 1 AS $e}, {a, null AS b, null AS c, 3 AS $e}])
                   +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>

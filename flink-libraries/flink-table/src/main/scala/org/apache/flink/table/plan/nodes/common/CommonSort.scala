@@ -91,14 +91,12 @@ trait CommonSort {
   }
 
   private[flink] def sortExplainTerms(
-    pw: RelWriter,
-    rowRelDataType: RelDataType,
-    sortCollation: RelCollation,
-    sortOffset: RexNode,
-    sortFetch: RexNode) : RelWriter = {
-
-    pw
-      .item("orderBy", sortFieldsToString(sortCollation, rowRelDataType))
+      pw: RelWriter,
+      rowRelDataType: RelDataType,
+      sortCollation: RelCollation,
+      sortOffset: RexNode,
+      sortFetch: RexNode): RelWriter = {
+    pw.item("orderBy", sortFieldsToString(sortCollation, rowRelDataType))
       .itemIf("offset", offsetToString(sortOffset), sortOffset != null)
       .itemIf("fetch", fetchToString(sortFetch, sortOffset), sortFetch != null)
   }

@@ -25,10 +25,10 @@ import org.apache.calcite.sql.SemiJoinType
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.nodes.common.CommonCorrelate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
 /**
@@ -91,10 +91,8 @@ class StreamExecCorrelate(
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
     super.explainTerms(pw)
       .item("invocation", scan.getCall)
-      .item("correlate", correlateToString(
-        child.getRowType,
-        rexCall, sqlFunction,
-        getExpressionString))
+      .item("correlate",
+        correlateToString(child.getRowType, rexCall, sqlFunction, getExpressionString))
       .item("select", selectToString(relDataType))
       .item("rowType", relDataType)
       .item("joinType", joinType)
@@ -107,8 +105,8 @@ class StreamExecCorrelate(
 
     val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
       tableEnv, queryConfig)
-    val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, true).setOperatorBaseClass(
-      classOf[AbstractProcessStreamOperator[_]])
+    val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
+      .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
     generateCorrelateTransformation(
       tableEnv,
       operatorCtx,

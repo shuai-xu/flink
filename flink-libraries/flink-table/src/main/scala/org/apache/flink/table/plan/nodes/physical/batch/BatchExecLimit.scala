@@ -75,10 +75,10 @@ class BatchExecLimit(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-        .item("offset", offsetToString)
-        .item("limit", limitToString)
-        .item("global", isGlobal)
-        .itemIf("reuse_id", getReuseId, isReused)
+      .item("offset", offsetToString)
+      .item("limit", limitToString)
+      .item("global", isGlobal)
+      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   private def offsetToString: String = {

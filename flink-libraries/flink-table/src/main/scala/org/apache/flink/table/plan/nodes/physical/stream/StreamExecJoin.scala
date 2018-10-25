@@ -23,7 +23,7 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import org.apache.calcite.plan._
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
+import org.apache.calcite.rel.core.JoinInfo
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
@@ -39,16 +39,15 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, Ta
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.common.CommonJoin
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
-import org.apache.flink.table.runtime.operator.join._
-import org.apache.flink.table.runtime.operator.join.stream.{FullOuterJoinStreamOperator, InnerJoinStreamOperator, LeftOuterJoinStreamOperator, RightOuterJoinStreamOperator, SemiAntiJoinStreamOperator}
 import org.apache.flink.table.runtime.operator.join.stream.bundle._
 import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
+import org.apache.flink.table.runtime.operator.join.stream._
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -164,9 +163,10 @@ class StreamExecJoin(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-        .item("where", joinConditionToString)
-        .item("join", joinSelectionToString)
-        .item("joinType", joinTypeToString)
+      .item("where", joinConditionToString)
+      .item("join", joinSelectionToString)
+      .item("joinType", joinTypeToString)
+      .itemIf("joinHint", joinHint, joinHint != null)
   }
 
   @VisibleForTesting
@@ -176,14 +176,10 @@ class StreamExecJoin(
     values.add(Pair.of("where", joinConditionToString))
     values.add(Pair.of("join", joinSelectionToString))
     values.add(Pair.of("joinType", joinTypeToString))
-    values.add(Pair.of(
-      "leftStateType", s"$lStateType"))
-    values.add(Pair.of(
-      "leftMatchStateType", s"$lMatchStateType"))
-    values.add(Pair.of(
-      "rightStateType", s"$rStateType"))
-    values.add(Pair.of(
-      "rightMatchStateType", s"$rMatchStateType"))
+    values.add(Pair.of("leftStateType", s"$lStateType"))
+    values.add(Pair.of("leftMatchStateType", s"$lMatchStateType"))
+    values.add(Pair.of("rightStateType", s"$rStateType"))
+    values.add(Pair.of("rightMatchStateType", s"$rMatchStateType"))
     values
   }
 
@@ -433,7 +429,6 @@ class StreamExecJoin(
   }
 
   private def joinConditionToString: String = {
-
     val inFields = joinRowType.getFieldNames.asScala.toList
     getExpressionString(joinCondition, inFields, None)
   }

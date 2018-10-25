@@ -77,8 +77,9 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("build", if (leftIsBuild) "left" else "right")
-      .item("singleRow", singleRowJoin)
+    super.explainTerms(pw)
+      .item("build", if (leftIsBuild) "left" else "right")
+      .itemIf("singleRowJoin", singleRowJoin, singleRowJoin)
       .itemIf("reuse_id", getReuseId, isReused)
   }
 

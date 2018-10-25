@@ -32,6 +32,7 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.nodes.common.CommonUtils._
@@ -138,13 +139,13 @@ class StreamExecGroupAggregate(
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
       .item("select", aggregationToString(
-          inputRelDataType,
-          groupings,
-          getRowType,
-          aggCalls,
-          aggInfoList.getActualFunctions,
-          isMerge = false,
-          isGlobal = true))
+        inputRelDataType,
+        groupings,
+        getRowType,
+        aggCalls,
+        aggInfoList.getActualFunctions,
+        isMerge = false,
+        isGlobal = true))
   }
 
   @VisibleForTesting

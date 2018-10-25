@@ -36,8 +36,8 @@ class FlinkLogicalSemiJoin(
     condition: RexNode,
     leftKeys: ImmutableIntList,
     rightKeys: ImmutableIntList,
-    isAntiJoin: Boolean
-) extends SemiJoin(cluster, traitSet, left, right, condition, leftKeys, rightKeys, isAntiJoin)
+    isAntiJoin: Boolean)
+  extends SemiJoin(cluster, traitSet, left, right, condition, leftKeys, rightKeys, isAntiJoin)
   with FlinkLogicalRel {
 
   override def copy(

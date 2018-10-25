@@ -158,7 +158,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
   }
 
   @Test
-  def testExpressionOnWindowHavingFunction() = {
+  def testExpressionOnWindowHavingFunction(): Unit = {
     val util = batchTestUtil()
     util.addTable[(Int, Long, String, Timestamp)]("T", 'a, 'b, 'c, 'ts)
 
@@ -176,7 +176,7 @@ class GroupWindowTest extends TableTestBatchExecBase {
   }
 
   @Test
-  def testDecomposableAggFunctions() = {
+  def testDecomposableAggFunctions(): Unit = {
     val util = batchTestUtil()
     util.addTable[(Int, String, Long, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
 

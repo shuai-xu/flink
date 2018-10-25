@@ -62,15 +62,12 @@ class StreamExecExpand(
   override def toString: String = getOperatorName
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).item("expand", rowTypeToString(getRowType))
-  }
-
-  private def rowTypeToString(rowType: RelDataType): String = {
-    rowType.getFieldList.map(_.getName).mkString(", ")
+    super.explainTerms(pw)
+      .item("projects", projectsToString(projects, input.getRowType, getRowType))
   }
 
   private def getOperatorName: String = {
-    s"StreamExecExpand: ${rowTypeToString(getRowType)}"
+    s"StreamExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 
   override def translateToPlan(

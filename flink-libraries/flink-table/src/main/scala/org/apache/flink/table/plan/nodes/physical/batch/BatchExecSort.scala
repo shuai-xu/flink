@@ -66,7 +66,8 @@ class BatchExecSort(
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    pw.input("input", getInput).item("orderBy", sortFieldsToString(collations, getRowType))
+    pw.input("input", getInput)
+      .item("orderBy", sortFieldsToString(collations, getRowType))
       .itemIf("reuse_id", getReuseId, isReused)
   }
 

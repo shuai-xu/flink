@@ -79,9 +79,10 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-        .itemIf("isBroadcast", "true", isBroadcast)
-        .item("build", if (leftIsBuild) "left" else "right")
-        .itemIf("reuse_id", getReuseId, isReused)
+      .itemIf("isBroadcast", "true", isBroadcast)
+      .item("build", if (leftIsBuild) "left" else "right")
+      .itemIf("tryDistinctBuildRow", "true", tryDistinctBuildRow)
+      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
@@ -319,4 +320,5 @@ class BatchExecHashSemiJoin(
       description,
       haveInsertRf))
   }
+
 }

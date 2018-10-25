@@ -66,9 +66,9 @@ LogicalProject(TMP_0=[$0], TMP_1=[$1], TMP_2=[$2], TMP_3=[$3], TMP_4=[$4], TMP_5
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS TMP_0, CAST(/(-($f3, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1)))) AS TMP_1, CAST(POWER(/(-($f4, /(*(CAST($f1), CAST($f1)), $f2)), $f2), 0.5)) AS TMP_2, CAST(POWER(/(-($f5, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1))), 0.5)) AS TMP_3, TMP_4, TMP_5])
-+- HashWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], select=[Final_SUM(sum$0) AS $f0, Final_SUM(sum$1) AS $f1, Final_COUNT(count$2) AS $f2, Final_SUM(sum$3) AS $f3, Final_SUM(sum$4) AS $f4, Final_SUM(sum$5) AS $f5])
++- HashWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], properties=[TMP_4, TMP_5], select=[Final_SUM(sum$0) AS $f0, Final_SUM(sum$1) AS $f1, Final_COUNT(count$2) AS $f2, Final_SUM(sum$3) AS $f3, Final_SUM(sum$4) AS $f4, Final_SUM(sum$5) AS $f5])
    +- Exchange(distribution=[single])
-      +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
+      +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], properties=[TMP_4, TMP_5], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
          +- Calc(select=[c, rowtime, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[rowtime, a, b, c])
 ]]>
@@ -161,9 +161,9 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], select=[string, Final_COUNT(count$0) AS TMP_0])
+HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
-   +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], select=[string, Partial_COUNT(int) AS count$0])
+   +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
@@ -179,9 +179,9 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], select=[string, Final_COUNT(count$0) AS TMP_0])
+HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
-   +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], select=[string, Partial_COUNT(int) AS count$0])
+   +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
@@ -197,9 +197,9 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], select=[string, Final_COUNT(count$0) AS TMP_0])
+HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
-   +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], select=[string, Partial_COUNT(int) AS count$0])
+   +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
@@ -215,9 +215,9 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], select=[string, Final_COUNT(count$0) AS TMP_0])
+HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
-   +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], select=[string, Partial_COUNT(int) AS count$0])
+   +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>

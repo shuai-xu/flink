@@ -20,13 +20,13 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonValue
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.dataformat.BaseRow
 
 
 /**
@@ -50,13 +50,6 @@ class StreamExecValues(
       description
     )
   }
-
-  /**
-    * Note: Override this method is very important because Calcite will compute relNode's digest
-    * via this method and append a head name base on class name, w/o this overriding, digest header
-    * will be the same parent class name, then may encounter 'weird' problems during optimization...
-    */
-  override def explainTerms(pw: RelWriter): RelWriter = super.explainTerms(pw)
 
   override def translateToPlan(
       tableEnv: StreamTableEnvironment,

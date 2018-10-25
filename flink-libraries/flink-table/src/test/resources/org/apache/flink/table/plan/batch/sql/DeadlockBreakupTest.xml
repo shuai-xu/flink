@@ -31,7 +31,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], a0=[$3], b0=[$4], c0=[$5])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[=(a, a0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], build=[right], singleRow=[false])
+NestedLoopJoin(where=[=(a, a0)], join=[a, b, c, a0, b0, c0], joinType=[InnerJoin], build=[right])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- Calc(select=[a, b, c], where=[>(b, 10)])
 :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
@@ -64,7 +64,7 @@ LogicalProject(c=[$0], a=[$1], b=[$2], c0=[$3], a0=[$4], b0=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, a, b, c0, a1, b0])
-+- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right], singleRow=[false])
++- NestedLoopJoin(where=[=(a0, b0)], join=[c, a, b, a0, c0, a1, b0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- Calc(select=[c, a, b, CAST(a) AS a0])
    :     +- HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b], reuse_id=[1])
@@ -130,7 +130,7 @@ LogicalProject(a=[$0])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a])
-+- NestedLoopJoin(where=[=(a, a0)], join=[a, a0], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[=(a, a0)], join=[a, a0], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- TableSourceScan(table=[[x, source: [selectedFields=[a], limit=10]]], fields=[a])
    +- TableSourceScan(table=[[x, source: [selectedFields=[a], limit=10]]], fields=[a])

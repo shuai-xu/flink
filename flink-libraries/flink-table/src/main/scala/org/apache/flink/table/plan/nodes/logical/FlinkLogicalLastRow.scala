@@ -23,7 +23,7 @@ import java.util
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.rel.{RelNode, SingleRel}
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.calcite.LogicalLastRow
@@ -47,6 +47,13 @@ class FlinkLogicalLastRow(
       traitSet: RelTraitSet,
       inputs: util.List[RelNode]): RelNode = {
     new FlinkLogicalLastRow(cluster, traitSet, inputs.get(0), uniqueKeys, rowType)
+  }
+
+  override def explainTerms(pw: RelWriter): RelWriter = {
+    val keyNames = uniqueKeys.map(input.getRowType.getFieldNames.get(_)).mkString(", ")
+    super.explainTerms(pw)
+      .item("key", keyNames)
+      .item("select", rowType.getFieldNames.mkString(", "))
   }
 }
 

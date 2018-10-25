@@ -92,13 +92,6 @@ class BatchExecLocalHashWindowAggregate(
   }
 
   /**
-    * Note: Override this method is very important because Calcite will compute relNode's digest
-    * via this method and append a head name base on class name, w/o this overriding, digest header
-    * will be the same parent class name, then may encounter 'weird' problems during optimization...
-    */
-  override def explainTerms(pw: RelWriter): RelWriter = super.explainTerms(pw)
-
-  /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.

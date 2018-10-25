@@ -30,7 +30,7 @@ LogicalProject(a1=[$0], asum=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right], singleRow=[true])
+NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- Calc(select=[a1])
 :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])

@@ -34,7 +34,7 @@ LogicalProject(a1=[$0], a2=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a1, a2])
-+- NestedLoopJoin(where=[<(a1, cnt)], join=[a1, a2, cnt], joinType=[InnerJoin], build=[right], singleRow=[true])
++- NestedLoopJoin(where=[<(a1, cnt)], join=[a1, a2, cnt], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
@@ -63,7 +63,7 @@ LogicalProject(a1=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a1])
-+- NestedLoopJoin(where=[=(cnt, a2)], join=[cnt, a1, a2], joinType=[RightOuterJoin], build=[left], singleRow=[true])
++- NestedLoopJoin(where=[=(cnt, a2)], join=[cnt, a1, a2], joinType=[RightOuterJoin], build=[left], singleRowJoin=[true])
    :- Exchange(distribution=[broadcast])
    :  +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
    :     +- Exchange(distribution=[single])
@@ -91,7 +91,7 @@ LogicalProject(a1=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a1])
-+- NestedLoopJoin(where=[<(cnt, a2)], join=[cnt, a1, a2], joinType=[RightOuterJoin], build=[left], singleRow=[true])
++- NestedLoopJoin(where=[<(cnt, a2)], join=[cnt, a1, a2], joinType=[RightOuterJoin], build=[left], singleRowJoin=[true])
    :- Exchange(distribution=[broadcast])
    :  +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
    :     +- Exchange(distribution=[single])
@@ -119,7 +119,7 @@ LogicalProject(a2=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a2])
-+- NestedLoopJoin(where=[>(a1, cnt)], join=[a1, a2, cnt], joinType=[LeftOuterJoin], build=[right], singleRow=[true])
++- NestedLoopJoin(where=[>(a1, cnt)], join=[a1, a2, cnt], joinType=[LeftOuterJoin], build=[right], singleRowJoin=[true])
    :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
@@ -146,7 +146,7 @@ LogicalProject(a1=[$0], asum=[$2])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right], singleRow=[true])
+NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- Calc(select=[a1])
 :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
@@ -176,7 +176,7 @@ LogicalProject(a2=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a2])
-+- NestedLoopJoin(where=[=(a1, cnt)], join=[a1, a2, cnt], joinType=[LeftOuterJoin], build=[right], singleRow=[true])
++- NestedLoopJoin(where=[=(a1, cnt)], join=[a1, a2, cnt], joinType=[LeftOuterJoin], build=[right], singleRowJoin=[true])
    :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
@@ -205,7 +205,7 @@ LogicalProject(a1=[$0], a2=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a1, a2])
-+- NestedLoopJoin(where=[=(a10, cnt)], join=[a1, a2, a10, cnt], joinType=[InnerJoin], build=[right], singleRow=[true])
++- NestedLoopJoin(where=[=(a10, cnt)], join=[a1, a2, a10, cnt], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- Calc(select=[a1, a2, CAST(a1) AS a10])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
@@ -234,7 +234,7 @@ LogicalProject(a1=[$0], a2=[$1], b1=[$2], b2=[$3])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-NestedLoopJoin(where=[AND(<(a1, b1), =(a2, b2))], join=[a1, a2, b1, b2], joinType=[InnerJoin], build=[right], singleRow=[true])
+NestedLoopJoin(where=[AND(<(a1, b1), =(a2, b2))], join=[a1, a2, b1, b2], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
 :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 +- Exchange(distribution=[broadcast])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS b1, Final_MAX(max$1) AS b2])
@@ -264,7 +264,7 @@ LogicalProject(EXPR$0=[*($0, 0.1)])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a2, EXPR$1])
-+- NestedLoopJoin(where=[>(EXPR$1, $f0)], join=[a2, EXPR$1, $f0], joinType=[InnerJoin], build=[right], singleRow=[true])
++- NestedLoopJoin(where=[>(EXPR$1, $f0)], join=[a2, EXPR$1, $f0], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- HashAggregate(isMerge=[true], groupBy=[a2], select=[a2, Final_SUM(sum$0) AS EXPR$1])
    :  +- Exchange(distribution=[hash[a2]])
    :     +- LocalHashAggregate(groupBy=[a2], select=[a2, Partial_SUM(a1) AS sum$0])

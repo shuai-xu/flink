@@ -63,8 +63,9 @@ class FlinkLogicalJoinTable(
   }
 
   val checkedLookupKeys: Array[Int] = checkedIndex.get.toArray
-  val lookupKeyPairs = joinRawKeyPairs.asScala.filter(p => checkedLookupKeys.contains(p.target))
-    .toList
+  val lookupKeyPairs: List[IntPair] = joinRawKeyPairs.asScala.filter {
+    p => checkedLookupKeys.contains(p.target)
+  }.toList
 
   // do not rely on Calcite's call which needs assertion enabled
   validate(Litmus.THROW, null)
@@ -91,7 +92,7 @@ class FlinkLogicalJoinTable(
     }
 
     val leftKeys = lookupKeyPairs.map(_.source).toArray
-    val rightKeys = lookupKeyPairs.map(_.target) ++ constantLookupKeys.asScala.map(_._1)
+    val rightKeys = lookupKeyPairs.map(_.target) ++ constantLookupKeys.asScala.keys
     val inputSchema = new BaseRowSchema(input.getRowType)
     val tableSourceSchema = getTableSourceSchema()
     val leftKeyTypes = leftKeys.map(inputSchema.fieldTypeInfos(_))

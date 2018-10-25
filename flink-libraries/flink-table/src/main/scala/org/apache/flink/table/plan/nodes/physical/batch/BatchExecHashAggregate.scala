@@ -18,6 +18,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
+import org.apache.calcite.rel.RelDistribution.Type._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter}
@@ -29,6 +30,7 @@ import org.apache.flink.api.common.resources.Resource
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonUtils._
@@ -124,18 +126,18 @@ class BatchExecHashAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-        .item("isMerge", isMerge)
-        .itemIf("groupBy", groupingToString(inputType, grouping), grouping.nonEmpty)
-        .itemIf("auxGrouping", groupingToString(inputType, auxGrouping), auxGrouping.nonEmpty)
-        .item("select", aggregationToString(
-          inputType,
-          grouping,
-          auxGrouping,
-          rowRelDataType,
-          aggCallToAggFunction.map(_._1),
-          aggCallToAggFunction.map(_._2),
-          isMerge,
-          isGlobal = true))
+      .item("isMerge", isMerge)
+      .itemIf("groupBy", groupingToString(inputType, grouping), grouping.nonEmpty)
+      .itemIf("auxGrouping", groupingToString(inputType, auxGrouping), auxGrouping.nonEmpty)
+      .item("select", aggregationToString(
+        inputType,
+        grouping,
+        auxGrouping,
+        rowRelDataType,
+        aggCallToAggFunction.map(_._1),
+        aggCallToAggFunction.map(_._2),
+        isMerge,
+        isGlobal = true))
       .itemIf("reuse_id", getReuseId, isReused)
   }
 

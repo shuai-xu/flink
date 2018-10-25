@@ -115,7 +115,7 @@ LogicalProject(f1=[$0], f2=[$1], f3=[$2], f4=[$3], f5=[$4], f6=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[CAST(10086) AS f1, f2, f3, CAST(10086) AS f4, f5, f6])
-+- NestedLoopJoin(where=[true], join=[f2, f3, f5, f6], joinType=[InnerJoin], build=[left], singleRow=[false])
++- NestedLoopJoin(where=[true], join=[f2, f3, f5, f6], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[f2, f3], where=[=(f1, 10086)])
    :     +- TableSourceScan(table=[[T1, source: [selectedFields=[f1, f2, f3]]]], fields=[f1, f2, f3])

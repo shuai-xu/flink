@@ -155,20 +155,21 @@ abstract class BatchExecWindowAggregateBase(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-        .itemIf("groupBy", groupingToString(inputRelDataType, grouping), grouping.nonEmpty)
-        .itemIf("auxGrouping", groupingToString(inputRelDataType, auxGrouping),
-          auxGrouping.nonEmpty)
-        .item("window", window)
-        .item("select",
-          windowAggregationToString(
-            inputRelDataType,
-            grouping,
-            auxGrouping,
-            rowRelDataType,
-            aggCallToAggFunction,
-            enableAssignPane,
-            isMerge = isMerge,
-            isGlobal = isFinal))
+      .itemIf("groupBy", groupingToString(inputRelDataType, grouping), grouping.nonEmpty)
+      .itemIf("auxGrouping", groupingToString(inputRelDataType, auxGrouping), auxGrouping.nonEmpty)
+      .item("window", window)
+      .itemIf("properties", namedProperties.map(_.name).mkString(", "), namedProperties.nonEmpty)
+      .item("select",
+        windowAggregationToString(
+          inputRelDataType,
+          grouping,
+          auxGrouping,
+          rowRelDataType,
+          aggCallToAggFunction,
+          enableAssignPane,
+          isMerge = isMerge,
+          isGlobal = isFinal))
+      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   def getOutputType: BaseRowType = {

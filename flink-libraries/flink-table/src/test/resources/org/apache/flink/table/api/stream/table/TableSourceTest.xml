@@ -16,6 +16,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
+  <TestCase name="testNestedProject">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[id, deepNested.nested1.name AS nestedName, nested.value AS nestedValue, deepNested.nested2.flag AS nestedFlag, deepNested.nested2.num AS nestedNum])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(read nested fields: id.*, deepNested.*, nested.*, name.*)]]], fields=[id, deepNested, nested, name])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testProcTimeTableSourceOverWindow">
     <Resource name="plan">
       <![CDATA[
@@ -34,19 +42,27 @@ StreamExecCalc(select=[PROCTIME(pTime) AS pTime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testProjectableProcTimeTableSource">
+  <TestCase name="testProjectWithMapping">
     <Resource name="plan">
       <![CDATA[
-StreamExecCalc(select=[name, val], where=[>(val, 10)])
-  StreamExecTableSourceScan(table=[[PTimeTable]], fields=[id, val, name, pTime])
+StreamExecCalc(select=[name, rtime, val])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: p-rtime, p-id, p-name, p-val)]]], fields=[id, rtime, val, ptime, name])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testProjectableRowTimeTableSource">
+  <TestCase name="testProjectWithoutRowtime">
     <Resource name="plan">
       <![CDATA[
-StreamExecCalc(select=[name, val], where=[>(val, 10)])
-  StreamExecTableSourceScan(table=[[RTimeTable]], fields=[id, rowtime, val, name])
+StreamExecCalc(select=[PROCTIME(ptime) AS ptime, name, val, id])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: id, name, val, rtime)]]], fields=[id, rtime, val, ptime, name])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testProjectWithRowtimeProctime">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[name, val, id])
+  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: id, name, val, rtime)]]], fields=[id, rtime, val, ptime, name])
 ]]>
     </Resource>
   </TestCase>
@@ -54,7 +70,7 @@ StreamExecCalc(select=[name, val], where=[>(val, 10)])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[name, TMP_0, TMP_1])
-  StreamExecGroupWindowAggregate(groupBy=[name], window=[TumblingGroupWindow('w, 'rowtime, 600000.millis)], select=[name, AVG(val) AS TMP_1, end('w) AS TMP_0])
+  StreamExecGroupWindowAggregate(groupBy=[name], window=[TumblingGroupWindow('w, 'rowtime, 600000.millis)], properties=[TMP_0], select=[name, AVG(val) AS TMP_1, end('w) AS TMP_0])
     StreamExecExchange(distribution=[hash[name]])
       StreamExecCalc(select=[rowtime, val, name], where=[>(val, 100)])
         StreamExecTableSourceScan(table=[[rowTimeT]], fields=[id, rowtime, val, name])
@@ -108,40 +124,6 @@ StreamExecCalc(select=[rowtime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
-
-  <TestCase name="testNestedProject">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[id, deepNested.nested1.name AS nestedName, nested.value AS nestedValue, deepNested.nested2.flag AS nestedFlag, deepNested.nested2.num AS nestedNum])
-  StreamExecTableSourceScan(table=[[T, source: [TestSource(read nested fields: id.*, deepNested.*, nested.*, name.*)]]], fields=[id, deepNested, nested, name])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testProjectWithoutRowtime">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[PROCTIME(ptime) AS ptime, name, val, id])
-  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: id, name, val, rtime)]]], fields=[id, rtime, val, ptime, name])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testProjectWithMapping">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[name, rtime, val])
-  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: p-rtime, p-id, p-name, p-val)]]], fields=[id, rtime, val, ptime, name])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testProjectWithRowtimeProctime">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[name, val, id])
-  StreamExecTableSourceScan(table=[[T, source: [TestSource(physical fields: id, name, val, rtime)]]], fields=[id, rtime, val, ptime, name])
-]]>
-    </Resource>
-  </TestCase>
-
   <TestCase name="testTableSourceWithLongRowTimeField">
     <Resource name="plan">
       <![CDATA[
@@ -150,20 +132,39 @@ StreamExecCalc(select=[rowtime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
-
-    <TestCase name="testWithPkMultiRowUpdateTransposWithCalc">
-        <Resource name="plan">
-            <![CDATA[
+  <TestCase name="testWithPkMultiRowUpdate">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0, COUNT(c) AS TMP_1])
+  StreamExecExchange(distribution=[hash[pk]])
+    StreamExecLastRow(key=[pk], select=[a, pk, c])
+      StreamExecExchange(distribution=[hash[pk]])
+        StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
+]]>
+    </Resource>
+    <Resource name="trait">
+      <![CDATA[
+StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[true], accMode=[AccRetract])
+    StreamExecLastRow(retract=[true], accMode=[AccRetract])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecTableSourceScan(retract=[true], accMode=[Acc])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testWithPkMultiRowUpdateTransposWithCalc">
+    <Resource name="plan">
+      <![CDATA[
 StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0])
   StreamExecExchange(distribution=[hash[pk]])
-    StreamExecLastRow(LastRow=[LastRow: (key: (pk), select: (pk, a))])
+    StreamExecLastRow(key=[pk], select=[pk, a])
       StreamExecExchange(distribution=[hash[pk]])
         StreamExecCalc(select=[pk, a])
           StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
 ]]>
-        </Resource>
-        <Resource name="trait">
-            <![CDATA[
+    </Resource>
+    <Resource name="trait">
+      <![CDATA[
 StreamExecGroupAggregate(retract=[false], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[AccRetract])
     StreamExecLastRow(retract=[true], accMode=[AccRetract])
@@ -171,44 +172,6 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecCalc(retract=[true], accMode=[Acc])
           StreamExecTableSourceScan(retract=[true], accMode=[Acc])
 ]]>
-        </Resource>
-    </TestCase>
-
-    <TestCase name="testWithPkMultiRowUpdate">
-        <Resource name="plan">
-            <![CDATA[
-StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0, COUNT(c) AS TMP_1])
-  StreamExecExchange(distribution=[hash[pk]])
-    StreamExecLastRow(LastRow=[LastRow: (key: (pk), select: (a, pk, c))])
-      StreamExecExchange(distribution=[hash[pk]])
-        StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
-]]>
-        </Resource>
-        <Resource name="trait">
-            <![CDATA[
-StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[AccRetract])
-    StreamExecLastRow(retract=[true], accMode=[AccRetract])
-      StreamExecExchange(retract=[true], accMode=[Acc])
-        StreamExecTableSourceScan(retract=[true], accMode=[Acc])
-]]>
-        </Resource>
-    </TestCase>
-
-    <TestCase name="testWithPkAppend">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0, COUNT(c) AS TMP_1])
-  StreamExecExchange(distribution=[hash[pk]])
-    StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
-]]>
-		</Resource>
-		<Resource name="trait">
-			<![CDATA[
-StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecTableSourceScan(retract=[true], accMode=[Acc])
-]]>
-		</Resource>
-	</TestCase>
+    </Resource>
+  </TestCase>
 </Root>

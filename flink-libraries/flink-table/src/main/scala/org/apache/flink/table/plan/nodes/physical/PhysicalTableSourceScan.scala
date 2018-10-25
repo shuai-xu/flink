@@ -45,8 +45,7 @@ abstract class PhysicalTableSourceScan(
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
-        .item("fields", deriveRowType().getFieldNames.asScala.mkString(", "))
+    super.explainTerms(pw).item("fields", getRowType.getFieldNames.asScala.mkString(", "))
   }
 
   override def toString: String = {
