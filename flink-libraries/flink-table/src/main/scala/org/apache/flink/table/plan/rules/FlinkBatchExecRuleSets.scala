@@ -239,7 +239,6 @@ object FlinkBatchExecRuleSets {
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
     FlinkLogicalTableValuedAggregate.CONVERTER,
-    FlinkLogicalCoTableValuedAggregate.CONVERTER,
     FlinkLogicalRank.CONVERTER
   )
 
@@ -348,7 +347,6 @@ object FlinkBatchExecRuleSets {
     BatchExecWindowAggregateRule.INSTANCE,
     // table valued agg
     BatchExecSortTableValuedAggRule.INSTANCE,
-    BatchExecCoGroupTableValuedAggregateRule.INSTANCE,
     //union
     BatchExecUnionRule.INSTANCE,
     //expand

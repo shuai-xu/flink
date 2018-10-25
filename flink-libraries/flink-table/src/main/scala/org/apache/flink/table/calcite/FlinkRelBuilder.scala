@@ -38,7 +38,7 @@ import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkRelFactories.ExpandFactory
 import org.apache.flink.table.expressions.WindowProperty
 import org.apache.flink.table.plan.logical.LogicalWindow
-import org.apache.flink.table.plan.nodes.calcite.{LogicalCoTableValuedAggregate, LogicalRank, LogicalTableValuedAggregate, LogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalTableValuedAggregate, LogicalWindowAggregate}
 import org.apache.flink.table.plan.util.RankRange
 
 /**
@@ -94,18 +94,6 @@ class FlinkRelBuilder(
     val input = build()
     push(LogicalTableValuedAggregate.create(input, call, groupKey, groupKeyName))
 
-  }
-
-  def coTableValuedAggregate(
-    lRexCall: RexCall,
-    rRexCall: RexCall,
-    groupKey1: Seq[RexNode],
-    groupKey2: Seq[RexNode]): RelBuilder = {
-
-    val right = build()
-    val left = build()
-    push(LogicalCoTableValuedAggregate.create(
-      left, right, lRexCall, rRexCall, groupKey1, groupKey2))
   }
 
   def expand(

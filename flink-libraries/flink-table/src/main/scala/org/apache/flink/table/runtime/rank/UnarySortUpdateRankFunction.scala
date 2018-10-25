@@ -38,8 +38,8 @@ import org.apache.flink.table.types.DataType
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, OrderedTypeUtils}
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
 import org.apache.flink.table.util.{LRUMap, Logging, StateUtil}
+import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.util.Collector
 
 /**

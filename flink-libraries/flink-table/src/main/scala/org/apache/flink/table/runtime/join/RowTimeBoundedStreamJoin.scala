@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.runtime.join
 
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
 
 /**
   * The function to execute row(event) time bounded stream inner-join.
@@ -54,7 +54,8 @@ final class RowTimeBoundedStreamJoin(
     */
   def getMaxOutputDelay: Long = Math.max(leftRelativeSize, rightRelativeSize) + allowedLateness
 
-  override def updateOperatorTime(ctx: Context): Unit = {
+  override def updateOperatorTime(ctx: CoProcessFunction[BaseRow,
+    BaseRow, BaseRow]#Context): Unit = {
     leftOperatorTime = if (ctx.timerService().currentWatermark() > 0) {
       ctx.timerService().currentWatermark()
     } else {
@@ -65,19 +66,19 @@ final class RowTimeBoundedStreamJoin(
   }
 
   override def getTimeForLeftStream(
-      ctx: Context,
+      ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
       row: BaseRow): Long = {
     row.getLong(leftTimeIdx)
   }
 
   override def getTimeForRightStream(
-      ctx: Context,
+      ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
       row: BaseRow): Long = {
     row.getLong(rightTimeIdx)
   }
 
   override def registerTimer(
-      ctx: Context,
+      ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
       cleanupTime: Long): Unit = {
     // Maybe we can register timers for different streams in the future.
     ctx.timerService().registerEventTimeTimer(cleanupTime)

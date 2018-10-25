@@ -22,7 +22,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.schema.TemporalTable
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{Alias, Asc, CoTableValuedAggFunctionCall, Expression, ExpressionList, ExpressionParser, Literal, NamedExpression, Ordering, TableValuedAggFunctionCall, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Literal, NamedExpression, Ordering, TableValuedAggFunctionCall, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, TableSourceTable}
@@ -30,6 +30,7 @@ import org.apache.flink.table.plan.logical.{LogicalTableValuedAggregateCall, Min
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink, TableSink}
 import org.apache.flink.table.types._
+import org.apache.flink.table.validate.ValidationFailure
 import org.apache.flink.types.Row
 
 import _root_.scala.annotation.varargs
@@ -709,59 +710,6 @@ class Table(
         Join(this.logicalPlan, udtfCall, joinType, joinPredicate, correlated)
           .validate(tableEnv))
     }
-  }
-
-  /**
-    * Connects two [[Table]]s. The fields of the two connected operations must not overlap,
-    * use [[as]] to rename fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]].
-    *
-    * Example:
-    *
-    * {{{
-    *   left.connect(right).coAggApply(coTVAGGFunc('a, 'b)('c, 'd))
-    * }}}
-    */
-  def connect(right: Table): ConnectedTable = {
-    connect(right, None)
-  }
-
-  /**
-    * Connects two [[Table]]s. The fields of the two joined operations must not overlap,
-    * use [[as]] to rename fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]].
-    *
-    * Example:
-    *
-    * {{{
-    *   left.connect(right, 'a === 'c).coAggApply(coTVAGGFunc('a, 'b)('c, 'd))
-    * }}}
-    */
-  def connect(right: Table, connectPredicate: Expression): ConnectedTable = {
-    connect(right, Some(connectPredicate))
-  }
-
-  /**
-    * Connects two [[Table]]s. The fields of the two joined operations must not overlap,
-    * use [[as]] to rename fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]].
-    *
-    * Example:
-    *
-    * {{{
-    *   left.connect(right, "a = c").coAggApply("coTVAGGFunc(a, b)(c, d)")
-    * }}}
-    */
-  def connect(right: Table, connectPredicate: String): ConnectedTable = {
-    val connectPredicateExpr = ExpressionParser.parseExpression(connectPredicate)
-    connect(right, Some(connectPredicateExpr))
-  }
-
-  private def connect(right: Table, connectPredicate: Option[Expression]): ConnectedTable = {
-    new ConnectedTable(this, right, connectPredicate)
   }
 
   /**
@@ -1464,82 +1412,6 @@ class WindowGroupedTable(
     //get the correct expression for AggFunctionCall
     val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
     select(withResolvedAggFunctionCall: _*)
-  }
-}
-
-class ConnectedTable(
-    private[flink] val leftT: Table,
-    private[flink] val rightT: Table,
-    private[flink] val condition: Option[Expression]) {
-
-  def coAggApply(inputCall: CoTableValuedAggFunctionCall): Table = {
-
-    val coTableFunctionCall = inputCall.asInstanceOf[CoTableValuedAggFunctionCall]
-    if (leftT.tableEnv != rightT.tableEnv) {
-      throw new ValidationException("Only tables from the same TableEnvironment can be connected.")
-    }
-
-    val ll = extractFieldReferences(coTableFunctionCall.left.children)
-    val rr = extractFieldReferences(coTableFunctionCall.right.children)
-    val (groupKeys1, groupKeys2) = extractGroupKeys(ll, rr, condition)
-
-    val expandedLeftFields =
-      expandProjectList(coTableFunctionCall.left.children, leftT.logicalPlan, leftT.tableEnv)
-    val inputLeftFields: Seq[(NamedExpression, UnresolvedFieldReference)] =
-      expandedLeftFields.zipWithIndex.map(t => (UnresolvedAlias(Alias.apply(t._1, "_l" + t._2)),
-        UnresolvedFieldReference("_l" + t._2)))
-
-    val leftGroupFields: Seq[(NamedExpression, UnresolvedFieldReference)] =
-      groupKeys1.zipWithIndex.map(t => {
-        t._1 match {
-          case e: NamedExpression => (UnresolvedAlias(e), UnresolvedFieldReference(e.name))
-          case _ => (UnresolvedAlias(Alias.apply(t._1, "_lg" + t._2)),
-            UnresolvedFieldReference("_lg" + t._2))
-        }
-      })
-
-    val expandedRightFields =
-      expandProjectList(coTableFunctionCall.right.children, rightT.logicalPlan, rightT.tableEnv)
-    val inputRightFields: Seq[(NamedExpression, UnresolvedFieldReference)] =
-      expandedRightFields.zipWithIndex.map(t => (UnresolvedAlias(Alias.apply(t._1, "_r" + t._2)),
-        UnresolvedFieldReference("_r" + t._2)))
-    val rightGroupFields: Seq[(NamedExpression, UnresolvedFieldReference)] =
-      groupKeys2.zipWithIndex.map(t => {
-        t._1 match {
-          case e: NamedExpression => (UnresolvedAlias(e), UnresolvedFieldReference(e.name))
-          case _ => (UnresolvedAlias(Alias.apply(t._1, "_rg" + t._2)),
-            UnresolvedFieldReference("_rg" + t._2))
-        }
-      })
-
-    val resultType = DataTypes.internal(coTableFunctionCall.externalResultType)
-    val newCall = CoTableValuedAggFunctionCall(
-      coTableFunctionCall.function,
-      coTableFunctionCall.externalResultType,
-      coTableFunctionCall.externalAccType,
-      ExpressionList(inputLeftFields.map(_._2)),
-      ExpressionList(inputRightFields.map(_._2))
-    )
-
-    new Table(
-      leftT.tableEnv,
-      LogicalCoTableValuedAggregateCall(
-        Project(inputLeftFields.map(_._1) ++ leftGroupFields.map(_._1), leftT.logicalPlan)
-        .validate(leftT.tableEnv),
-        Project(inputRightFields.map(_._1) ++ rightGroupFields.map(_._1), rightT.logicalPlan)
-        .validate(rightT.tableEnv),
-        leftGroupFields.map(_._2),
-        rightGroupFields.map(_._2),
-        newCall
-      ).validate(leftT.tableEnv)
-    )
-  }
-
-  def coAggApply(coTableValuedAggregateFunctionCall: String): Table = {
-    val call = UserDefinedFunctionUtils.createLogicalCoTableValuedAggFunctionCall(
-      leftT.tableEnv,
-      coTableValuedAggregateFunctionCall)
-    coAggApply(call)
   }
 }
 

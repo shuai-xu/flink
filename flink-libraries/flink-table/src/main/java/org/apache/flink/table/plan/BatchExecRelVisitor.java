@@ -20,7 +20,6 @@ package org.apache.flink.table.plan;
 
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -106,8 +105,6 @@ public interface BatchExecRelVisitor<R> {
 	R visit(BatchExecUnion union);
 
 	R visit(BatchExecJoinTable joinTable);
-
-	R visit(BatchExecCoGroupTableValuedAggregate coAgg);
 
 	R visit(BatchExecRel<?> batchExec);
 }

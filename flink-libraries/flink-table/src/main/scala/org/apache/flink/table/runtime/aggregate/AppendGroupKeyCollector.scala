@@ -24,13 +24,16 @@ import org.apache.flink.util.Collector
 /**
  * Collector which saves group key in collected data.
  */
-class AppendGroupKeyCollector
-  extends TableValuedAggCollector
-    with Serializable {
+class AppendGroupKeyCollector extends Collector[BaseRow] with Serializable {
 
-  override def reSet(out: Collector[BaseRow],
+  protected var resultRow: JoinedRow = new JoinedRow()
+  protected var currentKey: BaseRow = _
+  protected var out: Collector[BaseRow] = _
+  protected var isRetract: Boolean = false
+
+  def reSet(out: Collector[BaseRow],
       currentKey: BaseRow,
-      isRetract: Boolean = false): Unit = {
+      isRetract: Boolean): Unit = {
     this.out = out
     this.currentKey = currentKey
     this.isRetract = isRetract

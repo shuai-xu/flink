@@ -24,9 +24,9 @@ import org.apache.flink.runtime.state.keyed.KeyedListState
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.GeneratedTableValuedAggHandleFunction
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
-import org.apache.flink.table.runtime.functions.ExecutionContext
+import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunction}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
+import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.table.util.BaseRowUtil.isAccumulateMsg
 import org.apache.flink.util.Collector
 
@@ -72,7 +72,7 @@ class NonDeterministicGroupTableValuedAggFunction(
 
   override def processElement(
     input: BaseRow,
-    ctx: Context,
+    ctx: ProcessFunction.Context,
     out: Collector[BaseRow]): Unit = {
     val currentTime = ctx.timerService().currentProcessingTime()
     // register state-cleanup timer
@@ -80,9 +80,19 @@ class NonDeterministicGroupTableValuedAggFunction(
 
     val currentKey = executionContext.currentKey()
 
-    preAccumulateForNonDeterministic(function, accState, currentKey, out)
+    var accumulators = accState.get(currentKey)
+    if (null == accumulators) {
+      firstRow = true
+      accumulators = function.createAccumulators()
+    } else {
+      firstRow = false
+    }
 
-    var count = getCounter(currentKey, groupedDataCounter).getLong(0)
+    var count = getCounter(currentKey).getLong(0)
+
+    // set accumulators to handler first
+    function.setAccumulators(accumulators)
+
     // update aggregate result and set to the newRow
     if (isAccumulateMsg(input)) {
       // accumulate input
@@ -96,16 +106,38 @@ class NonDeterministicGroupTableValuedAggFunction(
       }
     }
 
-    postAccumulateForNonDeterministic(
-      function,
-      prevResults,
-      accState,
-      firstRow,
-      generateRetraction,
-      currentKey,
-      groupedDataCounter,
-      count,
-      bufferedCollector,
-      out)
+    // if this was not the first row and we have to emit retractions
+    if (!firstRow) {
+      if (generateRetraction) {
+        val it = prevResults.get(currentKey).iterator()
+        while (it.hasNext) {
+          var row = it.next()
+          row = BaseRowUtil.setRetract(row)
+          out.collect(row)
+        }
+      }
+    }
+
+    // clean prevResults state
+    prevResults.remove(currentKey)
+
+    val counter = getCounter(currentKey)
+    counter.setLong(0, count)
+    groupedDataCounter.put(currentKey, counter)
+
+    if (count != 0) {
+
+      // emit new result and update the
+      bufferedCollector.reSet(out, currentKey)
+      function.emitValue(bufferedCollector)
+
+      // update the state
+      accState.put(currentKey, function.getAccumulators)
+
+    } else { //last data of current key has been retracted
+      // clear all state
+      accState.remove(currentKey)
+      groupedDataCounter.remove(currentKey)
+    }
   }
 }

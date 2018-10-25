@@ -23,7 +23,7 @@ import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.GeneratedSorter
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
+import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
 

@@ -305,11 +305,10 @@ class BatchExecOverAggregate(
         val generator = new AggsHandlerCodeGenerator(
           codeGenCtx,
           relBuilder,
+          inputRelDataType.getFieldList.map(f => FlinkTypeFactory.toInternalType(f.getType)),
           needRetract = false,
           needMerge = false,
           tableEnv.getConfig.getNullCheck)
-          .bindInput(
-            inputRelDataType.getFieldList.map(f => FlinkTypeFactory.toInternalType(f.getType)))
         // over agg code gen must pass the constants
         generator.withConstants(constants)
           .generateAggsHandler("BoundedOverAggregateHelper", aggInfoList)
@@ -363,11 +362,10 @@ class BatchExecOverAggregate(
             val generator = new AggsHandlerCodeGenerator(
               codeGenCtx,
               relBuilder,
+              inputRelDataType.getFieldList.map(f => FlinkTypeFactory.toInternalType(f.getType)),
               needRetract = true,
               needMerge = false,
               config.getNullCheck)
-              .bindInput(
-                inputRelDataType.getFieldList.map(f => FlinkTypeFactory.toInternalType(f.getType)))
             // over agg code gen must pass the constants
             val genAggsHandler =
               generator.withConstants(constants)
@@ -406,11 +404,10 @@ class BatchExecOverAggregate(
           val generator = new AggsHandlerCodeGenerator(
             codeGenCtx,
             relBuilder,
+            inputRelDataType.getFieldList.map(f => FlinkTypeFactory.toInternalType(f.getType)),
             needRetract = false,
             needMerge = false,
             config.getNullCheck)
-            .bindInput(
-              inputRelDataType.getFieldList.map(f => FlinkTypeFactory.toInternalType(f.getType)))
 
           // over agg code gen must pass the constants
           val genAggsHandler = generator.withConstants(constants)

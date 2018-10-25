@@ -30,6 +30,18 @@ public interface AggHandleFunctionBase {
 	void open(ExecutionContext ctx) throws Exception;
 
 	/**
+	 * Accumulates the input values to the accumulators.
+	 * @param input input values bundled in a row
+	 */
+	void accumulate(BaseRow input) throws Exception;
+
+	/**
+	 * Retracts the input values from the accumulators.
+	 * @param input input values bundled in a row
+	 */
+	void retract(BaseRow input) throws Exception;
+
+	/**
 	 * Merges the other accumulators into current accumulators.
 	 *
 	 * @param accumulators The other row of accumulators

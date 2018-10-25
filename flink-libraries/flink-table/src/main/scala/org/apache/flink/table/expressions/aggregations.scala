@@ -27,7 +27,7 @@ import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.sql.AggSqlFunctions
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.utils.AggSqlFunction
-import org.apache.flink.table.functions._
+import org.apache.flink.table.functions.{AggregateFunction, TableValuedAggregateFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.types.{DataType, DataTypes, InternalType, MultisetType}
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -772,6 +772,7 @@ case class AggFunctionCall(
     logicalExprVisitor.visit(this)
 }
 
+
 /**
   * Represent aggregate table-valued function call
   */
@@ -829,54 +830,4 @@ case class TableValuedAggFunctionCall(
     * in the Product will not be transformed, only handed through.
     */
   override private[flink] def children: Seq[Expression] = args
-}
-
-/**
-  * Represent aggregate co-table-valued function call
-  */
-case class CoTableValuedAggFunctionCall(
-    function: CoTableValuedAggregateFunction[_, _],
-    externalResultType: DataType,
-    externalAccType: DataType,
-    left: Expression,
-    right: Expression)
-  extends BinaryExpression {
-
-  override private[flink] def validateInput() = {
-    val signature1 = left.asInstanceOf[ExpressionList].expressions.map(_.resultType)
-    val signature2 = right.asInstanceOf[ExpressionList].expressions.map(_.resultType)
-
-    val accLeft = "accumulateLeft"
-    val accRight = "accumulateRight"
-    // look for a signature that matches the input types
-    val foundSignature1 =
-      getAccumulateMethodSignature(function, signature1, accLeft)
-    val foundSignature2 =
-      getAccumulateMethodSignature(function, signature2, accRight)
-    if (foundSignature1.isEmpty) {
-      ValidationFailure(
-        s"Given parameters do not match any signature. \n" +
-          s"Actual: $accLeft${signatureToString(signature1)} \n" +
-          s"Expected: $accLeft${getMethodSignatures(function, accLeft)
-            .map(e => signatureToString(e.drop(1))).mkString(", ")}")
-    } else if (foundSignature2.isEmpty){
-      ValidationFailure(
-        s"Given parameters do not match any signature. \n" +
-          s"Actual: $accRight${signatureToString(signature2)} \n" +
-          s"Expected: $accRight${getMethodSignatures(function, accRight)
-            .map(e => signatureToString(e.drop(1))).mkString(", ")}")
-    } else {
-      ValidationSuccess
-    }
-  }
-
-  /**
-    * Returns the [[InternalType]] for evaluating this expression.
-    * It is sometimes not available until the expression is valid.
-    */
-  override private[flink] def resultType: InternalType = DataTypes.internal(externalResultType)
-
-  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T = {
-    logicalExprVisitor.visit(this)
-  }
 }

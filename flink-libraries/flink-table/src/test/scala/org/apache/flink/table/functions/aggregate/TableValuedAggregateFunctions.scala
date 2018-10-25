@@ -19,6 +19,9 @@ package org.apache.flink.table.functions.aggregate
 
 import java.lang.Iterable
 import java.sql.Time
+import java.util
+import java.util.Iterator
+import java.util.function.Consumer
 
 import org.apache.flink.table.api.dataview.{ListView, MapView}
 import org.apache.flink.table.dataformat.GenericRow
@@ -33,6 +36,7 @@ class LongWrapper {
   var l: Long = 0
   val t: Time = new Time(1)
 }
+
 
 class SimpleTVAGG extends TableValuedAggregateFunction[Long, LongWrapper] {
   override def createAccumulator(): LongWrapper = {

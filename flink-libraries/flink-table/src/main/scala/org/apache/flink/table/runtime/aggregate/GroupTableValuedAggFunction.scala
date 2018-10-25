@@ -21,8 +21,7 @@ package org.apache.flink.table.runtime.aggregate
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.GeneratedTableValuedAggHandleFunction
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
-import org.apache.flink.table.runtime.functions.ExecutionContext
+import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunction}
 import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.BaseRowUtil.isAccumulateMsg
 import org.apache.flink.util.Collector
@@ -51,7 +50,7 @@ class GroupTableValuedAggFunction(
 
   override def processElement(
     input: BaseRow,
-    ctx: Context,
+    ctx: ProcessFunction.Context,
     out: Collector[BaseRow]): Unit = {
     val currentTime = ctx.timerService().currentProcessingTime()
     // register state-cleanup timer
@@ -59,10 +58,28 @@ class GroupTableValuedAggFunction(
 
     val currentKey = executionContext.currentKey()
 
-    // init accumulators before accumualte.
-    preAccumulate(function, accState, currentKey, generateRetraction, appendCollector, out)
+    var accumulators = accState.get(currentKey)
+    if (null == accumulators) {
+      firstRow = true
+      accumulators = function.createAccumulators()
+    } else {
+      firstRow = false
+    }
 
-    var count = getCounter(currentKey, groupedDataCounter).getLong(0)
+    var count = getCounter(currentKey).getLong(0)
+
+    // if this was not the first row and we have to emit retractions
+    if (!firstRow) {
+      if (generateRetraction) {
+        function.setAccumulators(accumulators)
+        appendCollector.reSet(out, currentKey, true)
+        function.emitValue(appendCollector)
+      }
+    }
+
+    // set accumulators to handler first
+    function.setAccumulators(accumulators)
+
     // update aggregate result and set to the newRow
     if (isAccumulateMsg(input)) {
       // accumulate input
@@ -76,7 +93,24 @@ class GroupTableValuedAggFunction(
       }
     }
 
-    // update state and emit results after accumulate
-    postAccumulate(function, accState, currentKey, groupedDataCounter, count, appendCollector, out)
+    val counter = getCounter(currentKey)
+    counter.setLong(0, count)
+    groupedDataCounter.put(currentKey, counter)
+
+    if (count != 0) {
+      // emit new result
+      appendCollector.reSet(out, currentKey, false)
+      function.emitValue(appendCollector)
+
+      // update the state
+      accState.put(currentKey, function.getAccumulators)
+
+    } else {
+      // clear all state
+      function.cleanup()
+      accState.remove(currentKey)
+      groupedDataCounter.remove(currentKey)
+    }
   }
+
 }

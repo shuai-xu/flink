@@ -27,13 +27,16 @@ import org.apache.flink.util.Collector
  */
 class BufferedAppendGroupKeyCollector(
   bufferState: KeyedListState[BaseRow, BaseRow])
-  extends TableValuedAggCollector
-    with Serializable {
+  extends Collector[BaseRow]
+  with Serializable {
 
-  override def reSet(
+  private var resultRow: JoinedRow = new JoinedRow()
+  private var currentKey: BaseRow = _
+  private var out: Collector[BaseRow] = _
+
+  def reSet(
     out: Collector[BaseRow],
-    currentKey: BaseRow,
-    isRetract: Boolean = false): Unit = {
+    currentKey: BaseRow): Unit = {
     this.out = out
     this.currentKey = currentKey
   }

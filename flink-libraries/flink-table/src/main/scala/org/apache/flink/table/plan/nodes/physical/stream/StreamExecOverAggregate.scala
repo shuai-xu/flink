@@ -94,6 +94,7 @@ class StreamExecOverAggregate(
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
+
     val overWindow: Group = logicWindow.groups.get(0)
     val constants: Seq[RexLiteral] = logicWindow.constants.asScala
     val partitionKeys: Array[Int] = overWindow.keys.toArray
@@ -298,10 +299,10 @@ class StreamExecOverAggregate(
     val generator = new AggsHandlerCodeGenerator(
       ctx,
       relBuilder,
+      inputSchema.fieldTypes,
       needRetraction,
       needMerge = false,
       nullCheck)
-      .bindInput(inputSchema.fieldTypes)
 
     val genAggsHandler = generator
       // over agg code gen must pass the constants
@@ -371,10 +372,10 @@ class StreamExecOverAggregate(
     val generator = new AggsHandlerCodeGenerator(
       ctx,
       relBuilder,
+      inputSchema.fieldTypes,
       needRetraction,
       needMerge = false,
       nullCheck)
-      .bindInput(inputSchema.fieldTypes)
 
     val genAggsHandler = generator
       // over agg code gen must pass the constants

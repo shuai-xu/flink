@@ -375,11 +375,6 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
       case name ~ _ ~ args ~ _ => Call(name.toUpperCase, args)
     }
 
-  lazy val prefixCoFunctionCall: PackratParser[Expression] =
-    functionIdent ~ "(" ~ repsep(expression, ",") ~ ")(" ~ repsep(expression, ",") ~ ")" ^^ {
-      case name ~ _ ~ args1 ~ _ ~ args2 ~ _ => CoCall(name.toUpperCase, args1, args2)
-    }
-
   lazy val prefixFunctionCallOneArg: PackratParser[Expression] =
     functionIdent ~ "(" ~ expression ~ ")" ^^ {
       case name ~ _ ~ arg ~ _ => Call(name.toUpperCase, Seq(arg))
@@ -456,8 +451,6 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
     prefixIf |
     // expression with prefix distinct
     prefixDistinct |
-    // co function call
-    prefixCoFunctionCall |
     // function call must always be at the end
     prefixFunctionCall | prefixFunctionCallOneArg
 

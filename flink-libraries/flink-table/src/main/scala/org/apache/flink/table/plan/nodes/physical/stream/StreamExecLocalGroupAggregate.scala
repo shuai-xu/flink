@@ -37,7 +37,7 @@ import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.BundleOperator
-import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 
@@ -177,10 +177,10 @@ class StreamExecLocalGroupAggregate(
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(tableEnv.getConfig, supportReference = true),
       tableEnv.getRelBuilder,
+      inputRowType.getFieldTypes.map(DataTypes.internal),
       needRetraction,
       needMerge = true,
       tableEnv.getConfig.getNullCheck)
-      .bindInput(inputRowType.getFieldTypes.map(DataTypes.internal))
 
     val aggsHandler = generator.generateAggsHandler("GroupAggsHandler", aggInfoList)
     val aggFunction = new MiniBatchLocalGroupAggFunction(aggsHandler)

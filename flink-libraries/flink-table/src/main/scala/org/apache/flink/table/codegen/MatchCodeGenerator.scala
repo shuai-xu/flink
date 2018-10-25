@@ -873,10 +873,10 @@ class MatchCodeGenerator(
     val aggsHandlerCodeGenerator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(new TableConfig, supportReference = true),
       relBuilder,
+      Seq(elementType),
       needRetract = false,
       needMerge = false,
       nullCheck = true)
-      .bindInput(Seq(elementType))
     val generatedAggsHandler = aggsHandlerCodeGenerator.generateAggsHandler(
       "MatchAggregateHandler",
       aggInfoList)

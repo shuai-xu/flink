@@ -19,9 +19,9 @@
 package org.apache.flink.table.runtime.join
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.Context
 
 /**
   * The function to execute processing time bounded stream inner-join.
@@ -43,21 +43,26 @@ final class ProcTimeBoundedStreamJoin(
     genJoinFuncName,
     genJoinFuncCode) {
 
-  override def updateOperatorTime(ctx: Context): Unit = {
+  override def updateOperatorTime(ctx: CoProcessFunction[BaseRow, BaseRow,
+      BaseRow]#Context): Unit = {
     leftOperatorTime = ctx.timerService().currentProcessingTime()
     rightOperatorTime = leftOperatorTime
   }
 
-  override def getTimeForLeftStream(ctx: Context, row: BaseRow): Long = {
+  override def getTimeForLeftStream(
+      ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+      row: BaseRow): Long = {
     leftOperatorTime
   }
 
-  override def getTimeForRightStream(ctx: Context,
+  override def getTimeForRightStream(ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
       row: BaseRow): Long = {
     rightOperatorTime
   }
 
-  override def registerTimer(ctx: Context, cleanupTime: Long): Unit = {
+  override def registerTimer(
+      ctx: CoProcessFunction[BaseRow, BaseRow, BaseRow]#Context,
+      cleanupTime: Long): Unit = {
     ctx.timerService().registerProcessingTimeTimer(cleanupTime)
   }
 }

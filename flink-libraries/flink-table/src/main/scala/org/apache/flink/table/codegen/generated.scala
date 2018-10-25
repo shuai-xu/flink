@@ -25,7 +25,7 @@ import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.functions.{AggsHandleFunction, CoProcessFunction, CoTableValuedAggHandleFunction, ProcessFunction, SubKeyedAggsHandleFunction, TableValuedAggHandleFunction}
+import org.apache.flink.table.runtime.functions.{AggsHandleFunction, SubKeyedAggsHandleFunction, TableValuedAggHandleFunction}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.types.InternalType
 
@@ -44,7 +44,7 @@ import org.apache.flink.table.types.InternalType
 case class GeneratedExpression(
   resultTerm: String,
   nullTerm: String,
-  code: String,
+  var code: String,
   resultType: InternalType,
   literal: Boolean = false,
   literalValue: Any = null,
@@ -96,7 +96,7 @@ object GeneratedExpression {
   */
 case class GeneratedFunction[F <: Function, T <: Any](
   name: String,
-  code: String)
+  var code: String)
 
 /**
   * Describes a generated [[InputFormat]].
@@ -108,7 +108,7 @@ case class GeneratedFunction[F <: Function, T <: Any](
   */
 case class GeneratedInput[F <: InputFormat[_, _], T <: Any](
     name: String,
-    code: String)
+    var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.util.Collector]].
@@ -116,7 +116,7 @@ case class GeneratedInput[F <: InputFormat[_, _], T <: Any](
   * @param name class name of the generated Collector.
   * @param code code of the generated Collector.
   */
-case class GeneratedCollector(name: String, code: String)
+case class GeneratedCollector(name: String, var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.cep.pattern.conditions.IterativeCondition]].
@@ -184,7 +184,7 @@ case class GeneratedPatternFlatTimeoutFunction(
   * @param name class name of the generated StreamOperator.
   * @param code code of the generated StreamOperator.
   */
-case class GeneratedOperator(name: String, code: String)
+case class GeneratedOperator(name: String, var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.table.runtime.sort.NormalizedKeyComputer]].
@@ -192,7 +192,7 @@ case class GeneratedOperator(name: String, code: String)
   * @param name class name of the generated NormalizedKeyComputer.
   * @param code code of the generated NormalizedKeyComputer.
   */
-case class GeneratedNormalizedKeyComputer(name: String, code: String)
+case class GeneratedNormalizedKeyComputer(name: String, var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.table.runtime.sort.RecordComparator]].
@@ -231,7 +231,7 @@ case class GeneratedSorter(
   * @param name class name of the generated JoinConditionFunction.
   * @param code code of the generated JoinConditionFunction.
   */
-case class GeneratedJoinConditionFunction(name: String, code: String)
+case class GeneratedJoinConditionFunction(name: String, var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.table.codegen.HashFunc]].
@@ -239,7 +239,7 @@ case class GeneratedJoinConditionFunction(name: String, code: String)
   * @param name class name of the generated HashFunc.
   * @param code code of the generated HashFunc.
   */
-case class GeneratedHashFunc(name: String, code: String)
+case class GeneratedHashFunc(name: String, var code: String)
 
 /**
   * Describes a generated [[org.apache.flink.table.runtime.functions.ProcessFunction]]
@@ -248,24 +248,7 @@ case class GeneratedHashFunc(name: String, code: String)
   * @param name class name of the generated ProcessFunction.
   * @param code code of the generated ProcessFunction.
   */
-case class GeneratedProcessFunction[IN, OUT](
-  name: String,
-  var code: String,
-  references: Array[AnyRef])
-  extends GeneratedClass[ProcessFunction[IN, OUT]]
-
-/**
-  * Describes a generated [[org.apache.flink.table.runtime.functions.CoProcessFunction]]
-  * or [[org.apache.flink.table.runtime.functions.ProcessFunction]].
-  *
-  * @param name class name of the generated ProcessFunction.
-  * @param code code of the generated ProcessFunction.
-  */
-case class GeneratedCoProcessFunction[IN1, IN2, OUT](
-  name: String,
-  var code: String,
-  references: Array[AnyRef])
-  extends GeneratedClass[CoProcessFunction[IN1, IN2, OUT]]
+case class GeneratedProcessFunction(name: String, var code: String)
 
 /**
   * default implementation of GeneratedSplittable
@@ -285,7 +268,7 @@ case class GeneratedSplittableExpression(
  * @param name class name of the generated BoundComparator.
  * @param code code of the generated BoundComparator.
  */
-case class GeneratedBoundComparator(name: String, code: String)
+case class GeneratedBoundComparator(name: String, var code: String)
 
 /**
   * Describes a generated aggregate helper function
@@ -305,20 +288,9 @@ case class GeneratedAggsHandleFunction(name: String, var code: String, reference
 case class GeneratedTableValuedAggHandleFunction(
     name: String,
     var code: String,
-    references: Array[AnyRef])
+    references:
+    Array[AnyRef])
   extends GeneratedClass[TableValuedAggHandleFunction]
-
-/**
-  * Describes a generated co-table-valued aggregate helper function
-  *
-  * @param name class name of the generated Function.
-  * @param code code of the generated Function.
-  */
-case class GeneratedCoTableValuedAggHandleFunction(
-    name: String,
-    var code: String,
-    references: Array[AnyRef])
-  extends GeneratedClass[CoTableValuedAggHandleFunction]
 
 /**
   * Describes a generated subkeyed aggregate helper function

@@ -19,21 +19,16 @@
 package org.apache.flink.table.runtime.functions;
 
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.util.Collector;
 
 /**
  * The class for handling table-valued aggregate functions.
  */
-public interface TableValuedAggHandleFunction extends TableValuedAggHandleFunctionBase {
+public interface TableValuedAggHandleFunction extends AggHandleFunctionBase {
 
 	/**
-	 * Accumulates the input values to the accumulators.
-	 * @param input input values bundled in a row
+	 * Emit the result of the table-valued aggregation from the current accumulator.
 	 */
-	void accumulate(BaseRow input) throws Exception;
+	void emitValue(Collector<BaseRow> out) throws Exception;
 
-	/**
-	 * Retracts the input values from the accumulators.
-	 * @param input input values bundled in a row
-	 */
-	void retract(BaseRow input) throws Exception;
 }

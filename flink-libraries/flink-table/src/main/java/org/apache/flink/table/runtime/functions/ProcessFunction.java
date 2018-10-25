@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.runtime.functions;
 
+import org.apache.flink.api.common.functions.Function;
+import org.apache.flink.api.common.functions.RuntimeContext;
+import org.apache.flink.streaming.api.TimeDomain;
 import org.apache.flink.streaming.api.TimerService;
 import org.apache.flink.util.Collector;
 
@@ -36,11 +39,27 @@ import org.apache.flink.util.Collector;
  * @param <I> Type of the input elements.
  * @param <O> Type of the output elements.
  */
-public abstract class ProcessFunction<I, O> extends ProcessFunctionBase<O> {
+public abstract class ProcessFunction<I, O> implements Function {
 
 	private static final long serialVersionUID = 1L;
 
+	protected transient ExecutionContext executionContext;
+
+	public void open(ExecutionContext ctx) throws Exception {
+		this.executionContext = ctx;
+	}
+
+	public void close() throws Exception {}
+
 	public void endInput(Collector<O> out) throws Exception {}
+
+	protected RuntimeContext getRuntimeContext() {
+		if (this.executionContext != null) {
+			return this.executionContext.getRuntimeContext();
+		} else {
+			throw new IllegalStateException("The stream exec runtime context has not been initialized.");
+		}
+	}
 
 	/**
 	 * Process one element from the input stream.
@@ -57,5 +76,43 @@ public abstract class ProcessFunction<I, O> extends ProcessFunctionBase<O> {
 	 * @throws Exception This method may throw exceptions. Throwing an exception will cause the operation
 	 *                   to fail and may trigger recovery.
 	 */
-	public abstract void processElement(I input, ProcessFunctionBase.Context ctx, Collector<O> out) throws Exception;
+	public abstract void processElement(I input, Context ctx, Collector<O> out) throws Exception;
+
+	/**
+	 * Called when a timer set using {@link TimerService} fires.
+	 *
+	 * @param timestamp The timestamp of the firing timer.
+	 * @param ctx An {@link OnTimerContext} that allows querying the timestamp of the firing timer,
+	 *            querying the {@link TimeDomain} of the firing timer and getting a
+	 *            {@link TimerService} for registering timers and querying the time.
+	 *            The context is only valid during the invocation of this method, do not store it.
+	 * @param out The collector for returning result values.
+	 *
+	 * @throws Exception This method may throw exceptions. Throwing an exception will cause the operation
+	 *                   to fail and may trigger recovery.
+	 */
+	public void onTimer(long timestamp, OnTimerContext ctx, Collector<O> out) throws Exception {}
+
+	/**
+	 * Information available in an invocation of {@link #processElement(Object, Context, Collector)}
+	 * or {@link #onTimer(long, OnTimerContext, Collector)}.
+	 */
+	public abstract static class Context {
+
+		/**
+		 * A {@link TimerService} for querying time and registering timers.
+		 */
+		public abstract TimerService timerService();
+	}
+
+	/**
+	 * Information available in an invocation of {@link #onTimer(long, OnTimerContext, Collector)}.
+	 */
+	public abstract static class OnTimerContext extends Context {
+		/**
+		 * The {@link TimeDomain} of the firing timer.
+		 */
+		public abstract TimeDomain timeDomain();
+	}
+
 }

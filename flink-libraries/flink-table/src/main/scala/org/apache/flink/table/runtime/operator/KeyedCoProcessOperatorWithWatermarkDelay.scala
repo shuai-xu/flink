@@ -17,8 +17,9 @@
  */
 package org.apache.flink.table.runtime.operator
 
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction
+import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.watermark.Watermark
-import org.apache.flink.table.runtime.functions.CoProcessFunction
 
 /**
   * A [[KeyedCoProcessOperator]] that supports holding back watermarks with a static delay.

@@ -24,7 +24,6 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.BatchExecRelVisitor;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -336,7 +335,26 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 
 	@Override
 	public List<RelStageExchangeInfo> visit(BatchExecSortMergeJoinBase sortMergeJoin) {
-		return visitSortMergeJoin(sortMergeJoin);
+		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(sortMergeJoin);
+		if (outputInfoList == null) {
+			BiRel joinRel = (BiRel) sortMergeJoin;
+			BatchExecRelStage in0Stage = new BatchExecRelStage(sortMergeJoin, 0);
+			BatchExecRelStage in1Stage = new BatchExecRelStage(sortMergeJoin, 1);
+			BatchExecRelStage outStage = new BatchExecRelStage(sortMergeJoin, 2);
+			// in0Stage and in1Stage can be parallel
+			outStage.addDependStage(in0Stage, BatchExecRelStage.DependType.DATA_TRIGGER);
+			outStage.addDependStage(in1Stage, BatchExecRelStage.DependType.DATA_TRIGGER);
+
+			List<RelStageExchangeInfo> in0InfoList = ((RowBatchExecRel) joinRel.getLeft()).accept(this);
+			List<RelStageExchangeInfo> in1InfoList = ((RowBatchExecRel) joinRel.getRight()).accept(this);
+			addIntoInputRunningUnit(in0InfoList, in0Stage);
+			addIntoInputRunningUnit(in1InfoList, in1Stage);
+			newRunningUnitWithRelStage(outStage);
+
+			outputInfoList = Collections.singletonList(new RelStageExchangeInfo(outStage));
+			outputInfoMap.put(sortMergeJoin, outputInfoList);
+		}
+		return outputInfoList;
 	}
 
 	@Override
@@ -352,38 +370,6 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 			for (RelNode relNode : union.getInputs()) {
 				outputInfoList.addAll(((RowBatchExecRel) relNode).accept(this));
 			}
-		}
-		return outputInfoList;
-	}
-
-	@Override
-	public List<RelStageExchangeInfo> visit(BatchExecCoGroupTableValuedAggregate coAgg) {
-		return visitSortMergeJoin(coAgg);
-	}
-
-	private List<RelStageExchangeInfo> visitSortMergeJoin(RowBatchExecRel biRel) {
-		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(biRel);
-		if (outputInfoList == null) {
-			outputInfoList = new LinkedList<>();
-
-			// define order
-			BiRel rel = (BiRel) biRel;
-			BatchExecRelStage in0Stage = new BatchExecRelStage(biRel, 0);
-			BatchExecRelStage in1Stage = new BatchExecRelStage(biRel, 1);
-			BatchExecRelStage outStage = new BatchExecRelStage(biRel, 2);
-			outStage.addDependStage(in0Stage, BatchExecRelStage.DependType.DATA_TRIGGER);
-			outStage.addDependStage(in1Stage, BatchExecRelStage.DependType.DATA_TRIGGER);
-
-			// add info list
-			// in0Stage and in1Stage can be parallel
-			List<RelStageExchangeInfo> in0InfoList = ((RowBatchExecRel) rel.getLeft()).accept(this);
-			List<RelStageExchangeInfo> in1InfoList = ((RowBatchExecRel) rel.getRight()).accept(this);
-			addIntoInputRunningUnit(in0InfoList, in0Stage);
-			addIntoInputRunningUnit(in1InfoList, in1Stage);
-			newRunningUnitWithRelStage(outStage);
-
-			outputInfoList = Collections.singletonList(new RelStageExchangeInfo(outStage));
-			outputInfoMap.put(biRel, outputInfoList);
 		}
 		return outputInfoList;
 	}

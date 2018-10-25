@@ -62,7 +62,7 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{TableValuedAggregateFunction, CoTableValuedAggregateFunction, AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.functions.{TableValuedAggregateFunction, AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema._
@@ -330,31 +330,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an [[CoTableValuedAggregateFunction]] under a unique name in the
-    * TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param f The AggregateFunction to register.
-    * @tparam T The type of the output value.
-    * @tparam ACC The type of aggregate accumulator.
-    */
-  def registerFunction[T, ACC](
-    name: String,
-    f: CoTableValuedAggregateFunction[T, ACC])
-  : Unit = {
-    val resultType = DataTypes.of(
-      TypeExtractor.createTypeInfo(
-        f, classOf[CoTableValuedAggregateFunction[T, ACC]], f.getClass, 0))
-
-    val accType = DataTypes.of(
-      TypeExtractor.createTypeInfo(
-        f, classOf[CoTableValuedAggregateFunction[T, ACC]], f.getClass, 1))
-
-    registerCoTableValuedAggregateFunction(name, f, resultType, accType)
-  }
-
-  /**
    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
    * Registered functions can be referenced in Table API and SQL queries.
    *
@@ -441,38 +416,6 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     // register in SQL API
     val sqlFunctions = createTableValuedAggregateSqlFunction(
-      name,
-      name,
-      function,
-      resultType,
-      accType,
-      typeFactory)
-
-    functionCatalog.registerSqlFunction(sqlFunctions)
-  }
-
-  /**
-    * Registers a [[CoTableValuedAggregateFunction]] under a unique name. Replaces already existing
-    * user-defined functions under this name.
-    */
-  def registerCoTableValuedAggregateFunction[T, ACC](
-    name: String,
-    function: CoTableValuedAggregateFunction[T, ACC],
-    implicitResultType: DataType,
-    implicitAccType: DataType): Unit = {
-    // check if class not Scala object
-    checkNotSingleton(function.getClass)
-    // check if class could be instantiated
-    checkForInstantiation(function.getClass)
-
-    val resultType = getResultTypeOfAggregateFunction(function, implicitResultType)
-    val accType = getAccumulatorTypeOfAggregateFunction(function, implicitAccType)
-
-    // register in Table API
-    functionCatalog.registerFunction(name, function.getClass)
-
-    // register in SQL API
-    val sqlFunctions = createCoTableValuedAggregateSqlFunction(
       name,
       name,
       function,

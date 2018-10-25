@@ -26,18 +26,6 @@ import org.apache.flink.table.dataformat.BaseRow;
 public interface AggsHandleFunction extends AggHandleFunctionBase {
 
 	/**
-	 * Accumulates the input values to the accumulators.
-	 * @param input input values bundled in a row
-	 */
-	void accumulate(BaseRow input) throws Exception;
-
-	/**
-	 * Retracts the input values from the accumulators.
-	 * @param input input values bundled in a row
-	 */
-	void retract(BaseRow input) throws Exception;
-
-	/**
 	 * Gets the result of the aggregation from the current accumulators.
 	 * @return the final result (saved in a row) of the current accumulators.
 	 */

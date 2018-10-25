@@ -153,10 +153,10 @@ class StreamExecGroupTableValuedAggregate(
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(tableEnv.getConfig, supportReference = true),
       tableEnv.getRelBuilder,
+      inputTypes,
       needRetraction,
       needMerge = false,
       tableEnv.getConfig.getNullCheck)
-      .bindInput(inputTypes)
 
     val generateAggHandler: GeneratedTableValuedAggHandleFunction =
       generator.generateTableValuedAggHandler("GroupTableValuedAggHandler", aggInfoList)

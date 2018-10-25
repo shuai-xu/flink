@@ -20,7 +20,6 @@ package org.apache.flink.table.plan;
 
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCoGroupTableValuedAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExpand;
@@ -115,11 +114,6 @@ public class BatchExecRelVisitorImpl<R> implements BatchExecRelVisitor<R> {
 	@Override
 	public R visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		return visitInputs(sortMergeJoin);
-	}
-
-	@Override
-	public R visit(BatchExecCoGroupTableValuedAggregate coAgg) {
-		return visitInputs(coAgg);
 	}
 
 	@Override

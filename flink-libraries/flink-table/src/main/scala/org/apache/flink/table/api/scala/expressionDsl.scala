@@ -27,7 +27,7 @@ import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilli
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.expressions.{ToBase64, _}
-import org.apache.flink.table.functions.{AggregateFunction, CoTableValuedAggregateFunction, DistinctAggregateFunction, TableValuedAggregateFunction}
+import org.apache.flink.table.functions.{AggregateFunction, DistinctAggregateFunction, TableValuedAggregateFunction}
 import org.apache.flink.table.expressions.{Atan2, Cosh, DistinctAgg, Hex, Literal, RegexpExtract, RegexpReplace, Repeat, Replace, TimestampDiff, UDTVAGGExpression, _}
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -1183,10 +1183,6 @@ trait ImplicitExpressionConversions {
   implicit def tableValuedExpression2Call[T: TypeInformation, ACC: TypeInformation]
   (udtvagg: TableValuedAggregateFunction[T, ACC]): UDTVAGGExpression[T, ACC] = {
     new UDTVAGGExpression[T, ACC](udtvagg)
-  }
-  implicit def coTableValuedExpression2Call[T: TypeInformation, ACC: TypeInformation]
-  (udctvagg: CoTableValuedAggregateFunction[T, ACC]): UDCTVAGGExpression[T, ACC] = {
-    new UDCTVAGGExpression[T, ACC](udctvagg)
   }
   implicit def toDistinct(agg: Aggregation): DistinctAgg = DistinctAgg(agg)
   implicit def toDistinct[T: TypeInformation, ACC: TypeInformation]

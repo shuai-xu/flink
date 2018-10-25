@@ -25,11 +25,10 @@ import org.apache.flink.streaming.api.TimeDomain
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.ProcessFunction
-import org.apache.flink.table.runtime.functions.ProcessFunctionBase.{Context, OnTimerContext}
+import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 
 abstract class ProcessFunctionWithCleanupState[IN, OUT](queryConfig: StreamQueryConfig)
-  extends ProcessFunction[IN, OUT]
-  with CleanupState {
+  extends ProcessFunction[IN, OUT]{
 
   protected val minRetentionTime: Long = queryConfig.getMinIdleStateRetentionTime
   protected val maxRetentionTime: Long = queryConfig.getMaxIdleStateRetentionTime
@@ -47,14 +46,23 @@ abstract class ProcessFunctionWithCleanupState[IN, OUT](queryConfig: StreamQuery
   }
 
   protected def registerProcessingCleanupTimer(ctx: Context, currentTime: Long): Unit = {
-    registerProcessingCleanupTimer(
-      ctx.timerService(),
-      currentTime,
-      stateCleaningEnabled,
-      minRetentionTime,
-      maxRetentionTime,
-      cleanupTimeState,
-      executionContext)
+    if (stateCleaningEnabled) {
+
+      val currentKey = executionContext.currentKey()
+
+      // last registered timer
+      val curCleanupTime = cleanupTimeState.get(currentKey)
+
+      // check if a cleanup timer is registered and
+      // that the current cleanup timer won't delete state we need to keep
+      if (curCleanupTime == null || (currentTime + minRetentionTime) > curCleanupTime) {
+        // we need to register a new (later) timer
+        val cleanupTime = currentTime + maxRetentionTime
+        // register timer and remember clean-up time
+        ctx.timerService().registerProcessingTimeTimer(cleanupTime)
+        cleanupTimeState.put(currentKey, cleanupTime)
+      }
+    }
   }
 
   protected def isProcessingTimeTimer(ctx: OnTimerContext): Boolean = {
@@ -62,10 +70,19 @@ abstract class ProcessFunctionWithCleanupState[IN, OUT](queryConfig: StreamQuery
   }
 
   protected def needToCleanupState(timestamp: Long): Boolean = {
-    needToCleanupState(timestamp, stateCleaningEnabled, cleanupTimeState, executionContext)
+    if (stateCleaningEnabled) {
+      val cleanupTime = cleanupTimeState.get(executionContext.currentKey())
+      // check that the triggered timer is the last registered processing time timer.
+      null != cleanupTime && timestamp == cleanupTime
+    } else {
+      false
+    }
   }
 
   protected def cleanupState(states: KeyedState[BaseRow, _]*): Unit = {
-    cleanupState(cleanupTimeState, executionContext, states: _*)
+    val currentKey = executionContext.currentKey()
+    // clear all state
+    states.foreach(_.remove(currentKey))
+    this.cleanupTimeState.remove(currentKey)
   }
 }

@@ -202,10 +202,10 @@ class StreamExecGroupAggregate(
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(tableEnv.getConfig, supportReference = true),
       tableEnv.getRelBuilder,
+      inputRowType.getFieldTypes.map(DataTypes.internal),
       needRetraction,
       needMerge = false,
       tableEnv.getConfig.getNullCheck)
-      .bindInput(inputRowType.getFieldTypes.map(DataTypes.internal))
 
     val aggsHandler = generator.generateAggsHandler("GroupAggsHandler", aggInfoList)
     val accTypes = aggInfoList.getAccTypes.map(DataTypes.internal)
