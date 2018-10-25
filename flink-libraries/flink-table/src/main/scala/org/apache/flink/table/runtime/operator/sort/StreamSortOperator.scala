@@ -189,4 +189,6 @@ class StreamSortOperator(
     LOG.info("Closing StreamSortOperator")
     super.close()
   }
+
+  override def requireState(): Boolean = true
 }

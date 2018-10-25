@@ -279,4 +279,9 @@ public class BundleOperator<K, V, IN, OUT>
 			}
 		}
 	}
+
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }

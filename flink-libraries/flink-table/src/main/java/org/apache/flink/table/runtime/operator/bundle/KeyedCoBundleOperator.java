@@ -279,4 +279,9 @@ public abstract class KeyedCoBundleOperator
 		leftBufferState.putAll(leftBuffer);
 		rightBufferState.putAll(rightBuffer);
 	}
+
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }

@@ -229,4 +229,9 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 			}
 		}
 	}
+
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }

@@ -442,4 +442,9 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		}
 		return counter;
 	}
+
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }

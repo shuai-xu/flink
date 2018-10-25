@@ -757,4 +757,8 @@ public class WindowOperator<K, W extends Window>
 		return watermarkLatency;
 	}
 
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }

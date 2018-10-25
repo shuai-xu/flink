@@ -354,4 +354,9 @@ public abstract class JoinStreamOperator extends AbstractStreamOperator<BaseRow>
 		}
 		return condFunc.apply(leftRow, rightRow);
 	}
+
+	@Override
+	public boolean requireState() {
+		return true;
+	}
 }
