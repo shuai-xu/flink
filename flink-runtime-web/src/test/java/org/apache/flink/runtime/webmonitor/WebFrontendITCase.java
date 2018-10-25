@@ -211,6 +211,7 @@ public class WebFrontendITCase extends TestLogger {
 		assertTrue(logs.contains("job manager out"));
 	}
 
+	@Ignore
 	@Test
 	public void getTaskManagerLogAndStdoutFiles() {
 		try {
