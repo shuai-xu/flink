@@ -18,10 +18,14 @@
 
 package com.alibaba.blink.launcher;
 
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.util.FileUtils;
+
+import com.alibaba.blink.launcher.autoconfig.SourcePartitionFetcher;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -66,6 +70,14 @@ public class TestUtil {
 
 	public static String getResourceContent(String relativePath) throws IOException {
 		return FileUtils.readFileUtf8(getResource(relativePath));
+	}
+
+	public static synchronized void resetClassStaticFields() throws Exception {
+		Field idCounter = StreamTransformation.class.getDeclaredField("idCounter");
+		idCounter.setAccessible(true);
+		idCounter.set(null, 0);
+
+		SourcePartitionFetcher.getInstance().reset();
 	}
 
 }

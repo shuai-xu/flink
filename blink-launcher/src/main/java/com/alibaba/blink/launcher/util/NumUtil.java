@@ -52,6 +52,22 @@ public class NumUtil {
 	}
 
 	/**
+	 * Get from properties, retun null if not exist.
+	 * @param userProperties properties
+	 * @param key key
+	 * @param defaultValue default value
+	 * @return the value in this property, return null if not exist.
+	 */
+	public static int getProperty(Properties userProperties, String key, int defaultValue) {
+		if (userProperties == null) {
+			return defaultValue;
+		}
+
+		String value = userProperties.getProperty(key);
+		return value == null ? defaultValue : parseInt(value, defaultValue);
+	}
+
+	/**
 	 * Parse string to long.
 	 *
 	 * @param str Input String

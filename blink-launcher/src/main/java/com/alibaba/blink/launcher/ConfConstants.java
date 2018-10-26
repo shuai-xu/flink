@@ -26,6 +26,21 @@ public class ConfConstants {
 	// state backend type
 	public static final String STATE_BACKEND_TYPE = "state.backend.type"; // gemini, rocksdb, niagara
 
+	// checkpoint uri
+	public static final String CHECKPOINT_PATH = "blink.checkpoint.path";
+
+	// block cache size
+	public static final String STATE_BACKEND_BLOCK_CACHE_SIZE_MB = "state.backend.block.cache.size.mb";
+	public static final int DEFAULT_STATE_BACKEND_BLOCK_CACHE_SIZE_MB = 256;
+
+	// mem table size
+	public static final String STATE_BACKEND_MEM_TABLE_SIZE_MB = "state.backend.mem.table.size.mb";
+	public static final int DEFAULT_STATE_BACKEND_MEM_TABLE_SIZE_MB = 128;
+
+	// mem table number
+	public static final String STATE_BACKEND_ROCKSDB_MEM_TABLE_NUM = "state.backend.rocksdb.mem.table.num";
+	public static final int DEFAULT_STATE_BACKEND_ROCKSDB_MEM_TABLE_NUM = 4;
+
 	// niagara
 	public static final String STATE_BACKEND_NIAGARA_TTL_MS = "state.backend.niagara.ttl.ms"; // 3 * 86400 * 1000
 
@@ -60,14 +75,6 @@ public class ConfConstants {
 	// watermark interval
 	public static final String AUTO_WATERMARK_INTERVAL_MS = "blink.auto.watermark.interval.ms";
 
-	// operator name max length
-	public static final String BLINK_OPERATOR_NAME_MAX_LENGTH = "blink.operator.name.max.length";
-
-	// operator name default max length
-	// mainly concerned with source name, which is in format of <source_type>-<table_name>
-	// 128 allocated for table name, 39 for source name, and 1 for '-'
-	public static final int DEFAULT_OPERATOR_NAME_MAX_LENGTH = 168;
-
 	// enable object reuse
 	public static final String OBJECT_REUSE = "blink.object.reuse";
 
@@ -81,4 +88,5 @@ public class ConfConstants {
 
 	public static final String BLINK_CODEGEN_REWRITE = "blink.codegen.rewrite";
 
+	public static final int DEFAULT_BLINK_NON_STATE_NATIVE_MEM_MB = 20;
 }

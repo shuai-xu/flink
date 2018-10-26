@@ -1,0 +1,424 @@
+{
+  "resourceSettings" : {
+    "blink.resource.allocation.jm.min.cpu.cores" : 4.0,
+    "blink.resource.allocation.jm.min.memory.mb" : 12088
+  },
+  "autoConfig" : {
+    "goal" : {
+      "maxResourceUnits" : 10000.0
+    },
+    "result" : {
+      "attemptId" : 1,
+      "attempts" : 1,
+      "attemptsCurrentPlan" : 1,
+      "statusMessage" : "新任务，使用默认配置。",
+      "scalingAction" : "InitialScale",
+      "allocatedResourceUnits" : 22.0,
+      "allocatedCpuCores" : 22.0,
+      "allocatedMemoryInMB" : 90112,
+      "messages" : [ "old plan json is not compatible, maybe blink version has changed, will generate new default config" ]
+    }
+  },
+  "global" : [ {
+    "tracingMetricsEnabled" : true,
+    "jobManagerCpuCores" : 4.0,
+    "jobManagerMemoryInMB" : 16384
+  } ],
+  "nodes" : [ {
+    "id" : 1,
+    "uid" : "1",
+    "pact" : "Data Source",
+    "name" : "DummySource-custom_input1-Stream",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 8,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 2,
+    "uid" : "2",
+    "pact" : "Operator",
+    "name" : "SourceConversion(table:[_DataStreamTable_0, source: [DummySource-custom_input1-Stream]], fields:(f0))",
+    "parallelism" : 8,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 3,
+    "uid" : "3",
+    "pact" : "Operator",
+    "name" : "correlate: table(SourceCollectorTableFunction0($cor0.f0)), select: a,b",
+    "parallelism" : 8,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 5,
+    "uid" : "5",
+    "pact" : "Data Source",
+    "name" : "DummySource-custom_input2-Stream",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 20,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 6,
+    "uid" : "6",
+    "pact" : "Operator",
+    "name" : "SourceConversion(table:[_DataStreamTable_2, source: [DummySource-custom_input2-Stream]], fields:(f0))",
+    "parallelism" : 20,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 7,
+    "uid" : "7",
+    "pact" : "Operator",
+    "name" : "correlate: table(SourceCollectorTableFunction1($cor1.f0)), select: c,d",
+    "parallelism" : 20,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 9,
+    "uid" : "9",
+    "pact" : "Operator",
+    "name" : "LeftOuterJoin(where: (=(b, d)), join: (a, b, c, d))",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 17,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 384
+  }, {
+    "id" : 11,
+    "uid" : "11",
+    "pact" : "Data Source",
+    "name" : "DummySource-custom_input3-Stream",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 8,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 12,
+    "uid" : "12",
+    "pact" : "Operator",
+    "name" : "SourceConversion(table:[_DataStreamTable_4, source: [DummySource-custom_input3-Stream]], fields:(f0))",
+    "parallelism" : 8,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 13,
+    "uid" : "13",
+    "pact" : "Operator",
+    "name" : "correlate: table(SourceCollectorTableFunction2($cor2.f0)), select: e,f",
+    "parallelism" : 8,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 6
+  }, {
+    "id" : 15,
+    "uid" : "15",
+    "pact" : "Operator",
+    "name" : "LeftOuterJoin(where: (=(b, e)), join: (a, b, c, d, e, f))",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 17,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128,
+    "native_memory" : 384
+  }, {
+    "id" : 16,
+    "uid" : "16",
+    "pact" : "Operator",
+    "name" : "SinkConversion to Tuple2",
+    "parallelism" : 17,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  }, {
+    "id" : 17,
+    "uid" : "17",
+    "pact" : "Operator",
+    "name" : "Flat Map",
+    "parallelism" : 17,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  }, {
+    "id" : 18,
+    "uid" : "18",
+    "pact" : "Data Sink",
+    "name" : "Print to System.out [discarding=false]",
+    "parallelism" : 17,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  } ],
+  "links" : [ {
+    "source" : 1,
+    "target" : 2,
+    "side" : "second"
+  }, {
+    "source" : 2,
+    "target" : 3,
+    "side" : "second"
+  }, {
+    "source" : 3,
+    "target" : 9,
+    "ship_strategy" : "HASH",
+    "side" : "second"
+  }, {
+    "source" : 5,
+    "target" : 6,
+    "side" : "second"
+  }, {
+    "source" : 6,
+    "target" : 7,
+    "side" : "second"
+  }, {
+    "source" : 7,
+    "target" : 9,
+    "ship_strategy" : "HASH",
+    "side" : "second"
+  }, {
+    "source" : 9,
+    "target" : 15,
+    "ship_strategy" : "HASH",
+    "side" : "second"
+  }, {
+    "source" : 11,
+    "target" : 12,
+    "side" : "second"
+  }, {
+    "source" : 12,
+    "target" : 13,
+    "side" : "second"
+  }, {
+    "source" : 13,
+    "target" : 15,
+    "ship_strategy" : "HASH",
+    "side" : "second"
+  }, {
+    "source" : 15,
+    "target" : 16,
+    "side" : "second"
+  }, {
+    "source" : 16,
+    "target" : 17,
+    "side" : "second"
+  }, {
+    "source" : 17,
+    "target" : 18,
+    "side" : "second"
+  } ],
+  "statefulNodes" : [ 9, 15 ],
+  "vertexAdjustments" : {
+    "0" : {
+      "parallelismFactor" : 8.0,
+      "parallelismLimit" : 16
+    },
+    "1" : {
+      "parallelismFactor" : 17.0,
+      "parallelismLimit" : 65
+    },
+    "2" : {
+      "parallelismFactor" : 8.0,
+      "parallelismLimit" : 32
+    },
+    "3" : {
+      "parallelismFactor" : 17.0
+    },
+    "4" : {
+      "parallelismFactor" : 17.0
+    }
+  },
+  "vertices" : {
+    "0" : {
+      "vertexId" : 0,
+      "source" : true,
+      "name" : "Source: DummySource-custom_input1-Stream -> SourceConversion(table:[_DataStreamTable_0, source: [DummySource-custom_input1-Stream]], fields:(f0)) -> correlate: table(SourceCollectorTableFunction0($cor0.f0)), select: a,b",
+      "parallelismFactor" : 8.0,
+      "parallelismLimit" : 16,
+      "parallelism" : 8,
+      "maxParallelism" : 32768,
+      "maxPartitionsPerSourceParallelism" : 243,
+      "minResource" : {
+        "cpuCores" : 0.25,
+        "heapMemoryInMB" : 768,
+        "managedMemoryInMB" : 0,
+        "directMemoryInMB" : 0,
+        "nativeMemoryInMB" : 18
+      },
+      "transformations" : [ 1, 2, 3 ],
+      "inputVertexIds" : [ ]
+    },
+    "1" : {
+      "vertexId" : 1,
+      "source" : true,
+      "name" : "Source: DummySource-custom_input2-Stream -> SourceConversion(table:[_DataStreamTable_2, source: [DummySource-custom_input2-Stream]], fields:(f0)) -> correlate: table(SourceCollectorTableFunction1($cor1.f0)), select: c,d",
+      "parallelismFactor" : 17.0,
+      "parallelismLimit" : 65,
+      "parallelism" : 20,
+      "maxParallelism" : 32768,
+      "maxPartitionsPerSourceParallelism" : 243,
+      "minResource" : {
+        "cpuCores" : 0.25,
+        "heapMemoryInMB" : 768,
+        "managedMemoryInMB" : 0,
+        "directMemoryInMB" : 0,
+        "nativeMemoryInMB" : 18
+      },
+      "transformations" : [ 5, 6, 7 ],
+      "inputVertexIds" : [ ]
+    },
+    "2" : {
+      "vertexId" : 2,
+      "source" : true,
+      "name" : "Source: DummySource-custom_input3-Stream -> SourceConversion(table:[_DataStreamTable_4, source: [DummySource-custom_input3-Stream]], fields:(f0)) -> correlate: table(SourceCollectorTableFunction2($cor2.f0)), select: e,f",
+      "parallelismFactor" : 8.0,
+      "parallelismLimit" : 32,
+      "parallelism" : 8,
+      "maxParallelism" : 32768,
+      "maxPartitionsPerSourceParallelism" : 243,
+      "minResource" : {
+        "cpuCores" : 0.25,
+        "heapMemoryInMB" : 768,
+        "managedMemoryInMB" : 0,
+        "directMemoryInMB" : 0,
+        "nativeMemoryInMB" : 18
+      },
+      "transformations" : [ 11, 12, 13 ],
+      "inputVertexIds" : [ ]
+    },
+    "3" : {
+      "vertexId" : 3,
+      "name" : "LeftOuterJoin(where: (=(b, d)), join: (a, b, c, d))",
+      "parallelismFactor" : 17.0,
+      "parallelismLimit" : 32768,
+      "parallelism" : 17,
+      "maxParallelism" : 32768,
+      "minResource" : {
+        "cpuCores" : 0.25,
+        "heapMemoryInMB" : 256,
+        "managedMemoryInMB" : 0,
+        "directMemoryInMB" : 0,
+        "nativeMemoryInMB" : 384
+      },
+      "transformations" : [ 9 ],
+      "inputVertexIds" : [ 0, 1 ]
+    },
+    "4" : {
+      "vertexId" : 4,
+      "name" : "LeftOuterJoin(where: (=(b, e)), join: (a, b, c, d, e, f)) -> SinkConversion to Tuple2 -> Flat Map -> Sink: Print to System.out [discarding=false]",
+      "parallelismFactor" : 17.0,
+      "parallelismLimit" : 32768,
+      "parallelism" : 17,
+      "maxParallelism" : 32768,
+      "minResource" : {
+        "cpuCores" : 0.25,
+        "heapMemoryInMB" : 512,
+        "managedMemoryInMB" : 0,
+        "directMemoryInMB" : 0,
+        "nativeMemoryInMB" : 384
+      },
+      "transformations" : [ 15, 16, 17, 18 ],
+      "inputVertexIds" : [ 3, 2 ]
+    }
+  },
+  "subDags" : {
+    "0" : {
+      "vertices" : [ 0 ],
+      "inputFromVertices" : [ ],
+      "targetTps" : 0.0
+    },
+    "1" : {
+      "vertices" : [ 1 ],
+      "inputFromVertices" : [ ],
+      "targetTps" : 0.0
+    },
+    "2" : {
+      "vertices" : [ 2 ],
+      "inputFromVertices" : [ ],
+      "targetTps" : 0.0
+    },
+    "3" : {
+      "vertices" : [ 3 ],
+      "inputFromVertices" : [ 0, 1 ],
+      "targetTps" : 0.0
+    },
+    "4" : {
+      "vertices" : [ 4 ],
+      "inputFromVertices" : [ 2, 3 ],
+      "targetTps" : 0.0
+    }
+  },
+  "workers" : [ {
+    "numWorkers" : 1,
+    "resourceUnits" : 2.0,
+    "estimatedCpuCores" : 2.0,
+    "estimatedMemoryInMB" : 6288.0,
+    "allocatedCpuCores" : 2.0,
+    "allocatedMemoryInMB" : 8192,
+    "taskSlots" : [ {
+      "topologyID" : 0,
+      "count" : 8
+    } ]
+  }, {
+    "numWorkers" : 4,
+    "resourceUnits" : 1.25,
+    "estimatedCpuCores" : 1.25,
+    "estimatedMemoryInMB" : 3930.0,
+    "allocatedCpuCores" : 1.25,
+    "allocatedMemoryInMB" : 5120,
+    "taskSlots" : [ {
+      "topologyID" : 1,
+      "count" : 5
+    } ]
+  }, {
+    "numWorkers" : 1,
+    "resourceUnits" : 2.0,
+    "estimatedCpuCores" : 2.0,
+    "estimatedMemoryInMB" : 6288.0,
+    "allocatedCpuCores" : 2.0,
+    "allocatedMemoryInMB" : 8192,
+    "taskSlots" : [ {
+      "topologyID" : 2,
+      "count" : 8
+    } ]
+  }, {
+    "numWorkers" : 3,
+    "resourceUnits" : 1.5,
+    "estimatedCpuCores" : 1.5,
+    "estimatedMemoryInMB" : 3840.0,
+    "allocatedCpuCores" : 1.5,
+    "allocatedMemoryInMB" : 6144,
+    "taskSlots" : [ {
+      "topologyID" : 3,
+      "count" : 6
+    } ]
+  }, {
+    "numWorkers" : 3,
+    "resourceUnits" : 1.5,
+    "estimatedCpuCores" : 1.5,
+    "estimatedMemoryInMB" : 5376.0,
+    "allocatedCpuCores" : 1.5,
+    "allocatedMemoryInMB" : 6144,
+    "taskSlots" : [ {
+      "topologyID" : 4,
+      "count" : 6
+    } ]
+  } ]
+}

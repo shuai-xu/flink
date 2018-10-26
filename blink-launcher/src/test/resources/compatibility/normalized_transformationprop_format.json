@@ -1,0 +1,79 @@
+{
+  "nodes" : [ {
+    "id" : 1,
+    "uid" : "1",
+    "name" : "node1",
+    "slotSharingGroup" : "test",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 8,
+    "maxParallelism" : 10240,
+    "vcore" : 0.5,
+    "heap_memory" : 1024,
+    "direct_memory" : 1,
+    "native_memory" : 1,
+    "lock" : [ "heap_memory", "parallelism", "chainingStrategy", "vcore", "native_memory" ],
+    "gpu" : 5.0,
+    "work_dir_vssd" : 2,
+    "log_dir_vssd" : 3,
+    "state_native_memory" : 12345,
+    "otherResources" : {
+      "cnn" : 1.0,
+      "rnn" : 2.0
+    },
+    "resourceConstraints" : {
+      "zk" : "3",
+      "hbase" : "1"
+    }
+  }, {
+    "id" : 2,
+    "uid" : "2",
+    "lock" : [ "heap_memory", "parallelism" ],
+    "otherResources" : {
+      "cnn" : 5.0
+    }
+  }, {
+    "id" : 3,
+    "uid" : "3",
+    "maxParallelism" : 1
+  }, {
+    "id" : 4,
+    "uid" : "4",
+    "name" : "null",
+    "slotSharingGroup" : "null",
+    "lock" : [ ]
+  }, {
+    "id" : 5,
+    "uid" : "5",
+    "lock" : [ "chainingStrategy" ]
+  }, {
+    "id" : 6,
+    "uid" : "6",
+    "parallelism" : 101
+  }, {
+    "id" : 7,
+    "uid" : "7",
+    "parallelism" : 101
+  } ],
+  "links" : [ {
+    "source" : 1,
+    "target" : 2,
+    "ship_strategy" : "null"
+  }, {
+    "source" : 1,
+    "target" : 3
+  }, {
+    "source" : 3,
+    "target" : 4,
+    "ship_strategy" : ""
+  }, {
+    "source" : 3,
+    "target" : 5
+  }, {
+    "source" : 5,
+    "target" : 6
+  }, {
+    "source" : 6,
+    "target" : 7
+  } ],
+  "statefulNodes" : [ 1, 3 ]
+}

@@ -1,0 +1,89 @@
+{
+  "nodes" : [ {
+    "id" : 1,
+    "uid" : "1",
+    "name" : "DummySource-custom_input-Stream",
+    "pact" : "Source",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 11,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256
+  }, {
+    "id" : 2,
+    "uid" : "2",
+    "name" : "SourceConversion(table:[_DataStreamTable_0, source: [DummySource-custom_input-Stream]], fields:(f0))",
+    "pact" : "Operator",
+    "parallelism" : 11,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256
+  }, {
+    "id" : 3,
+    "uid" : "3",
+    "name" : "correlate: table(SourceCollectorTableFunction0($cor0.f0)), select: x,y",
+    "pact" : "Operator",
+    "parallelism" : 11,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256
+  }, {
+    "id" : 5,
+    "uid" : "5",
+    "name" : "GroupAggregate(groupBy: (x), select: (x, COUNT(y) AS EXPR$1))",
+    "pact" : "Operator",
+    "parallelism" : 1,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128,
+    "native_memory" : 384
+  }, {
+    "id" : 6,
+    "uid" : "6",
+    "name" : "Calc(select: (x AS a, EXPR$1 AS b, 'Test' AS c))",
+    "pact" : "Operator",
+    "parallelism" : 1,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  }, {
+    "id" : 7,
+    "uid" : "7",
+    "name" : "SinkConversion to Tuple2",
+    "pact" : "Operator",
+    "parallelism" : 1,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  }, {
+    "id" : 8,
+    "uid" : "8",
+    "name" : "Print to System.out",
+    "pact" : "Sink",
+    "parallelism" : 1,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  } ],
+  "links" : [ {
+    "source" : 1,
+    "target" : 2
+  }, {
+    "source" : 2,
+    "target" : 3
+  }, {
+    "source" : 3,
+    "target" : 5,
+    "ship_strategy" : "HASH"
+  }, {
+    "source" : 5,
+    "target" : 6
+  }, {
+    "source" : 6,
+    "target" : 7
+  }, {
+    "source" : 7,
+    "target" : 8
+  } ],
+  "statefulNodes" : [ 5 ]
+}

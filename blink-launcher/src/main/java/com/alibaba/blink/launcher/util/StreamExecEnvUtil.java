@@ -25,6 +25,8 @@ import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.client.cli.CliArgsException;
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
+import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
@@ -246,20 +248,6 @@ public class StreamExecEnvUtil {
 				LOG.warn("Unknown state backend type: " + stateBackendType);
 			}
 		}
-
-		String strTTL = userParams.getProperty(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS);
-		if (!StringUtil.isEmpty(strTTL)) {
-			LOG.info("set niagara state-backend with ttl:" + strTTL);
-			setStreamNiagara(env, userParams);
-		} else {
-			strTTL = userParams.getProperty(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS);
-			if (!StringUtil.isEmpty(strTTL)) {
-				LOG.info("set rocksDB state-backend with ttl:" + strTTL);
-				setStreamRocksDB(env, userParams);
-			} else {
-				LOG.info("no niagara/rocksDB backend update of stream env");
-			}
-		}
 	}
 
 	/**
@@ -273,14 +261,8 @@ public class StreamExecEnvUtil {
 		StreamExecutionEnvironment streamEnv,
 		Properties userParams)
 		throws Exception {
+		throw new CliArgsException("Niagara state backend not supported");
 
-		String strTTL = userParams.getProperty(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS);
-		long ttl = NumUtil.parseLong(strTTL);
-		if (ttl < 0) {
-			throw new CliArgsException(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS +
-				":" + strTTL + ", the value must be long!");
-		} else {
-		}
 	}
 
 	/**
@@ -295,13 +277,64 @@ public class StreamExecEnvUtil {
 		Properties userParams)
 		throws Exception {
 
+		RocksDBConfiguration configuration = new RocksDBConfiguration();
 		String strTTL = userParams.getProperty(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS);
 		long ttl = NumUtil.parseLong(strTTL);
 		if (ttl < 0) {
 			throw new CliArgsException(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS +
-				":" + strTTL + ", the value must be long!");
+					":" + strTTL + ", the value must be long!");
 		} else {
+			LOG.info("set state backend as rocksdb");
+
+			// set ttl
+			configuration.setTtl(ttl + "ms"); // append time unit
+			log(RocksDBConfiguration.TTL.key(), ttl + "ms");
+
+			// set block cache size
+			int blockCacheSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_BLOCK_CACHE_SIZE_MB;
+			blockCacheSizeMb = NumUtil.getProperty(
+					userParams, ConfConstants.STATE_BACKEND_BLOCK_CACHE_SIZE_MB, blockCacheSizeMb);
+			if (blockCacheSizeMb < 0) {
+				blockCacheSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_BLOCK_CACHE_SIZE_MB;
+			}
+			configuration.setBlockCacheSize(blockCacheSizeMb + "mb");
+			log(RocksDBConfiguration.BLOCK_CACHE_SIZE.key(), blockCacheSizeMb + "mb");
+
+			// set number of mem table
+			int memTableNum = ConfConstants.DEFAULT_STATE_BACKEND_ROCKSDB_MEM_TABLE_NUM;
+			memTableNum = NumUtil.getProperty(
+					userParams,
+					ConfConstants.STATE_BACKEND_ROCKSDB_MEM_TABLE_NUM,
+					memTableNum);
+			if (memTableNum < 0) {
+				memTableNum = ConfConstants.DEFAULT_STATE_BACKEND_ROCKSDB_MEM_TABLE_NUM;
+			}
+
+			configuration.setMaxWriteBufferNumber(memTableNum);
+			log(RocksDBConfiguration.WRITE_BUFFER_NUMBER.key(), String.valueOf(memTableNum));
+
+			// set each mem table size
+			int memTableTotalSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_MEM_TABLE_SIZE_MB;
+			String strMemTable = userParams.getProperty(ConfConstants.STATE_BACKEND_MEM_TABLE_SIZE_MB);
+			if (strMemTable != null) {
+				memTableTotalSizeMb = NumUtil.parseInt(strMemTable);
+				if (memTableTotalSizeMb < 0) {
+					memTableTotalSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_MEM_TABLE_SIZE_MB;
+				}
+			}
+			int menTableSizeMb = memTableTotalSizeMb / memTableNum;
+			configuration.setWriteBufferSize(menTableSizeMb + "mb");
+			log(RocksDBConfiguration.WRITE_BUFFER_SIZE.key(), menTableSizeMb + "mb");
 		}
+		String checkPointPath = userParams.getProperty(ConfConstants.CHECKPOINT_PATH);
+		RocksDBStateBackend backend = null;
+		if (checkPointPath == null) {
+			backend = new RocksDBStateBackend(new MemoryStateBackend());
+		} else {
+			backend = new RocksDBStateBackend(checkPointPath);
+		}
+		backend.setOptions(configuration);
+		streamEnv.setStateBackend(backend);
 	}
 
 	/**
@@ -314,7 +347,7 @@ public class StreamExecEnvUtil {
 	private static void setStreamGemini(
 		StreamExecutionEnvironment streamEnv,
 		Properties userParams) throws Exception {
-
+		throw new CliArgsException("Gemini state backend not supported");
 	}
 
 	/**

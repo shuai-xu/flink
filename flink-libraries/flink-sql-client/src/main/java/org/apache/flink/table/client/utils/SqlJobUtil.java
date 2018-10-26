@@ -322,7 +322,7 @@ public class SqlJobUtil {
 			for (SqlNodeList uniqueKeys: uniqueKeyList) {
 				List<String> uk = new ArrayList<>();
 				for (int i = 0; i < uniqueKeys.size(); i++) {
-					uk.add(uniqueKeyList.get(i).toString());
+					uk.add(uniqueKeys.get(i).toString());
 				}
 				ukList.add(uk);
 			}

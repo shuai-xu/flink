@@ -1,0 +1,178 @@
+{
+  "nodes" : [ {
+    "id" : 1,
+    "uid" : "1",
+    "name" : "DummySource-custom_input1-Stream",
+    "pact" : "Source",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 2,
+    "uid" : "2",
+    "name" : "SourceConversion(table:[_DataStreamTable_0, source: [DummySource-custom_input1-Stream]], fields:(f0))",
+    "pact" : "Operator",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 3,
+    "uid" : "3",
+    "name" : "correlate: table(SourceCollectorTableFunction0($cor0.f0)), select: a,b",
+    "pact" : "Operator",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 5,
+    "uid" : "5",
+    "name" : "DummySource-custom_input2-Stream",
+    "pact" : "Source",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 6,
+    "uid" : "6",
+    "name" : "SourceConversion(table:[_DataStreamTable_2, source: [DummySource-custom_input2-Stream]], fields:(f0))",
+    "pact" : "Operator",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 7,
+    "uid" : "7",
+    "name" : "correlate: table(SourceCollectorTableFunction1($cor1.f0)), select: c,d",
+    "pact" : "Operator",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 9,
+    "uid" : "9",
+    "name" : "LeftOuterJoin(where: (=(b, d)), join: (a, b, c, d))",
+    "pact" : "Operator",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 18,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 384
+  }, {
+    "id" : 11,
+    "uid" : "11",
+    "name" : "DummySource-custom_input3-Stream",
+    "pact" : "Source",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 12,
+    "uid" : "12",
+    "name" : "SourceConversion(table:[_DataStreamTable_4, source: [DummySource-custom_input3-Stream]], fields:(f0))",
+    "pact" : "Operator",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 13,
+    "uid" : "13",
+    "name" : "correlate: table(SourceCollectorTableFunction2($cor2.f0)), select: e,f",
+    "pact" : "Operator",
+    "parallelism" : 24,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 256,
+    "native_memory" : 5
+  }, {
+    "id" : 15,
+    "uid" : "15",
+    "name" : "LeftOuterJoin(where: (=(b, e)), join: (a, b, c, d, e, f))",
+    "pact" : "Operator",
+    "chainingStrategy" : "HEAD",
+    "parallelism" : 18,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128,
+    "native_memory" : 384
+  }, {
+    "id" : 16,
+    "uid" : "16",
+    "name" : "SinkConversion to Tuple2",
+    "pact" : "Operator",
+    "parallelism" : 18,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  }, {
+    "id" : 17,
+    "uid" : "17",
+    "name" : "Print to System.out",
+    "pact" : "Sink",
+    "parallelism" : 18,
+    "maxParallelism" : 32768,
+    "vcore" : 0.25,
+    "heap_memory" : 128
+  } ],
+  "links" : [ {
+    "source" : 1,
+    "target" : 2
+  }, {
+    "source" : 2,
+    "target" : 3
+  }, {
+    "source" : 3,
+    "target" : 9,
+    "ship_strategy" : "HASH"
+  }, {
+    "source" : 5,
+    "target" : 6
+  }, {
+    "source" : 6,
+    "target" : 7
+  }, {
+    "source" : 7,
+    "target" : 9,
+    "ship_strategy" : "HASH"
+  }, {
+    "source" : 9,
+    "target" : 15,
+    "ship_strategy" : "HASH"
+  }, {
+    "source" : 11,
+    "target" : 12
+  }, {
+    "source" : 12,
+    "target" : 13
+  }, {
+    "source" : 13,
+    "target" : 15,
+    "ship_strategy" : "HASH"
+  }, {
+    "source" : 15,
+    "target" : 16
+  }, {
+    "source" : 16,
+    "target" : 17
+  } ],
+  "statefulNodes" : [ 9, 15 ]
+}

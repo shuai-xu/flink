@@ -18,14 +18,13 @@
 
 package com.alibaba.blink.launcher;
 
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.GlobalConfiguration;
-import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.LocalStreamEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
@@ -34,10 +33,14 @@ import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.StringUtils;
-import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.Maps;
 
+import com.alibaba.blink.launcher.autoconfig.StreamGraphConfigurer;
+import com.alibaba.blink.launcher.autoconfig.StreamGraphProperty;
+import com.alibaba.blink.launcher.autoconfig.UnexpectedConfigurationException;
+import com.alibaba.blink.launcher.autoconfig.errorcode.AutoConfigErrors;
+import com.alibaba.blink.launcher.autoconfig.rulebased.RuleBasedStreamGraphPropertyGenerator;
 import com.alibaba.blink.launcher.util.EnvUtil;
 import com.alibaba.blink.launcher.util.JobBuildHelper;
 import com.alibaba.blink.launcher.util.NumUtil;
@@ -57,8 +60,6 @@ import java.util.Properties;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import scala.Option;
-
 /**
  * The entry class for submitting a sql/tableAPI job.
  */
@@ -76,7 +77,7 @@ public class JobLauncher {
 	private static final String DEFAULT_PREVIEW_RECORD_DELIM = "\n";
 	private static final String DEFAULT_PREVIEW_QUOTE_CHARACTER = "\"";
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		System.setProperty("saffron.default.charset", "UTF-16LE");
 		System.setProperty("saffron.default.nationalcharset", "UTF-16LE");
 		System.setProperty("saffron.default.collation.name", "UTF-16LE$en_US");
@@ -93,10 +94,6 @@ public class JobLauncher {
 			String jobName = null;
 			String jsonFile = null;
 			String outputFile = null;
-			double yarnJmCpuCores = 0;
-			int yarnJmMemoryInMB = 0;
-			String flinkConfDir = null;
-			boolean streamUseSessionMode = false;
 			String previewCsvPath = null;
 			int previewCsvNumFiles = DEFAULT_PREVIEW_CSV_NUM_FILES;
 			int previewLimit = DEFAULT_PREVIEW_LIMIT;
@@ -124,8 +121,8 @@ public class JobLauncher {
 						jobName = args[i++];
 
 						EnvUtil.addAttrForLogAppender(
-							EnvUtil.AttrForAppender.JOB_NAME_ATTR,
-							jobName);
+								EnvUtil.AttrForAppender.JOB_NAME_ATTR,
+								jobName);
 						break;
 					case "-conf":
 						try (InputStream inputStream = new FileInputStream(args[i++])) {
@@ -134,23 +131,20 @@ public class JobLauncher {
 						}
 
 						EnvUtil.addAttrForLogAppender(
-							EnvUtil.AttrForAppender.CLUSTER_NAME_ATTR,
-							jobConf.getProperty(EnvUtil.AttrForAppender.CLUSTER_NAME_ATTR.getName()));
+								EnvUtil.AttrForAppender.CLUSTER_NAME_ATTR,
+								jobConf.getProperty(EnvUtil.AttrForAppender.CLUSTER_NAME_ATTR.getName()));
 						EnvUtil.addAttrForLogAppender(
-							EnvUtil.AttrForAppender.QUEUE_NAME_ATTR,
-							jobConf.getProperty(EnvUtil.AttrForAppender.QUEUE_NAME_ATTR.getName()));
+								EnvUtil.AttrForAppender.QUEUE_NAME_ATTR,
+								jobConf.getProperty(EnvUtil.AttrForAppender.QUEUE_NAME_ATTR.getName()));
 						EnvUtil.addAttrForLogAppender(
-							EnvUtil.AttrForAppender.APPENDER_LEVEL_ATTR,
-							jobConf.getProperty(EnvUtil.AttrForAppender.APPENDER_LEVEL_ATTR.getName()));
+								EnvUtil.AttrForAppender.APPENDER_LEVEL_ATTR,
+								jobConf.getProperty(EnvUtil.AttrForAppender.APPENDER_LEVEL_ATTR.getName()));
 						break;
 					case "-plan":
 						jsonFile = args[i++];
 						break;
 					case "-output":
 						outputFile = args[i++];
-						break;
-					case "-streamUseSessionMode":
-						streamUseSessionMode = Boolean.parseBoolean(args[i++]);
 						break;
 					case "-previewCsvPath":
 						previewCsvPath = args[i++];
@@ -176,22 +170,10 @@ public class JobLauncher {
 					case "-previewMergeRetractResult":
 						previewMergeRetractResult = Boolean.parseBoolean(args[i++]);
 						break;
-					case "-flinkConfDir":
-						flinkConfDir = args[i++];
-						break;
 					default:
 						//ignore
 				}
 			}
-
-			// if flinkConfDir is not null, get default jmCpu from Yarn
-			Configuration configuration = new Configuration();
-			if (flinkConfDir != null) {
-				configuration = GlobalConfiguration.loadConfiguration(flinkConfDir);
-			}
-			int yarnVcoreRatio = configuration.getInteger(YarnConfigOptions.YARN_VCORE_RATIO);
-			yarnJmCpuCores = 1.0 * configuration.getInteger(YarnConfigOptions.JOB_APP_MASTER_CORE) / yarnVcoreRatio;
-			yarnJmMemoryInMB = configuration.getInteger(JobManagerOptions.JOB_MANAGER_HEAP_MEMORY);
 
 			//run job
 			TableConfig conf = new TableConfig();
@@ -204,14 +186,14 @@ public class JobLauncher {
 			String jobInfo;
 			if (isBatchNotStream) {
 				jobInfo = runBatch(jobConf, conf, jobName, type, sqlFile, currentClassLoader,
-					buildClass, action, usrPyLibs, previewCsvPath, previewCsvNumFiles, previewLimit,
-					previewFieldDelim, previewRecordDelim, previewQuoteCharacter);
+						buildClass, action, jsonFile, usrPyLibs, previewCsvPath, previewCsvNumFiles, previewLimit,
+						previewFieldDelim, previewRecordDelim, previewQuoteCharacter);
 			} else {
 				jobInfo = runStream(jobConf, conf, jobName, type, sqlFile, currentClassLoader,
-					buildClass, action, jsonFile, usrPyLibs, yarnJmCpuCores, yarnJmMemoryInMB,
-					previewCsvPath, previewCsvNumFiles,
-					previewFieldDelim, previewRecordDelim, previewQuoteCharacter,
-					previewUseRetractSink, previewMergeRetractResult, streamUseSessionMode);
+						buildClass, action, jsonFile, usrPyLibs,
+						previewCsvPath, previewCsvNumFiles,
+						previewFieldDelim, previewRecordDelim, previewQuoteCharacter,
+						previewUseRetractSink, previewMergeRetractResult);
 			}
 			if (jobInfo != null) {
 				if (outputFile != null) {
@@ -229,7 +211,7 @@ public class JobLauncher {
 			}
 		} catch (Throwable t) {
 			JobBuildHelper.handleError(t);
-			System.exit(-1);
+			throw t;
 		}
 	}
 
@@ -244,7 +226,8 @@ public class JobLauncher {
 	 * @param currentClassLoader    The current class loader
 	 * @param buildClass            The build class
 	 * @param action                The action "run" or "info"
-	 * @param previewCsvDir         The DFS directory for the result of the previewed query, it can be null
+	 * @param previewCsvDir         The DFS directory for the result of the previewed query, it can
+	 *                              be null
 	 *                              or empty. There will be no preview
 	 * @param previewCsvNumFiles    The number of csv file
 	 * @param previewLimit          The limit of the preview select
@@ -254,21 +237,22 @@ public class JobLauncher {
 	 * @return jobInfo if has (if the action is "info"), otherwise null.
 	 */
 	private static synchronized String runBatch(
-		Properties jobConf,
-		TableConfig conf,
-		String jobName,
-		String type,
-		String sqlFile,
-		ClassLoader currentClassLoader,
-		String buildClass,
-		String action,
-		String userPyLibs,
-		String previewCsvDir,
-		int previewCsvNumFiles,
-		int previewLimit,
-		String previewFieldDelim,
-		String previewRecordDelim,
-		String previewQuoteCharacter) throws Exception {
+			Properties jobConf,
+			TableConfig conf,
+			String jobName,
+			String type,
+			String sqlFile,
+			ClassLoader currentClassLoader,
+			String buildClass,
+			String action,
+			String jsonFilePath,
+			String userPyLibs,
+			String previewCsvDir,
+			int previewCsvNumFiles,
+			int previewLimit,
+			String previewFieldDelim,
+			String previewRecordDelim,
+			String previewQuoteCharacter) throws Exception {
 		//add user config
 		for (Object str : jobConf.keySet()) {
 			String keyStr = String.valueOf(str);
@@ -287,31 +271,26 @@ public class JobLauncher {
 			LOG.info("Set path of optimized plan to {}", absolutePathOfOptimizedPlanFile);
 		}
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(ExecutionConfig.PARALLELISM_DEFAULT);
 
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, conf);
 
 		if ("sql".equals(type)) {
 			JobBuildHelper.buildSqlJob(false, sqlFile, currentClassLoader, jobConf, userPyLibs, tEnv,
-				previewCsvDir, previewCsvNumFiles, previewLimit,
-				previewFieldDelim, previewRecordDelim, previewQuoteCharacter,
-				false, false);
+					previewCsvDir, previewCsvNumFiles, previewLimit,
+					previewFieldDelim, previewRecordDelim, previewQuoteCharacter,
+					false, false);
 		} else if ("table".equals(type)) {
 			JobBuildHelper.callBuild(buildClass, currentClassLoader, jobConf, tEnv);
 		}
 
-		if ("run".equals(action)) {
-			tEnv.execute(jobName);
-		} else if ("info".equals(action)) {
-			long s1 = System.currentTimeMillis();
-			tEnv.compile();
-			long s2 = System.currentTimeMillis();
-			LOG.info("compile used time: {} ms", s2 - s1);
-			String jobInfo = tEnv.generateStreamGraph(Option.apply(jobName)).toString();
-			long s3 = System.currentTimeMillis();
-			LOG.info("getPlanJson used time: {} ms", s3 - s2);
-			return jobInfo;
-		}
-		return null;
+		long s1 = System.currentTimeMillis();
+		tEnv.compile();
+		long s2 = System.currentTimeMillis();
+		LOG.info("compile used time: {} ms", s2 - s1);
+
+		String jobInfo = execute(env, jobName, jobConf, action, jsonFilePath);
+		return jobInfo;
 	}
 
 	/**
@@ -326,9 +305,8 @@ public class JobLauncher {
 	 * @param buildClass                The build class
 	 * @param action                    The action "run" or "info"
 	 * @param jsonFilePath              The json file
-	 * @param yarnJmCpuCores            The yarn default jm core
-	 * @param yarnJmMemoryInMB          The yarn default jm memory in MB
-	 * @param previewCsvDir             The DFS directory for the result of the previewed query, it can be null
+	 * @param previewCsvDir             The DFS directory for the result of the previewed query, it
+	 *                                  can be null
 	 *                                  or empty. There will be no preview
 	 * @param previewCsvNumFiles        The number of csv file
 	 * @param previewFieldDelim         The field delimiter of the csv file
@@ -336,32 +314,28 @@ public class JobLauncher {
 	 * @param previewQuoteCharacter     The quote character of the csv file
 	 * @param previewUseRetractSink     Whether preview use retract csv sink
 	 * @param previewMergeRetractResult Whether merge retract result
-	 * @param streamUseSessionMode      Whether use session mode
 	 * @return jobInfo if has (if the action is "info"), otherwise null.
 	 */
-	protected static synchronized String runStream(
-		Properties jobConf,
-		TableConfig conf,
-		String jobName,
-		String type,
-		String sqlFilePath,
-		ClassLoader currentClassLoader,
-		String buildClass,
-		String action,
-		String jsonFilePath,
-		String userPyLibs,
-		double yarnJmCpuCores,
-		int yarnJmMemoryInMB,
-		String previewCsvDir,
-		int previewCsvNumFiles,
-		String previewFieldDelim,
-		String previewRecordDelim,
-		String previewQuoteCharacter,
-		boolean previewUseRetractSink,
-		boolean previewMergeRetractResult,
-		boolean streamUseSessionMode) throws Exception {
-		String jobInfo = null;
+	public static synchronized String runStream(
+			Properties jobConf,
+			TableConfig conf,
+			String jobName,
+			String type,
+			String sqlFilePath,
+			ClassLoader currentClassLoader,
+			String buildClass,
+			String action,
+			String jsonFilePath,
+			String userPyLibs,
+			String previewCsvDir,
+			int previewCsvNumFiles,
+			String previewFieldDelim,
+			String previewRecordDelim,
+			String previewQuoteCharacter,
+			boolean previewUseRetractSink,
+			boolean previewMergeRetractResult) throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(ExecutionConfig.PARALLELISM_DEFAULT);
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env, conf);
 		setQueryConfig(tEnv, jobConf);
@@ -370,58 +344,51 @@ public class JobLauncher {
 		long start = System.currentTimeMillis();
 		if ("sql".equals(type)) {
 			JobBuildHelper.buildSqlJob(
-				true, sqlFilePath, currentClassLoader, jobConf, userPyLibs, tEnv, previewCsvDir,
-				previewCsvNumFiles, DEFAULT_PREVIEW_LIMIT,
-				previewFieldDelim, previewRecordDelim, previewQuoteCharacter,
-				previewUseRetractSink, previewMergeRetractResult);
+					true, sqlFilePath, currentClassLoader, jobConf, userPyLibs, tEnv, previewCsvDir,
+					previewCsvNumFiles, DEFAULT_PREVIEW_LIMIT,
+					previewFieldDelim, previewRecordDelim, previewQuoteCharacter,
+					previewUseRetractSink, previewMergeRetractResult);
 		} else if ("table".equals(type)) {
 			JobBuildHelper.callBuild(buildClass, currentClassLoader, jobConf, tEnv);
 		}
 		long end = System.currentTimeMillis();
 		LOG.info("build type {}, used time: {} ms", type, end - start);
-		boolean autoConfig;
-		String autoConfResultMessage = "";
-		if (StringUtils.isNullOrWhitespaceOnly(jsonFilePath)) {
-			autoConfig = false;
-		} else {
-			String configJson = FileUtils.readFileUtf8(new File(jsonFilePath));
-			try {
-				LOG.info("Parsing json config file as JobConfiguration");
 
-				autoConfig = !StringUtils.isNullOrWhitespaceOnly(configJson);
-			} catch (IllegalArgumentException e) {
-				LOG.warn("Failed parsing json config file as JobConfiguration. {}", e);
-				LOG.info("Parsing json config file as ResourceFile");
+		registerPythonLibFiles(env, jobConf, userPyLibs);
+		StreamExecEnvUtil.setConfig(env, jobConf);
 
-				try {
-					autoConfig = false;
-				} catch (IllegalArgumentException e2) {
-					String errorMessage = String.format("Failed parsing json config as either JobConfiguration or ResourceFile.\n" +
-						"Cause for failed parsing as JobConfiguration: %s\n" +
-						"Cause for failed parsing as ResourceFile: %s",
-						e.getCause(), e2.getCause());
-					LOG.warn("Failed parsing json config file as ResourceFile. {},\n will use default config by autoconf", errorMessage);
-					autoConfResultMessage = "old plan json is not compatible, maybe blink version has changed, will generate new default config";
-					autoConfig = true;
-				}
-			}
-		}
+		tEnv.compile();
+		String jobInfo = execute(env, jobName, jobConf, action, jsonFilePath);
+		return jobInfo;
+	}
+
+	private static String execute(StreamExecutionEnvironment env,
+			String jobName, Properties jobConf, String action, String jsonFilePath) throws Exception {
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		String jobInfo = null;
 
 		if ("run".equals(action)) {
+			StreamGraphProperty property = loadStreamGraphProperty(jsonFilePath);
 
-			registerPythonLibFiles(env, jobConf, userPyLibs);
+			if (property == null) {
+				property = new RuleBasedStreamGraphPropertyGenerator.Builder()
+						.setUserProperties(jobConf).build().generateProperties(streamGraph);
+			}
 
-			StreamExecEnvUtil.setConfig(env, jobConf);
+			StreamGraphConfigurer.configure(streamGraph, property);
+			streamGraph.setJobName(jobName);
+			env.execute(streamGraph);
 
-			// TODO config job resources.
-
-			tEnv.execute(jobName);
 		} else if ("info".equals(action)) {
 			long s1 = System.currentTimeMillis();
 
-			// TODO config job resources.
+			StreamGraphProperty oldProperty = loadStreamGraphProperty(jsonFilePath);
 
-			tEnv.compile();
+			// generate new property with based on given property.
+			StreamGraphProperty property = new RuleBasedStreamGraphPropertyGenerator.Builder()
+					.setUserProperties(jobConf).build().generateProperties(streamGraph, oldProperty);
+			jobInfo = property.toString();
 			long s2 = System.currentTimeMillis();
 			LOG.info("compile used time: {} ms", s2 - s1);
 
@@ -429,7 +396,26 @@ public class JobLauncher {
 		return jobInfo;
 	}
 
-	protected static void setTableConf(TableConfig conf, Properties userParams) {
+	private static StreamGraphProperty loadStreamGraphProperty(
+			String jsonFilePath) throws IOException {
+		StreamGraphProperty oldProperty = null;
+		if (!StringUtils.isNullOrWhitespaceOnly(jsonFilePath)) {
+			try {
+				String configJson = FileUtils.readFileUtf8(new File(jsonFilePath));
+				oldProperty = StreamGraphProperty.fromJson(configJson);
+				LOG.info("Parsing json config file as JobConfiguration");
+			} catch (IllegalArgumentException e) {
+				LOG.warn("Failed parsing json config file as JobConfiguration. {}", e);
+				LOG.info("Parsing json config file as ResourceFile");
+				throw new UnexpectedConfigurationException(
+						AutoConfigErrors.INST.cliAutoConfTransformationCfgSetError(
+								"Fail to parse resource configuration file."), e);
+			}
+		}
+		return oldProperty;
+	}
+
+	public static void setTableConf(TableConfig conf, Properties userParams) {
 		conf.setSubsectionOptimization(true);
 
 		String joinReorder = userParams.getProperty(ConfConstants.BLINK_JOINREORDER_ENABLED);
@@ -474,7 +460,7 @@ public class JobLauncher {
 		}
 		if (parentPath.endsWith(File.separator)) {
 			parentPath = parentPath.substring(
-				0, parentPath.length() - File.separator.length());
+					0, parentPath.length() - File.separator.length());
 		}
 		String fileName = null;
 		if (prefix != null) {
@@ -486,8 +472,9 @@ public class JobLauncher {
 		return parentPath + File.separator + fileName;
 	}
 
-	public static void registerPythonLibFiles(StreamExecutionEnvironment env, Properties jobConf, String userPyLibs)
-		throws IOException {
+	public static void registerPythonLibFiles(StreamExecutionEnvironment env, Properties jobConf,
+			String userPyLibs)
+			throws IOException {
 
 		if (StringUtils.isNullOrWhitespaceOnly(userPyLibs)) {
 			return;
@@ -502,7 +489,7 @@ public class JobLauncher {
 			}
 
 			// keys should be consistent with JobGraph.addUserArtifact
-			URI uri  = filePath.toUri();
+			URI uri = filePath.toUri();
 			final String fileKey = uri.getFragment() != null ? uri.getFragment() : new Path(uri).getName();
 			dcFileKeys = dcFileKeys.length() == 0 ? fileKey : (dcFileKeys + "," + fileKey);
 
