@@ -318,7 +318,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 				final InputFetcher inputFetcher = inputFetcherMap.get(inputSelection);
 				if (inputFetcher != null) {
 					selectedInputFetchers.add(inputFetcher);
-					if (inputFetcher.moreAvailable()) {
+					// SourceFetcher may have no data in the beginning, we have to enqueue it at first time.
+					if (inputFetcher.moreAvailable() || inputFetcher.isFinished()) {
 						enqueueInputFetcher(inputFetcher);
 					}
 				}

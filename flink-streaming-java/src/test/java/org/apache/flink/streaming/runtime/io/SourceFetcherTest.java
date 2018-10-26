@@ -54,57 +54,93 @@ public class SourceFetcherTest {
 			mock(TaskMetricGroup.class),
 			1);
 
-		final SourceFetcher fetcher = new SourceFetcher(
-			mock(InputSelector.InputSelection.class),
-			new FakeStreamSourceV2<>(sourceFunctionV2),
-			context,
-			processor);
+		{
+			final SourceFetcher fetcher = new SourceFetcher(
+				mock(InputSelector.InputSelection.class),
+				new FakeStreamSourceV2<>(sourceFunctionV2),
+				context,
+				processor);
 
-		sourceFunctionV2.isFinished.add(true);
-		assertFalse(fetcher.fetchAndProcess());
+			sourceFunctionV2.isFinished.add(true);
+			assertFalse(fetcher.fetchAndProcess());
+		}
 
-		context.reset();
-		processor.reset();
-		sourceFunctionV2.isFinished.add(false);
-		sourceFunctionV2.next = null;
-		assertFalse(fetcher.fetchAndProcess());
-		assertTrue(context.idleMark);
+		{
+			final SourceFetcher fetcher = new SourceFetcher(
+				mock(InputSelector.InputSelection.class),
+				new FakeStreamSourceV2<>(sourceFunctionV2),
+				context,
+				processor);
+			sourceFunctionV2.reset();
+			context.reset();
+			processor.reset();
+			sourceFunctionV2.isFinished.add(false);
+			sourceFunctionV2.isFinished.add(false);
+			sourceFunctionV2.next = null;
+			assertFalse(fetcher.fetchAndProcess());
+			assertTrue(context.idleMark);
+		}
 
-		context.reset();
-		processor.reset();
-		sourceFunctionV2.isFinished.add(false);
-		sourceFunctionV2.next = SourceRecord.create(1024);
-		assertTrue(fetcher.fetchAndProcess());
-		assertEquals(1, context.collected.size());
-		assertEquals(1024, context.collected.get(0).intValue());
+		{
+			final SourceFetcher fetcher = new SourceFetcher(
+				mock(InputSelector.InputSelection.class),
+				new FakeStreamSourceV2<>(sourceFunctionV2),
+				context,
+				processor);
+			sourceFunctionV2.reset();
+			context.reset();
+			processor.reset();
+			sourceFunctionV2.isFinished.add(false);
+			sourceFunctionV2.isFinished.add(false);
+			sourceFunctionV2.next = SourceRecord.create(1024);
+			assertTrue(fetcher.fetchAndProcess());
+			assertEquals(1, context.collected.size());
+			assertEquals(1024, context.collected.get(0).intValue());
+		}
 
-		context.reset();
-		processor.reset();
-		sourceFunctionV2.isFinished.add(false);
-		sourceFunctionV2.isFinished.add(true);
-		sourceFunctionV2.next = SourceRecord.create(9527, 123L);
-		assertTrue(fetcher.fetchAndProcess());
-		assertEquals(1, context.collected.size());
-		assertEquals(9527, context.collected.get(0).intValue());
-		assertEquals(1, context.timestamps.size());
-		assertEquals(123L, context.timestamps.get(0).longValue());
-		assertEquals(1, context.watermarks.size());
-		assertEquals(Watermark.MAX_WATERMARK, context.watermarks.get(0));
-		assertTrue(processor.endInput);
-		assertTrue(processor.released);
+		{
+			final SourceFetcher fetcher = new SourceFetcher(
+				mock(InputSelector.InputSelection.class),
+				new FakeStreamSourceV2<>(sourceFunctionV2),
+				context,
+				processor);
+			sourceFunctionV2.reset();
+			context.reset();
+			processor.reset();
+			sourceFunctionV2.isFinished.add(false);
+			sourceFunctionV2.isFinished.add(true);
+			sourceFunctionV2.next = SourceRecord.create(9527, 123L);
+			assertFalse(fetcher.fetchAndProcess());
+			assertEquals(1, context.collected.size());
+			assertEquals(9527, context.collected.get(0).intValue());
+			assertEquals(1, context.timestamps.size());
+			assertEquals(123L, context.timestamps.get(0).longValue());
+			assertEquals(1, context.watermarks.size());
+			assertEquals(Watermark.MAX_WATERMARK, context.watermarks.get(0));
+			assertTrue(processor.endInput);
+			assertTrue(processor.released);
+		}
 
-		context.reset();
-		processor.reset();
-		sourceFunctionV2.isFinished.add(false);
-		sourceFunctionV2.isFinished.add(true);
-		sourceFunctionV2.next = SourceRecord.create(new Watermark(456L));
-		assertTrue(fetcher.fetchAndProcess());
-		assertTrue(context.collected.isEmpty());
-		assertEquals(2, context.watermarks.size());
-		assertEquals(456L, context.watermarks.get(0).getTimestamp());
-		assertEquals(Watermark.MAX_WATERMARK, context.watermarks.get(1));
-		assertTrue(processor.endInput);
-		assertTrue(processor.released);
+		{
+			final SourceFetcher fetcher = new SourceFetcher(
+				mock(InputSelector.InputSelection.class),
+				new FakeStreamSourceV2<>(sourceFunctionV2),
+				context,
+				processor);
+			sourceFunctionV2.reset();
+			context.reset();
+			processor.reset();
+			sourceFunctionV2.isFinished.add(false);
+			sourceFunctionV2.isFinished.add(true);
+			sourceFunctionV2.next = SourceRecord.create(new Watermark(456L));
+			assertFalse(fetcher.fetchAndProcess());
+			assertTrue(context.collected.isEmpty());
+			assertEquals(2, context.watermarks.size());
+			assertEquals(456L, context.watermarks.get(0).getTimestamp());
+			assertEquals(Watermark.MAX_WATERMARK, context.watermarks.get(1));
+			assertTrue(processor.endInput);
+			assertTrue(processor.released);
+		}
 	}
 
 	class FakeStreamSourceV2<SRC extends SourceFunctionV2<Integer>> extends StreamSourceV2<Integer, SRC> {
@@ -129,6 +165,11 @@ public class SourceFetcherTest {
 		@Override
 		public SourceRecord<Integer> next() throws Exception {
 			return next;
+		}
+
+		public void reset() {
+			next = null;
+			isFinished.clear();
 		}
 	}
 

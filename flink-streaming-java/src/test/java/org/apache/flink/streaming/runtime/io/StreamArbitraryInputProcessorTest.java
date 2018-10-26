@@ -17,9 +17,19 @@
 
 package org.apache.flink.streaming.runtime.io;
 
+import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunctionV2;
+import org.apache.flink.streaming.api.functions.source.SourceRecord;
 import org.apache.flink.streaming.api.graph.StreamEdge;
+import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.StreamSourceV2;
+import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatusSubMaintainer;
 import org.apache.flink.streaming.runtime.tasks.InputSelector;
 import org.apache.flink.streaming.runtime.tasks.InputSelector.EdgeInputSelection;
 import org.apache.flink.streaming.runtime.tasks.InputSelector.SourceInputSelection;
@@ -103,6 +113,47 @@ public class StreamArbitraryInputProcessorTest {
 		assertEquals(inputFetcher2, processor.getInputFetcherReadingQueue().peek());
 		assertTrue(processor.getEnqueuedInputFetchers().contains(inputFetcher2));
 		assertFalse(processor.getEnqueuedInputFetchers().contains(inputFetcher1));
+	}
+
+	@Test
+	public void testEmptySourceProcess() throws Exception {
+
+		final InputSelector.InputSelection inputSelection = SourceInputSelection.create(1);
+
+		final FakeInputSelector inputSelector = new FakeInputSelector();
+		inputSelector.add(Collections.singletonList(inputSelection));
+
+		final StreamArbitraryInputProcessor processor = new StreamArbitraryInputProcessor(
+			mock(IOManager.class),
+			this,
+			inputSelector,
+			mock(TaskMetricGroup.class),
+			mock(SelectedReadingBarrierHandler.class));
+
+		final SourceFunctionV2<String> sourceFunction = new SourceFunctionV2<String>() {
+			@Override
+			public boolean isFinished() {
+				return true;
+			}
+
+			@Override
+			public SourceRecord<String> next() throws Exception {
+				return null;
+			}
+		};
+
+		final EndInputChecker endInputChecker = new EndInputChecker();
+		final StreamSourceV2 sourceOperator = new StreamSourceV2<>(sourceFunction);
+		processor.bindSourceOperator(
+			1,
+			sourceOperator,
+			endInputChecker,
+			new FakeSourceContext(),
+			mock(StreamStatusSubMaintainer.class));
+
+		processor.process();
+
+		assertTrue(endInputChecker.endInputInvoked);
 	}
 
 	@Test
@@ -343,6 +394,58 @@ public class StreamArbitraryInputProcessorTest {
 		@Override
 		public List<InputSelection> getNextSelectedInputs() {
 			return null;
+		}
+	}
+
+	private class EndInputChecker extends AbstractUdfStreamOperator<String, Function> implements OneInputStreamOperator<String, String> {
+		public boolean endInputInvoked = false;
+
+		public EndInputChecker() {
+			super(new Function() {});
+		}
+
+		@Override
+		public void processElement(StreamRecord element) throws Exception {
+
+		}
+
+		@Override
+		public void endInput() throws Exception {
+			assertFalse(endInputInvoked);
+			endInputInvoked = true;
+		}
+	}
+
+	private class FakeSourceContext implements SourceFunction.SourceContext {
+
+		@Override
+		public void collect(Object element) {
+
+		}
+
+		@Override
+		public void collectWithTimestamp(Object element, long timestamp) {
+
+		}
+
+		@Override
+		public void emitWatermark(Watermark mark) {
+
+		}
+
+		@Override
+		public void markAsTemporarilyIdle() {
+
+		}
+
+		@Override
+		public Object getCheckpointLock() {
+			return this;
+		}
+
+		@Override
+		public void close() {
+
 		}
 	}
 }

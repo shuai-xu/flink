@@ -41,6 +41,8 @@ class SourceFetcher implements InputFetcher {
 
 	private boolean isIdle = false;
 
+	private volatile boolean finishedInput = false;
+
 	private InputFetcherAvailableListener listener;
 
 	/**
@@ -71,6 +73,7 @@ class SourceFetcher implements InputFetcher {
 	@Override
 	public boolean fetchAndProcess() throws Exception {
 		if (isFinished()) {
+			finishInput();
 			return false;
 		}
 		final SourceRecord sourceRecord = operator.next();
@@ -91,19 +94,23 @@ class SourceFetcher implements InputFetcher {
 			context.markAsTemporarilyIdle();
 			isIdle = true;
 		}
-		checkFinishing();
+		if (isFinished()) {
+			finishInput();
+			return false;
+		}
 
 		// TODO: return !idle status, register a timer
 		return !isIdle;
 	}
 
-	private void checkFinishing() throws Exception {
-		if (operator.isFinished()) {
+	private void finishInput() throws Exception {
+		if (!finishedInput) {
 			context.emitWatermark(Watermark.MAX_WATERMARK);
 			synchronized (context.getCheckpointLock()) {
 				processor.endInput();
 				processor.release();
 			}
+			finishedInput = true;
 		}
 	}
 
