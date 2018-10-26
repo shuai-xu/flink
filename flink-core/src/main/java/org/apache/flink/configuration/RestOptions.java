@@ -108,4 +108,15 @@ public class RestOptions {
 			.defaultValue(104_857_600)
 			.withDescription("The maximum content length in bytes that the client will handle.");
 
+	/**
+	 * The max waited milliseconds of retries to poll the asynchronously created resource for the client
+	 * after a successful poll where the asynchronously resource is not completed.
+	 * @see org.apache.flink.client.program.rest.retry.WaitStrategy
+	 */
+	public static final ConfigOption<Long> POLL_MAX_INTERVAL = ConfigOptions
+		.key("rest.poll.wait-strategy.max-interval")
+		.defaultValue(2_000L)
+		.withDescription("The max waited milliseconds of retries to poll the asynchronously created resource " +
+			"if the resource is not completed.");
+
 }

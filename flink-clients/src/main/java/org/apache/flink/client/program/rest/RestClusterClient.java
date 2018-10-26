@@ -31,6 +31,7 @@ import org.apache.flink.client.program.rest.retry.ExponentialWaitStrategy;
 import org.apache.flink.client.program.rest.retry.WaitStrategy;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.client.JobSubmissionException;
@@ -158,7 +159,7 @@ public class RestClusterClient<T> extends ClusterClient<T> implements NewCluster
 			config,
 			null,
 			clusterId,
-			new ExponentialWaitStrategy(10L, 2000L),
+			new ExponentialWaitStrategy(10L, config.getLong(RestOptions.POLL_MAX_INTERVAL)),
 			null);
 	}
 
@@ -170,7 +171,7 @@ public class RestClusterClient<T> extends ClusterClient<T> implements NewCluster
 			config,
 			null,
 			clusterId,
-			new ExponentialWaitStrategy(10L, 2000L),
+			new ExponentialWaitStrategy(10L, config.getLong(RestOptions.POLL_MAX_INTERVAL)),
 			webMonitorRetrievalService);
 	}
 
