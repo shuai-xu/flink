@@ -297,6 +297,8 @@ public class YarnApplicationMasterRunner {
 					config, akkaHostname, akkaPort, slotsPerTaskManager, TASKMANAGER_REGISTRATION_TIMEOUT);
 			LOG.debug("TaskManager configuration: {}", taskManagerConfig);
 
+			Utils.uploadTaskManagerConf(taskManagerConfig, yarnConfig, ENV, currDir);
+
 			final ContainerLaunchContext taskManagerContext = Utils.createTaskExecutorContext(
 				config, yarnConfig, ENV,
 				taskManagerParameters, taskManagerConfig,

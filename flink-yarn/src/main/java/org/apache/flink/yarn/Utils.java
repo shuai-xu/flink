@@ -425,7 +425,7 @@ public final class Utils {
 		// write taskmanager configuration to file
 
 		File taskManagerConfigFile = new File(workingDirectory, "taskmanager-conf.yaml");
-		LOG.debug("Writing TaskManager configuration to {}", taskManagerConfigFile.getAbsolutePath());
+		LOG.info("Writing TaskManager configuration to {}", taskManagerConfigFile.getAbsolutePath());
 		BootstrapTools.writeConfiguration(flinkConfig, taskManagerConfigFile);
 
 		Path homeDirPath = new Path(clientHomeDir);
@@ -436,7 +436,7 @@ public final class Utils {
 		String suffix = ".flink/" + appId + "/taskmanager-conf.yaml";
 		Path dst = new Path(homeDirPath, suffix);
 
-		LOG.debug("Copying from {} to {}", src, dst);
+		LOG.info("Copying from {} to {}", src, dst);
 		fs.copyFromLocalFile(false, true, src, dst);
 	}
 
