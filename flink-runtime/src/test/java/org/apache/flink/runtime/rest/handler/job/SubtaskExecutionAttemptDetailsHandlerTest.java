@@ -48,6 +48,7 @@ import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -114,7 +115,8 @@ public class SubtaskExecutionAttemptDetailsHandlerTest extends TestLogger {
 			"test",
 			1,
 			1,
-			emptyAccumulators);
+			emptyAccumulators,
+			new ArrayList<>());
 
 		// Change some fields so we can make it different from other sub tasks.
 		final MetricFetcher<?> metricFetcher = new MetricFetcher<>(

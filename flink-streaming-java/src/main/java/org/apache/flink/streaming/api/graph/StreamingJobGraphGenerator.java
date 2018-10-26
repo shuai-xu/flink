@@ -40,6 +40,8 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.MultiInputOutputFormatVertex;
+import org.apache.flink.runtime.jobgraph.OperatorDescriptor;
+import org.apache.flink.runtime.jobgraph.OperatorEdgeDescriptor;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
@@ -581,6 +583,22 @@ public class StreamingJobGraphGenerator {
 					legacyJobVertexIds,
 					chainedOperatorVertexIds,
 					userDefinedChainedOperatorVertexIds);
+		}
+
+		for (Integer nodeId : storager.chainedNodeIdsInOrder) {
+			final byte[] hash = hashes.get(nodeId);
+			final StreamNode node = streamGraph.getStreamNode(nodeId);
+			final OperatorID operatorID = new OperatorID(hash);
+			final OperatorDescriptor operatorDescriptor = new OperatorDescriptor(node.getOperatorName(), operatorID);
+			for (StreamEdge streamEdge : node.getInEdges()) {
+				final OperatorEdgeDescriptor edgeDescriptor = new OperatorEdgeDescriptor(
+					new OperatorID(hashes.get(streamEdge.getSourceId())),
+					operatorID,
+					streamEdge.getTypeNumber(),
+					streamEdge.getPartitioner() == null ? "null" : streamEdge.getPartitioner().toString());
+				operatorDescriptor.addInput(edgeDescriptor);
+			}
+			jobVertex.addOperatorDescriptor(operatorDescriptor);
 		}
 
 		// set properties of job vertex
