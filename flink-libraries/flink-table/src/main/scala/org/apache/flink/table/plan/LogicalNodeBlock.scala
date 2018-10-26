@@ -500,8 +500,8 @@ class LogicalNodeBlock(val outputNode: LogicalNode, tEnv: TableEnvironment) {
         val left = children.head
         val right = children.last
         b match {
-          case Join(_, _, joinType, condition, correlated, dataVersion) =>
-            Join(left, right, joinType, condition, correlated, dataVersion)
+          case Join(_, _, joinType, condition, correlated) =>
+            Join(left, right, joinType, condition, correlated)
           case Union(_, _, all) => Union(left, right, all)
           case Intersect(_, _, all) => Intersect(left, right, all)
           case Minus(_, _, all) => Minus(left, right, all)

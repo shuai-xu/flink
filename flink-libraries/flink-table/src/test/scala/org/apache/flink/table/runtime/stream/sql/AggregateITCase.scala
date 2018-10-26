@@ -27,7 +27,6 @@ import org.apache.flink.table.runtime.functions.aggfunctions.{ConcatAggFunction,
 import org.apache.flink.table.hive.functions.{HiveFunctionWrapper, HiveUDAFFunction}
 import org.apache.flink.table.runtime.batch.sql.agg.{MyPojoAggFunction, VarArgsAggFunction}
 import org.apache.flink.table.runtime.batch.sql.{MyPojo, MyPojoFunc}
-import org.apache.flink.table.runtime.stream.ToCompositeObj
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.VarSumAggFunction
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode

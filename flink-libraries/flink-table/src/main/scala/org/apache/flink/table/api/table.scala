@@ -27,7 +27,6 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, TableSourceTable}
 import org.apache.flink.table.plan.logical.{LogicalTableValuedAggregateCall, Minus, _}
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink, TableSink}
 import org.apache.flink.table.types._
 import org.apache.flink.table.validate.ValidationFailure
@@ -68,8 +67,8 @@ import _root_.scala.collection.JavaConverters._
   * @param logicalPlan logical representation
   */
 class Table(
-  private[flink] val tableEnv: TableEnvironment,
-  private[flink] val logicalPlan: LogicalNode) {
+    private[flink] val tableEnv: TableEnvironment,
+    private[flink] val logicalPlan: LogicalNode) {
 
   // Check if the plan has an unbounded TableFunctionCall as child node.
   //   A TableFunctionCall is tolerated as root node because the Table holds the initial call.
@@ -260,43 +259,6 @@ class Table(
   }
 
   /**
-    * Set the data version of temporal table. And obtain the snapshot table of the temporal table
-    * according to the data version when execute the query.
-    *
-    * Example:
-    *
-    * {{{
-    *   tab.asof("proctime()")
-    * }}}
-    */
-  def asof(dataVersion: String): TemporalTable = {
-    if(dataVersion.isEmpty) {
-      throw ValidationException("The dataVersion of temporal table can not be empty.")
-    }
-    val dataVersionExpr = ExpressionParser.parseExpression(dataVersion)
-    asof(dataVersionExpr)
-  }
-
-  /**
-    * Set the data version of temporal table. And obtain the snapshot table of the temporal table
-    * according to the data version when execute the query.
-    *
-    * Example:
-    *
-    * {{{
-    *   tab.asof(proctime())
-    * }}}
-    */
-  def asof(dataVersion: Expression): TemporalTable = {
-    this.logicalPlan.toRelNode(relBuilder).getTable() match {
-      case tab: FlinkRelOptTable if tab.isTemporalTable =>
-        new TemporalTable(this, dataVersion)
-      case _ =>
-        throw ValidationException("Only temporal table can set the data version.")
-    }
-  }
-
-  /**
     * Filters out elements that don't pass the filter predicate. Similar to a SQL WHERE
     * clause.
     *
@@ -445,38 +407,6 @@ class Table(
   }
 
   /**
-    * Temporal Join a [[TemporalTable]]. Similar to an SQL join. The fields of the two joined
-    * operations must not overlap, use [[as]] to rename fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]].
-    *
-    * Example:
-    *
-    * {{{
-    *   left.join(right, "a = b")
-    * }}}
-    */
-  def join(right: TemporalTable, joinPredicate: String): Table = {
-    join(right, ExpressionParser.parseExpression(joinPredicate))
-  }
-
-  /**
-    * Temporal Join a [[TemporalTable]]. Similar to an SQL join. The fields of the two joined
-    * operations must not overlap, use [[as]] to rename fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]].
-    *
-    * Example:
-    *
-    * {{{
-    *   left.join(right, 'a === 'b).select('a, 'b, 'd)
-    * }}}
-    */
-  def join(right: TemporalTable, joinPredicate: Expression): Table = {
-    join(right, joinPredicate, JoinType.INNER)
-  }
-
-  /**
     * Joins this [[Table]] with an user-defined [[org.apache.calcite.schema.TableFunction]].
     * This join is similar to a SQL left outer join with ON TRUE predicate, but it works with a
     * table function. Each row of the outer table is joined with all rows produced by the table
@@ -543,42 +473,6 @@ class Table(
     */
   def leftOuterJoin(right: Table, joinPredicate: Expression): Table = {
     join(right, Some(joinPredicate), JoinType.LEFT_OUTER)
-  }
-
-  /**
-    * Temporal Join a [[TemporalTable]]. Similar to an SQL left outer join.
-    * The fields of the two joined operations must not overlap, use [[as]] to rename
-    * fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]] and its [[TableConfig]] must
-    * have nullCheck enabled.
-    *
-    * Example:
-    *
-    * {{{
-    *   left.leftOuterJoin(right, "a = b").select('a, 'b, 'd)
-    * }}}
-    */
-  def leftOuterJoin(right: TemporalTable, joinPredicate: String): Table = {
-    join(right, ExpressionParser.parseExpression(joinPredicate), JoinType.LEFT_OUTER)
-  }
-
-  /**
-    * Temporal Join a [[TemporalTable]]. Similar to an SQL left outer join.
-    * The fields of the two joined operations must not overlap, use [[as]] to rename
-    * fields if necessary.
-    *
-    * Note: Both tables must be bound to the same [[TableEnvironment]] and its [[TableConfig]] must
-    * have nullCheck enabled.
-    *
-    * Example:
-    *
-    * {{{
-    *   left.leftOuterJoin(right, 'a === 'b).select('a, 'b, 'd)
-    * }}}
-    */
-  def leftOuterJoin(right: TemporalTable, joinPredicate: Expression): Table = {
-    join(right, joinPredicate, JoinType.LEFT_OUTER)
   }
 
   /**
@@ -652,18 +546,6 @@ class Table(
   private def join(right: Table, joinPredicate: String, joinType: JoinType): Table = {
     val joinPredicateExpr = ExpressionParser.parseExpression(joinPredicate)
     join(right, Some(joinPredicateExpr), joinType)
-  }
-
-  private def join(right: TemporalTable, joinPredicate: Expression, joinType: JoinType): Table = {
-    new Table(
-      tableEnv,
-      Join(
-        this.logicalPlan,
-        right.table.logicalPlan,
-        joinType,
-        Some(joinPredicate),
-        correlated = false,
-        Some(right.dataVersion)).validate(tableEnv))
   }
 
   private def join(right: Table, joinPredicate: Option[Expression], joinType: JoinType): Table = {
@@ -1414,14 +1296,3 @@ class WindowGroupedTable(
     select(withResolvedAggFunctionCall: _*)
   }
 }
-
-/**
-  * A Temporal Table with a data version.
-  *
-  * @param dataVersion the temporal table data version
-  */
-  class TemporalTable(
-    private[flink] val table: Table,
-    private[flink] var dataVersion: Expression) {
-  }
-

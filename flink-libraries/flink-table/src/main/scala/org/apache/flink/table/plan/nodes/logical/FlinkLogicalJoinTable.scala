@@ -148,8 +148,6 @@ class FlinkLogicalJoinTable(
             // it's left table's field, ok
             case call: RexCall if call.getOperator == ScalarSqlFunctions.PROCTIME =>
             // it is PROCTIME() call, ok
-            case ref: RexInputRef if ref.getType.isInstanceOf[TimeIndicatorRelDataType] &&
-              !ref.getType.asInstanceOf[TimeIndicatorRelDataType].isEventTime => // ok
             case _ =>
               return litmus.fail(TableErrors.INST.sqlJoinTemporalTableError(
                 "Currently only support join temporal table as of on left table's proctime field."))
