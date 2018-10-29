@@ -36,7 +36,7 @@ import org.apache.flink.table.runtime.operator.BytesHashMap
 import org.apache.flink.table.runtime.sort.{BufferedKVExternalSorter, NormalizedKeyComputer, RecordComparator}
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{BinaryRowSerializer, TypeUtils}
-import org.apache.flink.table.util.{BatchExecResourceUtil, BytesHashMapSpillMemorySegmentPool}
+import org.apache.flink.table.util.{ExecResourceUtil, BytesHashMapSpillMemorySegmentPool}
 
 trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
@@ -69,8 +69,8 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 
     // create aggregate map
     val mapTypeTerm = classOf[BytesHashMap].getName
-    val perRequestSize = BatchExecResourceUtil.getPerRequestManagedMemory(config) *
-        BatchExecResourceUtil.SIZE_IN_MB
+    val perRequestSize = ExecResourceUtil.getPerRequestManagedMemory(config) *
+        ExecResourceUtil.SIZE_IN_MB
     ctx.addReusableMember(s"private transient $mapTypeTerm $aggregateMapTerm;")
     ctx.addReusableOpenStatement(s"$aggregateMapTerm " +
         s"= new $mapTypeTerm(" +

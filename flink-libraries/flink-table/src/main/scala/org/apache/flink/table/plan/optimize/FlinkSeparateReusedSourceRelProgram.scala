@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.optimize
 
 import com.google.common.collect.Sets
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.BatchExecRelShuttleImpl
+import org.apache.flink.table.plan.batch.BatchExecRelShuttleImpl
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecReused, BatchExecTableSourceScan, BatchExecValues, RowBatchExecRel}
 
 import scala.collection.JavaConversions._

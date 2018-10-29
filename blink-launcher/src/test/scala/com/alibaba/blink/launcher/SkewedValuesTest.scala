@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.CommonTestData.{get3Data, writeToTempFile}
-import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
+import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.junit.Test
 
 class SkewedValuesTest {

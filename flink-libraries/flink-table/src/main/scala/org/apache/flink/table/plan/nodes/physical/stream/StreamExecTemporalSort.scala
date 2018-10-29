@@ -36,7 +36,7 @@ import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.{OnlyRowTimeSortOperator, ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 
 import _root_.scala.collection.JavaConverters._
 
@@ -101,8 +101,8 @@ class StreamExecTemporalSort(
       throw new TableException(
         TableErrors.INST.sqlSortOrderError())}
 
-    val managedMemory = BatchExecResourceUtil.getSortBufferManagedMemory(tableEnv.getConfig)
-    val mangedMemorySize = managedMemory * BatchExecResourceUtil.SIZE_IN_MB
+    val managedMemory = ExecResourceUtil.getSortBufferManagedMemory(tableEnv.getConfig)
+    val mangedMemorySize = managedMemory * ExecResourceUtil.SIZE_IN_MB
 
     // enable to extend for other types of aggregates that will not be implemented in a window
     timeType match {

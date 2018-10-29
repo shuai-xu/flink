@@ -26,19 +26,20 @@ import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
-import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
+import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkRelMetadataQuery}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
 import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.BatchExecResourceUtil
-import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
+import org.apache.flink.table.util.ExecResourceUtil.InferMode
+import org.apache.flink.table.util.ExecResourceUtil
 
 import scala.collection.JavaConversions._
 
@@ -168,13 +169,13 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
     val condFunc = generateConditionFunction(config, leftType, rightType)
 
-    val externalBufferMemory = BatchExecResourceUtil.
+    val externalBufferMemory = ExecResourceUtil.
         getExternalBufferManagedMemory(config)
-    val externalBufferMemorySize = externalBufferMemory * BatchExecResourceUtil.SIZE_IN_MB
+    val externalBufferMemorySize = externalBufferMemory * ExecResourceUtil.SIZE_IN_MB
 
     val perRequestSize =
-      BatchExecResourceUtil.getPerRequestManagedMemory(config)* BatchExecResourceUtil.SIZE_IN_MB
-    val infer = BatchExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
+      ExecResourceUtil.getPerRequestManagedMemory(config)* ExecResourceUtil.SIZE_IN_MB
+    val infer = ExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
 
     val leftRatio = if (infer) {
       inferLeftRowCountRatio
@@ -183,10 +184,10 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     }
 
     val totalReservedSortMemory = (resource.getReservedManagedMem - externalBufferMemory *
-        getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
+        getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
 
     val totalMaxSortMemory = (resource.getMaxManagedMem - externalBufferMemory *
-        getExternalBufferNum) * BatchExecResourceUtil.SIZE_IN_MB
+        getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
 
     val sortReservedMemorySize1 = calcSortMemory(leftRatio, totalReservedSortMemory)
 

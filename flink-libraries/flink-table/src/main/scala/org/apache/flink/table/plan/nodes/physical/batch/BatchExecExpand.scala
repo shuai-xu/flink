@@ -27,8 +27,8 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.nodes.common.CommonExpand
 import org.apache.flink.table.types.DataTypes

@@ -30,13 +30,13 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.functions.UserDefinedFunction
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 
 class BatchExecHashWindowAggregate(
     window: LogicalWindow,
@@ -110,14 +110,14 @@ class BatchExecHashWindowAggregate(
     val outputRowType = getOutputType
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
 
-    val groupBufferLimitSize = BatchExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
+    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
 
     val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]
     val generatedOperator = codegen(ctx, tableEnv,
       inputType, outputRowType,
       groupBufferLimitSize,
-      resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB,
-      resource.getMaxManagedMem * BatchExecResourceUtil.SIZE_IN_MB,
+      resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB,
+      resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB,
       windowStart,
       windowSize,
       slideSize)

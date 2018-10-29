@@ -38,8 +38,8 @@ import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAg
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.functions.UserDefinedFunction
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
@@ -48,7 +48,7 @@ import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToB
 import org.apache.flink.table.runtime.operator.overagg._
 import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -318,7 +318,7 @@ class BatchExecOverAggregate(
     } else {
       val windowFrames = createOverWindowFrames(tableEnv, inputRowType)
       val operator = new BufferDataOverWindowOperator(
-        (resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB).toInt,
+        (resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB).toInt,
         windowFrames,
         generatorSort)
       val transformation = new OneInputTransformation(input, "OverAggregate", operator,

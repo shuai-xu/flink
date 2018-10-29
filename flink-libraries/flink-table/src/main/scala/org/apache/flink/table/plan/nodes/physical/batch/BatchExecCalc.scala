@@ -29,9 +29,9 @@ import org.apache.calcite.util.mapping.{Mapping, MappingType, Mappings}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonCalc
 
 import scala.collection.JavaConversions._

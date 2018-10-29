@@ -30,8 +30,8 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, Tabl
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonExchange
 import org.apache.flink.table.runtime.aggregate.SortUtil
 import org.apache.flink.table.runtime.operator.range._

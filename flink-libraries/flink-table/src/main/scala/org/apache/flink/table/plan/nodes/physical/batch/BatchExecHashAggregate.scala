@@ -32,14 +32,14 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.UserDefinedFunction
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
 
@@ -158,9 +158,9 @@ class BatchExecHashAggregate(
       codegenWithoutKeys(isMerge, isFinal, ctx, tableEnv, inputType, outputRowType, "NoGrouping")
     } else {
       val reservedManagedMem =
-        resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB
+        resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
       val maxManagedMem =
-        resource.getMaxManagedMem * BatchExecResourceUtil.SIZE_IN_MB
+        resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
       codegenWithKeys(
         ctx,
         tableEnv,

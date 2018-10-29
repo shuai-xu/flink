@@ -28,28 +28,17 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.plan.BatchExecRelVisitor
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery.reuseOrCreate
-import org.apache.flink.table.plan.nodes.FlinkRelNode
-import org.apache.flink.table.plan.resource.RelResource
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{FlinkRelOptUtil, Logging}
 
 import scala.collection.JavaConversions._
 
-trait BatchExecRel[T] extends FlinkRelNode with Logging {
-
-  /**
-    * Defines how many partitions the data of the node will output
-    */
-  private[flink] var resultPartitionCount = -1
-
-  /**
-    * Defines how much resource the rel will take
-    */
-  private[flink] var resource: RelResource = _
+trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
 
   /**
     * Defines an unique reuse id for reused node and
@@ -58,17 +47,6 @@ trait BatchExecRel[T] extends FlinkRelNode with Logging {
   private var reuseId: Option[Int] = None
 
   private var reusedTransformation: Option[StreamTransformation[T]] = None
-
-  def setResultPartitionCount(count: Int): Unit = {
-    resultPartitionCount = count
-  }
-
-  /**
-    * Sets rel resource.
-    */
-  def setResource(resource: RelResource): Unit = {
-    this.resource = resource
-  }
 
   /**
     * Generates a reuse id if it does not exist.

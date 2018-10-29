@@ -35,7 +35,7 @@ import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
 import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
+import ExecResourceUtil.InferMode
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row

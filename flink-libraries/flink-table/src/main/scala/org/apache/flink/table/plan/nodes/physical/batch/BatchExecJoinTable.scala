@@ -28,7 +28,7 @@ import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.BatchExecRelVisitor
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}

@@ -26,7 +26,7 @@ import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.BatchExecRelVisitor
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonValue
 
 import scala.collection.JavaConversions._

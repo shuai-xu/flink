@@ -26,10 +26,10 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.functions.utils.TableSqlFunction
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonCorrelate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 /**
   * Flink RelNode which matches along with join a user defined table function.

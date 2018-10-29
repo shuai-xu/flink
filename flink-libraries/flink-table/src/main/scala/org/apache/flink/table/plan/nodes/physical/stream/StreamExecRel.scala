@@ -23,8 +23,9 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 
-trait StreamExecRel extends FlinkRelNode {
+trait StreamExecRel extends FlinkPhysicalRel {
 
   /**
     * Translates the FlinkRelNode into a Flink operator.

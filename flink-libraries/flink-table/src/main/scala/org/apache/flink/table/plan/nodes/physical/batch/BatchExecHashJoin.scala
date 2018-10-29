@@ -29,8 +29,8 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen.operator.LongHashJoinGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.{ExpressionFormat, FlinkConventions}
@@ -38,7 +38,7 @@ import org.apache.flink.table.runtime.operator.join.batch.hashtable.BinaryHashBu
 import org.apache.flink.table.runtime.operator.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 
 import scala.collection.JavaConversions._
 
@@ -167,9 +167,9 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     val keyType = new BaseRowType(
       classOf[BinaryRow], leftKeys.map(lType.getFieldTypes()(_)): _*)
     val managedMemorySize = resource.getReservedManagedMem *
-        BatchExecResourceUtil.SIZE_IN_MB
+        ExecResourceUtil.SIZE_IN_MB
     val maxMemorySize = resource.getMaxManagedMem *
-        BatchExecResourceUtil.SIZE_IN_MB
+        ExecResourceUtil.SIZE_IN_MB
     val condFunc = generateConditionFunction(config, lType, rType)
 
     // projection for equals
@@ -185,7 +185,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
         (rInput, lInput, rProj, lProj, rType, lType, true)
       }
     val perRequestSize =
-      BatchExecResourceUtil.getPerRequestManagedMemory(config) * BatchExecResourceUtil.SIZE_IN_MB
+      ExecResourceUtil.getPerRequestManagedMemory(config) * ExecResourceUtil.SIZE_IN_MB
     val mq = getCluster.getMetadataQuery
 
     val buildRowSize = Util.first(mq.getAverageRowSize(buildRel), 24).toInt

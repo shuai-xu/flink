@@ -30,14 +30,14 @@ import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.BatchExecRelVisitor
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.runtime.aggregate.SortUtil
 import org.apache.flink.table.runtime.operator.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 
 import scala.collection.JavaConversions._
 
@@ -100,12 +100,12 @@ class BatchExecSort(
     // sort code gen
     val (comparators, serializers, codeGen) = getSortInfo(tableEnv.getConfig)
 
-    val reservedMangedMemorySize = resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB
+    val reservedMangedMemorySize = resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
 
-    val preferMangedMemorySize = resource.getMaxManagedMem * BatchExecResourceUtil.SIZE_IN_MB
+    val preferMangedMemorySize = resource.getMaxManagedMem * ExecResourceUtil.SIZE_IN_MB
     val perRequestSize =
-      BatchExecResourceUtil.getPerRequestManagedMemory(
-        tableEnv.getConfig)* BatchExecResourceUtil.SIZE_IN_MB
+      ExecResourceUtil.getPerRequestManagedMemory(
+        tableEnv.getConfig)* ExecResourceUtil.SIZE_IN_MB
 
     val operator = new SortOperator(
       reservedMangedMemorySize,

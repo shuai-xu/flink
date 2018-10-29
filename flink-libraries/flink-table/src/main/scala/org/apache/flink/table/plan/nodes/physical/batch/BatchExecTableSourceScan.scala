@@ -26,17 +26,17 @@ import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableException}
-import org.apache.flink.table.plan.BatchExecRelVisitor
+import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableEnvironment, TableException}
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource, TableSourceUtil}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
-
 import java.lang.{Boolean => JBoolean}
 import java.lang.{Integer => JInteger}
+
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 /**
   * Flink RelNode to read data from an external source defined by a [[BatchExecTableSource]].
@@ -128,17 +128,18 @@ class BatchExecTableSourceScan(
   }
 
   override private[flink] def getTableSourceResultPartitionNum(
-      tableEnv: BatchTableEnvironment): JTuple[JBoolean, JInteger] = {
+      tableEnv: TableEnvironment): JTuple[JBoolean, JInteger] = {
     tableSource match {
       case source: LimitableTableSource if source.isLimitPushedDown => new JTuple(true, 1)
       case _ =>
-        val transformation = getSourceTransformation(tableEnv.streamEnv)
+        val transformation = getSourceTransformation(
+          tableEnv.asInstanceOf[BatchTableEnvironment].streamEnv)
         new JTuple(transformation.isParallelismLocked, transformation.getParallelism)
     }
   }
 
   override private[flink] def getTableSourceResource(
-    tableEnv: BatchTableEnvironment): ResourceSpec = {
-    getSourceTransformation(tableEnv.streamEnv).getMinResources
+    tableEnv: TableEnvironment): ResourceSpec = {
+    getSourceTransformation(tableEnv.asInstanceOf[BatchTableEnvironment].streamEnv).getMinResources
   }
 }

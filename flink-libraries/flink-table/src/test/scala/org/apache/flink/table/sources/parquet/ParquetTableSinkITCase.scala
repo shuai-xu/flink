@@ -31,7 +31,7 @@ import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMod
 import org.apache.flink.table.runtime.utils.{CommonTestData, TableProgramsCollectionTestBase}
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
 import org.apache.flink.table.types.{DataTypes, InternalType}
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.lib.input.FileSplit
@@ -60,7 +60,7 @@ class ParquetTableSinkITCase(configMode: TableConfigMode)
     tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig)
     tEnv.getConfig.getParameters.setString(
       TableConfig.SQL_EXEC_INFER_RESOURCE_MODE,
-      BatchExecResourceUtil.InferMode.ONLY_SOURCE.toString)
+      ExecResourceUtil.InferMode.ONLY_SOURCE.toString)
   }
 
   @Test

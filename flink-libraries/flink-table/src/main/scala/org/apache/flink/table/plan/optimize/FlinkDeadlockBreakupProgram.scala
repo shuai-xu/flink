@@ -23,7 +23,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
+import org.apache.flink.table.plan.batch.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
 
 import scala.collection.mutable
 import scala.collection.JavaConversions._

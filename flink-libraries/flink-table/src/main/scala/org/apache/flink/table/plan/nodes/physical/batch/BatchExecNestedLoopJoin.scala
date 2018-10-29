@@ -33,15 +33,16 @@ import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{FIRST, SECOND, generatorCollect}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
-import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
+import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.{BatchExecResourceUtil, ResettableExternalBuffer}
+import org.apache.flink.table.util.{ExecResourceUtil, ResettableExternalBuffer}
 
 import scala.collection.JavaConversions._
 
@@ -146,7 +147,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     val isBinaryRow = newName("isBinaryRow")
     val baseRowSerializer = newName("baseRowSerializer")
 
-    val externalBufferMemorySize = resource.getReservedManagedMem * BatchExecResourceUtil.SIZE_IN_MB
+    val externalBufferMemorySize = resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
 
     if (singleRowJoin) {
       ctx.addReusableMember(s"$BASE_ROW $buildRow = null;")

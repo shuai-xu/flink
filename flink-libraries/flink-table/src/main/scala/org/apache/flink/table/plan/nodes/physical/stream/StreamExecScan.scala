@@ -93,4 +93,9 @@ class StreamExecScan(
       config,
       rowtimeExpr)
   }
+
+  override def needInternalConversion: Boolean = {
+    hasTimeAttributeField(dataStreamTable.fieldIndexes) ||
+      needsConversion(dataStreamTable.dataType)
+  }
 }

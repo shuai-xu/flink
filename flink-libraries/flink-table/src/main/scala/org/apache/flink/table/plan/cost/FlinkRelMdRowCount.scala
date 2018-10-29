@@ -37,7 +37,7 @@ import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.stats.ValueInterval
 import org.apache.flink.table.plan.util.AggregateUtil._
 import org.apache.flink.table.util.FlinkRelMdUtil._
-import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelMdUtil, FlinkRelOptUtil}
+import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelMdUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._
 
@@ -125,7 +125,7 @@ class FlinkRelMdRowCount private extends MetadataHandler[BuiltInMetadata.RowCoun
     } else {
       val childRowCount = mq.getRowCount(rel.getInput)
       val tableConfig = FlinkRelOptUtil.getTableConfig(rel)
-      val nParallelism = BatchExecResourceUtil.calOperatorParallelism(childRowCount, tableConfig)
+      val nParallelism = ExecResourceUtil.calOperatorParallelism(childRowCount, tableConfig)
       if (nParallelism == 1) {
         ndvOfGroupKeysOnGlobalAgg
       } else if (grouping.isEmpty) {

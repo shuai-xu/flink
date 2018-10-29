@@ -28,7 +28,7 @@ import org.apache.flink.table.runtime.utils.CommonTestData;
 import org.apache.flink.table.sinks.csv.CsvTableSink;
 import org.apache.flink.table.sources.BatchExecTableSource;
 import org.apache.flink.table.sources.csv.CsvTableSource;
-import org.apache.flink.table.util.BatchExecResourceUtil;
+import org.apache.flink.table.util.ExecResourceUtil;
 import org.apache.flink.table.util.FinalizeCsvSink;
 import org.apache.flink.test.util.AbstractTestBase;
 import org.apache.flink.test.util.TestBaseUtils;
@@ -65,7 +65,7 @@ public class BatchITCase extends AbstractTestBase {
 		env = StreamExecutionEnvironment.getExecutionEnvironment();
 		tableEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		tableEnv.getConfig().getParameters().setString(TableConfig.SQL_EXEC_INFER_RESOURCE_MODE(),
-				BatchExecResourceUtil.InferMode.ONLY_SOURCE.toString());
+				ExecResourceUtil.InferMode.ONLY_SOURCE.toString());
 		deleteFiles();
 	}
 

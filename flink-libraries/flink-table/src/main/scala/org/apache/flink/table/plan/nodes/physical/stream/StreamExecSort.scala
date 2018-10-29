@@ -33,7 +33,7 @@ import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.StreamSortOperator
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 
 import _root_.scala.collection.JavaConverters._
 
@@ -106,8 +106,8 @@ class StreamExecSort(
       tableEnv, queryConfig)
 
     val mangedMemorySize =
-      BatchExecResourceUtil.getPerRequestManagedMemory(
-        tableEnv.getConfig)* BatchExecResourceUtil.SIZE_IN_MB
+      ExecResourceUtil.getPerRequestManagedMemory(
+        tableEnv.getConfig)* ExecResourceUtil.SIZE_IN_MB
 
     createSort(inputTransformation, mangedMemorySize)
   }

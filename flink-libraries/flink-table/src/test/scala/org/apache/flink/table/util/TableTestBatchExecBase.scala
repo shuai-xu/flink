@@ -37,7 +37,7 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.LogicalNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
-import org.apache.flink.table.plan.resource.RunningUnitKeeper
+import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.types.DataTypes
 import org.junit.Assert._

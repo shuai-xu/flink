@@ -44,18 +44,18 @@ import org.apache.flink.table.plan.cost.{BatchExecCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
 import org.apache.flink.table.plan.optimize.BatchOptimizeContext
-import org.apache.flink.table.plan.resource.RunningUnitKeeper
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
+import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchExecTableSource, _}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{BatchExecResourceUtil, FlinkRelOptUtil, PlanUtil}
+import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil}
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.util.{AbstractID, Preconditions}
 
@@ -331,12 +331,12 @@ class BatchTableEnvironment(
     val streamTransformation = boundedStream.getTransformation
     val preferredResources = sinkTransformation.getPreferredResources
     if (preferredResources == null) {
-      val heapMem = BatchExecResourceUtil.getSinkMem(getConfig)
-      val resource = BatchExecResourceUtil.getResourceSpec(getConfig, heapMem)
+      val heapMem = ExecResourceUtil.getSinkMem(getConfig)
+      val resource = ExecResourceUtil.getResourceSpec(getConfig, heapMem)
       sinkTransformation.setResources(resource, resource)
     }
     if (!sinkTransformation.isParallelismLocked) {
-      val configSinkParallelism = BatchExecResourceUtil.getSinkParallelism(getConfig)
+      val configSinkParallelism = ExecResourceUtil.getSinkParallelism(getConfig)
       if (configSinkParallelism > 0) {
         sinkTransformation.setParallelism(configSinkParallelism)
       } else if (streamTransformation.getParallelism > 0) {
@@ -574,7 +574,7 @@ class BatchTableEnvironment(
           operator,
           outputTypeInfo,
           input.getParallelism)
-        val defaultResource = BatchExecResourceUtil.getDefaultResourceSpec(getConfig)
+        val defaultResource = ExecResourceUtil.getDefaultResourceSpec(getConfig)
         transformation.setParallelismLocked(true)
         transformation.setResources(defaultResource, defaultResource)
         transformation

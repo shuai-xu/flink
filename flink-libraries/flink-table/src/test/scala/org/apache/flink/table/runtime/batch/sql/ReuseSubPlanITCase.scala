@@ -23,7 +23,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -41,7 +41,7 @@ class ReuseSubPlanITCase(subPlanReuse: Boolean) extends QueryTest {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 1)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_AGG_TABLE_MEM, 32)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM, 32)
-    tEnv.getConfig.getParameters.setInteger(BatchExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
+    tEnv.getConfig.getParameters.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 5)
 
     registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfSmallData3)

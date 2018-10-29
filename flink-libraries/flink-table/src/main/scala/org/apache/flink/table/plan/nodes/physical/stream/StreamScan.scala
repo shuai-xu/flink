@@ -41,7 +41,7 @@ trait StreamScan extends CommonScan[BaseRow] with StreamExecRel {
     val ctx = CodeGeneratorContext(config, true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
 
-    if (hasTimeAttributeField(fieldIdx) || needsConversion(dataType)) {
+    if (needInternalConversion) {
       convertToInternalRow(
         ctx, input, fieldIdx, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
     } else {

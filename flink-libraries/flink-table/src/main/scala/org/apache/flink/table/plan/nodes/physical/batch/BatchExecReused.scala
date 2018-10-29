@@ -22,8 +22,8 @@ import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelWriter, SingleRel}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 /**
   * A dummy [[BatchExecRel]] that references a real reused node.

@@ -28,13 +28,13 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.functions.UserDefinedFunction
-import org.apache.flink.table.plan.BatchExecRelVisitor
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator._
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.BatchExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil
 
 class BatchExecSortWindowAggregate(
     window: LogicalWindow,
@@ -107,7 +107,7 @@ class BatchExecSortWindowAggregate(
     val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
     val outputRowType = getOutputType
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
-    val groupBufferLimitSize = BatchExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
+    val groupBufferLimitSize = ExecResourceUtil.getWindowAggBufferLimitSize(tableEnv.getConfig)
 
     val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]
     val generatedOperator = if (grouping.isEmpty) {

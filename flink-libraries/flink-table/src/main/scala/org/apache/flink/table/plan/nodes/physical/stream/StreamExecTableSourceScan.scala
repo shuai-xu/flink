@@ -100,4 +100,12 @@ class StreamExecTableSourceScan(
       config,
       rowtimeExpression)
   }
+
+  override def needInternalConversion: Boolean = {
+    val fieldIndexes = TableSourceUtil.computeIndexMapping(
+      tableSource,
+      isStreamTable = false,
+      None)
+    hasTimeAttributeField(fieldIndexes) || needsConversion(tableSource.getReturnType)
+  }
 }

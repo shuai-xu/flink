@@ -31,8 +31,8 @@ import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.util.BatchExecResourceUtil
-import org.apache.flink.table.util.BatchExecResourceUtil.InferMode
+import org.apache.flink.table.util.ExecResourceUtil.InferMode
+import org.apache.flink.table.util.ExecResourceUtil
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
@@ -159,7 +159,7 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
 
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_SORT_BUFFER_MEM, 1)
     conf.getParameters.setInteger(TableConfig.SQL_EXEC_HASH_JOIN_TABLE_MEM, 2)
-    tEnv.getConfig.getParameters.setInteger(BatchExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
+    tEnv.getConfig.getParameters.setInteger(ExecResourceUtil.SQL_EXEC_PER_REQUEST_MEM, 2)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 1)
 
     val bigData = Random.shuffle(

@@ -63,6 +63,8 @@ trait CommonScan[T] {
       indexes.contains(DataTypes.PROCTIME_STREAM_MARKER)||
       indexes.contains(DataTypes.PROCTIME_BATCH_MARKER)
 
+  def needInternalConversion: Boolean
+
   private[flink] def convertToInternalRow(
       ctx: CodeGeneratorContext,
       input: StreamTransformation[Any],
