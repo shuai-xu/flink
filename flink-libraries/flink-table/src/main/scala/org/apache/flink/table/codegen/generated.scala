@@ -24,6 +24,7 @@ import org.apache.flink.api.common.io.InputFormat
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
+import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newName}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, SubKeyedAggsHandleFunction}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
@@ -68,6 +69,32 @@ case class GeneratedExpression(
        """.stripMargin
     } else {
       s"$target = $resultTerm;"
+    }
+  }
+
+  /**
+    * Copy result if `copyResult` parameter is enabled and the result type is a mutable type.
+    * NOTE: Please use this method when the result will be buffered.
+    * This method makes sure a new object/data is created when the type is mutable.
+    *
+    * @param copyResult copy result if true
+    */
+  def copyResultIfNeeded(copyResult: Boolean): GeneratedExpression = {
+    if (copyResult && CodeGenUtils.needCopyForType(resultType)) {
+      val newResult = newName("field")
+      // if the type need copy, it must be a boxed type
+      val typeTerm = boxedTypeTermForType(resultType)
+      val newCode =
+        s"""
+          |$code
+          |$typeTerm $newResult = $resultTerm;
+          |if (!$nullTerm) {
+          |  $newResult = $newResult.copy();
+          |}
+        """.stripMargin
+      this.copy(resultTerm = newResult, code = newCode)
+    } else {
+      this
     }
   }
 

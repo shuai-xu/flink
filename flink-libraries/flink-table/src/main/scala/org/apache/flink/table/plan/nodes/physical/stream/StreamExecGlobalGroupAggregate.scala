@@ -191,7 +191,9 @@ class StreamExecGlobalGroupAggregate(
       mergedAccOnHeap = true,
       localAggInfoList.getAccTypes,
       tableEnv.getConfig,
-      tableEnv.getRelBuilder)
+      tableEnv.getRelBuilder,
+      // the local aggregate result will be buffered, so need copy
+      inputFieldCopy = true)
 
     val globalAggsHandler = generateAggsHandler(
       "GlobalGroupAggsHandler",
@@ -200,7 +202,11 @@ class StreamExecGlobalGroupAggregate(
       mergedAccOnHeap = true,
       localAggInfoList.getAccTypes,
       tableEnv.getConfig,
-      tableEnv.getRelBuilder)
+      tableEnv.getRelBuilder,
+      // if global aggregate result will be put into state, then not need copy
+      // but this global aggregate result will be put into a buffered map first,
+      // then multiput to state, so it need copy
+      inputFieldCopy = true)
 
     val globalAccTypes = globalAggInfoList.getAccTypes.map(DataTypes.internal)
     val globalAggValueTypes = globalAggInfoList.getActualValueTypes.map(DataTypes.internal)
@@ -255,7 +261,8 @@ class StreamExecGlobalGroupAggregate(
     mergedAccOnHeap: Boolean,
     mergedAccExternalTypes: Array[DataType],
     config: TableConfig,
-    relBuilder: RelBuilder): GeneratedAggsHandleFunction = {
+    relBuilder: RelBuilder,
+    inputFieldCopy: Boolean): GeneratedAggsHandleFunction = {
 
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(config, supportReference = true),
@@ -263,7 +270,8 @@ class StreamExecGlobalGroupAggregate(
       aggInputSchema.fieldTypes,
       needRetract = false,
       needMerge = true,
-      config.getNullCheck)
+      config.getNullCheck,
+      inputFieldCopy)
 
     generator
       .withMerging(mergedAccOffset, mergedAccOnHeap, mergedAccExternalTypes)

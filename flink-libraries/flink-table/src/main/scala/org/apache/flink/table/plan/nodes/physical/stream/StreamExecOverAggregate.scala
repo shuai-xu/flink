@@ -302,7 +302,8 @@ class StreamExecOverAggregate(
       inputSchema.fieldTypes,
       needRetraction,
       needMerge = false,
-      nullCheck)
+      nullCheck,
+      copyInputField = false)
 
     val genAggsHandler = generator
       // over agg code gen must pass the constants
@@ -375,7 +376,8 @@ class StreamExecOverAggregate(
       inputSchema.fieldTypes,
       needRetraction,
       needMerge = false,
-      nullCheck)
+      nullCheck,
+      copyInputField = false)
 
     val genAggsHandler = generator
       // over agg code gen must pass the constants

@@ -41,7 +41,10 @@ import static org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_P
  * Provide type specialized getters and setters to reduce if/else and eliminate box and unbox.
  *
  * <p>There is only setter for the fixed-length type field, because the variable-length type
- * cannot be set to the binary format such as {@link BinaryRow}.
+ * cannot be set to the binary format such as {@link BinaryRow}.</p>
+ *
+ * <p>All the {@code getXxx(int)} methods do not guarantee new object returned when every
+ * time called.</p>
  */
 public interface TypeGetterSetters {
 
@@ -96,9 +99,10 @@ public interface TypeGetterSetters {
 	BinaryString getBinaryString(int ordinal);
 
 	/**
-	 * Get BinaryString(intenral String/Varchar) value by reuse object.
+	 * Get BinaryString(intenral String/Varchar) value by reuse object. The underlying bytes
+	 * array is not copied.
 	 */
-	BinaryString getBinaryString(int ordinal, BinaryString reuse);
+	BinaryString getBinaryString(int ordinal, BinaryString reuseRef);
 
 	/**
 	 * Get String value.

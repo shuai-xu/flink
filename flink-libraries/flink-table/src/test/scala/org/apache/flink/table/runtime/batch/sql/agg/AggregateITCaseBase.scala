@@ -226,6 +226,46 @@ abstract class AggregateITCaseBase(testName: String) extends QueryTest {
     )
   }
 
+  @Test
+  def testUV(): Unit = {
+    val data = (0 until 100).map {i =>row("1", "1", s"${i%10}", "1")}.toList
+    val type4 = new RowTypeInfo(
+      Types.STRING,
+      Types.STRING,
+      Types.STRING,
+      Types.STRING)
+    val nullables4 = Seq(false, false, false, false)
+    registerCollection(
+      "src",
+      data,
+      type4,
+      "a, b, c, d",
+      nullables4)
+
+    val sql =
+      s"""
+         |SELECT
+         |  a,
+         |  b,
+         |  COUNT(distinct c) as uv
+         |FROM (
+         |  SELECT
+         |    a, b, c, d
+         |  FROM
+         |    src where b <> ''
+         |  UNION ALL
+         |  SELECT
+         |    a, 'ALL' as b, c, d
+         |  FROM
+         |    src where b <> ''
+         |) t
+         |GROUP BY
+         |  a, b
+     """.stripMargin
+
+    checkResult(sql, Seq(row("1", "1", 10), row("1", "ALL", 10)))
+  }
+
   //
   // tests borrowed from org.apache.spark.sql.DataFrameAggregateSuite
   //

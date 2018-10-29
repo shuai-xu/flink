@@ -258,7 +258,8 @@ class StreamExecGroupWindowAggregate(
       inputSchema.fieldTypes,
       needRetraction,
       needMerge,
-      config.getNullCheck)
+      config.getNullCheck,
+      copyInputField = false)
     aggsGenerator.generateSubKeyedAggsHandler(
       "GroupingWindowAggsHandler",
       aggInfoList,

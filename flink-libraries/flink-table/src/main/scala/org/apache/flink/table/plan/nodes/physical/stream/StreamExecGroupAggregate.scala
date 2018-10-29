@@ -205,7 +205,10 @@ class StreamExecGroupAggregate(
       inputRowType.getFieldTypes.map(DataTypes.internal),
       needRetraction,
       needMerge = false,
-      tableEnv.getConfig.getNullCheck)
+      tableEnv.getConfig.getNullCheck,
+      // TODO: gemini state backend do not copy key currently, we have to copy input field
+      // TODO: copy is not need when state backend is rocksdb or niagara, improve this in future
+      copyInputField = true)
 
     val aggsHandler = generator.generateAggsHandler("GroupAggsHandler", aggInfoList)
     val accTypes = aggInfoList.getAccTypes.map(DataTypes.internal)

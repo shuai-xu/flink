@@ -394,7 +394,7 @@ object CodeGenUtils {
       index: Int,
       nullableInput: Boolean,
       nullCheck: Boolean,
-      objReuse: Boolean = true): GeneratedExpression = {
+      fieldCopy: Boolean = false): GeneratedExpression = {
     // if input has been used before, we can reuse the code that
     // has already been generated
     val inputExpr = ctx.getReusableInputUnboxingExprs(inputTerm, index) match {
@@ -404,9 +404,9 @@ object CodeGenUtils {
       // generate input access and unboxing if necessary
       case None =>
         val expr = if (nullableInput) {
-          generateNullableInputFieldAccess(ctx, inputType, inputTerm, index, nullCheck, objReuse)
+          generateNullableInputFieldAccess(ctx, inputType, inputTerm, index, nullCheck, fieldCopy)
         } else {
-          generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck, objReuse)
+          generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck, fieldCopy)
         }
 
         ctx.addReusableInputUnboxingExprs(inputTerm, index, expr)
@@ -416,19 +416,41 @@ object CodeGenUtils {
     GeneratedExpression(inputExpr.resultTerm, inputExpr.nullTerm, "", inputExpr.resultType)
   }
 
+  /**
+    * Generates field access code expression. The different between this method and
+    * [[generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck)]] is that this method
+    * accepts an additional `fieldCopy` parameter. When copyResult is set to true, the returned
+    * result will be copied.
+    *
+    * NOTE: Please set `fieldCopy` to true when the result will be buffered.
+    */
   def generateFieldAccess(
       ctx: CodeGeneratorContext,
       inputType: InternalType,
       inputTerm: String,
       index: Int,
       nullCheck: Boolean,
-      objReuse: Boolean = true): GeneratedExpression =
+      fieldCopy: Boolean): GeneratedExpression = {
+    val expr = generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck)
+    if (fieldCopy) {
+      expr.copyResultIfNeeded(fieldCopy)
+    } else {
+      expr
+    }
+  }
+
+  def generateFieldAccess(
+      ctx: CodeGeneratorContext,
+      inputType: InternalType,
+      inputTerm: String,
+      index: Int,
+      nullCheck: Boolean): GeneratedExpression =
     inputType match {
       case ct: BaseRowType =>
         val fieldType = ct.getFieldTypes()(index)
         val resultTypeTerm = primitiveTypeTermForType(fieldType)
         val defaultValue = primitiveDefaultValue(fieldType)
-        val readCode = baseRowFieldReadAccess(ctx, index.toString, inputTerm, fieldType, objReuse)
+        val readCode = baseRowFieldReadAccess(ctx, index.toString, inputTerm, fieldType)
         val Seq(fieldTerm, nullTerm) = ctx.newReusableFields(
           Seq("field", "isNull"),
           Seq(resultTypeTerm, "boolean"))
@@ -460,7 +482,7 @@ object CodeGenUtils {
       inputTerm: String,
       index: Int,
       nullCheck: Boolean,
-      objReuse: Boolean = true): GeneratedExpression = {
+      fieldCopy: Boolean = false): GeneratedExpression = {
 
     val fieldType = inputType match {
       case ct: BaseRowType => ct.getFieldTypes()(index)
@@ -473,7 +495,7 @@ object CodeGenUtils {
       Seq("result", "isNull"),
       Seq(resultTypeTerm, "boolean"))
     val fieldAccessExpr = generateFieldAccess(
-      ctx, inputType, inputTerm, index, nullCheck, objReuse)
+      ctx, inputType, inputTerm, index, nullCheck, fieldCopy)
 
     val inputCheckCode =
       s"""
@@ -841,8 +863,7 @@ object CodeGenUtils {
       ctx: CodeGeneratorContext,
       pos: String,
       rowTerm: String,
-      fieldType: InternalType,
-      objReuse: Boolean = true) : String =
+      fieldType: InternalType) : String =
     fieldType match {
       case DataTypes.INT => s"$rowTerm.getInt($pos)"
       case DataTypes.LONG => s"$rowTerm.getLong($pos)"
@@ -852,13 +873,9 @@ object CodeGenUtils {
       case DataTypes.DOUBLE => s"$rowTerm.getDouble($pos)"
       case DataTypes.BOOLEAN => s"$rowTerm.getBoolean($pos)"
       case DataTypes.STRING =>
-        if (objReuse) {
-          val reuse = newName("reuseBString")
-          ctx.addReusableMember(s"$BINARY_STRING $reuse = new $BINARY_STRING();")
-          s"$rowTerm.getBinaryString($pos, $reuse)"
-        } else {
-          s"$rowTerm.getBinaryString($pos)"
-        }
+        val reuse = newName("reuseBString")
+        ctx.addReusableMember(s"$BINARY_STRING $reuse = new $BINARY_STRING();")
+        s"$rowTerm.getBinaryString($pos, $reuse)"
       case dt: DecimalType => s"$rowTerm.getDecimal($pos, ${dt.precision()}, ${dt.scale()})"
       case DataTypes.CHAR => s"$rowTerm.getChar($pos)"
       case _: TimestampType => s"$rowTerm.getLong($pos)"

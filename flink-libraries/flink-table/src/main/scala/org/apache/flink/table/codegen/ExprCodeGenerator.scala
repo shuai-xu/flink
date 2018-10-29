@@ -138,7 +138,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       outRecordTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_TERM,
       outRecordWriterTerm: String = CodeGeneratorContext.DEFAULT_OUT_RECORD_WRITER_TERM,
       reusedOutRow: Boolean = true,
-      objReuse: Boolean = true,
+      fieldCopy: Boolean = false,
       rowtimeExpression: Option[RexNode] = None)
     : GeneratedExpression = {
     val input1AccessExprs = input1Mapping.map {
@@ -166,7 +166,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
           idx,
           nullableInput,
           nullCheck,
-          objReuse)
+          fieldCopy)
     }
 
     val input2AccessExprs = input2Type match {

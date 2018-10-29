@@ -32,6 +32,8 @@ import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
+import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
 import org.apache.hadoop.hive.ql.udf.generic.{AbstractGenericUDAFResolver, GenericUDAFCount, GenericUDAFResolver2, GenericUDAFSum}
@@ -1146,6 +1148,44 @@ class AggregateITCase(
     env.execute()
 
     val expected = List("1,1,1", "2,1,2", "3,1,3", "4,4,4", "5,2,2")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testCountDistinctWithBinaryRowSource(): Unit = {
+    // this case is failed before, because of object reuse problem
+    val data = (0 until 100).map {i => ("1", "1", s"${i%50}", "1")}.toList
+    // use BinaryRow source here for BinaryString reuse
+    val t = failingBinaryRowSource(data).toTable(tEnv, 'a, 'b, 'c, 'd)
+    tEnv.registerTable("src", t)
+
+    val sql =
+      s"""
+         |SELECT
+         |  a,
+         |  b,
+         |  COUNT(distinct c) as uv
+         |FROM (
+         |  SELECT
+         |    a, b, c, d
+         |  FROM
+         |    src where b <> ''
+         |  UNION ALL
+         |  SELECT
+         |    a, 'ALL' as b, c, d
+         |  FROM
+         |    src where b <> ''
+         |) t
+         |GROUP BY
+         |  a, b
+     """.stripMargin
+
+    val t1 = tEnv.sqlQuery(sql)
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1,1,50", "1,ALL,50")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 }

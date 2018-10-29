@@ -876,7 +876,8 @@ class MatchCodeGenerator(
       Seq(elementType),
       needRetract = false,
       needMerge = false,
-      nullCheck = true)
+      nullCheck = true,
+      copyInputField = false)
     val generatedAggsHandler = aggsHandlerCodeGenerator.generateAggsHandler(
       "MatchAggregateHandler",
       aggInfoList)

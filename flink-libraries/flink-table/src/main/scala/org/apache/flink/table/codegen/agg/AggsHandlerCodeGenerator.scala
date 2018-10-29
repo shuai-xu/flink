@@ -36,6 +36,8 @@ import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**
   * A code generator for generating [[AggsHandleFunction]].
+  * @param copyInputField copy input field element if true (only mutable type will be copied),
+  *                       set to true if field will be buffered (such as local aggregate)
   */
 class AggsHandlerCodeGenerator(
     ctx: CodeGeneratorContext,
@@ -43,7 +45,8 @@ class AggsHandlerCodeGenerator(
     inputFieldTypes: Seq[InternalType],
     needRetract: Boolean,
     needMerge: Boolean,
-    nullCheck: Boolean) {
+    nullCheck: Boolean,
+    copyInputField: Boolean) {
 
   private val inputType = new BaseRowType(classOf[BaseRow], inputFieldTypes: _*)
 
@@ -195,7 +198,8 @@ class AggsHandlerCodeGenerator(
             relBuilder,
             hasNamespace,
             mergedAccOnHeap,
-            mergedAccExternalTypes(aggBufferOffset))
+            mergedAccExternalTypes(aggBufferOffset),
+            copyInputField)
       }
       aggBufferOffset = aggBufferOffset + aggInfo.externalAccTypes.length
       codegen
@@ -220,6 +224,7 @@ class AggsHandlerCodeGenerator(
           hasNamespace,
           mergedAccOnHeap,
           distinctInfo.consumeRetraction,
+          copyInputField,
           relBuilder)
         // distinct agg buffer occupies only one field
         aggBufferOffset += 1

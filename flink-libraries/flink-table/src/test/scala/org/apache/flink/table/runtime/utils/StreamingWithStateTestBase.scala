@@ -21,6 +21,7 @@ import java.util
 
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.configuration.{CheckpointingOptions, Configuration}
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
 import org.apache.flink.runtime.state.gemini.GeminiConfiguration
@@ -28,12 +29,16 @@ import org.apache.flink.runtime.state.memory.MemoryStateBackend
 import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.functions.source.FromElementsFunction
 import org.apache.flink.streaming.api.scala.DataStream
+import org.apache.flink.table.api.Types
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.junit.runners.Parameterized
 import org.junit.{After, Assert, Before}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestBase {
@@ -59,6 +64,35 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
   @After
   def after(): Unit = {
     Assert.assertTrue(FailingCollectionSource.failedBefore)
+  }
+
+  /**
+    * Creates a BinaryRow DataStream from the given non-empty [[Seq]].
+    */
+  def failingBinaryRowSource[T: TypeInformation](data: Seq[T]): DataStream[BaseRow] = {
+    val typeInfo = implicitly[TypeInformation[_]].asInstanceOf[CompositeType[_]]
+    val result = new mutable.MutableList[BaseRow]
+    val reuse = new BinaryRow(typeInfo.getArity)
+    val writer = new BinaryRowWriter(reuse)
+    data.foreach {
+      case p: Product =>
+        for (i <- 0 until typeInfo.getArity) {
+          val fieldType = typeInfo.getTypeAt(i).asInstanceOf[TypeInformation[_]]
+          fieldType match {
+            case Types.INT => writer.writeInt(i, p.productElement(i).asInstanceOf[Int])
+            case Types.LONG => writer.writeLong(i, p.productElement(i).asInstanceOf[Long])
+            case Types.STRING => writer.writeString(i, p.productElement(i).asInstanceOf[String])
+            case Types.BOOLEAN => writer.writeBoolean(i, p.productElement(i).asInstanceOf[Boolean])
+          }
+        }
+        writer.complete()
+        result += reuse.copy()
+      case _ => throw new UnsupportedOperationException
+    }
+    val newTypeInfo = new BaseRowTypeInfo(
+      classOf[BinaryRow],
+      (0 until typeInfo.getArity).map(typeInfo.getTypeAt).toArray: _*)
+    failingDataSource(result)(newTypeInfo.asInstanceOf[TypeInformation[BaseRow]])
   }
 
   /**

@@ -25,15 +25,17 @@ import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
+import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference, ResolvedAggLocalReference}
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.AggregateInfo
-import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
-import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.{genToExternal, genToInternal}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.TypeUtils
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * It is for code generate aggregation functions that are specified in terms of
@@ -51,6 +53,7 @@ import org.apache.flink.table.typeutils.TypeUtils
   * @param constantExprs  the constant expressions
   * @param relBuilder  the rel builder to translate expressions to calcite rex nodes
   * @param hasNamespace  whether the accumulators state has namespace
+  * @param inputFieldCopy    copy input field element if true (only mutable type will be copied)
   */
 class ImperativeAggCodeGen(
     ctx: CodeGeneratorContext,
@@ -64,7 +67,8 @@ class ImperativeAggCodeGen(
     relBuilder: RelBuilder,
     hasNamespace: Boolean,
     mergedAccOnHeap: Boolean,
-    mergedAccExternalType: DataType)
+    mergedAccExternalType: DataType,
+    inputFieldCopy: Boolean)
   extends AggCodeGen {
 
   private val SINGLE_ITERABLE = className[SingleElementIterator[_]]
@@ -129,7 +133,6 @@ class ImperativeAggCodeGen(
       viewSpecs,
       useStateDataView = true,
       useBackupDataView = false,
-      nullableInput = false,
       nullCheck = true)
 
     if (isAccTypeInternal) {
@@ -158,14 +161,19 @@ class ImperativeAggCodeGen(
   }
 
   def accumulate(generator: ExprCodeGenerator): String = {
-    val parameters = aggParametersCode(generator)
+    val (parameters, code) = aggParametersCode(generator)
     val call = s"$functionTerm.accumulate($parameters);"
     filterExpression match {
-      case None => call
+      case None =>
+        s"""
+           |$code
+           |$call
+         """.stripMargin
       case Some(expr) =>
         val generated = generator.generateExpression(expr.toRexNode(relBuilder))
         s"""
            |if (${generated.resultTerm}) {
+           |  $code
            |  $call
            |}
          """.stripMargin
@@ -173,14 +181,19 @@ class ImperativeAggCodeGen(
   }
 
   def retract(generator: ExprCodeGenerator): String = {
-    val parameters = aggParametersCode(generator)
+    val (parameters, code) = aggParametersCode(generator)
     val call = s"$functionTerm.retract($parameters);"
     filterExpression match {
-      case None => call
+      case None =>
+        s"""
+           |$code
+           |$call
+         """.stripMargin
       case Some(expr) =>
         val generated = generator.generateExpression(expr.toRexNode(relBuilder))
         s"""
            |if (${generated.resultTerm}) {
+           |  $code
            |  $call
            |}
          """.stripMargin
@@ -200,7 +213,6 @@ class ImperativeAggCodeGen(
       viewSpecs,
       useStateDataView = !mergedAccOnHeap,
       useBackupDataView = true,
-      nullableInput = false,
       nullCheck = true)
 
     if (isAccTypeInternal) {
@@ -238,11 +250,12 @@ class ImperativeAggCodeGen(
     GeneratedExpression(valueInternalTerm, nullTerm, code, DataTypes.internal(resultType))
   }
 
-  private def aggParametersCode(generator: ExprCodeGenerator): String = {
+  private def aggParametersCode(generator: ExprCodeGenerator): (String, String) = {
     val externalUDITypes = getAggUserDefinedInputTypes(
       function,
       externalAccType,
       argTypes)
+    var codes: ArrayBuffer[String] = ArrayBuffer.empty[String]
     val inputFields = aggInfo.argIndexes.zipWithIndex.map { case (f, index) =>
       if (f >= inputTypes.length) {
         // index to constant
@@ -263,9 +276,15 @@ class ImperativeAggCodeGen(
           // called from accumulate
           ResolvedAggInputReference(f.toString, f, inputTypes(f))
         }
-
-        val inputExpr = generator.generateExpression(inputRef.toRexNode(relBuilder))
+        val inputExpr = generator
+          .generateExpression(inputRef.toRexNode(relBuilder))
+          // TODO: the copy result is not resued (i.e. MAX(a), MIN(a))
+          .copyResultIfNeeded(inputFieldCopy)
+        codes += inputExpr.code
         var term = s"${genToExternal(ctx, externalUDITypes(index), inputExpr.resultTerm)}"
+        // TODO: we have to keep this currently, because copy maybe not enabled
+        // TODO: maybe we want to provide an CopyOption including (none, deepCopy, shallowCopy)
+        // TODO: deepCopy means copy result, shallowCopy means only copy the reference
         if (needCloneRefForDataType(externalUDITypes(index))) {
           term = s"$term.cloneReference()"
         }
@@ -277,7 +296,7 @@ class ImperativeAggCodeGen(
     // insert acc to the head of the list
     val fields = Seq(accTerm) ++ inputFields
     // acc, arg1, arg2
-    fields.mkString(", ")
+    (fields.mkString(", "), codes.mkString("\n"))
   }
 
   /**
@@ -285,15 +304,14 @@ class ImperativeAggCodeGen(
     * that this method using UpdatableRow to wrap BaseRow to handle DataViews.
     */
   def generateAccumulatorAccess(
-      ctx: CodeGeneratorContext,
-      inputType: InternalType,
-      inputTerm: String,
-      index: Int,
-      viewSpecs: Array[DataViewSpec],
-      useStateDataView: Boolean,
-      useBackupDataView: Boolean,
-      nullableInput: Boolean,
-      nullCheck: Boolean): GeneratedExpression = {
+    ctx: CodeGeneratorContext,
+    inputType: InternalType,
+    inputTerm: String,
+    index: Int,
+    viewSpecs: Array[DataViewSpec],
+    useStateDataView: Boolean,
+    useBackupDataView: Boolean,
+    nullCheck: Boolean): GeneratedExpression = {
 
     // if input has been used before, we can reuse the code that
     // has already been generated
@@ -303,11 +321,8 @@ class ImperativeAggCodeGen(
 
       // generate input access and unboxing if necessary
       case None =>
-        val expr = if (nullableInput) {
-          generateNullableInputFieldAccess(ctx, inputType, inputTerm, index, nullCheck)
-        } else {
-          generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck)
-        }
+        // this field access is not need to reuse
+        val expr = generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck)
 
         val newExpr = inputType match {
           case ct: BaseRowType if isAccTypeInternal =>
@@ -319,7 +334,7 @@ class ImperativeAggCodeGen(
               fieldType,
               outRecordTerm = newName("acc"),
               reusedOutRow = false,
-              objReuse = false)
+              fieldCopy = inputFieldCopy)
             val code =
               s"""
                  |${expr.code}

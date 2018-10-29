@@ -42,14 +42,15 @@ import org.apache.flink.table.typeutils.TypeUtils.createTypeInfoFromDataType
   * @param distinctIndex  the index of this distinct in all distincts
   * @param innerAggCodeGens the code generator of inner aggregate
   * @param filterExpression filter argument access expression, none if no filter
-  * @param mergedAccOffset the mergedAcc may come from local aggregate,
-  *                        this is the first buffer offset in the row
-  * @param aggBufferOffset  the offset in the buffers of this aggregate
-  * @param aggBufferSize  the total size of aggregate buffers
-  * @param hasNamespace  whether the accumulators state has namespace
-  * @param mergedAccOnHeap  whether the merged accumulator is on heap, otherwise is on state
-  * @param consumeRetraction  whether the distinct consumes retraction
-  * @param relBuilder the rel builder to translate expressions to calcite rex nodes
+  * @param mergedAccOffset   the mergedAcc may come from local aggregate,
+  *                          this is the first buffer offset in the row
+  * @param aggBufferOffset   the offset in the buffers of this aggregate
+  * @param aggBufferSize     the total size of aggregate buffers
+  * @param hasNamespace      whether the accumulators state has namespace
+  * @param mergedAccOnHeap   whether the merged accumulator is on heap, otherwise is on state
+  * @param consumeRetraction whether the distinct consumes retraction
+  * @param inputFieldCopy    copy input field element if true (only mutable type will be copied)
+  * @param relBuilder        the rel builder to translate expressions to calcite rex nodes
   */
 class DistinctAggCodeGen(
   ctx: CodeGeneratorContext,
@@ -63,6 +64,7 @@ class DistinctAggCodeGen(
   hasNamespace: Boolean,
   mergedAccOnHeap: Boolean,
   consumeRetraction: Boolean,
+  inputFieldCopy: Boolean,
   relBuilder: RelBuilder) extends AggCodeGen {
 
   val MAP_VIEW: String = className[MapView[_, _]]
@@ -280,17 +282,15 @@ class DistinctAggCodeGen(
 
 
   private def generateKeyExpression(
-    ctx: CodeGeneratorContext,
-    generator: ExprCodeGenerator
-  ): GeneratedExpression = {
+      ctx: CodeGeneratorContext,
+      generator: ExprCodeGenerator): GeneratedExpression = {
     val fieldExprs = distinctInfo.argIndexes.map(generateInputAccess(
       ctx,
       generator.input1Type,
       generator.input1Term,
       _,
       nullableInput = false,
-      nullCheck = true,
-      objReuse = false))  // disable object reuse
+      nullCheck = true).copyResultIfNeeded(inputFieldCopy))
 
     // the key expression of MapView
     if (fieldExprs.length > 1) {
