@@ -633,20 +633,19 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 	protected void notifyAndUpdateConsumers(IntermediateResultPartition partition) {
 
-		currentExecution.updateConsumers(partition.getConsumers());
 		getExecutionGraph().getGraphManager().notifyResultPartitionConsumable(
 				getExecutionVertexID(),
 				partition.getIntermediateResult().getId(),
 				partition.getPartitionNumber(),
 				getCurrentAssignedResourceLocation());
+
+		getExecutionGraph().getFutureExecutor().execute(() -> {
+			currentExecution.updateConsumers(partition.getConsumers());
+		});
 	}
 
 	public void cachePartitionInfo(PartialInputChannelDeploymentDescriptor partitionInfo){
 		getCurrentExecutionAttempt().cachePartitionInfo(partitionInfo);
-	}
-
-	void sendPartitionInfos() {
-		currentExecution.sendPartitionInfos();
 	}
 
 	void clearAssignedInputSplits() {

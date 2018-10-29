@@ -832,7 +832,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 				// double check to resolve race conditions
 				if (consumerVertex.getExecutionState() == RUNNING) {
-					consumerVertex.sendPartitionInfos();
+					consumerVertex.getCurrentExecutionAttempt().sendPartitionInfoAsync();
 				}
 			}
 		}
@@ -1249,7 +1249,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	boolean switchToRunning() {
 
 		if (transitionState(DEPLOYING, RUNNING)) {
-			sendPartitionInfos();
+			sendPartitionInfoAsync();
 			return true;
 		}
 		else {
@@ -1343,21 +1343,17 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 			final TaskManagerLocation taskManagerLocation = slot.getTaskManagerLocation();
 
-			executor.execute(
-				() -> {
-					CompletableFuture<Acknowledge> updatePartitionsResultFuture =
-						taskManagerGateway.updatePartitions(attemptId, partitionInfos, rpcTimeout);
+			CompletableFuture<Acknowledge> updatePartitionsResultFuture = taskManagerGateway.updatePartitions(
+				attemptId, partitionInfos, rpcTimeout);
 
-					updatePartitionsResultFuture.whenCompleteAsync(
-						(ack, failure) -> {
-							// fail if there was a failure
-							if (failure != null) {
-								fail(new IllegalStateException("Update task on TaskManager " + taskManagerLocation +
-									" failed due to:", failure));
-							}
-						}, executor);
-				}
-			);
+			updatePartitionsResultFuture.whenCompleteAsync(
+				(ack, failure) -> {
+					// fail if there was a failure
+					if (failure != null) {
+						fail(new IllegalStateException("Update task on TaskManager " + taskManagerLocation +
+							" failed due to:", failure));
+					}
+				}, executor);
 		}
 	}
 

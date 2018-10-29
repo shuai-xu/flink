@@ -66,7 +66,7 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 	@Override
 	public void onSchedulingStarted() {
 		final List<ExecutionVertexID> verticesToSchedule = new ArrayList<>();
-		for (JobVertex vertex : jobGraph.getVertices()) {
+		for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
 			if (vertex.isInputVertex()) {
 				for (int i = 0; i < vertex.getParallelism(); i++) {
 					verticesToSchedule.add(new ExecutionVertexID(vertex.getID(), i));
