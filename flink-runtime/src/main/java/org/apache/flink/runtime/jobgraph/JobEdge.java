@@ -208,6 +208,16 @@ public class JobEdge implements java.io.Serializable {
 		this.operatorLevelCachingDescription = operatorLevelCachingDescription;
 	}
 
+	/**
+	 * Clear the cache of consumer execution vertices, should be invoked if a parallelism
+	 * change happens to any of the producer or consumer vertices.
+	 */
+	public void clearConsumerExecutionVerticesCache() {
+		if (consumerExecutionVerticesCache != null) {
+			consumerExecutionVerticesCache.clear();
+		}
+	}
+
 	public Collection<ExecutionVertexID> getConsumerExecutionVertices(int partitionNumber) {
 		if (consumerExecutionVerticesCache == null) {
 			consumerExecutionVerticesCache = new HashMap<>();

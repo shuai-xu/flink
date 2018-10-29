@@ -110,9 +110,6 @@ public class JobGraph implements Serializable {
 	/** List of classpaths required to run this job. */
 	private List<URL> classpaths = Collections.emptyList();
 
-	/** This cache helps to reduce the calculation load of consumer vertices for each result partition */
-	private transient Map<IntermediateDataSetID, Map<Integer, Collection<Collection<ExecutionVertexID>>>> consumerVerticesCache;
-
 	// --------------------------------------------------------------------------------------------
 
 	/**
@@ -411,17 +408,6 @@ public class JobGraph implements Serializable {
 		IntermediateDataSetID resultID,
 		int partitionNumber) {
 
-		if (consumerVerticesCache == null) {
-			consumerVerticesCache = new HashMap<>();
-		}
-		if (consumerVerticesCache.containsKey(resultID)) {
-			if (consumerVerticesCache.get(resultID).containsKey(partitionNumber)) {
-				return consumerVerticesCache.get(resultID).get(partitionNumber);
-			}
-		} else {
-			consumerVerticesCache.put(resultID, new HashMap<>());
-		}
-
 		IntermediateDataSet result = getResult(resultID);
 		if (result == null) {
 			throw new IllegalArgumentException("Cannot find the given result " + resultID + " in job graph");
@@ -435,7 +421,6 @@ public class JobGraph implements Serializable {
 		for (JobEdge edge : getResult(resultID).getConsumers()) {
 			consumerVertices.add(edge.getConsumerExecutionVertices(partitionNumber));
 		}
-		consumerVerticesCache.get(resultID).put(partitionNumber, consumerVertices);
 		return consumerVertices;
 	}
 

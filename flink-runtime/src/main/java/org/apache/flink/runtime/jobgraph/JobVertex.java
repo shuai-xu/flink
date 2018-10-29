@@ -309,6 +309,16 @@ public class JobVertex implements java.io.Serializable {
 			throw new IllegalArgumentException("The parallelism must be at least one.");
 		}
 		this.parallelism = parallelism;
+
+		// Clear the consumer execution vertices cache for related edges
+		for (JobEdge edge : getInputs()) {
+			edge.clearConsumerExecutionVerticesCache();
+		}
+		for (IntermediateDataSet dataSet : getProducedDataSets()) {
+			for (JobEdge edge :dataSet.getConsumers()) {
+				edge.clearConsumerExecutionVerticesCache();
+			}
+		}
 	}
 
 	/**
