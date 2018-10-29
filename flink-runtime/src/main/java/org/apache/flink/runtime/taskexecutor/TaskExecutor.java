@@ -109,9 +109,10 @@ import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerActions;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.util.FileOffsetRange;
-import org.apache.flink.shaded.guava18.com.google.common.io.ByteStreams;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
+
+import org.apache.flink.shaded.guava18.com.google.common.io.ByteStreams;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -137,6 +138,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -168,6 +170,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 	private final FatalErrorHandler fatalErrorHandler;
 
 	private final BlobCacheService blobCacheService;
+
+	private final ExecutorService executorService;
 
 	// --------- TaskManager services --------
 
@@ -227,6 +231,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			HeartbeatServices heartbeatServices,
 			TaskManagerMetricGroup taskManagerMetricGroup,
 			BlobCacheService blobCacheService,
+			ExecutorService executorService,
 			FatalErrorHandler fatalErrorHandler) {
 
 		super(rpcService, AkkaRpcServiceUtils.createRandomName(TASK_MANAGER_NAME));
@@ -239,6 +244,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		this.fatalErrorHandler = checkNotNull(fatalErrorHandler);
 		this.taskManagerMetricGroup = checkNotNull(taskManagerMetricGroup);
 		this.blobCacheService = checkNotNull(blobCacheService);
+		this.executorService = checkNotNull(executorService);
 
 		this.taskSlotTable = taskExecutorServices.getTaskSlotTable();
 		this.jobManagerTable = taskExecutorServices.getJobManagerTable();
@@ -552,7 +558,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 				taskMetricGroup,
 				resultPartitionConsumableNotifier,
 				partitionStateChecker,
-				getRpcService().getExecutor());
+				getRpcService().getExecutor(),
+				executorService);
 
 			log.info("Received task {}.", task.getTaskInfo().getTaskNameWithSubtasks());
 

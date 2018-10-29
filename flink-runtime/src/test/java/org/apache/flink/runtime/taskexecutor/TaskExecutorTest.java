@@ -105,8 +105,8 @@ import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.TestLogger;
-
 import org.apache.flink.util.function.SupplierWithException;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -119,8 +119,6 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
-import scala.concurrent.duration.Deadline;
-import scala.concurrent.duration.FiniteDuration;
 
 import javax.annotation.Nonnull;
 
@@ -144,6 +142,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+
+import scala.concurrent.duration.Deadline;
+import scala.concurrent.duration.FiniteDuration;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
@@ -290,6 +291,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServices,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -380,6 +382,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServices,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -524,6 +527,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServices,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler));
 
 		final AllocationID allocationId = new AllocationID();
@@ -665,6 +669,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServices,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler));
 
 		final AllocationID allocationId = new AllocationID();
@@ -841,6 +846,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServices,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -919,6 +925,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -982,6 +989,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -998,10 +1006,10 @@ public class TaskExecutorTest extends TestLogger {
 					eq(taskManagerAddress), eq(taskManagerLocation.getResourceID()), anyInt(), any(HardwareDescription.class), any(Time.class));
 			assertNotNull(taskManager.getResourceManagerConnection());
 
-			// cancel the leader 
+			// cancel the leader
 			resourceManagerLeaderRetriever.notifyListener(null, null);
 
-			// set a new leader, see that a registration happens 
+			// set a new leader, see that a registration happens
 			resourceManagerLeaderRetriever.notifyListener(address2, leaderId2);
 
 			verify(rmGateway2, Mockito.timeout(timeout.toMilliseconds())).registerTaskExecutor(
@@ -1105,6 +1113,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1208,6 +1217,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1328,6 +1338,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1450,6 +1461,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			taskManagerMetricGroup,
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1566,6 +1578,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServicesMock,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1642,6 +1655,7 @@ public class TaskExecutorTest extends TestLogger {
 			heartbeatServices,
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1699,6 +1713,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		try {
@@ -1796,6 +1811,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(heartbeatInterval, 10L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		taskExecutor.start();
@@ -1917,6 +1933,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(heartbeatInterval, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		taskExecutor.start();
@@ -2080,6 +2097,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		final CompletableFuture<Collection<Tuple2<String, Long>>> logsWithLengthFuture = taskExecutor.requestLogList(timeout);
@@ -2117,6 +2135,7 @@ public class TaskExecutorTest extends TestLogger {
 			new HeartbeatServices(1000L, 1000L),
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			new BlobCacheService(mock(PermanentBlobCache.class), transientBlobCache),
+			java.util.concurrent.Executors.newSingleThreadExecutor(),
 			testingFatalErrorHandler);
 
 		{
@@ -2169,6 +2188,7 @@ public class TaskExecutorTest extends TestLogger {
                 new HeartbeatServices(1000L, 1000L),
                 UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
                 dummyBlobCacheService,
+				java.util.concurrent.Executors.newSingleThreadExecutor(),
                 testingFatalErrorHandler);
 	}
 

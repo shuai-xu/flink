@@ -1059,6 +1059,7 @@ public class RemoteInputChannelTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			partitionRequestManager,
+			Executors.newSingleThreadExecutor(),
 			true,
 			false);
 	}

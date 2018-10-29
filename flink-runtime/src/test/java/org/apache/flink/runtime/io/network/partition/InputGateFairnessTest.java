@@ -52,6 +52,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
 import static org.apache.flink.runtime.io.network.buffer.BufferBuilderTestUtils.createFilledBufferConsumer;
 import static org.apache.flink.runtime.io.network.partition.InputChannelTestUtils.createDummyConnectionManager;
@@ -380,7 +381,13 @@ public class InputGateFairnessTest {
 
 			super(owningTaskName, jobId, consumedResultId, ResultPartitionType.PIPELINED,
 				consumedSubpartitionIndex,
-					numberOfInputChannels, taskActions, metrics, partitionRequestManager, isCreditBased, false);
+				numberOfInputChannels,
+				taskActions,
+				metrics,
+				partitionRequestManager,
+				Executors.newSingleThreadExecutor(),
+				isCreditBased,
+				false);
 
 			try {
 				Field f = SingleInputGate.class.getDeclaredField("inputChannelsWithData");

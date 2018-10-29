@@ -48,6 +48,7 @@ import org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -225,6 +226,7 @@ public class PartitionRequestClientHandlerTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			new PartitionRequestManager(Integer.MAX_VALUE, 1),
+			Executors.newSingleThreadExecutor(),
 			true,
 			false);
 	}

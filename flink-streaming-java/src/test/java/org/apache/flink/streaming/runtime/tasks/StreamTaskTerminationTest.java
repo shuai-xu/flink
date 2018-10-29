@@ -182,7 +182,8 @@ public class StreamTaskTerminationTest extends TestLogger {
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup(),
 			mock(ResultPartitionConsumableNotifier.class),
 			mock(PartitionProducerStateChecker.class),
-			Executors.directExecutor());
+			Executors.directExecutor(),
+			java.util.concurrent.Executors.newSingleThreadExecutor());
 
 		CompletableFuture<Void> taskRun = CompletableFuture.runAsync(
 			() -> task.run(),

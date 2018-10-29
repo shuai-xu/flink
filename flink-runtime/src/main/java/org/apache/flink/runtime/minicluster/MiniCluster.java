@@ -97,6 +97,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -795,6 +796,7 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 				heartbeatServices,
 				metricRegistry,
 				blobCacheService,
+				Executors.newSingleThreadExecutor(),
 				localCommunication,
 				new TerminatingFatalErrorHandler(i));
 

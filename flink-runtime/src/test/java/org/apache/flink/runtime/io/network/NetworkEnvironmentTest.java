@@ -45,6 +45,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import static org.apache.flink.runtime.io.network.partition.InputChannelTestUtils.createDummyConnectionManager;
 import static org.junit.Assert.assertEquals;
@@ -362,6 +363,7 @@ public class NetworkEnvironmentTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			new PartitionRequestManager(Integer.MAX_VALUE, 1),
+			Executors.newSingleThreadExecutor(),
 			enableCreditBasedFlowControl,
 			false));
 	}

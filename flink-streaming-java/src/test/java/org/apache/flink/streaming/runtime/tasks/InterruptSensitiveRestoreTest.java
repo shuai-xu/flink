@@ -88,6 +88,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static org.apache.flink.streaming.runtime.tasks.StreamTaskTestHarness.createSingleOperatorTaskConfig;
 import static org.junit.Assert.assertEquals;
@@ -292,7 +293,8 @@ public class InterruptSensitiveRestoreTest {
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup(),
 			mock(ResultPartitionConsumableNotifier.class),
 			mock(PartitionProducerStateChecker.class),
-			mock(Executor.class));
+			mock(Executor.class),
+			Executors.newSingleThreadExecutor());
 	}
 
 	// ------------------------------------------------------------------------

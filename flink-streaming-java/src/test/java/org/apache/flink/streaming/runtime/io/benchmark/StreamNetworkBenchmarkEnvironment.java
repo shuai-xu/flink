@@ -59,6 +59,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.concurrent.Executors;
 
 import static org.apache.flink.util.ExceptionUtils.suppressExceptions;
 
@@ -262,7 +263,8 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 				new NoOpTaskActions(),
 				UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 				partitionRequestManager,
-				BlockingShuffleType.TM);
+				BlockingShuffleType.TM,
+				Executors.newSingleThreadExecutor());
 
 			environment.setupInputGate(gate);
 			gates[channel] = gate;

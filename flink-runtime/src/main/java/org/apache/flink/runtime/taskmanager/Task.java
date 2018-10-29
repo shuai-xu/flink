@@ -245,6 +245,9 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	/** Executor to run future callbacks. */
 	private final Executor executor;
 
+	/** General executor service for time-consuming tasks (e.g. tcp connection setup). */
+	private final ExecutorService executorService;
+
 	/** The create timestamp of execution */
 	private final long createTimestamp;
 
@@ -312,7 +315,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		@Nonnull TaskMetricGroup metricGroup,
 		ResultPartitionConsumableNotifier resultPartitionConsumableNotifier,
 		PartitionProducerStateChecker partitionProducerStateChecker,
-		Executor executor) {
+		Executor executor,
+		ExecutorService executorService) {
 
 		Preconditions.checkNotNull(jobInformation);
 		Preconditions.checkNotNull(taskInformation);
@@ -368,6 +372,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 
 		this.partitionProducerStateChecker = Preconditions.checkNotNull(partitionProducerStateChecker);
 		this.executor = Preconditions.checkNotNull(executor);
+		this.executorService = Preconditions.checkNotNull(executorService);
 
 		// create the reader and writer structures
 		final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
@@ -932,7 +937,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				this,
 				metrics.getIOMetricGroup(),
 				partitionRequestManager,
-				shuffleType);
+				shuffleType,
+				executorService);
 
 			inputGates[counter] = gate;
 			inputGatesById.put(gate.getConsumedResultId(), gate);

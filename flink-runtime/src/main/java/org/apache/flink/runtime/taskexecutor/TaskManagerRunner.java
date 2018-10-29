@@ -148,6 +148,7 @@ public class TaskManagerRunner implements FatalErrorHandler, AutoCloseableAsync 
 			heartbeatServices,
 			metricRegistry,
 			blobCacheService,
+			executor,
 			false,
 			this);
 
@@ -321,6 +322,7 @@ public class TaskManagerRunner implements FatalErrorHandler, AutoCloseableAsync 
 			HeartbeatServices heartbeatServices,
 			MetricRegistry metricRegistry,
 			BlobCacheService blobCacheService,
+			ExecutorService executorService,
 			boolean localCommunicationOnly,
 			FatalErrorHandler fatalErrorHandler) throws Exception {
 
@@ -359,6 +361,7 @@ public class TaskManagerRunner implements FatalErrorHandler, AutoCloseableAsync 
 			heartbeatServices,
 			taskManagerMetricGroup,
 			blobCacheService,
+			executorService,
 			fatalErrorHandler);
 	}
 

@@ -300,6 +300,7 @@ public class LocalInputChannelTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			new PartitionRequestManager(Integer.MAX_VALUE, 1),
+			Executors.newSingleThreadExecutor(),
 			true,
 			false
 		);
@@ -576,6 +577,7 @@ public class LocalInputChannelTest {
 					mock(TaskActions.class),
 					UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 					partitionRequestManager,
+					Executors.newSingleThreadExecutor(),
 					true,
 					false);
 

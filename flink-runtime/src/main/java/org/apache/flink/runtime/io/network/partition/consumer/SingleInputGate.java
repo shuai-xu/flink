@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Timer;
+import java.util.concurrent.ExecutorService;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -163,6 +164,9 @@ public class SingleInputGate implements InputGate {
 	/** Global network buffer pool to request and recycle exclusive buffers (only for credit-based). */
 	private NetworkBufferPool networkBufferPool;
 
+	/** Executor service for time-consuming tasks (e.g. tcp connection setup). */
+	private final ExecutorService executorService;
+
 	private final boolean isCreditBased;
 
 	private boolean hasReceivedAllEndOfPartitionEvents;
@@ -202,6 +206,7 @@ public class SingleInputGate implements InputGate {
 		TaskActions taskActions,
 		TaskIOMetricGroup metrics,
 		PartitionRequestManager partitionRequestManager,
+		ExecutorService executorService,
 		boolean isCreditBased,
 		boolean isPartitionRequestRestricted) {
 
@@ -222,6 +227,8 @@ public class SingleInputGate implements InputGate {
 		this.enqueuedInputChannelsWithData = new BitSet(numberOfInputChannels);
 
 		this.taskActions = checkNotNull(taskActions);
+
+		this.executorService = checkNotNull(executorService);
 
 		this.partitionRequestManager = checkNotNull(partitionRequestManager);
 		this.isPartitionRequestRestricted = isPartitionRequestRestricted;
@@ -706,6 +713,14 @@ public class SingleInputGate implements InputGate {
 
 	// ------------------------------------------------------------------------
 
+	//----------------------------------------------------------------------------------------------
+	// Utility methods
+	//----------------------------------------------------------------------------------------------
+
+	public void runAsync(Runnable runnable) {
+		executorService.submit(runnable);
+	}
+
 	/**
 	 * Creates an input gate and all of its input channels.
 	 */
@@ -718,7 +733,8 @@ public class SingleInputGate implements InputGate {
 		TaskActions taskActions,
 		TaskIOMetricGroup metrics,
 		PartitionRequestManager partitionRequestManager,
-		BlockingShuffleType shuffleType) {
+		BlockingShuffleType shuffleType,
+		ExecutorService executorService) {
 
 		final IntermediateDataSetID consumedResultId = checkNotNull(igdd.getConsumedResultId());
 		final ResultPartitionType consumedPartitionType = checkNotNull(igdd.getConsumedPartitionType());
@@ -733,7 +749,7 @@ public class SingleInputGate implements InputGate {
 		final SingleInputGate inputGate = new SingleInputGate(
 			owningTaskName, jobId, consumedResultId, consumedPartitionType,
 			consumedSubpartitionIndex, icdd.length, taskActions, metrics,
-			partitionRequestManager, networkEnvironment.isCreditBased(), isPartitionRequestRestricted);
+			partitionRequestManager, executorService, networkEnvironment.isCreditBased(), isPartitionRequestRestricted);
 
 		// Create the input channels. There is one input channel for each consumed partition.
 		final InputChannel[] inputChannels = new InputChannel[icdd.length];

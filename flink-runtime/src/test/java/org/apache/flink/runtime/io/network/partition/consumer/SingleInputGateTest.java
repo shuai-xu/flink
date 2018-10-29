@@ -60,6 +60,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -366,7 +367,8 @@ public class SingleInputGateTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			partitionRequestManager,
-			BlockingShuffleType.TM);
+			BlockingShuffleType.TM,
+			Executors.newSingleThreadExecutor());
 
 		try {
 			assertEquals(gateDesc.getConsumedPartitionType(), gate.getConsumedPartitionType());
@@ -614,6 +616,7 @@ public class SingleInputGateTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			partitionRequestManager,
+			Executors.newSingleThreadExecutor(),
 			enableCreditBasedFlowControl,
 			false);
 

@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
 import static org.apache.flink.runtime.io.network.partition.consumer.SingleInputGateTest.verifyBufferOrEvent;
 import static org.apache.flink.util.Preconditions.checkState;
@@ -378,6 +379,7 @@ public class UnionInputGateTest {
 					mock(TaskActions.class),
 					UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 					partitionRequestManager,
+					Executors.newSingleThreadExecutor(),
 					true,
 					false);
 

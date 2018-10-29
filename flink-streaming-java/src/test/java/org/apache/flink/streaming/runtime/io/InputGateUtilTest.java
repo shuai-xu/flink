@@ -31,6 +31,7 @@ import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -123,6 +124,7 @@ public class InputGateUtilTest {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			partitionRequestManager,
+			Executors.newSingleThreadExecutor(),
 			true,
 			false);
 	}

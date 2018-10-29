@@ -80,6 +80,9 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	/** Client to establish a (possibly shared) TCP connection and request the partition. */
 	private volatile PartitionRequestClient partitionRequestClient;
 
+	/** A lock to synchronize partition request client initialization. */
+	private final Object partitionRequestLock = new Object();
+
 	/**
 	 * The next expected sequence number for the next buffer. This is modified by the network
 	 * I/O thread only.
@@ -128,6 +131,25 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 
 		this.connectionId = checkNotNull(connectionId);
 		this.connectionManager = checkNotNull(connectionManager);
+
+		inputGate.runAsync(new Runnable() {
+			@Override
+			public void run() {
+				createPartitionRequestClient();
+			}
+		});
+	}
+
+	private void createPartitionRequestClient() {
+		synchronized (partitionRequestLock) {
+			if (partitionRequestClient == null) {
+				try {
+					partitionRequestClient = connectionManager.createPartitionRequestClient(connectionId);
+				} catch (Throwable t) {
+					setError(new DataConsumptionException(partitionId, t));
+				}
+			}
+		}
 	}
 
 	/**
@@ -162,23 +184,21 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	@VisibleForTesting
 	@Override
 	public void requestSubpartition(int subpartitionIndex) throws IOException, InterruptedException {
+		// initialize partitionRequestClient if not initialized yet
 		if (partitionRequestClient == null) {
-			// Create a client and request the partition
-			try {
-				partitionRequestClient = connectionManager.createPartitionRequestClient(connectionId);
-			} catch (Throwable t) {
-				throw new DataConsumptionException(partitionId, t);
-			}
-
-			partitionRequestClient.requestSubpartition(partitionId, subpartitionIndex, this, 0);
+			createPartitionRequestClient();
+			// throw exception when errors occur
+			checkError();
 		}
+
+		partitionRequestClient.requestSubpartition(partitionId, subpartitionIndex, this, 0);
 	}
 
 	/**
 	 * Retriggers a remote subpartition request.
 	 */
 	void retriggerSubpartitionRequest(int subpartitionIndex) throws IOException, InterruptedException {
-		checkState(partitionRequestClient != null, "Missing initial subpartition request.");
+		checkState(partitionRequestClient != null, "Partition request client initialization failed.");
 
 		if (increaseBackoff()) {
 			partitionRequestClient.requestSubpartition(

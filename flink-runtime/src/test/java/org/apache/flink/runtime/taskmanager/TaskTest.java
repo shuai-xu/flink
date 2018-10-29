@@ -1036,7 +1036,8 @@ public class TaskTest extends TestLogger {
 			taskMetricGroup,
 			consumableNotifier,
 			partitionProducerStateChecker,
-			executor);
+			executor,
+			java.util.concurrent.Executors.newSingleThreadExecutor());
 	}
 
 	// ------------------------------------------------------------------------

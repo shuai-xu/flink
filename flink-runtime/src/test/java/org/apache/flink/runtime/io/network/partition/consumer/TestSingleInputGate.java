@@ -29,6 +29,7 @@ import org.mockito.stubbing.Answer;
 
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
+import java.util.concurrent.Executors;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.mockito.Matchers.any;
@@ -65,6 +66,7 @@ public class TestSingleInputGate {
 			mock(TaskActions.class),
 			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
 			partitionRequestManager,
+			Executors.newSingleThreadExecutor(),
 			true,
 			false);
 

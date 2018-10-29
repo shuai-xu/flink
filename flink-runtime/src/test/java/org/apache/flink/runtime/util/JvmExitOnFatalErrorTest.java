@@ -101,7 +101,7 @@ public class JvmExitOnFatalErrorTest {
 		// this test works only on linux
 		assumeTrue(OperatingSystem.isLinux());
 
-		// to check what went wrong (when the test hangs) uncomment this line 
+		// to check what went wrong (when the test hangs) uncomment this line
 //		ProcessEntryPoint.main(new String[0]);
 
 		final KillOnFatalErrorProcess testProcess = new KillOnFatalErrorProcess();
@@ -137,7 +137,7 @@ public class JvmExitOnFatalErrorTest {
 		public String getEntryPointClassName() {
 			return ProcessEntryPoint.class.getName();
 		}
-	} 
+	}
 
 	// ------------------------------------------------------------------------
 
@@ -230,7 +230,8 @@ public class JvmExitOnFatalErrorTest {
 						UnregisteredMetricGroups.createUnregisteredTaskMetricGroup(),
 						new NoOpResultPartitionConsumableNotifier(),
 						new NoOpPartitionProducerStateChecker(),
-						executor);
+						executor,
+						Executors.newSingleThreadExecutor());
 
 				System.err.println("starting task thread");
 
