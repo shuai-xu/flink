@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlStdOperatorTable}
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
@@ -43,7 +44,7 @@ import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregate
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.types.DataTypes._
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, DecimalType}
-import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, MapViewTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, BoxedValueTypeInfo, MapViewTypeInfo, TypeUtils}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -280,7 +281,7 @@ object AggregateUtil {
           .map(FlinkTypeFactory.toInternalType) // InternalType
           .toArray
 
-        val keyType = createInternalType(argTypes)
+        val keyType = createDistinctKeyType(argTypes)
 
         val accTypeInfo = new MapViewTypeInfo(
           TypeUtils.createTypeInfoFromDataType(keyType),
@@ -325,24 +326,25 @@ object AggregateUtil {
     (distinctMap.values.toArray, newAggCalls)
   }
 
-  def createInternalType(argTypes: Array[DataType]): DataType = {
+  def createDistinctKeyType(argTypes: Array[DataType]): DataType = {
     if (argTypes.length == 1) {
-      argTypes(0) match {
-        case BYTE => BYTE
-        case SHORT => SHORT
-        case INT => INT
-        case LONG => LONG
-        case FLOAT => FLOAT
-        case DOUBLE => DOUBLE
-        case BOOLEAN => BOOLEAN
-        case DATE | TIME => INT
-        case TIMESTAMP => LONG
-        case STRING => DataTypes.of(BinaryStringTypeInfo.INSTANCE)
-        case d: DecimalType => d
+      val typeInfo: TypeInformation[_] = argTypes(0) match {
+        case BYTE => Types.BYTE
+        case SHORT => Types.SHORT
+        case INT => Types.INT
+        case LONG => Types.LONG
+        case FLOAT => Types.FLOAT
+        case DOUBLE => Types.DOUBLE
+        case BOOLEAN => Types.BOOLEAN
+        case DATE | TIME => Types.INT
+        case TIMESTAMP => Types.LONG
+        case STRING => BinaryStringTypeInfo.INSTANCE
+        case d: DecimalType => Types.DECIMAL(d.precision(), d.scale())
         case t =>
           throw new TableException(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Distinct", t.toString))
       }
+      DataTypes.of(new BoxedValueTypeInfo(typeInfo))
     } else {
       new BaseRowType(argTypes.map(DataTypes.internal): _*)
     }

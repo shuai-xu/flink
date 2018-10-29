@@ -25,9 +25,10 @@ import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.expressions.ResolvedBoxedValueInputReference
 import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
 import org.apache.flink.table.dataview.DataViewSpec
-import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference, ResolvedAggLocalReference}
+import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.AggregateInfo
@@ -264,10 +265,10 @@ class ImperativeAggCodeGen(
           genToExternal(ctx, externalUDITypes(index), expr.resultTerm)}"
       } else {
         // index to input field
-        val inputRef = if (DISTINCT_KEY_TERM == generator.input1Term) {
+        val inputRef = if (generator.input1Term.startsWith(DISTINCT_KEY_TERM)) {
           if (argTypes.length == 1) {
             // called from distinct merge and the inputTerm is the only argument
-            ResolvedAggLocalReference(generator.input1Term, "false", generator.input1Type)
+            ResolvedBoxedValueInputReference(generator.input1Term, inputTypes(f))
           } else {
             // called from distinct merge call and the inputTerm is BaseRow type
             ResolvedAggInputReference(f.toString, index, inputTypes(f))

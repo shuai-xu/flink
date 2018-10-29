@@ -57,17 +57,19 @@ class SplitAggregateITCase(
     val data = List(
       (1L, 1, "Hello 0"),
       (1L, 2, "Hello 1"),
-      (2L, 2, "Hello 0"),
       (2L, 3, "Hello 1"),
+      (3L, 5, "Hello 1"),
       (2L, 3, "Hello 2"),
       (2L, 4, "Hello 3"),
-      (2L, 4, "Hello 3"),
-      (2L, 4, "Hello 3"),
+      (2L, 4, null),
       (2L, 5, "Hello 4"),
       (3L, 5, "Hello 0"),
-      (3L, 5, "Hello 1"),
+      (2L, 4, "Hello 3"),
       (4L, 5, "Hello 2"),
+      (2L, 4, "Hello 3"),
+      (4L, 5, null),
       (4L, 5, "Hello 3"),
+      (2L, 2, "Hello 0"),
       (4L, 6, "Hello 1"))
 
     val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
@@ -108,8 +110,8 @@ class SplitAggregateITCase(
     t1.toRetractStream[Row].addSink(sink)
     env.execute()
 
-    val expected = List("1,3,2,1.5", "2,25,5,3.5714285714285716",
-                        "3,10,2,5.0", "4,16,3,5.333333333333333")
+    val expected = List("1,3,2,1.5", "2,29,5,3.625",
+                        "3,10,2,5.0", "4,21,3,5.25")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
@@ -145,7 +147,7 @@ class SplitAggregateITCase(
     t1.toRetractStream[Row].addSink(sink)
     env.execute()
 
-    val expected = List("1,1,2", "2,1,7", "3,1,2", "4,1,3")
+    val expected = List("1,1,2", "2,1,8", "3,1,2", "4,1,4")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
@@ -235,9 +237,10 @@ class SplitAggregateITCase(
     t1.toRetractStream[Row].addSink(sink)
     env.execute()
 
-    val expected = List("2,2,2,1,4,5,Hello 2", "2,2,2,1,4,5,Hello 3", "2,2,2,1,4,6,Hello 1",
-                        "5,1,4,2,3,5,Hello 0", "5,1,4,2,3,5,Hello 1", "6,2,2,1,4,5,Hello 2",
-                        "6,2,2,1,4,5,Hello 3", "6,2,2,1,4,6,Hello 1")
+    val expected = List("2,2,2,1,4,5,Hello 2", "2,2,2,1,4,5,Hello 3", "2,2,2,1,4,5,null",
+                        "2,2,2,1,4,6,Hello 1", "5,1,4,2,3,5,Hello 0", "5,1,4,2,3,5,Hello 1",
+                        "6,2,2,1,4,5,Hello 2", "6,2,2,1,4,5,Hello 3", "6,2,2,1,4,5,null",
+                        "6,2,2,1,4,6,Hello 1")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 

@@ -28,7 +28,7 @@ import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}
+import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable, RexBoxedValueVariable}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.dataformat._
@@ -628,6 +628,29 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       GeneratedExpression(resultTerm, nullTerm, "", localVar.internalType)
     case local: RexAggLocalVariable =>
       GeneratedExpression(local.fieldTerm, local.nullTerm, NO_CODE, local.internalType)
+    case value: RexBoxedValueVariable =>
+      val inputExpr = ctx.getReusableInputUnboxingExprs(input1Term, 0) match {
+        case Some(expr) => expr
+        case None =>
+          val bType = boxedTypeTermForType(value.internalType)
+          val defaultValue = primitiveDefaultValue(value.internalType)
+          val resultTerm = newName("field")
+          val nullTerm = newName("isNull")
+          val code =
+            s"""
+               |$bType $resultTerm = $defaultValue;
+               |boolean $nullTerm = true;
+               |if ($input1Term.getValue() != null) {
+               |  $nullTerm = false;
+               |  $resultTerm = ($bType) $input1Term.getValue();
+               |}
+            """.stripMargin
+          val expr = GeneratedExpression(resultTerm, nullTerm, code, value.internalType)
+          ctx.addReusableInputUnboxingExprs(input1Term, 0, expr)
+          expr
+      }
+      // hide the generated code as it will be executed only once
+      GeneratedExpression(inputExpr.resultTerm, inputExpr.nullTerm, NO_CODE, inputExpr.resultType)
     case _ => throw new CodeGenException("Local variables are not supported yet.")
   }
 

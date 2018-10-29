@@ -36,3 +36,9 @@ case class RexAggLocalVariable(
     dataType: RelDataType,
     internalType: InternalType)
   extends RexLocalRef(0, dataType)
+
+case class RexBoxedValueVariable(
+    fieldTerm: String,
+    dataType: RelDataType,
+    internalType: InternalType)
+  extends RexLocalRef(0, dataType)

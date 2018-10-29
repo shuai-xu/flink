@@ -25,7 +25,7 @@ import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.GeneratedExpression._
-import org.apache.flink.table.dataformat.GenericRow
+import org.apache.flink.table.dataformat.{BoxedValue, GenericRow}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
@@ -70,6 +70,7 @@ class DistinctAggCodeGen(
   val MAP_VIEW: String = className[MapView[_, _]]
   val MAP_ENTRY: String = className[java.util.Map.Entry[_, _]]
   val ITERABLE: String = className[java.lang.Iterable[_]]
+  val BOXED_VALUE: String = className[BoxedValue[_]]
 
   val externalAccType: DataType = distinctInfo.accType
   val keyType: DataType = distinctInfo.keyType
@@ -209,8 +210,9 @@ class DistinctAggCodeGen(
     val otherAccTerm = otherAccExpr.resultTerm
     val otherEntries = newName("otherEntries")
 
+    val keyTerm = newName(DISTINCT_KEY_TERM)
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck = true)
-      .bindInput(DataTypes.internal(keyType), inputTerm = DISTINCT_KEY_TERM)
+      .bindInput(DataTypes.internal(keyType), inputTerm = keyTerm)
 
     val retractCodes = if (consumeRetraction) {
       innerAggCodeGens.map(_.retract(exprGenerator)).mkString("\n")
@@ -224,28 +226,28 @@ class DistinctAggCodeGen(
        |$ITERABLE<$MAP_ENTRY> $otherEntries = ($ITERABLE<$MAP_ENTRY>) $otherAccTerm.entries();
        |if ($otherEntries != null) {
        |  for ($MAP_ENTRY entry: $otherEntries) {
-       |    $keyTypeTerm $DISTINCT_KEY_TERM = ($keyTypeTerm) entry.getKey();
-       |    ${ctx.reuseInputUnboxingCode(Set(DISTINCT_KEY_TERM))}
+       |    $keyTypeTerm $keyTerm = ($keyTypeTerm) entry.getKey();
+       |    ${ctx.reuseInputUnboxingCode(Set(keyTerm))}
        |    java.lang.Long otherCnt = (java.lang.Long) entry.getValue();
-       |    java.lang.Long thisCnt = (java.lang.Long) $distinctAccTerm.get($DISTINCT_KEY_TERM);
+       |    java.lang.Long thisCnt = (java.lang.Long) $distinctAccTerm.get($keyTerm);
        |    if (thisCnt != null) {
        |      java.lang.Long mergedCnt = thisCnt + otherCnt;
        |      if (mergedCnt == 0) {
-       |        $distinctAccTerm.remove($DISTINCT_KEY_TERM);
+       |        $distinctAccTerm.remove($keyTerm);
        |        if (thisCnt > 0) {
        |          // do retract
        |          $retractCodes
        |          // end do retract
        |        }
        |      } else if (mergedCnt < 0) {
-       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, mergedCnt);
+       |        $distinctAccTerm.put($keyTerm, mergedCnt);
        |        if (thisCnt > 0) {
        |          // do retract
        |          $retractCodes
        |          // end do retract
        |        }
        |      } else {    // mergedCnt > 0
-       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, mergedCnt);
+       |        $distinctAccTerm.put($keyTerm, mergedCnt);
        |        if (thisCnt < 0) {
        |          // do accumulate
        |          $accumulateCodes
@@ -254,12 +256,12 @@ class DistinctAggCodeGen(
        |      }
        |    } else {  // thisCnt == null
        |      if (otherCnt > 0) {
-       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, otherCnt);
+       |        $distinctAccTerm.put($keyTerm, otherCnt);
        |        // do accumulate
        |        $accumulateCodes
        |        // end do accumulate
        |      } else if (otherCnt < 0) {
-       |        $distinctAccTerm.put($DISTINCT_KEY_TERM, otherCnt);
+       |        $distinctAccTerm.put($keyTerm, otherCnt);
        |      } // ignore otherCnt == 0
        |    }
        |  } // end foreach
@@ -306,7 +308,17 @@ class DistinctAggCodeGen(
         outRow = keyTerm,
         reusedOutRow = false)
     } else {
-      fieldExprs.head
+      val fieldExpr = fieldExprs.head
+      val keyTerm = newName(DISTINCT_KEY_TERM)
+      val code =
+        s"""
+          |${fieldExpr.code}
+          |$BOXED_VALUE $keyTerm = new $BOXED_VALUE();
+          |if (!${fieldExpr.nullTerm}) {
+          |  $keyTerm.setValue(${fieldExpr.resultTerm});
+          |}
+        """.stripMargin
+      GeneratedExpression(keyTerm, NEVER_NULL, code, DataTypes.internal(keyType))
     }
   }
 

@@ -106,7 +106,7 @@ class DeclarativeAggCodeGen(
   }
 
   def accumulate(generator: ExprCodeGenerator): String = {
-    val resolvedExprs = if (DISTINCT_KEY_TERM == generator.input1Term) {
+    val resolvedExprs = if (generator.input1Term.startsWith(DISTINCT_KEY_TERM)) {
       // called from distinct merge
       function.accumulateExpressions
         .map(_.postOrderTransform(resolveReference(isDistinctMerge = true)))
@@ -142,7 +142,7 @@ class DeclarativeAggCodeGen(
   }
 
   def retract(generator: ExprCodeGenerator): String = {
-    val resolvedExprs = if (DISTINCT_KEY_TERM == generator.input1Term) {
+    val resolvedExprs = if (generator.input1Term.startsWith(DISTINCT_KEY_TERM)) {
       // called from distinct merge
       function.retractExpressions
         .map(_.postOrderTransform(resolveReference(isDistinctMerge = true)))
@@ -233,8 +233,8 @@ class DeclarativeAggCodeGen(
         } else {
           if (isDistinctMerge) {  // this is called from distinct merge
             if (function.inputCount == 1) {
-              // the operand is just the distinct key
-              ResolvedAggLocalReference(DISTINCT_KEY_TERM, "false", argTypes(0))
+              // the distinct key is a BoxedValue
+              ResolvedBoxedValueInputReference(input.name, argTypes(0))
             } else {
               // the distinct key is a BaseRow
               ResolvedAggInputReference(input.name, localIndex, argTypes(localIndex))

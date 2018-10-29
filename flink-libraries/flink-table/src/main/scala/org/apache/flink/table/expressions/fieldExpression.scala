@@ -24,6 +24,7 @@ import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory.isTimeIndicatorType
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}
 import org.apache.flink.table.functions.sql.StreamRecordTimestampSqlFunction
+import org.apache.flink.table.calcite._
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
@@ -178,6 +179,34 @@ case class ResolvedAggLocalReference(
   override private[flink] def withName(newName: String): Attribute = {
     if (newName == name) this
     else ResolvedAggLocalReference(newName, nullTerm, resultType)
+  }
+
+  override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =
+    logicalExprVisitor.visit(this)
+}
+
+/**
+  * Special reference which represent a BoxedValue input filed,
+  * [[ResolvedBoxedValueInputReference]] uses name to locate the field.
+  */
+case class ResolvedBoxedValueInputReference(
+    name: String,
+    resultType: InternalType)
+  extends Attribute {
+
+  override def toString = s"'$name"
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    val typeFactory = relBuilder.getRexBuilder.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    RexBoxedValueVariable(
+      name,
+      typeFactory.createTypeFromInternalType(resultType, isNullable = true),
+      DataTypes.internal(resultType))
+  }
+
+  override private[flink] def withName(newName: String): Attribute = {
+    if (newName == name) this
+    else ResolvedBoxedValueInputReference(newName, resultType)
   }
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =

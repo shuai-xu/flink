@@ -17,11 +17,14 @@
  */
 package org.apache.flink.table.runtime.stream.sql
 
+import java.lang.{Integer => JInt, Long => JLong}
+
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.DataStream
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.functions.aggfunctions.{ConcatAggFunction, ConcatWsAggFunction}
 import org.apache.flink.table.hive.functions.{HiveFunctionWrapper, HiveUDAFFunction}
@@ -154,29 +157,35 @@ class AggregateITCase(
 
   @Test
   def testCountDistinct(): Unit = {
-    val data = new mutable.MutableList[(Int, Long, String)]
-    data.+=((1, 1L, "A"))
-    data.+=((2, 2L, "B"))
-    data.+=((3, 2L, "B"))
-    data.+=((4, 3L, "C"))
-    data.+=((5, 3L, "C"))
-    data.+=((6, 3L, "C"))
-    data.+=((7, 4L, "B"))
-    data.+=((8, 4L, "A"))
-    data.+=((9, 4L, "D"))
-    data.+=((10, 4L, "E"))
-    data.+=((11, 5L, "A"))
-    data.+=((12, 5L, "B"))
+    val data = new mutable.MutableList[Row]
+    data.+=(Row.of(JInt.valueOf(1), JLong.valueOf(1L), "A"))
+    data.+=(Row.of(JInt.valueOf(2), JLong.valueOf(2L), "B"))
+    data.+=(Row.of(null, JLong.valueOf(2L), "B"))
+    data.+=(Row.of(JInt.valueOf(3), JLong.valueOf(2L), "B"))
+    data.+=(Row.of(JInt.valueOf(4), JLong.valueOf(3L), "C"))
+    data.+=(Row.of(JInt.valueOf(5), JLong.valueOf(3L), "C"))
+    data.+=(Row.of(JInt.valueOf(5), JLong.valueOf(3L), null))
+    data.+=(Row.of(JInt.valueOf(6), JLong.valueOf(3L), "C"))
+    data.+=(Row.of(JInt.valueOf(7), JLong.valueOf(4L), "B"))
+    data.+=(Row.of(JInt.valueOf(8), JLong.valueOf(4L), "A"))
+    data.+=(Row.of(JInt.valueOf(9), JLong.valueOf(4L), "D"))
+    data.+=(Row.of(null, JLong.valueOf(4L), null))
+    data.+=(Row.of(JInt.valueOf(10), JLong.valueOf(4L), "E"))
+    data.+=(Row.of(JInt.valueOf(11), JLong.valueOf(5L), "A"))
+    data.+=(Row.of(JInt.valueOf(12), JLong.valueOf(5L), "B"))
 
-    val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
+    val rowType: RowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)
+
+    val t = failingDataSource(data)(rowType).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T", t)
-    val t1 = tEnv.sqlQuery("SELECT b, count(distinct c), count(distinct a) FROM T GROUP BY b")
+    val t1 = tEnv.sqlQuery(
+      "SELECT b, count(*), count(distinct c), count(distinct a) FROM T GROUP BY b")
 
     val sink = new TestingRetractSink
     t1.toRetractStream[Row].addSink(sink)
     env.execute()
 
-    val expected = List("1,1,1", "2,1,2", "3,1,3", "4,4,4", "5,2,2")
+    val expected = List("1,1,1,1", "2,3,1,2", "3,4,1,3", "4,5,4,4", "5,2,2,2")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
