@@ -26,9 +26,8 @@ import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, Unb
 import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRangeInterval, toRowInterval}
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
-import org.apache.flink.table.expressions.{ToBase64, _}
-import org.apache.flink.table.functions.{AggregateFunction, DistinctAggregateFunction, TableValuedAggregateFunction}
-import org.apache.flink.table.expressions.{Atan2, Cosh, DistinctAgg, Hex, Literal, RegexpExtract, RegexpReplace, Repeat, Replace, TimestampDiff, UDTVAGGExpression, _}
+import org.apache.flink.table.functions.{AggregateFunction, DistinctAggregateFunction}
+import org.apache.flink.table.expressions.{Atan2, Cosh, DistinctAgg, Hex, Literal, RegexpExtract, RegexpReplace, Repeat, Replace, TimestampDiff, _}
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
 import org.apache.flink.table.types.{DataTypes, InternalType}
 
@@ -1180,10 +1179,6 @@ trait ImplicitExpressionConversions {
   implicit def array2ArrayConstructor(array: Array[_]): Expression = convertArray(array)
   implicit def userDefinedAggFunctionConstructor[T: TypeInformation, ACC: TypeInformation]
       (udagg: AggregateFunction[T, ACC]): UDAGGExpression[T, ACC] = UDAGGExpression(udagg)
-  implicit def tableValuedExpression2Call[T: TypeInformation, ACC: TypeInformation]
-  (udtvagg: TableValuedAggregateFunction[T, ACC]): UDTVAGGExpression[T, ACC] = {
-    new UDTVAGGExpression[T, ACC](udtvagg)
-  }
   implicit def toDistinct(agg: Aggregation): DistinctAgg = DistinctAgg(agg)
   implicit def toDistinct[T: TypeInformation, ACC: TypeInformation]
   (agg: AggregateFunction[T, ACC]): DistinctAggregateFunction[T, ACC] =

@@ -283,9 +283,6 @@ class FlinkRelMdPopulationSize private extends MetadataHandler[BuiltInMetadata.P
       mq: RelMetadataQuery,
       groupKey: ImmutableBitSet): Double = {
     // for global agg which has inner local agg, it passes the parameters to input directly
-    if (rel.isFinal && rel.isTableValuedAgg(rel.aggregates)) {
-      return null
-    }
     if (rel.isFinal && rel.isMerge) {
       return mq.getPopulationSize(rel.getInput, groupKey)
     }

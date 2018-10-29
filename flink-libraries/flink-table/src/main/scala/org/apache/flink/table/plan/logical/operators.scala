@@ -24,15 +24,15 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{CorrelationId, JoinRelType}
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan
-import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
+import org.apache.calcite.rex.{RexInputRef, RexNode}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.api.{StreamTableEnvironment, TableEnvironment, UnresolvedException}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowCountLiteral
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.{TableFunction, TableValuedAggregateFunction}
-import org.apache.flink.table.functions.utils._
+import org.apache.flink.table.functions.TableFunction
+import org.apache.flink.table.functions.utils.{TableSqlFunction, UserDefinedFunctionUtils}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.schema.TypedFlinkTableFunction
 import org.apache.flink.table.sinks.TableSink
@@ -818,56 +818,4 @@ case class LogicalTableFunctionCall(
 
   override def accept[T](logicalSqlVisitor: LogicalNodeVisitor[T]): T =
     logicalSqlVisitor.visit(this)
-}
-
-/**
-  * LogicalNode for calling a user-defined table-valued aggregate function.
-  */
-case class LogicalTableValuedAggregateCall(
-    tableValuedAggFunctionCall: TableValuedAggFunctionCall,
-    groupKey: Seq[NamedExpression],
-    child: LogicalNode)
-  extends UnaryNode {
-
-  private val (generatedNames, _, fieldTypes) =
-    getFieldInfo(tableValuedAggFunctionCall.externalResultType)
-
-  override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
-    val flinkRelBuilder = relBuilder.asInstanceOf[FlinkRelBuilder]
-    child.construct(flinkRelBuilder)
-
-    val typeFactory = flinkRelBuilder.getTypeFactory
-    val function: TableValuedAggregateFunction[_, _] = tableValuedAggFunctionCall.function
-    val sqlFunction = new TableValuedAggSqlFunction(
-      function.functionIdentifier(),
-      function.toString,
-      function,
-      tableValuedAggFunctionCall.externalResultType,
-      tableValuedAggFunctionCall.externalAccType,
-      typeFactory
-    )
-
-    val call: RexCall =
-      flinkRelBuilder.call(
-        sqlFunction, tableValuedAggFunctionCall.args.map(_.toRexNode(flinkRelBuilder)).asJava)
-      .asInstanceOf[RexCall]
-
-    flinkRelBuilder.tableValuedAggregate(
-      call,
-      groupKey.map(_.toRexNode(flinkRelBuilder)),
-      groupKey.map(_.name))
-  }
-
-  override def output: Seq[Attribute] = {
-    groupKey.map(_.toAttribute) ++ generatedNames.zip(fieldTypes).map {
-      case (n, t) => ResolvedFieldReference(n, t)
-    }
-  }
-
-  override def accept[T](logicalSqlVisitor: LogicalNodeVisitor[T]): T =
-    logicalSqlVisitor.visit(this)
-
-  override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
-    super.resolveExpressions(tableEnv).asInstanceOf[LogicalTableValuedAggregateCall]
-  }
 }

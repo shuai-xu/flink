@@ -96,7 +96,7 @@ HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'long, 8.mi
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(string=[$0], TMP_0=[$1])
-+- LogicalWindowAggregate(group=[{0}], TMP_0=[org$apache$flink$table$runtime$utils$JavaUserDefinedAggFunctions$WeightedAvgWithMerge$75bfdae3448b12bf98607b2371ccad4e($1, $2)], window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], properties=[])
++- LogicalWindowAggregate(group=[{0}], TMP_0=[org$apache$flink$table$runtime$utils$JavaUserDefinedAggFunctions$WeightedAvgWithMerge$1275cea7c22dbb6d4f5610517c192bf4($1, $2)], window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], properties=[])
    +- LogicalProject(string=[$2], long=[$0], int=[$1])
       +- LogicalTableScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -134,7 +134,7 @@ HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'long, 5.m
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(string=[$0], TMP_0=[$1])
-+- LogicalWindowAggregate(group=[{0}], TMP_0=[org$apache$flink$table$runtime$utils$JavaUserDefinedAggFunctions$WeightedAvgWithMerge$75bfdae3448b12bf98607b2371ccad4e($1, $2)], window=[TumblingGroupWindow('w, 'long, 5.millis)], properties=[])
++- LogicalWindowAggregate(group=[{0}], TMP_0=[org$apache$flink$table$runtime$utils$JavaUserDefinedAggFunctions$WeightedAvgWithMerge$1275cea7c22dbb6d4f5610517c192bf4($1, $2)], window=[TumblingGroupWindow('w, 'long, 5.millis)], properties=[])
    +- LogicalProject(string=[$2], long=[$0], int=[$1])
       +- LogicalTableScan(table=[[_DataStreamTable_0]])
 ]]>

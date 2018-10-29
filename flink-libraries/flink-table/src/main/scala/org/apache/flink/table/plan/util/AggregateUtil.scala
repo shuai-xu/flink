@@ -550,9 +550,9 @@ case class DistinctInfo(
   */
 case class AggregateInfoList(
   aggInfos: Array[AggregateInfo],
-  count1AggIndex: Option[Int] = None,
-  count1AggInserted: Boolean = false,
-  distinctInfos: Array[DistinctInfo] = Array[DistinctInfo]()) {
+  count1AggIndex: Option[Int],
+  count1AggInserted: Boolean,
+  distinctInfos: Array[DistinctInfo]) {
 
   def getAggNames: Array[String] = aggInfos.map(_.agg.getName)
 

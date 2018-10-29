@@ -21,16 +21,15 @@ package org.apache.flink.table.functions.sql.internal
 import org.apache.calcite.sql.`type`.OperandTypes
 import org.apache.calcite.sql.{SqlFunction, SqlFunctionCategory, SqlKind, SqlSyntax}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.utils.AggSqlFunction.createReturnTypeInference
+import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.types.InternalType
 
 class SqlThrowExceptionFunction(
     tp: InternalType,
-    typeFactory: FlinkTypeFactory)
-  extends SqlFunction(
+    typeFactory: FlinkTypeFactory) extends SqlFunction(
   s"ThrowException",
   SqlKind.OTHER_FUNCTION,
-  createReturnTypeInference(tp, typeFactory),
+  AggSqlFunction.createReturnTypeInference(tp, typeFactory),
   null,
   OperandTypes.STRING,
   SqlFunctionCategory.USER_DEFINED_FUNCTION) {

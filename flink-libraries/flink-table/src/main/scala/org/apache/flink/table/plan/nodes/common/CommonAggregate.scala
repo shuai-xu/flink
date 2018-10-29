@@ -20,15 +20,24 @@ package org.apache.flink.table.plan.nodes.common
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
+import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
+import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, UserDefinedAggregateFunction => TableAggregateFunction}
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
 import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.plan.util.AggregateUtil._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-trait CommonAggregate{
+trait CommonAggregate {
+
+  private[flink] def groupingToString(inputType: RelDataType, grouping: Array[Int]): String = {
+
+    val inFields = inputType.getFieldNames.asScala
+    grouping.map( inFields(_) ).mkString(", ")
+  }
 
   private[flink] def buildAggregationToString(
       inputType: RelDataType,
@@ -169,7 +178,7 @@ trait CommonAggregate{
       var newArgList = aggCall.getArgList.asScala.map(_.toInt).toList
       if (isMerge) {
         newArgList = udf match {
-          case _: TableAggregateFunction[_] =>
+          case _: TableAggregateFunction[_, _] =>
             val argList = List(offset)
             offset = offset + 1
             argList
@@ -203,7 +212,7 @@ trait CommonAggregate{
         name
       } else {
         udf match {
-          case _: TableAggregateFunction[_] =>
+          case _: TableAggregateFunction[_, _] =>
             val name = outFields(offset)
             offset = offset + 1
             name
@@ -261,7 +270,7 @@ trait CommonAggregate{
       var newArgList = aggCall.getArgList.asScala.map(_.toInt).toList
       if (isMerge) {
         newArgList = udf match {
-          case _: TableAggregateFunction[_] =>
+          case _: TableAggregateFunction[_, _] =>
             val argList = List(offset)
             offset = offset + 1
             argList
@@ -300,7 +309,7 @@ trait CommonAggregate{
         name
       } else {
         udf match {
-          case _: TableAggregateFunction[_] =>
+          case _: TableAggregateFunction[_, _] =>
             val name = outFields(offset)
             offset = offset + 1
             name
@@ -325,5 +334,28 @@ trait CommonAggregate{
         s"$prefix$f AS $o"
       }
     }.mkString(", ")
+  }
+
+  private[flink] def getMiniBatchTrigger(queryConfig: StreamQueryConfig, useLocalAgg: Boolean) = {
+    val triggerTime = if (useLocalAgg) {
+      queryConfig.getMiniBatchTriggerTime / 2
+    } else {
+      queryConfig.getMiniBatchTriggerTime
+    }
+    val timeTrigger: Option[BundleTrigger[BaseRow]] =
+      if (queryConfig.isMicroBatchEnabled) {
+        None
+      } else {
+        Some(new TimeBundleTrigger[BaseRow](triggerTime))
+      }
+    val sizeTrigger: Option[BundleTrigger[BaseRow]] =
+      if (queryConfig.getMiniBatchTriggerSize == Long.MinValue) {
+        None
+      } else {
+        Some(new CountBundleTrigger[BaseRow](queryConfig.getMiniBatchTriggerSize))
+      }
+    new CombinedBundleTrigger[BaseRow](
+      Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*
+    )
   }
 }

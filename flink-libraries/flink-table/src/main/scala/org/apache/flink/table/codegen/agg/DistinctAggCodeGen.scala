@@ -270,11 +270,6 @@ class DistinctAggCodeGen(
       "Distinct shouldn't return result value, this is a bug, please file a issue.")
   }
 
-  override def emitValue(generator: ExprCodeGenerator): String = {
-    throw new TableException(
-      "Distinct shouldn't call emitValue, this is a bug, please file a issue.")
-  }
-
   override def checkNeededMethods(
       needAccumulate: Boolean,
       needRetract: Boolean,
@@ -392,5 +387,4 @@ class DistinctAggCodeGen(
     // hide the generated code as it will be executed only once
     GeneratedExpression(inputExpr.resultTerm, inputExpr.nullTerm, "", inputExpr.resultType)
   }
-
 }

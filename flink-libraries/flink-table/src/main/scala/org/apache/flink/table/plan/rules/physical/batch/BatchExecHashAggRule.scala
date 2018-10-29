@@ -60,10 +60,8 @@ class BatchExecHashAggRule
     val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
     if (isTwoPhaseAggWorkable(aggregates, call)) {
       //localHashAgg
-      val aggNames: Seq[String] = agg.getNamedAggCalls.map(_.right)
-      val cluster = agg.getCluster
       val localAggRelType = inferLocalAggType(
-        input.getRowType, cluster, aggNames, groupSet, auxGroupSet, aggregates,
+        input.getRowType, agg, groupSet, auxGroupSet, aggregates,
         aggBufferTypes.map(_.map(DataTypes.internal)))
       val localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
       val newInput = RelOptRule.convert(input, localRequiredTraitSet)

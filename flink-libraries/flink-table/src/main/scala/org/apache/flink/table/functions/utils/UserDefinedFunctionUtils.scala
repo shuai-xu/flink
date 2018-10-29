@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+
 package org.apache.flink.table.functions.utils
 
 import java.lang.reflect.{Method, Modifier}
@@ -32,7 +33,7 @@ import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.expressions.{TableValuedAggFunctionCall, _}
+import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions._
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
@@ -123,7 +124,7 @@ object UserDefinedFunctionUtils {
   }
 
   def getAggUserDefinedInputTypes(
-      func: UserDefinedAggregateFunction[_],
+      func: AggregateFunction[_, _],
       externalAccType: DataType,
       expectedTypes: Array[InternalType]): Array[DataType] = {
     val accMethod = getAggFunctionUDIMethod(
@@ -147,7 +148,7 @@ object UserDefinedFunctionUtils {
     * Elements of the signature can be null (act as a wildcard).
     */
   def getAccumulateMethodSignature(
-      function: UserDefinedAggregateFunction[_],
+      function: AggregateFunction[_, _],
       expectedTypes: Seq[InternalType])
       : Option[Array[Class[_]]] = {
     getAggFunctionUDIMethod(
@@ -186,7 +187,7 @@ object UserDefinedFunctionUtils {
   }
 
   def getAggFunctionUDIMethod(
-      function: UserDefinedAggregateFunction[_],
+      function: AggregateFunction[_, _],
       methodName: String,
       accType: DataType,
       expectedTypes: Seq[InternalType])
@@ -432,35 +433,7 @@ object UserDefinedFunctionUtils {
       externalResultType,
       externalAccType,
       typeFactory,
-      aggFunction.requiresOver())
-  }
-
-  /**
-    * Create [[SqlFunction]] for an [[TableValuedAggregateFunction]]
-    *
-    * @param name function name
-    * @param aggFunction aggregate function
-    * @param typeFactory type factory
-    * @return the TableSqlFunction
-    */
-  def createTableValuedAggregateSqlFunction(
-    name: String,
-    displayName: String,
-    aggFunction: TableValuedAggregateFunction[_, _],
-    externalResultType: DataType,
-    externalAccType: DataType,
-    typeFactory: FlinkTypeFactory)
-  : SqlFunction = {
-    //check if a qualified accumulate method exists before create Sql function
-    checkAndExtractMethods(aggFunction, "accumulate")
-
-    TableValuedAggSqlFunction(
-      name,
-      displayName,
-      aggFunction,
-      externalResultType,
-      externalAccType,
-      typeFactory)
+      aggFunction.requiresOver)
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -476,7 +449,7 @@ object UserDefinedFunctionUtils {
     * @return The inferred result type of the AggregateFunction.
     */
   def getResultTypeOfAggregateFunction(
-      aggregateFunction: UserDefinedAggregateFunction[_],
+      aggregateFunction: AggregateFunction[_, _],
       extractedType: DataType = null)
     : DataType = {
 
@@ -508,7 +481,7 @@ object UserDefinedFunctionUtils {
     * @return The inferred accumulator type of the AggregateFunction.
     */
   def getAccumulatorTypeOfAggregateFunction(
-    aggregateFunction: UserDefinedAggregateFunction[_],
+    aggregateFunction: AggregateFunction[_, _],
     extractedType: DataType = null): DataType = {
 
     val accType = aggregateFunction.getAccumulatorType
@@ -540,22 +513,12 @@ object UserDefinedFunctionUtils {
     */
   @throws(classOf[InvalidTypesException])
   private def extractTypeFromAggregateFunction(
-    aggregateFunction: UserDefinedAggregateFunction[_],
-    parameterTypePos: Int): DataType = {
+      aggregateFunction: AggregateFunction[_, _],
+      parameterTypePos: Int): DataType = {
 
-    val clazz = aggregateFunction match {
-      case agg: AggregateFunction[_, _] => classOf[AggregateFunction[_, _]]
-      case tvAgg: TableValuedAggregateFunction[_, _] => classOf[TableValuedAggregateFunction[_, _]]
-      case _ =>
-        throw new TableException(s"Unsupported UserDefinedAggregateFunction: ${
-          aggregateFunction
-          .getClass
-          .getSimpleName
-        }")
-    }
     DataTypes.of(TypeExtractor.createTypeInfo(
       aggregateFunction,
-      clazz,
+      classOf[AggregateFunction[_, _]],
       aggregateFunction.getClass,
       parameterTypePos))
   }
@@ -749,33 +712,6 @@ object UserDefinedFunctionUtils {
     val functionCall: LogicalTableFunctionCall = unwrap(ExpressionParser.parseExpression(udtf))
       .as(alias).toLogicalTableFunctionCall(child = null)
     functionCall
-  }
-
-  /**
-    * Creates a [[TableValuedAggFunctionCall]] by parsing a String expression.
-    *
-    * @param tableEnv The table environmenent to lookup the function.
-    * @param tvaggCall String expression of a TableValuedAggFunctionCall,
-    *                                   such as "fun(c)"
-    * @return A TableValuedAggFunctionCall.
-    */
-  def createLogicalTableValuedAggFunctionCall(
-    tableEnv: TableEnvironment,
-    tvaggCall: String): TableValuedAggFunctionCall = {
-
-    // unwrap an Expression until we get a TableValuedAggFunctionCall
-    def unwrap(expr: Expression): TableValuedAggFunctionCall = expr match {
-      case Call(name, args) =>
-        val function = tableEnv.chainedFunctionCatalog.lookupFunction(name, args)
-        unwrap(function)
-      case c: TableValuedAggFunctionCall => c
-      case _ =>
-        throw new TableException(
-          "aggApply(String) constructor only accept String " +
-            "that define table-valued function.")
-    }
-
-    unwrap(ExpressionParser.parseExpression(tvaggCall))
   }
 
   def getOperandType(callBinding: SqlOperatorBinding): Seq[InternalType] = {

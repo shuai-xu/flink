@@ -99,16 +99,12 @@ class FlinkRelMdModifiedMonotonicityTest extends FlinkRelMdHandlerTestBase {
     val rowType = new BaseRowTypeInfo(classOf[BaseRow], BasicTypeInfo.LONG_TYPE_INFO)
     val dataType = DataTypes.of(rowType)
     val udaf = new MyAgg
-    val aggSqlFunction = new AggSqlFunction(
-      "udaf", "udaf", udaf, dataType, dataType, typeFactory,false)
+    val aggSqlFunction =
+      new AggSqlFunction("udaf", "udaf", udaf, dataType, dataType, typeFactory, false)
     val udagg = relBuilder.scan("t1").aggregate(
       relBuilder.groupKey(relBuilder.field("id")),
       relBuilder.aggregateCall(
-        aggSqlFunction,
-        false,
-        null,
-        "avg_score",
-        relBuilder.field("score"))).build()
+        aggSqlFunction, false, null, "avg_score", relBuilder.field("score"))).build()
     assertEquals(
       new RelModifiedMonotonicity(Array(CONSTANT, INCREASING)).toString,
       mq.getRelModifiedMonotonicity(udagg).toString

@@ -15,21 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.flink.table.api
 
 import org.apache.calcite.rel.RelNode
-import org.apache.calcite.schema.TemporalTable
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Literal, NamedExpression, Ordering, TableValuedAggFunctionCall, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Literal, Ordering, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
+import org.apache.flink.table.plan.logical.{Minus, _}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, TableSourceTable}
-import org.apache.flink.table.plan.logical.{LogicalTableValuedAggregateCall, Minus, _}
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink, TableSink}
 import org.apache.flink.table.types._
-import org.apache.flink.table.validate.ValidationFailure
 import org.apache.flink.types.Row
 
 import _root_.scala.annotation.varargs
@@ -775,6 +772,7 @@ class Table(
     * }}}
     *
     * @param offset number of records to skip
+    * @deprecated Please use [[Table.offset()]] and [[Table.fetch()]] instead.
     */
   @deprecated(message = "Deprecated in favor of Table.offset() and Table.fetch()")
   def limit(offset: Int): Table = {
@@ -795,6 +793,7 @@ class Table(
     *
     * @param offset number of records to skip
     * @param fetch number of records to be returned
+   * @deprecated Please use [[Table.offset()]] and [[Table.fetch()]] instead.
     */
   @deprecated(message = "Deprecated in favor of Table.offset() and Table.fetch()")
   def limit(offset: Int, fetch: Int): Table = {
@@ -1011,32 +1010,6 @@ class Table(
       case _: LeafNode => false
     }
   }
-
-  /**
-    * Computes the given table-valued aggregation, returning a table.
-    *
-    * Example:
-    *
-    * {{{
-    *   tab.aggApply(aggregate table function call)
-    * }}}
-    */
-  def aggApply(tableValuedAggregateFunctionCall: TableValuedAggFunctionCall): Table = {
-    this.groupBy().aggApply(tableValuedAggregateFunctionCall)
-  }
-
-  /**
-    * Computes the given table-valued aggregation, returning a table.
-    *
-    * Example:
-    *
-    * {{{
-    *   tab.aggApply("aggregate table function call")
-    * }}}
-    */
-  def aggApply(tableValuedAggregateFunctionCall: String): Table = {
-    this.groupBy().aggApply(tableValuedAggregateFunctionCall)
-  }
 }
 
 /**
@@ -1045,73 +1018,6 @@ class Table(
 class GroupedTable(
   private[flink] val table: Table,
   private[flink] val groupKey: Seq[Expression]) {
-
-  /**
-    * Computes the given table-valued aggregation, returning a table for each unique key.
-    *
-    * Example:
-    *
-    * {{{
-    *   tab.groupBy('key).aggApply(aggregate table function call)
-    * }}}
-    */
-  def aggApply(tableValuedAggregateFunctionCall: TableValuedAggFunctionCall): Table = {
-    val expandedFields =
-      expandProjectList(tableValuedAggregateFunctionCall.args, table.logicalPlan, table.tableEnv)
-
-    val inputFields : Seq[(NamedExpression, UnresolvedFieldReference)] =
-      expandedFields.zipWithIndex.map(t => (UnresolvedAlias(Alias.apply(t._1, "_f" + t._2)),
-          UnresolvedFieldReference("_f" + t._2)))
-
-    val groupFields: Seq[(NamedExpression, UnresolvedFieldReference)] =
-      groupKey.zipWithIndex.map(t => {
-      t._1 match {
-        case e: NamedExpression => (UnresolvedAlias(e), UnresolvedFieldReference(e.name))
-        case _ => (UnresolvedAlias(Alias.apply(t._1, "_g" + t._2)),
-          UnresolvedFieldReference("_g" + t._2))
-      }
-    })
-
-    val validateCall = TableValuedAggFunctionCall(
-      tableValuedAggregateFunctionCall.function,
-      tableValuedAggregateFunctionCall.externalResultType,
-      tableValuedAggregateFunctionCall.externalAccType,
-      expandedFields
-    )
-
-    val validateNode = LogicalTableValuedAggregateCall(validateCall, Seq(), table.logicalPlan)
-
-    validateNode.validate(table.tableEnv)
-
-    val newCall = TableValuedAggFunctionCall(
-      tableValuedAggregateFunctionCall.function,
-      tableValuedAggregateFunctionCall.externalResultType,
-      tableValuedAggregateFunctionCall.externalAccType,
-      inputFields.map(_._2)
-    )
-
-    new Table(table.tableEnv,
-      LogicalTableValuedAggregateCall(newCall, groupFields.map(_._2),
-         Project(inputFields.map(_._1) ++ groupFields.map(_._1), table.logicalPlan
-           ).validate(table.tableEnv)
-        ).validate(table.tableEnv))
-  }
-
-  /**
-    * Computes the given table-valued aggregation, returning a table for each unique key.
-    *
-    * Example:
-    *
-    * {{{
-    *   tab.groupBy("key").aggApply("aggregate table function call")
-    * }}}
-    */
-  def aggApply(tableValuedAggregateFunctionCall: String): Table = {
-    val call = UserDefinedFunctionUtils.createLogicalTableValuedAggFunctionCall(
-      table.tableEnv,
-      tableValuedAggregateFunctionCall)
-    aggApply(call)
-  }
 
   /**
     * Performs a selection operation on a grouped table. Similar to an SQL SELECT statement.

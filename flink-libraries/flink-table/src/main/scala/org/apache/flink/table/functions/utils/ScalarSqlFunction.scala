@@ -20,14 +20,14 @@ package org.apache.flink.table.functions.utils
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql._
-import org.apache.calcite.sql.`type`.{SqlOperandCountRanges, SqlOperandTypeChecker, SqlOperandTypeInference, SqlReturnTypeInference}
 import org.apache.calcite.sql.`type`.SqlOperandTypeChecker.Consistency
+import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.{CustomTypeDefinedFunction, ScalarFunction}
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.utils.ScalarSqlFunction._
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getOperandType, _}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
 
@@ -64,10 +64,10 @@ class ScalarSqlFunction(
 object ScalarSqlFunction {
 
   private[flink] def createReturnTypeInference(
-    name: String,
-    scalarFunction: ScalarFunction,
-    typeFactory: FlinkTypeFactory)
-  : SqlReturnTypeInference = {
+      name: String,
+      scalarFunction: ScalarFunction,
+      typeFactory: FlinkTypeFactory)
+    : SqlReturnTypeInference = {
     /**
       * Return type inference based on [[ScalarFunction]] given information.
       */
@@ -76,14 +76,13 @@ object ScalarSqlFunction {
         val sqlTypes = opBinding.collectOperandTypes().asScala.toArray
         val parameters = getOperandType(opBinding).toArray
 
-        val arguments =
-          sqlTypes.indices.map(
-            i => if (opBinding.isOperandLiteral(i, false)) {
-              opBinding.getOperandLiteralValue(
-                i, TypeUtils.getExternalClassForType(parameters(i))).asInstanceOf[AnyRef]
-            } else {
-              null
-            }
+        val arguments = sqlTypes.indices.map(i =>
+          if (opBinding.isOperandLiteral(i, false)) {
+            opBinding.getOperandLiteralValue(
+              i, TypeUtils.getExternalClassForType(parameters(i))).asInstanceOf[AnyRef]
+          } else {
+            null
+          }
         ).toArray
         val resultType = getResultTypeOfScalarFunction(scalarFunction, arguments, parameters)
         typeFactory.createTypeFromTypeInfo(
@@ -93,38 +92,38 @@ object ScalarSqlFunction {
   }
 
   def inferOperandTypes(
-    name: String,
-    func: CustomTypeDefinedFunction,
-    typeFactory: FlinkTypeFactory,
-    callBinding: SqlCallBinding,
-    returnType: RelDataType,
-    operandTypes: Array[RelDataType]): Unit = {
+      name: String,
+      func: CustomTypeDefinedFunction,
+      typeFactory: FlinkTypeFactory,
+      callBinding: SqlCallBinding,
+      returnType: RelDataType,
+      operandTypes: Array[RelDataType]): Unit = {
     val parameters = getOperandType(callBinding).toArray
     if (getEvalUserDefinedMethod(func, parameters).isEmpty) {
       throwValidationException(name, func, parameters)
     }
     func.getParameterTypes(getEvalMethodSignature(func, parameters))
-    .map(DataTypes.toTypeInfo)
-    .map(typeFactory.createTypeFromTypeInfo(_, isNullable = true))
-    .zipWithIndex
-    .foreach {
-      case (t, i) => operandTypes(i) = t
-    }
+        .map(DataTypes.toTypeInfo)
+        .map(typeFactory.createTypeFromTypeInfo(_, isNullable = true))
+        .zipWithIndex
+        .foreach {
+          case (t, i) => operandTypes(i) = t
+        }
   }
 
   private[flink] def createOperandTypeInference(
-    name: String,
-    scalarFunction: ScalarFunction,
-    typeFactory: FlinkTypeFactory)
-  : SqlOperandTypeInference = {
+      name: String,
+      scalarFunction: ScalarFunction,
+      typeFactory: FlinkTypeFactory)
+    : SqlOperandTypeInference = {
     /**
       * Operand type inference based on [[ScalarFunction]] given information.
       */
     new SqlOperandTypeInference {
       override def inferOperandTypes(
-        callBinding: SqlCallBinding,
-        returnType: RelDataType,
-        operandTypes: Array[RelDataType]): Unit = {
+          callBinding: SqlCallBinding,
+          returnType: RelDataType,
+          operandTypes: Array[RelDataType]): Unit = {
         ScalarSqlFunction.inferOperandTypes(
           name, scalarFunction, typeFactory, callBinding, returnType, operandTypes)
       }
@@ -132,9 +131,9 @@ object ScalarSqlFunction {
   }
 
   private[flink] def createOperandTypeChecker(
-    name: String,
-    scalarFunction: ScalarFunction)
-  : SqlOperandTypeChecker = {
+      name: String,
+      scalarFunction: ScalarFunction)
+    : SqlOperandTypeChecker = {
 
     val methods = checkAndExtractMethods(scalarFunction, "eval")
 
@@ -169,9 +168,9 @@ object ScalarSqlFunction {
       }
 
       override def checkOperandTypes(
-        callBinding: SqlCallBinding,
-        throwOnFailure: Boolean)
-      : Boolean = {
+          callBinding: SqlCallBinding,
+          throwOnFailure: Boolean)
+        : Boolean = {
         val operandTypeInfo = getOperandType(callBinding)
 
         val foundMethod = getEvalUserDefinedMethod(scalarFunction, operandTypeInfo)

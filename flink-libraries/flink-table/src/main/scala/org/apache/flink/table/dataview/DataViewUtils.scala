@@ -25,8 +25,8 @@ import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo}
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview._
+import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.dataformat.GenericRow
-import org.apache.flink.table.functions.UserDefinedAggregateFunction
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils._
 
@@ -46,7 +46,7 @@ object DataViewUtils {
     */
   def useNullSerializerForStateViewFieldsFromAccType(
     index: Int,
-    aggFun: UserDefinedAggregateFunction[_],
+    aggFun: AggregateFunction[_, _],
     externalAccType: DataType,
     isStateBackedDataViews: Boolean)
   : (DataType, Array[DataViewSpec]) = {

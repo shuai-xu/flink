@@ -21,7 +21,9 @@ import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel._
 import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.types.DataTypes
@@ -33,7 +35,7 @@ class BatchExecSortAggRule
     extends RelOptRule(
       operand(
         classOf[FlinkLogicalAggregate],
-        operand(classOf[RelNode], any)), "BatchExecSortAggRule") with BatchExecSortAggRuleBase {
+        operand(classOf[RelNode], any)), "BatchExecSortAggRule") with BatchExecAggRuleBase {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
@@ -54,22 +56,96 @@ class BatchExecSortAggRule
       aggCallsWithoutAuxGroupCalls, input.getRowType)
     val groupSet = agg.getGroupSet.toArray
     val aggCallToAggFunction = aggCallsWithoutAuxGroupCalls.zip(aggregates)
-    val aggNames: Seq[String] = agg.getNamedAggCalls.map(_.right)
-    val cluster = agg.getCluster
     // TODO aggregate include projection now, so do not provide new trait will be safe
     val aggProvidedTraitSet = agg.getTraitSet.replace(FlinkConventions.BATCHEXEC)
 
-    generateSortAggPhysicalNode(
-      call,
-      cluster,
-      aggNames,
-      groupSet,
-      auxGroupSet,
-      aggregates,
-      aggBufferTypes.map(_.map(DataTypes.internal)),
-      aggCallToAggFunction,
-      aggProvidedTraitSet,
-      agg.getRowType)
+    if (isTwoPhaseAggWorkable(aggregates, call)) {
+      val localAggRelType = inferLocalAggType(
+        input.getRowType, agg, groupSet, auxGroupSet, aggregates,
+        aggBufferTypes.map(_.map(DataTypes.internal)))
+      //localSortAgg
+      var localRequiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+      if (agg.getGroupCount != 0) {
+        localRequiredTraitSet = localRequiredTraitSet.replace(createRelCollation(groupSet))
+      }
+      val newLocalInput = RelOptRule.convert(input, localRequiredTraitSet)
+      val providedLocalTraitSet = localRequiredTraitSet
+      val localSortAgg = new BatchExecLocalSortAggregate(
+        agg.getCluster,
+        call.builder(),
+        providedLocalTraitSet,
+        newLocalInput,
+        aggCallToAggFunction,
+        localAggRelType,
+        newLocalInput.getRowType,
+        groupSet,
+        auxGroupSet)
+
+      //globalSortAgg
+      val globalDistributions = if (agg.getGroupCount != 0) {
+        // global agg should use groupSet's indices as distribution fields
+        val globalGroupSet = groupSet.indices
+        val distributionFields = globalGroupSet.map(Integer.valueOf)
+        Seq(
+          FlinkRelDistribution.hash(distributionFields),
+          FlinkRelDistribution.hash(distributionFields, requireStrict = false))
+      } else {
+        Seq(FlinkRelDistribution.SINGLETON)
+      }
+      globalDistributions.foreach { globalDistribution =>
+        //replace the RelCollation with EMPTY
+        var requiredTraitSet = localSortAgg.getTraitSet
+            .replace(globalDistribution).replace(RelCollations.EMPTY)
+        if (agg.getGroupCount != 0) {
+          requiredTraitSet = requiredTraitSet.replace(createRelCollation(groupSet.indices.toArray))
+        }
+        val newInputForFinalAgg = RelOptRule.convert(localSortAgg, requiredTraitSet)
+        val globalSortAgg = new BatchExecSortAggregate(
+          agg.getCluster,
+          call.builder(),
+          aggProvidedTraitSet,
+          newInputForFinalAgg,
+          aggCallToAggFunction,
+          agg.getRowType,
+          newInputForFinalAgg.getRowType,
+          groupSet.indices.toArray,
+          (groupSet.length until groupSet.length + auxGroupSet.length).toArray,
+          isMerge = true)
+        call.transformTo(globalSortAgg)
+      }
+    }
+    if (isOnePhaseAggWorkable(agg, aggregates, call)) {
+      val requiredDistributions = if (agg.getGroupCount != 0) {
+        val distributionFields = groupSet.map(Integer.valueOf).toList
+        Seq(
+          FlinkRelDistribution.hash(distributionFields),
+          FlinkRelDistribution.hash(distributionFields, requireStrict = false))
+      } else {
+        Seq(FlinkRelDistribution.SINGLETON)
+      }
+      requiredDistributions.foreach { requiredDistribution =>
+        var requiredTraitSet = input.getTraitSet.replace(FlinkConventions.BATCHEXEC)
+            .replace(requiredDistribution)
+        if (agg.getGroupCount != 0) {
+          requiredTraitSet = requiredTraitSet.replace(createRelCollation(groupSet))
+        }
+        val newInput = RelOptRule.convert(input, requiredTraitSet)
+        //transform aggregate physical node
+        val sortAgg = new BatchExecSortAggregate(
+          agg.getCluster,
+          call.builder(),
+          aggProvidedTraitSet,
+          newInput,
+          aggCallToAggFunction,
+          agg.getRowType,
+          newInput.getRowType,
+          groupSet,
+          auxGroupSet,
+          isMerge = false
+        )
+        call.transformTo(sortAgg)
+      }
+    }
   }
 }
 

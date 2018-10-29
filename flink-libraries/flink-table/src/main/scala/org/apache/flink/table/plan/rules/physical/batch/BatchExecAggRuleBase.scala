@@ -19,16 +19,15 @@ package org.apache.flink.table.plan.rules.physical.batch
 
 import java.util.{ArrayList => JArrayList}
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptRuleCall}
+import org.apache.calcite.plan.RelOptRuleCall
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Aggregate
-import org.apache.calcite.rel.{RelNode, RelCollations, RelFieldCollation}
-import org.apache.calcite.util.ImmutableBitSet
+import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
 import org.apache.flink.table.api.AggPhaseEnforcer.AggPhaseEnforcer
 import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{AggregateFunction => TableAggregateFunction, UserDefinedAggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
@@ -42,18 +41,19 @@ trait BatchExecAggRuleBase {
 
   protected def inferLocalAggType(
       inputType: RelDataType,
-      cluster: RelOptCluster,
-      aggNames: Seq[String],
+      agg: Aggregate,
       groupSet: Array[Int],
       auxGroupSet: Array[Int],
       aggregates: Array[UserDefinedFunction],
       aggBufferTypes: Array[Array[InternalType]]): RelDataType = {
 
+    val aggNames = agg.getNamedAggCalls.map(_.right)
+
     val aggBufferFieldNames = new Array[Array[String]](aggregates.length)
     var index = -1
     aggregates.zipWithIndex.foreach{ case (udf, aggIndex) =>
       aggBufferFieldNames(aggIndex) = udf match {
-          case _: UserDefinedAggregateFunction[_] =>
+          case _: TableAggregateFunction[_, _] =>
             Array(aggNames(aggIndex))
           case agf: DeclarativeAggregateFunction =>
             agf.aggBufferAttributes.map { attr =>
@@ -66,7 +66,7 @@ trait BatchExecAggRuleBase {
 
     //localAggType
     // local agg output order: groupSet + auxGroupSet + aggCalls
-    val typeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+    val typeFactory = agg.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val aggBufferSqlTypes = aggBufferTypes.flatten.map { t =>
       val nullable = !FlinkTypeFactory.isTimeIndicatorType(t)
       typeFactory.createTypeFromInternalType(t, nullable)
@@ -150,15 +150,7 @@ trait BatchExecAggRuleBase {
   protected def isOnePhaseAggWorkable(
     agg: Aggregate,
     aggregateList: Array[UserDefinedFunction],
-    call: RelOptRuleCall): Boolean =
-    isOnePhaseAggWorkable(agg.getCluster, agg.getGroupSet, agg.getInput, aggregateList, call)
-
-  protected def isOnePhaseAggWorkable(
-      cluster: RelOptCluster,
-      groupSet: ImmutableBitSet,
-      input: RelNode,
-      aggregateList: Array[UserDefinedFunction],
-      call: RelOptRuleCall): Boolean = {
+    call: RelOptRuleCall): Boolean = {
     getAggEnforceStrategy(call) match {
       case AggPhaseEnforcer.ONE_PHASE => true
       case AggPhaseEnforcer.TWO_PHASE => !doAllSupportMerge(aggregateList)
@@ -169,8 +161,8 @@ trait BatchExecAggRuleBase {
           // if ndv of group key in aggregate is Unknown and all aggFunctions are splittable,
           // use two-phase agg.
           // else whether choose one-phase agg or two-phase agg depends on CBO.
-          val mq = cluster.getMetadataQuery
-          mq.getDistinctRowCount(input, groupSet, null) != null
+          val mq = agg.getCluster.getMetadataQuery
+          mq.getDistinctRowCount(agg.getInput, agg.getGroupSet, null) != null
         }
     }
   }

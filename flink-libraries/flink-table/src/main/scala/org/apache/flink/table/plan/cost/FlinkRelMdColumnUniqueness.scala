@@ -544,9 +544,6 @@ class FlinkRelMdColumnUniqueness private extends MetadataHandler[BuiltInMetadata
       mq: RelMetadataQuery,
       columns: ImmutableBitSet,
       ignoreNulls: Boolean): JBool = {
-    if (rel.isFinal && rel.isTableValuedAgg(rel.aggregates)) {
-      return null
-    }
     if (rel.isFinal) {
       columns.contains(ImmutableBitSet.of(rel.getGrouping: _*))
     } else {

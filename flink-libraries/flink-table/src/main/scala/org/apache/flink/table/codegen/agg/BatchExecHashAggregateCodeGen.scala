@@ -30,7 +30,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
 import org.apache.flink.table.runtime.aggregate.SortUtil
 import org.apache.flink.table.runtime.operator.BytesHashMap
 import org.apache.flink.table.runtime.sort.{BufferedKVExternalSorter, NormalizedKeyComputer, RecordComparator}
@@ -503,7 +503,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       inputRelDataType: RelDataType,
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_], String],
+      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
       logTerm: String,
       aggregateMapTerm: String,
       aggMapKVTypesTerm: (String, String),
@@ -651,7 +651,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
       inputRelDataType: RelDataType,
       aggCallToAggFunction: Seq[(AggregateCall, UserDefinedFunction)],
       aggregates: Seq[UserDefinedFunction],
-      udaggs: Map[UserDefinedAggregateFunction[_], String],
+      udaggs: Map[UserDefinedAggregateFunction[_, _], String],
       mapTerm: String,
       mapKVRowTypes: (BaseRowType, BaseRowType),
       aggregateMapTerm: String,

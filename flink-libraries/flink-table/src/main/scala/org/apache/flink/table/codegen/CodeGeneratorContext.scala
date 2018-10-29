@@ -81,7 +81,7 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
 
   // map of initial input unboxing expressions that will be added only once
   // (inputTerm, index) -> expr
-  var reusableInputUnboxingExprs: mutable.Map[(String, Int), GeneratedExpression] =
+  val reusableInputUnboxingExprs: mutable.Map[(String, Int), GeneratedExpression] =
     mutable.Map[(String, Int), GeneratedExpression]()
 
 
@@ -307,13 +307,6 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
 
   def getReusableInputUnboxingExprs(inputTerm: String, index: Int): Option[GeneratedExpression] =
     reusableInputUnboxingExprs.get((inputTerm, index))
-
-  def getReusableInputUnboxingExprs = reusableInputUnboxingExprs
-
-  def setReusableInputUnboxingExprs
-  (reusableInputUnboxingExprs: mutable.Map[(String, Int), GeneratedExpression]): Unit = {
-    this.reusableInputUnboxingExprs = reusableInputUnboxingExprs
-  }
 
   def addReusableInputUnboxingExprs(
       inputTerm: String,

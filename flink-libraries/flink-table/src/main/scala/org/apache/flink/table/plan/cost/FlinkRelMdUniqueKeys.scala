@@ -302,9 +302,6 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
       rel: BatchExecGroupAggregateBase,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
-    if (rel.isFinal && rel.isTableValuedAgg(rel.aggregates)) {
-      return null
-    }
     if (rel.isFinal) {
       // group by keys form a unique key
       ImmutableSet.of(ImmutableBitSet.of(rel.getGrouping: _*))

@@ -18,7 +18,6 @@
 package org.apache.flink.table.codegen.agg
 
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.TableException
 import org.apache.flink.table.codegen.CodeGenUtils.primitiveTypeTermForType
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
@@ -199,10 +198,6 @@ class DeclarativeAggCodeGen(
     val resolvedGetValueExpression = function.getValueExpression
       .postOrderTransform(resolveReference())
     generator.generateExpression(resolvedGetValueExpression.toRexNode(relBuilder))
-  }
-
-  override def emitValue(generator: ExprCodeGenerator): String = {
-    throw new TableException("Declarative agg not support emitValue yet.")
   }
 
   /**

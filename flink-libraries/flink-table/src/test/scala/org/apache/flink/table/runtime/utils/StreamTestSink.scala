@@ -152,8 +152,7 @@ final class TestingAppendBaseRowSink(rowTypeInfo: BaseRowTypeInfo[_])
   }
 }
 
-class RetractSinkBase[T] extends AbstractExactlyOnceSink[T]{
-
+class TestingRetractSink extends AbstractExactlyOnceSink[(Boolean, Row)] {
   protected var retractResultsState: ListState[String] = _
   protected var localRetractResults: ArrayBuffer[String] = _
 
@@ -184,20 +183,6 @@ class RetractSinkBase[T] extends AbstractExactlyOnceSink[T]{
     }
   }
 
-  def getRawResults: List[String] = getResults
-
-  def getRetractResults: List[String] = {
-    clearAndStashGlobalResults()
-    val result = ArrayBuffer.empty[String]
-    this.globalRetractResults.foreach {
-      case (_, list) => result ++= list
-    }
-    result.toList
-  }
-}
-
-class TestingRetractSink extends RetractSinkBase[(Boolean, Row)] {
-
   def invoke(v: (Boolean, Row)): Unit = {
     val tupleString = v.toString()
     localResults += tupleString
@@ -216,29 +201,18 @@ class TestingRetractSink extends RetractSinkBase[(Boolean, Row)] {
     }
   }
 
-}
+  def getRawResults: List[String] = getResults
 
-class TestingJavaRetractSink extends RetractSinkBase[JTuple2[JBoolean, Row]] {
-
-   def invoke(v: JTuple2[JBoolean, Row]): Unit = {
-    val tupleString = v.toString()
-    localResults += tupleString
-    val rowString = v.f1.toString
-    if (v.f0) {
-      localRetractResults += rowString
-    } else {
-      val index = localRetractResults.indexOf(rowString)
-      if (index >= 0) {
-        localRetractResults.remove(index)
-      } else {
-        throw new RuntimeException("Tried to retract a value that wasn't added first. " +
-          "This is probably an incorrectly implemented test. " +
-          "Try to set the parallelism of the sink to 1.")
-      }
+  def getRetractResults: List[String] = {
+    clearAndStashGlobalResults()
+    val result = ArrayBuffer.empty[String]
+    this.globalRetractResults.foreach {
+      case (_, list) => result ++= list
     }
+    result.toList
   }
-
 }
+
 final class TestingUpsertSink(keys: Array[Int])
   extends AbstractExactlyOnceSink[BaseRow] {
 
