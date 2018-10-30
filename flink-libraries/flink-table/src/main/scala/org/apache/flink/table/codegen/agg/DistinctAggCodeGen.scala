@@ -17,6 +17,9 @@
  */
 
 package org.apache.flink.table.codegen.agg
+
+import java.lang.{Long => JLong}
+
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.MapView
@@ -31,6 +34,7 @@ import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.typeutils.TypeUtils.createTypeInfoFromDataType
+import org.apache.flink.util.Preconditions.checkArgument
 
 /**
   * It is for code generate distinct aggregate. The distinct aggregate buffer is a MapView which
@@ -41,7 +45,7 @@ import org.apache.flink.table.typeutils.TypeUtils.createTypeInfoFromDataType
   * @param distinctInfo the distinct information
   * @param distinctIndex  the index of this distinct in all distincts
   * @param innerAggCodeGens the code generator of inner aggregate
-  * @param filterExpression filter argument access expression, none if no filter
+  * @param filterExpressions filter argument access expression, none if no filter
   * @param mergedAccOffset   the mergedAcc may come from local aggregate,
   *                          this is the first buffer offset in the row
   * @param aggBufferOffset   the offset in the buffers of this aggregate
@@ -57,7 +61,7 @@ class DistinctAggCodeGen(
   distinctInfo: DistinctInfo,
   distinctIndex: Int,
   innerAggCodeGens: Array[AggCodeGen],
-  filterExpression: Option[Expression],
+  filterExpressions: Array[Option[Expression]],
   mergedAccOffset: Int,
   aggBufferOffset: Int,
   aggBufferSize: Int,
@@ -72,11 +76,16 @@ class DistinctAggCodeGen(
   val ITERABLE: String = className[java.lang.Iterable[_]]
   val BOXED_VALUE: String = className[BoxedValue[_]]
 
+  val aggCount: Int = innerAggCodeGens.length
   val externalAccType: DataType = distinctInfo.accType
   val keyType: DataType = distinctInfo.keyType
   val keyTypeTerm: String = createTypeInfoFromDataType(keyType).getTypeClass.getCanonicalName
   val distinctAccTerm: String = s"distinct_view_$distinctIndex"
   val distinctBackupAccTerm: String = s"distinct_backup_view_$distinctIndex"
+
+  val isValueChangedTerm: String = s"is_distinct_value_changed_$distinctIndex"
+  val isValueEmptyTerm: String = s"is_distinct_value_empty_$distinctIndex"
+  val valueGenerator: DistinctValueGenerator = createDistinctValueGenerator()
 
   addReusableDistinctAccumulator()
 
@@ -120,41 +129,56 @@ class DistinctAggCodeGen(
   override def accumulate(generator: ExprCodeGenerator): String = {
     val keyExpr = generateKeyExpression(ctx, generator)
     val key = keyExpr.resultTerm
-    val accumulateCode = innerAggCodeGens.map(_.accumulate(generator)).mkString("\n")
-    val countTerm = newName("count")
+    val accumulateCode = innerAggCodeGens.map(_.accumulate(generator))
+    val valueTerm = newName("value")
+    val valueTypeTerm = valueGenerator.valueTypeTerm
+    val filterResults = filterExpressions.map {
+      case None => None
+      case Some(f) => Some(generator.generateExpression(f.toRexNode(relBuilder)).resultTerm)
+    }
 
-    val body =
+    val head =
       s"""
          |${keyExpr.code}
-         |java.lang.Long $countTerm = (java.lang.Long) $distinctAccTerm.get($key);
-         |if ($countTerm != null) {
-         |  // NOTE: we have to keep this even though in append input stream,
-         |  // we find regression here when we remove the additional put logic,
-         |  // which result in more cache miss and get latency increase.
-         |  $countTerm += 1;
-         |  if ($countTerm == 0) {    // cnt is -1 before
-         |    $distinctAccTerm.remove($key);
-         |  } else {
-         |    $distinctAccTerm.put($key, $countTerm);
-         |  }
-         |} else {
-         |  // this key is first been seen
-         |  $distinctAccTerm.put($key, 1L);
-         |  // do accumulate
-         |  $accumulateCode
-         |  // end do accumulate
+         |$valueTypeTerm $valueTerm = ($valueTypeTerm) $distinctAccTerm.get($key);
+         |if ($valueTerm == null) {
+         |  $valueTerm = ${valueGenerator.initialValue};
          |}
-      """.stripMargin
+       """.stripMargin
 
-    filterExpression match {
-      case None => body
-      case Some(expr) =>
-        val generated = generator.generateExpression(expr.toRexNode(relBuilder))
-        s"""
-           |if (${generated.resultTerm}) {
-           |  $body
-           |}
-         """.stripMargin
+    val body = if (consumeRetraction) {
+      // input contains retraction, due to local/global, the value might be empty, and need remove
+      s"""
+         |$head
+         |boolean $isValueEmptyTerm = true;
+         |${valueGenerator.foreachAccumulate(valueTerm, accumulateCode, filterResults)}
+         |if ($isValueEmptyTerm) {
+         |  $distinctAccTerm.remove($key);
+         |} else {
+         |  $distinctAccTerm.put($key, $valueTerm);
+         |}
+       """.stripMargin
+    } else {
+      // input contains only append messages, update value only when value changed
+      s"""
+         |$head
+         |boolean $isValueChangedTerm = false;
+         |${valueGenerator.foreachAccumulate(valueTerm, accumulateCode, filterResults)}
+         |if ($isValueChangedTerm) {
+         |  $distinctAccTerm.put($key, $valueTerm);
+         |}
+       """.stripMargin
+    }
+
+    if (filterResults.exists(_.isDefined)) {
+      val condition = filterResults.flatten.mkString(" || ")
+      s"""
+         |if ($condition) {
+         |  $body
+         |}
+       """.stripMargin
+    } else {
+      body
     }
   }
 
@@ -164,37 +188,44 @@ class DistinctAggCodeGen(
     }
     val keyExpr = generateKeyExpression(ctx, generator)
     val key = keyExpr.resultTerm
-    val retractCode = innerAggCodeGens.map(_.retract(generator)).mkString("\n")
-    val countTerm = newName("count")
+    val retractCodes = innerAggCodeGens.map(_.retract(generator))
+    val valueTerm = newName("value")
+    val valueTypeTerm = valueGenerator.valueTypeTerm
+    val filterResults = filterExpressions.map {
+      case None => None
+      case Some(f) => Some(generator.generateExpression(f.toRexNode(relBuilder)).resultTerm)
+    }
 
-    val body =
+    val head =
       s"""
          |${keyExpr.code}
-         |java.lang.Long $countTerm = (java.lang.Long) $distinctAccTerm.get($key);
-         |if ($countTerm != null) {
-         |  $countTerm -= 1;
-         |  if ($countTerm == 0) { // cnt is +1 before
-         |    $distinctAccTerm.remove($key);
-         |    // do retract
-         |    $retractCode
-         |    // end do retract
-         |  } else {
-         |    $distinctAccTerm.put($key, $countTerm);
-         |  }
-         |} else {
-         |  $distinctAccTerm.put($key, -1L);
+         |$valueTypeTerm $valueTerm = ($valueTypeTerm) $distinctAccTerm.get($key);
+         |if ($valueTerm == null) {
+         |  $valueTerm = ${valueGenerator.initialValue};
          |}
        """.stripMargin
 
-    filterExpression match {
-      case None => body
-      case Some(expr) =>
-        val generated = generator.generateExpression(expr.toRexNode(relBuilder))
-        s"""
-           |if (${generated.resultTerm}) {
-           |  $body
-           |}
-         """.stripMargin
+    val body =
+      s"""
+         |$head
+         |boolean $isValueEmptyTerm = true;
+         |${valueGenerator.foreachRetract(valueTerm, retractCodes, filterResults)}
+         |if ($isValueEmptyTerm) {
+         |  $distinctAccTerm.remove($key);
+         |} else {
+         |  $distinctAccTerm.put($key, $valueTerm);
+         |}
+       """.stripMargin
+
+    if (filterResults.exists(_.isDefined)) {
+      val condition = filterResults.flatten.mkString(" || ")
+      s"""
+         |if ($condition) {
+         |  $body
+         |}
+       """.stripMargin
+    } else {
+      body
     }
   }
 
@@ -207,20 +238,25 @@ class DistinctAggCodeGen(
       mergedAccOffset + aggBufferOffset,
       useStateDataView = !mergedAccOnHeap,
       useBackupDataView = true)
-    val otherAccTerm = otherAccExpr.resultTerm
-    val otherEntries = newName("otherEntries")
 
     val keyTerm = newName(DISTINCT_KEY_TERM)
     val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck = true)
       .bindInput(DataTypes.internal(keyType), inputTerm = keyTerm)
-
+    val accumulateCodes = innerAggCodeGens.map(_.accumulate(exprGenerator))
     val retractCodes = if (consumeRetraction) {
-      innerAggCodeGens.map(_.retract(exprGenerator)).mkString("\n")
+      innerAggCodeGens.map(_.retract(exprGenerator))
     } else {
-      "throw new RuntimeException(\"This distinct aggregate do not consume retractions, " +
-        "but received retract message, which should never happen.\");"
+      innerAggCodeGens.map(_ =>
+          "throw new RuntimeException(\"This distinct aggregate do not consume" +
+            " retractions, " +
+            "but received retract message, which should never happen.\");")
     }
-    val accumulateCodes = innerAggCodeGens.map(_.accumulate(exprGenerator)).mkString("\n")
+
+    val otherAccTerm = otherAccExpr.resultTerm
+    val otherEntries = newName("otherEntries")
+    val valueTypeTerm = valueGenerator.valueTypeTerm
+    val thisValue = "thisValue"
+    val otherValue = "otherValue"
 
     s"""
        |$ITERABLE<$MAP_ENTRY> $otherEntries = ($ITERABLE<$MAP_ENTRY>) $otherAccTerm.entries();
@@ -228,41 +264,18 @@ class DistinctAggCodeGen(
        |  for ($MAP_ENTRY entry: $otherEntries) {
        |    $keyTypeTerm $keyTerm = ($keyTypeTerm) entry.getKey();
        |    ${ctx.reuseInputUnboxingCode(Set(keyTerm))}
-       |    java.lang.Long otherCnt = (java.lang.Long) entry.getValue();
-       |    java.lang.Long thisCnt = (java.lang.Long) $distinctAccTerm.get($keyTerm);
-       |    if (thisCnt != null) {
-       |      java.lang.Long mergedCnt = thisCnt + otherCnt;
-       |      if (mergedCnt == 0) {
-       |        $distinctAccTerm.remove($keyTerm);
-       |        if (thisCnt > 0) {
-       |          // do retract
-       |          $retractCodes
-       |          // end do retract
-       |        }
-       |      } else if (mergedCnt < 0) {
-       |        $distinctAccTerm.put($keyTerm, mergedCnt);
-       |        if (thisCnt > 0) {
-       |          // do retract
-       |          $retractCodes
-       |          // end do retract
-       |        }
-       |      } else {    // mergedCnt > 0
-       |        $distinctAccTerm.put($keyTerm, mergedCnt);
-       |        if (thisCnt < 0) {
-       |          // do accumulate
-       |          $accumulateCodes
-       |          // end do accumulate
-       |        }
-       |      }
-       |    } else {  // thisCnt == null
-       |      if (otherCnt > 0) {
-       |        $distinctAccTerm.put($keyTerm, otherCnt);
-       |        // do accumulate
-       |        $accumulateCodes
-       |        // end do accumulate
-       |      } else if (otherCnt < 0) {
-       |        $distinctAccTerm.put($keyTerm, otherCnt);
-       |      } // ignore otherCnt == 0
+       |    $valueTypeTerm $otherValue = ($valueTypeTerm) entry.getValue();
+       |    $valueTypeTerm $thisValue = ($valueTypeTerm) $distinctAccTerm.get($keyTerm);
+       |    if ($thisValue == null) {
+       |      $thisValue = ${valueGenerator.initialValue};
+       |    }
+       |    boolean $isValueChangedTerm = false;
+       |    boolean $isValueEmptyTerm = false;
+       |    ${valueGenerator.foreachMerge(thisValue, otherValue, accumulateCodes, retractCodes)}
+       |    if ($isValueEmptyTerm) {
+       |      $distinctAccTerm.remove($keyTerm);
+       |    } else if ($isValueChangedTerm) { // value is not empty and is changed, do update
+       |      $distinctAccTerm.put($keyTerm, $thisValue);
        |    }
        |  } // end foreach
        |} // end otherEntries != null
@@ -398,5 +411,449 @@ class DistinctAggCodeGen(
     }
     // hide the generated code as it will be executed only once
     GeneratedExpression(inputExpr.resultTerm, inputExpr.nullTerm, "", inputExpr.resultType)
+  }
+
+  // ---------------------------- Distinct Value Code Generator ---------------------------
+
+  /**
+    * The [[DistinctValueGenerator]] is an abstraction for generating codes about the
+    * distinct value.
+    *
+    * The value of distinct state maybe long or long[] depends on the input stream
+    * and the number of the distinct aggregates.
+    *
+    * 1. when the input is not a retraction stream, and the distinct agg number <= 64,
+    *   then long is used as the value, each bit indicate whether each condition is satisfied.
+    *
+    * 2. when the input is not a retraction stream, and the distinct agg number > 64,
+    *   then long[] is used as the value, each bit indicate whether each condition is satisfied.
+    *
+    * 3. when the input is a retraction stream, and the distinct agg number == 1,
+    *   then long is used as the value, the long indicates the number of elements
+    *   satisfy the aggregate condition.
+    *
+    * 4. when the input is a retraction stream, and the distinct agg number > 1,
+    *   then long[] is used as the value, each long indicate the number of elements
+    * *   satisfy each aggregate condition.
+    */
+  trait DistinctValueGenerator {
+    /** the type of value of distinct state */
+    def valueTypeTerm: String
+
+    /** the default value of value of distinct state */
+    def initialValue: String
+
+    /** Accumulate the value of distinct state,
+      * and generates each accumulate codes for every aggregates. */
+    def foreachAccumulate(
+      valueTerm: String,
+      innerAccumulateCodes: Array[String],
+      filterResults: Array[Option[String]]): String
+
+    /**
+      * Retract the value of distinct state,
+      * and generates each retract codes for every aggregates. */
+    def foreachRetract(
+      valueTerm: String,
+      innerRetractCodes: Array[String],
+      filterResults: Array[Option[String]]): String
+
+    /** Merge the value of distinct state,
+      * and generates accumulate/retract codes when needed. */
+    def foreachMerge(
+      thisValueTerm: String,
+      otherValueTerm: String,
+      innerAccumulateCodes: Array[String],
+      innerRetractCodes: Array[String]): String
+  }
+
+  /** Create a [[DistinctValueGenerator]] instance for current [[DistinctAggCodeGen]] */
+  private def createDistinctValueGenerator(): DistinctValueGenerator = {
+    if (!consumeRetraction) {
+      if (aggCount <= JLong.SIZE) {
+        new LongValueWithoutRetractionGenerator
+      } else {
+        new LongArrayValueWithoutRetractionGenerator
+      }
+    } else {
+      if (aggCount <= 1) {
+        new LongValueWithRetractionGenerator
+      } else {
+        new LongArrayValueWithRetractionGenerator
+      }
+    }
+  }
+
+  /** The generator used in non-retraction stream and number of aggregate <= 64 */
+  class LongValueWithoutRetractionGenerator extends DistinctValueGenerator {
+    checkArgument(aggCount <= JLong.SIZE)
+
+    override def valueTypeTerm: String = "java.lang.Long"
+
+    override def initialValue: String = "0L"
+
+    override def foreachAccumulate(
+        valueTerm: String,
+        innerAccumulateCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+
+      val codes = for (index <- filterResults.indices) yield {
+        val existedTerm = newName("existed")
+        val code =
+          s"""
+             |long $existedTerm = ((long) $valueTerm) & (1L << $index);
+             |if ($existedTerm == 0) {  // not existed
+             |  $valueTerm = ((long) $valueTerm) | (1L << $index);
+             |  $isValueChangedTerm = true;
+             |  ${innerAccumulateCodes(index)}
+             |}
+           """.stripMargin
+        filterResults(index) match {
+          case None => code
+          case Some(f) =>
+            s"""
+               |if ($f) {
+               |  $code
+               |}
+             """.stripMargin
+        }
+      }
+
+      codes.mkString("\n")
+    }
+
+    override def foreachRetract(
+        valueTerm: String,
+        innerRetractCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+      throw new TableException("LongValueAppendGenerator do not support retract, " +
+                                 "this method should never be called, please file a issue.")
+    }
+
+    override def foreachMerge(
+        thisValueTerm: String,
+        otherValueTerm: String,
+        innerAccumulateCodes: Array[String],
+        innerRetractCodes: Array[String] /* retract code is not used here */ ): String = {
+
+      val codes = for (index <- innerAccumulateCodes.indices) yield {
+        val existedTerm = newName("existed")
+        s"""
+           |long $existedTerm = ((long) $thisValueTerm) & (1L << $index);
+           |if ($existedTerm == 0) {  // not existed
+           |  long otherExisted = ((long) $otherValueTerm) & (1L << $index);
+           |  if (otherExisted != 0) {  // existed in other
+           |     $isValueChangedTerm = true;
+           |     // do accumulate
+           |     ${innerAccumulateCodes(index)}
+           |  }
+           |}
+         """.stripMargin
+      }
+
+      s"""
+         |${codes.mkString("\n")}
+         |$thisValueTerm = ((long) $thisValueTerm) | ((long) $otherValueTerm);
+         |$isValueEmptyTerm = false;
+       """.stripMargin
+    }
+  }
+
+  /** The generator used in non-retraction stream and number of aggregate > 64 */
+  class LongArrayValueWithoutRetractionGenerator extends DistinctValueGenerator {
+    checkArgument(aggCount > JLong.SIZE)
+
+    override def valueTypeTerm: String = "long[]"
+
+    override def initialValue: String = s"new long[${aggCount / JLong.SIZE + 1}]"
+
+    override def foreachAccumulate(
+        valueTerm: String,
+        innerAccumulateCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+
+      val codes = for (index <- filterResults.indices) yield {
+        val existedTerm = newName("existed")
+        val arrayIndex = index / JLong.SIZE
+        val bitIndex = index % JLong.SIZE
+        val code =
+          s"""
+             |long $existedTerm = $valueTerm[$arrayIndex] & (1L << $bitIndex);
+             |if ($existedTerm == 0) {  // not existed
+             |  $isValueChangedTerm = true;
+             |  $valueTerm[$arrayIndex] = $valueTerm[$arrayIndex] | (1L << $bitIndex);
+             |  ${innerAccumulateCodes(index)}
+             |}
+           """.stripMargin
+        filterResults(index) match {
+          case None => code
+          case Some(f) =>
+            s"""
+               |if ($f) {
+               |  $code
+               |}
+             """.stripMargin
+        }
+      }
+
+      codes.mkString("\n")
+    }
+
+    override def foreachRetract(
+        valueTerm: String,
+        innerRetractCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+      throw new TableException("LongArrayValueAppendGenerator do not support retract, " +
+                                 "this method should never be called, please file a issue.")
+    }
+
+    override def foreachMerge(
+        thisValueTerm: String,
+        otherValueTerm: String,
+        innerAccumulateCodes: Array[String],
+        innerRetractCodes: Array[String]): String = {
+      val codes = for (index <- innerAccumulateCodes.indices) yield {
+        val existedTerm = newName("thisExisted")
+        val arrayIndex = index / JLong.SIZE
+        val bitIndex = index % JLong.SIZE
+        s"""
+           |long $existedTerm = $thisValueTerm[$arrayIndex] & (1L << $bitIndex);
+           |if ($existedTerm == 0) {  // not existed
+           |  long otherExisted = $otherValueTerm[$arrayIndex] & (1L << $bitIndex);
+           |  if (otherExisted != 0) {  // existed in other
+           |     $isValueChangedTerm = true;
+           |     // do accumulate
+           |     ${innerAccumulateCodes(index)}
+           |  }
+           |}
+         """.stripMargin
+      }
+
+      val setValueCodes = for (index <- 0 until (aggCount / JLong.SIZE + 1)) yield {
+        s"$thisValueTerm[$index] |= $otherValueTerm[$index];"
+      }
+
+      s"""
+         |${codes.mkString("\n")}
+         |${setValueCodes.mkString("\n")}
+         |$isValueEmptyTerm = false;
+       """.stripMargin
+    }
+  }
+
+  /** The generator used in retraction stream and only one aggregate */
+  class LongValueWithRetractionGenerator extends DistinctValueGenerator {
+    checkArgument(aggCount == 1)
+
+    override def valueTypeTerm: String = "java.lang.Long"
+
+    override def initialValue: String = "0L"
+
+    override def foreachAccumulate(
+        countTerm: String,
+        innerAccumulateCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+      foreachAction(isAccumulate = true, countTerm, innerAccumulateCodes, filterResults)
+    }
+
+    override def foreachRetract(
+        countTerm: String,
+        innerRetractCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+      foreachAction(isAccumulate = false, countTerm, innerRetractCodes, filterResults)
+    }
+
+    private def foreachAction(
+        isAccumulate: Boolean,
+        countTerm: String,
+        innerCodes: Array[String],
+        filterResults: Array[Option[String]]): String = {
+
+      val code = if (isAccumulate) {
+        s"""
+           |$countTerm += 1;
+           |if ($countTerm == 1) {  // cnt is 0 before
+           |  ${innerCodes.head}
+           |}
+           """.stripMargin
+      } else {
+        s"""
+           |$countTerm -= 1;
+           |if ($countTerm == 0) {  // cnt is +1 before
+           |  ${innerCodes.head}
+           |}
+           """.stripMargin
+      }
+
+      filterResults.head match {
+        case None =>
+          s"""
+             |$code
+             |$isValueEmptyTerm = $countTerm == 0L;
+           """.stripMargin
+        case Some(f) =>
+          s"""
+             |if ($f) {
+             |  $code
+             |}
+             |$isValueEmptyTerm = $countTerm == 0L;
+             """.stripMargin
+      }
+    }
+
+    override def foreachMerge(
+        thisCountTerm: String,
+        otherCountTerm: String,
+        innerAccumulateCodes: Array[String],
+        innerRetractCodes: Array[String]): String = {
+
+      val mergedCntTerm = newName("mergedCnt")
+      s"""
+         |long $mergedCntTerm = $thisCountTerm + $otherCountTerm;
+         |if ($mergedCntTerm == 0) {
+         |  $isValueEmptyTerm = true;
+         |  if ($thisCountTerm > 0) {
+         |    // origin is > 0, and retract to 0, do retract
+         |    ${innerRetractCodes.mkString("\n")}
+         |  }
+         |} else if ($mergedCntTerm < 0) {
+         |  if ($thisCountTerm > 0) {
+         |    // origin is > 0, and retract to < 0, do retract
+         |    ${innerRetractCodes.mkString("\n")}
+         |  }
+         |} else if ($mergedCntTerm > 0) {
+         |  if ($thisCountTerm <= 0) {
+         |    // origin is <= 0, and accumulate to > 0, do accumulate
+         |    ${innerAccumulateCodes.mkString("\n")}
+         |  }
+         |}
+         |$thisCountTerm = $mergedCntTerm;
+         |$isValueChangedTerm = true;
+       """.stripMargin
+    }
+  }
+
+  /** The generator used in retraction stream and number of aggregate > 1 */
+  class LongArrayValueWithRetractionGenerator extends DistinctValueGenerator {
+    checkArgument(aggCount > 1)
+
+    override def valueTypeTerm: String = "long[]"
+
+    override def initialValue: String = s"new long[$aggCount]"
+
+    override def foreachAccumulate(
+      valueTerm: String,
+      innerAccumulateCodes: Array[String],
+      filterResults: Array[Option[String]]): String = {
+      foreachAction(isAccumulate = true, valueTerm, innerAccumulateCodes, filterResults)
+    }
+
+    override def foreachRetract(
+      valueTerm: String,
+      innerRetractCodes: Array[String],
+      filterResults: Array[Option[String]]): String = {
+      foreachAction(isAccumulate = false, valueTerm, innerRetractCodes, filterResults)
+    }
+
+    private def foreachAction(
+      isAccumulate: Boolean,
+      valueTerm: String,
+      innerCodes: Array[String],
+      filterResults: Array[Option[String]]): String = {
+
+      val codes = for (index <- filterResults.indices) yield {
+        val countTerm = newName("count")
+        val code = if (isAccumulate) {
+          s"""
+             |long $countTerm = $valueTerm[$index] + 1;
+             |$valueTerm[$index] = $countTerm;
+             |if ($countTerm == 1) {  // cnt is 0 before
+             |  ${innerCodes(index)}
+             |}
+           """.stripMargin
+        } else {
+          s"""
+             |long $countTerm = $valueTerm[$index] - 1;
+             |$valueTerm[$index] = $countTerm;
+             |if ($countTerm == 0) {  // cnt is +1 before
+             |  ${innerCodes(index)}
+             |}
+           """.stripMargin
+        }
+        filterResults(index) match {
+          case None => code
+          case Some(f) =>
+            s"""
+               |if ($f) {
+               |  $code
+               |}
+             """.stripMargin
+        }
+      }
+
+      val isEmptyCode =
+        s"""
+           |for (long cnt : $valueTerm) {
+           |  if (cnt != 0) {
+           |    $isValueEmptyTerm = false;
+           |    break;
+           |  }
+           |}
+         """.stripMargin
+
+      s"""
+         |${codes.mkString("\n")}
+         |$isEmptyCode
+       """.stripMargin
+    }
+
+    override def foreachMerge(
+        thisValueTerm: String,
+        otherValueTerm: String,
+        innerAccumulateCodes: Array[String],
+        innerRetractCodes: Array[String]): String = {
+
+      val codes = for (index <- innerAccumulateCodes.indices) yield {
+        val thisCountTerm = newName("thisCnt")
+        val mergedCntTerm = newName("mergedCnt")
+        s"""
+           |long $thisCountTerm = $thisValueTerm[$index];
+           |long $mergedCntTerm = $thisCountTerm + $otherValueTerm[$index];
+           |if ($mergedCntTerm == 0) {
+           |  if ($thisCountTerm > 0) {
+           |    // origin is > 0, and retract to 0, do retract
+           |    ${innerRetractCodes(index)}
+           |  }
+           |} else if ($mergedCntTerm < 0) {
+           |  if ($thisCountTerm > 0) {
+           |    // origin is > 0, and retract to < 0, do retract
+           |    ${innerRetractCodes(index)}
+           |  }
+           |} else if ($mergedCntTerm > 0) {
+           |  if ($thisCountTerm <= 0) {
+           |    // origin is <= 0, and accumulate to > 0, do accumulate
+           |    ${innerAccumulateCodes(index)}
+           |  }
+           |}
+           |$thisValueTerm[$index] = $mergedCntTerm;
+       """.stripMargin
+      }
+
+      val isEmptyCode =
+        s"""
+           |for (long cnt : $thisValueTerm) {
+           |  if (cnt != 0) {
+           |    $isValueEmptyTerm = false;
+           |    break;
+           |  }
+           |}
+           |$isValueChangedTerm = true;
+         """.stripMargin
+
+      s"""
+         |${codes.mkString("\n")}
+         |$isEmptyCode
+       """.stripMargin
+    }
   }
 }

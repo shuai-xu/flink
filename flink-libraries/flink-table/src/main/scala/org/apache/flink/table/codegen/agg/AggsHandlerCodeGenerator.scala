@@ -75,6 +75,10 @@ class AggsHandlerCodeGenerator(
     * flatten all the AggCodeGens in a flat format. The [[aggActionCodeGens]] organize all the
     * AggCodeGens in a tree format. If there is no distinct aggregate, the [[aggBufferCodeGens]]
     * and [[aggActionCodeGens]] are totally the same.
+    *
+    * When different aggregate distinct on the same field but on different filter conditions,
+    * they will share the same distinct state, see [[DistinctAggCodeGen.DistinctValueGenerator]]
+    * for more information.
     */
 
   /**
@@ -83,12 +87,12 @@ class AggsHandlerCodeGenerator(
     * [[genCreateAccumulators()]], [[genGetAccumulators()]], [[genSetAccumulators()]].
     *
     * For example if we have :
-    * count(*), count(distinct a), sum(a), sum(distinct a), max(distinct c)
+    * count(*), count(distinct a), count(distinct a) filter d > 5, sum(a), sum(distinct a)
     *
     * then the members of aggBufferCodeGens are organized looks like this:
-    * +----------+-----------+--------+---------+---------+----------------+----------------+
-    * | count(*) | count(a') | sum(a) | sum(a') | max(c') | distinct(a) a' | distinct(c) c' |
-    * +----------+-----------+--------+---------+---------+----------------+----------------+
+    * +----------+-----------+-----------+---------+---------+----------------+
+    * | count(*) | count(a') | count(a') |  sum(a) | sum(a') | distinct(a) a' |
+    * +----------+-----------+-----------+---------+---------+----------------+
     * */
   private var aggBufferCodeGens: Array[AggCodeGen] = _
 
@@ -99,15 +103,16 @@ class AggsHandlerCodeGenerator(
     * to aggregate action. Such as [[genAccumulate()]], [[genRetract()]], [[genMerge()]].
     *
     * For example if we have :
-    * count(*), count(distinct a), sum(a), sum(distinct a), max(distinct c)
+    * count(*), count(distinct a), count(distinct a) filter d > 5, sum(a), sum(distinct a)
     *
     * then the members of aggActionCodeGens are organized looks like this:
     *
-    * +-------------------------------------------------------+
-    * | count(*) | sum(a) | distinct(a) a'  | distinct(c) c'  |
-    * |          |        |   |-- count(a') |   |-- max(c')   |
-    * |          |        |   |-- sum(a')   |                 |
-    * +-------------------------------------------------------+
+    * +----------------------------------------------------+
+    * | count(*) | sum(a) | distinct(a) a'                 |
+    * |          |        |   |-- count(a')                |
+    * |          |        |   |-- count(a') (filter d > 5) |
+    * |          |        |   |-- sum(a')                  |
+    * +----------------------------------------------------+
     */
   private var aggActionCodeGens: Array[AggCodeGen] = _
 
@@ -208,16 +213,15 @@ class AggsHandlerCodeGenerator(
     val distinctCodeGens = aggInfoList.distinctInfos.zipWithIndex.map {
       case (distinctInfo, index) =>
         val innerCodeGens = distinctInfo.aggIndexes.map(aggCodeGens(_)).toArray
-        val filterExpr = createFilterExpression(
-          distinctInfo.filterArg,
-          index + aggCodeGens.length,
-          "distinct aggregate")
+        val distinctIndex = aggCodeGens.length + index
+        val filterExpr = distinctInfo.filterArgs.map(
+          createFilterExpression(_, distinctIndex, "distinct aggregate"))
         val codegen = new DistinctAggCodeGen(
           ctx,
           distinctInfo,
           index,
           innerCodeGens,
-          filterExpr,
+          filterExpr.toArray,
           mergedAccOffset,
           aggBufferOffset,
           aggBufferSize,

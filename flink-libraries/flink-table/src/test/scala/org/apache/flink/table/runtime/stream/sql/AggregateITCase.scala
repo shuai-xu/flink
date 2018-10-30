@@ -46,6 +46,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 import scala.collection.{Seq, mutable}
+import scala.util.Random
 
 @RunWith(classOf[Parameterized])
 class AggregateITCase(
@@ -191,6 +192,7 @@ class AggregateITCase(
 
   @Test
   def testDistinctWithRetract(): Unit = {
+    // this case covers LongArrayValueWithRetractionGenerator and LongValueWithRetractionGenerator
     val data = new mutable.MutableList[(Int, Long, String)]
     data.+=((1, 1L, "A"))
     data.+=((1, 1L, "A"))
@@ -206,6 +208,7 @@ class AggregateITCase(
     data.+=((10, 4L, "E"))
     data.+=((11, 5L, "A"))
     data.+=((12, 5L, "B"))
+    // 1, 3,6,10,12
 
     val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("T", t)
@@ -213,13 +216,14 @@ class AggregateITCase(
     val sql =
       """
         |SELECT
-        |  count(distinct c),
-        |  sum(distinct c),
-        |  max(distinct c),
-        |  min(distinct c),
-        |  avg(distinct c)
+        |  count(distinct cnt),
+        |  sum(distinct cnt),
+        |  max(distinct cnt),
+        |  min(distinct cnt),
+        |  avg(distinct cnt),
+        |  count(distinct max_a)
         |FROM (
-        | SELECT b, count(a) as c
+        | SELECT b, count(a) as cnt, max(a) as max_a
         | FROM T
         | GROUP BY b)
       """.stripMargin
@@ -229,7 +233,74 @@ class AggregateITCase(
     t1.toRetractStream[Row].addSink(sink).setParallelism(1)
     env.execute()
 
-    val expected = List("3,9,4,2,3.0")
+    val expected = List("3,9,4,2,3.0,5")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testDistinctAggregateMoreThan64(): Unit = {
+    // this case is used to cover DistinctAggCodeGen#LongArrayValueWithoutRetractionGenerator
+    val data = new mutable.MutableList[(Int, Int)]
+    for (i <- 0 until 100) {
+      for (j <- 0 until 100 - i) {
+        data.+=((j, i))
+      }
+    }
+    val t = failingDataSource(Random.shuffle(data)).toTable(tEnv, 'a, 'b)
+    tEnv.registerTable("T", t)
+
+    val distincts = for (i <- 0 until 100) yield {
+      s"count(distinct a) filter (where b = $i)"
+    }
+
+    val sql =
+      s"""
+         |SELECT
+         |  ${distincts.mkString(", ")}
+         |FROM T
+       """.stripMargin
+
+    val t1 = tEnv.sqlQuery(sql)
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = List((1 to 100).reverse.mkString(","))
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testDistinctAggWithNullValues(): Unit = {
+    val data = new mutable.MutableList[(Int, Long, String)]
+    data.+=((1, 1L, "A"))
+    data.+=((2, 2L, "B"))
+    data.+=((3, 2L, "B"))
+    data.+=((4, 3L, "C"))
+    data.+=((5, 3L, "C"))
+    data.+=((6, 3L, null))
+    data.+=((7, 3L, "C"))
+    data.+=((8, 4L, "B"))
+    data.+=((9, 4L, null))
+    data.+=((10, 4L, null))
+    data.+=((11, 4L, "A"))
+    data.+=((12, 4L, "D"))
+    data.+=((13, 4L, null))
+    data.+=((14, 4L, "E"))
+    data.+=((15, 5L, "A"))
+    data.+=((16, 5L, null))
+    data.+=((17, 5L, "B"))
+
+    val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("T", t)
+    tEnv.registerFunction("CntNullNonNull", new CountNullNonNull)
+    val t1 = tEnv.sqlQuery(
+      "SELECT b, count(*), CntNullNonNull(DISTINCT c)  FROM T GROUP BY b")
+
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1,1,1|0", "2,2,1|0", "3,4,1|1", "4,7,4|1", "5,3,2|1")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 

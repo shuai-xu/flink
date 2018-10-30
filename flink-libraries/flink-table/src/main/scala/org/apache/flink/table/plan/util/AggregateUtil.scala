@@ -282,32 +282,18 @@ object AggregateUtil {
           .toArray
 
         val keyType = createDistinctKeyType(argTypes)
-
-        val accTypeInfo = new MapViewTypeInfo(
-          TypeUtils.createTypeInfoFromDataType(keyType),
-          Types.LONG,
-          isStateBackedDataViews)
-
-        val distinctMapViewSpec = if (isStateBackedDataViews) {
-          Some(MapViewSpec(
-            s"distinctAcc_${distinctMap.size}",
-            -1, // the field index will not be used
-            accTypeInfo))
-        } else {
-          None
-        }
-
         val distinctInfo = distinctMap.getOrElseUpdate(
-          argIndexes.mkString("argIndex:", ",", s" filterIndex:${call.filterArg}"),
+          argIndexes.mkString(","),
           DistinctInfo(
             argIndexes,
-            call.filterArg,
-            DataTypes.createGenericType(accTypeInfo),
             keyType,
-            distinctMapViewSpec,
+            null, // later fill in
+            null, // later fill in
             consumeRetraction,
+            ArrayBuffer.empty[Int],
             ArrayBuffer.empty[Int]))
         // add current agg to the distinct agg list
+        distinctInfo.filterArgs += call.filterArg
         distinctInfo.aggIndexes += index
 
         AggregateCall.create(
@@ -323,7 +309,47 @@ object AggregateUtil {
       }
     }
 
-    (distinctMap.values.toArray, newAggCalls)
+    // fill in the acc type and dataview spec
+    val distinctInfos = distinctMap.values.zipWithIndex.map { case (d, index) =>
+      val valueType = if (consumeRetraction) {
+        if (d.filterArgs.length <= 1) {
+          Types.LONG
+        } else {
+          Types.PRIMITIVE_ARRAY(Types.LONG)
+        }
+      } else {
+        if (d.filterArgs.length <= 64) {
+          Types.LONG
+        } else {
+          Types.PRIMITIVE_ARRAY(Types.LONG)
+        }
+      }
+
+      val accTypeInfo = new MapViewTypeInfo(
+        TypeUtils.createTypeInfoFromDataType(d.keyType),
+        valueType,
+        isStateBackedDataViews)
+
+      val distinctMapViewSpec = if (isStateBackedDataViews) {
+        Some(MapViewSpec(
+          s"distinctAcc_$index",
+          -1, // the field index will not be used
+          accTypeInfo))
+      } else {
+        None
+      }
+
+      DistinctInfo(
+        d.argIndexes,
+        d.keyType,
+        DataTypes.createGenericType(accTypeInfo),
+        distinctMapViewSpec,
+        consumeRetraction,
+        d.filterArgs,
+        d.aggIndexes)
+    }
+
+    (distinctInfos.toArray, newAggCalls)
   }
 
   def createDistinctKeyType(argTypes: Array[DataType]): DataType = {
@@ -523,21 +549,21 @@ case class AggregateInfo(
   * distinct aggregates.
   *
   * @param argIndexes the distinct aggregate arguments indexes in the input
-  * @param filterArg ordinal of filter argument, or -1
-  * @param accType the accumulator type of the shared distinct
   * @param keyType the distinct key type
+  * @param accType the accumulator type of the shared distinct
   * @param dataViewSpec data view spec about this distinct agg used to generate state access,
   *                     None when dataview is not worked in state mode
   * @param consumeRetraction whether the distinct agg consumes retractions
+  * @param filterArgs the ordinal of filter argument for each aggregate, -1 means without filter
   * @param aggIndexes the distinct aggregate index in the aggregation list
   */
 case class DistinctInfo(
   argIndexes: Array[Int],
-  filterArg: Int,
-  accType: DataType,
   keyType: DataType,
+  accType: DataType,
   dataViewSpec: Option[DataViewSpec],
   consumeRetraction: Boolean,
+  filterArgs: ArrayBuffer[Int],
   aggIndexes: ArrayBuffer[Int])
 
 /**

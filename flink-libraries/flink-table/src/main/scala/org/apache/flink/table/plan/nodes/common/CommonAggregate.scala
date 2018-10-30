@@ -144,8 +144,10 @@ trait CommonAggregate {
     } else {
       distincts.map { distinct =>
         val argListNames = distinct.argIndexes.map(inFields).mkString(",")
-        if (distinct.filterArg >= 0 && distinct.filterArg < inFields.size) {
-          s"DISTINCT($argListNames) FILTER ${inFields(distinct.filterArg)}"
+        // TODO: [BLINK-16994458] Refactor local&global aggregate name
+        val filterNames = distinct.filterArgs.filter(_ > 0).map(inFields).mkString(", ")
+        if (filterNames.nonEmpty) {
+          s"DISTINCT($argListNames) FILTER ($filterNames)"
         } else {
           s"DISTINCT($argListNames)"
         }

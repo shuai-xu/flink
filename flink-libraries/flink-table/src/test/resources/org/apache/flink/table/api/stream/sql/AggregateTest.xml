@@ -16,7 +16,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testAggAfterUnionWithMicroBatch">
+  <TestCase name="testAggWithFilterClauseWithLocalGlobal">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) FILTER count$1 AS EXPR$1, Final_COUNT(DISTINCT distinct$0) AS EXPR$2, Final_COUNT(DISTINCT distinct$0) AS EXPR$3, Final_MAX(max$3) AS EXPR$4])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_SUM(b) FILTER $f2 AS sum$0, Partial_COUNT(distinct$0) AS count$1, Partial_COUNT(distinct$0) AS count$2, Partial_MAX(b) AS max$3, Partial_DISTINCT(c) FILTER ($f4, $f5) AS distinct$0])
+      StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4, IS TRUE(=(b, 1)) AS $f5])
+        StreamExecScan(table=[[_DataStreamTable_1]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggAfterUnionWithMicroBatch">
     <Resource name="plan">
       <![CDATA[
 StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) AS EXPR$1, COUNT(DISTINCT c) AS EXPR$2])

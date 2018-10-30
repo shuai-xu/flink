@@ -125,6 +125,27 @@ class AggregateTest extends TableTestBase {
   }
 
   @Test
+  def testAggWithFilterClauseWithLocalGlobal(): Unit = {
+    streamUtil.addTable[(Int, Long, String, Boolean)]("T", 'a, 'b, 'c, 'd)
+    streamUtil.tableEnv.queryConfig
+      .enableMiniBatch
+      .enableLocalAgg
+
+    val sql =
+      """
+        |SELECT
+        |  a,
+        |  sum(b) filter (where c = 'A'),
+        |  count(distinct c) filter (where d is true),
+        |  count(distinct c) filter (where b = 1),
+        |  max(b)
+        |FROM T GROUP BY a
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
   def testUserDefinedAggregateFunctionWithScalaAccumulator(): Unit = {
     streamUtil.addFunction("udag", new MyAgg)
     val call = streamUtil
