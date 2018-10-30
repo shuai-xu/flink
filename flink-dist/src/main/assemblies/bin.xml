@@ -58,6 +58,11 @@ under the License.
 			<outputDirectory>conf</outputDirectory>
 			<fileMode>0644</fileMode>
 		</file>
+		<file>
+			<source>src/main/resources/flink-conf.yaml</source>
+			<outputDirectory>batch_conf</outputDirectory>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 
 	<fileSets>
@@ -88,6 +93,11 @@ under the License.
 			<outputDirectory>conf</outputDirectory>
 			<fileMode>0644</fileMode>
 		</fileSet>
+		<fileSet>
+			<directory>../flink-libraries/flink-sql-client/conf/</directory>
+			<outputDirectory>batch_conf</outputDirectory>
+			<fileMode>0644</fileMode>
+		</fileSet>
 
 		<!-- copy yarn start scripts -->
 		<fileSet>
@@ -107,6 +117,11 @@ under the License.
 		<fileSet>
 			<directory>src/main/flink-bin/conf</directory>
 			<outputDirectory>conf</outputDirectory>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/flink-bin/conf</directory>
+			<outputDirectory>batch_conf</outputDirectory>
 			<fileMode>0644</fileMode>
 		</fileSet>
 
