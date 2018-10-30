@@ -117,12 +117,14 @@ public class HiveUDAFFunction extends AggregateFunction<BaseRow, GenericUDAFEval
 		}
 	}
 
-	public void merge(
+	// TODO open this block after BLINK-17364558 resolved.
+/*	public void merge(
 			GenericUDAFEvaluator.AggregationBuffer acc,
 			Iterable<GenericUDAFEvaluator.AggregationBuffer> it) {
 
 		try {
 			for (GenericUDAFEvaluator.AggregationBuffer agg : it) {
+
 				getPartial2Evaluator().merge(
 						acc,
 						getPartial2Evaluator().terminatePartial(agg));
@@ -130,7 +132,7 @@ public class HiveUDAFFunction extends AggregateFunction<BaseRow, GenericUDAFEval
 		} catch (HiveException e) {
 			throw new RuntimeException(e);
 		}
-	}
+	}*/
 
 	public void resetAccumulator(GenericUDAFEvaluator.AggregationBuffer acc) {
 

@@ -516,8 +516,9 @@ object StreamQueryConfig {
     .key("blink.state.ttl.max.ms")
     .defaultValue(Long.MinValue)
 
+  /** whether to enable flushing buffered data before snapshot, enabled by default*/
   val BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT: ConfigOption[JBoolean] = ConfigOptions
       .key("blink.miniBatch.flushBeforeSnapshot")
-      .defaultValue(false)
+      .defaultValue(true)
 
 }

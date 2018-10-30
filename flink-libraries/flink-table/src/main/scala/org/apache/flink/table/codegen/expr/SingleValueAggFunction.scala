@@ -44,7 +44,9 @@ abstract class SingleValueAggFunction extends DeclarativeAggregateFunction {
 
   override def mergeExpressions: Seq[Expression] = Seq(
     If(count.left + count.right > 1, ThrowException(s"$msg", getResultType),
-       If(count.left + count.right === 0, Null(getResultType), value.right)),
+      If(count.left + count.right === 0,
+        // both zero or right > 0 means we need to reserve the new value here
+        If(count.left === 0 || count.right > 0, value.right, Null(getResultType)), value.right)),
     count.left + count.right
   )
 

@@ -116,16 +116,18 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 		this.buffer = new HashMap<>();
 
 		// create & restore state
-		TypeSerializer<V> valueSer = valueType.createSerializer(getExecutionConfig());
-		//noinspection unchecked
-		KeyedValueStateDescriptor<K, V> bufferStateDesc = new KeyedValueStateDescriptor<>(
-				"globalBufferState",
-				(TypeSerializer<K>) getKeySerializer(),
-				valueSer);
-		this.bufferState = getKeyedState(bufferStateDesc);
-		// recovering buffer
-		buffer.putAll(bufferState.getAll());
-		bufferState.removeAll();
+		if (!finishBundleBeforeSnapshot) {
+			TypeSerializer<V> valueSer = valueType.createSerializer(getExecutionConfig());
+			//noinspection unchecked
+			KeyedValueStateDescriptor<K, V> bufferStateDesc = new KeyedValueStateDescriptor<>(
+					"globalBufferState",
+					(TypeSerializer<K>) getKeySerializer(),
+					valueSer);
+			this.bufferState = getKeyedState(bufferStateDesc);
+			// recovering buffer
+			buffer.putAll(bufferState.getAll());
+			bufferState.removeAll();
+		}
 
 		// recovering number
 		numOfElements = buffer.size();
@@ -248,6 +250,7 @@ public class KeyedBundleOperator<K, V, IN, OUT>
 
 	@Override
 	public boolean requireState() {
+		// always requireState
 		return true;
 	}
 }

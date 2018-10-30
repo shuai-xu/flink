@@ -71,7 +71,7 @@ public class BundleOperator<K, V, IN, OUT>
 	implements OneInputStreamOperator<IN, OUT>, BundleTriggerCallback {
 	private static final long serialVersionUID = 5081841938324118594L;
 
-	private static final String STATE_NAME = "_async_wait_operator_state_";
+	private static final String STATE_NAME = "_bundle_operator_state_";
 
 	private final boolean finishBundleBeforeSnapshot;
 
@@ -137,18 +137,20 @@ public class BundleOperator<K, V, IN, OUT>
 		this.buffer = new HashMap<>();
 
 		// create & restore state
-		// recover buffer from partition state
-		if (bufferState != null) {
-			for (Tuple2<K, V> tuple : bufferState.get()) {
-				K key = tuple.f0;
-				V value = tuple.f1;
-				V prevValue = buffer.get(key);
-				V newValue = function.mergeValue(prevValue, value);
-				buffer.put(key, newValue);
-				// recovering number
-				numOfElements++;
+		if (!finishBundleBeforeSnapshot) {
+			// recover buffer from partition state
+			if (bufferState != null) {
+				for (Tuple2<K, V> tuple : bufferState.get()) {
+					K key = tuple.f0;
+					V value = tuple.f1;
+					V prevValue = buffer.get(key);
+					V newValue = function.mergeValue(prevValue, value);
+					buffer.put(key, newValue);
+					// recovering number
+					numOfElements++;
+				}
+				bufferState = null;
 			}
-			bufferState = null;
 		}
 
 		bundleTrigger.registerBundleTriggerCallback(this,
@@ -228,6 +230,9 @@ public class BundleOperator<K, V, IN, OUT>
 
 	@Override
 	public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+		while (isInFinishingBundle) {
+			checkpointingLock.wait();
+		}
 		if (finishBundleBeforeSnapshot) {
 			finishBundle();
 		}
@@ -269,7 +274,7 @@ public class BundleOperator<K, V, IN, OUT>
 		}
 		try {
 			finishBundle();
-
+			function.endInput(collector);
 		} finally {
 			Exception exception = null;
 
@@ -294,6 +299,7 @@ public class BundleOperator<K, V, IN, OUT>
 
 	@Override
 	public boolean requireState() {
-		return true;
+		// if finishBundleBeforeSnapshot, then no state requirement
+		return !finishBundleBeforeSnapshot;
 	}
 }

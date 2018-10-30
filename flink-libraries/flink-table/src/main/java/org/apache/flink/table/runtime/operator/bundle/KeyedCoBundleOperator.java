@@ -212,33 +212,33 @@ public abstract class KeyedCoBundleOperator
 		super.open();
 		this.checkpointingLock = getContainingTask().getCheckpointLock();
 		this.collector = new StreamRecordCollector<>(output);
-		TypeSerializer<BaseRow> leftSerializer = this.lTypeSerializer == null
-			? config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader())
-			: this.lTypeSerializer;
-		TypeSerializer<BaseRow> rightSerializer = this.rTypeSerializer == null
-			? config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader())
-			: this.rTypeSerializer;
+		this.leftBuffer = new HashMap<>();
+		this.rightBuffer = new HashMap<>();
 
 		// create & restore state
-		//noinspection unchecked
-		KeyedValueStateDescriptor<BaseRow, List<BaseRow>> leftBufferStateDesc = new KeyedValueStateDescriptor<>(
-			LEFT_STATE_NAME,
-			(TypeSerializer) getKeySerializer(),
-			new ListSerializer<>(leftSerializer));
-		this.leftBufferState = getKeyedState(leftBufferStateDesc);
-		this.leftBuffer = new HashMap<>();
-		this.leftBuffer.putAll(leftBufferState.getAll());
-		leftBufferState.removeAll();
+		if (!finishBundleBeforeSnapshot) {
+			TypeSerializer<BaseRow> leftSerializer =
+					this.lTypeSerializer == null ? config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader()) : this.lTypeSerializer;
+			TypeSerializer<BaseRow> rightSerializer =
+					this.rTypeSerializer == null ? config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader()) : this.rTypeSerializer;
 
-		//noinspection unchecked
-		KeyedValueStateDescriptor<BaseRow, List<BaseRow>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
-			RIGHT_STATE_NAME,
-			(TypeSerializer) getKeySerializer(),
-			new ListSerializer<>(rightSerializer));
-		this.rightBufferState = getKeyedState(rightBufferStateDesc);
-		this.rightBuffer = new HashMap<>();
-		this.rightBuffer.putAll(rightBufferState.getAll());
-		rightBufferState.removeAll();
+			// create & restore state
+			//noinspection unchecked
+			KeyedValueStateDescriptor<BaseRow, List<BaseRow>> leftBufferStateDesc = new KeyedValueStateDescriptor<>(
+					LEFT_STATE_NAME,
+					(TypeSerializer) getKeySerializer(),
+					new ListSerializer<>(leftSerializer));
+			this.leftBufferState = getKeyedState(leftBufferStateDesc);
+			this.leftBuffer.putAll(leftBufferState.getAll());
+			leftBufferState.removeAll();
+
+			//noinspection unchecked
+			KeyedValueStateDescriptor<BaseRow, List<BaseRow>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
+					RIGHT_STATE_NAME,
+					(TypeSerializer) getKeySerializer(),
+					new ListSerializer<>(rightSerializer));
+			this.rightBufferState = getKeyedState(rightBufferStateDesc);
+		}
 
 		coBundleTrigger.registerBundleTriggerCallback(
 			this,
@@ -296,6 +296,7 @@ public abstract class KeyedCoBundleOperator
 
 	@Override
 	public boolean requireState() {
+		// always requireState
 		return true;
 	}
 }
