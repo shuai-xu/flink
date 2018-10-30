@@ -657,32 +657,31 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 				String.format("The execution %s has not been assigned to the assigned slot.", this));
 		}
 
-		try {
+		// race double check, did we fail/cancel and do we need to release the slot?
+		if (this.state != DEPLOYING) {
+			slot.releaseSlot(new FlinkException("Actual state of execution " + this + " (" + state + ") does not match expected state DEPLOYING."));
+			return;
+		}
 
-			// race double check, did we fail/cancel and do we need to release the slot?
-			if (this.state != DEPLOYING) {
-				slot.releaseSlot(new FlinkException("Actual state of execution " + this + " (" + state + ") does not match expected state DEPLOYING."));
-				return;
-			}
-
-			if (LOG.isInfoEnabled()) {
-				LOG.info(String.format("Deploying %s (attempt #%d) to %s", vertex.getTaskNameWithSubtaskIndex(),
+		if (LOG.isInfoEnabled()) {
+			LOG.info(String.format("Deploying %s (attempt #%d) to %s", vertex.getTaskNameWithSubtaskIndex(),
 					attemptNumber, getAssignedResourceLocation().getHostname()));
-			}
+		}
 
-			final TaskDeploymentDescriptor deployment = vertex.createDeploymentDescriptor(
-				attemptId,
-				slot,
-				taskRestore,
-				attemptNumber);
+		executor.execute(
+			() -> {
+				try {
+					final TaskDeploymentDescriptor deployment = vertex.createDeploymentDescriptor(
+							attemptId,
+							slot,
+							taskRestore,
+							attemptNumber);
 
-			// null taskRestore to let it be GC'ed
-			taskRestore = null;
+					// null taskRestore to let it be GC'ed
+					taskRestore = null;
 
-			final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
+					final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
-			executor.execute(
-				() -> {
 					final CompletableFuture<Acknowledge> submitResultFuture = taskManagerGateway.submitTask(deployment, rpcTimeout);
 
 					submitResultFuture.whenCompleteAsync(
@@ -693,21 +692,18 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 									String taskname = vertex.getTaskNameWithSubtaskIndex() + " (" + attemptId + ')';
 
 									markFailed(new Exception(
-										"Cannot deploy task " + taskname + " - TaskManager (" + getAssignedResourceLocation()
+											"Cannot deploy task " + taskname + " - TaskManager (" + getAssignedResourceLocation()
 											+ ") not responding after a rpcTimeout of " + rpcTimeout, failure));
 								} else {
 									markFailed(failure);
 								}
 							}
-						},
-						executor);
+						}, executor);
+				} catch (Throwable t) {
+					markFailed(t);
 				}
-			);
-		}
-		catch (Throwable t) {
-			markFailed(t);
-			ExceptionUtils.rethrow(t);
-		}
+			}
+		);
 	}
 
 	/**

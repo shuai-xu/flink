@@ -45,6 +45,7 @@ import org.apache.flink.runtime.taskmanager.LocalTaskManagerLocation;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
+import org.apache.flink.runtime.testutils.DirectScheduledExecutorService;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
@@ -409,6 +410,7 @@ public class ExecutionTest extends TestLogger {
 			new JobID(),
 			slotProvider,
 			new NoRestartStrategy(),
+			new DirectScheduledExecutorService(),
 			jobVertex);
 
 		ExecutionJobVertex executionJobVertex = executionGraph.getJobVertex(jobVertexId);
