@@ -24,7 +24,7 @@ import java.util.TimeZone
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.types.{DataType, DataTypes}
@@ -144,7 +144,7 @@ class UpsertCsvTableSink(
   override def setIsAppendOnly(isAppendOnly: JBool): Unit = {}
 
   /** Emits the DataStream. */
-  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): Unit = {
+  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
     val csvRows = dataStream.map(
       new UpsertCsvFormatter(fieldDelim.getOrElse(","),
       outputFieldNames.getOrElse(false),
@@ -165,6 +165,7 @@ class UpsertCsvTableSink(
     if (numFiles.isDefined) {
       sink.setParallelism(numFiles.get)
     }
+    sink
   }
 
   override protected def copy: TableSinkBase[JTuple2[JBool, Row]] = {

@@ -404,7 +404,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
   override def getOutputType: DataType =
     DataTypes.createBaseRowType(fTypes.map(DataTypes.internal), fNames)
 
-  override def emitDataStream(dataStream: DataStream[BaseRow]): Unit = {
+  override def emitDataStream(dataStream: DataStream[BaseRow]) = {
     dataStream.addSink(sink)
       .name(s"TestingUpsertTableSink(keys=${
         if (keys != null) {
@@ -444,7 +444,7 @@ final class TestingAppendTableSink extends AppendStreamTableSink[Row]
   var sink = new TestingAppendSink
   var outputFormat = new TestingOutputFormat[Row]
 
-  override def emitDataStream(dataStream: DataStream[Row]): Unit = {
+  override def emitDataStream(dataStream: DataStream[Row]) = {
     dataStream.addSink(sink).name("TestingAppendTableSink")
       .setParallelism(dataStream.getParallelism)
   }
@@ -505,7 +505,7 @@ final class TestingRetractTableSink extends RetractStreamTableSink[Row]
 
   override def shuffleEmptyKey(): Boolean = false
 
-  override def emitDataStream(dataStream: DataStream[JTuple2[JBoolean, Row]]): Unit = {
+  override def emitDataStream(dataStream: DataStream[JTuple2[JBoolean, Row]]) = {
     dataStream.map(new MapFunction[JTuple2[JBoolean, Row], (Boolean, Row)] {
       override def map(value: JTuple2[JBoolean, Row]): (Boolean, Row) = {
         (value.f0, value.f1)

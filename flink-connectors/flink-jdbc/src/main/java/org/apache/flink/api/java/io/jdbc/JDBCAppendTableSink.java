@@ -62,8 +62,8 @@ public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchExe
 	}
 
 	@Override
-	public void emitDataStream(DataStream<Row> dataStream) {
-		dataStream
+	public DataStreamSink emitDataStream(DataStream<Row> dataStream) {
+		return dataStream
 				.addSink(new JDBCSinkFunction(outputFormat))
 				.name(TableConnectorUtil.generateRuntimeName(this.getClass(), fieldNames));
 	}

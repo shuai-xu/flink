@@ -25,7 +25,7 @@ import java.util.TimeZone
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase}
@@ -109,7 +109,7 @@ private[flink] class TestRetractSink extends RetractStreamTableSink[Row] {
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _
 
-  override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]): Unit = {
+  override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]) = {
     s.addSink(new RowSink)
   }
 
@@ -155,7 +155,7 @@ private[flink] class TestUpsertSink(
 
   override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
 
-  override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]): Unit = {
+  override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]) = {
     s.addSink(new RowSink)
   }
 
