@@ -18,6 +18,11 @@
 
 package org.apache.flink.factories;
 
+import org.apache.flink.connectors.csv.CsvTableFactory;
+import org.apache.flink.connectors.csv.RetractCsvTableFactory;
+import org.apache.flink.connectors.csv.UpsertCsvTableFactory;
+import org.apache.flink.connectors.orc.OrcTableFactory;
+import org.apache.flink.connectors.parquet.ParquetTableFactory;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.TableFactory;
@@ -49,12 +54,10 @@ public class FlinkTableFactory implements TableFactory {
 	public static final Map<String, String> DIRECTORY = new HashMap<>();
 
 	static {
-		DIRECTORY.put("CSV", "org.apache.flink.connectors.csv.CsvTableFactory");
-		DIRECTORY.put("UPSERTCSV", "org.apache.flink.connectors.csv.UpsertCsvTableFactory");
-		DIRECTORY.put("RETRACTCSV", "org.apache.flink.connectors.csv.RetractCsvTableFactory");
-		DIRECTORY.put("PARQUET", "org.apache.flink.connectors.parquet.ParquetTableFactory");
-		DIRECTORY.put("ORC", "org.apache.flink.connectors.orc.OrcTableFactory");
-
+		DIRECTORY.put("CSV", CsvTableFactory.class.getCanonicalName());
+		DIRECTORY.put("UPSERTCSV", UpsertCsvTableFactory.class.getCanonicalName());
+		DIRECTORY.put("RETRACTCSV", RetractCsvTableFactory.class.getCanonicalName());
+		DIRECTORY.put("PARQUET", ParquetTableFactory.class.getCanonicalName());
 		DIRECTORY.put("ADS", "com.alibaba.blink.connectors.ads.AdsTableFactory");
 		DIRECTORY.put("ALIHBASE", "com.alibaba.blink.streaming.connector.alihbase094.AliHBase094TableFactory");
 		DIRECTORY.put("ALIHBASE11", "com.alibaba.blink.streaming.connector.alihbase11.AliHBase11TableFactory");
@@ -93,6 +96,7 @@ public class FlinkTableFactory implements TableFactory {
 		DIRECTORY.put("KAFKA010", "com.alibaba.blink.streaming.connectors.kafka010.Kafka010TableFactory");
 		DIRECTORY.put("KAFKA011", "com.alibaba.blink.streaming.connectors.kafka011.Kafka011TableFactory");
 		DIRECTORY.put("JDBC", "com.alibaba.blink.connectors.jdbc.JdbcTableFactory");
+		DIRECTORY.put("ORC", OrcTableFactory.class.getCanonicalName());
 		DIRECTORY.put("HADOOPCOMPATIBILITY", "com.alibaba.blink.connectors.hadoopcompatibility.HadoopCompatibilityTableFactory");
 		DIRECTORY.put("BLINKSTORE", "com.alibaba.blink.connectors.store.BlinkStoreTableFactory");
 		DIRECTORY.put("REDIS", "com.alibaba.blink.connector.redis.RedisTableFactory");

@@ -145,6 +145,10 @@
 					<groupId>org.slf4j</groupId>
 					<artifactId>slf4j-api</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>commons-lang</groupId>
+					<artifactId>commons-lang</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
@@ -266,7 +270,6 @@
 			<artifactId>jackson-databind</artifactId>
 			<version>2.8.1</version>
 		</dependency>
-
 	</dependencies>
 
 	<build>
@@ -305,6 +308,14 @@
 									<pattern>com.fasterxml.jackson.databind</pattern>
 									<shadedPattern>org.apache.flink.hive.shaded.com.fasterxml.jackson.databind</shadedPattern>
 								</relocation>
+								<relocation>
+									<pattern>org.apache.commons.lang3</pattern>
+									<shadedPattern>org.apache.flink.hive.shaded.org.apache.commons.lang3</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.commons.lang</pattern>
+									<shadedPattern>org.apache.flink.hive.shaded.org.apache.commons.lang</shadedPattern>
+								</relocation>
 							</relocations>
 						</configuration>
 					</execution>
@@ -312,5 +323,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>

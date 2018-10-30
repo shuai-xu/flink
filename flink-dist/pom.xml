@@ -165,6 +165,18 @@ under the License.
 			</exclusions>
 		</dependency>
 
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-table_${scala.binary.version}</artifactId>
+			<version>${project.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.flink</groupId>
+					<artifactId>flink-shaded-hadoop2</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
 		<!-- Default file system support. The Hadoop and MapR dependencies -->
 		<!--       are optional, so not being added to the dist jar        -->
 
@@ -236,7 +248,6 @@ under the License.
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-metrics-dropwizard</artifactId>
 			<version>${project.version}</version>
-			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
@@ -361,12 +372,14 @@ under the License.
 			<scope>provided</scope>
 		</dependency>
 
+		<!--
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
+		-->
 
 		<dependency>
 			<groupId>com.alibaba.blink</groupId>
@@ -403,6 +416,317 @@ under the License.
 			<scope>provided</scope>
 		</dependency>
 		<!-- end optional Flink libraries -->
+
+		<!-- start blink connectors-->
+
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-common</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hbase</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-tt</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-tair</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hqueue</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-filesystem</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-metaq</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-swift</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-rds</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-sls</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-tddl</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-alihbase-0.94</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-alihbase-1.1</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-datahub</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-ots</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-ads</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-notify</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hitsdb</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-oceanbase</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-random</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-print</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-custom</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-petadata</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-igraph</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hbasescan</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hdfs</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-odps</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hfile</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-drc</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-lindorm</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-mysqlscan</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-cloudHbase</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-cloudHbase</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-elasticsearch</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-kafka-08</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-kafka-09</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-kafka-010</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-kafka-011</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-blinkstore</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-jdbc</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hbasesnapshot</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-hadoopcompatibility</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-connector-redis</artifactId>
+			<version>${connectors.version}</version>
+			<classifier>jar-with-dependencies</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<!-- end blink connectors-->
+
+		<dependency>
+			<groupId>asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>3.3.1</version>
+		</dependency>
 
 		<!-- test dependencies -->
 
