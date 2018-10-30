@@ -248,8 +248,13 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	/** General executor service for time-consuming tasks (e.g. tcp connection setup). */
 	private final ExecutorService executorService;
 
-	/** The create timestamp of execution */
+	/** The create timestamp of execution. */
 	private final long createTimestamp;
+
+	/** Whether to check partition producer state if the task requests a partition failed and wants to
+	 * re-trigger the partition request. The task will re-trigger the partition request
+	 * if the producer is healthy or fail otherwise. */
+	private final boolean checkPartitionProducerState;
 
 	// ------------------------------------------------------------------------
 	//  Fields that control the task execution. All these fields are volatile
@@ -348,6 +353,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		Configuration tmConfig = taskManagerConfig.getConfiguration();
 		this.taskCancellationInterval = tmConfig.getLong(TaskManagerOptions.TASK_CANCELLATION_INTERVAL);
 		this.taskCancellationTimeout = tmConfig.getLong(TaskManagerOptions.TASK_CANCELLATION_TIMEOUT);
+		this.checkPartitionProducerState = tmConfig.getBoolean(TaskManagerOptions.CHECK_PARTITION_PRODUCER_STATE);
 
 		this.createTimestamp = createTimestamp;
 
@@ -1241,39 +1247,56 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		final IntermediateDataSetID intermediateDataSetId,
 		final ResultPartitionID resultPartitionId) {
 
-		CompletableFuture<ExecutionState> futurePartitionState =
-			partitionProducerStateChecker.requestPartitionProducerState(
-				jobId,
-				intermediateDataSetId,
-				resultPartitionId);
+		if (checkPartitionProducerState) {
+			CompletableFuture<ExecutionState> futurePartitionState =
+				partitionProducerStateChecker.requestPartitionProducerState(
+					jobId,
+					intermediateDataSetId,
+					resultPartitionId);
 
-		futurePartitionState.whenCompleteAsync(
-			(ExecutionState executionState, Throwable throwable) -> {
-				try {
-					if (executionState != null) {
-						onPartitionStateUpdate(
-							intermediateDataSetId,
-							resultPartitionId,
-							executionState);
-					} else if (throwable instanceof TimeoutException) {
-						// our request timed out, assume we're still running and try again
-						onPartitionStateUpdate(
-							intermediateDataSetId,
-							resultPartitionId,
-							ExecutionState.RUNNING);
-					} else if (throwable instanceof PartitionProducerDisposedException) {
-						String msg = String.format("Producer %s of partition %s disposed. Cancelling execution.",
-							resultPartitionId.getProducerId(), resultPartitionId.getPartitionId());
-						LOG.info(msg, throwable);
-						cancelExecution();
-					} else {
-						failExternally(throwable);
+			futurePartitionState.whenCompleteAsync(
+				(ExecutionState executionState, Throwable throwable) -> {
+					try {
+						if (executionState != null) {
+							onPartitionStateUpdate(
+								intermediateDataSetId,
+								resultPartitionId,
+								executionState);
+						} else if (throwable instanceof TimeoutException) {
+							// our request timed out, assume we're still running and try again
+							onPartitionStateUpdate(
+								intermediateDataSetId,
+								resultPartitionId,
+								ExecutionState.RUNNING);
+						} else if (throwable instanceof PartitionProducerDisposedException) {
+							String msg = String.format("Producer %s of partition %s disposed. Cancelling execution.",
+								resultPartitionId.getProducerId(), resultPartitionId.getPartitionId());
+							LOG.info(msg, throwable);
+							cancelExecution();
+						} else {
+							failExternally(throwable);
+						}
+					} catch (IOException | InterruptedException e) {
+						failExternally(e);
 					}
+				},
+				executor);
+		} else {
+			executor.execute(() -> {
+				try {
+					LOG.debug("Re-trigger partition request of {} directly without checking partition producer state.",
+						resultPartitionId);
+					// assume the producer is running if configured not to check the partition producer state
+					onPartitionStateUpdate(
+                        intermediateDataSetId,
+                        resultPartitionId,
+                        ExecutionState.RUNNING
+                    );
 				} catch (IOException | InterruptedException e) {
 					failExternally(e);
 				}
-			},
-			executor);
+			});
+		}
 	}
 
 	// ------------------------------------------------------------------------

@@ -624,6 +624,65 @@ public class TaskTest extends TestLogger {
 	}
 
 	/**
+	 * Tests re-triggering partition request without checking partition producer state.
+	 */
+	@Test
+	public void testRetriggeringPartitionRequestWithoutCheckingPartitionProducerState() throws Exception {
+		IntermediateDataSetID resultId = new IntermediateDataSetID();
+		ResultPartitionID partitionId = new ResultPartitionID();
+
+		BlobCacheService blobService = createBlobCache();
+		LibraryCacheManager libCache = mock(LibraryCacheManager.class);
+		when(libCache.getClassLoader(any(JobID.class))).thenReturn(getClass().getClassLoader());
+
+		PartitionProducerStateChecker partitionChecker = mock(PartitionProducerStateChecker.class);
+		TaskEventDispatcher taskEventDispatcher = mock(TaskEventDispatcher.class);
+
+		ResultPartitionConsumableNotifier consumableNotifier = mock(ResultPartitionConsumableNotifier.class);
+		NetworkEnvironment network = mock(NetworkEnvironment.class);
+		when(network.getResultPartitionManager()).thenReturn(mock(ResultPartitionManager.class));
+		when(network.getDefaultIOMode()).thenReturn(IOManager.IOMode.SYNC);
+		when(network.createKvStateTaskRegistry(any(JobID.class), any(JobVertexID.class)))
+			.thenReturn(mock(TaskKvStateRegistry.class));
+		when(network.getTaskEventDispatcher()).thenReturn(taskEventDispatcher);
+
+		Configuration tmConfig = new Configuration();
+		tmConfig.setBoolean(TaskManagerOptions.CHECK_PARTITION_PRODUCER_STATE, false);
+
+		// Reset latches
+		createQueuesAndActors();
+
+		// Success
+		Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network,
+			consumableNotifier, partitionChecker, Executors.directExecutor(), tmConfig, new ExecutionConfig());
+		SingleInputGate inputGate = mock(SingleInputGate.class);
+		when(inputGate.getConsumedResultId()).thenReturn(resultId);
+
+		try {
+			task.startTaskThread();
+			awaitLatch.await();
+
+			setInputGate(task, inputGate);
+
+			CompletableFuture<ExecutionState> promise = new CompletableFuture<>();
+			when(partitionChecker.requestPartitionProducerState(eq(task.getJobID()), eq(resultId), eq(partitionId))).thenReturn(promise);
+
+			task.triggerPartitionProducerStateCheck(task.getJobID(), resultId, partitionId);
+
+			promise.complete(ExecutionState.RUNNING);
+
+			assertEquals(ExecutionState.RUNNING, task.getExecutionState());
+
+			verify(partitionChecker, times(0)).requestPartitionProducerState(
+				eq(task.getJobID()), eq(resultId), eq(partitionId));
+			verify(inputGate, times(1)).retriggerPartitionRequest(eq(partitionId.getPartitionId()));
+		} finally {
+			task.getExecutingThread().interrupt();
+			task.getExecutingThread().join();
+		}
+	}
+
+	/**
 	 * Tests the trigger partition state update future completions.
 	 */
 	@Test
@@ -646,7 +705,10 @@ public class TaskTest extends TestLogger {
 			.thenReturn(mock(TaskKvStateRegistry.class));
 		when(network.getTaskEventDispatcher()).thenReturn(taskEventDispatcher);
 
-		createTask(InvokableBlockingInInvoke.class, blobService, libCache, network, consumableNotifier, partitionChecker, Executors.directExecutor());
+		Configuration tmConfig = new Configuration();
+		tmConfig.setBoolean(TaskManagerOptions.CHECK_PARTITION_PRODUCER_STATE, true);
+		createTask(InvokableBlockingInInvoke.class, blobService, libCache, network, consumableNotifier,
+			partitionChecker, Executors.directExecutor(), tmConfig, new ExecutionConfig());
 
 		// Test all branches of trigger partition state check
 
@@ -655,7 +717,8 @@ public class TaskTest extends TestLogger {
 			createQueuesAndActors();
 
 			// PartitionProducerDisposedException
-			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network, consumableNotifier, partitionChecker, Executors.directExecutor());
+			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network,
+				consumableNotifier, partitionChecker, Executors.directExecutor(), tmConfig, new ExecutionConfig());
 
 			CompletableFuture<ExecutionState> promise = new CompletableFuture<>();
 			when(partitionChecker.requestPartitionProducerState(eq(task.getJobID()), eq(resultId), eq(partitionId))).thenReturn(promise);
@@ -671,7 +734,8 @@ public class TaskTest extends TestLogger {
 			createQueuesAndActors();
 
 			// Any other exception
-			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network, consumableNotifier, partitionChecker, Executors.directExecutor());
+			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network,
+				consumableNotifier, partitionChecker, Executors.directExecutor(), tmConfig, new ExecutionConfig());
 
 			CompletableFuture<ExecutionState> promise = new CompletableFuture<>();
 			when(partitionChecker.requestPartitionProducerState(eq(task.getJobID()), eq(resultId), eq(partitionId))).thenReturn(promise);
@@ -688,7 +752,8 @@ public class TaskTest extends TestLogger {
 			createQueuesAndActors();
 
 			// TimeoutException handled special => retry
-			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network, consumableNotifier, partitionChecker, Executors.directExecutor());
+			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network,
+				consumableNotifier, partitionChecker, Executors.directExecutor(), tmConfig, new ExecutionConfig());
 			SingleInputGate inputGate = mock(SingleInputGate.class);
 			when(inputGate.getConsumedResultId()).thenReturn(resultId);
 
@@ -719,7 +784,8 @@ public class TaskTest extends TestLogger {
 			createQueuesAndActors();
 
 			// Success
-			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network, consumableNotifier, partitionChecker, Executors.directExecutor());
+			Task task = createTask(InvokableBlockingInInvoke.class, blobService, libCache, network,
+				consumableNotifier, partitionChecker, Executors.directExecutor(), tmConfig, new ExecutionConfig());
 			SingleInputGate inputGate = mock(SingleInputGate.class);
 			when(inputGate.getConsumedResultId()).thenReturn(resultId);
 

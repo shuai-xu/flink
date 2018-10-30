@@ -163,6 +163,11 @@
             <td>How many native memory (in megabytes) a task manager will supply for user.</td>
         </tr>
         <tr>
+            <td><h5>taskmanager.network.check-partition-producer-state</h5></td>
+            <td style="word-wrap: break-word;">false</td>
+            <td>Boolean flag indicates whether to check partition producer state if the task requests a partition failed and wants to re-trigger the partition request. The task will re-trigger the partition request if the producer is healthy or fail otherwise.</td>
+        </tr>
+        <tr>
             <td><h5>taskmanager.network.detailed-metrics</h5></td>
             <td style="word-wrap: break-word;">false</td>
             <td>Boolean flag to enable/disable more detailed metrics about inbound/outbound network queue lengths.</td>

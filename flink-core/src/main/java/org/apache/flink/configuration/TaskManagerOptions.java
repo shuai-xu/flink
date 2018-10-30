@@ -572,6 +572,16 @@ public class TaskManagerOptions {
 			.withDeprecatedKeys("taskmanager.network.credit-based-flow-control.enabled")
 			.withDescription("Boolean flag to enable/disable network credit-based flow control.");
 
+	/** Boolean flag indicates whether to check partition producer state if the task requests a partition failed
+	 * and wants to re-trigger the partition request. The task will re-trigger the partition request
+	 * if the producer is healthy or fail otherwise. */
+	public static final ConfigOption<Boolean> CHECK_PARTITION_PRODUCER_STATE =
+		key("taskmanager.network.check-partition-producer-state")
+			.defaultValue(false)
+			.withDescription("Boolean flag indicates whether to check partition producer state if the task requests" +
+				" a partition failed and wants to re-trigger the partition request. The task will re-trigger the" +
+				" partition request if the producer is healthy or fail otherwise.");
+
 	// ------------------------------------------------------------------------
 	//  Task Options
 	// ------------------------------------------------------------------------
