@@ -20,40 +20,86 @@ package org.apache.flink.table.runtime.collector
 
 import java.util
 import java.util.Collections
+import java.util.concurrent.BlockingQueue
 
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 
 /**
-  * The AsyncCollector is used to wrap left [[BaseRow]] and right [[BaseRow]] to [[JoinedRow]]
+  * The [[JoinedRowAsyncCollector]] is used to wrap left [[BaseRow]] and
+  * right [[BaseRow]] to [[JoinedRow]]
   */
 class JoinedRowAsyncCollector(
-    val leftRow: BaseRow,
-    val out: ResultFuture[BaseRow],
+    val collectorQueue: BlockingQueue[JoinedRowAsyncCollector],
+    val joinConditionCollector: TableAsyncCollector[BaseRow],
     val rightArity: Int,
     val leftOuterJoin: Boolean) extends ResultFuture[BaseRow] {
 
+  var leftRow: BaseRow = _
+  var realOutput: ResultFuture[BaseRow] = _
+
   val nullRow: GenericRow = new GenericRow(rightArity)
+  val delegate = new DelegateResultFuture
+
+  def reset(row: BaseRow, realOutput: ResultFuture[BaseRow]): Unit = {
+    this.realOutput = realOutput
+    this.leftRow = row
+    joinConditionCollector.setInput(row)
+    joinConditionCollector.setCollector(delegate)
+    delegate.reset()
+  }
 
   override def complete(collection: util.Collection[BaseRow]): Unit = {
-    if (collection == null || collection.size() == 0) {
+    // call condition collector first
+    try {
+      joinConditionCollector.complete(collection)
+    } catch {
+      // we should cache the exception here to let the framework know
+      case t: Throwable =>
+        completeExceptionally(t)
+        return
+    }
+
+    val resultCollection = delegate.collection
+    if (resultCollection == null || resultCollection.isEmpty) {
       if (leftOuterJoin) {
         val outRow: BaseRow = new JoinedRow(leftRow, nullRow)
         outRow.setHeader(leftRow.getHeader)
-        out.complete(Collections.singleton(outRow))
+        realOutput.complete(Collections.singleton(outRow))
       } else {
-        out.complete(Collections.emptyList[BaseRow]())
+        realOutput.complete(Collections.emptyList[BaseRow]())
       }
     } else {
       // TODO: currently, collection should only contain one element
-      val rightRow = collection.iterator().next()
+      val rightRow = resultCollection.iterator().next()
       val outRow: BaseRow = new JoinedRow(leftRow, rightRow)
       outRow.setHeader(leftRow.getHeader)
-      out.complete(Collections.singleton(outRow))
+      realOutput.complete(Collections.singleton(outRow))
     }
+    // return this collector to the queue
+    collectorQueue.put(this)
   }
 
   override def completeExceptionally(throwable: Throwable): Unit = {
-    out.completeExceptionally(throwable)
+    realOutput.completeExceptionally(throwable)
+    // return this collector to the queue
+    collectorQueue.put(this)
+  }
+
+  class DelegateResultFuture extends ResultFuture[BaseRow] {
+
+    var collection: util.Collection[BaseRow] = _
+
+    def reset(): Unit = {
+      this.collection = null
+    }
+
+    override def complete(result: util.Collection[BaseRow]): Unit = {
+      collection = result
+    }
+
+    override def completeExceptionally(error: Throwable): Unit = {
+      JoinedRowAsyncCollector.this.completeExceptionally(error)
+    }
   }
 }

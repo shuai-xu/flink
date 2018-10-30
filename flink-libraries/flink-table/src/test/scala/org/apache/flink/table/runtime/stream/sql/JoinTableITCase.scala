@@ -24,6 +24,7 @@ import java.util.concurrent.{CompletableFuture, ExecutorService, Executors}
 import java.util.function.{Consumer, Supplier}
 
 import org.apache.flink.api.common.functions.RichFlatMapFunction
+import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
@@ -40,8 +41,8 @@ import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexK
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
-import org.apache.flink.util.Collector
-import org.junit.Assert.assertEquals
+import org.apache.flink.util.{Collector, ExceptionUtils}
+import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -675,6 +676,35 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "9,12,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, dim.getFetcherResourceCount())
+  }
+
+  @Test
+  def testExceptionThrownFromAsyncJoinTemporalTable(): Unit = {
+    env.setRestartStrategy(RestartStrategies.noRestart())
+    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val dim = new TestDimensionTableSource(true)
+    tEnv.registerTableSource("csvdim", dim)
+
+    val sql = "SELECT T.id, T.len, D.name, D.age FROM T LEFT JOIN csvdim " +
+      "for system_time as of PROCTIME() AS D ON T.id = D.id " +
+      "where cast(D.name as decimal(10,4)) > cast(1000 as decimal(10,4))"  // should exception here
+
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+
+    try {
+      env.execute()
+    } catch {
+      case t: Throwable =>
+        val exception = ExceptionUtils.findThrowable(t, classOf[NumberFormatException])
+        assertTrue(exception.isPresent)
+        assertTrue(exception.get().getMessage.contains("Cannot parse"))
+        return
+    }
+    fail("NumberFormatException is expected here!")
   }
 
 }

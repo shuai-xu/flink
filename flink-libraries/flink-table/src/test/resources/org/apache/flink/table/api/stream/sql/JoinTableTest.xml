@@ -79,6 +79,15 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) A
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testJoinTemporalTableWithDimensionTableCalcPushDown">
+    <Resource name="plan">
+	<![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
+  StreamExecJoinTable(join=[a, b, c, proc, rt, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[AND(=(age, 10), >(CAST(name), 1000))], period=[$cor0.proc])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testJoinTemporalTableWithMultiIndexColumn">
     <Resource name="plan">
       <![CDATA[

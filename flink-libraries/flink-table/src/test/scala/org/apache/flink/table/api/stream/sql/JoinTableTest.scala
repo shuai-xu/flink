@@ -163,6 +163,19 @@ class JoinTableTest extends TableTestBase {
   }
 
   @Test
+  def testJoinTemporalTableWithDimensionTableCalcPushDown(): Unit = {
+    val sql =
+      """
+        |SELECT * FROM MyTable AS T
+        |JOIN LATERAL dimTemporal FOR SYSTEM_TIME AS OF T.proc AS D
+        |ON T.a = D.id AND D.age = 10
+        |WHERE cast(D.name as bigint) > 1000
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
   def testJoinTemporalTableWithMultiIndexColumn(): Unit = {
     val sql =
       """

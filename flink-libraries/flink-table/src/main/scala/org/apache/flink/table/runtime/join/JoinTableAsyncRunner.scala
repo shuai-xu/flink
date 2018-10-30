@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.join
 
 import java.util
+import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 
 import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.typeutils.TypeSerializer
@@ -38,7 +39,7 @@ class JoinTableAsyncRunner(
     fetcher: AsyncFunction[BaseRow, BaseRow],
     collectorName: String,
     var collectorCode: String,
-    objectReuse: Boolean,
+    capacity: Int,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
     rightKeysInDefineOrder: List[Int],
@@ -49,6 +50,8 @@ class JoinTableAsyncRunner(
   with ResultTypeQueryable[BaseRow]
   with Compiler[Any]
   with Logging {
+
+  var collectorQueue: BlockingQueue[JoinedRowAsyncCollector] = _
   var collectorClass: Class[TableAsyncCollector[BaseRow]] = _
   val rightArity: Int = returnType.getArity - inputFieldTypes.length
   var leftKeyTypes: Array[InternalType] = _
@@ -70,9 +73,17 @@ class JoinTableAsyncRunner(
       collectorCode).asInstanceOf[Class[TableAsyncCollector[BaseRow]]]
     collectorCode = null
 
-    LOG.debug("Instantiating TableAsyncCollector.")
-    // trying to instantiating
-    collectorClass.newInstance()
+    // add an additional collector in it to avoid blocking on the queue when taking a collector
+    collectorQueue = new ArrayBlockingQueue[JoinedRowAsyncCollector](capacity + 1)
+    for (_ <- 0 until capacity + 1) {
+      val c = new JoinedRowAsyncCollector(
+        collectorQueue,
+        getDimensionTableCollector,
+        rightArity,
+        leftOuterJoin)
+      // throws exception immediately if the queue is full which should never happen
+      collectorQueue.add(c)
+    }
 
     FunctionUtils.setFunctionRuntimeContext(fetcher, getRuntimeContext)
     FunctionUtils.openFunction(fetcher, parameters)
@@ -97,12 +108,9 @@ class JoinTableAsyncRunner(
   }
 
   override def asyncInvoke(in: BaseRow, asyncCollector: ResultFuture[BaseRow]): Unit = {
-    val baseRow = if (objectReuse) {
-      in.copy()
-    } else {
-      in
-    }
-    val collector = getAsyncCollector(baseRow, asyncCollector)
+    val collector = collectorQueue.take()
+    // the input row is copied when object reuse in AsyncWaitOperator
+    collector.reset(in, asyncCollector)
 
     def fillKeyRow(in: BaseRow, keyRow: GenericRow): Unit = {
       for (i <- inRowSrcIdx.indices) {
@@ -117,20 +125,13 @@ class JoinTableAsyncRunner(
     }
     // fill left keys to new keyRow instance because reuse it is not definitely safe here
     val thisKeyRow = keysRow.copy()
-    fillKeyRow(baseRow, thisKeyRow)
+    fillKeyRow(in, thisKeyRow)
 
     fetcher.asyncInvoke(thisKeyRow, collector)
   }
 
-  protected def getAsyncCollector(
-      row: BaseRow,
-      out: ResultFuture[BaseRow]): ResultFuture[BaseRow] = {
-    val joinedRowCollector = new JoinedRowAsyncCollector(row, out, rightArity, leftOuterJoin)
-
-    val collector = collectorClass.newInstance()
-    collector.setCollector(joinedRowCollector)
-    collector.setInput(row)
-    collector
+  protected def getDimensionTableCollector: TableAsyncCollector[BaseRow] = {
+    collectorClass.newInstance()
   }
 
   override def getProducedType: BaseRowTypeInfo[BaseRow] =

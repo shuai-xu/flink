@@ -24,17 +24,21 @@ import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{AsyncFunction, ResultFuture}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.collector.TableAsyncCollector
 import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
 
+/**
+  * The async join runner with an additional calculate function on the dimension table
+  */
 class JoinTableWithCalcAsyncRunner(
     fetcher: AsyncFunction[BaseRow, BaseRow],
     calcFunctionName: String,
     var calcFunctionCode: String,
     collectorName: String,
     collectorCode: String,
-    objectReuse: Boolean,
+    capacity: Int,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
     rightKeysInDefineOrder: List[Int],
@@ -45,7 +49,7 @@ class JoinTableWithCalcAsyncRunner(
     fetcher,
     collectorName,
     collectorCode,
-    objectReuse,
+    capacity,
     leftOuterJoin,
     inputFieldTypes,
     rightKeysInDefineOrder,
@@ -57,50 +61,55 @@ class JoinTableWithCalcAsyncRunner(
   var calcClass: Class[FlatMapFunction[BaseRow, BaseRow]] = _
 
   override def open(parameters: Configuration): Unit = {
-    super.open(parameters)
+    // compile calc class first
     LOG.debug(s"Compiling CalcFunction: $calcFunctionName \n\n Code:\n$calcFunctionCode")
     calcClass = compile(
       getRuntimeContext.getUserCodeClassLoader,
       calcFunctionName,
       calcFunctionCode).asInstanceOf[Class[FlatMapFunction[BaseRow, BaseRow]]]
-    calcFunctionCode = null
 
-    LOG.debug("Instantiating CalcFunction.")
-    // trying to instantiating
-    calcClass.newInstance()
+    super.open(parameters)
   }
 
-  override protected def getAsyncCollector(
-      row: BaseRow,
-      asyncCollector: ResultFuture[BaseRow]): ResultFuture[BaseRow] = {
-    val collector = super.getAsyncCollector(row, asyncCollector)
-    new CalcAsyncCollector(calcClass.newInstance(), collector)
+  override protected def getDimensionTableCollector: TableAsyncCollector[BaseRow] = {
+    val joinConditionCollector = super.getDimensionTableCollector
+    new DimensionTableCalcCollector(calcClass.newInstance(), joinConditionCollector)
   }
 
-  class CalcAsyncCollector(
+  class DimensionTableCalcCollector(
       calcFlatMap: FlatMapFunction[BaseRow, BaseRow],
-      delegate: ResultFuture[BaseRow])
-    extends ResultFuture[BaseRow] {
+      joinConditionCollector: TableAsyncCollector[BaseRow])
+    extends TableAsyncCollector[BaseRow] {
+
+    val collectionCollector = new CalcCollectionCollector
+
+    override def setInput(input: Any): Unit = {
+      joinConditionCollector.setInput(input)
+      collectionCollector.collection = null
+    }
+
+    override def setCollector(collector: ResultFuture[_]): Unit = {
+      joinConditionCollector.setCollector(collector)
+    }
 
     override def complete(collection: util.Collection[BaseRow]): Unit = {
       if (collection == null || collection.size() == 0) {
-        delegate.complete(collection)
+        joinConditionCollector.complete(collection)
       } else {
         // TODO: currently, collection should only contain one element
         val input = collection.iterator().next()
-        val collectionCollector = new CalcCollectionCollector
         calcFlatMap.flatMap(input, collectionCollector)
-        delegate.complete(collectionCollector.collection)
+        joinConditionCollector.complete(collectionCollector.collection)
       }
     }
 
     override def completeExceptionally(throwable: Throwable): Unit =
-      delegate.completeExceptionally(throwable)
+      joinConditionCollector.completeExceptionally(throwable)
   }
 
   class CalcCollectionCollector extends Collector[BaseRow] {
 
-    var collection: util.Collection[BaseRow] = Collections.emptyList()
+    var collection: util.Collection[BaseRow] = _
 
     override def collect(t: BaseRow): Unit = {
       collection = Collections.singleton(t)
