@@ -24,25 +24,22 @@ import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
-import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
-import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
-import org.apache.flink.table.codegen.{CodeGeneratorContext, ProjectionCodeGenerator}
-import org.apache.flink.table.plan.{BatchExecRelVisitor, FlinkJoinRelType}
+import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkRelMetadataQuery}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
 import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.apache.flink.table.util.ExecResourceUtil
+import org.apache.flink.table.util.ExecResourceUtil.InferMode
 
 import scala.collection.JavaConversions._
 

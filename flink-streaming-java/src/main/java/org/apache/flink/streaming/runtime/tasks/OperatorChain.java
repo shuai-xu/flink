@@ -937,6 +937,11 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		}
 
 		@Override
+		public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+			operator.prepareSnapshotPreBarrier(checkpointId);
+		}
+
+		@Override
 		public OperatorSnapshotFutures snapshotState(
 				long checkpointId,
 				long timestamp,
