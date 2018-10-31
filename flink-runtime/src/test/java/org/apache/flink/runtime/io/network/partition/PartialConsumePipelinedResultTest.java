@@ -112,7 +112,7 @@ public class PartialConsumePipelinedResultTest extends TestLogger {
 		sender.setSlotSharingGroup(slotSharingGroup);
 		receiver.setSlotSharingGroup(slotSharingGroup);
 
-		flink.executeJobBlocking(jobGraph);
+		flink.executeJob(jobGraph, false);
 	}
 
 	// ---------------------------------------------------------------------------------------------

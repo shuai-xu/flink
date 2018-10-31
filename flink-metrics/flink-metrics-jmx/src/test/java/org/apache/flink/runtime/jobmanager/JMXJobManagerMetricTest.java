@@ -103,7 +103,7 @@ public class JMXJobManagerMetricTest {
 
 			ClusterClient<?> client = MINI_CLUSTER_RESOURCE.getClusterClient();
 			client.setDetached(true);
-			client.submitJob(jobGraph, JMXJobManagerMetricTest.class.getClassLoader());
+			client.submitJob(jobGraph, JMXJobManagerMetricTest.class.getClassLoader(), true);
 
 			FutureUtils.retrySuccesfulWithDelay(
 				() -> client.getJobStatus(jobGraph.getJobID()),

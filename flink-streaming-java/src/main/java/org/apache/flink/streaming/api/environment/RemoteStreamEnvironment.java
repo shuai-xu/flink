@@ -23,6 +23,7 @@ import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.JobListener;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.JobWithJars;
 import org.apache.flink.client.program.ProgramInvocationException;
@@ -31,6 +32,8 @@ import org.apache.flink.client.program.rest.RestClusterClient;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 
 import org.slf4j.Logger;
@@ -177,9 +180,17 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 	}
 
 	@Override
+	protected JobSubmissionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws ProgramInvocationException {
+		StreamGraph streamGraph = getStreamGraph();
+		streamGraph.setJobName(jobName);
+		transformations.clear();
+		return executeRemotely(streamGraph, jarFiles, detached, savepointRestoreSettings);
+	}
+
+	@Override
 	public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
 		transformations.clear();
-		return executeRemotely(streamGraph, jarFiles);
+		return (JobExecutionResult) executeRemotely(streamGraph, jarFiles, false, SavepointRestoreSettings.none());
 	}
 
 	/**
@@ -191,7 +202,7 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 	 * 			  List of jar file URLs to ship to the cluster
 	 * @return The result of the job execution, containing elapsed time and accumulators.
 	 */
-	protected JobExecutionResult executeRemotely(StreamGraph streamGraph, List<URL> jarFiles) throws ProgramInvocationException {
+	protected JobSubmissionResult executeRemotely(StreamGraph streamGraph, List<URL> jarFiles, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws ProgramInvocationException {
 		if (LOG.isInfoEnabled()) {
 			LOG.info("Running remotely at {}:{}", host, port);
 		}
@@ -201,8 +212,8 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 
 		ClusterClient<?> client = null;
 		try {
-			client = prepareClusterClient();
-			return client.run(streamGraph, jarFiles, globalClasspaths, usercodeClassLoader).getJobExecutionResult();
+			client = prepareClusterClient(detached);
+			return client.run(streamGraph, jarFiles, globalClasspaths, usercodeClassLoader, savepointRestoreSettings, detached).getJobExecutionResult();
 		} catch (ProgramInvocationException e) {
 			throw e;
 		} catch (Exception e) {
@@ -217,25 +228,7 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 		}
 	}
 
-	@Override
-	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
-		if (LOG.isInfoEnabled()) {
-			LOG.info("Running remotely at {}:{}", host, port);
-		}
-
-		ClassLoader usercodeClassLoader = JobWithJars.buildUserCodeClassLoader(jarFiles, globalClasspaths,
-			getClass().getClassLoader());
-
-		ClusterClient<?> client = prepareClusterClient();
-		client.setDetached(true);
-		JobSubmissionResult jobSubmissionResult = client.submitJob(streamGraph.getJobGraph(),
-			usercodeClassLoader);
-		JobID jobID = jobSubmissionResult.getJobID();
-		submittedJobs.put(jobID, client);
-		return jobSubmissionResult;
-	}
-
-	private ClusterClient<?> prepareClusterClient() throws Exception {
+	private ClusterClient<?> prepareClusterClient(boolean detached) throws Exception {
 
 		Configuration configuration = new Configuration();
 		configuration.addAll(this.clientConfiguration);
@@ -250,6 +243,9 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 			} else {
 				client = new RestClusterClient<>(configuration, "RemoteStreamEnvironment");
 			}
+
+			client.setJobListeners(getJobListeners());
+			client.setDetached(detached);
 		}
 		catch (Exception e) {
 			throw new ProgramInvocationException("Cannot establish connection to JobManager: " + e.getMessage(), e);
@@ -265,6 +261,100 @@ public class RemoteStreamEnvironment extends StreamExecutionEnvironment {
 		ClusterClient clusterClient = submittedJobs.get(jobID);
 		clusterClient.stop(jobID);
 		clusterClient.shutdown();
+	}
+
+	@Override
+	public void cancel(String jobId) throws Exception {
+		if (LOG.isInfoEnabled()) {
+			LOG.info("Running remotely at {}:{}", host, port);
+		}
+
+		ClassLoader usercodeClassLoader = JobWithJars.buildUserCodeClassLoader(jarFiles, globalClasspaths,
+			getClass().getClassLoader());
+
+		Configuration configuration = new Configuration();
+		configuration.addAll(this.clientConfiguration);
+
+		configuration.setString(JobManagerOptions.ADDRESS, host);
+		configuration.setInteger(JobManagerOptions.PORT, port);
+
+		configuration.setInteger(RestOptions.PORT, port);
+
+		final ClusterClient<?> client;
+		try {
+			client = new RestClusterClient<>(configuration, "RemoteStreamEnvironment");
+			client.setDetached(true);
+		}
+		catch (Exception e) {
+			throw new ProgramInvocationException("Cannot establish connection to JobManager: " + e.getMessage(), e);
+		}
+		LOG.info("Cancel Job: " + jobId);
+		client.cancel(JobID.fromHexString(jobId));
+		for (JobListener jobListener : getJobListeners()) {
+			jobListener.onJobCanceled(JobID.fromHexString(jobId), null);
+		}
+	}
+
+	@Override
+	public String cancelWithSavepoint(String jobId, String path) throws Exception {
+		if (LOG.isInfoEnabled()) {
+			LOG.info("Running remotely at {}:{}", host, port);
+		}
+
+		ClassLoader usercodeClassLoader = JobWithJars.buildUserCodeClassLoader(jarFiles, globalClasspaths,
+			getClass().getClassLoader());
+
+		Configuration configuration = new Configuration();
+		configuration.addAll(this.clientConfiguration);
+
+		configuration.setString(JobManagerOptions.ADDRESS, host);
+		configuration.setInteger(JobManagerOptions.PORT, port);
+
+		configuration.setInteger(RestOptions.PORT, port);
+
+		final ClusterClient<?> client;
+		try {
+			client = new RestClusterClient<>(configuration, "RemoteStreamEnvironment");
+			client.setDetached(true);
+		}
+		catch (Exception e) {
+			throw new ProgramInvocationException("Cannot establish connection to JobManager: " + e.getMessage(), e);
+		}
+		LOG.info("CancelWithSavePoint Job: " + jobId);
+		String savepointPath = client.cancelWithSavepoint(JobID.fromHexString(jobId), path);
+		for (JobListener jobListener : getJobListeners()) {
+			jobListener.onJobCanceled(JobID.fromHexString(jobId), savepointPath);
+		}
+		return savepointPath;
+	}
+
+	@Override
+	public String triggerSavepoint(String jobId, String path) throws Exception {
+		if (LOG.isInfoEnabled()) {
+			LOG.info("Running remotely at {}:{}", host, port);
+		}
+
+		ClassLoader usercodeClassLoader = JobWithJars.buildUserCodeClassLoader(jarFiles, globalClasspaths,
+			getClass().getClassLoader());
+
+		Configuration configuration = new Configuration();
+		configuration.addAll(this.clientConfiguration);
+
+		configuration.setString(JobManagerOptions.ADDRESS, host);
+		configuration.setInteger(JobManagerOptions.PORT, port);
+
+		configuration.setInteger(RestOptions.PORT, port);
+
+		final ClusterClient<?> client;
+		try {
+			client = new RestClusterClient<>(configuration, "RemoteStreamEnvironment");
+			client.setDetached(true);
+		}
+		catch (Exception e) {
+			throw new ProgramInvocationException("Cannot establish connection to JobManager: " + e.getMessage(), e);
+		}
+		LOG.info("Trigger Savepoint for Job: " + jobId);
+		return client.triggerSavepoint(JobID.fromHexString(jobId), path).get();
 	}
 
 	@Override

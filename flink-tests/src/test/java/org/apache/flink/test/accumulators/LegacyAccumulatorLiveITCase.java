@@ -20,6 +20,7 @@ package org.apache.flink.test.accumulators;
 
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.Plan;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.accumulators.IntCounter;
@@ -41,6 +42,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.instance.ActorGateway;
 import org.apache.flink.runtime.instance.AkkaActorGateway;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.messages.JobManagerMessages;
 import org.apache.flink.runtime.testingUtils.TestingCluster;
 import org.apache.flink.runtime.testingUtils.TestingJobManagerMessages;
@@ -387,7 +389,17 @@ public class LegacyAccumulatorLiveITCase extends TestLogger {
 
 		@Override
 		public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
-			throw new RuntimeException("This should not be called.");
+			return null;
+		}
+
+		@Override
+		protected JobSubmissionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws Exception {
+			return null;
+		}
+
+		@Override
+		public String triggerSavepoint(String jobId, String path) throws Exception {
+			return null;
 		}
 	}
 }

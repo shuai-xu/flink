@@ -16,26 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.minicluster;
+package org.apache.flink.api.java;
 
+import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.JobSubmissionResult;
-import org.apache.flink.runtime.client.JobExecutionException;
-import org.apache.flink.runtime.jobgraph.JobGraph;
 
 /**
- * Interface for {@link JobGraph} executors.
+ * Hooks for job submission and execution which is invoked in client side.
  */
-public interface JobExecutor {
+public interface JobListener {
 
-	/**
-	 * Run the given job and block until its execution result can be returned.
-	 *
-	 * @param jobGraph to execute
-	 * @return Execution result of the executed job
-	 * @throws JobExecutionException if the job failed to execute
-	 */
-	JobSubmissionResult executeJob(final JobGraph jobGraph, boolean detached) throws JobExecutionException, InterruptedException;
+	void onJobSubmitted(JobID jobId);
 
-	void cancel(JobID jobId) throws Exception;
+	void onJobExecuted(JobExecutionResult jobResult);
+
+	void onJobCanceled(JobID jobId, String savepointPath);
 }

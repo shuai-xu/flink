@@ -104,7 +104,7 @@ public class SlotCountExceedingParallelismTest extends TestLogger {
 	// ---------------------------------------------------------------------------------------------
 
 	private void submitJobGraphAndWait(final JobGraph jobGraph) throws JobExecutionException, InterruptedException {
-		flink.executeJobBlocking(jobGraph);
+		flink.executeJob(jobGraph, false);
 	}
 
 	private JobGraph createTestJobGraph(

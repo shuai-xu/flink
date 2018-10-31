@@ -19,8 +19,8 @@
 package org.apache.flink.client.program;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.Plan;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.optimizer.plan.OptimizedPlan;
@@ -63,12 +63,30 @@ public class ContextEnvironment extends ExecutionEnvironment {
 	}
 
 	@Override
-	public JobExecutionResult execute(String jobName) throws Exception {
+	public JobSubmissionResult executeInternal(String jobName, boolean detached) throws Exception {
 		Plan p = createProgramPlan(jobName);
 		JobWithJars toRun = new JobWithJars(p, this.jarFilesToAttach, this.classpathsToAttach,
 				libjars, files, this.userCodeClassLoader);
-		this.lastJobExecutionResult = client.run(toRun, getParallelism(), savepointSettings).getJobExecutionResult();
+		JobSubmissionResult submissionResult = client.run(toRun, getParallelism(), savepointSettings, detached);
+		if (submissionResult.isJobExecutionResult()) {
+			this.lastJobExecutionResult = submissionResult.getJobExecutionResult();
+		}
 		return this.lastJobExecutionResult;
+	}
+
+	@Override
+	public void cancel(JobID jobId) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void stop() {
+		this.client.shutDownCluster();
+		try {
+			this.client.shutdown();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override

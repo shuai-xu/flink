@@ -18,8 +18,8 @@
 
 package org.apache.flink.client;
 
-import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.Plan;
 import org.apache.flink.api.common.PlanExecutor;
 import org.apache.flink.client.program.ClusterClient;
@@ -55,7 +55,7 @@ public class RemoteExecutor extends PlanExecutor {
 
 	private final Object lock = new Object();
 
-	private final List<URL> jarFiles;
+	private List<URL> jarFiles;
 
 	private final List<URL> globalClasspaths;
 
@@ -116,6 +116,10 @@ public class RemoteExecutor extends PlanExecutor {
 		clientConfiguration.setInteger(RestOptions.PORT, inet.getPort());
 	}
 
+	public void setJarFiles(List<URL> jarFiles) {
+		this.jarFiles = jarFiles;
+	}
+
 	// ------------------------------------------------------------------------
 	//  Properties
 	// ------------------------------------------------------------------------
@@ -157,6 +161,7 @@ public class RemoteExecutor extends PlanExecutor {
 					client = new RestClusterClient<>(clientConfiguration, "RemoteExecutor");
 				}
 				client.setPrintStatusDuringExecution(isPrintingStatusDuringExecution());
+				client.setJobListeners(this.jobListeners);
 			}
 			else {
 				throw new IllegalStateException("The remote executor was already started.");
@@ -169,6 +174,7 @@ public class RemoteExecutor extends PlanExecutor {
 		synchronized (lock) {
 			if (client != null) {
 				client.shutdown();
+				System.out.println("shutdown client");
 				client = null;
 			}
 		}
@@ -184,16 +190,31 @@ public class RemoteExecutor extends PlanExecutor {
 	// ------------------------------------------------------------------------
 
 	@Override
-	public JobExecutionResult executePlan(Plan plan) throws Exception {
+	public JobSubmissionResult executePlan(Plan plan, boolean detached) throws Exception {
 		if (plan == null) {
 			throw new IllegalArgumentException("The plan may not be null.");
 		}
 
 		JobWithJars p = new JobWithJars(plan, this.jarFiles, this.globalClasspaths);
-		return executePlanWithJars(p);
+		return executePlanWithJars(p, detached);
 	}
 
-	public JobExecutionResult executePlanWithJars(JobWithJars program) throws Exception {
+	public void cancelPlan(JobID jobId) throws Exception {
+		while (client == null) {
+			Thread.sleep(1000);
+			System.out.println("client is null");
+			client = new RestClusterClient<>(clientConfiguration, "RemoteExecutor");
+			client.setPrintStatusDuringExecution(isPrintingStatusDuringExecution());
+			client.setJobListeners(this.jobListeners);
+		}
+		if (client != null) {
+			client.cancel(jobId);
+		} else {
+			System.out.println("Unable to cancel because client is null");
+		}
+	}
+
+	public JobSubmissionResult executePlanWithJars(JobWithJars program, boolean detached) throws Exception {
 		if (program == null) {
 			throw new IllegalArgumentException("The job may not be null.");
 		}
@@ -213,7 +234,7 @@ public class RemoteExecutor extends PlanExecutor {
 			}
 
 			try {
-				return client.run(program, defaultParallelism).getJobExecutionResult();
+				return client.run(program, defaultParallelism, detached);
 			}
 			finally {
 				if (shutDownAtEnd) {

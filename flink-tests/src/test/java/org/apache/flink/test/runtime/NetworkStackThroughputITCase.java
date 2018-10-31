@@ -282,7 +282,7 @@ public class NetworkStackThroughputITCase extends TestLogger {
 				isSlowSender,
 				isSlowReceiver,
 				parallelism),
-			getClass().getClassLoader());
+			getClass().getClassLoader(), false);
 
 		long dataVolumeMbit = dataVolumeGb * 8192;
 		long runtimeSecs = jer.getNetRuntime(TimeUnit.SECONDS);

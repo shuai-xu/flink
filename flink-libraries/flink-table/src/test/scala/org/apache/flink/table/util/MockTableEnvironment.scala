@@ -76,8 +76,47 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
 
   override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
 
-  override protected def registerTableSourceInternal(name: String, tableSource: TableSource,
-    statistic: FlinkStatistic): Unit = ???
-
   override def registerTableSourceFromTableMetas(name: String, tableMeta: TableMeta): Unit = ???
+
+  /**
+    * Registers an internal [[TableSource]] in this [[TableEnvironment]]'s catalog without
+    * name checking. Registered tables can be referenced in SQL queries.
+    *
+    * @param name        The name under which the [[TableSource]] is registered.
+    * @param tableSource The [[TableSource]] to register.
+    * @param replace     Whether to replace this [[TableSource]]
+    */
+  override protected def registerTableSourceInternal(name: String,
+                                                     tableSource: TableSource,
+                                                     tableStats: FlinkStatistic,
+                                                     replace: Boolean): Unit = ???
+
+  /**
+    * Registers or replace an external [[TableSink]] with given field names and types in this
+    * [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name       The name under which the [[TableSink]] is registered.
+    * @param fieldNames The field names to register with the [[TableSink]].
+    * @param fieldTypes The field types to register with the [[TableSink]].
+    * @param tableSink  The [[TableSink]] to register.
+    * @param replace    Whether replace this [[TableSink]].
+    */
+  override protected def registerTableSinkInternal(name: String,
+                                                   fieldNames: Array[String],
+                                                   fieldTypes: Array[DataType],
+                                                   tableSink: TableSink[_],
+                                                   replace: Boolean): Unit = ???
+
+  /**
+    * Registers an external [[TableSink]] with already configured field names and field types in
+    * this [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name           The name under which the [[TableSink]] is registered.
+    * @param configuredSink The configured [[TableSink]] to register.
+    */
+  override protected def registerTableSinkInternal(name: String,
+                                                   configuredSink: TableSink[_],
+                                                   replace: Boolean): Unit = ???
 }

@@ -134,7 +134,7 @@ public class ScheduleOrUpdateConsumersTest extends TestLogger {
 				pipelinedReceiver,
 				blockingReceiver);
 
-		flink.executeJobBlocking(jobGraph);
+		flink.executeJob(jobGraph, false);
 	}
 
 	// ---------------------------------------------------------------------------------------------

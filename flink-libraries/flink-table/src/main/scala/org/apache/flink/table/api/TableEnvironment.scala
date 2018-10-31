@@ -497,7 +497,6 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param table The table to register.
     */
   def registerTable(name: String, table: Table): Unit = {
-
     // check that table belongs to this table environment
     if (table.tableEnv != this) {
       throw new TableException(
@@ -506,8 +505,28 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     checkValidTableName(name)
     val tableTable = new RelTable(table.getRelNode)
-    registerTableInternal(name, tableTable)
+    registerTableInternal(name, tableTable, false)
   }
+
+  /**
+    * Registers or replace a [[Table]] under a unique name in the TableEnvironment's catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * @param name The name under which the table will be registered.
+    * @param table The table to register.
+    */
+  def registerOrReplaceTable(name: String, table: Table): Unit = {
+    // check that table belongs to this table environment
+    if (table.tableEnv != this) {
+      throw new TableException(
+        "Only tables that belong to this TableEnvironment can be registered.")
+    }
+
+    checkValidTableName(name)
+    val tableTable = new RelTable(table.getRelNode)
+    registerTableInternal(name, tableTable, true)
+  }
+
 
   /**
     * Registers a Calcite [[AbstractTable]] in the TableEnvironment's catalog.
@@ -575,7 +594,20 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     */
   def registerTableSource(name: String, tableSource: TableSource): Unit = {
     checkValidTableName(name)
-    registerTableSourceInternal(name, tableSource, FlinkStatistic.UNKNOWN)
+    registerTableSourceInternal(name, tableSource, FlinkStatistic.UNKNOWN, false)
+  }
+
+  /**
+    * Registers or replace an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * @param name        The name under which the [[TableSource]] is registered.
+    * @param tableSource The [[TableSource]] to register.
+    */
+  def registerOrReplaceTableSource(name: String,
+                          tableSource: TableSource): Unit = {
+    checkValidTableName(name)
+    registerTableSourceInternal(name, tableSource, FlinkStatistic.UNKNOWN, true)
   }
 
   /**
@@ -584,10 +616,12 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     *
     * @param name        The name under which the [[TableSource]] is registered.
     * @param tableSource The [[TableSource]] to register.
-    * @param statistics  The [[FlinkStatistic]] passed
+    * @param replace     Whether to replace this [[TableSource]]
     */
-  protected def registerTableSourceInternal(name: String, tableSource: TableSource,
-    statistics: FlinkStatistic): Unit
+  protected def registerTableSourceInternal(name: String,
+                                            tableSource: TableSource,
+                                            tableStats: FlinkStatistic,
+                                            replace: Boolean): Unit
 
   /**
     * Gets the statistics of a table.
@@ -744,15 +778,15 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param skewInfo statistics of skewedColNames and skewedColValues.
     */
   def alterSkewInfo(
-      tableName: String,
-      skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
+                     tableName: String,
+                     skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
     require(tableName != null && tableName.nonEmpty, "tableName must not be null or empty.")
     alterSkewInfo(Array(tableName), skewInfo)
   }
 
   private def alterSkewInfo(
-      tablePath: Array[String],
-      skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
+                             tablePath: Array[String],
+                             skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
     val tableOpt = getTable(tablePath)
     if (tableOpt.isEmpty) {
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
@@ -777,7 +811,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
         (statistic.getUniqueKeys, statistic.getTableStats)
       }
       val newTable =  table.asInstanceOf[FlinkTable]
-          .copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
+        .copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
       replaceRegisteredTable(tableName, newTable)
     } else {
       throw new TableException("alterSkewInfo operation is not supported for external catalog.")
@@ -790,8 +824,8 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param uniqueKeys list of unique key fields
     */
   def alterUniqueKeys(
-      tablePath: Array[String],
-      uniqueKeys: util.Set[util.Set[String]]): Unit = {
+                       tablePath: Array[String],
+                       uniqueKeys: util.Set[util.Set[String]]): Unit = {
     val tableOpt = getTable(tablePath)
     if (tableOpt.isEmpty) {
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
@@ -816,7 +850,7 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
         (statistic.getSkewInfo, statistic.getTableStats)
       }
       val newTable = table.asInstanceOf[FlinkTable]
-          .copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
+        .copy(FlinkStatistic.of(tableStats, uniqueKeys, skewInfo))
       replaceRegisteredTable(tableName, newTable)
     } else {
       throw new TableException("alter unique keys operation is not supported for external catalog.")
@@ -837,7 +871,45 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
       name: String,
       fieldNames: Array[String],
       fieldTypes: Array[DataType],
-      tableSink: TableSink[_]): Unit
+      tableSink: TableSink[_]): Unit = {
+    registerTableSinkInternal(name, fieldNames, fieldTypes, tableSink, false)
+  }
+
+  /**
+    * Registers or replace an external [[TableSink]] with given field names and types in this
+    * [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param fieldNames The field names to register with the [[TableSink]].
+    * @param fieldTypes The field types to register with the [[TableSink]].
+    * @param tableSink The [[TableSink]] to register.
+    */
+  def registerOrReplaceTableSink(
+                         name: String,
+                         fieldNames: Array[String],
+                         fieldTypes: Array[DataType],
+                         tableSink: TableSink[_]): Unit = {
+    registerTableSinkInternal(name, fieldNames, fieldTypes, tableSink, true)
+  }
+
+  /**
+    * Registers or replace an external [[TableSink]] with given field names and types in this
+    * [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param fieldNames The field names to register with the [[TableSink]].
+    * @param fieldTypes The field types to register with the [[TableSink]].
+    * @param tableSink The [[TableSink]] to register.
+    * @param replace Whether replace this [[TableSink]].
+    */
+  protected def registerTableSinkInternal(
+       name: String,
+       fieldNames: Array[String],
+       fieldTypes: Array[DataType],
+       tableSink: TableSink[_],
+       replace: Boolean): Unit
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
@@ -847,7 +919,34 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
     * @param name The name under which the [[TableSink]] is registered.
     * @param configuredSink The configured [[TableSink]] to register.
     */
-  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit
+  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = {
+    registerTableSinkInternal(name, configuredSink, false)
+  }
+
+  /**
+    * Registers or replace an external [[TableSink]] with already configured field names and
+    * field types in this [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param configuredSink The configured [[TableSink]] to register.
+    */
+  def registerOrReplaceTableSink(name: String, configuredSink: TableSink[_]): Unit = {
+    registerTableSinkInternal(name, configuredSink, true)
+  }
+
+  /**
+    * Registers an external [[TableSink]] with already configured field names and field types in
+    * this [[TableEnvironment]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param configuredSink The configured [[TableSink]] to register.
+    */
+  protected def registerTableSinkInternal(name: String,
+                                          configuredSink: TableSink[_],
+                                          replace: Boolean): Unit
+
 
   private[flink] def getStateTableNameForWrite(name: String): String = {
     s"__W_$name"
@@ -1202,41 +1301,42 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     def typeMatch(t1: InternalType, t2: InternalType): Boolean = {
       t1 == t2 ||
-          (t1.isInstanceOf[DateType] && t2.isInstanceOf[DateType]) ||
-          (t1.isInstanceOf[TimestampType] && t2.isInstanceOf[TimestampType])
+        (t1.isInstanceOf[DateType] && t2.isInstanceOf[DateType]) ||
+        (t1.isInstanceOf[TimestampType] && t2.isInstanceOf[TimestampType])
+
     }
 
     if (srcFieldTypes.length != sinkFieldTypes.length) {
       // format table and table sink schema strings
       val srcSchema = srcNameTypes
-          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-          .mkString("[", ", ", "]")
+        .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+        .mkString("[", ", ", "]")
 
       val sinkSchema = sinkNameTypes
-          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-          .mkString("[", ", ", "]")
+        .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+        .mkString("[", ", ", "]")
 
       throw new ValidationException(
         TableErrors.INST.sqlInsertIntoMismatchedFieldLen(
           targetTableName, srcSchema, sinkSchema))
     } else if (srcFieldTypes.zip(sinkFieldTypes)
-        .exists {
-          case (_: GenericType[_], _: GenericType[_]) => false
-          case (srcF, snkF) => !typeMatch(srcF, snkF)
-        }
+      .exists {
+        case (_: GenericType[_], _: GenericType[_]) => false
+        case (srcF, snkF) => !typeMatch(srcF, snkF)
+      }
     ) {
       val diffNameTypes = srcNameTypes.zip(sinkNameTypes)
-          .filter {
-            case ((_, srcType), (_, sinkType)) => !typeMatch(srcType, sinkType)
-          }
+        .filter {
+          case ((_, srcType), (_, sinkType)) => !typeMatch(srcType, sinkType)
+        }
       val srcDiffMsg = diffNameTypes
-          .map(_._1)
-          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-          .mkString("[", ", ", "]")
+        .map(_._1)
+        .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+        .mkString("[", ", ", "]")
       val sinkDiffMsg = diffNameTypes
-          .map(_._2)
-          .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
-          .mkString("[", ", ", "]")
+        .map(_._2)
+        .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
+        .mkString("[", ", ", "]")
 
       throw new ValidationException(
         TableErrors.INST.sqlInsertIntoMismatchedFieldTypes(
@@ -1245,6 +1345,32 @@ abstract class TableEnvironment(val config: TableConfig) extends AutoCloseable {
 
     // emit the table to the configured table sink
     writeToSink(sourceTable, tableSink, targetTableName)
+  }
+
+  /**
+    * Registers a Calcite [[AbstractTable]] in the TableEnvironment's catalog.
+    *
+    * @param name The name under which the table will be registered.
+    * @param table The table to register in the catalog.
+    * @param replace Whether to replace the registered table.
+    * @throws TableException if another table is registered under the provided name.
+    */
+  @throws[TableException]
+  protected def registerTableInternal(name: String,
+                                      table: AbstractTable,
+                                      replace: Boolean): Unit = {
+    if (replace) {
+      catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
+        .asInstanceOf[ReadableWritableCatalog]
+        .dropTable(new ObjectPath(catalogManager.getDefaultDatabaseName, name), true)
+    }
+    catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
+      .asInstanceOf[ReadableWritableCatalog]
+      .createTable(
+        new ObjectPath(catalogManager.getDefaultDatabaseName, name),
+        createFlinkTempTable(table),
+        false
+      )
   }
 
   /**

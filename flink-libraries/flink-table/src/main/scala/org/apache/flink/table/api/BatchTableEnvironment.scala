@@ -286,11 +286,11 @@ class BatchTableEnvironment(
    * @tparam T the type of the [[DataStream]].
    */
   protected def registerBoundedStreamInternal[T](
-      name: String, boundedStream: DataStream[T]): Unit = {
+      name: String, boundedStream: DataStream[T], replace: Boolean): Unit = {
     val (fieldNames, fieldIdxs) = getFieldInfo(
       DataTypes.of(boundedStream.getTransformation.getOutputType))
     val boundedStreamTable = new DataStreamTable[T](boundedStream, fieldIdxs, fieldNames)
-    registerTableInternal(name, boundedStreamTable)
+    registerTableInternal(name, boundedStreamTable, replace)
   }
 
   /**
@@ -305,7 +305,8 @@ class BatchTableEnvironment(
   protected def registerBoundedStreamInternal[T](
       name: String,
       boundedStream: DataStream[T],
-      fieldNullables: Array[Boolean]): Unit = {
+      fieldNullables: Array[Boolean],
+      replace: Boolean): Unit = {
     val dataType =
       DataTypes.of(boundedStream.getTransformation.getOutputType)
     val (fieldNames, fieldIndexes) = getFieldInfo(dataType)
@@ -313,7 +314,7 @@ class BatchTableEnvironment(
     val relDataType = getTypeFactory.buildRelDataType(fieldNames, fieldTypes, fieldNullables)
     val boundedStreamTable = new IntermediateBoundedStreamTable[T](
       relDataType, boundedStream, fieldIndexes, fieldNames)
-    registerTableInternal(name, boundedStreamTable)
+    registerTableInternal(name, boundedStreamTable, replace)
   }
 
   /**
@@ -326,7 +327,8 @@ class BatchTableEnvironment(
    * @tparam T The type of the [[DataStream]].
    */
   protected def registerBoundedStreamInternal[T](
-      name: String, boundedStream: DataStream[T], fields: Array[Expression]): Unit = {
+      name: String, boundedStream: DataStream[T],
+      fields: Array[Expression], replace: Boolean): Unit = {
 
     if (fields.exists(_.isInstanceOf[TimeAttribute])) {
       throw new ValidationException(
@@ -336,7 +338,7 @@ class BatchTableEnvironment(
     val dataType = DataTypes.of(boundedStream.getTransformation.getOutputType)
     val (fieldNames, fieldIndexes) = getFieldInfo[T](dataType, fields)
     val boundedStreamTable = new DataStreamTable[T](boundedStream, fieldIndexes, fieldNames)
-    registerTableInternal(name, boundedStreamTable)
+    registerTableInternal(name, boundedStreamTable, replace)
   }
 
   /**
@@ -353,7 +355,8 @@ class BatchTableEnvironment(
       name: String,
       boundedStream: DataStream[T],
       fields: Array[Expression],
-      fieldNullables: Array[Boolean]): Unit = {
+      fieldNullables: Array[Boolean],
+      replace: Boolean): Unit = {
 
     if (fields.exists(_.isInstanceOf[TimeAttribute])) {
       throw new ValidationException(
@@ -366,7 +369,7 @@ class BatchTableEnvironment(
     val relDataType = getTypeFactory.buildRelDataType(fieldNames, fieldTypes, fieldNullables)
     val boundedStreamTable = new IntermediateBoundedStreamTable[T](
       relDataType, boundedStream, fieldIndexes, fieldNames)
-    registerTableInternal(name, boundedStreamTable)
+    registerTableInternal(name, boundedStreamTable, replace)
   }
 
   /**
@@ -536,11 +539,13 @@ class BatchTableEnvironment(
     *
     * @param name        The name under which the [[TableSource]] is registered.
     * @param tableSource The [[TableSource]] to register.
+    * @param replace     Whether to replace the registered table.
     */
   override protected def registerTableSourceInternal(
     name: String,
     tableSource: TableSource,
-    statistic: FlinkStatistic)
+    statistic: FlinkStatistic,
+    replace: Boolean = false)
   : Unit = {
 
     tableSource match {
@@ -554,7 +559,7 @@ class BatchTableEnvironment(
           case Some(table: TableSourceSinkTable[_]) => table.tableSourceTable match {
 
             // wrapper contains source
-            case Some(_: TableSourceTable) =>
+            case Some(_: TableSourceTable) if !replace =>
               throw new TableException(s"Table '$name' already exists. " +
                 s"Please choose a different name.")
 
@@ -634,11 +639,12 @@ class BatchTableEnvironment(
     new BatchTableDescriptor(this, connectorDescriptor)
   }
 
-  override def registerTableSink(
+  override def registerTableSinkInternal(
       name: String,
       fieldNames: Array[String],
       fieldTypes: Array[DataType],
-      tableSink: TableSink[_]): Unit = {
+      tableSink: TableSink[_],
+      replace: Boolean): Unit = {
     checkValidTableName(name)
     if (fieldNames == null) throw new TableException("fieldNames must not be null.")
     if (fieldTypes == null) throw new TableException("fieldTypes must not be null.")
@@ -649,22 +655,12 @@ class BatchTableEnvironment(
 
     // configure and register
     val configuredSink = tableSink.configure(fieldNames, fieldTypes)
-    registerTableSinkInternal(name, configuredSink)
+    registerTableSinkInternal(name, configuredSink, replace)
   }
 
-  /**
-    * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
-    * Registered sink tables can be referenced in SQL DML statements.
-    *
-    * @param name The name under which the [[TableSink]] is registered.
-    * @param configuredSink The configured [[TableSink]] to register.
-    */
-  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = {
-    registerTableSinkInternal(name, configuredSink)
-  }
-
-  private def registerTableSinkInternal(name: String, configuredSink: TableSink[_]): Unit = {
+  protected def registerTableSinkInternal(name: String,
+                                          configuredSink: TableSink[_],
+                                          replace: Boolean): Unit = {
     // validate
     checkValidTableName(name)
     if (configuredSink.getFieldNames == null || configuredSink.getFieldTypes == null) {
@@ -690,7 +686,7 @@ class BatchTableEnvironment(
           case Some(table: TableSourceSinkTable[_]) => table.tableSinkTable match {
 
             // wrapper contains sink
-            case Some(_: TableSinkTable[_]) =>
+            case Some(_: TableSinkTable[_]) if !replace =>
               throw new TableException(s"Table '$name' already exists. " +
                 s"Please choose a different name.")
 

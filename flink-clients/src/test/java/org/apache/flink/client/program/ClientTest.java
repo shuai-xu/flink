@@ -206,7 +206,7 @@ public class ClientTest extends TestLogger {
 
 		StandaloneClusterClient out = new StandaloneClusterClient(config);
 		out.setDetached(true);
-		JobSubmissionResult result = out.run(program.getPlanWithJars(), 1);
+		JobSubmissionResult result = out.run(program.getPlanWithJars(), 1, false);
 
 		assertNotNull(result);
 
@@ -226,7 +226,7 @@ public class ClientTest extends TestLogger {
 		out.setDetached(true);
 
 		try {
-			out.run(program.getPlanWithJars(), 1);
+			out.run(program.getPlanWithJars(), 1, false);
 			fail("This should fail with an exception");
 		}
 		catch (ProgramInvocationException e) {

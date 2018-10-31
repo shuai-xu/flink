@@ -179,7 +179,7 @@ public class ZooKeeperHighAvailabilityITCase extends TestLogger {
 		JobID jobID = Preconditions.checkNotNull(jobGraph.getJobID());
 
 		clusterClient.setDetached(true);
-		clusterClient.submitJob(jobGraph, ZooKeeperHighAvailabilityITCase.class.getClassLoader());
+		clusterClient.submitJob(jobGraph, ZooKeeperHighAvailabilityITCase.class.getClassLoader(), false);
 
 		// wait until we did some checkpoints
 		waitForCheckpointLatch.await();

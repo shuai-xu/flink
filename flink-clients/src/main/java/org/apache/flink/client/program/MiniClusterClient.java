@@ -68,10 +68,10 @@ public class MiniClusterClient extends ClusterClient<MiniClusterClient.MiniClust
 	}
 
 	@Override
-	public JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader) throws ProgramInvocationException {
+	public JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader, boolean detached) throws ProgramInvocationException {
 		final CompletableFuture<JobSubmissionResult> jobSubmissionResultFuture = submitJob(jobGraph);
 
-		if (isDetached()) {
+		if (isDetached() || detached) {
 			try {
 				return jobSubmissionResultFuture.get();
 			} catch (InterruptedException | ExecutionException e) {

@@ -307,7 +307,7 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		JobGraph initialJobGraph = getJobGraph(backend, externalCheckpoint);
 		NotifyingInfiniteTupleSource.countDownLatch = new CountDownLatch(PARALLELISM);
 
-		client.submitJob(initialJobGraph, ResumeCheckpointManuallyITCase.class.getClassLoader());
+		client.submitJob(initialJobGraph, ResumeCheckpointManuallyITCase.class.getClassLoader(), false);
 
 		// wait until all sources have been started
 		NotifyingInfiniteTupleSource.countDownLatch.await();

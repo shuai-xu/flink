@@ -27,6 +27,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.MiniClusterConfiguration;
 import org.apache.flink.streaming.api.graph.StreamGraph;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -82,13 +84,29 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 		return configuration;
 	}
 
-	/**
-	 * Executes the JobGraph of the on a mini cluster of CLusterUtil with a user
-	 * specified name.
-	 *
-	 * @param streamGraph Stream Graph to execute
-	 * @return The result of the job execution, containing elapsed time and accumulators.
-	 */
+	@Override
+	protected JobSubmissionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws Exception {
+		// transform the streaming program into a JobGraph
+		StreamGraph streamGraph = getStreamGraph();
+		streamGraph.setJobName(jobName);
+		// transform the streaming program into a JobGraph
+		JobGraph jobGraph = streamGraph.getJobGraph();
+		jobGraph.setAllowQueuedScheduling(true);
+		MiniCluster miniCluster = prepareMiniCluster(jobGraph);
+
+		try {
+			return miniCluster.executeJob(jobGraph, detached);
+		}
+		finally {
+			transformations.clear();
+			if (!detached) {
+				miniCluster.close();
+			} else {
+				this.submitMapping.put(jobGraph.getJobID(), miniCluster);
+			}
+		}
+	}
+
 	@Override
 	public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
 		// transform the streaming program into a JobGraph
@@ -97,24 +115,12 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 		MiniCluster miniCluster = prepareMiniCluster(jobGraph);
 
 		try {
-			return miniCluster.executeJobBlocking(jobGraph);
+			return (JobExecutionResult) miniCluster.executeJob(jobGraph, false);
 		}
 		finally {
 			transformations.clear();
 			miniCluster.close();
 		}
-	}
-
-	@Override
-	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
-		// transform the streaming program into a JobGraph
-		JobGraph jobGraph = streamGraph.getJobGraph();
-		jobGraph.setAllowQueuedScheduling(true);
-		MiniCluster miniCluster = prepareMiniCluster(jobGraph);
-		this.submitMapping.put(jobGraph.getJobID(), miniCluster);
-		JobSubmissionResult jobSubmissionResult = miniCluster.submitJob(jobGraph).get();
-		transformations.clear();
-		return jobSubmissionResult;
 	}
 
 	@Override
@@ -146,18 +152,28 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 		int numSlotsPerTaskManager = configuration.getInteger(TaskManagerOptions.NUM_TASK_SLOTS, jobGraph.getMaximumParallelism() * jobGraph.getNumberOfVertices());
 
 		MiniClusterConfiguration cfg = new MiniClusterConfiguration.Builder()
-			.setConfiguration(configuration)
-			.setNumSlotsPerTaskManager(numSlotsPerTaskManager)
-			.build();
+				.setConfiguration(configuration)
+				.setNumSlotsPerTaskManager(numSlotsPerTaskManager)
+				.build();
 
 		if (LOG.isInfoEnabled()) {
 			LOG.info("Running job on local embedded Flink mini cluster");
 		}
 
 		MiniCluster miniCluster = new MiniCluster(cfg);
-
 		miniCluster.start();
+
 		configuration.setInteger(RestOptions.PORT, miniCluster.getRestAddress().getPort());
 		return miniCluster;
+	}
+
+	@Override
+	public void cancel(String jobId) {
+
+	}
+
+	@Override
+	public String triggerSavepoint(String jobId, String path) throws Exception {
+		throw new IOException("not supported");
 	}
 }

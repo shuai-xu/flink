@@ -18,17 +18,17 @@
 package org.apache.flink.api.scala
 
 import com.esotericsoftware.kryo.Serializer
-import org.apache.flink.annotation.{PublicEvolving, Public}
+import org.apache.flink.annotation.{Public, PublicEvolving}
 import org.apache.flink.api.common.io.{FileInputFormat, InputFormat}
 import org.apache.flink.api.common.restartstrategy.RestartStrategies.RestartStrategyConfiguration
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.common.{ExecutionConfig, JobExecutionResult, JobID}
+import org.apache.flink.api.common.{ExecutionConfig, JobExecutionResult, JobID, JobSubmissionResult}
 import org.apache.flink.api.java.io._
 import org.apache.flink.api.java.operators.DataSource
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.api.java.typeutils.{PojoTypeInfo, TupleTypeInfoBase, ValueTypeInfo}
-import org.apache.flink.api.java.{CollectionEnvironment, ExecutionEnvironment => JavaEnv}
+import org.apache.flink.api.java.{CollectionEnvironment, JobListener, ExecutionEnvironment => JavaEnv}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.Path
 import org.apache.flink.types.StringValue
@@ -69,6 +69,12 @@ class ExecutionEnvironment(javaEnv: JavaEnv) {
    */
   def getConfig: ExecutionConfig = {
     javaEnv.getConfig
+  }
+
+  def getJobListeners : java.util.List[JobListener] = javaEnv.getJobListeners
+
+  def addJobListener(jobListener: JobListener) ={
+    javaEnv.addJobListener(jobListener)
   }
 
   /**
@@ -540,6 +546,22 @@ class ExecutionEnvironment(javaEnv: JavaEnv) {
     javaEnv.execute(jobName)
   }
 
+  def submit(): JobSubmissionResult = {
+    javaEnv.submit()
+  }
+
+  def submit(jobName: String): JobSubmissionResult = {
+    javaEnv.submit(jobName)
+  }
+
+  def cancel(jobId: JobID): Unit = {
+    javaEnv.cancel(jobId)
+  }
+
+  def stop(): Unit = {
+    javaEnv.stop()
+  }
+
   /**
    * Creates the plan with which the system will execute the program, and returns it as  a String
    * using a JSON representation of the execution data flow graph.
@@ -610,7 +632,7 @@ object ExecutionEnvironment {
    * This method sets the environment's default parallelism to given parameter, which
    * defaults to the value set via [[setDefaultLocalParallelism(Int)]].
    */
-  def createLocalEnvironment(parallelism: Int = JavaEnv.getDefaultLocalParallelism): 
+  def createLocalEnvironment(parallelism: Int = JavaEnv.getDefaultLocalParallelism):
       ExecutionEnvironment = {
     new ExecutionEnvironment(JavaEnv.createLocalEnvironment(parallelism))
   }

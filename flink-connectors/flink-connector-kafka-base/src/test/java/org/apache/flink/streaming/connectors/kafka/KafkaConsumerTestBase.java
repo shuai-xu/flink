@@ -462,7 +462,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			public void run() {
 				try {
 					client.setDetached(false);
-					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader());
+					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader(), false);
 				} catch (Throwable t) {
 					if (!ExceptionUtils.findThrowable(t, JobCancellationException.class).isPresent()) {
 						error.set(t);
@@ -1020,7 +1020,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			public void run() {
 				try {
 					client.setDetached(false);
-					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader());
+					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader(), false);
 				}
 				catch (Throwable t) {
 					jobError.set(t);
@@ -1096,7 +1096,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			public void run() {
 				try {
 					client.setDetached(false);
-					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader());
+					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader(), false);
 				}
 				catch (Throwable t) {
 					LOG.error("Job Runner failed with exception", t);
@@ -1620,7 +1620,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			public void run() {
 				try {
 					client.setDetached(false);
-					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader());
+					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader(), false);
 				} catch (Throwable t) {
 					if (!ExceptionUtils.findThrowable(t, JobCancellationException.class).isPresent()) {
 						LOG.warn("Got exception during execution", t);
@@ -2070,7 +2070,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			public void run() {
 				try {
 					client.setDetached(false);
-					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader());
+					client.submitJob(jobGraph, KafkaConsumerTestBase.class.getClassLoader(), false);
 					tryExecute(readEnv, "sequence validation");
 				} catch (Throwable t) {
 					if (!ExceptionUtils.findThrowable(t, SuccessException.class).isPresent()) {

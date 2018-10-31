@@ -71,7 +71,7 @@ class BatchTableEnvironment(
   def fromBoundedStream[T](boundedStream: DataStream[T]): Table = {
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream)
+    registerBoundedStreamInternal(name, boundedStream, false)
     scan(name)
   }
 
@@ -89,9 +89,8 @@ class BatchTableEnvironment(
   def fromBoundedStream[T](
       boundedStream: DataStream[T],
       fieldNullables: Iterable[Boolean]): Table = {
-
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray)
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray, false)
     scan(name)
   }
 
@@ -116,9 +115,10 @@ class BatchTableEnvironment(
       .toArray
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream, exprs)
+    registerBoundedStreamInternal(name, boundedStream, exprs, false)
     scan(name)
   }
+
 
   /**
     * Converts the given [[DataStream]] into a [[Table]] with specified field names.
@@ -146,7 +146,7 @@ class BatchTableEnvironment(
         .toArray
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray)
+    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray, false)
     scan(name)
   }
 
@@ -166,7 +166,23 @@ class BatchTableEnvironment(
   def registerBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream)
+    registerBoundedStreamInternal(name, boundedStream, false)
+  }
+
+  /**
+    * Registers or replace the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]].
+    *
+    * @param name The name under which the [[DataStream]] is registered in the catalog.
+    * @param dataSet The [[DataStream]] to register.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {
+    registerBoundedStreamInternal(name, boundedStream, true)
   }
 
   /**
@@ -189,7 +205,31 @@ class BatchTableEnvironment(
       fieldNullables: Iterable[Boolean]): Unit = {
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray)
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray, false)
+  }
+
+
+  /**
+    * Registers or replace the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](
+                                        name: String,
+                                        boundedStream: DataStream[T],
+                                        fieldNullables: Iterable[Boolean]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, fieldNullables.toArray, true)
   }
 
   /**
@@ -219,7 +259,38 @@ class BatchTableEnvironment(
       .toArray
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream, exprs)
+    registerBoundedStreamInternal(name, boundedStream, exprs, false)
+  }
+
+
+  /**
+    * Registers the given [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * Example:
+    *
+    * {{{
+    *   DataStream<Tuple2<String, Long>> set = ...
+    *   tableEnv.registerOrReplaceBoundedStream("myTable", set, "a, b")
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](
+                                        name: String,
+                                        boundedStream: DataStream[T],
+                                        fields: String): Unit = {
+    val exprs = ExpressionParser
+      .parseExpressionList(fields)
+      .toArray
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, exprs, true)
   }
 
   /**
@@ -252,7 +323,40 @@ class BatchTableEnvironment(
         .toArray
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray)
+    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray, false)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * Example:
+    *
+    * {{{
+    *   DataStream<Tuple2<String, Long>> set = ...
+    *   List<Boolean> fieldNullables = ...
+    *   tableEnv.registerOrReplaceBoundedStream("myTable", set, fieldNullables, "a, b")
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](
+                                        name: String,
+                                        boundedStream: DataStream[T],
+                                        fieldNullables: Iterable[Boolean],
+                                        fields: String): Unit = {
+    val exprs = ExpressionParser
+      .parseExpressionList(fields)
+      .toArray
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray, true)
   }
 
   /**

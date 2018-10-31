@@ -710,8 +710,16 @@ abstract class FlinkMiniCluster(
     * @return Execution result of the executed job
     * @throws JobExecutionException if the job failed to execute
     */
-  override def executeJobBlocking(jobGraph: JobGraph) = {
-    submitJobAndWait(jobGraph, false)
+  override def executeJob(jobGraph: JobGraph, detached: Boolean) = {
+    if (detached) {
+      submitJobDetached(jobGraph)
+    } else {
+      submitJobAndWait(jobGraph, false)
+    }
+  }
+
+  override def cancel(jobId: JobID):Unit = {
+
   }
 
   override def closeAsync() = {

@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -243,13 +244,23 @@ public abstract class KafkaTableSourceSinkFactoryTestBase extends TestLogger {
 		}
 
 		@Override
-		public JobExecutionResult execute(String jobName) {
+		public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
+			return null;
+		}
+
+		@Override
+		protected JobExecutionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
-		public JobExecutionResult execute(StreamGraph streamGraph) throws Exception {
-			throw new UnsupportedOperationException();
+		public void cancel(String jobId) {
+
+		}
+
+		@Override
+		public String triggerSavepoint(String jobId, String path) {
+			return null;
 		}
 	}
 

@@ -18,10 +18,11 @@
 
 package org.apache.flink.api.java;
 
-import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.scala.FlinkILoop;
 import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.streaming.api.environment.RemoteStreamEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironmentFactory;
@@ -86,7 +87,7 @@ public class ScalaShellRemoteStreamEnvironment extends RemoteStreamEnvironment {
 	 * @return The result of the job execution, containing elapsed time and accumulators.
 	 */
 	@Override
-	protected JobExecutionResult executeRemotely(StreamGraph streamGraph, List<URL> jarFiles) throws ProgramInvocationException {
+	protected JobSubmissionResult executeRemotely(StreamGraph streamGraph, List<URL> jarFiles, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws ProgramInvocationException {
 		URL jarUrl;
 		try {
 			jarUrl = flinkILoop.writeFilesToDisk().getAbsoluteFile().toURI().toURL();
@@ -98,7 +99,22 @@ public class ScalaShellRemoteStreamEnvironment extends RemoteStreamEnvironment {
 		allJarFiles.addAll(jarFiles);
 		allJarFiles.add(jarUrl);
 
-		return super.executeRemotely(streamGraph, allJarFiles);
+		return super.executeRemotely(streamGraph, allJarFiles, detached, savepointRestoreSettings);
+	}
+
+	@Override
+	public void cancel(String jobId) throws Exception {
+		super.cancel(jobId);
+	}
+
+	@Override
+	public String cancelWithSavepoint(String jobId, String path) throws Exception {
+		return super.cancelWithSavepoint(jobId, path);
+	}
+
+	@Override
+	public String triggerSavepoint(String jobId, String path) throws Exception {
+		return super.triggerSavepoint(jobId, path);
 	}
 
 	public void setAsContext() {

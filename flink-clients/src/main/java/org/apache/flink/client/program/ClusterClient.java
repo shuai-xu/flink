@@ -25,6 +25,7 @@ import org.apache.flink.api.common.Plan;
 import org.apache.flink.api.common.accumulators.AccumulatorHelper;
 import org.apache.flink.api.common.cache.DistributedCache.DistributedCacheEntry;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.JobListener;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.optimizer.CompilerException;
@@ -135,6 +136,8 @@ public abstract class ClusterClient<T> {
 
 	/** Switch for blocking/detached job submission of the client. */
 	private boolean detachedJobSubmission = false;
+
+	protected List<JobListener> jobListeners;
 
 	/**
 	 * Value returned by {@link #getMaxSlots()} if the number of maximum slots is unknown.
@@ -286,6 +289,10 @@ public abstract class ClusterClient<T> {
 		}
 	}
 
+	public void killCluster() throws Exception {
+
+	}
+
 	// ------------------------------------------------------------------------
 	//  Configuration
 	// ------------------------------------------------------------------------
@@ -299,6 +306,11 @@ public abstract class ClusterClient<T> {
 	public void setPrintStatusDuringExecution(boolean print) {
 		this.printStatusDuringExecution = print;
 	}
+
+	public void setJobListeners(List<JobListener> jobListeners) {
+		this.jobListeners = jobListeners;
+	}
+
 
 	/**
 	 * @return whether the client will print progress updates during the execution to {@code System.out}
@@ -384,7 +396,7 @@ public abstract class ClusterClient<T> {
 				jobWithJars = prog.getPlanWithJars();
 			}
 
-			return run(jobWithJars, parallelism, prog.getSavepointSettings());
+			return run(jobWithJars, parallelism, prog.getSavepointSettings(), false);
 		}
 		else if (prog.isUsingInteractiveMode()) {
 			log.info("Starting program in interactive mode (detached: {})", isDetached());
@@ -426,8 +438,8 @@ public abstract class ClusterClient<T> {
 		}
 	}
 
-	public JobSubmissionResult run(JobWithJars program, int parallelism) throws ProgramInvocationException {
-		return run(program, parallelism, SavepointRestoreSettings.none());
+	public JobSubmissionResult run(JobWithJars program, int parallelism, boolean detached) throws ProgramInvocationException {
+		return run(program, parallelism, SavepointRestoreSettings.none(), detached);
 	}
 
 	/**
@@ -444,7 +456,7 @@ public abstract class ClusterClient<T> {
 	 *                                    i.e. the job-manager is unreachable, or due to the fact that the
 	 *                                    parallel execution failed.
 	 */
-	public JobSubmissionResult run(JobWithJars jobWithJars, int parallelism, SavepointRestoreSettings savepointSettings)
+	public JobSubmissionResult run(JobWithJars jobWithJars, int parallelism, SavepointRestoreSettings savepointSettings, boolean detached)
 			throws CompilerException, ProgramInvocationException {
 		ClassLoader classLoader = jobWithJars.getUserCodeClassLoader();
 		if (classLoader == null) {
@@ -453,21 +465,21 @@ public abstract class ClusterClient<T> {
 
 		OptimizedPlan optPlan = getOptimizedPlan(compiler, jobWithJars, parallelism);
 		return run(optPlan, jobWithJars.getJarFiles(), jobWithJars.getClasspaths(),
-				jobWithJars.getLibjars(), jobWithJars.getFiles(), classLoader, savepointSettings);
+				jobWithJars.getLibjars(), jobWithJars.getFiles(), classLoader, savepointSettings, detached);
 	}
 
 	public JobSubmissionResult run(
-			FlinkPlan compiledPlan, List<URL> libraries, List<URL> classpaths, ClassLoader classLoader) throws ProgramInvocationException {
+			FlinkPlan compiledPlan, List<URL> libraries, List<URL> classpaths, ClassLoader classLoader, SavepointRestoreSettings savepointSettings, boolean detached) throws ProgramInvocationException {
 		return run(compiledPlan, libraries, classpaths,
-				Collections.emptyList(), Collections.emptyList(), classLoader, SavepointRestoreSettings.none());
+				Collections.emptyList(), Collections.emptyList(), classLoader, savepointSettings, detached);
 	}
 
 	public JobSubmissionResult run(FlinkPlan compiledPlan,
 			List<URL> libraries, List<URL> classpaths, List<URI> libjars, List<URI> files,
-			ClassLoader classLoader, SavepointRestoreSettings savepointSettings)
+			ClassLoader classLoader, SavepointRestoreSettings savepointSettings, boolean detached)
 			throws ProgramInvocationException {
 		JobGraph job = getJobGraph(flinkConfig, compiledPlan, libraries, classpaths, libjars, files, savepointSettings);
-		return submitJob(job, classLoader);
+		return submitJob(job, classLoader, detached);
 	}
 
 	/**
@@ -1042,8 +1054,13 @@ public abstract class ClusterClient<T> {
 	 * @param jobGraph The JobGraph to be submitted
 	 * @return JobSubmissionResult
 	 */
-	public abstract JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader)
+	public abstract JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader, boolean detached)
 		throws ProgramInvocationException;
+
+	public JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader)
+		throws ProgramInvocationException {
+		return submitJob(jobGraph, classLoader, false);
+	}
 
 	/**
 	 * Rescales the specified job such that it will have the new parallelism.

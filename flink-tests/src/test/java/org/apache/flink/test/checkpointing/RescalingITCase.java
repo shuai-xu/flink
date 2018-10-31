@@ -187,7 +187,7 @@ public class RescalingITCase extends TestLogger {
 			final JobID jobID = jobGraph.getJobID();
 
 			client.setDetached(true);
-			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader(), true);
 
 			// wait til the sources have emitted numberElements for each key and completed a checkpoint
 			SubtaskIndexFlatMapper.workCompletedLatch.await(deadline.timeLeft().toMillis(), TimeUnit.MILLISECONDS);
@@ -226,7 +226,7 @@ public class RescalingITCase extends TestLogger {
 			scaledJobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forPath(savepointPath));
 
 			client.setDetached(false);
-			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader(), false);
 
 			Set<Tuple2<Integer, Integer>> actualResult2 = CollectionSink.getElementsSet();
 
@@ -268,7 +268,7 @@ public class RescalingITCase extends TestLogger {
 			final JobID jobID = jobGraph.getJobID();
 
 			client.setDetached(true);
-			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader(), true);
 
 			// wait until the operator is started
 			StateSourceBase.workStartedLatch.await();
@@ -289,7 +289,7 @@ public class RescalingITCase extends TestLogger {
 			scaledJobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forPath(savepointPath));
 
 			client.setDetached(false);
-			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader(), false);
 		} catch (JobExecutionException exception) {
 			if (exception.getCause() instanceof IllegalStateException) {
 				// we expect a IllegalStateException wrapped
@@ -335,7 +335,7 @@ public class RescalingITCase extends TestLogger {
 			final JobID jobID = jobGraph.getJobID();
 
 			client.setDetached(true);
-			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader(), true);
 
 			// wait til the sources have emitted numberElements for each key and completed a checkpoint
 			SubtaskIndexFlatMapper.workCompletedLatch.await(deadline.timeLeft().toMillis(), TimeUnit.MILLISECONDS);
@@ -379,7 +379,7 @@ public class RescalingITCase extends TestLogger {
 			scaledJobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forPath(savepointPath));
 
 			client.setDetached(false);
-			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader(), false);
 
 			Set<Tuple2<Integer, Integer>> actualResult2 = CollectionSink.getElementsSet();
 
@@ -459,7 +459,7 @@ public class RescalingITCase extends TestLogger {
 			final JobID jobID = jobGraph.getJobID();
 
 			client.setDetached(true);
-			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(jobGraph, RescalingITCase.class.getClassLoader(), true);
 
 			// wait until the operator is started
 			StateSourceBase.workStartedLatch.await();
@@ -491,7 +491,7 @@ public class RescalingITCase extends TestLogger {
 			scaledJobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forPath(savepointPath));
 
 			client.setDetached(false);
-			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader());
+			client.submitJob(scaledJobGraph, RescalingITCase.class.getClassLoader(), false);
 
 			int sumExp = 0;
 			int sumAct = 0;

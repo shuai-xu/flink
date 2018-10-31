@@ -107,9 +107,9 @@ public class StandaloneClusterClient extends ClusterClient<StandaloneClusterId> 
 	}
 
 	@Override
-	public JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader)
+	public JobSubmissionResult submitJob(JobGraph jobGraph, ClassLoader classLoader, boolean detached)
 			throws ProgramInvocationException {
-		if (isDetached()) {
+		if (isDetached() || isDetached()) {
 			return super.runDetached(jobGraph, classLoader);
 		} else {
 			return super.run(jobGraph, classLoader);

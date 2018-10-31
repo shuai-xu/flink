@@ -38,6 +38,7 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.ClosureCleaner;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.JobListener;
 import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -53,6 +54,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.state.AbstractStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.StateBackend;
@@ -160,6 +162,7 @@ public abstract class StreamExecutionEnvironment {
 
 	protected final List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cacheFile = new ArrayList<>();
 
+	private List<JobListener> jobListeners = new ArrayList<>();
 
 	// --------------------------------------------------------------------------------------------
 	// Constructor and Properties
@@ -238,6 +241,14 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	public int getMaxParallelism() {
 		return config.getMaxParallelism();
+	}
+
+	public void addJobListener(JobListener jobListener) {
+		this.jobListeners.add(jobListener);
+	}
+
+	public List<JobListener> getJobListeners() {
+		return this.jobListeners;
 	}
 
 	/**
@@ -1822,23 +1833,10 @@ public abstract class StreamExecutionEnvironment {
 	 * @throws Exception which occurs during job execution.
 	 */
 	public JobExecutionResult execute(String jobName) throws Exception {
-		Preconditions.checkNotNull("Streaming Job name should not be null.");
-
-		StreamGraph streamGraph = this.getStreamGraph();
-		streamGraph.setJobName(jobName);
-
-		return execute(streamGraph);
+		return executeInternal(jobName, false, SavepointRestoreSettings.none()).getJobExecutionResult();
 	}
 
-	public JobSubmissionResult submit(String jobName) throws Exception {
-		Preconditions.checkNotNull("Streaming Job name should not be null.");
-
-		StreamGraph streamGraph = this.getStreamGraph();
-		streamGraph.setJobName(jobName);
-
-		return submitJob(streamGraph);
-	}
-
+	// TODO remove this as this is only used by test code
 	/**
 	 * Triggers the program execution with stream graph.
 	 *
@@ -1849,13 +1847,33 @@ public abstract class StreamExecutionEnvironment {
 	@Internal
 	public abstract JobExecutionResult execute(StreamGraph streamGraph) throws Exception;
 
-	public JobSubmissionResult submitJob(StreamGraph streamGraph) throws Exception {
-		throw new RuntimeException("do not support submitting job.");
+	public JobExecutionResult execute(String jobName, SavepointRestoreSettings savepointRestoreSettings) throws Exception {
+		return executeInternal(jobName, false, savepointRestoreSettings).getJobExecutionResult();
+	}
+
+	protected abstract JobSubmissionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws Exception;
+
+	public JobSubmissionResult submit(String jobName) throws Exception {
+		return executeInternal(jobName, true, SavepointRestoreSettings.none());
+	}
+
+	public JobSubmissionResult submit() throws Exception {
+		return submit(DEFAULT_JOB_NAME);
+	}
+
+	public void cancel(String jobId) throws Exception {
+		throw new UnsupportedOperationException("cancel is not supported");
+	}
+
+	public String cancelWithSavepoint(String jobId, String path) throws Exception {
+		throw new UnsupportedOperationException("cancelWithSavepoint is not supported");
 	}
 
 	public void stopJob(JobID jobID) throws Exception {
 		throw new RuntimeException("do not support stopping job.");
 	}
+
+	public abstract String triggerSavepoint(String jobId, String path) throws Exception;
 
 	/**
 	 * Getter of the {@link org.apache.flink.streaming.api.graph.StreamGraph} of the streaming job.

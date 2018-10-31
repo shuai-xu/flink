@@ -143,7 +143,7 @@ public class AccumulatorLiveITCase extends TestLogger {
 		final CheckedThread submissionThread = new CheckedThread() {
 			@Override
 			public void go() throws Exception {
-				client.submitJob(jobGraph, AccumulatorLiveITCase.class.getClassLoader());
+				client.submitJob(jobGraph, AccumulatorLiveITCase.class.getClassLoader(), false);
 			}
 		};
 

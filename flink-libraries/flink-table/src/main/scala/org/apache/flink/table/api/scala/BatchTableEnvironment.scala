@@ -68,7 +68,7 @@ class BatchTableEnvironment(
   def fromBoundedStream[T](boundedStream: DataStream[T]): Table = {
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream.javaStream)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, false)
     scan(name)
   }
 
@@ -88,7 +88,7 @@ class BatchTableEnvironment(
       fieldNullables: Array[Boolean]): Table = {
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fieldNullables)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fieldNullables, false)
     scan(name)
   }
 
@@ -110,7 +110,7 @@ class BatchTableEnvironment(
   def fromBoundedStream[T](boundedStream: DataStream[T], fields: Expression*): Table = {
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, false)
     scan(name)
   }
 
@@ -137,7 +137,8 @@ class BatchTableEnvironment(
       fields: Expression*): Table = {
 
     val name = createUniqueTableName()
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, fieldNullables)
+    registerBoundedStreamInternal(name, boundedStream.javaStream,
+      fields.toArray, fieldNullables, false)
     scan(name)
   }
 
@@ -161,7 +162,7 @@ class BatchTableEnvironment(
   def fromBoundedStream[T](name: String, boundedStream: DataStream[T], fields: Expression*):
   Table = {
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, false)
     scan(name)
   }
 
@@ -191,7 +192,8 @@ class BatchTableEnvironment(
       fields: Expression*):
   Table = {
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, fieldNullables)
+    registerBoundedStreamInternal(name, boundedStream.javaStream,
+      fields.toArray, fieldNullables, false)
     scan(name)
   }
 
@@ -211,7 +213,27 @@ class BatchTableEnvironment(
   def registerBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream.javaStream)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, false)
+  }
+
+
+  /**
+    * Registers or replace the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](name: String, boundedStream: DataStream[T]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, true)
   }
 
   /**
@@ -234,7 +256,30 @@ class BatchTableEnvironment(
       fieldNullables: Array[Boolean]): Unit = {
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fieldNullables)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fieldNullables, false)
+  }
+
+  /**
+    * Registers or replace the given [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](
+                                        name: String,
+                                        boundedStream: DataStream[T],
+                                        fieldNullables: Array[Boolean]): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fieldNullables, true)
   }
 
   /**
@@ -261,7 +306,34 @@ class BatchTableEnvironment(
       fields: Expression*): Unit = {
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, false)
+  }
+
+  /**
+    * Registers or replace the given [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * Example:
+    *
+    * {{{
+    *   val set: DataStream[(String, Long)] = ...
+    *   tableEnv.registerBoundedStream("myTable", set, 'a, 'b)
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](
+                                        name: String,
+                                        boundedStream: DataStream[T],
+                                        fields: Expression*): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, true)
   }
 
   /**
@@ -291,7 +363,39 @@ class BatchTableEnvironment(
       fields: Expression*): Unit = {
 
     checkValidTableName(name)
-    registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, fieldNullables)
+    registerBoundedStreamInternal(name, boundedStream.javaStream,
+      fields.toArray, fieldNullables, false)
+  }
+
+  /**
+    * Registers the given [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * Example:
+    *
+    * {{{
+    *   val set: BoundedStream[(String, Long)] = ...
+    *   val fieldNullables: Array[Boolean] = ...
+    *   tableEnv.registerBoundedStream("myTable", set, fieldNullables, 'a, 'b)
+    * }}}
+    *
+    * @param name           The name under which the [[DataStream]] is registered in the
+    *                       catalog.
+    * @param boundedStream The [[DataStream]] to register.
+    * @param fieldNullables The field isNullables attributes of boundedStream.
+    * @param fields         The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerOrReplaceBoundedStream[T](
+                                        name: String,
+                                        boundedStream: DataStream[T],
+                                        fieldNullables: Array[Boolean],
+                                        fields: Expression*): Unit = {
+
+    checkValidTableName(name)
+    registerBoundedStreamInternal(name, boundedStream.javaStream,
+      fields.toArray, fieldNullables, true)
   }
 
   /**
@@ -412,10 +516,10 @@ class BatchTableEnvironment(
       typeInfo, tableName)
     boundedStream.forceNonParallel()
     (fields == null, fieldNullables == null) match {
-      case (true, true) => registerBoundedStreamInternal(tableName, boundedStream)
-      case (false, true) => registerBoundedStreamInternal(tableName, boundedStream, fields)
+      case (true, true) => registerBoundedStreamInternal(tableName, boundedStream, false)
+      case (false, true) => registerBoundedStreamInternal(tableName, boundedStream, fields, false)
       case (false, false) => registerBoundedStreamInternal(tableName, boundedStream, fields,
-        fieldNullables.toArray)
+        fieldNullables.toArray, false)
       case (true, false) => throw new IllegalArgumentException("Can not register collection with" +
         "empty field names while fieldNullables non empty.")
     }
@@ -506,9 +610,9 @@ class BatchTableEnvironment(
     boundedStream.setParallelism(1)
     val name = if (tableName == null) createUniqueTableName() else tableName
     if (fields == null) {
-      registerBoundedStreamInternal(name, boundedStream)
+      registerBoundedStreamInternal(name, boundedStream, false)
     } else {
-      registerBoundedStreamInternal(name, boundedStream, fields)
+      registerBoundedStreamInternal(name, boundedStream, fields, false)
     }
     scan(name)
   }

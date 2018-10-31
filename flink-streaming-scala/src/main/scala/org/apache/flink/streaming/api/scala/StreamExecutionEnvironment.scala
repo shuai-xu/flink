@@ -25,10 +25,12 @@ import org.apache.flink.api.common.io.{FileInputFormat, FilePathFilter, InputFor
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.common.restartstrategy.RestartStrategies.RestartStrategyConfiguration
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.JobListener
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.api.scala.ClosureCleaner
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings
 import org.apache.flink.runtime.state.AbstractStateBackend
 import org.apache.flink.runtime.state.StateBackend
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
@@ -115,6 +117,12 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
    */
   def getBufferTimeout = javaEnv.getBufferTimeout
 
+  def getJobListeners: java.util.List[JobListener] = javaEnv.getJobListeners
+
+  def addJobListener(jobListener: JobListener) = {
+    javaEnv.addJobListener(jobListener)
+  }
+
   /**
    * Disables operator chaining for streaming operators. Operator chaining
    * allows non-shuffle operations to be co-located in the same thread fully
@@ -149,13 +157,13 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
   // ------------------------------------------------------------------------
   //  Checkpointing Settings
   // ------------------------------------------------------------------------
-  
+
   /**
    * Gets the checkpoint config, which defines values like checkpoint interval, delay between
    * checkpoints, etc.
    */
   def getCheckpointConfig = javaEnv.getCheckpointConfig()
-  
+
   /**
    * Enables checkpointing for the streaming job. The distributed state of the streaming
    * dataflow will be periodically snapshotted. In case of a failure, the streaming
@@ -195,12 +203,12 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
    *
    * NOTE: Checkpointing iterative streaming dataflows in not properly supported at
    * the moment. For that reason, iterative jobs will not be started if used
-   * with enabled checkpointing. To override this mechanism, use the 
+   * with enabled checkpointing. To override this mechanism, use the
    * [[enableCheckpointing(long, CheckpointingMode, boolean)]] method.
    *
-   * @param interval 
+   * @param interval
    *     Time interval between state checkpoints in milliseconds.
-   * @param mode 
+   * @param mode
    *     The checkpointing mode, selecting between "exactly once" and "at least once" guarantees.
    */
   def enableCheckpointing(interval : Long,
@@ -220,10 +228,10 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
    *
    * NOTE: Checkpointing iterative streaming dataflows in not properly supported at
    * the moment. For that reason, iterative jobs will not be started if used
-   * with enabled checkpointing. To override this mechanism, use the 
+   * with enabled checkpointing. To override this mechanism, use the
    * [[enableCheckpointing(long, CheckpointingMode, boolean)]] method.
    *
-   * @param interval 
+   * @param interval
    *           Time interval between state checkpoints in milliseconds.
    */
   def enableCheckpointing(interval : Long) : StreamExecutionEnvironment = {
@@ -244,7 +252,7 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
     javaEnv.enableCheckpointing()
     this
   }
-  
+
   def getCheckpointingMode = javaEnv.getCheckpointingMode()
 
   /**
@@ -670,16 +678,16 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
 
   /**
    * Create a DataStream using a user defined source function for arbitrary
-   * source functionality. By default sources have a parallelism of 1. 
-   * To enable parallel execution, the user defined source should implement 
-   * ParallelSourceFunction or extend RichParallelSourceFunction. 
-   * In these cases the resulting source will have the parallelism of the environment. 
+   * source functionality. By default sources have a parallelism of 1.
+   * To enable parallel execution, the user defined source should implement
+   * ParallelSourceFunction or extend RichParallelSourceFunction.
+   * In these cases the resulting source will have the parallelism of the environment.
    * To change this afterwards call DataStreamSource.setParallelism(int)
    *
    */
   def addSource[T: TypeInformation](function: SourceFunction[T]): DataStream[T] = {
     require(function != null, "Function must not be null.")
-    
+
     val cleanFun = scalaClean(function)
     val typeInfo = implicitly[TypeInformation[T]]
     asScalaStream(javaEnv.addSource(cleanFun).returns(typeInfo))
@@ -722,7 +730,7 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
    * Triggers the program execution. The environment will execute all parts of
    * the program that have resulted in a "sink" operation. Sink operations are
    * for example printing results or forwarding them to a message queue.
-   * 
+   *
    * The program execution will be logged and displayed with a generated
    * default name.
    */
@@ -732,10 +740,25 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
    * Triggers the program execution. The environment will execute all parts of
    * the program that have resulted in a "sink" operation. Sink operations are
    * for example printing results or forwarding them to a message queue.
-   * 
+   *
    * The program execution will be logged and displayed with the provided name.
    */
   def execute(jobName: String) = javaEnv.execute(jobName)
+
+  def execute(jobName: String, savePointSetting: SavepointRestoreSettings) =
+    javaEnv.execute(jobName, savePointSetting)
+
+  def submit(jobName: String) = javaEnv.submit(jobName)
+
+  def submit() = javaEnv.submit()
+
+  def cancel(jobId: String) = javaEnv.cancel(jobId)
+
+  def cancelWithSavepoint(jobId: String, path: String) = javaEnv.cancelWithSavepoint(jobId, path)
+
+  def triggerSavepoint(jobId: String) = javaEnv.triggerSavepoint(jobId, null)
+
+  def triggerSavepoint(jobId: String, path: String) = javaEnv.triggerSavepoint(jobId, path)
 
   /**
    * Creates the plan with which the system will execute the program, and
@@ -818,24 +841,6 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
   }
 
   /**
-    * Submit job asynchronously.
-    * @param streamGraph
-    * @return
-    */
-  def submitJob(streamGraph: StreamGraph): JobSubmissionResult = {
-    javaEnv.submitJob(streamGraph)
-  }
-
-  /**
-    * Submit job asynchronously with a name.
-    * @param streamGraph
-    * @return
-    */
-  def submit(jobName: String): JobSubmissionResult = {
-    javaEnv.submit(jobName)
-  }
-
-  /**
     * Stop a submitted job with JobID.
     * @param jobId
     */
@@ -862,11 +867,11 @@ object StreamExecutionEnvironment {
    */
   @PublicEvolving
   def getDefaultLocalParallelism: Int = JavaEnv.getDefaultLocalParallelism
-  
+
   // --------------------------------------------------------------------------
   //  context environment
   // --------------------------------------------------------------------------
-  
+
   /**
    * Creates an execution environment that represents the context in which the program is
    * currently executed. If the program is invoked standalone, this method returns a local

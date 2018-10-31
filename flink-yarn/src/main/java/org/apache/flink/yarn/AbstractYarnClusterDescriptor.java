@@ -51,6 +51,7 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ShutdownHookUtil;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -845,6 +846,11 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 					userJarFiles.add(localFile);
 					localFile.deleteOnExit();
 				}
+			}
+		}
+		if (!StringUtils.isBlank(configuration.getString("flink.yarn.jars", ""))) {
+			for (String jar : configuration.getString("flink.yarn.jars", "").split(":")) {
+				userJarFiles.add(new File(jar));
 			}
 		}
 
