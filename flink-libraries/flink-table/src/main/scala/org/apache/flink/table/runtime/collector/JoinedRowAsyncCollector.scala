@@ -72,7 +72,8 @@ class JoinedRowAsyncCollector(
     } else {
       // TODO: currently, collection should only contain one element
       val rightRow = resultCollection.iterator().next()
-      val outRow: BaseRow = new JoinedRow(leftRow, rightRow)
+      // copy right row to avoid object reuse in async collector
+      val outRow: BaseRow = new JoinedRow(leftRow, rightRow.copy())
       outRow.setHeader(leftRow.getHeader)
       realOutput.complete(Collections.singleton(outRow))
     }
