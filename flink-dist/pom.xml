@@ -33,6 +33,10 @@ under the License.
 	<name>flink-dist</name>
 	<packaging>jar</packaging>
 
+	<properties>
+		<install.folder.name>blink-3.0</install.folder.name>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -1010,7 +1014,7 @@ under the License.
 							<descriptors>
 								<descriptor>src/main/assemblies/package.xml</descriptor>
 							</descriptors>
-							<finalName>${project.version}</finalName>
+							<finalName>${install.folder.name}</finalName>
 							<appendAssemblyId>false</appendAssemblyId>
 							<tarLongFileMode>posix</tarLongFileMode>
 						</configuration>
