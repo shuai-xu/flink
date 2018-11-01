@@ -19,11 +19,12 @@ package org.apache.flink.table.runtime.batch.sql
 
 import java.util.Random
 
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.hive.functions.{HiveFunctionWrapper, HiveGenericUDF}
 import org.apache.flink.table.runtime.batch.sql.TestData.{data3, nullablesOfData3, type3}
-import org.apache.hadoop.hive.ql.udf.generic.{GenericUDF}
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDF
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 
@@ -32,7 +33,7 @@ class UdfITCase extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    registerCollection("Table3", data3, type3, "a, b, c", nullablesOfData3)
+    registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)
     tEnv.registerFunction("rand_udf", RandUDF)
   }
 

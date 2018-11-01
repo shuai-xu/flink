@@ -19,6 +19,7 @@
 package org.apache.flink.table.api.batch
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.junit._
 
@@ -27,7 +28,7 @@ class ExplainTest extends QueryTest {
   @Test
   def testFilterWithoutExtended(): Unit = {
 
-    val table = tEnv.fromCollection(Seq((1, "hello")), "a, b")
+    val table = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
       .filter("a % 2 = 0")
     verifyPlan(table)
   }
@@ -35,7 +36,7 @@ class ExplainTest extends QueryTest {
   @Test
   def testFilterWithExtended(): Unit = {
 
-    val table = tEnv.fromCollection(Seq((1, "hello")), "a, b")
+    val table = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
       .filter("a % 2 = 0")
 
     verifyPlan(table)
@@ -44,9 +45,9 @@ class ExplainTest extends QueryTest {
   @Test
   def testJoinWithoutExtended(): Unit = {
 
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), "a, b")
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), "c, d")
-    val table = table1.join(table2).where("b = d").select("a, c")
+    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
+    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'c, 'd)
+    val table = table1.join(table2).where("b = d").select('a, 'c)
 
     verifyPlan(table)
   }
@@ -54,17 +55,17 @@ class ExplainTest extends QueryTest {
   @Test
   def testJoinWithExtended(): Unit = {
 
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), "a, b")
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), "c, d")
-    val table = table1.join(table2).where("b = d").select("a, c")
+    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
+    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'c, 'd)
+    val table = table1.join(table2).where("b = d").select('a, 'c)
 
     verifyPlan(table)
   }
 
   @Test
   def testUnionWithoutExtended(): Unit = {
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), "count, word")
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), "count, word")
+    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
+    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
     val table = table1.unionAll(table2)
 
     verifyPlan(table)
@@ -72,8 +73,8 @@ class ExplainTest extends QueryTest {
 
   @Test
   def testUnionWithExtended(): Unit = {
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), "count, word")
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), "count, word")
+    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
+    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
     val table = table1.unionAll(table2)
 
     verifyPlan(table)

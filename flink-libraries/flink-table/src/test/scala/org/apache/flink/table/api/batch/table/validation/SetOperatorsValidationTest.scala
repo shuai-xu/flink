@@ -19,7 +19,7 @@
 package org.apache.flink.table.api.batch.table.validation
 
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, ValidationException}
 import org.apache.flink.table.util.{CollectionBatchExecTable, TableTestBatchExecBase}

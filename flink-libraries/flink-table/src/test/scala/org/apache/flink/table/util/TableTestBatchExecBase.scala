@@ -28,7 +28,7 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.{DataStream => ScalaStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.scala.BatchTableEnvironment
 import org.apache.flink.table.api.{Table, TableException, _}
@@ -194,7 +194,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
     when(transform.getOutputType).thenReturn(typeInfo)
     when(transform.getMinResources).thenReturn(ResourceSpec.DEFAULT)
 
-    val t = tableEnv.fromBoundedStream(bs, fields: _*)
+    val t = tableEnv.fromBoundedStream(new ScalaStream[T](bs), fields: _*)
     tableEnv.registerTable(name, t)
     t
   }
@@ -206,7 +206,7 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
     when(bs.getType).thenReturn(typeInfo)
     when(transform.getOutputType).thenReturn(typeInfo)
 
-    val t = tableEnv.fromBoundedStream(bs, fields: _*)
+    val t = tableEnv.fromBoundedStream(new ScalaStream[T](bs), fields: _*)
     tableEnv.registerTable(name, t)
     t
   }

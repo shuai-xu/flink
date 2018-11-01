@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
@@ -44,9 +45,9 @@ class TableFunctionITCase extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    registerCollection("inputT", TableFunctionITCase.testData, type3, "a, b, c")
-    registerCollection("inputTWithNull", TableFunctionITCase.testDataWithNull, type3, "a, b, c")
-    registerCollection("SmallTable3", smallData3, type3, "a, b, c")
+    registerCollection("inputT", TableFunctionITCase.testData, type3, 'a, 'b, 'c)
+    registerCollection("inputTWithNull", TableFunctionITCase.testDataWithNull, type3, 'a, 'b, 'c)
+    registerCollection("SmallTable3", smallData3, type3, 'a, 'b, 'c)
   }
 
   @Test
@@ -146,7 +147,7 @@ class TableFunctionITCase extends QueryTest {
     registerCollection("myT", Seq(
       row(UTCDate("1990-10-14"), 1000L, UTCTimestamp("1990-10-14 12:10:10"))),
       new RowTypeInfo(SqlTimeTypeInfo.DATE, LONG_TYPE_INFO, SqlTimeTypeInfo.TIMESTAMP),
-      "x, y, z")
+      'x, 'y, 'z)
     tEnv.registerFunction("func", new JavaTableFunc0)
     checkResult(
       "select s from myT, LATERAL TABLE(func(x, y, z)) as T(s)",
@@ -228,11 +229,8 @@ class TableFunctionITCase extends QueryTest {
       row(new MyPojo(5, 105)),
       row(new MyPojo(6, 11)),
       row(new MyPojo(7, 12)))
-    tEnv.registerCollection(
-      "MyTable",
-      data,
-      new RowTypeInfo(TypeExtractor.createTypeInfo(classOf[MyPojo])),
-      "a")
+    tEnv.registerCollection("MyTable", data,
+      new RowTypeInfo(TypeExtractor.createTypeInfo(classOf[MyPojo])), 'a)
 
     //1. external type for udtf parameter
     tEnv.registerFunction("pojoTFunc", new MyPojoTableFunc)
@@ -299,8 +297,8 @@ class TableFunctionITCase extends QueryTest {
 
   @Test
   def testJavaGenericTableFunc(): Unit = {
-    tEnv.registerFunction("func0", new GenericTableFunc(DataTypes.INT))
-    tEnv.registerFunction("func1", new GenericTableFunc(DataTypes.STRING))
+    tEnv.registerFunction("func0", new GenericTableFunc[DataTypes.INT.type](DataTypes.INT))
+    tEnv.registerFunction("func1", new GenericTableFunc[DataTypes.STRING.type](DataTypes.STRING))
     testGenericTableFunc()
   }
 

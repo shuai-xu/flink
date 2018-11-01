@@ -26,7 +26,8 @@ import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIV
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.{DATE, TIME, TIMESTAMP}
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, Types, ValidationException}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
 import org.apache.flink.table.functions.ScalarFunction
@@ -50,8 +51,8 @@ class CalcITCase extends QueryTest {
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     InternalTypeConverters.createToExternalConverter(DataTypes.createRowType())
-    registerCollection("Table3", data3, type3, "a, b, c", nullablesOfData3)
-    registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfData3)
+    registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)
+    registerCollection("SmallTable3", smallData3, type3, nullablesOfData3, 'a, 'b, 'c)
   }
 
   @Test
@@ -164,10 +165,7 @@ class CalcITCase extends QueryTest {
         UTCTime("14:34:24"),
         UTCTimestamp("1984-07-12 14:34:24")))
     tEnv.registerCollection(
-      "MyTable",
-      data,
-      new RowTypeInfo(DATE, TIME, TIMESTAMP),
-      "a, b, c")
+      "MyTable", data, new RowTypeInfo(DATE, TIME, TIMESTAMP), 'a, 'b, 'c)
 
     checkResult(
       "SELECT a, b, c, DATE '1984-07-12', TIME '14:34:24', " +
@@ -213,7 +211,7 @@ class CalcITCase extends QueryTest {
     tEnv.registerFunction("hashCode", OldHashCode)
     tEnv.registerFunction("hashCode", MyHashCode)
     val data = Seq(row("a"), row("b"), row("c"))
-    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), "text")
+    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), 'text)
 
     checkResult(
       "SELECT hashCode(text) FROM MyTable",
@@ -225,7 +223,7 @@ class CalcITCase extends QueryTest {
   def testUDFWithInternalClass(): Unit = {
     tEnv.registerFunction("func", BinaryStringFunction)
     val data = Seq(row("a"), row("b"), row("c"))
-    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), "text")
+    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), 'text)
 
     checkResult(
       "SELECT func(text) FROM MyTable",
@@ -237,7 +235,7 @@ class CalcITCase extends QueryTest {
   def testTimeUDF(): Unit = {
     tEnv.registerFunction("func", DateFunction)
     val data = Seq(row(UTCDate("1984-07-12")))
-    tEnv.registerCollection("MyTable", data, new RowTypeInfo(DATE), "a")
+    tEnv.registerCollection("MyTable", data, new RowTypeInfo(DATE), 'a)
     checkResult("SELECT func(a) FROM MyTable", Seq(row(UTCDate("1984-07-12"))))
   }
 
@@ -248,7 +246,7 @@ class CalcITCase extends QueryTest {
       "MyTable",
       data,
       new RowTypeInfo(INT_TYPE_INFO, INT_TYPE_INFO, BYTE_PRIMITIVE_ARRAY_TYPE_INFO),
-      "a, b, c")
+      'a, 'b, 'c)
 
     checkResult(
       "SELECT a, b, c FROM MyTable",
@@ -308,7 +306,7 @@ class CalcITCase extends QueryTest {
     tEnv.registerFunction("func2", ListFunc)
     tEnv.registerFunction("func3", StringFunc)
     val data = Seq(row("a"), row("b"), row("c"))
-    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), "text")
+    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), 'text)
 
     checkResult(
       "SELECT rowToStr(func1(text)), func2(text), func3(text) FROM MyTable",
@@ -339,7 +337,7 @@ class CalcITCase extends QueryTest {
       "MyTable",
       data,
       new RowTypeInfo(TypeExtractor.createTypeInfo(classOf[MyPojo])),
-      "a")
+      'a)
 
     check(
       "SELECT a FROM MyTable",
@@ -364,7 +362,7 @@ class CalcITCase extends QueryTest {
       "MyTable",
       data,
       new RowTypeInfo(TypeExtractor.createTypeInfo(classOf[MyPojo])),
-      "a")
+      'a)
 
     //1. external type for udf parameter
     tEnv.registerFunction("pojoFunc", MyPojoFunc)
@@ -392,7 +390,7 @@ class CalcITCase extends QueryTest {
     tEnv.registerFunction("hashCode0", LiteralHashCode)
     tEnv.registerFunction("hashCode1", LiteralHashCode)
     val data = Seq(row("a"), row("b"), row("c"))
-    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), "text")
+    tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), 'text)
     checkResult(
       "SELECT hashCode0(text, 'int') FROM MyTable",
       Seq(row(97), row(98), row(99)
@@ -589,7 +587,7 @@ class CalcITCase extends QueryTest {
   def testValueConstructor(): Unit = {
     val data = Seq(row("foo", 12, UTCTimestamp("1984-07-12 14:34:24")))
     val tpe = new RowTypeInfo(STRING_TYPE_INFO, INT_TYPE_INFO, TIMESTAMP)
-    registerCollection("MyTable", data, tpe, "a, b, c", Seq(false, false, false))
+    registerCollection("MyTable", data, tpe, Seq(false, false, false), 'a, 'b, 'c)
 
     val table = parseQuery("SELECT ROW(a, b, c), ARRAY[12, b], MAP[a, c] FROM MyTable " +
       "WHERE (a, b, c) = ('foo', 12, TIMESTAMP '1984-07-12 14:34:24')")
@@ -639,7 +637,7 @@ class CalcITCase extends QueryTest {
       (0L, "0"),
       (1L, "1"),
       (2L, "2")
-    ), "a, b")
+    ), 'a, 'b)
     tEnv.registerTable("MyTable", table)
 
     checkResult(
@@ -696,7 +694,7 @@ class CalcITCase extends QueryTest {
                       |FROM T1
                       |""".stripMargin
 
-    val t1 = tEnv.fromCollection(data, "a,b,c")
+    val t1 = tEnv.fromCollection(data, 'a, 'b, 'c)
 
     tEnv.registerTable("T1", t1)
 

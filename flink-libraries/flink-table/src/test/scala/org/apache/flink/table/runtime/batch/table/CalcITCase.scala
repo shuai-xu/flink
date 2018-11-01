@@ -22,7 +22,6 @@ import java.sql.Timestamp
 import java.util
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.{BaseRow, Decimal}
 import org.apache.flink.table.expressions.Literal

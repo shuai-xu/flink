@@ -109,11 +109,11 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 
 	@Test(expected = TableException.class)
 	public void testRegisterTableFromOtherEnv() throws Exception {
-		BatchTableEnvironment tEnv2 = TableEnvironment.getBatchTableEnvironment(env(), conf());
+		BatchTableEnvironment tEnv2 = TableEnvironment.getBatchTableEnvironment(javaEnv(), conf());
 
-		registerCollection("T", TestData.data3(), TestData.type3(), "f0, f1, f2");
+		registerCollectionOfJavaTableEnv("T", TestData.data3(), TestData.type3(), "f0, f1, f2");
 
-		Table t = tEnv().scan("T");
+		Table t = javaTableEnv().scan("T");
 		// Must fail. Table is bound to different tEnv()ironment.
 		tEnv2.registerTable("MyTable", t);
 	}
@@ -161,7 +161,7 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		data.add(new Tuple4<>("lol", 2, 1.0, "Hi"));
 		data.add(new Tuple4<>("Test me", 4, 3.33, "Hello world"));
 
-		Table table = tEnv().fromJavaCollection(data, "q, w, e, r")
+		Table table = javaTableEnv().fromCollection(data, "q, w, e, r")
 			.select("q as a, w as b, e as c, r as d");
 
 		String expected = "Rofl,1,1.0,Hi\n" + "lol,2,1.0,Hi\n" + "Test me,4,3.33,Hello world\n";
@@ -176,7 +176,7 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		data.add(new SmallPojo("Anna", 56, 10000.00, "Engineering", new Integer[] {}));
 		data.add(new SmallPojo("Lucy", 42, 6000.00, "HR", new Integer[] {1, 2, 3}));
 
-		Table table = tEnv().fromJavaCollection(data,
+		Table table = javaTableEnv().fromCollection(data,
 				"department AS a, " +
 				"age AS b, " +
 				"salary AS c, " +
@@ -201,7 +201,7 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 
 		TypeInformation<Either<String, Integer>> typeInfo =
 				TypeInformation.of(new TypeHint<Either<String, Integer>>() { });
-		Table table = tEnv().fromJavaCollection(data, typeInfo, "either").select("either");
+		Table table = javaTableEnv().fromCollection(data, typeInfo, "either").select("either");
 
 		String expected =
 			"Left(Hello)\n" +
@@ -218,7 +218,7 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		data.add(new SmallPojo("Anna", 56, 10000.00, "Engineering", new Integer[] {}));
 		data.add(new SmallPojo("Lucy", 42, 6000.00, "HR", new Integer[] {1, 2, 3}));
 
-		Table table = tEnv().fromJavaCollection(data, "name as d")
+		Table table = javaTableEnv().fromCollection(data, "name as d")
 			.select("d");
 
 		String expected =
@@ -236,8 +236,8 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		data.add(new PrivateSmallPojo("Anna", 56, 10000.00, "Engineering"));
 		data.add(new PrivateSmallPojo("Lucy", 42, 6000.00, "HR"));
 
-		Table table = tEnv()
-			.fromJavaCollection(data,
+		Table table = javaTableEnv()
+			.fromCollection(data,
 				"department AS a, " +
 				"age AS b, " +
 				"salary AS c, " +
@@ -259,8 +259,8 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		data.add(new SmallPojo("Anna", 56, 10000.00, "Engineering", new Integer[] {}));
 		data.add(new SmallPojo("Lucy", 42, 6000.00, "HR", new Integer[] {1, 2, 3}));
 
-		Table table = tEnv()
-				.fromJavaCollection(data,
+		Table table = javaTableEnv()
+				.fromCollection(data,
 				"department AS a, " +
 				"age AS b, " +
 				"salary AS c, " +
@@ -283,8 +283,8 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		data.add(new PrivateSmallPojo("Anna", 56, 10000.00, "Engineering"));
 		data.add(new PrivateSmallPojo("Lucy", 42, 6000.00, "HR"));
 
-		Table table = tEnv()
-				.fromJavaCollection(data,
+		Table table = javaTableEnv()
+				.fromCollection(data,
 				"department AS a, " +
 				"age AS b, " +
 				"salary AS c, " +
@@ -310,8 +310,8 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 		hm2.put("abc", "cde");
 		data.add(new PojoWithGeneric("Lucy", 42, hm2, new ArrayList<String>()));
 
-		Table table = tEnv()
-				.fromJavaCollection(data,
+		Table table = javaTableEnv()
+				.fromCollection(data,
 				"name AS a, " +
 				"age AS b, " +
 				"generic AS c, " +
@@ -329,23 +329,23 @@ public class JavaTableEnvironmentITCase extends QueryTest {
 	@Test(expected = TableException.class)
 	public void testAsWithToManyFields() throws Exception {
 		// Must fail. Too many field names specified.
-		registerCollection("T", TestData.data3(), TestData.type3(), "a, b, c, d");
+		registerCollectionOfJavaTableEnv("T", TestData.data3(), TestData.type3(), "a, b, c, d");
 	}
 
 	@Test(expected = TableException.class)
 	public void testAsWithAmbiguousFields() throws Exception {
 		// Must fail. Specified field names are not unique.
-		registerCollection("T", TestData.data3(), TestData.type3(), "a, b, b");
+		registerCollectionOfJavaTableEnv("T", TestData.data3(), TestData.type3(), "a, b, b");
 	}
 
 	@Test(expected = TableException.class)
 	public void testAsWithNonFieldReference1() throws Exception {
-		registerCollection("T", TestData.data3(), TestData.type3(), "a + 1, b, c");
+		registerCollectionOfJavaTableEnv("T", TestData.data3(), TestData.type3(), "a + 1, b, c");
 	}
 
 	@Test(expected = TableException.class)
 	public void testAsWithNonFieldReference2() throws Exception {
-		registerCollection("T", TestData.data3(), TestData.type3(), "a as foo, b, c");
+		registerCollectionOfJavaTableEnv("T", TestData.data3(), TestData.type3(), "a as foo, b, c");
 	}
 
 	// --------------------------------------------------------------------------------------------

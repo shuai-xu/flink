@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.CommonTestData.createCsvTableSource
@@ -69,7 +70,7 @@ class DeadlockBreakupITCase extends QueryTest {
     tEnv.getConfig.setSubPlanReuse(false)
     // make sure that buffer pool of channel can't hold all data
     val data = (1 until 100000).map(i => row(i.toLong))
-    tEnv.registerCollection("t", data, new RowTypeInfo(Types.LONG), "a")
+    tEnv.registerCollection("t", data, new RowTypeInfo(Types.LONG), 'a)
     checkResult(
       "SELECT * FROM t INTERSECT SELECT * FROM t",
       data

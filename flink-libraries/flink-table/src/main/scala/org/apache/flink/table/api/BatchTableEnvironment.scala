@@ -26,7 +26,7 @@ import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config
-import org.apache.flink.annotation.InterfaceStability
+import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
@@ -77,6 +77,9 @@ class BatchTableEnvironment(
   private val DEFAULT_JOB_NAME = "Flink Exec Job"
   private val ruKeeper = new RunningUnitKeeper(this)
 
+  /** Fetch [[RunningUnitKeeper]] bond with this table env. */
+  private [table] def getRUKeeper(): RunningUnitKeeper = ruKeeper
+
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
   override protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
     frameworkConfig, config, getTypeFactory, Array(
@@ -116,6 +119,10 @@ class BatchTableEnvironment(
     execute(DEFAULT_JOB_NAME)
   }
 
+  /**
+    * Triggers the program execution with specific job name.
+    * @param jobName name for the job
+    */
   override def execute(jobName: String): JobExecutionResult = {
     mergeParameters()
     if (config.getSubsectionOptimization) {
@@ -126,7 +133,7 @@ class BatchTableEnvironment(
       throw new TableException("No table sinks have been created yet. " +
           "A program needs at least one sink that consumes data. ")
     }
-    val result = execute(transformations, Option.apply(jobName))
+    val result = executeInternal(transformations, Option.apply(jobName))
     transformations.clear()
     sinkNodes.clear()
     result
@@ -143,12 +150,12 @@ class BatchTableEnvironment(
     sink.init(typeSerializer, id)
     val result = translate[T](table, outType, sink, queryConfig)
     val execSink = emitBoundedStreamSink(sink, result)
-    val res = execute(ArrayBuffer(execSink.getTransformation), jobName)
+    val res = executeInternal(ArrayBuffer(execSink.getTransformation), jobName)
     val accResult: JArrayList[Array[Byte]] = res.getAccumulatorResult(id)
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
   }
 
-  private def execute(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
+  private def executeInternal(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
       jobName: Option[String]): JobExecutionResult = {
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
     ruKeeper.setScheduleConfig(context)
@@ -160,13 +167,34 @@ class BatchTableEnvironment(
 
     setQueryPlan()
 
-    setOperatorMetricCollectToStreamEnv()
+    setupOperatorMetricCollect()
     val result = streamEnv.execute(streamGraph)
     dumpPlanWithMetricsIfNeed(streamGraph, result)
     ruKeeper.clear()
     result
   }
 
+  /**
+    * Set up operator metric collect to be true.
+    */
+  @VisibleForTesting
+  def setupOperatorMetricCollect(): Unit = {
+    if (streamEnv != null && streamEnv.getConfig != null && config.getOperatorMetricCollect) {
+      val parameters = new Configuration()
+      Option(streamEnv.getConfig.getGlobalJobParameters).foreach(gb =>
+        gb.toMap.foreach(kv => parameters.setString(kv._1, kv._2))
+      )
+      parameters.setString(
+        AbstractStreamOperatorWithMetrics.METRICS_CONF_KEY,
+        AbstractStreamOperatorWithMetrics.METRICS_CONF_VALUE)
+      streamEnv.getConfig.setGlobalJobParameters(parameters)
+    }
+  }
+
+  /**
+    * Set up the [[queryPlans]] concatenated string to [[streamEnv]]. This will clear
+    * the [[queryPlans]].
+    */
   private def setQueryPlan(): Unit = {
     val queryPlan = queryPlans.mkString("\n")
     require(queryPlan.nonEmpty)
@@ -214,7 +242,7 @@ class BatchTableEnvironment(
     }
   }
 
-  def compile(): Seq[LogicalNodeBlock] = {
+  override def compile(): Seq[LogicalNodeBlock] = {
     if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
         throw new TableException("No table sinks have been created yet. " +
@@ -240,15 +268,6 @@ class BatchTableEnvironment(
     } else {
       Seq.empty
     }
-  }
-
-  def generateStreamGraph(jobName: Option[String]): StreamGraph = {
-    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv);
-    jobName match {
-      case Some(jn) => context.setJobName(jn)
-      case None => context.setJobName(DEFAULT_JOB_NAME)
-    }
-    StreamGraphGenerator.generate(context, transformations)
   }
 
   private def translateLogicalNodeBlock(block: LogicalNodeBlock): DataStream[_] = {
@@ -525,40 +544,26 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Adds original relNode plan and optimized relNode plan to `queryPlans`
+    * If the input' outputType is incompatible with the external type, here need create a final
+    * converter that maps the internal row type to external type.
+    *
+    * @param physicalTypeInfo the input of the sink
+    * @param relType          the input relDataType with correct field names
+    * @param name             name of the map operator. Must not be unique but has to be a
+    *                         valid Java class identifier.
+    * @param withChangeFlag   Set to true to emit records with change flags.
+    * @param resultType       The [[DataType]] of the resulting [[DataStream]].
     */
-  private def addQueryPlan(originalNode: RelNode, optimizedNode: RelNode): Unit = {
-    val queryPlan =
-      s"""
-         |== Abstract Syntax Tree ==
-         |${FlinkRelOptUtil.toString(originalNode)}
-         |== Optimized Logical Plan ==
-         |${FlinkRelOptUtil.toString(optimizedNode, detailLevel = SqlExplainLevel.ALL_ATTRIBUTES)}
-      """.stripMargin
-    queryPlans += queryPlan
-  }
-
-  /**
-   * If the input' outputType is incompatible with the external type, here need create a final
-   * converter that maps the internal row type to external type.
-   *
-   * @param physicalTypeInfo the input of the sink
-   * @param relType          the input relDataType with correct field names
-   * @param name             name of the map operator. Must not be unique but has to be a
-   *                         valid Java class identifier.
-   * @param withChangeFlag   Set to true to emit records with change flags.
-   * @param resultType       The [[DataType]] of the resulting [[DataStream]].
-   */
-  protected def getConversionMapper[IN, OUT](
-      input: StreamTransformation[IN],
-      physicalTypeInfo: BaseRowTypeInfo[_],
-      relType: RelDataType,
-      name: String,
-      withChangeFlag: Boolean,
-      resultType: DataType): StreamTransformation[OUT] = {
+  private def getConversionMapper[IN, OUT](
+    input: StreamTransformation[IN],
+    physicalTypeInfo: BaseRowTypeInfo[_],
+    relType: RelDataType,
+    name: String,
+    withChangeFlag: Boolean,
+    resultType: DataType): StreamTransformation[OUT] = {
 
     val (converterOperator, outputTypeInfo) = generateRowConverterOperator[IN, OUT](
-      CodeGeneratorContext(config, true),
+      CodeGeneratorContext(config, supportReference = true),
       physicalTypeInfo,
       relType,
       name,
@@ -581,7 +586,19 @@ class BatchTableEnvironment(
     }
   }
 
-  def getParallelism: Int = streamEnv.getParallelism
+  /**
+    * Adds original relNode plan and optimized relNode plan to `queryPlans`.
+    */
+  private def addQueryPlan(originalNode: RelNode, optimizedNode: RelNode): Unit = {
+    val queryPlan =
+      s"""
+         |== Abstract Syntax Tree ==
+         |${FlinkRelOptUtil.toString(originalNode)}
+         |== Optimized Logical Plan ==
+         |${FlinkRelOptUtil.toString(optimizedNode, detailLevel = SqlExplainLevel.ALL_ATTRIBUTES)}
+      """.stripMargin
+    queryPlans += queryPlan
+  }
 
   /**
    * Generates the optimized [[RelNode]] tree from the original relational node tree.
@@ -895,6 +912,12 @@ class BatchTableEnvironment(
 
   def explain(table: Table): String = explain(table: Table, extended = false)
 
+  /**
+    * Explain ast tree nodes of table and the logical plan after optimization.
+    * @param table table to explain for
+    * @return string presentation of of explaining
+    */
+  @VisibleForTesting
   def explainLogical(table: Table): String = {
     val ast = table.getRelNode
     val optimizedPlan = optimize(ast)
@@ -977,19 +1000,6 @@ class BatchTableEnvironment(
     }
   }
 
-  def setOperatorMetricCollectToStreamEnv(): Unit = {
-    if (streamEnv != null && streamEnv.getConfig != null && config.getOperatorMetricCollect) {
-      val parameters = new Configuration()
-      Option(streamEnv.getConfig.getGlobalJobParameters).foreach(gb =>
-        gb.toMap.foreach(kv => parameters.setString(kv._1, kv._2))
-      )
-      parameters.setString(
-        AbstractStreamOperatorWithMetrics.METRICS_CONF_KEY,
-        AbstractStreamOperatorWithMetrics.METRICS_CONF_VALUE)
-      streamEnv.getConfig.setGlobalJobParameters(parameters)
-    }
-  }
-
   /**
    * Dump optimized plan if config enabled.
    *
@@ -1001,8 +1011,6 @@ class BatchTableEnvironment(
       dumpRelNode(optimizedNode, dumpFilePath)
     }
   }
-
-  def getRUKeeper(): RunningUnitKeeper = ruKeeper
 
   override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
     registerExternalCatalogInternal(name, externalCatalog, false)

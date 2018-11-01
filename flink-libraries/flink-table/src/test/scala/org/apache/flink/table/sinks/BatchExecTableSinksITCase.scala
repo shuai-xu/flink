@@ -21,7 +21,9 @@ package org.apache.flink.table.sinks
 import java.lang.{Boolean => JBoolean}
 
 import org.apache.flink.api.scala._
+
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
@@ -52,7 +54,7 @@ class BatchExecTableSinksITCase extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    tEnv.registerCollection("sTable", data, dataType, "a, b, c")
+    tEnv.registerCollection("sTable", data, dataType, 'a, 'b, 'c)
     tEnv.getConfig.getParameters.setString(
       TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashAgg")
   }
@@ -104,7 +106,7 @@ class BatchExecTableSinksITCase extends QueryTest {
   @Test
   def testPartitinalSink(): Unit = {
     val data = StreamTestData.get3TupleData
-    val t = tEnv.fromCollection(data, "id, num, name")
+    val t = tEnv.fromCollection(data, 'id, 'num, 'name)
     val testingRetractSink = new TestingRetractTableSink
     val globalPartitionalResults = mutable.HashMap.empty[Int, mutable.HashSet[String]]
     testingRetractSink.setPartitionField("id")

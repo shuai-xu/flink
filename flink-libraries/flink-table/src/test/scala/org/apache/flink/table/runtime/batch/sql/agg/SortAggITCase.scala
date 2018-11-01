@@ -21,6 +21,8 @@ package org.apache.flink.table.runtime.batch.sql.agg
 import java.lang.{Iterable => JIterable}
 
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.dataformat.BaseRow
@@ -152,7 +154,7 @@ class SortAggITCase
       "MyTable",
       data,
       new RowTypeInfo(Types.INT, TypeExtractor.createTypeInfo(classOf[MyPojo])),
-      "a, b")
+      'a, 'b)
 
     tEnv.registerFunction("pojoFunc", new MyPojoAggFunction)
     check(
@@ -177,9 +179,9 @@ class SortAggITCase
       "MyTable",
       data,
       new RowTypeInfo(Types.INT, Types.LONG, Types.STRING, Types.STRING),
-      "id, s, s1, s2")
-
-    tEnv.registerFunction("func", new VarArgsAggFunction)
+      'id, 's, 's1, 's2)
+    val func = new VarArgsAggFunction
+    tEnv.registerFunction("func", func)
 
     // no group
     checkResult(

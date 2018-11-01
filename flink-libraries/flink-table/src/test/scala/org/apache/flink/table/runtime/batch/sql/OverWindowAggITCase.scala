@@ -18,8 +18,8 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{DOUBLE_TYPE_INFO, FLOAT_TYPE_INFO, INT_TYPE_INFO, STRING_TYPE_INFO, SHORT_TYPE_INFO}
+import org.apache.flink.api.scala._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.configuration.TaskManagerOptions
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row

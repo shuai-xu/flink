@@ -824,7 +824,7 @@ public class SqlJobAdapter {
 		if (!isStream) {
 			org.apache.flink.table.api.java.BatchTableEnvironment tEnv =
 					(org.apache.flink.table.api.java.BatchTableEnvironment) tableEnv;
-			table = tEnv.fromJavaCollection(results, rowTypeInfo, fields);
+			table = tEnv.fromCollection(results, rowTypeInfo, fields);
 
 		}  else {
 			StreamExecutionEnvironment execEnv = ((StreamTableEnvironment) tableEnv).execEnv();

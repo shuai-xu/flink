@@ -18,6 +18,7 @@
 package org.apache.flink.table.api.java
 
 import java.lang.{Iterable => JIterable}
+import java.util.{ArrayList => JArrayList, Collection => JCollection}
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CollectionInputFormat
@@ -27,6 +28,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.expressions.ExpressionParser
 
+import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import org.apache.flink.table.api._
@@ -95,59 +97,67 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Registers the given [[Iterable]] as table in the
+    * Registers the given [[JIterable]] as table in the
     * [[TableEnvironment]]'s catalog.
     *
+    * The data passed in must not be empty, cause we need to infer the [[TypeInformation]] from it.
+    *
     * @param tableName name of table.
-    * @param data The [[Iterable]] to be converted.
+    * @param data The [[JIterable]] to be converted.
     * @param fields field names, eg: "a, b, c"
-    * @tparam T The type of the [[Iterable]].
+    * @tparam T The type of the [[JIterable]].
     * @return The converted [[Table]].
     */
-  def registerCollection[T : ClassTag : TypeInformation](
-      tableName: String, data: Iterable[T], fields: String): Unit = {
-    val typeInfo = implicitly[TypeInformation[T]]
-    registerCollection(tableName, data, typeInfo, fields)
+  def registerCollection[T](
+      tableName: String, data: JIterable[T], fields: String): Unit = {
+    val typeInfo = TypeExtractor.createTypeInfo(data.iterator().next().getClass)
+    registerCollection(tableName, data, typeInfo.asInstanceOf[TypeInformation[T]], fields)
   }
 
   /**
-    * Registers the given [[Iterable]] as table in the
+    * Registers the given [[JIterable]] as table in the
     * [[TableEnvironment]]'s catalog.
     *
+    * The data passed in must not be empty, cause we need to infer the [[TypeInformation]] from it.
+    *
     * @param tableName name of table.
-    * @param data The [[Iterable]] to be converted.
+    * @param data The [[JIterable]] to be converted.
     * @param fieldNullables The field isNullables attributes of data.
     * @param fields field names, eg: "a, b, c"
-    * @tparam T The type of the [[Iterable]].
+    * @tparam T The type of the [[JIterable]].
     * @return The converted [[Table]].
     */
-  def registerCollection[T : ClassTag : TypeInformation](
-      tableName: String,
-      data: Iterable[T],
-      fieldNullables: Iterable[Boolean],
-      fields: String
-  ): Unit = {
-    val typeInfo = implicitly[TypeInformation[T]]
-    registerCollection(tableName, data, typeInfo, fieldNullables, fields)
+  def registerCollection[T](tableName: String, data: JIterable[T],
+    fieldNullables: Iterable[Boolean], fields: String): Unit = {
+
+    val typeInfo = TypeExtractor.createTypeInfo(data.iterator().next().getClass)
+    registerCollection(tableName, data, typeInfo.asInstanceOf[TypeInformation[T]],
+      fieldNullables, fields)
+  }
+
+  private implicit def iterableToCollection[T](data: JIterable[T]): JCollection[T] = {
+    val collection = new JArrayList[T]()
+    data foreach (d => collection.add(d))
+    collection
   }
 
   /**
-    * Registers the given [[Iterable]] as table in the
+    * Registers the given [[JIterable]] as table in the
     * [[TableEnvironment]]'s catalog.
     *
     * @param tableName name of table.
-    * @param data The [[Iterable]] to be converted.
-    * @param information information of [[Iterable]].
+    * @param data The [[JIterable]] to be converted.
+    * @param typeInfo type information of [[JIterable]].
     * @param fields field names, eg: "a, b, c"
-    * @tparam T The type of the [[Iterable]].
+    * @tparam T The type of the [[JIterable]].
     * @return The converted [[Table]].
     */
-  def registerCollection[T](tableName: String, data: Iterable[T],
-      information: TypeInformation[T], fields: String): Unit = {
+  def registerCollection[T](tableName: String, data: JIterable[T],
+      typeInfo: TypeInformation[T], fields: String): Unit = {
     val boundedStream = streamEnv.createInput(new CollectionInputFormat[T](
-      data.asJavaCollection,
-      information.createSerializer(execEnv.getConfig)),
-      information, tableName)
+      data,
+      typeInfo.createSerializer(execEnv.getConfig)),
+      typeInfo, tableName)
     if (fields == null) {
       registerBoundedStream(tableName, boundedStream)
     } else {
@@ -156,27 +166,27 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Registers the given [[Iterable]] as table in the
+    * Registers the given [[JIterable]] as table in the
     * [[TableEnvironment]]'s catalog.
     *
     * @param tableName name of table.
-    * @param data The [[Iterable]] to be converted.
-    * @param information information of [[Iterable]].
+    * @param data The [[JIterable]] to be converted.
+    * @param typeInfo type information of [[JIterable]].
     * @param fieldNullables The field isNullables attributes of data.
     * @param fields field names, eg: "a, b, c"
-    * @tparam T The type of the [[Iterable]].
+    * @tparam T The type of the [[JIterable]].
     * @return The converted [[Table]].
     */
   def registerCollection[T](
       tableName: String,
-      data: Iterable[T],
-      information: TypeInformation[T],
+      data: JIterable[T],
+      typeInfo: TypeInformation[T],
       fieldNullables: Iterable[Boolean],
       fields: String): Unit = {
     val boundedStream = streamEnv.createInput(new CollectionInputFormat[T](
-        data.asJavaCollection,
-        information.createSerializer(execEnv.getConfig)),
-      information, tableName)
+        data,
+        typeInfo.createSerializer(execEnv.getConfig)),
+      typeInfo, tableName)
     registerBoundedStream(tableName, boundedStream, fieldNullables, fields)
   }
 
@@ -340,46 +350,54 @@ class BatchTableEnvironment(
     registerBoundedStreamInternal(name, boundedStream, exprs, fieldNullables.toArray)
   }
 
-  def registerJavaCollection[T](tableName: String, data: JIterable[T], fields: String): Unit = {
-    require(data != null, "Data must not be null.")
-    val typeInfo = TypeExtractor.createTypeInfo(data.iterator().next().getClass)
-    registerCollection(tableName, data.asScala, typeInfo.asInstanceOf[TypeInformation[T]], fields)
-  }
-
+  /**
+    * Create a [[Table]] from sequence of elements. Typical, user can pass in a sequence of tuples,
+    * the table schema type would be inferred from the tuple type: e.g.
+    * {{{
+    *   tEnv.fromElements((1, 2, "abc"), (3, 4, "def"))
+    * }}}
+    * Then the schema type would be (_1:int, _2:int, _3:varchar)
+    *
+    * Caution that use must pass a ''Java'' type data elements, or the inferred type
+    * would be unexpected.
+    *
+    * @param data row data sequence
+    * @tparam T row data class type
+    * @return table from the data with default fields names
+    */
   def fromElements[T: ClassTag : TypeInformation](data: T*): Table = {
     require(data != null, "Data must not be null.")
-    val typeInfo = implicitly[TypeInformation[T]]
-    fromCollection(data)(implicitly[ClassTag[T]], typeInfo)
+    fromCollection(data.asJava)
   }
 
-  def fromCollection[T: ClassTag : TypeInformation](data: Iterable[T]): Table = {
+  /**
+    * Create a [[Table]] from a java [[JIterable]]. The table schema type would be inferred
+    * from the [[JIterable]] element type.
+    */
+  def fromCollection[T](data: JIterable[T]): Table = {
     fromCollection(data, null)
   }
 
-  def fromCollection[T: ClassTag : TypeInformation](data: Iterable[T], fields: String): Table = {
-    require(data != null, "Data must not be null.")
-    val typeInfo = implicitly[TypeInformation[T]]
-    fromCollection(data, typeInfo, fields)
-  }
-
-  def fromJavaCollection[T](data: JIterable[T], fields: String): Table = {
+  /**
+    * Create a [[Table]] from a java [[JIterable]]. Would infer table schema from the passed in
+    * typeInfo.
+    *
+    * This passed in data must not be empty cause we need to infer [[TypeInformation]] from it.
+    */
+  def fromCollection[T](data: JIterable[T], fields: String): Table = {
     require(data != null, "Data must not be null.")
     val typeInfo = TypeExtractor.createTypeInfo(data.iterator().next().getClass)
-    fromCollection(data.asScala, typeInfo.asInstanceOf[TypeInformation[T]], fields)
+    fromCollection(data, typeInfo.asInstanceOf[TypeInformation[T]], fields)
   }
 
-  def fromJavaCollection[T](
-      data: JIterable[T],
-      typeInfo: TypeInformation[T],
-      fields: String): Table = {
-    require(data != null, "Data must not be null.")
-    fromCollection(data.asScala, typeInfo, fields)
-  }
-
-  def fromCollection[T](data: Iterable[T], typeInfo: TypeInformation[T], fields: String): Table = {
-    CollectionInputFormat.checkCollection(data.asJavaCollection, typeInfo.getTypeClass)
+  /**
+    * Create a [[Table]] from a java [[JIterable]]. Would infer table schema from the passed in
+    * typeInfo.
+    */
+  def fromCollection[T](data: JIterable[T], typeInfo: TypeInformation[T], fields: String): Table = {
+    CollectionInputFormat.checkCollection(data, typeInfo.getTypeClass)
     val boundedStream = streamEnv.createInput(new CollectionInputFormat[T](
-      data.asJavaCollection,
+      data,
       typeInfo.createSerializer(execEnv.getConfig)),
       typeInfo, getCallLocationName())
     if (fields == null) {

@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.batch.sql.agg
 
+import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.aggregate.{CountAggFunction, IntSumAggFunction}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row

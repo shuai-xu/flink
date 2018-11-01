@@ -25,7 +25,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
-import org.apache.flink.annotation.InterfaceStability
+import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.configuration.Configuration
@@ -138,10 +138,7 @@ abstract class StreamTableEnvironment(
 
   def setQueryConfig(queryConfig: StreamQueryConfig): Unit = streamQueryConfig = queryConfig
 
-  /**
-    * compile the whole plan into a [[DataStream]].
-    */
-  def compile(): Seq[LogicalNodeBlock] = {
+  override def compile(): Seq[LogicalNodeBlock] = {
 
     mergeParameters()
 
@@ -1449,6 +1446,14 @@ abstract class StreamTableEnvironment(
     }
   }
 
+  /**
+    * Register a table with specific row time field and offset.
+    * @param tableName table name
+    * @param sourceTable table to register
+    * @param rowtimeField row time field
+    * @param offset offset to the row time field value
+    */
+  @VisibleForTesting
   def registerTableWithWatermark(
       tableName: String,
       sourceTable: Table,
@@ -1472,6 +1477,13 @@ abstract class StreamTableEnvironment(
     )
   }
 
+  /**
+    * Register a table with specific list of primary keys.
+    * @param tableName table name
+    * @param sourceTable table to register
+    * @param primaryKeys table primary field name list
+    */
+  @VisibleForTesting
   def registerTableWithPk(
     tableName: String,
     sourceTable: Table,

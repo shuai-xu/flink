@@ -42,6 +42,8 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.AbstractID
 import org.junit._
 
+import scala.collection.JavaConversions._
+
 import scala.io.Source
 
 class PlanUtilTest extends AbstractTestBase {
@@ -148,7 +150,7 @@ class PlanUtilTest extends AbstractTestBase {
     */
   private def setDumpFileToConfig(): Unit = {
     conf.setDumpFileOfPlanWithMetrics(tmpFile)
-    tableEnv.setOperatorMetricCollectToStreamEnv()
+    tableEnv.setupOperatorMetricCollect()
   }
 
   /**

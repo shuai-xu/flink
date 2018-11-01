@@ -346,7 +346,7 @@ class GroupWindowITCase extends QueryTest {
   @Test
   def testEventTimeTumblingGroupWindowOnDay(): Unit = {
     val table = tEnv
-        .fromCollection(data6, type6,  "a, b, c, d, e, f")
+        .fromCollection(data6, type6,  'a, 'b, 'c, 'd, 'e, 'f)
 
     val windowedTable = table
         .window(Tumble over 30.day on 'd as 'w)
@@ -373,7 +373,7 @@ class GroupWindowITCase extends QueryTest {
   @Test
   def testEventTimeSlidingGroupWindowOnDay(): Unit = {
     val table = tEnv
-        .fromCollection(data6, type6,  "a, b, c, d, e, f")
+        .fromCollection(data6, type6,  'a, 'b, 'c, 'd, 'e, 'f)
 
     val windowedTable = table
         .window(Slide over 3.day every 10.day on 'd as 'w)

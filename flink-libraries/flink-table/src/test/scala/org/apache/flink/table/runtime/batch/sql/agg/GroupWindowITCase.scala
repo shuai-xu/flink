@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.TIMESTAMP
+import org.apache.flink.api.scala._
 import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream

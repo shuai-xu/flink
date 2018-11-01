@@ -30,13 +30,16 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.java.BatchTableEnvironment
+import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaExecEnv}
+import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
 import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
+import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
-import org.apache.flink.table.util.{ExecResourceUtil, DiffRepository, FlinkRelOptUtil}
+import org.apache.flink.table.util.{DiffRepository, ExecResourceUtil, FlinkRelOptUtil}
 import org.apache.flink.types.Row
 import org.junit.{Assert, Rule}
 import org.junit.Assert._
@@ -52,8 +55,10 @@ class QueryTest {
   TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
   val conf: TableConfig = QueryTest.initConfigForTest(new TableConfig)
   val jobConfig = new Configuration()
-  val env: StreamExecutionEnvironment = generatorTestEnv
-  val tEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(env, conf)
+  val env: ScalaExecEnv = generatorScalaTestEnv
+  val javaEnv: StreamExecutionEnvironment = generatorTestEnv
+  val tEnv: ScalaBatchTableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
+  val javaTableEnv: JavaBatchTableEnv = TableEnvironment.getBatchTableEnvironment(javaEnv, conf)
   val LINE_COL_PATTERN = Pattern.compile("At line ([0-9]+), column ([0-9]+)")
   val LINE_COL_TWICE_PATTERN = Pattern.compile("(?s)From line ([0-9]+),"
     + " column ([0-9]+) to line ([0-9]+), column ([0-9]+): (.*)")
@@ -72,6 +77,11 @@ class QueryTest {
     val config: Configuration = getConfiguration
     StreamExecutionEnvironment.createLocalEnvironment(Runtime.getRuntime.availableProcessors,
       config)
+  }
+
+  protected def generatorScalaTestEnv: ScalaExecEnv = {
+    val config: Configuration = getConfiguration
+    ScalaExecEnv.createLocalEnvironment(Runtime.getRuntime.availableProcessors, config)
   }
 
   def checkResult(sqlQuery: String, expectedResult: Seq[Row], isSorted: Boolean = false): Unit = {
@@ -334,11 +344,27 @@ class QueryTest {
   }
 
   implicit def registerCollection(
-      tableName: String,
-      data: Iterable[Row],
-      typeInfo: TypeInformation[Row],
-      fields: String): Unit = {
-    tEnv.registerCollection(tableName, data, typeInfo, fields)
+    tableName: String,
+    data: Iterable[Row],
+    typeInfo: TypeInformation[Row],
+    fields: Expression*): Unit = {
+    tEnv.registerCollection(tableName, data, typeInfo, null, fields.toArray)
+  }
+
+  implicit def registerCollection(
+    tableName: String,
+    data: Iterable[Row],
+    typeInfo: TypeInformation[Row],
+    fields: String): Unit = {
+    tEnv.registerCollection(tableName, data, typeInfo, null, fields)
+  }
+
+  implicit def registerCollectionOfJavaTableEnv(
+    tableName: String,
+    data: Iterable[Row],
+    typeInfo: TypeInformation[Row],
+    fields: String): Unit = {
+    javaTableEnv.registerCollection(tableName, data.asJavaCollection, typeInfo, fields)
   }
 
   def registerJavaCollection[T](
@@ -346,21 +372,37 @@ class QueryTest {
       data: JIterable[T],
       typeInfo: TypeInformation[T],
       fields: String): Unit = {
-    tEnv.registerCollection(tableName, data.asScala, typeInfo, fields)
+    tEnv.registerCollection(tableName, data.asScala, typeInfo, null, fields)
   }
 
   implicit def registerCollection(
       tableName: String,
       data: Iterable[Row],
       typeInfo: TypeInformation[Row],
-      fields: String,
-      fieldNullables: Iterable[Boolean]): Unit = {
+      fieldNullables: Iterable[Boolean],
+      fields: Expression*): Unit = {
+    tEnv.registerCollection(tableName, data, typeInfo, fieldNullables, fields.toArray)
+  }
+
+  implicit def registerCollection(
+    tableName: String,
+    data: Iterable[Row],
+    typeInfo: TypeInformation[Row],
+    fields: String,
+    fieldNullables: Iterable[Boolean]): Unit = {
     tEnv.registerCollection(tableName, data, typeInfo, fieldNullables, fields)
   }
 
-  implicit def registerFunction(
+  /** Tool converters used to convert string fields to array of [[Expression]]s. **/
+  implicit def strToExpressions(fields: String): Array[Expression] = {
+    if (fields == null) null else {
+      ExpressionParser.parseExpressionList(fields).toArray
+    }
+  }
+
+  implicit def registerFunction[T: TypeInformation, ACC: TypeInformation](
       name: String,
-      f: AggregateFunction[_, _]): Unit = {
+      f: AggregateFunction[T, ACC]): Unit = {
     tEnv.registerFunction(name, f)
   }
 }

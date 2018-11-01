@@ -44,7 +44,7 @@ object WordCountTable {
     val tEnv = TableEnvironment.getBatchTableEnvironment(execEnv)
 
     val input = execEnv.fromElements(WC("hello", 1), WC("hello", 1), WC("ciao", 1))
-    tEnv.fromBoundedStream(input.javaStream, 'word, 'frequency)
+    tEnv.fromBoundedStream(input, 'word, 'frequency)
       .groupBy('word)
       .select('word, 'frequency.sum as 'frequency)
       .filter('frequency === 2)

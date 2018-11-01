@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.api
 
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.junit._
@@ -26,8 +27,8 @@ class BatchExecExplainTest extends QueryTest {
 
   @Before
   def before(): Unit = {
-    registerCollection("t", Seq(QueryTest.row(1, "hello")), INT_STRING, "a, b")
-    registerCollection("t2", Seq(QueryTest.row(1, "hello")), INT_STRING, "c, d")
+    registerCollection("t", Seq(QueryTest.row(1, "hello")), INT_STRING, 'a, 'b)
+    registerCollection("t2", Seq(QueryTest.row(1, "hello")), INT_STRING, 'c, 'd)
   }
 
   @Test

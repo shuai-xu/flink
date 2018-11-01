@@ -35,7 +35,7 @@ class StringITCase() extends QueryTest {
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    registerCollection("Table3", nullData3, type3, "a, b, c", nullablesOfData3)
+    registerCollection("Table3", nullData3, type3, nullablesOfData3, 'a, 'b, 'c)
   }
 
   @Test
@@ -83,7 +83,7 @@ class StringITCase() extends QueryTest {
       (5, "a%_ha")
     )
 
-    tEnv.registerCollection("MyT", rows, "a, b")
+    tEnv.registerCollection("MyT", rows, 'a, 'b)
 
     checkResult(
       "SELECT a FROM MyT WHERE b LIKE '%ha?_ha%' ESCAPE '?'",
@@ -212,7 +212,7 @@ class StringITCase() extends QueryTest {
 
   @Test
   def testNestUdf(): Unit = {
-    registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfData3)
+    registerCollection("SmallTable3", smallData3, type3, nullablesOfData3, 'a, 'b, 'c)
     tEnv.registerFunction("func", MyStringFunc)
     checkResult(
       "SELECT func(func(func(c))) FROM SmallTable3",

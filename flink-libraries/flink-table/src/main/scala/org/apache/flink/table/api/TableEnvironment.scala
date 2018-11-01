@@ -36,6 +36,7 @@ import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
 import org.apache.commons.lang3.StringUtils
+import org.apache.flink.annotation.Internal
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
@@ -63,6 +64,7 @@ import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, Unr
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema._
@@ -173,6 +175,13 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
+    * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to [[LogicalNodeBlock]],
+    * see [[LogicalNodeBlockPlanBuilder]] for details.
+    * @return A sequence of LogicalNodeBlock
+    */
+  def compile(): Seq[LogicalNodeBlock] = ???
+
+  /**
     * Returns the operator table for this environment including a custom Calcite configuration.
     */
   protected def getSqlOperatorTable: SqlOperatorTable = {
@@ -213,6 +222,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   /**
     * Returns the SqlToRelConverter config.
     */
+  @Internal
   protected def getSqlToRelConverterConfig: SqlToRelConverter.Config =
     SqlToRelConverter.configBuilder()
       .withTrimUnusedFields(false)
@@ -478,18 +488,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   /**
     *  Alters the statistics of a table.
     *
-    * @param tableName The table name under which the table is registered in [[TableEnvironment]].
-    *                  tableName must be a single name(e.g. "MyTable") associated with a table.
-    * @param tableStats The [[TableStats]] to update.
-    */
-  def alterTableStats(tableName: String, tableStats: TableStats): Unit = {
-    alterTableStats(tableName, Option(tableStats))
-  }
-
-
-  /**
-    *  Alters the statistics of a table.
-    *
     * @param tablePath The table name under which the table is registered in [[TableEnvironment]].
     *                  tablePath can be a single name(e.g. Array("MyTable")) associated with a
     *                  table , or can be a nest names (e.g. Array("MyCatalog", "MyDb", "MyTable"))
@@ -609,6 +607,11 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
   }
 
+  /**
+    * Modify unique keys info of a table, which will be used in plan optimization.
+    * @param tablePath table patch of the target table
+    * @param uniqueKeys list of unique key fields
+    */
   def alterUniqueKeys(
       tablePath: Array[String],
       uniqueKeys: util.Set[util.Set[String]]): Unit = {
@@ -1167,6 +1170,10 @@ abstract class TableEnvironment(val config: TableConfig) {
     getTableFromSchema(rootSchema, pathNames)
   }
 
+  /**
+    * Get the [[ExternalCatalog]] from this env. If the passed catalogPaths is null or empty,
+    * a default schema ''hive'' would be used.
+    */
   def getExternalCatalog(catalogPaths: Array[String]): ExternalCatalog = {
     val externalCatalog = if (null == catalogPaths || catalogPaths.length == 0) {
       getRegisteredExternalCatalog(TableEnvironment.DEFAULT_SCHEMA)
@@ -1180,6 +1187,13 @@ abstract class TableEnvironment(val config: TableConfig) {
     externalCatalog
   }
 
+  /**
+    * Register a [[ExternalCatalogTable]] to this table.
+    * @param catalogPaths
+    * @param tableName
+    * @param externalTable
+    * @param ignoreIfExists
+    */
   def registerExternalTable(
       catalogPaths: Array[String],
       tableName: String,
@@ -1350,6 +1364,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
   }
 
+  /** Code gen a operator to convert internal type rows to external type. **/
   protected def generateRowConverterOperator[IN, OUT](
       ctx: CodeGeneratorContext,
       inputTypeInfo: BaseRowTypeInfo[_],

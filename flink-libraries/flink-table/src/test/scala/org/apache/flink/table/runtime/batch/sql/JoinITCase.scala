@@ -23,7 +23,7 @@ import java.util
 import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo.STRING_ARRAY_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.java.typeutils.{ObjectArrayTypeInfo, RowTypeInfo}
-import org.apache.flink.configuration.TaskManagerOptions
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
@@ -42,14 +42,14 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
   @Before
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
-    registerCollection("SmallTable3", smallData3, type3, "a, b, c", nullablesOfSmallData3)
-    registerCollection("Table3", data3, type3, "a, b, c", nullablesOfData3)
-    registerCollection("Table5", data5, type5, "d, e, f, g, h", nullablesOfData5)
-    registerCollection("NullTable3", nullData3, type3, "a, b, c", nullablesOfNullData3)
-    registerCollection("NullTable5", nullData5, type5, "d, e, f, g, h", nullablesOfNullData5)
-    registerCollection("l", data2_1, INT_DOUBLE, "a, b")
-    registerCollection("r", data2_2, INT_DOUBLE, "c, d")
-    registerCollection("t", data2_3, INT_DOUBLE, "c, d", nullablesOfData2_3)
+    registerCollection("SmallTable3", smallData3, type3, nullablesOfSmallData3, 'a, 'b, 'c)
+    registerCollection("Table3", data3, type3, nullablesOfData3, 'a, 'b, 'c)
+    registerCollection("Table5", data5, type5, nullablesOfData5, 'd, 'e, 'f, 'g, 'h)
+    registerCollection("NullTable3", nullData3, type3, nullablesOfNullData3, 'a, 'b, 'c)
+    registerCollection("NullTable5", nullData5, type5, nullablesOfNullData5, 'd, 'e, 'f, 'g, 'h)
+    registerCollection("l", data2_1, INT_DOUBLE, 'a, 'b)
+    registerCollection("r", data2_2, INT_DOUBLE, 'c, 'd)
+    registerCollection("t", data2_3, INT_DOUBLE, nullablesOfData2_3, 'c, 'd)
     disableOtherJoinOpForJoin(tEnv, expectedJoinType)
   }
 
@@ -149,7 +149,7 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
 
   @Test
   def testJoinWithAlias(): Unit = {
-    registerCollection("AliasTable5", data5, type5, "d, e, f, g, c")
+    registerCollection("AliasTable5", data5, type5, 'd, 'e, 'f, 'g, 'c)
     checkResult(
       "SELECT AliasTable5.c, T.`1-_./Ü` FROM " +
         "(SELECT a, b, c AS `1-_./Ü` FROM Table3) AS T, AliasTable5 WHERE a = d AND a < 4",
@@ -451,9 +451,8 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
       row(3, 2L, Array("Hello world", "x"))
     )
     tEnv.registerCollection("T", data,
-                            new RowTypeInfo(INT_TYPE_INFO, LONG_TYPE_INFO, STRING_ARRAY_TYPE_INFO),
-                            "a, b, c"
-    )
+      new RowTypeInfo(INT_TYPE_INFO, LONG_TYPE_INFO, STRING_ARRAY_TYPE_INFO),
+      'a, 'b, 'c)
 
     checkResult(
       "SELECT a, s FROM T, UNNEST(T.c) as A (s)",
@@ -468,12 +467,10 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
       row(2, Array(row(13, "41.6"), row(1, "45.2136"))),
       row(3, Array(row(18, "42.6"))))
     tEnv.registerCollection("T", data,
-                            new RowTypeInfo(INT_TYPE_INFO,
-                                            ObjectArrayTypeInfo.getInfoFor(
-                                              classOf[Array[Row]],
-                                              new RowTypeInfo(INT_TYPE_INFO, STRING_TYPE_INFO))),
-                            "a, b"
-    )
+      new RowTypeInfo(INT_TYPE_INFO,
+        ObjectArrayTypeInfo.getInfoFor(classOf[Array[Row]],
+          new RowTypeInfo(INT_TYPE_INFO, STRING_TYPE_INFO))),
+      'a, 'b)
 
     checkResult(
       "SELECT a, b, x, y " +
@@ -609,7 +606,7 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
       ))
 
     registerCollection(
-      "NullT", Seq(row(null, null, "c")), type3, "a, b, c", allNullablesOfNullData3)
+      "NullT", Seq(row(null, null, "c")), type3, allNullablesOfNullData3, 'a, 'b, 'c)
     checkResult(
       "SELECT T1.a, T1.b, T1.c FROM NullT T1, NullT T2 WHERE " +
           "(T1.a = T2.a OR (T1.a IS NULL AND T2.a IS NULL)) " +

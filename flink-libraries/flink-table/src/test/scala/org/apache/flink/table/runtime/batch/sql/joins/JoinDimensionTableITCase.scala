@@ -33,6 +33,7 @@ import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFu
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
@@ -56,7 +57,7 @@ class JoinDimensionTableITCase extends QueryTest {
 
   @Before
   def setup() {
-    tEnv.registerCollection("T", data, typeInfo, "id, len, content")
+    tEnv.registerCollection("T", data, typeInfo, 'id, 'len, 'content)
     val dim = new TestDimensionTableSource
     tEnv.registerTableSource("csvdim", dim)
     TestFetcher.resetCounter();

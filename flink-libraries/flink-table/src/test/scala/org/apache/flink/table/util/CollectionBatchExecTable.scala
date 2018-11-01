@@ -21,7 +21,8 @@ import java.sql.{Date => SqlDate, Time => SqlTime, Timestamp => SqlTimestamp}
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Table
-import org.apache.flink.table.api.java.BatchTableEnvironment
+import org.apache.flink.table.api.scala.BatchTableEnvironment
+import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.util.TimeConvertUtils
 import org.apache.flink.util.TimeConvertUtils.MILLIS_PER_DAY
 import org.apache.hadoop.io.IntWritable
@@ -357,6 +358,13 @@ object CollectionBatchExecTable {
     data.+=(new CollectionBatchExecTable.PojoWithMultiplePojos("d", "dd", "e", "ee", 3))
     data.+=(new CollectionBatchExecTable.PojoWithMultiplePojos("d", "dd", "e", "ee", 3))
     env.fromCollection(data, fields)
+  }
+
+  /** Tool converters used to convert string fields to array of [[Expression]]s. **/
+  implicit def strToExpressions(fields: String): Array[Expression] = {
+    if (fields == null) null else {
+      ExpressionParser.parseExpressionList(fields).toArray
+    }
   }
 
   case class MutableTuple3[T1, T2, T3](var _1: T1, var _2: T2, var _3: T3)

@@ -45,7 +45,7 @@ object WordCountSQL {
     val input = execEnv.fromCollection(List(WC("hello", 1), WC("hello", 1), WC("ciao", 1)))
 
     // register the BoundedStream as table "WordCount"
-    tEnv.registerBoundedStream("WordCount", input.javaStream, 'word, 'frequency)
+    tEnv.registerBoundedStream("WordCount", input, 'word, 'frequency)
 
     // run a SQL query on the Table and retrieve the result as a new Table
     tEnv.sqlQuery("SELECT word, SUM(frequency) FROM WordCount GROUP BY word").print()

@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.codegen
 
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
@@ -36,12 +37,12 @@ class CodeSplitBatchITCase extends QueryTest {
   def before(): Unit = {
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_EXEC_DEFAULT_PARALLELISM, 3)
     tEnv.getConfig.getParameters.setInteger(TableConfig.SQL_CODEGEN_MAX_LENGTH, 1)
-    registerCollection("Table3", nullData3, type3, "a, b, c", nullablesOfData3)
-    registerCollection("Table5", data5, type5, "d, e, f, g, h", nullablesOfData5)
-    registerCollection("Table4", data3, type3, "a, b, c", nullablesOfData3)
-    registerCollection("NullTable3", nullData3, type3, "a, b, c", nullablesOfNullData3)
-    registerCollection("NullTable5", nullData5, type5, "d, e, f, g, h", nullablesOfNullData5)
-    registerCollection("testTable", buildInData, buildInType, "a,b,c,d,e,f,g,h,i,j")
+    registerCollection("Table3", nullData3, type3, nullablesOfData3, 'a, 'b, 'c)
+    registerCollection("Table5", data5, type5, nullablesOfData5, 'd, 'e, 'f, 'g, 'h)
+    registerCollection("Table4", data3, type3, nullablesOfData3, 'a, 'b, 'c)
+    registerCollection("NullTable3", nullData3, type3, nullablesOfNullData3, 'a, 'b, 'c)
+    registerCollection("NullTable5", nullData5, type5, nullablesOfNullData5, 'd, 'e, 'f, 'g, 'h)
+    registerCollection("testTable", buildInData, buildInType, 'a,'b,'c,'d,'e,'f,'g,'h,'i,'j)
 
   }
 
