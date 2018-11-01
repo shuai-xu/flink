@@ -118,6 +118,8 @@ public class NetworkBufferCalculationTest extends TestLogger {
 			managedMemoryFraction,
 			0,
 			Arrays.asList(ResourceProfile.UNKNOWN),
-			ResourceProfile.UNKNOWN);
+			ResourceProfile.UNKNOWN,
+			-1,
+			-1);
 	}
 }

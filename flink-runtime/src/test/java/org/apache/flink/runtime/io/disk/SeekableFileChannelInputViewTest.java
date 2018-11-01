@@ -22,6 +22,8 @@ import static org.junit.Assert.*;
 
 import java.io.EOFException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.flink.core.memory.MemorySegment;
@@ -33,13 +35,25 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.DummyInvokable;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-
+@RunWith(Parameterized.class)
 public class SeekableFileChannelInputViewTest {
+
+	private IOManager ioManager;
+
+	public SeekableFileChannelInputViewTest(boolean useBufferedIO) {
+		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
+	}
+
+	@Parameterized.Parameters(name = "useBufferedIO-{0}")
+	public static Collection<Boolean> parameters() {
+		return Arrays.asList(true, false);
+	}
 
 	@Test
 	public void testSeek() {
-		final IOManager ioManager = new IOManagerAsync();
 		final int PAGE_SIZE = 16 * 1024;
 		final int NUM_RECORDS = 120000;
 		// integers across 7.x pages (7 pages = 114.688 bytes, 8 pages = 131.072 bytes)

@@ -630,6 +630,20 @@ public class TaskManagerOptions {
 				" alignment buffers more than the configured amount of data, the checkpoint is aborted (skipped)." +
 				" A value of -1 indicates that there is no limit.");
 
+	public static final ConfigOption<Integer> IO_MANAGER_BUFFERED_READ_SIZE =
+			key("io.manager.buffered.read.size")
+					.defaultValue(-1)
+					.withDescription("The buffer size of io manager buffered read, -1 mean" +
+							" not use buffered read, this will reduce random IO, but will" +
+							" result in more than one copy.");
+
+	public static final ConfigOption<Integer> IO_MANAGER_BUFFERED_WRITE_SIZE =
+			key("io.manager.buffered.write.size")
+					.defaultValue(-1)
+					.withDescription("The buffer size of io manager buffered write, -1 mean" +
+							" not use buffered write, this will reduce random IO, but will" +
+							" result in more than one copy.");
+
 	// ------------------------------------------------------------------------
 
 	/** Not intended to be instantiated. */

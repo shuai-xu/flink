@@ -342,7 +342,7 @@ public class AsynchronousFileIOChannelTest {
 			FileIOChannel.ID channelId = ioMan.createChannel();
 
 			BlockChannelWriterWithCallback<MemorySegment> writer = new AsynchronousBlockWriterWithCallback(channelId,
-					ioMan.getWriteRequestQueue(channelId), new NoOpCallback()) {
+					ioMan.getWriteRequestQueue(channelId), new NoOpCallback(), -1) {
 
 				private int numBlocks;
 

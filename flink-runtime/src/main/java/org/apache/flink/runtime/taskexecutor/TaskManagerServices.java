@@ -256,7 +256,10 @@ public class TaskManagerServices {
 		final MemoryManager memoryManager = createMemoryManager(taskManagerServicesConfiguration, freeHeapMemoryWithDefrag, maxJvmHeapMemory);
 
 		// start the I/O manager, it will create some temp directories.
-		final IOManager ioManager = new IOManagerAsync(taskManagerServicesConfiguration.getTmpDirPaths());
+		final IOManagerAsync ioManager = new IOManagerAsync(
+			taskManagerServicesConfiguration.getTmpDirPaths(),
+			taskManagerServicesConfiguration.getIoManagerBufferedReadSize(),
+			taskManagerServicesConfiguration.getIoManagerBufferedWriteSize());
 
 		final BroadcastVariableManager broadcastVariableManager = new BroadcastVariableManager();
 

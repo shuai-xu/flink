@@ -21,6 +21,8 @@ package org.apache.flink.runtime.io.disk.iomanager;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -37,10 +39,13 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Integration test case for the I/O manager.
  */
+@RunWith(Parameterized.class)
 public class IOManagerITCase extends TestLogger {
 	
 	private static final long SEED = 649180756312423613L;
@@ -57,10 +62,14 @@ public class IOManagerITCase extends TestLogger {
 
 	private MemoryManager memoryManager;
 
-	@Before
-	public void beforeTest() {
+	public IOManagerITCase(boolean useBufferedIO) {
+		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
 		memoryManager = new MemoryManager(MEMORY_SIZE, 1);
-		ioManager = new IOManagerAsync();
+	}
+
+	@Parameterized.Parameters(name = "useBufferedIO-{0}")
+	public static Collection<Boolean> parameters() {
+		return Arrays.asList(true, false);
 	}
 
 	@After

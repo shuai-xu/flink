@@ -20,6 +20,8 @@ package org.apache.flink.runtime.io.disk.iomanager;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
+import org.apache.flink.runtime.util.NioBufferedFileOutputStream;
+import org.apache.flink.runtime.util.NioBufferedFileInputStream;
 import org.apache.flink.runtime.util.event.NotificationListener;
 
 import java.io.IOException;
@@ -135,10 +137,7 @@ public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends 
 				checkErroneous();
 			}
 			finally {
-				// close the file
-				if (this.fileChannel.isOpen()) {
-					this.fileChannel.close();
-				}
+				super.close();
 			}
 		}
 	}
@@ -292,8 +291,12 @@ final class SegmentReadRequest implements ReadRequest {
 	private final AsynchronousFileIOChannel<MemorySegment, ReadRequest> channel;
 
 	private final MemorySegment segment;
+	private final int bufferSize;
 
-	protected SegmentReadRequest(AsynchronousFileIOChannel<MemorySegment, ReadRequest> targetChannel, MemorySegment segment) {
+	protected SegmentReadRequest(
+			AsynchronousFileIOChannel<MemorySegment, ReadRequest> targetChannel,
+			MemorySegment segment, int bufferSize) {
+		this.bufferSize = bufferSize;
 		if (segment == null) {
 			throw new NullPointerException("Illegal read request with null memory segment.");
 		}
@@ -304,15 +307,20 @@ final class SegmentReadRequest implements ReadRequest {
 
 	@Override
 	public void read() throws IOException {
-		final FileChannel c = this.channel.fileChannel;
-		if (c.size() - c.position() > 0) {
-			try {
-				final ByteBuffer wrapper = this.segment.wrap(0, this.segment.size());
-				this.channel.fileChannel.read(wrapper);
+		try {
+			if (bufferSize == -1) {
+				final FileChannel c = this.channel.fileChannel;
+				if (c.size() - c.position() > 0) {
+					this.channel.fileChannel.read(this.segment.wrap(0, this.segment.size()));
+				}
+			} else {
+				NioBufferedFileInputStream in = channel.getBufferedInputStream(bufferSize);
+				if (in.available() > 0) {
+					in.continuousRead(segment.wrap(0, this.segment.size()));
+				}
 			}
-			catch (NullPointerException npex) {
-				throw new IOException("Memory segment has been released.");
-			}
+		} catch (NullPointerException ignored) {
+			throw new IOException("Memory segment has been released.");
 		}
 	}
 
@@ -332,18 +340,24 @@ final class SegmentWriteRequest implements WriteRequest {
 	private final AsynchronousFileIOChannel<MemorySegment, WriteRequest> channel;
 
 	private final MemorySegment segment;
+	private final int bufferSize;
 
-	protected SegmentWriteRequest(AsynchronousFileIOChannel<MemorySegment, WriteRequest> targetChannel, MemorySegment segment) {
+	protected SegmentWriteRequest(AsynchronousFileIOChannel<MemorySegment, WriteRequest> targetChannel,
+			MemorySegment segment, int bufferSize) {
 		this.channel = targetChannel;
 		this.segment = segment;
+		this.bufferSize = bufferSize;
 	}
 
 	@Override
 	public void write() throws IOException {
 		try {
-			this.channel.fileChannel.write(this.segment.wrap(0, this.segment.size()));
-		}
-		catch (NullPointerException npex) {
+			if (bufferSize == -1) {
+				channel.fileChannel.write(segment.wrap(0, segment.size()));
+			} else {
+				channel.getBufferedOutputStream(bufferSize).write(segment, 0, segment.size());
+			}
+		} catch (NullPointerException npex) {
 			throw new IOException("Memory segment has been released.");
 		}
 	}
@@ -359,10 +373,13 @@ final class BufferWriteRequest implements WriteRequest {
 	private final AsynchronousFileIOChannel<Buffer, WriteRequest> channel;
 
 	private final Buffer buffer;
+	private final int bufferSize;
 
-	protected BufferWriteRequest(AsynchronousFileIOChannel<Buffer, WriteRequest> targetChannel, Buffer buffer) {
+	protected BufferWriteRequest(AsynchronousFileIOChannel<Buffer, WriteRequest> targetChannel,
+			Buffer buffer, int bufferSize) {
 		this.channel = checkNotNull(targetChannel);
 		this.buffer = checkNotNull(buffer);
+		this.bufferSize = bufferSize;
 	}
 
 	@Override
@@ -375,8 +392,14 @@ final class BufferWriteRequest implements WriteRequest {
 		header.putInt(nioBufferReadable.remaining());
 		header.flip();
 
-		channel.fileChannel.write(header);
-		channel.fileChannel.write(nioBufferReadable);
+		if (bufferSize == -1) {
+			channel.fileChannel.write(header);
+			channel.fileChannel.write(nioBufferReadable);
+		} else {
+			NioBufferedFileOutputStream out = channel.getBufferedOutputStream(bufferSize);
+			out.write(header);
+			out.write(nioBufferReadable);
+		}
 	}
 
 	@Override
@@ -393,10 +416,14 @@ final class BufferReadRequest implements ReadRequest {
 
 	private final AtomicBoolean hasReachedEndOfFile;
 
-	protected BufferReadRequest(AsynchronousFileIOChannel<Buffer, ReadRequest> targetChannel, Buffer buffer, AtomicBoolean hasReachedEndOfFile) {
+	private final int bufferSize;
+
+	protected BufferReadRequest(AsynchronousFileIOChannel<Buffer, ReadRequest> targetChannel, Buffer buffer,
+			AtomicBoolean hasReachedEndOfFile, int bufferSize) {
 		this.channel = targetChannel;
 		this.buffer = buffer;
 		this.hasReachedEndOfFile = hasReachedEndOfFile;
+		this.bufferSize = bufferSize;
 	}
 
 	@Override
@@ -404,12 +431,21 @@ final class BufferReadRequest implements ReadRequest {
 
 		final FileChannel fileChannel = channel.fileChannel;
 
-		if (fileChannel.size() - fileChannel.position() > 0) {
-			BufferFileChannelReader reader = new BufferFileChannelReader(fileChannel);
-			hasReachedEndOfFile.set(reader.readBufferFromFileChannel(buffer));
-		}
-		else {
-			hasReachedEndOfFile.set(true);
+		if (bufferSize == -1) {
+			if (fileChannel.size() - fileChannel.position() > 0) {
+				BufferFileChannelReader reader = new BufferFileChannelReader(fileChannel);
+				hasReachedEndOfFile.set(reader.readBufferFromFileChannel(buffer));
+			} else {
+				hasReachedEndOfFile.set(true);
+			}
+		} else {
+			NioBufferedFileInputStream in = channel.getBufferedInputStream(bufferSize);
+			if (in.available() > 0) {
+				BufferFileChannelReader reader = new BufferFileChannelReader(fileChannel);
+				hasReachedEndOfFile.set(reader.readBufferFromFileBufferedChannel(in, buffer));
+			} else {
+				hasReachedEndOfFile.set(true);
+			}
 		}
 	}
 
@@ -473,10 +509,12 @@ final class SeekRequest implements ReadRequest, WriteRequest {
 
 	private final AsynchronousFileIOChannel<?, ?> channel;
 	private final long position;
+	private final int bufferSize;
 
-	protected SeekRequest(AsynchronousFileIOChannel<?, ?> channel, long position) {
+	protected SeekRequest(AsynchronousFileIOChannel<?, ?> channel, long position, int bufferSize) {
 		this.channel = channel;
 		this.position = position;
+		this.bufferSize = bufferSize;
 	}
 
 	@Override
@@ -485,11 +523,17 @@ final class SeekRequest implements ReadRequest, WriteRequest {
 
 	@Override
 	public void read() throws IOException {
+		if (bufferSize != -1) {
+			channel.getBufferedInputStream(bufferSize).clearBuffer();
+		}
 		this.channel.fileChannel.position(position);
 	}
 
 	@Override
 	public void write() throws IOException {
+		if (bufferSize != -1) {
+			channel.getBufferedOutputStream(bufferSize).flush();
+		}
 		this.channel.fileChannel.position(position);
 	}
 }

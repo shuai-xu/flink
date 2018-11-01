@@ -26,19 +26,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class AsynchronousBufferFileReader extends AsynchronousFileIOChannel<Buffer, ReadRequest> implements BufferFileReader {
 
 	private final AtomicBoolean hasReachedEndOfFile = new AtomicBoolean();
+	private final int bufferSize;
 
-	protected AsynchronousBufferFileReader(ID channelID, RequestQueue<ReadRequest> requestQueue, RequestDoneCallback<Buffer> callback) throws IOException {
+	protected AsynchronousBufferFileReader(ID channelID, RequestQueue<ReadRequest> requestQueue,
+			RequestDoneCallback<Buffer> callback, int bufferSize) throws IOException {
 		super(channelID, requestQueue, callback, false);
+		this.bufferSize = bufferSize;
 	}
 
 	@Override
 	public void readInto(Buffer buffer) throws IOException {
-		addRequest(new BufferReadRequest(this, buffer, hasReachedEndOfFile));
+		addRequest(new BufferReadRequest(this, buffer, hasReachedEndOfFile, bufferSize));
 	}
 
 	@Override
 	public void seekToPosition(long position) throws IOException {
-		requestQueue.add(new SeekRequest(this, position));
+		requestQueue.add(new SeekRequest(this, position, bufferSize));
 	}
 
 	@Override

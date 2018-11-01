@@ -48,6 +48,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import static org.apache.flink.configuration.TaskManagerOptions.IO_MANAGER_BUFFERED_READ_SIZE;
+import static org.apache.flink.configuration.TaskManagerOptions.IO_MANAGER_BUFFERED_WRITE_SIZE;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -98,6 +100,10 @@ public class TaskManagerServicesConfiguration {
 
 	private final ResourceProfile totalResourceProfile;
 
+	private final int ioManagerBufferedReadSize;
+
+	private final int ioManagerBufferedWriteSize;
+
 	public TaskManagerServicesConfiguration(
 			InetAddress taskManagerAddress,
 			String[] tmpDirPaths,
@@ -113,7 +119,9 @@ public class TaskManagerServicesConfiguration {
 			float memoryFraction,
 			long timerServiceShutdownTimeout,
 			List<ResourceProfile> resourceProfileList,
-			ResourceProfile totalResourceProfile) {
+			ResourceProfile totalResourceProfile,
+			int ioManagerBufferedReadSize,
+			int ioManagerBufferedWriteSize) {
 
 		this.taskManagerAddress = checkNotNull(taskManagerAddress);
 		this.tmpDirPaths = checkNotNull(tmpDirPaths);
@@ -128,6 +136,8 @@ public class TaskManagerServicesConfiguration {
 		this.memoryType = checkNotNull(memoryType);
 		this.preAllocateMemory = preAllocateMemory;
 		this.memoryFraction = memoryFraction;
+		this.ioManagerBufferedReadSize = ioManagerBufferedReadSize;
+		this.ioManagerBufferedWriteSize = ioManagerBufferedWriteSize;
 
 		checkArgument(timerServiceShutdownTimeout >= 0L, "The timer " +
 			"service shutdown timeout must be greater or equal to 0.");
@@ -172,6 +182,14 @@ public class TaskManagerServicesConfiguration {
 
 	public float getMemoryFraction() {
 		return memoryFraction;
+	}
+
+	public int getIoManagerBufferedReadSize() {
+		return ioManagerBufferedReadSize;
+	}
+
+	public int getIoManagerBufferedWriteSize() {
+		return ioManagerBufferedWriteSize;
 	}
 
 	/**
@@ -316,6 +334,9 @@ public class TaskManagerServicesConfiguration {
 			totalResourceProfile = (ResourceProfile)rpInput.readObject();
 		}
 
+		final int ioManagerBufferedReadSize = configuration.getInteger(IO_MANAGER_BUFFERED_READ_SIZE);
+		final int ioManagerBufferedWriteSize = configuration.getInteger(IO_MANAGER_BUFFERED_WRITE_SIZE);
+
 		return new TaskManagerServicesConfiguration(
 			remoteAddress,
 			tmpDirs,
@@ -331,7 +352,9 @@ public class TaskManagerServicesConfiguration {
 			memoryFraction,
 			timerServiceShutdownTimeout,
 			resourceProfiles,
-			totalResourceProfile);
+			totalResourceProfile,
+			ioManagerBufferedReadSize,
+			ioManagerBufferedWriteSize);
 	}
 
 	// --------------------------------------------------------------------------

@@ -23,15 +23,20 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@RunWith(Parameterized.class)
 public class IOManagerAsyncTest {
 	
 	private IOManagerAsync ioManager;
@@ -39,10 +44,14 @@ public class IOManagerAsyncTest {
 	// ------------------------------------------------------------------------
 	//                           Setup & Shutdown
 	// ------------------------------------------------------------------------
-	
-	@Before
-	public void beforeTest() {
-		ioManager = new IOManagerAsync();
+
+	public IOManagerAsyncTest(boolean useBufferedIO) {
+		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
+	}
+
+	@Parameterized.Parameters(name = "useBufferedIO-{0}")
+	public static Collection<Boolean> parameters() {
+		return Arrays.asList(true, false);
 	}
 
 	@After
