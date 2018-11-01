@@ -28,7 +28,7 @@ under the License.
 
 	<groupId>org.apache.flink</groupId>
 	<artifactId>flink-parent</artifactId>
-	<version>1.5.1</version>
+	<version>blink-3.0-SNAPSHOT</version>
 
 	<name>flink</name>
 	<packaging>pom</packaging>
@@ -94,7 +94,7 @@ under the License.
 
 	<properties>
 		<!-- When updating the Calcite version, make sure to update the dependency exclusions -->
-		<connectors.version>1.5.1</connectors.version>
+		<connectors.version>blink-3.0-SNAPSHOT</connectors.version>
 		<calcite.version>1.17.2-SNAPSHOT</calcite.version>
 		<hive.version>2.3.3</hive.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -155,7 +155,7 @@ under the License.
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>force-shading</artifactId>
-			<version>1.5.1</version>
+			<version>blink-3.0-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Root dependencies for all projects -->
@@ -1003,6 +1003,17 @@ under the License.
 			</build>
 		</profile>
 	</profiles>
+
+	<distributionManagement>
+		<repository>
+			<id>releases</id>
+			<url>http://mvnrepo.alibaba-inc.com/mvn/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>snapshots</id>
+			<url>http://mvnrepo.alibaba-inc.com/mvn/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
 
 	<build>
 		<plugins>

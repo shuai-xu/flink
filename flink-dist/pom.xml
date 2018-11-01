@@ -25,7 +25,7 @@ under the License.
 	<parent>
 		<groupId>org.apache.flink</groupId>
 		<artifactId>flink-parent</artifactId>
-		<version>1.5.1</version>
+		<version>blink-3.0-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
 
@@ -185,12 +185,13 @@ under the License.
 			<artifactId>flink-hadoop-fs</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-
+		<!--
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-mapr-fs</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		-->
 
 		<!-- Concrete logging framework - we add this only here (and not in the 
 			root POM) to not tie the projects to one specific framework and make
@@ -997,6 +998,21 @@ under the License.
 							</descriptors>
 							<finalName>flink-${project.version}-bin</finalName>
 							<appendAssemblyId>false</appendAssemblyId>
+						</configuration>
+					</execution>
+					<execution>
+						<id>package</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<descriptors>
+								<descriptor>src/main/assemblies/package.xml</descriptor>
+							</descriptors>
+							<finalName>${project.version}</finalName>
+							<appendAssemblyId>false</appendAssemblyId>
+							<tarLongFileMode>posix</tarLongFileMode>
 						</configuration>
 					</execution>
 				</executions>
