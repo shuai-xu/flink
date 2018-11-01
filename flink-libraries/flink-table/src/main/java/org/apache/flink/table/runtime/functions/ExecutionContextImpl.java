@@ -50,7 +50,11 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataview.StateDataView;
 import org.apache.flink.util.Preconditions;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -62,6 +66,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	private final AbstractStreamOperator<?> operator;
 	private final RuntimeContext runtimeContext;
 	private final TypeSerializer<?> namespaceSerializer;
+	private final List<StateDataView<BaseRow>> registeredStateDataViews;
 
 	public ExecutionContextImpl(
 			AbstractStreamOperator<?> operator,
@@ -76,6 +81,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 		this.operator = Preconditions.checkNotNull(operator);
 		this.runtimeContext = Preconditions.checkNotNull(runtimeContext);
 		this.namespaceSerializer = namespaceSerializer;
+		this.registeredStateDataViews = new ArrayList<>();
 	}
 
 	@Override
@@ -215,6 +221,11 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	}
 
 	@Override
+	public void registerStateDataView(StateDataView<BaseRow> stateDataView) {
+		registeredStateDataViews.add(stateDataView);
+	}
+
+	@Override
 	public <K> TypeSerializer<K> getKeySerializer() {
 		return (TypeSerializer<K>) operator.getKeySerializer();
 	}
@@ -227,6 +238,10 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public void setCurrentKey(BaseRow key) {
 		operator.setCurrentKey(key);
+		// set current key to all the registered stateDataviews
+		for (StateDataView<BaseRow> dataView : registeredStateDataViews) {
+			dataView.setCurrentKey(key);
+		}
 	}
 
 	@Override

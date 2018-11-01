@@ -132,39 +132,19 @@ StreamExecCalc(select=[rowtime, id, name, val])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testWithPkMultiRowUpdate">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0, COUNT(c) AS TMP_1])
-  StreamExecExchange(distribution=[hash[pk]])
-    StreamExecLastRow(key=[pk], select=[a, pk, c])
-      StreamExecExchange(distribution=[hash[pk]])
-        StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
-]]>
-    </Resource>
-    <Resource name="trait">
-      <![CDATA[
-StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-  StreamExecExchange(retract=[true], accMode=[AccRetract])
-    StreamExecLastRow(retract=[true], accMode=[AccRetract])
-      StreamExecExchange(retract=[true], accMode=[Acc])
-        StreamExecTableSourceScan(retract=[true], accMode=[Acc])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testWithPkMultiRowUpdateTransposWithCalc">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0])
+    <TestCase name="testWithPkMultiRowUpdateTransposeWithCalc">
+        <Resource name="plan">
+            <![CDATA[
+StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0])
   StreamExecExchange(distribution=[hash[pk]])
     StreamExecLastRow(key=[pk], select=[pk, a])
       StreamExecExchange(distribution=[hash[pk]])
         StreamExecCalc(select=[pk, a])
           StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
 ]]>
-    </Resource>
-    <Resource name="trait">
-      <![CDATA[
+        </Resource>
+        <Resource name="trait">
+            <![CDATA[
 StreamExecGroupAggregate(retract=[false], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[AccRetract])
     StreamExecLastRow(retract=[true], accMode=[AccRetract])
@@ -172,6 +152,44 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecCalc(retract=[true], accMode=[Acc])
           StreamExecTableSourceScan(retract=[true], accMode=[Acc])
 ]]>
-    </Resource>
-  </TestCase>
+        </Resource>
+    </TestCase>
+
+    <TestCase name="testWithPkMultiRowUpdate">
+        <Resource name="plan">
+            <![CDATA[
+StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0, COUNT_RETRACT(c) AS TMP_1])
+  StreamExecExchange(distribution=[hash[pk]])
+    StreamExecLastRow(key=[pk], select=[a, pk, c])
+      StreamExecExchange(distribution=[hash[pk]])
+        StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
+]]>
+        </Resource>
+        <Resource name="trait">
+            <![CDATA[
+StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[true], accMode=[AccRetract])
+    StreamExecLastRow(retract=[true], accMode=[AccRetract])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecTableSourceScan(retract=[true], accMode=[Acc])
+]]>
+        </Resource>
+    </TestCase>
+
+    <TestCase name="testWithPkAppend">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT(a) AS TMP_0, COUNT(c) AS TMP_1])
+  StreamExecExchange(distribution=[hash[pk]])
+    StreamExecTableSourceScan(table=[[MyTable]], fields=[a, pk, c])
+]]>
+		</Resource>
+		<Resource name="trait">
+			<![CDATA[
+StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+  StreamExecExchange(retract=[true], accMode=[Acc])
+    StreamExecTableSourceScan(retract=[true], accMode=[Acc])
+]]>
+		</Resource>
+	</TestCase>
 </Root>

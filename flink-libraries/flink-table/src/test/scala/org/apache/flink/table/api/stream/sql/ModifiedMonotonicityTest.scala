@@ -27,12 +27,15 @@ import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
-import org.apache.flink.table.util.StreamTableTestUtil
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class ModifiedMonotonicityTest extends StreamPlanTestBase {
+class ModifiedMonotonicityTest extends TableTestBase {
 
+  val streamUtil: StreamTableTestUtil = streamTestUtil()
+  streamUtil.addTable[(Int, Long, Long)]("A", 'a1, 'a2, 'a3)
+  streamUtil.addTable[(Int, Long, Long)]("B", 'b1, 'b2, 'b3)
   streamUtil.addTable[(Int, String, Long)](
     "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
   streamUtil.addFunction("weightedAvg", new WeightedAvgWithMerge)
@@ -45,50 +48,53 @@ class ModifiedMonotonicityTest extends StreamPlanTestBase {
   def testMaxWithRetractOptimize(): Unit = {
     val query = "SELECT a1, max(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testMinWithRetractOptimize(): Unit = {
     val query = "SELECT a1, min(a3) from (SELECT a1, a2, min(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testMinCanNotOptimize(): Unit = {
     val query = "SELECT a1, min(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testMaxWithRetractOptimizeWithLocalGlobal(): Unit = {
-    queryConfig.enableMiniBatch
-    queryConfig.withMiniBatchTriggerTime(100)
-    queryConfig.enableLocalAgg
+    streamUtil.tableEnv.queryConfig
+      .enableMiniBatch
+      .withMiniBatchTriggerTime(100)
+      .enableLocalAgg
     val query = "SELECT a1, max(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testMinWithRetractOptimizeWithLocalGlobal(): Unit = {
-    queryConfig.enableMiniBatch
-    queryConfig.withMiniBatchTriggerTime(100)
-    queryConfig.enableLocalAgg
+    streamUtil.tableEnv.queryConfig
+      .enableMiniBatch
+      .withMiniBatchTriggerTime(100)
+      .enableLocalAgg
     val query = "SELECT min(a3) from (SELECT a1, a2, min(a3) as a3 FROM A GROUP BY a1, a2)"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testMinCanNotOptimizeWithLocalGlobal(): Unit = {
-    queryConfig.enableMiniBatch
-    queryConfig.withMiniBatchTriggerTime(100)
-    queryConfig.enableLocalAgg
+    streamUtil.tableEnv.queryConfig
+      .enableMiniBatch
+      .withMiniBatchTriggerTime(100)
+      .enableLocalAgg
     val query = "SELECT a1, min(a3) from (SELECT a1, a2, max(a3) as a3 FROM A GROUP BY a1, a2) " +
       "group by a1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
 
@@ -268,11 +274,14 @@ class ModifiedMonotonicityTest extends StreamPlanTestBase {
 
     val table = streamUtil.tableEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = streamUtil.tableEnv.optimize(relNode, updatesAsRetraction = false, queryConfig)
+    val optimized = streamUtil.tableEnv.optimize(
+      relNode,
+      updatesAsRetraction = false,
+      streamUtil.tableEnv.queryConfig)
 
     val flinkChainContext =
       optimized.getCluster.getPlanner.getContext.asInstanceOf[FlinkChainContext]
-    flinkChainContext.load(Contexts.of(queryConfig))
+    flinkChainContext.load(Contexts.of(streamUtil.tableEnv.queryConfig))
     val actualMono =
       optimized.getCluster.getMetadataQuery.asInstanceOf[FlinkRelMetadataQuery]
         .getRelModifiedMonotonicity(optimized)

@@ -18,17 +18,34 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import java.util
+
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
-import org.junit.Test
+import org.junit.{Before, Test}
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
-class SplitAggregateTest() extends TableTestBase {
+import scala.collection.JavaConversions._
+
+@RunWith(classOf[Parameterized])
+class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
 
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
-  streamUtil.addTable[(Long, Int, String)](
-    "MyTable", 'a, 'b, 'c)
-  streamUtil.tableEnv.queryConfig.enableMiniBatch.enablePartialAgg
+
+  @Before
+  def before(): Unit = {
+    streamUtil.addTable[(Long, Int, String)](
+      "MyTable", 'a, 'b, 'c)
+    val queryConfig = streamUtil.tableEnv.queryConfig.enableMiniBatch.enablePartialAgg
+
+    aggMode match {
+      case LocalGlobalOn => queryConfig.enableLocalAgg
+      case LocalGlobalOff => queryConfig.disableLocalAgg
+    }
+  }
 
   @Test
   def testSingleDistinctAgg(): Unit = {
@@ -62,6 +79,7 @@ class SplitAggregateTest() extends TableTestBase {
 
   @Test
   def testSomeColumnsBothInDistinctAggAndGroupBy(): Unit = {
+    // TODO: the COUNT(DISTINCT a) can be optimized to literal 1
     val sqlQuery = "SELECT a, COUNT(DISTINCT a), COUNT(b) FROM MyTable GROUP BY a"
     streamUtil.verifyPlan(sqlQuery)
   }
@@ -137,5 +155,15 @@ class SplitAggregateTest() extends TableTestBase {
     streamUtil.tableEnv.queryConfig.withPartialBucketNum(100)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
+  }
+}
+
+object SplitAggregateTest {
+
+  @Parameterized.Parameters(name = "LocalGlobal={0}")
+  def parameters(): util.Collection[Array[java.lang.Object]] = {
+    Seq[Array[AnyRef]](
+      Array(LocalGlobalOff),
+      Array(LocalGlobalOn))
   }
 }

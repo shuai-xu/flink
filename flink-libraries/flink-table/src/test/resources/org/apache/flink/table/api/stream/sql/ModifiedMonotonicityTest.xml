@@ -29,10 +29,10 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
 		</Resource>
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS EXPR$1], aggWithRetract=[[false]])
+StreamExecGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS EXPR$1])
   StreamExecExchange(distribution=[hash[a1]])
     StreamExecCalc(select=[a1, a3])
-      StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3], aggWithRetract=[[false]])
+      StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3])
         StreamExecExchange(distribution=[hash[a1, a2]])
           StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -51,10 +51,10 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
 		</Resource>
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN(a3) AS EXPR$1], aggWithRetract=[[false]])
+StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN(a3) AS EXPR$1])
   StreamExecExchange(distribution=[hash[a1]])
     StreamExecCalc(select=[a1, a3])
-      StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS a3], aggWithRetract=[[false]])
+      StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS a3])
         StreamExecExchange(distribution=[hash[a1, a2]])
           StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -73,10 +73,10 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
 		</Resource>
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN(a3) AS EXPR$1], aggWithRetract=[[true]])
+StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS EXPR$1])
   StreamExecExchange(distribution=[hash[a1]])
     StreamExecCalc(select=[a1, a3])
-      StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3], aggWithRetract=[[false]])
+      StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3])
         StreamExecExchange(distribution=[hash[a1, a2]])
           StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -97,13 +97,13 @@ StreamExecGlobalGroupAggregate(retract=[false], accMode=[Acc])
 		</Resource>
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, Final_MAX(max$0) AS EXPR$1], aggs=[LongMaxAggFunction, Count1AggFunction])
+StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MAX(max$0) AS EXPR$1])
   StreamExecExchange(distribution=[hash[a1]])
-    StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, Partial_MAX(a3) AS max$0, Partial_COUNT(*) AS count$1], aggs=[LongMaxAggFunction, Count1AggFunction])
+    StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS max$0, COUNT_RETRACT(*) AS count$1])
       StreamExecCalc(select=[a1, a3])
-        StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, Final_MAX(max$0) AS a3], aggs=[LongMaxAggFunction])
+        StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3])
           StreamExecExchange(distribution=[hash[a1, a2]])
-            StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, Partial_MAX(a3) AS max$0], aggs=[LongMaxAggFunction])
+            StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
@@ -123,13 +123,13 @@ StreamExecGlobalGroupAggregate(retract=[false], accMode=[Acc])
 		</Resource>
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[], select=[Final_MIN(min$0) AS EXPR$0], aggs=[LongMinAggFunction, Count1AggFunction])
+StreamExecGlobalGroupAggregate(select=[MIN(min$0) AS EXPR$0])
   StreamExecExchange(distribution=[single])
-    StreamExecLocalGroupAggregate(groupBy=[], select=[Partial_MIN(a3) AS min$0, Partial_COUNT(*) AS count$1], aggs=[LongMinAggFunction, Count1AggFunction])
+    StreamExecLocalGroupAggregate(select=[MIN(a3) AS min$0, COUNT_RETRACT(*) AS count$1])
       StreamExecCalc(select=[a3])
-        StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, Final_MIN(min$0) AS a3], aggs=[LongMinAggFunction])
+        StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(min$0) AS a3])
           StreamExecExchange(distribution=[hash[a1, a2]])
-            StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, Partial_MIN(a3) AS min$0], aggs=[LongMinAggFunction])
+            StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS min$0])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
@@ -149,13 +149,13 @@ StreamExecGlobalGroupAggregate(retract=[false], accMode=[Acc])
 		</Resource>
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, Final_MIN(EXPR$1) AS EXPR$1], aggs=[LongMinWithRetractAggFunction, Count1AggFunction])
+StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(min$0) AS EXPR$1])
   StreamExecExchange(distribution=[hash[a1]])
-    StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, Partial_MIN(a3) AS EXPR$1, Partial_COUNT(*) AS count$0], aggs=[LongMinWithRetractAggFunction, Count1AggFunction])
+    StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS min$0, COUNT_RETRACT(*) AS count$1])
       StreamExecCalc(select=[a1, a3])
-        StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, Final_MAX(max$0) AS a3], aggs=[LongMaxAggFunction])
+        StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3])
           StreamExecExchange(distribution=[hash[a1, a2]])
-            StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, Partial_MAX(a3) AS max$0], aggs=[LongMaxAggFunction])
+            StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>

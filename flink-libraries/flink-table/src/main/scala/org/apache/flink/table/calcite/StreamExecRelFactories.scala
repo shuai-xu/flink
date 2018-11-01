@@ -220,7 +220,6 @@ object StreamExecRelFactories {
         providedTraitSet,
         convInput,
         aggCalls,
-        input.getRowType,
         outputRowType,
         groupSet)
       val newTraitSet = FlinkRelMetadataQuery.traitSet(aggregate).simplify()

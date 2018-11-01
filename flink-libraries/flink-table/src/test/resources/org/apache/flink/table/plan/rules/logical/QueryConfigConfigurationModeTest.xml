@@ -30,9 +30,9 @@ StreamExecGroupAggregate(select=[COUNT(DISTINCT c) AS EXPR$0])
 	<TestCase name="testEnableMiniBatch">
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[Final_COUNT(DISTINCT distinct$0) AS EXPR$0])
+StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
   StreamExecExchange(distribution=[single])
-    StreamExecLocalGroupAggregate(select=[Partial_COUNT(distinct$0) AS count$0, Partial_DISTINCT(c) AS distinct$0])
+    StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
       StreamExecCalc(select=[c])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -41,28 +41,26 @@ StreamExecGlobalGroupAggregate(select=[Final_COUNT(DISTINCT distinct$0) AS EXPR$
 	<TestCase name="testEnablePartialAgg">
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0])
+StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
   StreamExecExchange(distribution=[single])
-    StreamExecLocalGroupAggregate(select=[Partial_$SUM0($f1_0) AS sum0$0, Partial_COUNT(*) AS count$1])
-      StreamExecGlobalGroupAggregate(groupBy=[$f1], select=[$f1, Final_COUNT(DISTINCT distinct$0) AS $f1_0])
-        StreamExecExchange(distribution=[hash[$f1]])
-          StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, Partial_COUNT(distinct$0) AS count$0, Partial_DISTINCT(c) AS distinct$0])
-            StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
-              StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
+      StreamExecExchange(distribution=[hash[$f1]])
+        StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
+          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+            StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
 	<TestCase name="testEnableByParameters">
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0])
+StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
   StreamExecExchange(distribution=[single])
-    StreamExecLocalGroupAggregate(select=[Partial_$SUM0($f1_0) AS sum0$0, Partial_COUNT(*) AS count$1])
-      StreamExecGlobalGroupAggregate(groupBy=[$f1], select=[$f1, Final_COUNT(DISTINCT distinct$0) AS $f1_0])
-        StreamExecExchange(distribution=[hash[$f1]])
-          StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, Partial_COUNT(distinct$0) AS count$0, Partial_DISTINCT(c) AS distinct$0])
-            StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
-              StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
+      StreamExecExchange(distribution=[hash[$f1]])
+        StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
+          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+            StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>

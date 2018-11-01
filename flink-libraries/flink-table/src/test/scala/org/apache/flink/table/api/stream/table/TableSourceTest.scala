@@ -387,7 +387,7 @@ class TableSourceTest extends TableTestBase {
   }
 
   @Test
-  def testWithPkMultiRowUpdateTransposWithCalc(): Unit = {
+  def testWithPkMultiRowUpdateTransposeWithCalc(): Unit = {
     val util = streamTestUtil()
 
     val rowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)

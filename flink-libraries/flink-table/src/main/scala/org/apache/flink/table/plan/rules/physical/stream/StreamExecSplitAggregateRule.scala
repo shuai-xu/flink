@@ -40,7 +40,7 @@ import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecGroupAggregate}
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecSplitAggregateRule._
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.plan.util.{AggregateInfo, AggregateUtil}
+import org.apache.flink.table.plan.util.{AggregateInfo, AggregateUtil, PartialFinalType}
 import org.apache.flink.table.plan.util.AggregateUtil.{doAllSupportSplit, transformToStreamAggregateInfoList}
 
 import scala.collection.JavaConversions._
@@ -136,7 +136,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     call.rels(1).isInstanceOf[StreamExecExchange] == inputIsExchange &&
       queryConfig.isMiniBatchEnabled &&
       queryConfig.isPartialAggEnabled &&
-      !agg.skipSplit &&
+      agg.partialFinal == PartialFinalType.NORMAL &&
       containsAggsWithDataView(aggInfoList.aggInfos) &&
       doAllSupportSplit(aggInfoList.aggInfos)
   }
@@ -279,7 +279,8 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     relBuilder.aggregate(
       relBuilder.groupKey(fullGroupSet, ImmutableList.of[ImmutableBitSet](fullGroupSet)),
       newPartialAggCalls)
-    relBuilder.peek().asInstanceOf[StreamExecGroupAggregate].setSkipSplit(true)
+    relBuilder.peek().asInstanceOf[StreamExecGroupAggregate]
+      .setPartialFinal(PartialFinalType.PARTIAL)
 
     // STEP 3: construct final aggregates
     val finalAggInputOffset = fullGroupSet.cardinality
@@ -307,7 +308,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
         remap(fullGroupSet, Seq(originalAggregate.getGroupSet))),
       finalAggCalls)
     val finalAggregate = relBuilder.peek().asInstanceOf[StreamExecGroupAggregate]
-    finalAggregate.setSkipSplit(skipSplit = true)
+    finalAggregate.setPartialFinal(PartialFinalType.FINAL)
 
     // STEP 4: convert final aggregation output to the original aggregation output.
     // For example, aggregate function AVG is transformed to SUM0 and COUNT, so the output of
@@ -315,7 +316,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     // for the final output.
     if (needMergeFinalAggOutput) {
       val nodes = new util.ArrayList[RexNode]
-      (0 until finalAggregate.getGroupings.length).foreach { index =>
+      finalAggregate.getGroupings.indices.foreach { index =>
         nodes.add(RexInputRef.of(index, finalAggregate.getRowType))
       }
 

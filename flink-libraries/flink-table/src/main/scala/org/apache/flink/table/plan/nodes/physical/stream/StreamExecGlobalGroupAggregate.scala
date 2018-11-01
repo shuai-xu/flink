@@ -33,8 +33,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandle
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
-import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, PartialFinalType, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.types.{DataType, DataTypes}
@@ -48,24 +47,25 @@ import org.apache.flink.table.util.Logging
   * @param cluster          Cluster of the RelNode, represent for an environment of related
   *                         relational expressions during the optimization of a query.
   * @param traitSet         Trait set of the RelNode
-  * @param inputNode        The input RelNode of aggregation
-  * @param aggInputSchema   The schema of input node of local aggregate node
+  * @param inputNode        The input RelNode of aggregation which is local/incremental aggregate
   * @param localAggInfoList      The information list about the node's local aggregates
   *                              which use heap dataviews
   * @param globalAggInfoList      The information list about the node's global aggregates
   *                               which use state dataviews
   * @param outputDataType   The type emitted by this RelNode
   * @param groupings        The position (in the input Row) of the grouping keys
+  * @param partialFinal     Whether the aggregate is partial agg or final agg or normal agg
   */
 class StreamExecGlobalGroupAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
-    localAggInfoList: AggregateInfoList,
+    val localAggInfoList: AggregateInfoList,
     val globalAggInfoList: AggregateInfoList,
-    aggInputSchema: BaseRowSchema,
+    val aggInputRowType: RelDataType,
     outputDataType: RelDataType,
-    groupings: Array[Int])
+    val groupings: Array[Int],
+    val partialFinal: PartialFinalType)
   extends SingleRel(cluster, traitSet, inputNode)
   with CommonAggregate
   with StreamExecRel
@@ -88,9 +88,10 @@ class StreamExecGlobalGroupAggregate(
       inputs.get(0),
       localAggInfoList,
       globalAggInfoList,
-      aggInputSchema,
+      aggInputRowType,
       outputDataType,
-      groupings)
+      groupings,
+      partialFinal)
   }
 
   override def toString: String = {
@@ -100,32 +101,23 @@ class StreamExecGlobalGroupAggregate(
       } else {
         ""
       }
-    }select:(${
-      aggregationToString(
-        inputNode.getRowType,
-        groupings,
-        Array.empty[Int],
-        getRowType,
-        globalAggInfoList.getActualAggregateCalls,
-        globalAggInfoList.getActualFunctions,
-        isMerge = true,
-        isGlobal = true,
-        globalAggInfoList.distinctInfos)}))"
+    }select:(${streamAggregationToString(
+      inputNode.getRowType,
+      getRowType,
+      globalAggInfoList,
+      groupings,
+      isGlobal = true)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputNode.getRowType, groupings), groupings.nonEmpty)
-      .item("select", aggregationToString(
+      .item("select", streamAggregationToString(
         inputNode.getRowType,
-        groupings,
-        Array.empty[Int],
         getRowType,
-        globalAggInfoList.getActualAggregateCalls,
-        globalAggInfoList.getActualFunctions,
-        isMerge = true,
-        isGlobal = true,
-        globalAggInfoList.distinctInfos))
+        globalAggInfoList,
+        groupings,
+        isGlobal = true))
   }
 
   @VisibleForTesting
@@ -163,24 +155,6 @@ class StreamExecGlobalGroupAggregate(
       tableEnv, queryConfig)
 
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
-
-    val aggString = aggregationToString(
-      inputNode.getRowType,
-      groupings,
-      Array.empty[Int],
-      getRowType,
-      globalAggInfoList.getActualAggregateCalls,
-      globalAggInfoList.getActualFunctions,
-      isMerge = true,
-      isGlobal = true,
-      globalAggInfoList.distinctInfos)
-
-    val opName = if (groupings.nonEmpty) {
-      s"groupBy: (${groupingToString(inputNode.getRowType, groupings)}), " +
-        s"select: ($aggString)"
-    } else {
-      s"select: ($aggString)"
-    }
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
 
@@ -241,7 +215,7 @@ class StreamExecGlobalGroupAggregate(
     // partitioned aggregation
     val ret = new OneInputTransformation(
       inputTransformation,
-      s"GlobalGroupAggregate($opName)",
+      this.toString,
       operator,
       outRowType,
       tableEnv.execEnv.getParallelism)
@@ -269,7 +243,7 @@ class StreamExecGlobalGroupAggregate(
     val generator = new AggsHandlerCodeGenerator(
       CodeGeneratorContext(config, supportReference = true),
       relBuilder,
-      aggInputSchema.fieldTypes,
+      FlinkTypeFactory.toInternalFieldTypes(aggInputRowType),
       needRetract = false,
       needMerge = true,
       config.getNullCheck,

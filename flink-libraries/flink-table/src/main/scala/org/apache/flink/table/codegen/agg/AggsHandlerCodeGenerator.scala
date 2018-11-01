@@ -287,6 +287,7 @@ class AggsHandlerCodeGenerator(
     val createAccumulatorsCode = genCreateAccumulators()
     val getAccumulatorsCode = genGetAccumulators()
     val setAccumulatorsCode = genSetAccumulators()
+    val resetAccumulatorsCode = genResetAccumulators()
     val accumulateCode = genAccumulate()
     val retractCode = genRetract()
     val mergeCode = genMerge()
@@ -329,6 +330,11 @@ class AggsHandlerCodeGenerator(
           @Override
           public void setAccumulators($BASE_ROW $ACC_TERM) throws Exception {
             $setAccumulatorsCode
+          }
+
+          @Override
+          public void resetAccumulators() throws Exception {
+            $resetAccumulatorsCode
           }
 
           @Override
@@ -445,8 +451,8 @@ class AggsHandlerCodeGenerator(
 
           @Override
           public void cleanup(Object ns) throws Exception {
-            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
             $BASE_ROW $CURRENT_KEY = ctx.currentKey();
+            $namespaceClassName $NAMESPACE_TERM = ($namespaceClassName) ns;
             ${ctx.reuseCleanupCode()}
           }
 
@@ -516,6 +522,19 @@ class AggsHandlerCodeGenerator(
       |${ctx.reuseFieldCode(methodName)}
       |${ctx.reuseInputUnboxingCode(Set(ACC_TERM))}
       |$body
+    """.stripMargin
+  }
+
+  private def genResetAccumulators(): String = {
+    val methodName = "resetAccumulators"
+    ctx.startNewFieldStatements(methodName)
+
+    val exprGenerator = new ExprCodeGenerator(ctx, INPUT_NOT_NULL, nullCheck)
+    val body = aggBufferCodeGens.map(_.resetAccumulator(exprGenerator)).mkString("\n")
+
+    s"""
+       |${ctx.reuseFieldCode(methodName)}
+       |$body
     """.stripMargin
   }
 
@@ -710,6 +729,7 @@ object AggsHandlerCodeGenerator {
   def addReusableStateDataViews(
       ctx: CodeGeneratorContext,
       hasNamespace: Boolean,
+      enableBackupDataView: Boolean,
       viewSpecs: Array[DataViewSpec]): Unit = {
     // add reusable dataviews to context
     viewSpecs.foreach { spec =>
@@ -717,28 +737,38 @@ object AggsHandlerCodeGenerator {
       val backupViewTerm = createDataViewBackupTerm(spec)
       val viewTypeTerm = spec.getStateDataViewClass(hasNamespace).getCanonicalName
       ctx.addReusableMember(s"private $viewTypeTerm $viewFieldTerm;")
-      // always create backup dataview
-      ctx.addReusableMember(s"private $viewTypeTerm $backupViewTerm;")
-
       val descTerm = ctx.addReusableObject(spec.toStateDescriptor, "desc")
       val createStateCall = spec.getCreateStateCall(hasNamespace)
+
+      val backupOpenCode = if (enableBackupDataView) {
+        // create backup dataview
+        ctx.addReusableMember(s"private $viewTypeTerm $backupViewTerm;")
+        s"""
+           |$backupViewTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+           |$CONTEXT_TERM.registerStateDataView($backupViewTerm);
+         """.stripMargin
+      } else {
+        ""
+      }
 
       val openCode =
         s"""
            |$viewFieldTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
-           |$backupViewTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+           |$CONTEXT_TERM.registerStateDataView($viewFieldTerm);
+           |$backupOpenCode
          """.stripMargin
       ctx.addReusableOpenStatement(openCode)
 
       // only cleanup dataview term, do not cleanup backup
       val cleanupCode = if (hasNamespace) {
         s"""
-           |$viewFieldTerm.setKeyNamespace($CURRENT_KEY, $NAMESPACE_TERM);
+           |$viewFieldTerm.setCurrentKey($CURRENT_KEY);
+           |$viewFieldTerm.setCurrentNamespace($NAMESPACE_TERM);
            |$viewFieldTerm.clear();
         """.stripMargin
       } else {
         s"""
-           |$viewFieldTerm.setKey($CURRENT_KEY);
+           |$viewFieldTerm.setCurrentKey($CURRENT_KEY);
            |$viewFieldTerm.clear();
         """.stripMargin
       }

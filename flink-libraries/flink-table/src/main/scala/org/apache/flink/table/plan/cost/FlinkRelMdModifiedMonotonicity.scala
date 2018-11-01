@@ -83,6 +83,8 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
         getBasicMono(mb.getInput, mq, rowSize)
       case _: StreamExecJoinTable | _: FlinkLogicalJoinTable =>
         getBasicMono(rel.getInput(0), mq, rowSize)
+      case _: StreamExecExpand =>
+        getBasicMono(rel.getInput(0), mq, rowSize)
       case _ => null
     }
   }
@@ -238,6 +240,11 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
     // global and local agg should have same update mono
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     fmq.getRelModifiedMonotonicity(rel.getInput)
+  }
+
+  def getRelModifiedMonotonicity(rel: StreamExecIncrementalGroupAggregate, mq: RelMetadataQuery):
+  RelModifiedMonotonicity = {
+    getAggModifiedMono(rel.getInput, mq, rel.finalAggCalls.toList, rel.groupKey)
   }
 
   def getRelModifiedMonotonicity(rel: StreamExecGroupWindowAggregate, mq: RelMetadataQuery):

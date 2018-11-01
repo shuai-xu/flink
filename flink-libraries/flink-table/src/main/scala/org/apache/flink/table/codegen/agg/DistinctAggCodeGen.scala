@@ -34,6 +34,7 @@ import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.typeutils.TypeUtils.createTypeInfoFromDataType
+import org.apache.flink.util.Preconditions
 import org.apache.flink.util.Preconditions.checkArgument
 
 /**
@@ -93,17 +94,51 @@ class DistinctAggCodeGen(
     * Add the distinct accumulator to the member variable and open close methods.
     */
   private def addReusableDistinctAccumulator(): Unit = {
+    // sanity check
+    if (distinctInfo.excludeAcc) {
+      // it only works in incremental mode when the distinct acc is excluded
+      // the distinct mapview must works on state mode when incremental mode
+      Preconditions.checkState(distinctInfo.dataViewSpec.nonEmpty)
+    }
+
+    val enableBackupDataView = !mergedAccOnHeap
+
     // add state mapview to member field
-    addReusableStateDataViews(ctx, hasNamespace, distinctInfo.dataViewSpec.toArray)
+    addReusableStateDataViews(
+      ctx,
+      hasNamespace,
+      enableBackupDataView,
+      distinctInfo.dataViewSpec.toArray)
+
+
     // add distinctAccTerm to member field
     ctx.addReusableMember(s"private $MAP_VIEW $distinctAccTerm;")
-    ctx.addReusableMember(s"private $MAP_VIEW $distinctBackupAccTerm;")
+    if (enableBackupDataView) {
+      ctx.addReusableMember(s"private $MAP_VIEW $distinctBackupAccTerm;")
+    }
+
+    // when dataview works on state, assign the stateDataView to accTerm in open method
+    distinctInfo.dataViewSpec match {
+      case Some(spec) =>
+        val dataviewTerm = createDataViewTerm(spec)
+        ctx.addReusableOpenStatement(s"$distinctAccTerm = $dataviewTerm;")
+        if (enableBackupDataView) {
+          val dataviewBackupTerm = createDataViewBackupTerm(spec)
+          ctx.addReusableOpenStatement(s"$distinctBackupAccTerm = $dataviewBackupTerm;")
+        }
+      case None => // do nothing
+    }
   }
 
   override def createAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
-    val accTerm = newName("distinct_acc")
-    val code = s"$MAP_VIEW $accTerm = new $MAP_VIEW();"
-    Seq(GeneratedExpression(accTerm, NEVER_NULL, code, DataTypes.internal(externalAccType)))
+    if (distinctInfo.excludeAcc) {
+      // when the distinct acc is excluded, no need to create distinct accumulator
+      Seq()
+    } else {
+      val accTerm = newName("distinct_acc")
+      val code = s"$MAP_VIEW $accTerm = new $MAP_VIEW();"
+      Seq(GeneratedExpression(accTerm, NEVER_NULL, code, DataTypes.internal(externalAccType)))
+    }
   }
 
   override def setAccumulator(generator: ExprCodeGenerator): String = {
@@ -118,12 +153,25 @@ class DistinctAggCodeGen(
     ""
   }
 
+  override def resetAccumulator(generator: ExprCodeGenerator): String = {
+    if (distinctInfo.excludeAcc) {
+      ""
+    } else {
+      s"$distinctAccTerm.clear();"
+    }
+  }
+
   override def getAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
-    Seq(GeneratedExpression(
-      distinctAccTerm,
-      NEVER_NULL,
-      NO_CODE,
-      DataTypes.internal(externalAccType)))
+    if (distinctInfo.excludeAcc) {
+      // when the distinct acc is excluded, the accumulator result shouldn't include distinct acc
+      Seq()
+    } else {
+      Seq(GeneratedExpression(
+        distinctAccTerm,
+        NEVER_NULL,
+        NO_CODE,
+        DataTypes.internal(externalAccType)))
+    }
   }
 
   override def accumulate(generator: ExprCodeGenerator): String = {
@@ -377,7 +425,8 @@ class DistinctAggCodeGen(
             s"""
                |// when namespace is null, the dataview is used in heap, no key and namespace set
                |if ($NAMESPACE_TERM != null) {
-               |  $dataViewTerm.setKeyNamespace($CURRENT_KEY, $NAMESPACE_TERM);
+               |  $dataViewTerm.setCurrentKey($CURRENT_KEY);
+               |  $dataViewTerm.setCurrentNamespace($NAMESPACE_TERM);
                |  $resultTerm = $dataViewTerm;
                |} else {
                |  ${expr.code}
@@ -386,7 +435,7 @@ class DistinctAggCodeGen(
             """.stripMargin
           } else {
             s"""
-               |$dataViewTerm.setKey($CURRENT_KEY);
+               |$dataViewTerm.setCurrentKey($CURRENT_KEY);
                |$resultTerm = $dataViewTerm;
             """.stripMargin
           }

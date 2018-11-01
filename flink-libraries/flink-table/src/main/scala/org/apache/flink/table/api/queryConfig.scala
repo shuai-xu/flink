@@ -521,4 +521,8 @@ object StreamQueryConfig {
       .key("blink.miniBatch.flushBeforeSnapshot")
       .defaultValue(true)
 
+  /** whether to enable incremental aggregate, default is enabled/ */
+  val SQL_EXEC_AGG_INCREMENTAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
+    .key("blink.incrementalAgg.enabled")
+    .defaultValue(true)
 }

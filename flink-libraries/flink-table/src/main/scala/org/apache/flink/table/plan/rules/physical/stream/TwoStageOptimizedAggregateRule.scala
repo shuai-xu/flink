@@ -31,7 +31,6 @@ import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule._
-import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.AggregateUtil._
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil}
 
@@ -114,7 +113,6 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
     val localAggRowType = inferLocalAggRowType(
       localAggInfoList,
       input.getRowType,
-      agg.getRowType,
       agg.getGroupings,
       input.getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory])
 
@@ -125,10 +123,10 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
       localAggTraitSet,
       input,
       localAggInfoList,
-      input.getRowType,
       localAggRowType,
       agg.getGroupings,
-      agg.aggCalls)
+      agg.aggCalls,
+      agg.partialFinal)
 
     // globalHashAgg
     val globalDistribution = if (agg.getGroupings.nonEmpty) {
@@ -150,10 +148,11 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
       newInput,
       localAggInfoList,
       globalAggInfoList,
-      new BaseRowSchema(input.getRowType),
+      input.getRowType,
       agg.getRowType,
       // grouping keys is forwarded by local agg, use indices instead of groupings
-      agg.getGroupings.indices.toArray)
+      agg.getGroupings.indices.toArray,
+      agg.partialFinal)
 
     call.transformTo(globalHashAgg)
   }

@@ -32,7 +32,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
-import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, PartialFinalType, StreamExecUtil}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
@@ -50,23 +50,25 @@ import org.apache.flink.table.util.Logging
   * @param traitSet         Trait set of the RelNode
   * @param inputNode        The input RelNode of aggregation
   * @param aggInfoList      The information list about the node's aggregates
-  * @param inputRelDataType The type of the rows consumed by this RelNode
   * @param outputDataType   The type of the rows emitted by this RelNode
   * @param groupings        The position (in the input Row) of the grouping keys
+  * @param partialFinal     Whether the aggregate is partial agg or final agg or normal agg
   */
 class StreamExecLocalGroupAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
     val aggInfoList: AggregateInfoList,
-    inputRelDataType: RelDataType,
-    outputDataType: RelDataType,
-    groupings: Array[Int],
-    val aggCalls: Seq[AggregateCall])
+    val outputDataType: RelDataType,
+    val groupings: Array[Int],
+    val aggCalls: Seq[AggregateCall],
+    val partialFinal: PartialFinalType)
   extends SingleRel(cluster, traitSet, inputNode)
   with CommonAggregate
   with StreamExecRel
   with Logging {
+
+  val inputRelDataType: RelDataType = getInput.getRowType
 
   override def deriveRowType(): RelDataType = outputDataType
 
@@ -82,10 +84,10 @@ class StreamExecLocalGroupAggregate(
       traitSet,
       inputs.get(0),
       aggInfoList,
-      inputRelDataType,
       outputDataType,
       groupings,
-      aggCalls)
+      aggCalls,
+      partialFinal)
   }
 
   override def toString: String = {
@@ -96,32 +98,24 @@ class StreamExecLocalGroupAggregate(
         ""
       }
     }select:(${
-      aggregationToString(
+      streamAggregationToString(
         inputRelDataType,
-        groupings,
-        Array.empty[Int],
         getRowType,
-        aggInfoList.aggInfos.map(_.agg),
-        aggInfoList.aggInfos.map(_.function),
-        isMerge = false,
-        isGlobal = false,
-        aggInfoList.distinctInfos)}))"
+        aggInfoList,
+        groupings,
+        isLocal = true)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
       .item(
-        "select", aggregationToString(
+        "select", streamAggregationToString(
           inputRelDataType,
-          groupings,
-          Array.empty[Int],
           getRowType,
-          aggInfoList.aggInfos.map(_.agg),
-          aggInfoList.aggInfos.map(_.function),
-          isMerge = false,
-          isGlobal = false,
-          aggInfoList.distinctInfos))
+          aggInfoList,
+          groupings,
+          isLocal = true))
   }
 
   @VisibleForTesting
@@ -153,24 +147,6 @@ class StreamExecLocalGroupAggregate(
       tableEnv, queryConfig)
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
-
-    val aggString = aggregationToString(
-      inputRelDataType,
-      groupings,
-      Array.empty[Int],
-      getRowType,
-      aggInfoList.aggInfos.map(_.agg),
-      aggInfoList.aggInfos.map(_.function),
-      isMerge = false,
-      isGlobal = false,
-      aggInfoList.distinctInfos)
-
-    val opName = if (groupings.nonEmpty) {
-      s"groupBy: (${groupingToString(inputRelDataType, groupings)}), " +
-        s"select: ($aggString)"
-    } else {
-      s"select: ($aggString)"
-    }
 
     val needRetraction = StreamExecRetractionRules.isAccRetract(getInput)
 
@@ -206,7 +182,7 @@ class StreamExecLocalGroupAggregate(
 
     new OneInputTransformation(
       inputTransformation,
-      s"LocalGroupAggregate($opName)",
+      this.toString,
       operator,
       outRowType,
       inputTransformation.getParallelism)

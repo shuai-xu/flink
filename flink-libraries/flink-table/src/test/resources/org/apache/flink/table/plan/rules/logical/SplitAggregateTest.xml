@@ -16,9 +16,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testAggWithFilterClause">
-    <Resource name="plan">
-      <![CDATA[
+	<TestCase name="testAggWithFilterClause">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f1, Final_MAX($f2) AS $f2, Final_MIN($f3) AS $f3])
   StreamExecExchange(distribution=[hash[a]])
     StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_$SUM0($f2) AS sum0$0, Partial_MAX($f3) AS $f2, Partial_MIN($f4_0) AS $f3, Partial_COUNT(*) AS count$1])
@@ -30,11 +30,40 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f
                 StreamExecCalc(select=[a, b, IS FALSE(=(b, 2)) AS $f2, IS FALSE(=(b, 5)) AS $f3, MOD(HASH_CODE(b), 256) AS $f4])
                   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testAggWithJoin">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggWithFilterClause[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2) AS $f1, MAX($f3) AS $f2, MIN($f4_0) AS $f3])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecGroupAggregate(groupBy=[a, $f4], select=[a, $f4, COUNT(DISTINCT b) FILTER $g_0 AS $f2, MAX(b) FILTER $g_1 AS $f3, MIN(b) FILTER $g_10 AS $f4_0])
+      StreamExecExchange(distribution=[hash[a, $f4]])
+        StreamExecCalc(select=[a, b, $f2, $f3, $f4, AND(=($e, 0), $f2) AS $g_0, AND(=($e, 1), $f3) AS $g_1, AND(=($e, 1), $f2) AS $g_10])
+          StreamExecExpand(projects=[{a, b, $f2, $f3, $f4, 0 AS $e}, {a, b, $f2, $f3, null AS $f4, 1 AS $e}])
+            StreamExecCalc(select=[a, b, IS FALSE(=(b, 2)) AS $f2, IS FALSE(=(b, 5)) AS $f3, MOD(HASH_CODE(b), 256) AS $f4])
+              StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggWithFilterClause[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, MAX(max$1) AS $f2, MIN(min$2) AS $f3])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f4], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0, MAX(max$1) AS max$1, MIN(min$2) AS min$2])
+      StreamExecExchange(distribution=[hash[a, $f4]])
+        StreamExecLocalGroupAggregate(groupBy=[a, $f4], select=[a, $f4, COUNT(distinct$0 b) FILTER $g_0 AS count$0, MAX(b) FILTER $g_1 AS max$1, MIN(b) FILTER $g_10 AS min$2, DISTINCT(b) AS distinct$0])
+          StreamExecCalc(select=[a, b, $f2, $f3, $f4, AND(=($e, 0), $f2) AS $g_0, AND(=($e, 1), $f3) AS $g_1, AND(=($e, 1), $f2) AS $g_10])
+            StreamExecExpand(projects=[{a, b, $f2, $f3, $f4, 0 AS $e}, {a, b, $f2, $f3, null AS $f4, 1 AS $e}])
+              StreamExecCalc(select=[a, b, IS FALSE(=(b, 2)) AS $f2, IS FALSE(=(b, 5)) AS $f3, MOD(HASH_CODE(b), 256) AS $f4])
+                StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggWithJoin">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecCalc(select=[c, b, d, a, a0, b0, c0])
   StreamExecJoin(where=[=($f4, a0)], join=[c, b, d, a, $f4, a0, b0, c0], joinType=[InnerJoin])
     StreamExecExchange(distribution=[hash[$f4]])
@@ -61,11 +90,68 @@ StreamExecCalc(select=[c, b, d, a, a0, b0, c0])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testBucketsConfiguration">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggWithJoin[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[c, b, d, a, a0, b0, c0])
+  StreamExecJoin(where=[=($f4, a0)], join=[c, b, d, a, $f4, a0, b0, c0], joinType=[InnerJoin])
+    StreamExecExchange(distribution=[hash[$f4]])
+      StreamExecCalc(select=[c, CAST($f1) AS b, CAST($f2) AS d, $f3 AS a, +(CAST($f1), 2) AS $f4])
+        StreamExecGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT($f3_0) AS $f1, MAX_RETRACT($f4_0) AS $f2, $SUM0_RETRACT($f5) AS $f3])
+          StreamExecExchange(distribution=[hash[c]])
+            StreamExecGroupAggregate(groupBy=[c, $f3, $f4], select=[c, $f3, $f4, MIN_RETRACT(b) FILTER $g_1 AS $f3_0, MAX_RETRACT(b) FILTER $g_1 AS $f4_0, COUNT_RETRACT(DISTINCT a) FILTER $g_2 AS $f5])
+              StreamExecExchange(distribution=[hash[c, $f3, $f4]])
+                StreamExecCalc(select=[c, b, a, $f3, $f4, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
+                  StreamExecExpand(projects=[{c, b, a, $f3, null AS $f4, 1 AS $e}, {c, b, a, null AS $f3, $f4, 2 AS $e}])
+                    StreamExecCalc(select=[c, b, a, MOD(HASH_CODE(b), 256) AS $f3, MOD(HASH_CODE(a), 256) AS $f4])
+                      StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2_0) AS $f1, MAX($f3) AS $f2, MIN($f4) AS $f3])
+                        StreamExecExchange(distribution=[hash[a]])
+                          StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT b) FILTER $g_0 AS $f2_0, MAX(b) FILTER $g_1 AS $f3, MIN(b) FILTER $g_1 AS $f4])
+                            StreamExecExchange(distribution=[hash[a, $f2]])
+                              StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+                                StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+                                  StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                                    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testAggWithJoin[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[c, b, d, a, a0, b0, c0])
+  StreamExecJoin(where=[=($f4, a0)], join=[c, b, d, a, $f4, a0, b0, c0], joinType=[InnerJoin])
+    StreamExecExchange(distribution=[hash[$f4]])
+      StreamExecCalc(select=[c, CAST($f1) AS b, CAST($f2) AS d, $f3 AS a, +(CAST($f1), 2) AS $f4])
+        StreamExecGlobalGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT(min$0) AS $f1, MAX_RETRACT(max$1) AS $f2, $SUM0_RETRACT(sum0$2) AS $f3])
+          StreamExecExchange(distribution=[hash[c]])
+            StreamExecLocalGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT($f3_0) AS min$0, MAX_RETRACT($f4_0) AS max$1, $SUM0_RETRACT($f5) AS sum0$2, COUNT_RETRACT(*) AS count$3])
+              StreamExecGlobalGroupAggregate(groupBy=[c, $f3, $f4], select=[c, $f3, $f4, MIN_RETRACT(min$0) AS $f3_0, MAX_RETRACT(max$1) AS $f4_0, COUNT_RETRACT(distinct$0 count$2) AS $f5])
+                StreamExecExchange(distribution=[hash[c, $f3, $f4]])
+                  StreamExecLocalGroupAggregate(groupBy=[c, $f3, $f4], select=[c, $f3, $f4, MIN_RETRACT(b) FILTER $g_1 AS min$0, MAX_RETRACT(b) FILTER $g_1 AS max$1, COUNT_RETRACT(distinct$0 a) FILTER $g_2 AS count$2, COUNT_RETRACT(*) AS count$3, DISTINCT(a) AS distinct$0])
+                    StreamExecCalc(select=[c, b, a, $f3, $f4, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
+                      StreamExecExpand(projects=[{c, b, a, $f3, null AS $f4, 1 AS $e}, {c, b, a, null AS $f3, $f4, 2 AS $e}])
+                        StreamExecCalc(select=[c, b, a, MOD(HASH_CODE(b), 256) AS $f3, MOD(HASH_CODE(a), 256) AS $f4])
+                          StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, MAX(max$1) AS $f2, MIN(min$2) AS $f3])
+                            StreamExecExchange(distribution=[hash[a]])
+                              StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f2], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0, MAX(max$1) AS max$1, MIN(min$2) AS min$2])
+                                StreamExecExchange(distribution=[hash[a, $f2]])
+                                  StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 b) FILTER $g_0 AS count$0, MAX(b) FILTER $g_1 AS max$1, MIN(b) FILTER $g_1 AS min$2, DISTINCT(b) AS distinct$0])
+                                    StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+                                      StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+                                        StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                                          StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testBucketsConfiguration">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0])
   StreamExecExchange(distribution=[single])
     StreamExecLocalGroupAggregate(select=[Partial_$SUM0($f1_0) AS sum0$0, Partial_COUNT(*) AS count$1])
@@ -75,11 +161,36 @@ StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0])
             StreamExecCalc(select=[c, MOD(HASH_CODE(c), 100) AS $f1])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testFirstValueLastValueWithRetraction">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testBucketsConfiguration[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(select=[$SUM0_RETRACT($f1_0) AS $f0])
+  StreamExecExchange(distribution=[single])
+    StreamExecGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(DISTINCT c) AS $f1_0])
+      StreamExecExchange(distribution=[hash[$f1]])
+        StreamExecCalc(select=[c, MOD(HASH_CODE(c), 100) AS $f1])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testBucketsConfiguration[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
+  StreamExecExchange(distribution=[single])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
+      StreamExecExchange(distribution=[hash[$f1]])
+        StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
+          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 100) AS $f1])
+            StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testFirstValueLastValueWithRetraction">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGroupAggregate(groupBy=[b], select=[b, FIRST_VALUE(c, a) AS EXPR$1, LAST_VALUE(c, a) AS EXPR$2, FIRST_VALUE(c) AS EXPR$3, LAST_VALUE(c) AS EXPR$4, COUNT(DISTINCT c) AS EXPR$5])
   StreamExecExchange(distribution=[hash[$f1]])
     StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f1, Final_MAX($f2) AS $f2])
@@ -93,11 +204,44 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, FIRST_VALUE(c, a) AS EXPR$1, LA
                     StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
                       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testMinMaxWithRetraction">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testFirstValueLastValueWithRetraction[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[$f1], select=[$f1 AS b, FIRST_VALUE_RETRACT($f2, a) AS EXPR$1, LAST_VALUE_RETRACT($f2, a) AS EXPR$2, FIRST_VALUE_RETRACT($f2) AS EXPR$3, LAST_VALUE_RETRACT($f2) AS EXPR$4, COUNT_RETRACT(DISTINCT $f2) AS EXPR$5])
+  StreamExecExchange(distribution=[hash[$f1]])
+    StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2_0) AS $f1, MAX($f3) AS $f2])
+      StreamExecExchange(distribution=[hash[a]])
+        StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT b) FILTER $g_0 AS $f2_0, MAX(b) FILTER $g_1 AS $f3])
+          StreamExecExchange(distribution=[hash[a, $f2]])
+            StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+              StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+                StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                  StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testFirstValueLastValueWithRetraction[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[$f1], select=[$f1 AS b, FIRST_VALUE_RETRACT($f2, a) AS EXPR$1, LAST_VALUE_RETRACT($f2, a) AS EXPR$2, FIRST_VALUE_RETRACT($f2) AS EXPR$3, LAST_VALUE_RETRACT($f2) AS EXPR$4, COUNT_RETRACT(DISTINCT $f2) AS EXPR$5])
+  StreamExecExchange(distribution=[hash[$f1]])
+    StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, MAX(max$1) AS $f2])
+      StreamExecExchange(distribution=[hash[a]])
+        StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f2], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0, MAX(max$1) AS max$1])
+          StreamExecExchange(distribution=[hash[a, $f2]])
+            StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 b) FILTER $g_0 AS count$0, MAX(b) FILTER $g_1 AS max$1, DISTINCT(b) AS distinct$0])
+              StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+                StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+                  StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testMinMaxWithRetraction">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecCalc(select=[c, CAST($f1) AS $f1, CAST($f2) AS $f2, $f3])
   StreamExecGlobalGroupAggregate(groupBy=[c], select=[c, Final_MIN($f1) AS $f1, Final_MAX($f2) AS $f2, Final_$SUM0(sum0$0) AS $f3])
     StreamExecExchange(distribution=[hash[c]])
@@ -119,11 +263,58 @@ StreamExecCalc(select=[c, CAST($f1) AS $f1, CAST($f2) AS $f2, $f3])
                                     StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
                                       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testMultiCountDistinctAgg">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testMinMaxWithRetraction[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[c, CAST($f1) AS $f1, CAST($f2) AS $f2, $f3])
+  StreamExecGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT($f3_0) AS $f1, MAX_RETRACT($f4_0) AS $f2, $SUM0_RETRACT($f5) AS $f3])
+    StreamExecExchange(distribution=[hash[c]])
+      StreamExecGroupAggregate(groupBy=[c, $f3, $f4], select=[c, $f3, $f4, MIN_RETRACT(b) FILTER $g_2 AS $f3_0, MAX_RETRACT(b) FILTER $g_2 AS $f4_0, COUNT_RETRACT(DISTINCT a) FILTER $g_1 AS $f5])
+        StreamExecExchange(distribution=[hash[c, $f3, $f4]])
+          StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 2) AS $g_2, =($e, 1) AS $g_1])
+            StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}])
+              StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(a), 256) AS $f3, MOD(HASH_CODE(b), 256) AS $f4])
+                StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2_0) AS $f1, MAX($f3) AS $f2])
+                  StreamExecExchange(distribution=[hash[a]])
+                    StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT b) FILTER $g_0 AS $f2_0, MAX(b) FILTER $g_1 AS $f3])
+                      StreamExecExchange(distribution=[hash[a, $f2]])
+                        StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+                          StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+                            StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                              StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testMinMaxWithRetraction[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[c, CAST($f1) AS $f1, CAST($f2) AS $f2, $f3])
+  StreamExecGlobalGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT(min$0) AS $f1, MAX_RETRACT(max$1) AS $f2, $SUM0_RETRACT(sum0$2) AS $f3])
+    StreamExecExchange(distribution=[hash[c]])
+      StreamExecLocalGroupAggregate(groupBy=[c], select=[c, MIN_RETRACT($f3_0) AS min$0, MAX_RETRACT($f4_0) AS max$1, $SUM0_RETRACT($f5) AS sum0$2, COUNT_RETRACT(*) AS count$3])
+        StreamExecGlobalGroupAggregate(groupBy=[c, $f3, $f4], select=[c, $f3, $f4, MIN_RETRACT(min$0) AS $f3_0, MAX_RETRACT(max$1) AS $f4_0, COUNT_RETRACT(distinct$0 count$2) AS $f5])
+          StreamExecExchange(distribution=[hash[c, $f3, $f4]])
+            StreamExecLocalGroupAggregate(groupBy=[c, $f3, $f4], select=[c, $f3, $f4, MIN_RETRACT(b) FILTER $g_2 AS min$0, MAX_RETRACT(b) FILTER $g_2 AS max$1, COUNT_RETRACT(distinct$0 a) FILTER $g_1 AS count$2, COUNT_RETRACT(*) AS count$3, DISTINCT(a) AS distinct$0])
+              StreamExecCalc(select=[a, b, c, $f3, $f4, =($e, 2) AS $g_2, =($e, 1) AS $g_1])
+                StreamExecExpand(projects=[{a, b, c, $f3, null AS $f4, 1 AS $e}, {a, b, c, null AS $f3, $f4, 2 AS $e}])
+                  StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(a), 256) AS $f3, MOD(HASH_CODE(b), 256) AS $f4])
+                    StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, MAX(max$1) AS $f2])
+                      StreamExecExchange(distribution=[hash[a]])
+                        StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f2], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0, MAX(max$1) AS max$1])
+                          StreamExecExchange(distribution=[hash[a, $f2]])
+                            StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 b) FILTER $g_0 AS count$0, MAX(b) FILTER $g_1 AS max$1, DISTINCT(b) AS distinct$0])
+                              StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+                                StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+                                  StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                                    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testMultiCountDistinctAgg">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0, Final_$SUM0(sum0$1) AS $f1])
   StreamExecExchange(distribution=[single])
     StreamExecLocalGroupAggregate(select=[Partial_$SUM0($f2_0) AS sum0$0, Partial_$SUM0($f3_0) AS sum0$1, Partial_COUNT(*) AS count$2])
@@ -135,11 +326,40 @@ StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0, Final_$SUM0(s
                 StreamExecCalc(select=[a, b, MOD(HASH_CODE(a), 256) AS $f2, MOD(HASH_CODE(b), 256) AS $f3])
                   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testSingleDistinctAgg">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testMultiCountDistinctAgg[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(select=[$SUM0_RETRACT($f2_0) AS $f0, $SUM0_RETRACT($f3_0) AS $f1])
+  StreamExecExchange(distribution=[single])
+    StreamExecGroupAggregate(groupBy=[$f2, $f3], select=[$f2, $f3, COUNT(DISTINCT a) FILTER $g_1 AS $f2_0, COUNT(DISTINCT b) FILTER $g_2 AS $f3_0])
+      StreamExecExchange(distribution=[hash[$f2, $f3]])
+        StreamExecCalc(select=[a, b, $f2, $f3, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
+          StreamExecExpand(projects=[{a, b, $f2, null AS $f3, 1 AS $e}, {a, b, null AS $f2, $f3, 2 AS $e}])
+            StreamExecCalc(select=[a, b, MOD(HASH_CODE(a), 256) AS $f2, MOD(HASH_CODE(b), 256) AS $f3])
+              StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testMultiCountDistinctAgg[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0, $SUM0(count$1) AS $f1])
+  StreamExecExchange(distribution=[single])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[$f2, $f3], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0, COUNT(distinct$1 count$1) AS count$1])
+      StreamExecExchange(distribution=[hash[$f2, $f3]])
+        StreamExecLocalGroupAggregate(groupBy=[$f2, $f3], select=[$f2, $f3, COUNT(distinct$0 a) FILTER $g_1 AS count$0, COUNT(distinct$1 b) FILTER $g_2 AS count$1, DISTINCT(a) AS distinct$0, DISTINCT(b) AS distinct$1])
+          StreamExecCalc(select=[a, b, $f2, $f3, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
+            StreamExecExpand(projects=[{a, b, $f2, null AS $f3, 1 AS $e}, {a, b, null AS $f2, $f3, 2 AS $e}])
+              StreamExecCalc(select=[a, b, MOD(HASH_CODE(a), 256) AS $f2, MOD(HASH_CODE(b), 256) AS $f3])
+                StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAgg">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0])
   StreamExecExchange(distribution=[single])
     StreamExecLocalGroupAggregate(select=[Partial_$SUM0($f1_0) AS sum0$0, Partial_COUNT(*) AS count$1])
@@ -149,11 +369,36 @@ StreamExecGlobalGroupAggregate(select=[Final_$SUM0(sum0$0) AS $f0])
             StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testSingleDistinctAggWithGroupBy">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAgg[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(select=[$SUM0_RETRACT($f1_0) AS $f0])
+  StreamExecExchange(distribution=[single])
+    StreamExecGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(DISTINCT c) AS $f1_0])
+      StreamExecExchange(distribution=[hash[$f1]])
+        StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAgg[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
+  StreamExecExchange(distribution=[single])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
+      StreamExecExchange(distribution=[hash[$f1]])
+        StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
+          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+            StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggWithGroupBy">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f1])
   StreamExecExchange(distribution=[hash[a]])
     StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_$SUM0($f2_0) AS sum0$0, Partial_COUNT(*) AS count$1])
@@ -163,11 +408,11 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f
             StreamExecCalc(select=[a, c, MOD(HASH_CODE(c), 256) AS $f2])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testSingleDistinctAggAndOneOrMultiNonDistinctAgg">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggAndOneOrMultiNonDistinctAgg">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecCalc(select=[$f1 AS EXPR$0, $f2 AS EXPR$1, CAST(/($f3, $f4)) AS EXPR$2])
   StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_SUM(sum$0, count$1) AS $f1, Final_$SUM0(sum0$2) AS $f2, Final_$SUM0(sum0$3) AS $f3, Final_$SUM0(sum0$4) AS $f4])
     StreamExecExchange(distribution=[hash[a]])
@@ -180,11 +425,42 @@ StreamExecCalc(select=[$f1 AS EXPR$0, $f2 AS EXPR$1, CAST(/($f3, $f4)) AS EXPR$2
                   StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3])
                     StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testSingleDistinctAggWithAndNonDistinctAggOnSameColumn">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggAndOneOrMultiNonDistinctAgg[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[$f1 AS EXPR$0, $f2 AS EXPR$1, CAST(/($f3, $f4)) AS EXPR$2])
+  StreamExecGroupAggregate(groupBy=[a], select=[a, SUM_RETRACT($f2) AS $f1, $SUM0_RETRACT($f3_0) AS $f2, $SUM0_RETRACT($f4) AS $f3, $SUM0_RETRACT($f5) AS $f4])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecGroupAggregate(groupBy=[a, $f3], select=[a, $f3, SUM(b) FILTER $g_1 AS $f2, COUNT(DISTINCT c) FILTER $g_0 AS $f3_0, $SUM0(b) FILTER $g_1 AS $f4, COUNT(b) FILTER $g_1 AS $f5])
+        StreamExecExchange(distribution=[hash[a, $f3]])
+          StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0])
+            StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}])
+              StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3])
+                StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggAndOneOrMultiNonDistinctAgg[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecCalc(select=[$f1 AS EXPR$0, $f2 AS EXPR$1, CAST(/($f3, $f4)) AS EXPR$2])
+  StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS $f1, $SUM0(count$1) AS $f2, $SUM0(sum0$2) AS $f3, $SUM0(count$3) AS $f4])
+    StreamExecExchange(distribution=[hash[a]])
+      StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f3], groupKey=[a], select=[a, SUM(sum$0) AS sum$0, COUNT(distinct$0 count$1) AS count$1, $SUM0(sum0$2) AS sum0$2, COUNT(count$3) AS count$3])
+        StreamExecExchange(distribution=[hash[a, $f3]])
+          StreamExecLocalGroupAggregate(groupBy=[a, $f3], select=[a, $f3, SUM(b) FILTER $g_1 AS sum$0, COUNT(distinct$0 c) FILTER $g_0 AS count$1, $SUM0(b) FILTER $g_1 AS sum0$2, COUNT(b) FILTER $g_1 AS count$3, DISTINCT(c) AS distinct$0])
+            StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0])
+              StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}])
+                StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3])
+                  StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggWithAndNonDistinctAggOnSameColumn">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f1, Final_MAX($f2) AS $f2, Final_MIN($f3) AS $f3])
   StreamExecExchange(distribution=[hash[a]])
     StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_$SUM0($f2_0) AS sum0$0, Partial_MAX($f3) AS $f2, Partial_MIN($f4) AS $f3, Partial_COUNT(*) AS count$1])
@@ -196,11 +472,40 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f
                 StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
                   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testSomeColumnsBothInDistinctAggAndGroupBy">
-    <Resource name="plan">
-      <![CDATA[
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggWithAndNonDistinctAggOnSameColumn[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2_0) AS $f1, MAX($f3) AS $f2, MIN($f4) AS $f3])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT b) FILTER $g_0 AS $f2_0, MAX(b) FILTER $g_1 AS $f3, MIN(b) FILTER $g_1 AS $f4])
+      StreamExecExchange(distribution=[hash[a, $f2]])
+        StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+          StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+            StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+              StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggWithAndNonDistinctAggOnSameColumn[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, MAX(max$1) AS $f2, MIN(min$2) AS $f3])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f2], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0, MAX(max$1) AS max$1, MIN(min$2) AS min$2])
+      StreamExecExchange(distribution=[hash[a, $f2]])
+        StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 b) FILTER $g_0 AS count$0, MAX(b) FILTER $g_1 AS max$1, MIN(b) FILTER $g_1 AS min$2, DISTINCT(b) AS distinct$0])
+          StreamExecCalc(select=[a, b, $f2, =($e, 0) AS $g_0, =($e, 1) AS $g_1])
+            StreamExecExpand(projects=[{a, b, $f2, 0 AS $e}, {a, b, null AS $f2, 1 AS $e}])
+              StreamExecCalc(select=[a, b, MOD(HASH_CODE(b), 256) AS $f2])
+                StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSomeColumnsBothInDistinctAggAndGroupBy">
+		<Resource name="plan">
+			<![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f1, Final_$SUM0(sum0$1) AS $f2])
   StreamExecExchange(distribution=[hash[a]])
     StreamExecLocalGroupAggregate(groupBy=[a], select=[a, Partial_$SUM0($f1) AS sum0$0, Partial_$SUM0($f2) AS sum0$1, Partial_COUNT(*) AS count$2])
@@ -210,6 +515,56 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, Final_$SUM0(sum0$0) AS $f
             StreamExecCalc(select=[a, b])
               StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-    </Resource>
-  </TestCase>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggWithGroupBy[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f2_0) AS $f1])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(DISTINCT c) AS $f2_0])
+      StreamExecExchange(distribution=[hash[a, $f2]])
+        StreamExecCalc(select=[a, c, MOD(HASH_CODE(c), 256) AS $f2])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSomeColumnsBothInDistinctAggAndGroupBy[LocalGlobal=OFF]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGroupAggregate(groupBy=[a], select=[a, $SUM0_RETRACT($f1) AS $f1, $SUM0_RETRACT($f2) AS $f2])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecGroupAggregate(groupBy=[a], select=[a, COUNT(DISTINCT a) AS $f1, COUNT(b) AS $f2])
+      StreamExecExchange(distribution=[hash[a]])
+        StreamExecCalc(select=[a, b])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSingleDistinctAggWithGroupBy[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[a, $f2], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0])
+      StreamExecExchange(distribution=[hash[a, $f2]])
+        StreamExecLocalGroupAggregate(groupBy=[a, $f2], select=[a, $f2, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
+          StreamExecCalc(select=[a, c, MOD(HASH_CODE(c), 256) AS $f2])
+            StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testSomeColumnsBothInDistinctAggAndGroupBy[LocalGlobal=ON]">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, $SUM0(count$0) AS $f1, $SUM0(count$1) AS $f2])
+  StreamExecExchange(distribution=[hash[a]])
+    StreamExecIncrementalGroupAggregate(shuffleKey=[a], groupKey=[a], select=[a, COUNT(distinct$0 count$0) AS count$0, COUNT(count$1) AS count$1])
+      StreamExecExchange(distribution=[hash[a]])
+        StreamExecLocalGroupAggregate(groupBy=[a], select=[a, COUNT(distinct$0 a) AS count$0, COUNT(b) AS count$1, DISTINCT(a) AS distinct$0])
+          StreamExecCalc(select=[a, b])
+            StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
 </Root>

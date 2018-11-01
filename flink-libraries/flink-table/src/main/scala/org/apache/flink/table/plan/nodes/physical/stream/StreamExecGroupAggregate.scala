@@ -37,7 +37,7 @@ import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
-import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil, PartialFinalType, StreamExecUtil}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
@@ -54,21 +54,19 @@ import org.apache.flink.table.util.Logging
   *                         relational expressions during the optimization of a query.
   * @param traitSet         Trait set of the RelNode
   * @param inputNode        The input RelNode of aggregation
-  * @param inputRelDataType The type consumed by this RelNode
   * @param aggCalls         List of calls to aggregate functions
   * @param outputDataType   The type emitted by this RelNode
   * @param groupSet        The position (in the input Row) of the grouping keys
+  * @param partialFinal    Whether the aggregate is partial agg or final agg or normal agg
   */
 class StreamExecGroupAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
     val aggCalls: Seq[AggregateCall],
-    val inputRelDataType: RelDataType,
     outputDataType: RelDataType,
     groupSet: ImmutableBitSet,
-    /* flag indicating whether to skip StreamExecSplitAggregateRule */
-    var skipSplit: Boolean = false)
+    var partialFinal: PartialFinalType = PartialFinalType.NORMAL)
   extends SingleRel(cluster, traitSet, inputNode)
   with CommonAggregate
   with StreamExecRel
@@ -76,7 +74,7 @@ class StreamExecGroupAggregate(
 
   override def deriveRowType(): RelDataType = outputDataType
 
-  def setSkipSplit(skipSplit: Boolean): Unit = this.skipSplit = skipSplit
+  def setPartialFinal(partialFinal: PartialFinalType): Unit = this.partialFinal = partialFinal
 
   def getGroupSet: ImmutableBitSet = groupSet
 
@@ -98,6 +96,8 @@ class StreamExecGroupAggregate(
       isStateBackendDataViews = true)
   }
 
+  val inputRelDataType: RelDataType = getInput.getRowType
+
   override def needsUpdatesAsRetraction(input: RelNode) = true
 
   override def producesUpdates = true
@@ -110,10 +110,9 @@ class StreamExecGroupAggregate(
       traitSet,
       inputs.get(0),
       aggCalls,
-      inputRelDataType,
       outputDataType,
       groupSet,
-      skipSplit)
+      partialFinal)
   }
 
   override def toString: String = {
@@ -123,28 +122,22 @@ class StreamExecGroupAggregate(
       } else {
         ""
       }
-    }select:(${
-      aggregationToString(
+    }select: (${
+      streamAggregationToString(
         inputRelDataType,
-        groupings,
         getRowType,
-        aggCalls,
-        aggInfoList.getActualFunctions,
-        isMerge = false,
-        isGlobal = true)}))"
+        aggInfoList,
+        groupings)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
-      .item("select", aggregationToString(
+      .item("select", streamAggregationToString(
         inputRelDataType,
-        groupings,
         getRowType,
-        aggCalls,
-        aggInfoList.getActualFunctions,
-        isMerge = false,
-        isGlobal = true))
+        aggInfoList,
+        groupings))
   }
 
   @VisibleForTesting
@@ -181,20 +174,6 @@ class StreamExecGroupAggregate(
 
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-
-    val aggString = aggregationToString(
-      inputRelDataType,
-      groupings,
-      getRowType,
-      aggCalls,
-      Nil)
-
-    val opName = if (groupings.nonEmpty) {
-      s"groupBy: (${groupingToString(inputRelDataType, groupings)}), " +
-        s"select: ($aggString)"
-    } else {
-      s"select: ($aggString)"
-    }
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
     val needRetraction = StreamExecRetractionRules.isAccRetract(getInput)
@@ -256,7 +235,7 @@ class StreamExecGroupAggregate(
     // partitioned aggregation
     val ret = new OneInputTransformation(
       inputTransformation,
-      s"GroupAggregate($opName)",
+      this.toString,
       operator,
       outRowType,
       tableEnv.execEnv.getParallelism)

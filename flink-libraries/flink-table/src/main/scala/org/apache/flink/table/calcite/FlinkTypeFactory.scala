@@ -521,6 +521,12 @@ object FlinkTypeFactory {
     new BaseRowType(referType, logicalFieldTypes.toArray, logicalFieldNames.toArray)
   }
 
+  def toInternalFieldTypes(logicalRowType: RelDataType): Seq[InternalType] = {
+    logicalRowType.getFieldList.asScala map { relDataType =>
+      FlinkTypeFactory.toInternalType(relDataType.getType)
+    }
+  }
+
   def newBaseRowTypeInfo[T <: BaseRow](
       types: Array[TypeInformation[_]], referType: Class[T]): BaseRowTypeInfo[T] = {
     new BaseRowTypeInfo(referType, types: _*)

@@ -19,7 +19,7 @@ limitations under the License.
   <TestCase name="testAvoidAggregatePushDown">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS EXPR$1, SUM(c) AS EXPR$2, SUM(d) AS EXPR$3])
+StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT_RETRACT(a) AS EXPR$1, SUM_RETRACT(c) AS EXPR$2, SUM_RETRACT(d) AS EXPR$3])
   StreamExecExchange(distribution=[hash[b]])
     StreamExecCalc(select=[b, a, c, d])
       StreamExecJoinTable(join=[b, a, c, d, id], source=[TestDimensionTable(id, name, age)], on=[[1-0]], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()])

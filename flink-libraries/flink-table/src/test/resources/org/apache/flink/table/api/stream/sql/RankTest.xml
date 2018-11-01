@@ -193,7 +193,7 @@ StreamExecRank(retract=[false], accMode=[Acc])
   <TestCase name="testTopNOrderByCount">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(select=[MAX(a) AS EXPR$0])
+StreamExecGroupAggregate(select=[MAX_RETRACT(a) AS EXPR$0])
   StreamExecExchange(distribution=[single])
     StreamExecCalc(select=[a])
       StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[count_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*])

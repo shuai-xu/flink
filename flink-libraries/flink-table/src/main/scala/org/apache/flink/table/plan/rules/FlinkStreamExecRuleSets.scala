@@ -348,13 +348,15 @@ object FlinkStreamExecRuleSets {
     * RuleSet to optimize plans after stream exec execution.
     */
   val POST: RuleSet = RuleSets.ofList(
-    // project correlate's left input
-    StreamExecPushProjectIntoCorrelateRule.INSTANCE,
     //optimize agg rule
     TwoStageOptimizedAggregateRule.INSTANCE,
+    // incremental agg rule
+    IncrementalAggregateRule.INSTANCE,
     StreamUnionTransposeRule.LOCAL_GROUP_AGG_INSTANCE,
     StreamUnionTransposeRule.EXPAND_INSTANCE,
     StreamUnionTransposeRule.CALC_INSTANCE,
-    CalcMergeRule.INSTANCE
+    CalcMergeRule.INSTANCE,
+    // project correlate's left input
+    StreamExecPushProjectIntoCorrelateRule.INSTANCE
   )
 }

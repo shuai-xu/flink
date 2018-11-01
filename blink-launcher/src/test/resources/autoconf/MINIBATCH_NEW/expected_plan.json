@@ -30,7 +30,7 @@
   }, {
     "id" : 4,
     "uid" : "4",
-    "name" : "LocalGroupAggregate(groupBy: (x), select: (x, Partial_COUNT(y) AS count$0))",
+    "name" : "LocalGroupAggregate(groupBy: (x), select:(x, COUNT(y) AS count$0))",
     "pact" : "Operator",
     "parallelism" : 11,
     "maxParallelism" : 32768,
@@ -42,7 +42,7 @@
   }, {
     "id" : 6,
     "uid" : "6",
-    "name" : "GlobalGroupAggregate(groupBy: (x), select: (x, Final_COUNT(count$0) AS EXPR$1))",
+    "name" : "GlobalGroupAggregate(groupBy: (x), select:(x, COUNT(count$0) AS EXPR$1))",
     "pact" : "Operator",
     "parallelism" : 1,
     "maxParallelism" : 32768,

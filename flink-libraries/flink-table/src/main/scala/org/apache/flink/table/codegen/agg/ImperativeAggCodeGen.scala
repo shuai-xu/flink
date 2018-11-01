@@ -23,8 +23,8 @@ import java.lang.{Iterable => JIterable}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.codegen.CodeGenUtils._
-import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.expressions.ResolvedBoxedValueInputReference
 import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
 import org.apache.flink.table.dataview.DataViewSpec
@@ -109,7 +109,7 @@ class ImperativeAggCodeGen(
 
   val viewSpecs: Array[DataViewSpec] = aggInfo.viewSpecs
   // add reusable dataviews to context
-  addReusableStateDataViews(ctx, hasNamespace, viewSpecs)
+  addReusableStateDataViews(ctx, hasNamespace, !mergedAccOnHeap, viewSpecs)
 
   def createAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
     // do not set dataview into the acc in createAccumulator
@@ -148,6 +148,17 @@ class ImperativeAggCodeGen(
          |$accInternalTerm = ${expr.resultTerm};
          |$accExternalTerm = ${genToExternal(ctx, externalAccType, accInternalTerm)};
       """.stripMargin
+    }
+  }
+
+  override def resetAccumulator(generator: ExprCodeGenerator): String = {
+    if (isAccTypeInternal) {
+      s"$accInternalTerm = $functionTerm.createAccumulator();"
+    } else {
+      s"""
+         |$accExternalTerm = $functionTerm.createAccumulator();
+         |$accInternalTerm = ${genToInternal(ctx, externalAccType, accExternalTerm)};
+       """.stripMargin
     }
   }
 
@@ -409,7 +420,8 @@ class ImperativeAggCodeGen(
         s"""
            |// when namespace is null, the dataview is used in heap, no key and namespace set
            |if ($NAMESPACE_TERM != null) {
-           |  $dataViewTerm.setKeyNamespace($CURRENT_KEY, $NAMESPACE_TERM);
+           |  $dataViewTerm.setCurrentKey($CURRENT_KEY);
+           |  $dataViewTerm.setCurrentNamespace($NAMESPACE_TERM);
            |  $accTerm.update(${spec.fieldIndex}, $dataViewTerm);
            |}
          """.stripMargin
@@ -417,7 +429,7 @@ class ImperativeAggCodeGen(
         val dataViewTerm = createDataViewTerm(spec)
 
         s"""
-           |$dataViewTerm.setKey($CURRENT_KEY);
+           |$dataViewTerm.setCurrentKey($CURRENT_KEY);
            |$accTerm.update(${spec.fieldIndex}, $dataViewTerm);
         """.stripMargin
       }

@@ -37,6 +37,7 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataview.StateDataView;
 
 /**
  * A ExecutionContext contains information about the context in which functions are executed and
@@ -156,6 +157,12 @@ public interface ExecutionContext {
 	 */
 	<K, N, UK, UV> SubKeyedSortedMapState<K, N, UK, UV> getSubKeyedSortedMapState(
 		final SortedMapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Registers stateDataView to the context. {@link #setCurrentKey(BaseRow)} will set the
+	 * currentKey to all the registered stateDataViews current key.
+	 */
+	void registerStateDataView(StateDataView<BaseRow> stateDataView);
 
 	/**
 	 * @return the key serializer of state key

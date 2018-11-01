@@ -35,8 +35,6 @@ import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
-import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
 import org.apache.hadoop.hive.ql.udf.generic.{AbstractGenericUDAFResolver, GenericUDAFCount, GenericUDAFResolver2, GenericUDAFSum}

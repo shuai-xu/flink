@@ -18,30 +18,16 @@
 
 package org.apache.flink.table.runtime.functions;
 
-import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.table.dataformat.BaseRow;
 
 /**
- * The base class for handling aggregate functions.
+ * Basic interface for handling aggregate function.
  */
-public interface AggsHandleFunction extends Function {
-
+public interface AggHandleFunctionBase {
 	/**
 	 * Initialization method for the function. It is called before the actual working methods.
 	 */
 	void open(ExecutionContext ctx) throws Exception;
-
-	/**
-	 * Accumulates the input values to the accumulators.
-	 * @param input input values bundled in a row
-	 */
-	void accumulate(BaseRow input) throws Exception;
-
-	/**
-	 * Retracts the input values from the accumulators.
-	 * @param input input values bundled in a row
-	 */
-	void retract(BaseRow input) throws Exception;
 
 	/**
 	 * Merges the other accumulators into current accumulators.
@@ -77,12 +63,6 @@ public interface AggsHandleFunction extends Function {
 	BaseRow createAccumulators() throws Exception;
 
 	/**
-	 * Gets the result of the aggregation from the current accumulators.
-	 * @return the final result (saved in a row) of the current accumulators.
-	 */
-	BaseRow getValue() throws Exception;
-
-	/**
 	 * Cleanup for the retired accumulators state.
 	 */
 	void cleanup() throws Exception;
@@ -92,5 +72,4 @@ public interface AggsHandleFunction extends Function {
 	 * By default, this method does nothing.
 	 */
 	void close() throws Exception;
-
 }

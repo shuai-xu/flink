@@ -31,6 +31,8 @@ trait AggCodeGen {
 
   def getAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression]
 
+  def resetAccumulator(generator: ExprCodeGenerator): String
+
   def accumulate(generator: ExprCodeGenerator): String
 
   def retract(generator: ExprCodeGenerator): String

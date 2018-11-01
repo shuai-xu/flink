@@ -23,9 +23,8 @@ import org.apache.calcite.rel.`type`._
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.RexInputRef
 import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.fun.SqlMinMaxAggFunction
+import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlMinMaxAggFunction, SqlStdOperatorTable}
 import org.apache.calcite.sql.SqlRankFunction
-import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlStdOperatorTable}
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -50,10 +49,11 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-object AggregateUtil {
+object AggregateUtil extends Enumeration {
 
   type CalcitePair[T, R] = org.apache.calcite.util.Pair[T, R]
   type JavaList[T] = java.util.List[T]
+  type AggregateType = Value
 
   def transformToBatchAggregateFunctions(
       aggregateCalls: Seq[AggregateCall],
@@ -112,7 +112,7 @@ object AggregateUtil {
       aggregateCalls,
       inputType,
       orderKeyIdx = null,
-      needRetraction,
+      needRetraction ++ Array(needInputCount),  // for additional count1
       needInputCount,
       isStateBackendDataViews,
       needDistinctInfo)
@@ -188,7 +188,8 @@ object AggregateUtil {
         argIndexes,
         externalAccTypes,
         viewSpecs,
-        externalResultType)
+        externalResultType,
+        needRetraction(index))
 
     }.toArray
 
@@ -288,6 +289,7 @@ object AggregateUtil {
             argIndexes,
             keyType,
             null, // later fill in
+            excludeAcc = false,
             null, // later fill in
             consumeRetraction,
             ArrayBuffer.empty[Int],
@@ -343,6 +345,7 @@ object AggregateUtil {
         d.argIndexes,
         d.keyType,
         DataTypes.createGenericType(accTypeInfo),
+        excludeAcc = false,
         distinctMapViewSpec,
         consumeRetraction,
         d.filterArgs,
@@ -413,26 +416,17 @@ object AggregateUtil {
   }
 
   /**
-    * Derives output row type from local aggregate
+    * Derives accumulators names from aggregate
     */
-  def inferLocalAggRowType(
-    aggInfoList: AggregateInfoList,
-    inputType: RelDataType,
-    outputType: RelDataType,
-    groupSet: Array[Int],
-    typeFactory: FlinkTypeFactory): RelDataType = {
+  def inferAggAccumulatorNames(aggInfoList: AggregateInfoList): Array[String] = {
 
-    val accTypes = aggInfoList.getAccTypes
-    val groupingTypes = groupSet
-      .map(inputType.getFieldList.get(_).getType)
-      .map(FlinkTypeFactory.toInternalType)
-
-    val groupingNames = groupSet.map(inputType.getFieldNames.get(_))
     var index = -1
     val aggBufferNames = aggInfoList.aggInfos.indices.flatMap { i =>
       aggInfoList.aggInfos(i).function match {
         case _: AggregateFunction[_, _] =>
-          Array(outputType.getFieldNames.get(groupSet.length + i))
+          val name = aggInfoList.aggInfos(i).agg.getAggregation.getName.toLowerCase
+          index += 1
+          Array(s"$name$$$index")
         case daf: DeclarativeAggregateFunction =>
           daf.aggBufferAttributes.map { a =>
             index += 1
@@ -443,9 +437,27 @@ object AggregateUtil {
     val distinctBufferNames = aggInfoList.distinctInfos.indices.map { i =>
       s"distinct$$$i"
     }
+    (aggBufferNames ++ distinctBufferNames).toArray
+  }
+
+  /**
+    * Derives output row type from local aggregate
+    */
+  def inferLocalAggRowType(
+    aggInfoList: AggregateInfoList,
+    inputType: RelDataType,
+    groupSet: Array[Int],
+    typeFactory: FlinkTypeFactory): RelDataType = {
+
+    val accTypes = aggInfoList.getAccTypes
+    val groupingTypes = groupSet
+      .map(inputType.getFieldList.get(_).getType)
+      .map(FlinkTypeFactory.toInternalType)
+    val groupingNames = groupSet.map(inputType.getFieldNames.get(_))
+    val accFieldNames = inferAggAccumulatorNames(aggInfoList)
 
     typeFactory.buildRelDataType(
-      groupingNames ++ aggBufferNames ++ distinctBufferNames,
+      groupingNames ++ accFieldNames,
       groupingTypes ++ accTypes.map(DataTypes.internal))
   }
 
@@ -525,6 +537,14 @@ object AggregateUtil {
   }
 }
 
+/** ALL aggregate types, this type is used in optimization rules for easy mapping aggregates */
+object AggregateType extends Enumeration {
+  type AggregateType = Value
+  val SUM, SUM0, COUNT, COUNT1, COUNT_DISTINCT, MAX, MIN, AVG,
+  SINGLE_VALUE, FIRST_VALUE, LAST_VALUE, CONCAT_AGG, CONCAT_WS_AGG,
+  COLLECT, OTHER = Value
+}
+
 /**
   * The information about aggregate function call
   * @param agg  calcite agg call
@@ -534,6 +554,7 @@ object AggregateUtil {
   * @param externalAccTypes  accumulator types
   * @param viewSpecs  data view specs
   * @param externalResultType the result type of aggregate
+  * @param consumeRetraction whether the aggregate consumes retractions
   */
 case class AggregateInfo(
   agg: AggregateCall,
@@ -542,7 +563,8 @@ case class AggregateInfo(
   argIndexes: Array[Int],
   externalAccTypes: Array[DataType],
   viewSpecs: Array[DataViewSpec],
-  externalResultType: DataType)
+  externalResultType: DataType,
+  consumeRetraction: Boolean)
 
 /**
   * The information about shared distinct of the aggregates. It indicates which aggregates are
@@ -551,6 +573,8 @@ case class AggregateInfo(
   * @param argIndexes the distinct aggregate arguments indexes in the input
   * @param keyType the distinct key type
   * @param accType the accumulator type of the shared distinct
+  * @param excludeAcc whether the distinct acc should excluded from the aggregate accumulator.
+  *                    e.g. when this works in incremental mode, returns true, otherwise false.
   * @param dataViewSpec data view spec about this distinct agg used to generate state access,
   *                     None when dataview is not worked in state mode
   * @param consumeRetraction whether the distinct agg consumes retractions
@@ -561,6 +585,7 @@ case class DistinctInfo(
   argIndexes: Array[Int],
   keyType: DataType,
   accType: DataType,
+  excludeAcc: Boolean,
   dataViewSpec: Option[DataViewSpec],
   consumeRetraction: Boolean,
   filterArgs: ArrayBuffer[Int],
@@ -585,7 +610,7 @@ case class AggregateInfoList(
   def getAggNames: Array[String] = aggInfos.map(_.agg.getName)
 
   def getAccTypes: Array[DataType] = {
-    aggInfos.flatMap(_.externalAccTypes) ++ distinctInfos.map(_.accType)
+    aggInfos.flatMap(_.externalAccTypes) ++ distinctInfos.filter(!_.excludeAcc).map(_.accType)
   }
   
   def getActualAggregateCalls: Array[AggregateCall] = {
@@ -619,8 +644,8 @@ case class AggregateInfoList(
       // need input count agg and the count1 is inserted,
       // which means the count1 shouldn't be calculated in value
       aggInfos.zipWithIndex
-      .filter { case (_, index) => index != count1AggIndex.get}
-      .map { case (aggInfo, _) => aggInfo}
+      .filter { case (_, index) => index != count1AggIndex.get }
+      .map { case (aggInfo, _) => aggInfo }
     } else {
       aggInfos
     }

@@ -24,12 +24,22 @@ import org.apache.flink.runtime.state.keyed.KeyedListState
 import org.apache.flink.runtime.state.subkeyed.SubKeyedListState
 import org.apache.flink.table.api.dataview.ListView
 
-class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T]) extends ListView[T] {
+/**
+  * [[SubKeyedStateListView]] is a [[SubKeyedListState]] with [[ListView]] interface which works
+  * on window aggregate.
+  */
+class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T])
+  extends ListView[T]
+  with StateDataView[K]{
+
   private var key: K = _
   private var namespace: N = _
 
-  def setKeyNamespace(key: K, namespace: N): Unit = {
+  override def setCurrentKey(key: K): Unit = {
     this.key = key
+  }
+
+  def setCurrentNamespace(namespace: N): Unit = {
     this.namespace = namespace
   }
 
@@ -43,17 +53,18 @@ class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T]) extends 
 }
 
 /**
-  * used for minibatch
-  * @param state
-  * @tparam K
-  * @tparam E
+  * [[KeyedStateListView]] is a [[KeyedListState]] with [[ListView]] interface which works on
+  * group aggregate.
   */
 class KeyedStateListView[K, E](state: KeyedListState[K, E])
-  extends ListView[E] {
+  extends ListView[E]
+  with StateDataView[K] {
 
   protected var stateKey: K = null.asInstanceOf[K]
 
-  def setKey(key: K) = this.stateKey = key
+  override def setCurrentKey(key: K): Unit = {
+    this.stateKey = key
+  }
 
   override def get: JIterable[E] = {
     state.get(stateKey)

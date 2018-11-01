@@ -30,7 +30,7 @@ StreamExecCalc(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecCalc(select=[cnt, TMP_1 AS frequency])
-  StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT(num) AS TMP_1])
+  StreamExecGroupAggregate(groupBy=[cnt], select=[cnt, COUNT_RETRACT(num) AS TMP_1])
     StreamExecExchange(distribution=[hash[cnt]])
       StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
         StreamExecScan(table=[[_DataStreamTable_2]])
@@ -71,7 +71,7 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
 						ship_strategy : FORWARD
 
 						 : Operator
-							content : GroupAggregate(groupBy: (cnt), select: (cnt, COUNT(num) AS TMP_1))
+							content : GroupAggregate(groupBy: (cnt), select: (cnt, COUNT_RETRACT(num) AS TMP_1))
 							ship_strategy : HASH
 
 							 : Operator

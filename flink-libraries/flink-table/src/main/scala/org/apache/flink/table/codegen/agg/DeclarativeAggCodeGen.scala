@@ -98,6 +98,22 @@ class DeclarativeAggCodeGen(
     setters.mkString("\n")
   }
 
+  override def resetAccumulator(generator: ExprCodeGenerator): String = {
+    val initialExprs = function.initialValuesExpressions
+      .map(expr => generator.generateExpression(expr.toRexNode(relBuilder)))
+    val codes = initialExprs.zipWithIndex.map {
+      case (init, index) =>
+        val memberName = bufferTerms(index)
+        val memberNullTerm = bufferNullTerms(index)
+        s"""
+           |${init.code}
+           |$memberName = ${init.resultTerm};
+           |$memberNullTerm = ${init.nullTerm};
+         """.stripMargin
+    }
+    codes.mkString("\n")
+  }
+
   def getAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
     bufferTypes.zipWithIndex.map { case (bufferType, index) =>
       GeneratedExpression(

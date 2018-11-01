@@ -24,8 +24,8 @@ import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigg
 import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
-import org.apache.flink.table.plan.util.DistinctInfo
+import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.plan.util.{AggregateInfo, AggregateInfoList, DistinctInfo}
 import org.apache.flink.table.plan.util.AggregateUtil._
 
 import scala.collection.JavaConverters._
@@ -180,7 +180,7 @@ trait CommonAggregate {
       var newArgList = aggCall.getArgList.asScala.map(_.toInt).toList
       if (isMerge) {
         newArgList = udf match {
-          case _: TableAggregateFunction[_, _] =>
+          case _: AggregateFunction[_, _] =>
             val argList = List(offset)
             offset = offset + 1
             argList
@@ -214,7 +214,7 @@ trait CommonAggregate {
         name
       } else {
         udf match {
-          case _: TableAggregateFunction[_, _] =>
+          case _: AggregateFunction[_, _] =>
             val name = outFields(offset)
             offset = offset + 1
             name
@@ -236,6 +236,185 @@ trait CommonAggregate {
         s"$prefix$f AS $o"
       }
     }.mkString(", ")
+  }
+
+  /**
+    * Returns string for the stream aggregations.
+    * @param inputType    the input row type of the aggregate node
+    * @param outputType   the output row type of the aggregate node
+    * @param aggInfoList  the aggregate information list
+    * @param grouping     the grouping keys of the aggregate node
+    * @param shuffleKey   the shuffle key. none when the aggregate is not incremental aggregate.
+    * @param isLocal      true when the aggregate is a local aggregate
+    * @param isGlobal     true when the aggregate is a global aggregate
+    * @return string for the stream aggregations.
+    */
+  def streamAggregationToString(
+      inputType: RelDataType,
+      outputType: RelDataType,
+      aggInfoList: AggregateInfoList,
+      grouping: Array[Int],
+      shuffleKey: Option[Array[Int]] = None,
+      isLocal: Boolean = false,
+      isGlobal: Boolean = false): String = {
+
+    val aggInfos = aggInfoList.aggInfos
+    val distincts = aggInfoList.distinctInfos
+    val distinctFieldNames = distincts.indices.map(index => s"distinct$$$index")
+    // aggIndex -> distinctFieldName
+    val distinctAggs = distincts.zip(distinctFieldNames)
+      .flatMap(f => f._1.aggIndexes.map(i => (i, f._2)))
+      .toMap
+    val aggFilters = {
+      val distinctAggFilters = distincts
+        .flatMap(d => d.aggIndexes.zip(d.filterArgs))
+        .toMap
+      val otherAggFilters = aggInfos
+        .map(info => (info.aggIndex, info.agg.filterArg))
+        .toMap
+      otherAggFilters ++ distinctAggFilters
+    }
+
+    val inFields = inputType.getFieldNames.asScala.toArray
+    val outFields = outputType.getFieldNames.asScala.toArray
+    val groupingStrings = grouping.map(inFields(_))
+    val aggOffset = shuffleKey match {
+      case None => grouping.length
+      case Some(k) => k.length
+    }
+
+    val aggStrings = if (isLocal) {
+      stringifyLocalAggregates(aggInfos, distincts, distinctAggs, aggFilters, inFields)
+    } else if (isGlobal) {
+      val accFieldNames = inputType.getFieldNames.asScala
+      val aggOutputFieldNames = localAggOutputFieldNames(aggOffset, aggInfos, accFieldNames)
+      stringifyGlobalAggregates(aggInfos, distinctAggs, aggOutputFieldNames)
+    } else {
+      stringifyAggregates(aggInfos, distinctAggs, aggFilters, inFields)
+    }
+
+    val outputFieldNames = if (isLocal) {
+      grouping.map(inFields(_)) ++ localAggOutputFieldNames(aggOffset, aggInfos, outFields)
+    } else {
+      outFields
+    }
+
+    (groupingStrings ++ aggStrings).zip(outputFieldNames).map {
+      case (f, o) if f == o => f
+      case (f, o) => s"$f AS $o"
+    }.mkString(", ")
+  }
+
+
+  private def localAggOutputFieldNames(
+      aggOffset: Int,
+      aggInfos: Array[AggregateInfo],
+      outFields: Seq[String]): Array[String] = {
+    var offset = aggOffset
+    val aggOutputNames = aggInfos.map { info =>
+      info.function match {
+        case _: AggregateFunction[_, _] =>
+          val name = outFields(offset)
+          offset = offset + 1
+          name
+        case daf: DeclarativeAggregateFunction =>
+          val name = daf.aggBufferSchema.indices.map(i => outFields(i + offset)).mkString(", ")
+          offset = offset + daf.aggBufferSchema.length
+          if (daf.aggBufferSchema.size > 1) s"($name)" else name
+      }
+    }
+    val distinctFieldNames = (offset until outFields.length).map(outFields)
+    aggOutputNames ++ distinctFieldNames
+  }
+
+  private def stringifyLocalAggregates(
+      aggInfos: Array[AggregateInfo],
+      distincts: Array[DistinctInfo],
+      distinctAggs: Map[Int, String],
+      aggFilters: Map[Int, Int],
+      inFields: Seq[String]): Array[String] = {
+    val aggStrs = aggInfos.zipWithIndex.map { case (aggInfo, index) =>
+      val buf = new mutable.StringBuilder
+      buf.append(aggInfo.agg.getAggregation)
+      if (aggInfo.consumeRetraction) {
+        buf.append("_RETRACT")
+      }
+      buf.append("(")
+      val argNames = aggInfo.agg.getArgList.asScala.map(inFields(_))
+      if (distinctAggs.contains(index)) {
+        buf.append(if (argNames.nonEmpty) s"${distinctAggs(index)} " else distinctAggs(index))
+      }
+      val argNameStr = if (argNames.nonEmpty) {
+        argNames.mkString(", ")
+      } else {
+        "*"
+      }
+      buf.append(argNameStr).append(")")
+      if (aggFilters(index) >= 0) {
+        val filterName = inFields(aggFilters(index))
+        buf.append(" FILTER ").append(filterName)
+      }
+      buf.toString
+    }
+    val distinctStrs = distincts.map { distinctInfo =>
+      val argNames = distinctInfo.argIndexes.map(inFields(_)).mkString(", ")
+      s"DISTINCT($argNames)"
+    }
+    aggStrs ++ distinctStrs
+  }
+
+  private def stringifyGlobalAggregates(
+      aggInfos: Array[AggregateInfo],
+      distinctAggs: Map[Int, String],
+      accFieldNames: Seq[String]): Array[String] = {
+    aggInfos.zipWithIndex.map { case (aggInfo, index) =>
+      val buf = new mutable.StringBuilder
+      buf.append(aggInfo.agg.getAggregation)
+      if (aggInfo.consumeRetraction) {
+        buf.append("_RETRACT")
+      }
+      buf.append("(")
+      if (index >= accFieldNames.length) {
+        println()
+      }
+      val argNames = accFieldNames(index)
+      if (distinctAggs.contains(index)) {
+        buf.append(s"${distinctAggs(index)} ")
+      }
+      buf.append(argNames).append(")")
+      buf.toString
+    }
+  }
+
+  private def stringifyAggregates(
+      aggInfos: Array[AggregateInfo],
+      distinctAggs: Map[Int, String],
+      aggFilters: Map[Int, Int],
+      inFields: Seq[String]): Array[String] = {
+    // MAX_RETRACT(DISTINCT a) FILTER b
+    aggInfos.zipWithIndex.map { case (aggInfo, index) =>
+      val buf = new mutable.StringBuilder
+      buf.append(aggInfo.agg.getAggregation)
+      if (aggInfo.consumeRetraction) {
+        buf.append("_RETRACT")
+      }
+      buf.append("(")
+      val argNames = aggInfo.agg.getArgList.asScala.map(inFields(_))
+      if (distinctAggs.contains(index)) {
+        buf.append(if (argNames.nonEmpty) "DISTINCT " else "DISTINCT")
+      }
+      val argNameStr = if (argNames.nonEmpty) {
+        argNames.mkString(", ")
+      } else {
+        "*"
+      }
+      buf.append(argNameStr).append(")")
+      if (aggFilters(index) >= 0) {
+        val filterName = inFields(aggFilters(index))
+        buf.append(" FILTER ").append(filterName)
+      }
+      buf.toString
+    }
   }
 
   private[flink] def windowAggregationToString(
@@ -272,7 +451,7 @@ trait CommonAggregate {
       var newArgList = aggCall.getArgList.asScala.map(_.toInt).toList
       if (isMerge) {
         newArgList = udf match {
-          case _: TableAggregateFunction[_, _] =>
+          case _: AggregateFunction[_, _] =>
             val argList = List(offset)
             offset = offset + 1
             argList
@@ -311,7 +490,7 @@ trait CommonAggregate {
         name
       } else {
         udf match {
-          case _: TableAggregateFunction[_, _] =>
+          case _: AggregateFunction[_, _] =>
             val name = outFields(offset)
             offset = offset + 1
             name
