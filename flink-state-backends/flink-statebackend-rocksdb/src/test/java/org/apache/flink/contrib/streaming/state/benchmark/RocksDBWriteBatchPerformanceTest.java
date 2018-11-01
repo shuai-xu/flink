@@ -24,6 +24,7 @@ import org.apache.flink.contrib.streaming.state.RocksDBWriteBatchWrapper;
 import org.apache.flink.testutils.junit.RetryOnFailure;
 import org.apache.flink.util.TestLogger;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -74,6 +75,7 @@ public class RocksDBWriteBatchPerformanceTest extends TestLogger {
 
 	private static final String VALUE = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ7890654321";
 
+	@Ignore
 	@Test(timeout = 2000)
 	@RetryOnFailure(times = 3)
 	public void benchMark() throws Exception {
