@@ -240,6 +240,56 @@ public class WebFrontendITCase extends TestLogger {
 	}
 
 	@Test
+	public void getTaskManagerLogRange() {
+		try {
+			String json = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/");
+
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode parsed = mapper.readTree(json);
+			ArrayNode taskManagers = (ArrayNode) parsed.get("taskmanagers");
+			JsonNode taskManager = taskManagers.get(0);
+			String id = taskManager.get("id").asText();
+			WebMonitorUtils.LogFileLocation logFiles = WebMonitorUtils.LogFileLocation.find(CLUSTER_CONFIGURATION);
+			FileUtils.writeStringToFile(logFiles.logFile, "job manager log");
+			String fileName = logFiles.logFile.getName();
+			String log1 = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/" + id + "/log/" + fileName);
+			String log2 = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/" + id + "/log/" + fileName + "?start=1");
+			String log3 = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/" + id + "/log/" + fileName + "?count=3");
+			String log4 = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/" + id + "/log/" + fileName + "?start=1&count=10");
+			String log5 = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/" + id + "/log/" + fileName + "?start=-1&count=100");
+			assertTrue(log1.contains("job manager log"));
+			assertTrue(log2.contains("ob manager log"));
+			assertTrue(log3.contains("job"));
+			assertTrue(log4.contains("ob manager"));
+			assertTrue(log5.contains("g"));
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void getTaskManagerLogs() {
+		try {
+			String json = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/");
+
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode parsed = mapper.readTree(json);
+			ArrayNode taskManagers = (ArrayNode) parsed.get("taskmanagers");
+			JsonNode taskManager = taskManagers.get(0);
+			String id = taskManager.get("id").asText();
+			String logsJsonStr = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/taskmanagers/" + id + "/logs");
+			JsonNode logsJson = mapper.readTree(logsJsonStr);
+			ArrayNode logs = (ArrayNode) logsJson.get("logs");
+			JsonNode log = logs.get(0);
+			Assert.assertEquals(log.get("name").asText(), "jobmanager.out");
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+	}
+
+	@Test
 	public void getConfiguration() {
 		try {
 			String config = TestBaseUtils.getFromHTTP("http://localhost:" + CLUSTER.getWebUIPort() + "/jobmanager/config");

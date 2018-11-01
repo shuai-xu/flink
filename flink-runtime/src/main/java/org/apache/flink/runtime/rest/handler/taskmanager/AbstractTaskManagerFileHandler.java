@@ -31,9 +31,14 @@ import org.apache.flink.runtime.rest.handler.util.HandlerUtils;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.ErrorResponseBody;
 import org.apache.flink.runtime.rest.messages.UntypedResponseMessageHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.FileReadCountQueryParameter;
+import org.apache.flink.runtime.rest.messages.taskmanager.FileReadStartQueryParameter;
+import org.apache.flink.runtime.rest.messages.taskmanager.LogFileNamePathParameter;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerIdPathParameter;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
+import org.apache.flink.runtime.util.FileOffsetRange;
+import org.apache.flink.runtime.util.FileReadDetail;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 import org.apache.flink.util.ExceptionUtils;
@@ -66,6 +71,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -86,17 +92,17 @@ public abstract class AbstractTaskManagerFileHandler<M extends TaskManagerMessag
 	private final GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever;
 	private final TransientBlobService transientBlobService;
 
-	private final LoadingCache<ResourceID, CompletableFuture<TransientBlobKey>> fileBlobKeys;
+	private final LoadingCache<FileReadDetail, CompletableFuture<TransientBlobKey>> fileBlobKeys;
 
 	protected AbstractTaskManagerFileHandler(
-			@Nonnull CompletableFuture<String> localAddressFuture,
-			@Nonnull GatewayRetriever<? extends RestfulGateway> leaderRetriever,
-			@Nonnull Time timeout,
-			@Nonnull Map<String, String> responseHeaders,
-			@Nonnull UntypedResponseMessageHeaders<EmptyRequestBody, M> untypedResponseMessageHeaders,
-			@Nonnull GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever,
-			@Nonnull TransientBlobService transientBlobService,
-			@Nonnull Time cacheEntryDuration) {
+		@Nonnull CompletableFuture<String> localAddressFuture,
+		@Nonnull GatewayRetriever<? extends RestfulGateway> leaderRetriever,
+		@Nonnull Time timeout,
+		@Nonnull Map<String, String> responseHeaders,
+		@Nonnull UntypedResponseMessageHeaders<EmptyRequestBody, M> untypedResponseMessageHeaders,
+		@Nonnull GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever,
+		@Nonnull TransientBlobService transientBlobService,
+		@Nonnull Time cacheEntryDuration) {
 		super(localAddressFuture, leaderRetriever, timeout, responseHeaders, untypedResponseMessageHeaders);
 
 		this.resourceManagerGatewayRetriever = Preconditions.checkNotNull(resourceManagerGatewayRetriever);
@@ -108,21 +114,39 @@ public abstract class AbstractTaskManagerFileHandler<M extends TaskManagerMessag
 			.expireAfterWrite(cacheEntryDuration.toMilliseconds(), TimeUnit.MILLISECONDS)
 			.removalListener(this::removeBlob)
 			.build(
-				new CacheLoader<ResourceID, CompletableFuture<TransientBlobKey>>() {
+				new CacheLoader<FileReadDetail, CompletableFuture<TransientBlobKey>>() {
 					@Override
-					public CompletableFuture<TransientBlobKey> load(ResourceID resourceId) throws Exception {
-						return loadTaskManagerFile(resourceId);
+					public CompletableFuture<TransientBlobKey> load(FileReadDetail fd) throws Exception {
+						return loadTaskManagerFile(fd);
 					}
-			});
+				});
 	}
 
 	@Override
 	protected CompletableFuture<Void> respondToRequest(ChannelHandlerContext ctx, HttpRequest httpRequest, HandlerRequest<EmptyRequestBody, M> handlerRequest, RestfulGateway gateway) throws RestHandlerException {
 		final ResourceID taskManagerId = handlerRequest.getPathParameter(TaskManagerIdPathParameter.class);
+		String filename;
+		final Long fileReadCount;
+		final Long fileStart;
+		try {
+			filename = handlerRequest.getPathParameter(LogFileNamePathParameter.class);
+		} catch (IllegalStateException e) {
+			filename = null;
+		}
+		if (null == filename) {
+			fileStart = null;
+			fileReadCount = null;
+		} else {
+			List<Long> fileReadCountsTmp = handlerRequest.getQueryParameter(FileReadCountQueryParameter.class);
+			fileReadCount = fileReadCountsTmp.isEmpty() ? FileOffsetRange.getSizeDefaultValue() : Math.abs(fileReadCountsTmp.get(0));
+			List<Long> fileReadStartsTmp = handlerRequest.getQueryParameter(FileReadStartQueryParameter.class);
+			fileStart = fileReadStartsTmp.isEmpty() ? FileOffsetRange.getStartDefaultValue() : fileReadStartsTmp.get(0);
+		}
 
+		final FileReadDetail fd = new FileReadDetail(taskManagerId, filename, fileStart, fileReadCount);
 		final CompletableFuture<TransientBlobKey> blobKeyFuture;
 		try {
-			blobKeyFuture = fileBlobKeys.get(taskManagerId);
+			blobKeyFuture = fileBlobKeys.get(fd);
 		} catch (ExecutionException e) {
 			final Throwable cause = ExceptionUtils.stripExecutionException(e);
 			if (cause instanceof RestHandlerException) {
@@ -180,24 +204,22 @@ public abstract class AbstractTaskManagerFileHandler<M extends TaskManagerMessag
 			});
 	}
 
-	protected abstract CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, ResourceID taskManagerResourceId);
+	protected abstract CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, FileReadDetail fd);
 
-	private CompletableFuture<TransientBlobKey> loadTaskManagerFile(ResourceID taskManagerResourceId) throws RestHandlerException {
-		log.debug("Load file from TaskManager {}.", taskManagerResourceId);
-
+	private CompletableFuture<TransientBlobKey> loadTaskManagerFile(FileReadDetail fd) throws RestHandlerException {
+		log.debug("Load file range from FileReadDetail:[{}].", fd);
 		final ResourceManagerGateway resourceManagerGateway = resourceManagerGatewayRetriever
 			.getNow()
 			.orElseThrow(() -> {
-				log.debug("Could not connect to ResourceManager right now.");
+				log.debug("Cannot connect to ResourceManager right now.");
 				return new RestHandlerException(
 					"Cannot connect to ResourceManager right now. Please try to refresh.",
 					HttpResponseStatus.NOT_FOUND);
 			});
-
-		return requestFileUpload(resourceManagerGateway, taskManagerResourceId);
+		return requestFileUpload(resourceManagerGateway, fd);
 	}
 
-	private void removeBlob(RemovalNotification<ResourceID, CompletableFuture<TransientBlobKey>> removalNotification) {
+	private void removeBlob(RemovalNotification<FileReadDetail, CompletableFuture<TransientBlobKey>> removalNotification) {
 		log.debug("Remove cached file for TaskExecutor {}.", removalNotification.getKey());
 
 		final CompletableFuture<TransientBlobKey> value = removalNotification.getValue();

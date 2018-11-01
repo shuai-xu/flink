@@ -129,6 +129,8 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 				false, // exit-jvm-on-fatal-error
 				FlinkUserCodeClassLoaders.ResolveOrder.CHILD_FIRST,
 				new String[0],
+				null,
+				null,
 				null);
 
 			final int networkBufNum = 32;

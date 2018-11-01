@@ -37,6 +37,7 @@ import org.apache.flink.runtime.rest.messages.UntypedResponseMessageHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerIdPathParameter;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
+import org.apache.flink.runtime.util.FileReadDetail;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 import org.apache.flink.util.FileUtils;
@@ -283,8 +284,8 @@ public class AbstractTaskManagerFileHandlerTest extends TestLogger {
 		}
 
 		@Override
-		protected CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, ResourceID taskManagerResourceId) {
-			assertThat(taskManagerResourceId, is(equalTo(expectedTaskManagerId)));
+		protected CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, FileReadDetail fd) {
+			assertThat(fd.getTaskManagerResourceId(), is(equalTo(expectedTaskManagerId)));
 			final CompletableFuture<TransientBlobKey> transientBlobKeyFuture = requestFileUploads.poll();
 
 			if (transientBlobKeyFuture != null) {

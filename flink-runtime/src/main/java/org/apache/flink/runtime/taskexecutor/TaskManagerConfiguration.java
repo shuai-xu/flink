@@ -71,6 +71,12 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 	private final String[] alwaysParentFirstLoaderPatterns;
 
 	@Nullable
+	private final String taskManagerLogPath;
+
+	@Nullable
+	private final String taskManagerStdoutPath;
+
+	@Nullable
 	private final String taskManagerLogDir;
 
 	public TaskManagerConfiguration(
@@ -86,6 +92,8 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		boolean exitJvmOnOutOfMemory,
 		FlinkUserCodeClassLoaders.ResolveOrder classLoaderResolveOrder,
 		String[] alwaysParentFirstLoaderPatterns,
+		@Nullable String taskManagerLogPath,
+		@Nullable String taskManagerStdoutPath,
 		@Nullable String taskManagerLogDir) {
 
 		this.numberSlots = numberSlots;
@@ -100,6 +108,8 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		this.exitJvmOnOutOfMemory = exitJvmOnOutOfMemory;
 		this.classLoaderResolveOrder = classLoaderResolveOrder;
 		this.alwaysParentFirstLoaderPatterns = alwaysParentFirstLoaderPatterns;
+		this.taskManagerLogPath = taskManagerLogPath;
+		this.taskManagerStdoutPath = taskManagerStdoutPath;
 		this.taskManagerLogDir = taskManagerLogDir;
 	}
 
@@ -159,6 +169,16 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 	@Nullable
 	public String getTaskManagerLogDir() {
 		return taskManagerLogDir;
+	}
+
+	@Nullable
+	public String getTaskManagerLogPath() {
+		return taskManagerLogPath;
+	}
+
+	@Nullable
+	public String getTaskManagerStdoutPath() {
+		return taskManagerStdoutPath;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -257,6 +277,20 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		final String[] alwaysParentFirstLoaderPatterns = CoreOptions.getParentFirstLoaderPatterns(configuration);
 
 		final String taskManagerLogPath = configuration.getString(ConfigConstants.TASK_MANAGER_LOG_PATH_KEY, System.getProperty("log.file"));
+		final String taskManagerStdoutPath;
+
+		if (taskManagerLogPath != null) {
+			final int extension = taskManagerLogPath.lastIndexOf('.');
+
+			if (extension > 0) {
+				taskManagerStdoutPath = taskManagerLogPath.substring(0, extension) + ".out";
+			} else {
+				taskManagerStdoutPath = null;
+			}
+		} else {
+			taskManagerStdoutPath = null;
+		}
+
 		final String taskManagerLogDir = taskManagerLogPath == null ? null : new File(taskManagerLogPath).getParent();
 
 		return new TaskManagerConfiguration(
@@ -272,6 +306,8 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 			exitOnOom,
 			FlinkUserCodeClassLoaders.ResolveOrder.fromString(classLoaderResolveOrder),
 			alwaysParentFirstLoaderPatterns,
+			taskManagerLogPath,
+			taskManagerStdoutPath,
 			taskManagerLogDir);
 	}
 }

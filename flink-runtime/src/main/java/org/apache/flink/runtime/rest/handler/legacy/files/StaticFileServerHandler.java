@@ -29,6 +29,7 @@ package org.apache.flink.runtime.rest.handler.legacy.files;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.rest.handler.RedirectHandler;
 import org.apache.flink.runtime.rest.handler.util.MimeTypes;
+import org.apache.flink.runtime.util.FileOffsetRange;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 
@@ -51,6 +52,8 @@ import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.router.Routed;
 import org.apache.flink.shaded.netty4.io.netty.handler.ssl.SslHandler;
 import org.apache.flink.shaded.netty4.io.netty.handler.stream.ChunkedFile;
 import org.apache.flink.shaded.netty4.io.netty.util.CharsetUtil;
+
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -128,7 +131,20 @@ public class StaticFileServerHandler<T extends RestfulGateway> extends RedirectH
 	protected void respondAsLeader(ChannelHandlerContext channelHandlerContext, Routed routed, T gateway) throws Exception {
 		final HttpRequest request = routed.request();
 		final String requestPath;
-
+		final Long start;
+		final Long count;
+		String fileReadStartFromQueryParameter = routed.queryParam("start");
+		String countFromQueryParameter = routed.queryParam("count");
+		if (StringUtils.isNotBlank(fileReadStartFromQueryParameter)) {
+			start = Long.parseLong(fileReadStartFromQueryParameter);
+		} else {
+			start = null;
+		}
+		if (StringUtils.isNotBlank(countFromQueryParameter)) {
+			count = Long.parseLong(countFromQueryParameter);
+		} else {
+			count = null;
+		}
 		// make sure we request the "index.html" in case there is a directory request
 		if (routed.path().endsWith("/")) {
 			requestPath = routed.path() + "index.html";
@@ -139,14 +155,13 @@ public class StaticFileServerHandler<T extends RestfulGateway> extends RedirectH
 		} else {
 			requestPath = routed.path();
 		}
-
-		respondToRequest(channelHandlerContext, request, requestPath);
+		respondToRequest(channelHandlerContext, request, requestPath, start, count);
 	}
 
 	/**
 	 * Response when running with leading JobManager.
 	 */
-	private void respondToRequest(ChannelHandlerContext ctx, HttpRequest request, String requestPath)
+	private void respondToRequest(ChannelHandlerContext ctx, HttpRequest request, String requestPath, Long start, Long count)
 			throws IOException, ParseException, URISyntaxException {
 
 		// convert to absolute path
@@ -237,7 +252,11 @@ public class StaticFileServerHandler<T extends RestfulGateway> extends RedirectH
 
 		try {
 			long fileLength = raf.length();
-
+			start = start != null ? start : FileOffsetRange.getStartDefaultValue();
+			count = count != null ? count : FileOffsetRange.getSizeDefaultValue();
+			FileOffsetRange fs = (new FileOffsetRange(start, count)).normalize(fileLength);
+			long position = fs.getStart();
+			fileLength = fs.getSize();
 			HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
 			setContentTypeHeader(response, file);
 
@@ -256,10 +275,10 @@ public class StaticFileServerHandler<T extends RestfulGateway> extends RedirectH
 			// write the content.
 			ChannelFuture lastContentFuture;
 			if (ctx.pipeline().get(SslHandler.class) == null) {
-				ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.newProgressivePromise());
+				ctx.write(new DefaultFileRegion(raf.getChannel(), position, fileLength), ctx.newProgressivePromise());
 				lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 			} else {
-				lastContentFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
+				lastContentFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, position, fileLength, 8192)),
 					ctx.newProgressivePromise());
 				// HttpChunkedInput will write the end marker (LastHttpContent) for us.
 			}

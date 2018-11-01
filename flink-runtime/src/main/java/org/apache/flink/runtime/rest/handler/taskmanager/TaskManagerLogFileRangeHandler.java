@@ -24,7 +24,7 @@ import org.apache.flink.runtime.blob.TransientBlobService;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.UntypedResponseMessageHeaders;
-import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.FileRangeMessageParameters;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
 import org.apache.flink.runtime.util.FileReadDetail;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
@@ -36,16 +36,16 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Rest handler which serves the stdout file of the {@link TaskExecutor}.
+ * Rest handler which serves the log range file of the {@link TaskExecutor}.
  */
-public class TaskManagerStdoutFileHandler extends AbstractTaskManagerFileHandler<TaskManagerMessageParameters> {
+public class TaskManagerLogFileRangeHandler extends AbstractTaskManagerFileHandler<FileRangeMessageParameters> {
 
-	public TaskManagerStdoutFileHandler(
+	public TaskManagerLogFileRangeHandler(
 			@Nonnull CompletableFuture<String> localAddressFuture,
 			@Nonnull GatewayRetriever<? extends RestfulGateway> leaderRetriever,
 			@Nonnull Time timeout,
 			@Nonnull Map<String, String> responseHeaders,
-			@Nonnull UntypedResponseMessageHeaders<EmptyRequestBody, TaskManagerMessageParameters> untypedResponseMessageHeaders,
+			@Nonnull UntypedResponseMessageHeaders<EmptyRequestBody, FileRangeMessageParameters> untypedResponseMessageHeaders,
 			@Nonnull GatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever,
 			@Nonnull TransientBlobService transientBlobService,
 			@Nonnull Time cacheEntryDuration) {
@@ -54,6 +54,6 @@ public class TaskManagerStdoutFileHandler extends AbstractTaskManagerFileHandler
 
 	@Override
 	protected CompletableFuture<TransientBlobKey> requestFileUpload(ResourceManagerGateway resourceManagerGateway, FileReadDetail fd) {
-		return resourceManagerGateway.requestTaskManagerFileUpload(fd.getTaskManagerResourceId(), "taskmanager.out", null, timeout);
+		return resourceManagerGateway.requestTaskManagerFileUpload(fd.getTaskManagerResourceId(), fd.getFileName(), fd.getFileOffsetRange(), timeout);
 	}
 }

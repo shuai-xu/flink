@@ -856,7 +856,14 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			return FutureUtils.completedExceptionally(new FlinkException("There is no log file available on the TaskExecutor."));
 		}
 
-		final File logFile = new File(logDir, filename);
+		final File logFile;
+		if (filename.equals("taskmanager.log")) {
+			logFile = new File(taskManagerConfiguration.getTaskManagerLogPath());
+		} else if (filename.equals("taskmanager.out")) {
+			logFile = new File(taskManagerConfiguration.getTaskManagerStdoutPath());
+		} else {
+			logFile = new File(logDir, filename);
+		}
 		if (!logFile.exists()) {
 			return FutureUtils.completedExceptionally(new FlinkException("The log file " + filename + " is not available on the TaskExecutor."));
 		}
@@ -867,17 +874,11 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			if (fileOffsetRange == null) {
 				logFileInputStream = new FileInputStream(logFile);
 			} else {
-				final long offset;
-				if (fileOffsetRange.getStart() < 0) {
-					// Negative starting offset means we want the last part of the file.
-					offset = logFile.length() - Math.abs(fileOffsetRange.getStart());
-				} else {
-					offset = fileOffsetRange.getStart();
-				}
+				fileOffsetRange = fileOffsetRange.normalize(logFile.length());
 				final RandomAccessFile randomAccessFile = new RandomAccessFile(logFile, "r");
 				logFileInputStream =
 					ByteStreams.limit(
-						Channels.newInputStream(randomAccessFile.getChannel().position(offset)),
+						Channels.newInputStream(randomAccessFile.getChannel().position(fileOffsetRange.getStart())),
 						fileOffsetRange.getSize());
 			}
 
