@@ -703,6 +703,29 @@ class CalcITCase extends QueryTest {
     val expected = List("a,a,d,d,e,e", "x,x,z,z,z,z").mkString("\n")
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
+
+  @Test
+  def testSplitCodeWithMultiFilter(): Unit = {
+    conf.getParameters.setInteger(TableConfig.SQL_CODEGEN_MAX_LENGTH, 1)
+    tEnv.registerFunction("func", StringFunction)
+    checkResult(
+      s"""
+         |SELECT a, b, md5(newc) FROM (select a, b, func(c) as newc from SmallTable3) where a < 50
+         | or cast(a as varchar) <> 'a' or cast(b as varchar) <> 'b'
+         |or newc like '%he1' or newc like '%he2' or newc like '%he3' or newc like '%he4'
+         |or newc like '%he5' or newc like '%he6' or newc like '%he7' or newc like '%he8'
+         |or newc like '%he9' or newc like '%he10' or newc like '%he11' or newc like '%he12'
+         |or newc like '%he13' or newc like '%he14'
+         """.stripMargin,
+      Seq(
+        row(1, 1, "c1a5298f939e87e8f962a5edfc206918"),
+        row(2, 2, "8b1a9953c4611296a827abf8c47804d7"),
+        row(3, 2, "3e25960a79dbc69b674cd4ec67a72c62")
+      ))
+    conf.getParameters.setInteger(
+      TableConfig.SQL_CODEGEN_MAX_LENGTH,
+      TableConfig.SQL_EXEC_DEFAULT_MEM_DEFAULT)
+  }
 }
 
 object MyHashCode extends ScalarFunction {
@@ -711,6 +734,10 @@ object MyHashCode extends ScalarFunction {
 
 object OldHashCode extends ScalarFunction {
   def eval(s: String): Int = -1
+}
+
+object StringFunction extends ScalarFunction {
+  def eval(s: String): String = s
 }
 
 object BinaryStringFunction extends ScalarFunction {

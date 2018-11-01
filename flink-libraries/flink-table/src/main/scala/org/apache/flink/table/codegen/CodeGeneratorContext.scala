@@ -84,48 +84,6 @@ class CodeGeneratorContext(val tableConfig: TableConfig, val supportReference: B
   val reusableInputUnboxingExprs: mutable.Map[(String, Int), GeneratedExpression] =
     mutable.Map[(String, Int), GeneratedExpression]()
 
-
-  /**
-    *  If call expression has been already generated, reuse it.
-    *  Make sure that the call expression was generated in current scope or
-    *  parent scope.
-    *
-    *  stores the generated expression in current scope
-    *  and parent scope.
-    */
-  val reusableFunctionCallExprs: mutable.Stack[mutable.Map[String, GeneratedExpression]] =
-    mutable.Stack[mutable.Map[String, GeneratedExpression]]()
-
-  def enterScope(): Unit = {
-    // this map is used to store the GeneratedExpression in current scope
-    val exprMap = mutable.Map[String, GeneratedExpression]()
-
-    // push a expr reuse cache map for the new scope
-    reusableFunctionCallExprs.push(exprMap)
-  }
-
-  def exitScope(): Unit = {
-
-    // if we exit a scope, the current scope will be useless.
-    // pop the cache map, so that it won't pollute the others's scope
-    reusableFunctionCallExprs.pop()
-  }
-
-  def addReusableExpression(key: String, expr: GeneratedExpression): Unit = {
-    if (reusableFunctionCallExprs.isEmpty) {
-      reusableFunctionCallExprs.push(mutable.Map[String, GeneratedExpression]())
-    }
-    reusableFunctionCallExprs.top(key) = expr
-  }
-
-  def getReusableExpression(key: String): Option[GeneratedExpression] = {
-    // search from  parent scopes and current scope
-    reusableFunctionCallExprs.find(_.contains(key)) match {
-      case Some(m) => Some(m(key))
-      case _ => None
-    }
-  }
-
   // set of constructor statements that will be added only once
   private val reusableConstructorStatements: mutable.LinkedHashSet[(String, String)] =
     mutable.LinkedHashSet[(String, String)]()

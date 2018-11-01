@@ -363,9 +363,7 @@ trait CommonCalc {
         val filterInputSet = Set(ctx.reusableInputUnboxingExprs.keySet.toSeq: _*)
 
         // if any filter conditions, projection code will enter an new scope
-        ctx.enterScope()
         val projectionCode = produceProjectionCode
-        ctx.exitScope()
 
         val projectionInputCode = ctx.reusableInputUnboxingExprs
           .filter((entry) => !filterInputSet.contains(entry._1))

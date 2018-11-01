@@ -22,7 +22,6 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
 import org.apache.commons.lang3.StringEscapeUtils
@@ -671,14 +670,6 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       return generateRowtimeAccess(contextTerm, ctx)
     }
 
-    if (reusedRexCall(call)) {
-      val key = getReusableExpressionKey(call)
-      ctx.getReusableExpression(key) match {
-        case Some(expr) => return expr
-        case _ =>
-      }
-    }
-
     val resultType = FlinkTypeFactory.toInternalType(call.getType)
 
     // convert operands and help giving untyped NULL literals a type
@@ -691,33 +682,11 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
           call.getOperator.getReturnTypeInference == ReturnTypes.ARG0 =>
         generateNullLiteral(resultType, nullCheck)
 
-      case (o@_, idx) =>
-        // for AND/OR/CASE/COALESCE, except for the first operand, other
-        // operands will enter a new scope
-        // Note: 'IF' function was introduced by Blink, it is a scalar function,
-        // without specific SqlKind info. Here we have to use the 'name'
-        // 'IF' function does create new variable scope(see #IfCallGen)
-        val newScope = idx > 0 && rexCallHasNewScope(call)
-        if (newScope) {
-          ctx.enterScope()
-        }
-        val operands = o.accept(this)
-        if (newScope) {
-          ctx.exitScope()
-        }
-        operands
+      case (o@_, idx) => o.accept(this)
     }
 
-    val expr = generateCallExpression(
+    generateCallExpression(
       ctx, call.getOperator, operands, resultType, nullCheck)
-
-    if (reusedRexCall(call)) {
-      val reusedExpr = GeneratedExpression(expr.resultTerm, expr.nullTerm, "", expr.resultType)
-      val key = getReusableExpressionKey(call)
-      ctx.addReusableExpression(key, reusedExpr)
-    }
-
-    expr
   }
 
   override def visitOver(over: RexOver): GeneratedExpression =
@@ -728,23 +697,4 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
 
   override def visitPatternFieldRef(fieldRef: RexPatternFieldRef): GeneratedExpression =
     throw new CodeGenException("Pattern field references are not supported yet.")
-
-  private def getReusableExpressionKey(call: RexCall): String =
-    call.toString + " | " + call.`type`.getFullTypeString
-
-  private def rexCallHasNewScope(call: RexCall): Boolean = {
-    (call.getKind == SqlKind.AND
-      || call.getKind == SqlKind.OR
-      || call.getKind == SqlKind.CASE
-      || call.getKind == SqlKind.COALESCE
-      || call.op.getName == "IF")
-  }
-
-  private def reusedRexCall(call: RexCall): Boolean = {
-    (call.getOperator.isDeterministic
-      && (!call.getOperator.isDynamicFunction)
-      && call.getKind == SqlKind.OTHER_FUNCTION
-      && !(call.op.getName == "ITEM"))
-  }
-
 }
