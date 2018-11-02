@@ -215,7 +215,7 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
       relBuilder.groupKey(relBuilder.field("score")),
       relBuilder.count(false, "c", relBuilder.field("id"))).build()
     assertEquals(ValueInterval(0D, 6.1D), mq.getColumnInterval(agg, 0))
-    assertNull(mq.getColumnInterval(agg, 1))
+    assertEquals(RightSemiInfiniteValueInterval(0), mq.getColumnInterval(agg, 1))
 
     val agg2 = relBuilder.scan("t1").aggregate(
       relBuilder.groupKey(relBuilder.field("id")),
@@ -278,7 +278,8 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
   def testGetColumnIntervalOnAggregateBatchExec(): Unit = {
     assertEquals(ValueInterval(0D, 6.1D),
       mq.getColumnInterval(unSplittableGlobalAggWithLocalAgg, 0))
-    assertNull(mq.getColumnInterval(unSplittableGlobalAggWithLocalAgg, 1))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+      mq.getColumnInterval(unSplittableGlobalAggWithLocalAgg, 1))
 
     assertEquals(ValueInterval(-5, 5), mq.getColumnInterval(splittableGlobalAggWithLocalAgg, 0))
     assertNull(mq.getColumnInterval(splittableGlobalAggWithLocalAgg, 1))
@@ -384,50 +385,56 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
   def testGetColumnIntervalOnFlinkLogicalWindowAggregate(): Unit = {
     assertEquals(ValueInterval(5, 45), mq.getColumnInterval(flinkLogicalWindowAgg, 0))
     assertEquals(null, mq.getColumnInterval(flinkLogicalWindowAgg, 1))
-    assertEquals(null, mq.getColumnInterval(flinkLogicalWindowAgg, 2))
+    assertEquals(RightSemiInfiniteValueInterval(0), mq.getColumnInterval(flinkLogicalWindowAgg, 2))
     assertEquals(null, mq.getColumnInterval(flinkLogicalWindowAgg, 3))
 
     assertEquals(ValueInterval(5, 55), mq.getColumnInterval(flinkLogicalWindowAggWithAuxGroup, 0))
     assertEquals(ValueInterval(0, 50), mq.getColumnInterval(flinkLogicalWindowAggWithAuxGroup, 1))
     assertEquals(null, mq.getColumnInterval(flinkLogicalWindowAggWithAuxGroup, 2))
-    assertEquals(null, mq.getColumnInterval(flinkLogicalWindowAggWithAuxGroup, 3))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+      mq.getColumnInterval(flinkLogicalWindowAggWithAuxGroup, 3))
   }
 
   @Test
   def testGetColumnIntervalOnLogicalWindowAggregate(): Unit = {
     assertEquals(ValueInterval(5, 45), mq.getColumnInterval(logicalWindowAgg, 0))
     assertEquals(null, mq.getColumnInterval(logicalWindowAgg, 1))
-    assertEquals(null, mq.getColumnInterval(logicalWindowAgg, 2))
+    assertEquals(RightSemiInfiniteValueInterval(0), mq.getColumnInterval(logicalWindowAgg, 2))
     assertEquals(null, mq.getColumnInterval(logicalWindowAgg, 3))
 
     assertEquals(ValueInterval(5, 55), mq.getColumnInterval(logicalWindowAggWithAuxGroup, 0))
     assertEquals(ValueInterval(0, 50), mq.getColumnInterval(logicalWindowAggWithAuxGroup, 1))
     assertEquals(null, mq.getColumnInterval(logicalWindowAggWithAuxGroup, 2))
-    assertEquals(null, mq.getColumnInterval(logicalWindowAggWithAuxGroup, 3))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+      mq.getColumnInterval(logicalWindowAggWithAuxGroup, 3))
   }
 
   @Test
   def testGetColumnIntervalOnWindowAggregateBatchExec(): Unit = {
     assertEquals(ValueInterval(5, 45), mq.getColumnInterval(globalWindowAggWithLocalAgg, 0))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithLocalAgg, 1))
-    assertEquals(null, mq.getColumnInterval(globalWindowAggWithLocalAgg, 2))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+      mq.getColumnInterval(globalWindowAggWithLocalAgg, 2))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithLocalAgg, 3))
     assertEquals(ValueInterval(5, 45), mq.getColumnInterval(globalWindowAggWithoutLocalAgg, 0))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAgg, 1))
-    assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAgg, 2))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+                 mq.getColumnInterval(globalWindowAggWithoutLocalAgg, 2))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAgg, 3))
 
     assertEquals(ValueInterval(5, 55),
       mq.getColumnInterval(globalWindowAggWithLocalAggWithAuxGrouping, 0))
     assertEquals(ValueInterval(0, 50),
       mq.getColumnInterval(globalWindowAggWithLocalAggWithAuxGrouping, 1))
-    assertEquals(null, mq.getColumnInterval(globalWindowAggWithLocalAggWithAuxGrouping, 2))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+      mq.getColumnInterval(globalWindowAggWithLocalAggWithAuxGrouping, 2))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithLocalAggWithAuxGrouping, 3))
     assertEquals(ValueInterval(5, 55),
       mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 0))
     assertEquals(ValueInterval(0, 50),
       mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 1))
-    assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 2))
+    assertEquals(RightSemiInfiniteValueInterval(0),
+                 mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 2))
     assertEquals(null, mq.getColumnInterval(globalWindowAggWithoutLocalAggWithAuxGrouping, 3))
   }
 

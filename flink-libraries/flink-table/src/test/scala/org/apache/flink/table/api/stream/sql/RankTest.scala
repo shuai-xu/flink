@@ -417,6 +417,36 @@ class RankTest extends TableTestBase {
   }
 
   @Test
+  def testTopNWithPartialFinalAgg(): Unit = {
+    // BLINK-17146809: monotonicity derivation not works when partial final optimization
+    streamUtil.tableEnv.queryConfig
+      .enableMiniBatch
+      .enableLocalAgg
+      .enablePartialAgg
+      .disableIncrementalAgg
+
+    val subquery =
+      """
+        |SELECT a, b, SUM(c) as c, COUNT(DISTINCT c) as cd
+        |FROM MyTable
+        |WHERE c >= 0
+        |GROUP BY a, b
+      """.stripMargin
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT *,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY cd DESC) as rank_num
+         |  FROM ($subquery))
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    streamUtil.verifyPlanAndTrait(sql)
+  }
+
+  @Test
   def testTopNWithoutRowNumber2(): Unit = {
     streamUtil.tableEnv.registerFunction("increasing_sum", new IncreasingSumAggFunction)
     streamUtil.addTable[(String, String, String, String, Long, String, Long, String)](

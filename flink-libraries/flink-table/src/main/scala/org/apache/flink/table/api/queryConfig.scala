@@ -292,6 +292,16 @@ class StreamQueryConfig extends QueryConfig {
     this
   }
 
+  def enableIncrementalAgg: StreamQueryConfig = {
+    parameters.setBoolean(SQL_EXEC_AGG_INCREMENTAL_ENABLED, true)
+    this
+  }
+
+  def disableIncrementalAgg: StreamQueryConfig = {
+    parameters.setBoolean(SQL_EXEC_AGG_INCREMENTAL_ENABLED, false)
+    this
+  }
+
   def enableMiniBatchJoin: StreamQueryConfig = {
     this.parameters.setBoolean(BLINK_MINIBATCH_JOIN_ENABLED, true)
     this
@@ -525,4 +535,5 @@ object StreamQueryConfig {
   val SQL_EXEC_AGG_INCREMENTAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
     .key("blink.incrementalAgg.enabled")
     .defaultValue(true)
+
 }

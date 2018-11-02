@@ -501,7 +501,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
       }
       if (aggregateCall != null) {
         aggregateCall.getAggregation.getKind match {
-          case SUM =>
+          case SUM | SUM0 =>
             val inputInterval: ValueInterval = fmq.getColumnInterval(
               aggregate.getInput,
               aggregateCall.getArgList.get(0))
@@ -524,6 +524,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
             } else {
               null
             }
+          case COUNT => RightSemiInfiniteValueInterval(0, includeLower = true)
           // todo add more built-in agg function
           case _ => null
         }

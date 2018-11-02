@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.cost
 
-import java.lang.{Double => JDouble, String => JString, Integer => JInt, Long => JLong, Float => JFloat, Short => JShort, Byte => JByte}
+import java.lang.{Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort, String => JString}
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util
@@ -31,7 +31,7 @@ import org.apache.calcite.rel.metadata._
 import org.apache.calcite.rel.{AbstractRelNode, RelCollation, RelFieldCollation, RelNode}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlMinMaxAggFunction, SqlSumAggFunction}
+import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlMinMaxAggFunction, SqlSumAggFunction, SqlSumEmptyIsZeroAggFunction}
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.sql.validate.SqlMonotonicity._
 import org.apache.calcite.util.{ImmutableIntList, Util}
@@ -215,14 +215,7 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
 
   def getRelModifiedMonotonicity(rel: StreamExecUnion, mq: RelMetadataQuery):
   RelModifiedMonotonicity = {
-    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
-    if (rel.getInputs.exists(p => containsDelete(fmq, p))) {
-      null
-    } else if (rel.getInputs.forall(p => allAppend(fmq, p))) {
-      constants(rel)
-    } else {
-      notMonotonic(rel)
-    }
+    getUnionMonotonicity(rel, mq)
   }
 
   def getRelModifiedMonotonicity(rel: StreamExecGroupAggregate, mq: RelMetadataQuery)
@@ -339,10 +332,14 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     if (rel.getInputs.exists(p => containsDelete(fmq, p))) {
       null
-    } else if (rel.getInputs.forall(p => allAppend(fmq, p))) {
-      constants(rel)
     } else {
-      notMonotonic(rel)
+      val monos = rel.getInputs.map(fmq.getRelModifiedMonotonicity)
+      val head = monos.head
+      if (monos.forall(head.equals(_))) {
+        head
+      } else {
+        notMonotonic(rel)
+      }
     }
   }
 
@@ -614,7 +611,7 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
           case Monotonicity.DECREASING => DECREASING
           case _ => NOT_MONOTONIC
         }
-      case _: SqlSumAggFunction =>
+      case _: SqlSumAggFunction | _: SqlSumEmptyIsZeroAggFunction =>
         val valueInterval = fmq.getColumnInterval(input, aggCall.getArgList.head)
         if (valueInterval == null) {
           NOT_MONOTONIC
