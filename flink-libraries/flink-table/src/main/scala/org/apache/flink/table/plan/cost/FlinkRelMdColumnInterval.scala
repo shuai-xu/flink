@@ -32,7 +32,7 @@ import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnInterval
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecGroupWindowAggregate, StreamExecLocalGroupAggregate}
+import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.plan.stats._
 import org.apache.flink.table.plan.util.{ConstantRankRange, VariableRankRange}
@@ -441,7 +441,12 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
   def getColumnInterval(
     aggregate: StreamExecGlobalGroupAggregate,
     mq: RelMetadataQuery,
-    index: Int): ValueInterval = estimateColumnIntervalOfAggregate(aggregate, mq, index)
+    index: Int): ValueInterval = {
+    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
+    // global aggregate can't estimate the column interval of agg arguments,
+    // and the global groupingSet mapping is same to index, so delegate it to local aggregate
+    fmq.getColumnInterval(aggregate.getInput, index)
+  }
 
   def getColumnInterval(
     aggregate: StreamExecGroupWindowAggregate,
@@ -456,7 +461,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     val groupSet = aggregate match {
       case agg: StreamExecGroupAggregate => agg.getGroupings
       case agg: StreamExecLocalGroupAggregate => agg.getGroupings
-      case agg: StreamExecGlobalGroupAggregate => agg.getGroupings
+      case agg: StreamExecIncrementalGroupAggregate => agg.shuffleKey
       case agg: StreamExecGroupWindowAggregate => agg.getGroupings
       case agg: BatchExecGroupAggregateBase => agg.getGrouping ++ agg.getAuxGrouping
       case agg: Aggregate => checkAndGetFullGroupSet(agg)
@@ -467,6 +472,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
         // grouping + assignTs + auxGrouping
         agg.getGrouping ++ Array(agg.inputTimestampIndex) ++ agg.getAuxGrouping
       case agg: BatchExecWindowAggregateBase => agg.getGrouping ++ agg.getAuxGrouping
+      // do not match StreamExecGlobalGroupAggregate
     }
     if (index < groupSet.length) {
       // estimates group keys according to the input relNodes.
@@ -482,9 +488,9 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
         case agg: StreamExecLocalGroupAggregate
           if agg.aggInfoList.getActualAggregateCalls.length > aggCallIndex =>
           agg.aggInfoList.getActualAggregateCalls(aggCallIndex)
-        case agg: StreamExecGlobalGroupAggregate
-          if agg.globalAggInfoList.getActualAggregateCalls.length > aggCallIndex =>
-          agg.globalAggInfoList.getActualAggregateCalls(aggCallIndex)
+        case agg: StreamExecIncrementalGroupAggregate
+          if agg.partialAggInfoList.getActualAggregateCalls.length > aggCallIndex =>
+          agg.partialAggInfoList.getActualAggregateCalls(aggCallIndex)
         case agg: StreamExecGroupWindowAggregate
           if agg.aggCalls.length > aggCallIndex =>
           agg.aggCalls(aggCallIndex)
@@ -497,6 +503,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
         case agg: BatchExecWindowAggregateBase
           if agg.aggregateCalls.length > aggCallIndex =>
           agg.aggregateCalls(aggCallIndex)
+        // do not match StreamExecGlobalGroupAggregate
         case _ => null
       }
       if (aggregateCall != null) {
@@ -559,19 +566,25 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
       expand: Expand,
       mq: RelMetadataQuery,
       index: Int): ValueInterval = {
-    if (index == expand.expandIdIndex) {
-      val values = expand.projects.map {
-        project =>
-          project.get(index) match {
-            case l: RexLiteral if l.getTypeName eq SqlTypeName.DECIMAL =>
-              l.getValueAs(classOf[java.lang.Long])
-            case _ => throw new TableException("expand_id should be a BIGINT constant value.")
-          }
+    val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
+    val intervals = expand.projects.flatMap { project =>
+      project(index) match {
+        case inputRef: RexInputRef =>
+          Some(fmq.getColumnInterval(expand.getInput, inputRef.getIndex))
+        case l: RexLiteral if l.getTypeName eq SqlTypeName.DECIMAL =>
+          val v = l.getValueAs(classOf[java.lang.Long])
+          Some(ValueInterval(v, v))
+        case l: RexLiteral if l.getValue == null =>
+          None
+        case p@_ =>
+          throw new TableException(s"Column interval can't handle $p type in expand.")
       }
-      ValueInterval(values.min, values.max)
+    }
+    if (intervals.contains(null)) {
+      // null union any value interval is null
+      null
     } else {
-      val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
-      fmq.getColumnInterval(expand.getInput, index)
+      intervals.reduce((a, b) => ValueInterval.union(a, b))
     }
   }
 

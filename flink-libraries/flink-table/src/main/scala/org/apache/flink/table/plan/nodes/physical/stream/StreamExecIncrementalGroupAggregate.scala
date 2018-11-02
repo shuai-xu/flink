@@ -63,10 +63,10 @@ class StreamExecIncrementalGroupAggregate(
     inputNode: RelNode,
     aggInputRowType: RelDataType,
     outputDataType: RelDataType,
-    partialAggInfoList: AggregateInfoList,
+    val partialAggInfoList: AggregateInfoList,
     finalAggInfoList: AggregateInfoList,
     val finalAggCalls: Seq[AggregateCall],
-    shuffleKey: Array[Int],
+    val shuffleKey: Array[Int],
     val groupKey: Array[Int])
   extends SingleRel(cluster, traitSet, inputNode)
   with CommonAggregate

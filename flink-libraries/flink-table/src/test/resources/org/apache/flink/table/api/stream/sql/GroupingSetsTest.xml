@@ -28,7 +28,7 @@ StreamExecCalc(select=[b, c, EXPR$2], where=[>(EXPR$2, 3)])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testGroupingsets">
+  <TestCase name="testGroupingSets">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[b, EXPR$1, 0 AS EXPR$2, 0 AS EXPR$3])
@@ -36,6 +36,32 @@ StreamExecCalc(select=[b, EXPR$1, 0 AS EXPR$2, 0 AS EXPR$3])
     StreamExecExchange(distribution=[hash[b]])
       StreamExecCalc(select=[b, a])
         StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupingSets1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[course, sum0, CASE(=($e, 0), 0, =($e, 1), 1, 3) AS EXPR$2])
+  StreamExecSort(orderBy=[course ASC, sum0 ASC])
+    StreamExecGroupAggregate(groupBy=[course, earnings, $e], select=[course, earnings, $e, SUM(earnings_0) AS sum0])
+      StreamExecExchange(distribution=[hash[course, earnings, $e]])
+        StreamExecExpand(projects=[{course, earnings, 0 AS $e, earnings AS earnings_0}, {course, null AS earnings, 1 AS $e, earnings AS earnings_0}, {null AS course, null AS earnings, 3 AS $e, earnings AS earnings_0}])
+          StreamExecCalc(select=[course, earnings])
+            StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testGroupingSets2">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[course, sum0])
+  StreamExecSort(orderBy=[course ASC, sum0 ASC])
+    StreamExecGroupAggregate(groupBy=[course, earnings, $e], select=[course, earnings, $e, SUM(earnings_0) AS sum0])
+      StreamExecExchange(distribution=[hash[course, earnings, $e]])
+        StreamExecExpand(projects=[{course, earnings, 0 AS $e, earnings AS earnings_0}, {course, null AS earnings, 1 AS $e, earnings AS earnings_0}, {null AS course, null AS earnings, 3 AS $e, earnings AS earnings_0}])
+          StreamExecCalc(select=[course, earnings])
+            StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

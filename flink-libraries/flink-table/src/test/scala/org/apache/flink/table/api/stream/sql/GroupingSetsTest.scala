@@ -25,11 +25,39 @@ import org.junit.Test
 class GroupingSetsTest extends TableTestBase {
 
   @Test
-  def testGroupingsets(): Unit = {
+  def testGroupingSets(): Unit = {
     val util = streamTestUtil()
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
     val sql = s"SELECT b, avg(a), grouping(b), grouping_id(b) FROM $table group by grouping sets(b)"
     util.verifyPlan(sql)
+  }
+
+  @Test
+  def testGroupingSets1(): Unit = {
+    val util = streamTestUtil()
+    util.addTable[(String, Int, Int)]("courseSales", 'course, 'year0, 'earnings)
+    val sqlQuery =
+      """
+        |SELECT course, SUM(earnings) AS sum0, GROUPING_ID(course, earnings)
+        |FROM courseSales
+        |GROUP BY GROUPING SETS((), (course), (course, earnings))
+        |ORDER BY course, sum0
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testGroupingSets2(): Unit = {
+    val util = streamTestUtil()
+    util.addTable[(String, Int, Int)]("courseSales", 'course, 'year0, 'earnings)
+    val sqlQuery =
+      """
+        |SELECT course, SUM(earnings) AS sum0
+        |FROM courseSales
+        |GROUP BY GROUPING SETS((), (course), (course, earnings))
+        |ORDER BY course, sum0
+      """.stripMargin
+    util.verifyPlan(sqlQuery)
   }
 
   @Test
