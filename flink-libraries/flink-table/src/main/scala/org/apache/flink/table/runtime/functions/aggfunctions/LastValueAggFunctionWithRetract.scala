@@ -40,7 +40,7 @@ abstract class LastValueWithRetractAggFunction[T]
     if (null != value) {
       val order = System.currentTimeMillis()
       val v = value.asInstanceOf[T]
-      val dataMapView = acc.getField(1).asInstanceOf[MapView[T, JList[JLong]]]
+      val dataMapView = acc.getField(2).asInstanceOf[MapView[T, JList[JLong]]]
       var dataMapList: JList[JLong] = dataMapView.get(v)
       if (null == dataMapList) {
         dataMapList = new JArrayList[JLong]
@@ -54,21 +54,25 @@ abstract class LastValueWithRetractAggFunction[T]
   def accumulate(acc: GenericRow, value: Any, order: Long): Unit = {
     if (null != value) {
       val v = value.asInstanceOf[T]
-      val sortedDataMapView = acc.getField(2).asInstanceOf[SortedMapView[JLong, JList[T]]]
+      val prevOrder = acc.getField(1).asInstanceOf[JLong]
+      if (prevOrder == null || prevOrder <= order) {
+        acc.update(0, v)      // acc.lastValue = v
+        acc.update(1, order)  // acc.lastOrder = order
+      }
+      val sortedDataMapView = acc.getField(3).asInstanceOf[SortedMapView[JLong, JList[T]]]
       var sortedDataMapList: JList[T] = sortedDataMapView.get(order)
       if (null == sortedDataMapList) {
         sortedDataMapList = new JArrayList[T]
       }
       sortedDataMapList.add(v)
       sortedDataMapView.put(order, sortedDataMapList)
-      updateValue(acc, sortedDataMapView)
     }
   }
 
   def retract(acc: GenericRow, value: Any): Unit = {
     if (null != value) {
       val v = value.asInstanceOf[T]
-      val dataMapView = acc.getField(1).asInstanceOf[MapView[T, JList[JLong]]]
+      val dataMapView = acc.getField(2).asInstanceOf[MapView[T, JList[JLong]]]
       val dataMapList: JList[JLong] = dataMapView.get(v)
       if (null != dataMapList && dataMapList.size() > 0) {
         val order = dataMapList.get(0)
@@ -86,7 +90,7 @@ abstract class LastValueWithRetractAggFunction[T]
   def retract(acc: GenericRow, value: Any, order: Long): Unit = {
     if (null != value) {
       val v = value.asInstanceOf[T]
-      val sortedDataMapView = acc.getField(2).asInstanceOf[SortedMapView[JLong, JList[T]]]
+      val sortedDataMapView = acc.getField(3).asInstanceOf[SortedMapView[JLong, JList[T]]]
       val sortedDataMapList = sortedDataMapView.get(order)
       if (null == sortedDataMapList) {
         return
@@ -113,13 +117,17 @@ abstract class LastValueWithRetractAggFunction[T]
 
   private def updateValue(
       acc: GenericRow,
-      sortedDataMapView: SortedMapView[JLong, JList[T]])
-  : Unit = {
-    val value = sortedDataMapView.firstEntry
-    val lastValue = if (null == value || null == value.getValue) {
+      sortedDataMapView: SortedMapView[JLong, JList[T]]): Unit = {
+    val startKey = acc.getField(1).asInstanceOf[JLong]
+    val itor = sortedDataMapView.tailEntries(startKey).iterator()
+    val lastValue = if (!itor.hasNext) {
+      acc.update(1, null)
       null.asInstanceOf[T]
     } else {
-      value.getValue.get(value.getValue.size() - 1)
+      val entry = itor.next()
+      // set lastOrder
+      acc.update(1, entry.getKey)
+      entry.getValue.get(entry.getValue.size() - 1)
     }
     // update acc
     acc.update(0, lastValue)
@@ -127,9 +135,10 @@ abstract class LastValueWithRetractAggFunction[T]
 
   def resetAccumulator(acc: GenericRow): Unit = {
     acc.update(0, null)
-    val dataMapView = acc.getField(1).asInstanceOf[MapView[T, JList[JLong]]]
+    acc.update(1, null)
+    val dataMapView = acc.getField(2).asInstanceOf[MapView[T, JList[JLong]]]
     dataMapView.clear()
-    val sortedDataMapView = acc.getField(2).asInstanceOf[SortedMapView[JLong, JList[T]]]
+    val sortedDataMapView = acc.getField(3).asInstanceOf[SortedMapView[JLong, JList[T]]]
     sortedDataMapView.clear()
   }
 
@@ -160,13 +169,14 @@ abstract class LastValueWithRetractAggFunction[T]
   override def createAccumulator(): GenericRow = {
     // The accumulator schema:
     // lastValue: T
+    // lastOrder: JLong
     // dataMap: MapView[T, JList[JLong]]
     // sortedDataMap: SortedMapView[JLong, JList[T]]
-    val acc = new GenericRow(3)
+    val acc = new GenericRow(4)
     val valueTypeInfo = TypeUtils.createTypeInfoFromDataType(getValueType)
     // field_0 is lastValue, default is null
-    acc.update(1, initDataMap)
-    acc.update(2, new SortedMapView(
+    acc.update(2, initDataMap)
+    acc.update(3, new SortedMapView(
       Order.DESCENDING,
       DataTypes.LONG,
       DataTypes.of(new ListTypeInfo(valueTypeInfo))
@@ -177,11 +187,12 @@ abstract class LastValueWithRetractAggFunction[T]
   override def getAccumulatorType: DataType = {
     val fieldTypes: Array[InternalType] = Array(
       getInternalValueType,
+      DataTypes.LONG,
       // it will be replaced to MapViewType
       DataTypes.createGenericType(classOf[MapView[_, _]]),
       // it will be replaced to SortedMapViewType
       DataTypes.createGenericType(classOf[SortedMapView[_, _]]))
-    val fieldNames = Array("lastValue", "dataMap", "sortedDataMap")
+    val fieldNames = Array("lastValue", "lastOrder", "dataMap", "sortedDataMap")
     DataTypes.createBaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
   }
 }

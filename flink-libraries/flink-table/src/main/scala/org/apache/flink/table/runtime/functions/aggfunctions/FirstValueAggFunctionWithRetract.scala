@@ -54,7 +54,8 @@ abstract class FirstValueWithRetractAggFunction[T]
   def accumulate(acc: GenericRow, value: Any, order: Long): Unit = {
     if (null != value) {
       val v = value.asInstanceOf[T]
-      if (acc.isNullAt(0)) { // null == acc.fistValue
+      val prevOrder = acc.getField(1).asInstanceOf[JLong]
+      if (prevOrder == null || prevOrder > order) {
         acc.update(0, v)      // acc.fistValue = v
         acc.update(1, order)  // acc.fistOrder = order
       }
@@ -65,7 +66,6 @@ abstract class FirstValueWithRetractAggFunction[T]
       }
       sortedDataMapList.add(v)
       sortedDataMapView.put(order, sortedDataMapList)
-      updateValue(acc, sortedDataMapView)
     }
   }
 
@@ -117,13 +117,15 @@ abstract class FirstValueWithRetractAggFunction[T]
 
   private def updateValue(
     acc: GenericRow,
-    sortedDataMapView: SortedMapView[JLong, JList[T]])
-  : Unit = {
-    val entry = sortedDataMapView.firstEntry
+    sortedDataMapView: SortedMapView[JLong, JList[T]]): Unit = {
+    val startKey = acc.getField(1).asInstanceOf[JLong]
+    val itor = sortedDataMapView.tailEntries(startKey).iterator()
 
-    val firstValue = if (null == entry || null == entry.getValue) {
+    val firstValue = if (!itor.hasNext) {
+      acc.update(1, null)
       null.asInstanceOf[T]
     } else {
+      val entry = itor.next()
       // set firstOrder
       acc.update(1, entry.getKey)
       entry.getValue.get(0)
