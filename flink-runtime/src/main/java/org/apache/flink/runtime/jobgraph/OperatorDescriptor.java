@@ -18,12 +18,15 @@
 
 package org.apache.flink.runtime.jobgraph;
 
+import org.apache.flink.runtime.metrics.dump.MetricQueryService;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
-
+import static org.apache.flink.runtime.metrics.groups.TaskMetricGroup.METRICS_OPERATOR_NAME_MAX_LENGTH;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -34,6 +37,8 @@ public class OperatorDescriptor implements Serializable {
 	private final String operatorName;
 
 	private final OperatorID operatorID;
+
+	private final String operatorMetricsName;
 
 	private final List<OperatorEdgeDescriptor> inputs = new ArrayList<>();
 
@@ -46,6 +51,16 @@ public class OperatorDescriptor implements Serializable {
 	public OperatorDescriptor(String operatorName, OperatorID operatorID) {
 		this.operatorName = checkNotNull(operatorName);
 		this.operatorID = checkNotNull(operatorID);
+		this.operatorMetricsName = name2MetricName(operatorName);
+	}
+
+	private String name2MetricName(String name){
+		String metricName = name;
+		if (name != null && name.length() > METRICS_OPERATOR_NAME_MAX_LENGTH) {
+			metricName = name.substring(0, METRICS_OPERATOR_NAME_MAX_LENGTH);
+		}
+		metricName = MetricQueryService.FILTER.filterCharacters(metricName);
+		return metricName;
 	}
 
 	/**
@@ -76,6 +91,14 @@ public class OperatorDescriptor implements Serializable {
 	}
 
 	/**
+	 * Gets operator metric name.
+	 * @return the operator metric name
+	 */
+	public String getOperatorMetricsName() {
+		return operatorMetricsName;
+	}
+
+	/**
 	 * Gets inputs.
 	 *
 	 * @return the inputs
@@ -90,6 +113,7 @@ public class OperatorDescriptor implements Serializable {
 			append("operatorName", operatorName).
 			append("operatorID", operatorID).
 			append("inputs", inputs).
+			append("metricName", operatorMetricsName).
 			toString();
 	}
 }

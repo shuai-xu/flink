@@ -56,7 +56,7 @@ public class MetricQueryService extends UntypedActor {
 
 	public static final String METRIC_QUERY_SERVICE_NAME = "MetricQueryService";
 
-	private static final CharacterFilter FILTER = new CharacterFilter() {
+	public static final CharacterFilter FILTER = new CharacterFilter() {
 		@Override
 		public String filterCharacters(String input) {
 			return replaceInvalidChars(input);

@@ -44,7 +44,7 @@ public class TaskMetricGroup extends ComponentMetricGroup<TaskManagerJobMetricGr
 
 	private final Map<OperatorID, OperatorMetricGroup> operators = new HashMap<>();
 
-	static final int METRICS_OPERATOR_NAME_MAX_LENGTH = 80;
+	public static final int METRICS_OPERATOR_NAME_MAX_LENGTH = 80;
 
 	private final TaskIOMetricGroup ioMetrics;
 
