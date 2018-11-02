@@ -40,8 +40,7 @@ import java.util.List;
  * Log4J-to-SLF4J adapter dependency must be excluded from the test classpath for the Elasticsearch embedded
  * node used in the tests to work properly.
  *
- * <p>
- * TODO: This is skipped now cause the test need cgroup conf to match the specific pattern, see
+ * <p>TODO: This is skipped now cause the test need cgroup conf to match the specific pattern, see
  * OsProbe#CONTROL_GROUP_PATTERN for details.
  */
 @Ignore
