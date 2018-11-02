@@ -132,7 +132,7 @@ public abstract class YarnJobMasterFailoverTestBase extends YarnTestBase {
 
 	Runner submitJob(String caseclass, String casename) throws Exception {
 		final File uberjar = findFile("..", (dir, name) ->
-			name.contains("flink-yarn-tests_2.11-1.5.1-tests.jar"));
+			name.startsWith("flink-yarn-tests_2.11") && name.endsWith("-tests.jar"));
 
 		return startWithArgs(
 			new String[] {
