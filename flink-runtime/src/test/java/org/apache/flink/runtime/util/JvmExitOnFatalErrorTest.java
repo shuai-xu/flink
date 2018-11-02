@@ -225,7 +225,7 @@ public class JvmExitOnFatalErrorTest {
 							blobService.getPermanentBlobService(),
 							FlinkUserCodeClassLoaders.ResolveOrder.CHILD_FIRST,
 							new String[0]),
-						new FileCache(tmInfo.getTmpDirectories()),
+						new FileCache(tmInfo.getTmpDirectories(), blobService.getPermanentBlobService()),
 						tmInfo,
 						UnregisteredMetricGroups.createUnregisteredTaskMetricGroup(),
 						new NoOpResultPartitionConsumableNotifier(),

@@ -152,8 +152,7 @@ class TaskManager(
 
   protected val globalFilterManager = new EmptyOperationAccumulatorAggregationManager()
 
-  /** Handler for distributed files cached by this TaskManager */
-  protected val fileCache = new FileCache(config.getTmpDirectories())
+
 
   protected val leaderRetrievalService: LeaderRetrievalService = highAvailabilityServices.
     getJobManagerLeaderRetriever(
@@ -164,6 +163,8 @@ class TaskManager(
   private val waitForRegistration = scala.collection.mutable.Set[ActorRef]()
 
   private var blobCache: Option[BlobCacheService] = None
+  /** Handler for distributed files cached by this TaskManager */
+  private var fileCache: Option[FileCache] = None
   private var libraryCacheManager: Option[LibraryCacheManager] = None
 
   /* The current leading JobManager Actor associated with */
@@ -260,12 +261,6 @@ class TaskManager(
       taskManagerLocalStateStoresManager.shutdown()
     } catch {
       case t: Exception => log.error("Task state manager did not shutdown properly.", t)
-    }
-
-    try {
-      fileCache.shutdown()
-    } catch {
-      case t: Exception => log.error("FileCache did not shutdown properly.", t)
     }
 
     taskManagerMetricGroup.close()
@@ -987,6 +982,9 @@ class TaskManager(
           blobcache.getPermanentBlobService,
           config.getClassLoaderResolveOrder(),
           config.getAlwaysParentFirstLoaderPatterns))
+      fileCache = Some(
+        new FileCache(config.getTmpDirectories(), blobcache.getPermanentBlobService)
+      )
     }
     catch {
       case e: Exception =>
@@ -1052,6 +1050,11 @@ class TaskManager(
     instanceID = null
 
     // shut down BLOB and library cache
+    fileCache foreach {
+      cache => cache.shutdown()
+    }
+    fileCache = None
+
     libraryCacheManager foreach {
       manager => manager.shutdown()
     }
@@ -1132,6 +1135,11 @@ class TaskManager(
       val blobCache = this.blobCache match {
         case Some(manager) => manager
         case None => throw new IllegalStateException("There is no valid BLOB cache.")
+      }
+
+      val fileCache = this.fileCache match {
+        case Some(manager) => manager
+        case None => throw new IllegalStateException("There is no valid file cache.")
       }
 
       val slot = tdd.getTargetSlotNumber

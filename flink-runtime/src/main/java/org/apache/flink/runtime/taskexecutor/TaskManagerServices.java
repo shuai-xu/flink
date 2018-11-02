@@ -28,7 +28,6 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.preaggregatedaccumulators.RPCBasedAccumulatorAggregationManager;
-import org.apache.flink.runtime.filecache.FileCache;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
@@ -81,7 +80,6 @@ public class TaskManagerServices {
 	private final NetworkEnvironment networkEnvironment;
 	private final BroadcastVariableManager broadcastVariableManager;
 	private final AccumulatorAggregationManager accumulatorAggregationManager;
-	private final FileCache fileCache;
 	private final TaskSlotTable taskSlotTable;
 	private final JobManagerTable jobManagerTable;
 	private final JobLeaderService jobLeaderService;
@@ -94,7 +92,6 @@ public class TaskManagerServices {
 		NetworkEnvironment networkEnvironment,
 		BroadcastVariableManager broadcastVariableManager,
 		AccumulatorAggregationManager accumulatorAggregationManager,
-		FileCache fileCache,
 		TaskSlotTable taskSlotTable,
 		JobManagerTable jobManagerTable,
 		JobLeaderService jobLeaderService,
@@ -105,7 +102,6 @@ public class TaskManagerServices {
 		this.ioManager = Preconditions.checkNotNull(ioManager);
 		this.networkEnvironment = Preconditions.checkNotNull(networkEnvironment);
 		this.broadcastVariableManager = Preconditions.checkNotNull(broadcastVariableManager);
-		this.fileCache = Preconditions.checkNotNull(fileCache);
 		this.taskSlotTable = Preconditions.checkNotNull(taskSlotTable);
 		this.jobManagerTable = Preconditions.checkNotNull(jobManagerTable);
 		this.jobLeaderService = Preconditions.checkNotNull(jobLeaderService);
@@ -135,10 +131,6 @@ public class TaskManagerServices {
 
 	public BroadcastVariableManager getBroadcastVariableManager() {
 		return broadcastVariableManager;
-	}
-
-	public FileCache getFileCache() {
-		return fileCache;
 	}
 
 	public TaskSlotTable getTaskSlotTable() {
@@ -192,12 +184,6 @@ public class TaskManagerServices {
 
 		try {
 			networkEnvironment.shutdown();
-		} catch (Exception e) {
-			exception = ExceptionUtils.firstOrSuppressed(e, exception);
-		}
-
-		try {
-			fileCache.shutdown();
 		} catch (Exception e) {
 			exception = ExceptionUtils.firstOrSuppressed(e, exception);
 		}
@@ -263,8 +249,6 @@ public class TaskManagerServices {
 
 		final BroadcastVariableManager broadcastVariableManager = new BroadcastVariableManager();
 
-		final FileCache fileCache = new FileCache(taskManagerServicesConfiguration.getTmpDirPaths());
-
 		final List<ResourceProfile> resourceProfiles = taskManagerServicesConfiguration.getResourceProfileList();
 
 		for (int i = resourceProfiles.size(); i < taskManagerServicesConfiguration.getNumberOfSlots(); i++) {
@@ -306,7 +290,6 @@ public class TaskManagerServices {
 			network,
 			broadcastVariableManager,
 			accumulatorAggregationManager,
-			fileCache,
 			taskSlotTable,
 			jobManagerTable,
 			jobLeaderService,

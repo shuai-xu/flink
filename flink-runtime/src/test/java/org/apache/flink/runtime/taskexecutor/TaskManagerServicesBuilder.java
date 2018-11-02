@@ -20,7 +20,6 @@ package org.apache.flink.runtime.taskexecutor;
 
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.broadcast.BroadcastVariableManager;
-import org.apache.flink.runtime.filecache.FileCache;
 import org.apache.flink.runtime.preaggregatedaccumulators.AccumulatorAggregationManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
@@ -44,7 +43,6 @@ public class TaskManagerServicesBuilder {
 	private NetworkEnvironment networkEnvironment;
 	private BroadcastVariableManager broadcastVariableManager;
 	private AccumulatorAggregationManager accumulatorAggregationManager;
-	private FileCache fileCache;
 	private TaskSlotTable taskSlotTable;
 	private JobManagerTable jobManagerTable;
 	private JobLeaderService jobLeaderService;
@@ -62,7 +60,6 @@ public class TaskManagerServicesBuilder {
 		networkEnvironment = mock(NetworkEnvironment.class);
 		broadcastVariableManager = new BroadcastVariableManager();
 		accumulatorAggregationManager = mock(AccumulatorAggregationManager.class);
-		fileCache = mock(FileCache.class);
 		taskSlotTable = mock(TaskSlotTable.class);
 		jobManagerTable = new JobManagerTable();
 		jobLeaderService = new JobLeaderService(taskManagerLocation);
@@ -98,11 +95,6 @@ public class TaskManagerServicesBuilder {
 		this.accumulatorAggregationManager = accumulatorAggregationManager;
 	}
 
-	public TaskManagerServicesBuilder setFileCache(FileCache fileCache) {
-		this.fileCache = fileCache;
-		return this;
-	}
-
 	public TaskManagerServicesBuilder setTaskSlotTable(TaskSlotTable taskSlotTable) {
 		this.taskSlotTable = taskSlotTable;
 		return this;
@@ -131,7 +123,6 @@ public class TaskManagerServicesBuilder {
 			networkEnvironment,
 			broadcastVariableManager,
 			accumulatorAggregationManager,
-			fileCache,
 			taskSlotTable,
 			jobManagerTable,
 			jobLeaderService,

@@ -61,10 +61,11 @@ public class JobSubmitHandlerTest extends TestLogger {
 	@ClassRule
 	public static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 	private static BlobServer blobServer;
+	private static Configuration config;
 
 	@BeforeClass
 	public static void setup() throws IOException {
-		Configuration config = new Configuration();
+		config = new Configuration();
 		config.setString(BlobServerOptions.STORAGE_DIRECTORY,
 			TEMPORARY_FOLDER.newFolder().getAbsolutePath());
 
@@ -91,9 +92,10 @@ public class JobSubmitHandlerTest extends TestLogger {
 			() -> CompletableFuture.completedFuture(mockGateway),
 			RpcUtils.INF_TIMEOUT,
 			Collections.emptyMap(),
-			TestingUtils.defaultExecutor());
+			TestingUtils.defaultExecutor(),
+			config);
 
-		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.toString(), Collections.emptyList());
+		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.toString(), Collections.emptyList(), Collections.emptyList());
 
 		try {
 			handler.handleRequest(new HandlerRequest<>(request, EmptyMessageParameters.getInstance()), mockGateway);
@@ -122,9 +124,10 @@ public class JobSubmitHandlerTest extends TestLogger {
 			() -> CompletableFuture.completedFuture(mockGateway),
 			RpcUtils.INF_TIMEOUT,
 			Collections.emptyMap(),
-			TestingUtils.defaultExecutor());
+			TestingUtils.defaultExecutor(),
+			config);
 
-		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.getFileName().toString(), Collections.emptyList());
+		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.getFileName().toString(), Collections.emptyList(), Collections.emptyList());
 
 		handler.handleRequest(new HandlerRequest<>(request, EmptyMessageParameters.getInstance(), Collections.emptyMap(), Collections.emptyMap(), Collections.singleton(jobGraphFile.toFile())), mockGateway)
 			.get();
@@ -142,7 +145,8 @@ public class JobSubmitHandlerTest extends TestLogger {
 			() -> CompletableFuture.completedFuture(mockGateway),
 			RpcUtils.INF_TIMEOUT,
 			Collections.emptyMap(),
-			TestingUtils.defaultExecutor());
+			TestingUtils.defaultExecutor(),
+			config);
 
 		final Path jobGraphFile = TEMPORARY_FOLDER.newFile().toPath();
 
@@ -151,7 +155,7 @@ public class JobSubmitHandlerTest extends TestLogger {
 			objectOut.writeObject(jobGraph);
 		}
 
-		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.getFileName().toString(), Collections.emptyList());
+		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.getFileName().toString(), Collections.emptyList(), Collections.emptyList());
 
 		try {
 			handler.handleRequest(new HandlerRequest<>(
@@ -191,9 +195,10 @@ public class JobSubmitHandlerTest extends TestLogger {
 			() -> CompletableFuture.completedFuture(mockGateway),
 			RpcUtils.INF_TIMEOUT,
 			Collections.emptyMap(),
-			TestingUtils.defaultExecutor());
+			TestingUtils.defaultExecutor(),
+			config);
 
-		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.getFileName().toString(), Collections.emptyList());
+		JobSubmitRequestBody request = new JobSubmitRequestBody(jobGraphFile.getFileName().toString(), Collections.emptyList(), Collections.emptyList());
 
 		try {
 			handler.handleRequest(new HandlerRequest<>(request, EmptyMessageParameters.getInstance(), Collections.emptyMap(), Collections.emptyMap(), Arrays.asList(jobGraphFile.toFile(), countExceedingFile.toFile())), mockGateway)
@@ -219,7 +224,8 @@ public class JobSubmitHandlerTest extends TestLogger {
 			() -> CompletableFuture.completedFuture(dispatcherGateway),
 			RpcUtils.INF_TIMEOUT,
 			Collections.emptyMap(),
-			TestingUtils.defaultExecutor());
+			TestingUtils.defaultExecutor(),
+			config);
 
 		final Path jobGraphFile = TEMPORARY_FOLDER.newFile().toPath();
 		final Path jarFile = TEMPORARY_FOLDER.newFile().toPath();
@@ -232,7 +238,7 @@ public class JobSubmitHandlerTest extends TestLogger {
 
 		JobSubmitRequestBody request = new JobSubmitRequestBody(
 			jobGraphFile.getFileName().toString(),
-			Collections.singletonList(jarFile.getFileName().toString()));
+			Collections.singletonList(jarFile.getFileName().toString()), Collections.emptyList());
 
 		handler.handleRequest(new HandlerRequest<>(
 				request,
