@@ -318,6 +318,42 @@ StreamExecRank(retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
+	<TestCase name="testTopNOrderBySumWithCaseWhen">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM($f2) AS sum_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecCalc(select=[a, b, CASE(>(c, 10), 1, <(c, 0), 0, null) AS $f2])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNOrderBySumWithIf">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM($f2) AS sum_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecCalc(select=[a, b, IF(>(c, 10), 1, 0) AS $f2])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
+	<TestCase name="testTopNOrderBySumWithFilterClause">
+		<Resource name="plan">
+			<![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
+  StreamExecExchange(distribution=[hash[b]])
+    StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) FILTER $f3 AS sum_c])
+      StreamExecExchange(distribution=[hash[a, b]])
+        StreamExecCalc(select=[a, b, c, IS TRUE(AND(>=(c, 0), <(a, 0))) AS $f3])
+          StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+		</Resource>
+	</TestCase>
   <TestCase name="testTopNOrderByUDAG">
     <Resource name="plan">
       <![CDATA[

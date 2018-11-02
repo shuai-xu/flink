@@ -70,6 +70,40 @@ public abstract class FlinkMetadata {
 	}
 
 	/**
+	 * Metadata about the interval of given column under the given filter argument
+	 * from a specified relational expression.
+	 */
+	public interface FilteredColumnInterval extends Metadata {
+		Method METHOD = Types.lookupMethod(FilteredColumnInterval.class, "getFilteredColumnInterval", int.class, int.class);
+
+		MetadataDef<FilteredColumnInterval> DEF = MetadataDef.of(
+			FilteredColumnInterval.class,
+			FilteredColumnInterval.Handler.class,
+			METHOD);
+
+		/**
+		 * Returns the interval value of the given column under the given filter argument
+		 * from a specified relational expression.
+		 *
+		 * @param columnIndex the index of the given column in a specified relational expression
+		 * @param filterArg the index of the filter argument, -1 when no filter argument existed
+		 * @return the interval of the given column.
+		 * Returns null if interval cannot be estimated,
+		 * Returns [[NullValueInterval]] if column values does not contains any value
+		 * except for null.
+		 */
+		ValueInterval getFilteredColumnInterval(int columnIndex, int filterArg);
+
+		/**
+		 * Handler API.
+		 */
+		interface Handler extends MetadataHandler<FilteredColumnInterval> {
+			ValueInterval getFilteredColumnInterval(RelNode r, RelMetadataQuery mq, int columnIndex, int filterArg);
+		}
+
+	}
+
+	/**
 	 * Metadata about the null count of given column from a specified relational expression.
 	 */
 	public interface ColumnNullCount extends Metadata {

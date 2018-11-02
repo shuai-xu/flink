@@ -171,6 +171,8 @@ object ValueInterval {
     case (n1: WithLower, n2: WithLower) =>
       val (lower, includeLower) = unionLower(n1, n2)
       RightSemiInfiniteValueInterval(lower, includeLower)
+    case (_, null) => null
+    case (null, _) => null
 
   }
 

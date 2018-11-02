@@ -33,6 +33,7 @@ object FlinkDefaultRelMetadataProvider {
       FlinkRelMdSelectivity.SOURCE,
       FlinkRelMdDistinctRowCount.SOURCE,
       FlinkRelMdColumnInterval.SOURCE,
+      FlinkRelMdFilteredColumnInterval.SOURCE,
       FlinkRelMdSkewInfo.SOURCE,
       FlinkRelMdDistribution.SOURCE,
       FlinkRelMdColumnNullCount.SOURCE,

@@ -612,7 +612,8 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
           case _ => NOT_MONOTONIC
         }
       case _: SqlSumAggFunction | _: SqlSumEmptyIsZeroAggFunction =>
-        val valueInterval = fmq.getColumnInterval(input, aggCall.getArgList.head)
+        val valueInterval = fmq.getFilteredColumnInterval(
+          input, aggCall.getArgList.head, aggCall.filterArg)
         if (valueInterval == null) {
           NOT_MONOTONIC
         } else {

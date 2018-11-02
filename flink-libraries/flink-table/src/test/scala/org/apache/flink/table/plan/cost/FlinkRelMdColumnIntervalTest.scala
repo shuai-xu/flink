@@ -29,6 +29,7 @@ import org.apache.calcite.sql.fun.SqlCountAggFunction
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.stats.{RightSemiInfiniteValueInterval, ValueInterval}
@@ -187,6 +188,30 @@ class FlinkRelMdColumnIntervalTest extends FlinkRelMdHandlerTestBase {
             RexUtil.negate(relBuilder.getRexBuilder, expr1.asInstanceOf[RexCall]),
             expr7)))))
     assertEquals(mq.getColumnInterval(calc7, 1), ValueInterval(-5, 2))
+
+    val expr8 = relBuilder.call(CASE, expr5, relBuilder.literal(1), relBuilder.literal(0))
+    val expr9 = relBuilder.call(
+      CASE, expr5, relBuilder.literal(11), expr7, relBuilder.literal(10), relBuilder.literal(12))
+    val expr10 = relBuilder.call(CASE, expr2, expr9, expr4, expr8, relBuilder.literal(null))
+    val expr11 = relBuilder.call(CASE, expr5, relBuilder.literal(1), relBuilder.field(1))
+    val expr12 = relBuilder.call(
+      ScalarSqlFunctions.IF, expr5, relBuilder.literal(1), relBuilder.literal(0))
+    val expr13 = relBuilder.call(
+      ScalarSqlFunctions.IF, expr2, expr12, relBuilder.literal(null))
+    val expr14 = relBuilder.call(
+      ScalarSqlFunctions.IF, expr2, relBuilder.literal(1), relBuilder.field(1))
+    val rowtype = typeFactory.buildLogicalRowType(
+      Array("f0", "f1", "f2", "f3", "f4", "f5", "f6"),
+      Array(Types.INT, Types.INT, Types.INT, Types.INT, Types.INT, Types.INT, Types.INT))
+    val calc8 = buildCalc(
+      ts, rowtype, List(expr8, expr9, expr10, expr11, expr12, expr13, expr14), List())
+    assertEquals(ValueInterval(0, 1), mq.getColumnInterval(calc8, 0))
+    assertEquals(ValueInterval(10, 12), mq.getColumnInterval(calc8, 1))
+    assertEquals(ValueInterval(0, 12), mq.getColumnInterval(calc8, 2))
+    assertEquals(ValueInterval(0D, 6.1D), mq.getColumnInterval(calc8, 3))
+    assertEquals(ValueInterval(0, 1), mq.getColumnInterval(calc8, 4))
+    assertEquals(ValueInterval(0, 1), mq.getColumnInterval(calc8, 5))
+    assertEquals(ValueInterval(0D, 6.1D), mq.getColumnInterval(calc8, 6))
   }
 
   @Test

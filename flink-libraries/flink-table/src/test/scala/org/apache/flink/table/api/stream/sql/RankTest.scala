@@ -258,6 +258,73 @@ class RankTest extends TableTestBase {
     streamUtil.verifyPlanAndTrait(sql)
   }
 
+
+  @Test
+  def testTopNOrderBySumWithCaseWhen(): Unit = {
+    val subquery =
+      """
+        |SELECT a, b, SUM(case when c > 10 then 1 when c < 0 then 0 else null end) as sum_c
+        |FROM MyTable
+        |GROUP BY a, b
+      """.stripMargin
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, sum_c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY sum_c DESC) as rank_num
+         |  FROM ($subquery))
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testTopNOrderBySumWithIf(): Unit = {
+    val subquery =
+      """
+        |SELECT a, b, SUM(IF(c > 10, 1, 0)) as sum_c
+        |FROM MyTable
+        |GROUP BY a, b
+      """.stripMargin
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, sum_c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY sum_c DESC) as rank_num
+         |  FROM ($subquery))
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
+  def testTopNOrderBySumWithFilterClause(): Unit = {
+    val subquery =
+      """
+        |SELECT a, b, SUM(c) filter (where c >= 0 and a < 0) as sum_c
+        |FROM MyTable
+        |GROUP BY a, b
+      """.stripMargin
+
+    val sql =
+      s"""
+         |SELECT *
+         |FROM (
+         |  SELECT a, b, sum_c,
+         |      ROW_NUMBER() OVER (PARTITION BY b ORDER BY sum_c DESC) as rank_num
+         |  FROM ($subquery))
+         |WHERE rank_num <= 10
+      """.stripMargin
+
+    streamUtil.verifyPlan(sql)
+  }
+
   @Test
   def testTopNOrderByCountAndOtherField(): Unit = {
     val subquery =
@@ -418,7 +485,7 @@ class RankTest extends TableTestBase {
 
   @Test
   def testTopNWithPartialFinalAgg(): Unit = {
-    // BLINK-17146809: monotonicity derivation not works when partial final optimization
+    // BLINK-17146809: fix monotonicity derivation not works when partial final optimization
     streamUtil.tableEnv.queryConfig
       .enableMiniBatch
       .enableLocalAgg

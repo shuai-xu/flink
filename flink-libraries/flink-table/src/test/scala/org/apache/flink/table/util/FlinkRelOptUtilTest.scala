@@ -105,8 +105,16 @@ class FlinkRelOptUtilTest {
     assertEquals((Option(expr2), None),
       decompose(expr2, rexBuilder, splitter))
     // $2 is true
-    val expr3 = rexBuilder.makeCall(IS_TRUE, rexBuilder.makeInputRef(booleanType, 2))
-    assertEquals((None, Option(expr3)), decompose(expr3, rexBuilder, splitter))
+    val ref2 = rexBuilder.makeInputRef(booleanType, 2)
+    val expr3 = rexBuilder.makeCall(IS_TRUE, ref2)
+    assertEquals((None, Option(ref2)), decompose(expr3, rexBuilder, splitter))
+    // $2 is false
+    val expr3_1 = rexBuilder.makeCall(IS_FALSE, ref2)
+    val expr3_2 = rexBuilder.makeCall(NOT, ref2)
+    val (interested3, rest3) = decompose(expr3_1, rexBuilder, splitter)
+    assertEquals(None, interested3)
+    assertTrue(rest3.isDefined)
+    assertTrue(RexUtil.eq(expr3_2, rest3.get))
     // $3 < 20
     val expr4 = rexBuilder.makeCall(LESS_THAN,
       rexBuilder.makeInputRef(integerType, 3),

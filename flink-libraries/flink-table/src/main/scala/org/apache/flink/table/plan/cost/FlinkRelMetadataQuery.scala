@@ -43,6 +43,7 @@ class FlinkRelMetadataQuery private(
     prototype: RelMetadataQuery) extends RelMetadataQuery(metadataProvider, prototype) {
 
   private[this] var columnIntervalHandler: ColumnInterval.Handler = _
+  private[this] var filteredColumnInterval: FilteredColumnInterval.Handler = _
   private[this] var distributionHandler: FlinkDistribution.Handler = _
   private[this] var columnNullCountHandler: ColumnNullCount.Handler = _
   private[this] var skewInfoHandler: SkewInfoMeta.Handler = _
@@ -52,6 +53,8 @@ class FlinkRelMetadataQuery private(
   private def this() {
     this(RelMetadataQuery.THREAD_PROVIDERS.get, RelMetadataQuery.EMPTY)
     this.columnIntervalHandler = RelMetadataQuery.initialHandler(classOf[ColumnInterval.Handler])
+    this.filteredColumnInterval =
+      RelMetadataQuery.initialHandler(classOf[FilteredColumnInterval.Handler])
     this.distributionHandler = RelMetadataQuery.initialHandler(classOf[FlinkDistribution.Handler])
     this.columnNullCountHandler = RelMetadataQuery.initialHandler(classOf[ColumnNullCount.Handler])
     this.skewInfoHandler = RelMetadataQuery.initialHandler(classOf[SkewInfoMeta.Handler])
@@ -77,6 +80,28 @@ class FlinkRelMetadataQuery private(
       case e: JaninoRelMetadataProvider.NoHandler =>
         columnIntervalHandler = revise(e.relClass, FlinkMetadata.ColumnInterval.DEF)
         getColumnInterval(rel, index)
+    }
+  }
+
+  /**
+    * Returns the [[ColumnInterval]] of the given column under the given filter argument.
+    *
+    * @param rel   the relational expression
+    * @param columnIndex the index of the given column
+    * @param filterArg the index of the filter argument
+    * @return the interval of the given column of a specified relational expression.
+    *         Returns null if interval cannot be estimated,
+    *         Returns [[org.apache.flink.table.plan.stats.EmptyValueInterval]]
+    *         if column values does not contains any value except for null.
+    */
+  def getFilteredColumnInterval(rel: RelNode, columnIndex: Int, filterArg: Int): ValueInterval = {
+    try {
+      filteredColumnInterval.getFilteredColumnInterval(
+        rel, this, columnIndex, filterArg)
+    } catch {
+      case e: JaninoRelMetadataProvider.NoHandler =>
+        filteredColumnInterval = revise(e.relClass, FlinkMetadata.FilteredColumnInterval.DEF)
+        getFilteredColumnInterval(rel, columnIndex, filterArg)
     }
   }
 

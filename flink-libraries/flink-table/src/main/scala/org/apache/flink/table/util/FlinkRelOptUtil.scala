@@ -251,6 +251,13 @@ object FlinkRelOptUtil {
           case (Some(_), None) => (Option(condition), None)
           case (_, _) => (None, Option(condition))
         }
+      case IS_TRUE =>
+        val operand = condition.asInstanceOf[RexCall].operands.head
+        decompose(operand, rexBuilder, splitterVisitor)
+      case IS_FALSE =>
+        val operand = condition.asInstanceOf[RexCall].operands.head
+        val newCondition = pushNotToLeaf(operand, rexBuilder, needReverse = true)
+        decompose(newCondition, rexBuilder, splitterVisitor)
       case _ =>
         if (condition.accept(splitterVisitor)) {
           (Option(condition), None)

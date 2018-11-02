@@ -28,12 +28,15 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.{SqlBinaryOperator, SqlKind}
 import org.apache.calcite.util.Util
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.cost.FlinkMetadata.ColumnInterval
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalDimensionTableSourceScan, FlinkLogicalWindowAggregate}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
+import org.apache.flink.util.Preconditions
+import org.apache.flink.table.plan.cost.FlinkRelMdColumnInterval.getColumnIntervalWithFilter
 import org.apache.flink.table.plan.stats._
 import org.apache.flink.table.plan.util.{ConstantRankRange, VariableRankRange}
 import org.apache.flink.table.util.FlinkRelOptUtil._
@@ -161,7 +164,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     val subIntervals = union
         .getInputs
         .map(fmq.getColumnInterval(_, index))
-    if (subIntervals.contains(null)) null else subIntervals.reduceLeft(ValueInterval.union)
+    subIntervals.reduceLeft(ValueInterval.union)
   }
 
   /**
@@ -197,7 +200,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
   def getColumnInterval(filter: Filter, mq: RelMetadataQuery, index: Int): ValueInterval = {
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     val inputValueInterval = fmq.getColumnInterval(filter.getInput, index)
-    getColumnInterval(
+    getColumnIntervalWithFilter(
       Option(inputValueInterval),
       filter.getCondition,
       index,
@@ -241,7 +244,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
         val condition = rexProgram.getCondition
         if (condition != null) {
           val predicate = rexProgram.expandLocalRef(rexProgram.getCondition)
-          getColumnInterval(
+          getColumnIntervalWithFilter(
             Option(inputValueInterval),
             predicate,
             sourceFieldIndex,
@@ -258,7 +261,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
           ValueInterval(literalValue, literalValue)
         }
 
-      case rexCall: RexCall if rexCall.op.isInstanceOf[SqlBinaryOperator] =>
+      case rexCall: RexCall =>
         getRexNodeInterval(rexCall, calc, mq)
       case _ => null
     }
@@ -272,6 +275,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     rexNode match {
       case inputRef: RexInputRef =>
         fmq.getColumnInterval(baseNode.getInput, inputRef.getIndex)
+
       case literal: RexLiteral =>
         val literalValue = getLiteralValue(literal)
         if (literalValue == null) {
@@ -279,6 +283,26 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
         } else {
           ValueInterval(literalValue, literalValue)
         }
+
+      case caseCall: RexCall if caseCall.getKind == SqlKind.CASE =>
+        // compute all the possible result values of this case when clause,
+        // the result values is the value interval
+        val operands = caseCall.getOperands
+        val operandCount = operands.size()
+        val possibleValueIntervals = operands.indices
+          // filter expressions which is condition
+          .filter(i => i % 2 != 0 || i == operandCount - 1)
+          .map(operands(_))
+          .map(getRexNodeInterval(_, baseNode, mq))
+        possibleValueIntervals.reduceLeft(ValueInterval.union)
+
+      case ifCall: RexCall if ifCall.getOperator == ScalarSqlFunctions.IF =>
+        // compute all the possible result values of this IF clause,
+        // the result values is the value interval
+        val trueValueInterval = getRexNodeInterval(ifCall.getOperands.get(1), baseNode, mq)
+        val falseValueInterval = getRexNodeInterval(ifCall.getOperands.get(2), baseNode, mq)
+        ValueInterval.union(trueValueInterval, falseValueInterval)
+
       case rexCall: RexCall if rexCall.op.isInstanceOf[SqlBinaryOperator] =>
         val leftValueInterval = getRexNodeInterval(rexCall.operands.get(0), baseNode, mq)
         val rightValueInterval = getRexNodeInterval(rexCall.operands.get(1), baseNode, mq)
@@ -286,6 +310,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
           rexCall,
           leftValueInterval,
           rightValueInterval)
+
       case _ => null
     }
   }
@@ -314,7 +339,7 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     if (joinCondition == null || joinCondition.isAlwaysTrue) {
       inputValueInterval
     } else {
-      getColumnInterval(
+      getColumnIntervalWithFilter(
         Option(inputValueInterval),
         joinCondition,
         index,
@@ -646,6 +671,17 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     */
   def getColumnInterval(rel: RelNode, mq: RelMetadataQuery, index: Int): ValueInterval = null
 
+
+}
+
+object FlinkRelMdColumnInterval {
+
+  private val INSTANCE = new FlinkRelMdColumnInterval
+
+  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
+    FlinkMetadata.ColumnInterval.METHOD, INSTANCE)
+
+
   /**
     * Calculate the interval of column which is referred in predicate expression, and intersect the
     * result with the origin interval of the column.
@@ -666,11 +702,11 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
     * @param rexBuilder     RexBuilder instance to analyze the predicate expression
     * @return
     */
-  private def getColumnInterval(
-      originInterval: Option[ValueInterval],
-      predicate: RexNode,
-      inputRef: Int,
-      rexBuilder: RexBuilder): ValueInterval = {
+  def getColumnIntervalWithFilter(
+    originInterval: Option[ValueInterval],
+    predicate: RexNode,
+    inputRef: Int,
+    rexBuilder: RexBuilder): ValueInterval = {
     val beginInterval = originInterval match {
       case Some(interval) => interval
       case _ => ValueInterval.infinite
@@ -682,8 +718,8 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
         val interval = orParts.map(or => {
           val andParts = RexUtil.flattenAnd(Vector(or))
           andParts.map(and => columnIntervalOfSinglePredicate(and))
-              .filter(_ != null)
-              .foldLeft(beginInterval)(ValueInterval.intersect)
+          .filter(_ != null)
+          .foldLeft(beginInterval)(ValueInterval.intersect)
         }).reduceLeft(ValueInterval.union)
         if (interval == ValueInterval.infinite) null else interval
       case None => beginInterval
@@ -721,14 +757,4 @@ class FlinkRelMdColumnInterval private extends MetadataHandler[ColumnInterval] {
       }
     }
   }
-
-}
-
-object FlinkRelMdColumnInterval {
-
-  private val INSTANCE = new FlinkRelMdColumnInterval
-
-  val SOURCE: RelMetadataProvider = ReflectiveRelMetadataProvider.reflectiveSource(
-    FlinkMetadata.ColumnInterval.METHOD, INSTANCE)
-
 }
