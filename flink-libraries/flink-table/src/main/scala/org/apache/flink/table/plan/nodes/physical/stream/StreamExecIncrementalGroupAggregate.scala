@@ -103,8 +103,7 @@ class StreamExecIncrementalGroupAggregate(
       getRowType,
       finalAggInfoList,
       groupKey,
-      shuffleKey = Some(shuffleKey),
-      isGlobal = true)})"
+      shuffleKey = Some(shuffleKey))})"
     s"IncrementalGroupAggregate($shuffleKeyToStr, $groupKeyToStr, $selectToStr)"
   }
 
@@ -117,8 +116,7 @@ class StreamExecIncrementalGroupAggregate(
         getRowType,
         finalAggInfoList,
         groupKey,
-        shuffleKey = Some(shuffleKey),
-        isGlobal = true))
+        shuffleKey = Some(shuffleKey)))
   }
 
   override def translateToPlan(

@@ -282,10 +282,11 @@ trait CommonAggregate {
       case None => grouping.length
       case Some(k) => k.length
     }
+    val isIncremental: Boolean = shuffleKey.isDefined
 
     val aggStrings = if (isLocal) {
       stringifyLocalAggregates(aggInfos, distincts, distinctAggs, aggFilters, inFields)
-    } else if (isGlobal) {
+    } else if (isGlobal || isIncremental) {
       val accFieldNames = inputType.getFieldNames.asScala
       val aggOutputFieldNames = localAggOutputFieldNames(aggOffset, aggInfos, accFieldNames)
       stringifyGlobalAggregates(aggInfos, distinctAggs, aggOutputFieldNames)
@@ -295,6 +296,9 @@ trait CommonAggregate {
 
     val outputFieldNames = if (isLocal) {
       grouping.map(inFields(_)) ++ localAggOutputFieldNames(aggOffset, aggInfos, outFields)
+    } else if (isIncremental) {
+      val accFieldNames = inputType.getFieldNames.asScala
+      grouping.map(inFields(_)) ++ localAggOutputFieldNames(aggOffset, aggInfos, accFieldNames)
     } else {
       outFields
     }

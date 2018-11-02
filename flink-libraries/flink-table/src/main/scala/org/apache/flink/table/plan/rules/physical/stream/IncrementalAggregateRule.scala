@@ -17,6 +17,8 @@
  */
 package org.apache.flink.table.plan.rules.physical.stream
 
+import java.util.Collections
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.flink.table.api.StreamQueryConfig
@@ -38,11 +40,6 @@ class IncrementalAggregateRule
     val finalGlobalAgg = call.rel[StreamExecGlobalGroupAggregate](0)
     val finalLocalAgg = call.rel[StreamExecLocalGroupAggregate](2)
     val partialAgg = call.rel[StreamExecGlobalGroupAggregate](3)
-    // when the final agg contains an additional count1, currently we cannot merge aggs into
-    // incremental agg which contains additional count1. When the partial agg input stream
-    // is not a retract stream, the additional count1 can be ignored.
-    // TODO: ignore count1 when optimize to local global aggs, after retraction rule refactoring
-    val count1Inserted = partialAgg.globalAggInfoList.count1AggInserted
 
     val config = partialAgg.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
 
@@ -53,7 +50,6 @@ class IncrementalAggregateRule
     partialAgg.partialFinal == PartialFinalType.PARTIAL &&
       finalLocalAgg.partialFinal == PartialFinalType.FINAL &&
       finalGlobalAgg.partialFinal == PartialFinalType.FINAL &&
-      !count1Inserted &&
       incrAggEnabled
   }
 
@@ -96,7 +92,7 @@ class IncrementalAggregateRule
 
     val incrAggOutputRowType = inferLocalAggRowType(
       incrAggInfoList,
-      aggInputRowType,
+      partialAgg.getRowType,
       finalGlobalAgg.groupings,
       typeFactory)
 
@@ -114,50 +110,61 @@ class IncrementalAggregateRule
 
     val newExchange = exchange.copy(exchange.getTraitSet, incrAgg, exchange.distribution)
 
-    // an additional count1 is inserted, need to adapt the global agg
-    val localAggInfoList = transformToStreamAggregateInfoList(
-      aggCalls,
-      // the final agg input is partial agg
-      partialAgg.getRowType,
-      // all the aggs do not need retraction
-      Array.fill(aggCalls.length)(false),
-      // also do not need count*
-      needInputCount = false,
-      // the local agg is not works on state
-      isStateBackendDataViews = false)
-    val globalAggInfoList = transformToStreamAggregateInfoList(
-      aggCalls,
-      // the final agg input is partial agg
-      partialAgg.getRowType,
-      // all the aggs do not need retraction
-      Array.fill(aggCalls.length)(false),
-      // also do not need count*
-      needInputCount = false,
-      // the global agg is works on state
-      isStateBackendDataViews = true)
+    val partialAggCount1Inserted = partialAgg.globalAggInfoList.count1AggInserted
 
-    // check whether the global agg required input row type equals the incr agg output row type
-    val globalAggInputRowType = inferLocalAggRowType(
-      localAggInfoList,
-      incrAgg.getRowType,
-      finalGlobalAgg.groupings,
-      typeFactory)
+    val globalAgg = if (partialAggCount1Inserted) {
+      val globalAggInputAccType = finalLocalAgg.getRowType
+      Preconditions.checkState(RelOptUtil.areRowTypesEqual(
+        incrAggOutputRowType,
+        globalAggInputAccType,
+        false))
+      finalGlobalAgg.copy(finalGlobalAgg.getTraitSet, Collections.singletonList(newExchange))
+    } else {
+      // an additional count1 is inserted, need to adapt the global agg
+      val localAggInfoList = transformToStreamAggregateInfoList(
+        aggCalls,
+        // the final agg input is partial agg
+        partialAgg.getRowType,
+        // all the aggs do not need retraction
+        Array.fill(aggCalls.length)(false),
+        // also do not need count*
+        needInputCount = false,
+        // the local agg is not works on state
+        isStateBackendDataViews = false)
+      val globalAggInfoList = transformToStreamAggregateInfoList(
+        aggCalls,
+        // the final agg input is partial agg
+        partialAgg.getRowType,
+        // all the aggs do not need retraction
+        Array.fill(aggCalls.length)(false),
+        // also do not need count*
+        needInputCount = false,
+        // the global agg is works on state
+        isStateBackendDataViews = true)
 
-    Preconditions.checkState(RelOptUtil.areRowTypesEqual(
-      incrAggOutputRowType,
-      globalAggInputRowType,
-      false))
+      // check whether the global agg required input row type equals the incr agg output row type
+      val globalAggInputAccType = inferLocalAggRowType(
+        localAggInfoList,
+        incrAgg.getRowType,
+        finalGlobalAgg.groupings,
+        typeFactory)
 
-    val globalAgg = new StreamExecGlobalGroupAggregate(
-      finalGlobalAgg.getCluster,
-      finalGlobalAgg.getTraitSet,
-      newExchange,
-      localAggInfoList, // the agg info list is changed
-      globalAggInfoList, // the agg info list is changed
-      finalGlobalAgg.aggInputRowType,
-      finalGlobalAgg.getRowType,
-      finalGlobalAgg.groupings,
-      finalGlobalAgg.partialFinal)
+      Preconditions.checkState(RelOptUtil.areRowTypesEqual(
+        incrAggOutputRowType,
+        globalAggInputAccType,
+        false))
+
+      new StreamExecGlobalGroupAggregate(
+        finalGlobalAgg.getCluster,
+        finalGlobalAgg.getTraitSet,
+        newExchange,
+        localAggInfoList, // the agg info list is changed
+        globalAggInfoList, // the agg info list is changed
+        finalGlobalAgg.aggInputRowType,
+        finalGlobalAgg.getRowType,
+        finalGlobalAgg.groupings,
+        finalGlobalAgg.partialFinal)
+    }
 
     call.transformTo(globalAgg)
   }

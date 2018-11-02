@@ -60,8 +60,13 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
   }
 
   @Test
-  def testSingleDistinctAggAndOneOrMultiNonDistinctAgg(): Unit = {
-    val sqlQuery = "SELECT SUM(b), COUNT(DISTINCT c), AVG(b) FROM MyTable GROUP BY a"
+  def testSingleDistinctAggWithAllNonDistinctAgg(): Unit = {
+    val sqlQuery =
+      """
+        |SELECT a, COUNT(DISTINCT c), SUM(b), AVG(b), MAX(b), MIN(b), COUNT(b), COUNT(*)
+        |FROM MyTable
+        |GROUP BY a
+      """.stripMargin
     streamUtil.verifyPlan(sqlQuery)
   }
 
@@ -100,14 +105,28 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
   }
 
   @Test
+  def testSingleDistinctWithRetraction(): Unit = {
+    val sql =
+      """
+        |SELECT a, COUNT(DISTINCT b), COUNT(1)
+        |FROM (
+        |  SELECT c, AVG(a) as a, AVG(b) as b
+        |  FROM MyTable
+        |  GROUP BY c
+        |) GROUP BY a
+      """.stripMargin
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
   def testMinMaxWithRetraction(): Unit = {
     val sqlQuery =
       s"""
          |SELECT
-         |  c, MIN(b), MAX(b), COUNT(DISTINCT a)
+         |  c, MIN(b), MAX(b), SUM(b), COUNT(*), COUNT(DISTINCT a)
          |FROM(
          |  SELECT
-         |    a, COUNT(DISTINCT b) as b, MAX(b) as c
+         |    a, AVG(b) as b, MAX(c) as c
          |  FROM MyTable
          |  GROUP BY a
          |) GROUP BY c

@@ -25,7 +25,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.stream.sql.SplitAggregateITCase.PartialAggMode
 import org.apache.flink.table.runtime.utils.{StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
-import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchOn
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MicroBatchOn
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
@@ -41,7 +41,7 @@ class SplitAggregateITCase(
     partialAggMode: PartialAggMode,
     aggMode: AggMode,
     backend: StateBackendMode)
-  extends StreamingWithAggTestBase(aggMode, MiniBatchOn, backend) {
+  extends StreamingWithAggTestBase(aggMode, MicroBatchOn, backend) {
 
   @Before
   override def before(): Unit = {
@@ -241,6 +241,35 @@ class SplitAggregateITCase(
                         "2,2,2,1,4,6,Hello 1", "5,1,4,2,3,5,Hello 0", "5,1,4,2,3,5,Hello 1",
                         "6,2,2,1,4,5,Hello 2", "6,2,2,1,4,5,Hello 3", "6,2,2,1,4,5,null",
                         "6,2,2,1,4,6,Hello 1")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testUvWithRetraction(): Unit = {
+    val data = (0 until 1000).map {i => (s"${i%10}", s"${i%100}", s"$i")}.toList
+    val t = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("src", t)
+
+    val sql =
+      s"""
+         |SELECT
+         |  a,
+         |  COUNT(distinct b) as uv
+         |FROM (
+         |  SELECT a, b, last_value(c)
+         |  FROM src
+         |  GROUP BY a, b
+         |) t
+         |GROUP BY a
+     """.stripMargin
+
+    val t1 = tEnv.sqlQuery(sql)
+    val sink = new TestingRetractSink
+    t1.toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("0,10", "1,10", "2,10", "3,10", "4,10",
+                        "5,10", "6,10", "7,10", "8,10", "9,10")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
