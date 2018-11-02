@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.runtime.functions;
 
-import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -50,7 +49,20 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataview.KeyedStateListView;
+import org.apache.flink.table.dataview.KeyedStateMapView;
+import org.apache.flink.table.dataview.KeyedStateSortedMapView;
+import org.apache.flink.table.dataview.NullAwareKeyedStateMapView;
+import org.apache.flink.table.dataview.NullAwareSubKeyedStateMapView;
 import org.apache.flink.table.dataview.StateDataView;
+import org.apache.flink.table.dataview.StateListView;
+import org.apache.flink.table.dataview.StateMapView;
+import org.apache.flink.table.dataview.StateSortedMapView;
+import org.apache.flink.table.dataview.SubKeyedStateListView;
+import org.apache.flink.table.dataview.SubKeyedStateMapView;
+import org.apache.flink.table.typeutils.ListViewTypeInfo;
+import org.apache.flink.table.typeutils.MapViewTypeInfo;
+import org.apache.flink.table.typeutils.SortedMapViewTypeInfo;
 import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;
@@ -62,6 +74,8 @@ import java.util.List;
  */
 @SuppressWarnings("unchecked")
 public final class ExecutionContextImpl implements ExecutionContext {
+
+	private static final String NULL_STATE_POSTFIX = "_null_state";
 
 	private final AbstractStreamOperator<?> operator;
 	private final RuntimeContext runtimeContext;
@@ -97,7 +111,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	@Override
 	public <K, V> KeyedValueState<K, V> getKeyedValueState(
 		ValueStateDescriptor<V> descriptor) {
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedValueStateDescriptor<>(
 				descriptor.getName(),
@@ -111,7 +125,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, V> KeyedListState<K, V> getKeyedListState(
 		ListStateDescriptor<V> descriptor
 	) {
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedListStateDescriptor<>(
 				descriptor.getName(),
@@ -125,7 +139,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, UK, UV> KeyedMapState<K, UK, UV> getKeyedMapState(
 		MapStateDescriptor<UK, UV> descriptor
 	) {
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedMapStateDescriptor<>(
 				descriptor.getName(),
@@ -139,7 +153,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 	public <K, UK, UV> KeyedSortedMapState<K, UK, UV> getKeyedSortedMapState(
 		SortedMapStateDescriptor<UK, UV> descriptor
 	) {
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getKeyedState(
 			new KeyedSortedMapStateDescriptor<>(
 				descriptor.getName(),
@@ -157,7 +171,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getSubKeyedState(
 			new SubKeyedValueStateDescriptor<>(
 				descriptor.getName(),
@@ -176,7 +190,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		return operator.getSubKeyedState(new SubKeyedListStateDescriptor<>(
 			descriptor.getName(),
 			(TypeSerializer<K>) operator.getKeySerializer(),
@@ -192,7 +206,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
 
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		MapSerializer<UK, UV> mapSerializer = (MapSerializer<UK, UV>) descriptor.getSerializer();
 		return operator.getSubKeyedState(new SubKeyedMapStateDescriptor<>(
 			descriptor.getName(),
@@ -209,7 +223,7 @@ public final class ExecutionContextImpl implements ExecutionContext {
 		if (namespaceSerializer == null) {
 			throw new RuntimeException("The namespace serializer has not been initialized.");
 		}
-		descriptor.initializeSerializerUnlessSet(new ExecutionConfig());
+		descriptor.initializeSerializerUnlessSet(operator.getExecutionConfig());
 		SortedMapSerializer<UK, UV> sortedMapSerializer = (SortedMapSerializer<UK, UV>) descriptor.getSerializer();
 		return operator.getSubKeyedState(new SubKeyedSortedMapStateDescriptor<>(
 			descriptor.getName(),
@@ -218,6 +232,79 @@ public final class ExecutionContextImpl implements ExecutionContext {
 			sortedMapSerializer.getComparator(),
 			sortedMapSerializer.getKeySerializer(),
 			sortedMapSerializer.getValueSerializer()));
+	}
+
+	@Override
+	public <K, UK, UV> StateMapView<K, UK, UV> getStateMapView(
+		String stateName,
+		MapViewTypeInfo<UK, UV> mapViewTypeInfo,
+		boolean hasNamespace) {
+
+		MapStateDescriptor<UK, UV> mapStateDescriptor = new MapStateDescriptor<>(
+			stateName,
+			mapViewTypeInfo.keyType(),
+			mapViewTypeInfo.valueType());
+
+		ValueStateDescriptor<UV> nullStateDescriptor = new ValueStateDescriptor<>(
+			stateName + NULL_STATE_POSTFIX,
+			mapViewTypeInfo.valueType());
+
+		if (hasNamespace) {
+			SubKeyedMapState<K, Object, UK, UV> mapState = getSubKeyedMapState(mapStateDescriptor);
+			if (mapViewTypeInfo.nullAware()) {
+				SubKeyedValueState<K, Object, UV> nullState = getSubKeyedValueState(nullStateDescriptor);
+				return new NullAwareSubKeyedStateMapView<>(mapState, nullState);
+			} else {
+				return new SubKeyedStateMapView<>(mapState);
+			}
+		} else {
+			KeyedMapState<K, UK, UV> mapState = getKeyedMapState(mapStateDescriptor);
+			if (mapViewTypeInfo.nullAware()) {
+				KeyedValueState<K, UV> nullState = getKeyedValueState(nullStateDescriptor);
+				return new NullAwareKeyedStateMapView<>(mapState, nullState);
+			} else {
+				return new KeyedStateMapView<>(mapState);
+			}
+		}
+	}
+
+	@Override
+	public <K, UK, UV> StateSortedMapView<K, UK, UV> getStateSortedMapView(
+		String stateName,
+		SortedMapViewTypeInfo<UK, UV> sortedMapViewTypeInfo,
+		boolean hasNamespace) {
+
+		SortedMapStateDescriptor<UK, UV> sortedMapStateDesc = new SortedMapStateDescriptor<>(
+			stateName,
+			sortedMapViewTypeInfo.comparator,
+			sortedMapViewTypeInfo.keyType,
+			sortedMapViewTypeInfo.valueType);
+
+		if (!hasNamespace) {
+			KeyedSortedMapState<K, UK, UV> mapState = getKeyedSortedMapState(sortedMapStateDesc);
+			return new KeyedStateSortedMapView<>(mapState);
+		} else {
+			throw new UnsupportedOperationException("SubKeyedState SortedMapView is not supported currently");
+		}
+	}
+
+	@Override
+	public <K, V> StateListView<K, V> getStateListView(
+		String stateName,
+		ListViewTypeInfo<V> listViewTypeInfo,
+		boolean hasNamespace) {
+
+		ListStateDescriptor<V> listStateDesc = new ListStateDescriptor<>(
+			stateName,
+			listViewTypeInfo.elementType());
+
+		if (hasNamespace) {
+			SubKeyedListState<K, Object, V> listState = getSubKeyedListState(listStateDesc);
+			return new SubKeyedStateListView<>(listState);
+		} else {
+			KeyedListState<K, V> listState = getKeyedListState(listStateDesc);
+			return new KeyedStateListView<>(listState);
+		}
 	}
 
 	@Override

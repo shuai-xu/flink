@@ -54,8 +54,10 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
         conf.setString(GeminiConfiguration.GEMINI_COPY_VALUE, "true")
         env.setStateBackend(new MemoryStateBackend().configure(conf))
       case ROCKSDB_BACKEND =>
+        val conf = new Configuration()
+        conf.setBoolean(CheckpointingOptions.INCREMENTAL_CHECKPOINTS, true)
         env.setStateBackend(new RocksDBStateBackend(
-          "file://" + tempFolder.newFolder().getAbsoluteFile))
+          "file://" + tempFolder.newFolder().getAbsoluteFile).configure(conf))
     }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
     FailingCollectionSource.failedBefore = true

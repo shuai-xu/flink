@@ -20,12 +20,11 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.api.java.tuple.{Tuple1, Tuple2}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeProcessOperator
 import org.apache.flink.table.api.StreamQueryConfig
-import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils.{CountNullNonNull, CountPairs, LargerThanCount}
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithStateTestBase, TestingAppendSink}
 import org.apache.flink.types.Row
 import org.junit.Assert._
@@ -1026,58 +1025,4 @@ class OverWindowITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
       "B,Hello World,10,7")
     assertEquals(expected, sink.getAppendResults)
   }
-}
-
-/** Counts how often the first argument was larger than the second argument. */
-class LargerThanCount extends AggregateFunction[Long, Tuple1[Long]] {
-
-  def accumulate(acc: Tuple1[Long], a: Long, b: Long): Unit = {
-    if (a > b) acc.f0 += 1
-  }
-
-  def retract(acc: Tuple1[Long], a: Long, b: Long): Unit = {
-    if (a > b) acc.f0 -= 1
-  }
-
-  override def createAccumulator(): Tuple1[Long] = Tuple1.of(0L)
-
-  override def getValue(acc: Tuple1[Long]): Long = acc.f0
-}
-
-class CountNullNonNull extends AggregateFunction[String, Tuple2[Long, Long]] {
-
-  override def createAccumulator(): Tuple2[Long, Long] = Tuple2.of(0L, 0L)
-
-  override def getValue(acc: Tuple2[Long, Long]): String = s"${acc.f0}|${acc.f1}"
-
-  def accumulate(acc: Tuple2[Long, Long], v: String): Unit = {
-    if (v == null) {
-      acc.f1 += 1
-    } else {
-      acc.f0 += 1
-    }
-  }
-
-  def retract(acc: Tuple2[Long, Long], v: String): Unit = {
-    if (v == null) {
-      acc.f1 -= 1
-    } else {
-      acc.f0 -= 1
-    }
-  }
-}
-
-class CountPairs extends AggregateFunction[Long, Tuple1[Long]] {
-
-  def accumulate(acc: Tuple1[Long], a: String, b: String): Unit = {
-    acc.f0 += 1
-  }
-
-  def retract(acc: Tuple1[Long], a: String, b: String): Unit = {
-    acc.f0 -= 1
-  }
-
-  override def createAccumulator(): Tuple1[Long] = Tuple1.of(0L)
-
-  override def getValue(acc: Tuple1[Long]): Long = acc.f0
 }

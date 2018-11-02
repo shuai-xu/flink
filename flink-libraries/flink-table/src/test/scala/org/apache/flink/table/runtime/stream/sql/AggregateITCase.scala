@@ -34,6 +34,7 @@ import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.VarSumAg
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
+import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils.CountNullNonNull
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
@@ -783,7 +784,7 @@ class AggregateITCase(
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  @Test @Ignore
+  @Test
   def testMinMaxWithBinaryString(): Unit = {
     val data = new mutable.MutableList[(Int, Long, String)]
     data.+=((1, 1L, "A"))
@@ -880,7 +881,7 @@ class AggregateITCase(
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
-  @Test @Ignore
+  @Test
   def testMinMaxWithDecimal(): Unit = {
     val data = new mutable.MutableList[Row]
     data.+=(Row.of(BigDecimal(1).bigDecimal))

@@ -215,11 +215,6 @@ public class BundleOperator<K, V, IN, OUT>
 	}
 
 	@Override
-	public void endInput() throws Exception {
-		finishBundle();
-	}
-
-	@Override
 	public void initializeState(StateInitializationContext context) throws Exception {
 		super.initializeState(context);
 		TypeInformation<Tuple2<K, V>> tupleType = new TupleTypeInfo<>(keyType, valueType);

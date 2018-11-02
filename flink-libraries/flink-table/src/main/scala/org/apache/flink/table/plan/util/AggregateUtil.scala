@@ -43,7 +43,7 @@ import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregate
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.types.DataTypes._
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, DecimalType}
-import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, BoxedValueTypeInfo, MapViewTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, MapViewTypeInfo, TypeUtils}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -53,7 +53,6 @@ object AggregateUtil extends Enumeration {
 
   type CalcitePair[T, R] = org.apache.calcite.util.Pair[T, R]
   type JavaList[T] = java.util.List[T]
-  type AggregateType = Value
 
   def transformToBatchAggregateFunctions(
       aggregateCalls: Seq[AggregateCall],
@@ -330,7 +329,9 @@ object AggregateUtil extends Enumeration {
       val accTypeInfo = new MapViewTypeInfo(
         TypeUtils.createTypeInfoFromDataType(d.keyType),
         valueType,
-        isStateBackedDataViews)
+        isStateBackedDataViews,
+        // the mapview serializer should handle null keys
+        nullAware = true)
 
       val distinctMapViewSpec = if (isStateBackedDataViews) {
         Some(MapViewSpec(
@@ -357,23 +358,22 @@ object AggregateUtil extends Enumeration {
 
   def createDistinctKeyType(argTypes: Array[DataType]): DataType = {
     if (argTypes.length == 1) {
-      val typeInfo: TypeInformation[_] = argTypes(0) match {
-        case BYTE => Types.BYTE
-        case SHORT => Types.SHORT
-        case INT => Types.INT
-        case LONG => Types.LONG
-        case FLOAT => Types.FLOAT
-        case DOUBLE => Types.DOUBLE
-        case BOOLEAN => Types.BOOLEAN
-        case DATE | TIME => Types.INT
-        case TIMESTAMP => Types.LONG
-        case STRING => BinaryStringTypeInfo.INSTANCE
-        case d: DecimalType => Types.DECIMAL(d.precision(), d.scale())
+      argTypes(0) match {
+        case BYTE => BYTE
+        case SHORT => SHORT
+        case INT => INT
+        case LONG => LONG
+        case FLOAT => FLOAT
+        case DOUBLE => DOUBLE
+        case BOOLEAN => BOOLEAN
+        case DATE | TIME => INT
+        case TIMESTAMP => LONG
+        case STRING => DataTypes.of(BinaryStringTypeInfo.INSTANCE)
+        case d: DecimalType => d
         case t =>
           throw new TableException(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Distinct", t.toString))
       }
-      DataTypes.of(new BoxedValueTypeInfo(typeInfo))
     } else {
       new BaseRowType(argTypes.map(DataTypes.internal): _*)
     }
@@ -535,14 +535,6 @@ object AggregateUtil extends Enumeration {
   def timeFieldIndex(inputType: RelDataType, relBuilder: RelBuilder, timeField: Expression): Int = {
     timeField.toRexNode(relBuilder.values(inputType)).asInstanceOf[RexInputRef].getIndex
   }
-}
-
-/** ALL aggregate types, this type is used in optimization rules for easy mapping aggregates */
-object AggregateType extends Enumeration {
-  type AggregateType = Value
-  val SUM, SUM0, COUNT, COUNT1, COUNT_DISTINCT, MAX, MIN, AVG,
-  SINGLE_VALUE, FIRST_VALUE, LAST_VALUE, CONCAT_AGG, CONCAT_WS_AGG,
-  COLLECT, OTHER = Value
 }
 
 /**

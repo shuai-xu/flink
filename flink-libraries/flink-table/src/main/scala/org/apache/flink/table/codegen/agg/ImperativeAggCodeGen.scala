@@ -25,7 +25,7 @@ import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
-import org.apache.flink.table.expressions.ResolvedBoxedValueInputReference
+import org.apache.flink.table.expressions.ResolvedDistinctKeyReference
 import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
 import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
@@ -109,7 +109,7 @@ class ImperativeAggCodeGen(
 
   val viewSpecs: Array[DataViewSpec] = aggInfo.viewSpecs
   // add reusable dataviews to context
-  addReusableStateDataViews(ctx, hasNamespace, !mergedAccOnHeap, viewSpecs)
+  addReusableStateDataViews(ctx, viewSpecs, hasNamespace, !mergedAccOnHeap)
 
   def createAccumulator(generator: ExprCodeGenerator): Seq[GeneratedExpression] = {
     // do not set dataview into the acc in createAccumulator
@@ -279,7 +279,7 @@ class ImperativeAggCodeGen(
         val inputRef = if (generator.input1Term.startsWith(DISTINCT_KEY_TERM)) {
           if (argTypes.length == 1) {
             // called from distinct merge and the inputTerm is the only argument
-            ResolvedBoxedValueInputReference(generator.input1Term, inputTypes(f))
+            ResolvedDistinctKeyReference(generator.input1Term, inputTypes(f))
           } else {
             // called from distinct merge call and the inputTerm is BaseRow type
             ResolvedAggInputReference(f.toString, index, inputTypes(f))

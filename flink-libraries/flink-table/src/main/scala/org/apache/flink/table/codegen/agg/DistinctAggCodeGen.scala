@@ -28,7 +28,7 @@ import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.GeneratedExpression._
-import org.apache.flink.table.dataformat.{BoxedValue, GenericRow}
+import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.DistinctInfo
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
@@ -67,6 +67,7 @@ class DistinctAggCodeGen(
   aggBufferOffset: Int,
   aggBufferSize: Int,
   hasNamespace: Boolean,
+  needMerge: Boolean,
   mergedAccOnHeap: Boolean,
   consumeRetraction: Boolean,
   inputFieldCopy: Boolean,
@@ -75,7 +76,6 @@ class DistinctAggCodeGen(
   val MAP_VIEW: String = className[MapView[_, _]]
   val MAP_ENTRY: String = className[java.util.Map.Entry[_, _]]
   val ITERABLE: String = className[java.lang.Iterable[_]]
-  val BOXED_VALUE: String = className[BoxedValue[_]]
 
   val aggCount: Int = innerAggCodeGens.length
   val externalAccType: DataType = distinctInfo.accType
@@ -101,14 +101,14 @@ class DistinctAggCodeGen(
       Preconditions.checkState(distinctInfo.dataViewSpec.nonEmpty)
     }
 
-    val enableBackupDataView = !mergedAccOnHeap
+    val enableBackupDataView = needMerge && !mergedAccOnHeap
 
     // add state mapview to member field
     addReusableStateDataViews(
       ctx,
+      distinctInfo.dataViewSpec.toArray,
       hasNamespace,
-      enableBackupDataView,
-      distinctInfo.dataViewSpec.toArray)
+      enableBackupDataView)
 
 
     // add distinctAccTerm to member field
@@ -371,15 +371,16 @@ class DistinctAggCodeGen(
     } else {
       val fieldExpr = fieldExprs.head
       val keyTerm = newName(DISTINCT_KEY_TERM)
+      val bType = boxedTypeTermForType(fieldExpr.resultType)
       val code =
         s"""
-          |${fieldExpr.code}
-          |$BOXED_VALUE $keyTerm = new $BOXED_VALUE();
-          |if (!${fieldExpr.nullTerm}) {
-          |  $keyTerm.setValue(${fieldExpr.resultTerm});
-          |}
-        """.stripMargin
-      GeneratedExpression(keyTerm, NEVER_NULL, code, DataTypes.internal(keyType))
+           |${fieldExpr.code}
+           |$bType $keyTerm = ($bType) ${fieldExpr.resultTerm};
+           |if (${fieldExpr.nullTerm}) {
+           |  $keyTerm = null;
+           |}
+         """.stripMargin
+      GeneratedExpression(keyTerm, fieldExpr.nullTerm, code, fieldExpr.resultType)
     }
   }
 

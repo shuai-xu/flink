@@ -186,10 +186,10 @@ case class ResolvedAggLocalReference(
 }
 
 /**
-  * Special reference which represent a BoxedValue input filed,
-  * [[ResolvedBoxedValueInputReference]] uses name to locate the field.
+  * Special reference which represent a distinct key input filed,
+  * [[ResolvedDistinctKeyReference]] uses name to locate the field.
   */
-case class ResolvedBoxedValueInputReference(
+case class ResolvedDistinctKeyReference(
     name: String,
     resultType: InternalType)
   extends Attribute {
@@ -198,7 +198,7 @@ case class ResolvedBoxedValueInputReference(
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     val typeFactory = relBuilder.getRexBuilder.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    RexBoxedValueVariable(
+    RexDistinctKeyVariable(
       name,
       typeFactory.createTypeFromInternalType(resultType, isNullable = true),
       DataTypes.internal(resultType))
@@ -206,7 +206,7 @@ case class ResolvedBoxedValueInputReference(
 
   override private[flink] def withName(newName: String): Attribute = {
     if (newName == name) this
-    else ResolvedBoxedValueInputReference(newName, resultType)
+    else ResolvedDistinctKeyReference(newName, resultType)
   }
 
   override def accept[T](logicalExprVisitor: LogicalExprVisitor[T]): T =

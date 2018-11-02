@@ -38,6 +38,12 @@ import org.apache.flink.runtime.state.subkeyed.SubKeyedStateDescriptor;
 import org.apache.flink.runtime.state.subkeyed.SubKeyedValueState;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataview.StateDataView;
+import org.apache.flink.table.dataview.StateListView;
+import org.apache.flink.table.dataview.StateMapView;
+import org.apache.flink.table.dataview.StateSortedMapView;
+import org.apache.flink.table.typeutils.ListViewTypeInfo;
+import org.apache.flink.table.typeutils.MapViewTypeInfo;
+import org.apache.flink.table.typeutils.SortedMapViewTypeInfo;
 
 /**
  * A ExecutionContext contains information about the context in which functions are executed and
@@ -157,6 +163,43 @@ public interface ExecutionContext {
 	 */
 	<K, N, UK, UV> SubKeyedSortedMapState<K, N, UK, UV> getSubKeyedSortedMapState(
 		final SortedMapStateDescriptor<UK, UV> descriptor);
+
+	/**
+	 * Creates a state map view.
+	 * @param stateName The name of underlying state of the map view
+	 * @param mapViewTypeInfo The type of the map view
+	 * @param hasNamespace whether the state map view works on subkeyed state
+	 * @param <K> Type of the key
+	 * @param <UK> Type of the keys in the map state
+	 * @param <UV> Type of the values in the map state
+	 * @return a keyed map state
+	 */
+	<K, UK, UV> StateMapView<K, UK, UV> getStateMapView(
+		String stateName, MapViewTypeInfo<UK, UV> mapViewTypeInfo, boolean hasNamespace);
+
+	/**
+	 * Creates a state map view.
+	 * @param stateName The name of underlying state of the sorted map view
+	 * @param sortedMapViewTypeInfo The type of the sorted map view
+	 * @param <K> Type of the key
+	 * @param <UK> Type of the keys in the map state
+	 * @param <UV> Type of the values in the map state
+	 * @return a keyed map state
+	 */
+	<K, UK, UV> StateSortedMapView<K, UK, UV> getStateSortedMapView(
+		String stateName, SortedMapViewTypeInfo<UK, UV> sortedMapViewTypeInfo, boolean hasNamespace);
+
+	/**
+	 * Creates a state list view.
+	 * @param stateName The name of underlying state of the list view
+	 * @param listViewTypeInfo The type of the list view
+	 * @param hasNamespace whether the state list view works on subkeyed state
+	 * @param <K> Type of the key
+	 * @param <V> Type of the elements in the list state
+	 * @return a keyed list state
+	 */
+	<K, V> StateListView<K, V> getStateListView(
+		String stateName, ListViewTypeInfo<V> listViewTypeInfo, boolean hasNamespace);
 
 	/**
 	 * Registers stateDataView to the context. {@link #setCurrentKey(BaseRow)} will set the

@@ -25,13 +25,18 @@ import java.util.Map
 import org.apache.flink.runtime.state.keyed.KeyedSortedMapState
 import org.apache.flink.table.api.dataview.SortedMapView
 
+// -------------------------------------------------------------------------------------
+//                                State SortedMapView
+// -------------------------------------------------------------------------------------
+
+trait StateSortedMapView[K, MK, MV] extends SortedMapView[MK, MV] with StateDataView[K]
+
 /**
   * [[SubKeyedStateMapView]] is a [[KeyedSortedMapState]] with [[SortedMapView]] interface
   * which works on group aggregate.
   */
 class KeyedStateSortedMapView[K, MK, MV](state: KeyedSortedMapState[K, MK, MV])
-  extends SortedMapView[MK, MV]
-  with StateDataView[K] {
+  extends StateSortedMapView[K, MK, MV] {
 
   private var stateKey: K = null.asInstanceOf[K]
 

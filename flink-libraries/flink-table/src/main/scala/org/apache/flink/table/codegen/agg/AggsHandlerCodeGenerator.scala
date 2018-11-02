@@ -226,6 +226,7 @@ class AggsHandlerCodeGenerator(
           aggBufferOffset,
           aggBufferSize,
           hasNamespace,
+          needMerge,
           mergedAccOnHeap,
           distinctInfo.consumeRetraction,
           copyInputField,
@@ -728,23 +729,24 @@ object AggsHandlerCodeGenerator {
 
   def addReusableStateDataViews(
       ctx: CodeGeneratorContext,
+      viewSpecs: Array[DataViewSpec],
       hasNamespace: Boolean,
-      enableBackupDataView: Boolean,
-      viewSpecs: Array[DataViewSpec]): Unit = {
+      enableBackupDataView: Boolean): Unit = {
     // add reusable dataviews to context
     viewSpecs.foreach { spec =>
       val viewFieldTerm = createDataViewTerm(spec)
       val backupViewTerm = createDataViewBackupTerm(spec)
       val viewTypeTerm = spec.getStateDataViewClass(hasNamespace).getCanonicalName
       ctx.addReusableMember(s"private $viewTypeTerm $viewFieldTerm;")
-      val descTerm = ctx.addReusableObject(spec.toStateDescriptor, "desc")
-      val createStateCall = spec.getCreateStateCall(hasNamespace)
+      val viewTypeInfo = ctx.addReusableObject(spec.dataViewTypeInfo, "viewTypeInfo")
+      val createStateViewCall = spec.getCreateStateViewCall
+      val parameters = s""""${spec.stateId}", $viewTypeInfo, $hasNamespace"""
 
       val backupOpenCode = if (enableBackupDataView) {
         // create backup dataview
         ctx.addReusableMember(s"private $viewTypeTerm $backupViewTerm;")
         s"""
-           |$backupViewTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+           |$backupViewTerm = ($viewTypeTerm) $CONTEXT_TERM.$createStateViewCall($parameters);
            |$CONTEXT_TERM.registerStateDataView($backupViewTerm);
          """.stripMargin
       } else {
@@ -753,7 +755,7 @@ object AggsHandlerCodeGenerator {
 
       val openCode =
         s"""
-           |$viewFieldTerm = new $viewTypeTerm($CONTEXT_TERM.$createStateCall($descTerm));
+           |$viewFieldTerm = ($viewTypeTerm) $CONTEXT_TERM.$createStateViewCall($parameters);
            |$CONTEXT_TERM.registerStateDataView($viewFieldTerm);
            |$backupOpenCode
          """.stripMargin

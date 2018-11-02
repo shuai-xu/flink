@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.dataview
 
-import org.apache.flink.api.common.state._
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.typeutils.{ListViewTypeInfo, MapViewTypeInfo, SortedMapViewTypeInfo}
 
 /**
@@ -27,19 +27,16 @@ import org.apache.flink.table.typeutils.{ListViewTypeInfo, MapViewTypeInfo, Sort
 trait DataViewSpec {
   def stateId: String
   def fieldIndex: Int
-  def toStateDescriptor: StateDescriptor[_ <: State, _]
+  def dataViewTypeInfo: TypeInformation[_]
   def getStateDataViewClass(hasNamespace: Boolean): Class[_]
-  def getCreateStateCall(hasNamespace: Boolean): String
+  def getCreateStateViewCall: String
 }
 
 case class ListViewSpec[T](
     stateId: String,
     fieldIndex: Int,
-    listViewTypeInfo: ListViewTypeInfo[T])
+    dataViewTypeInfo: ListViewTypeInfo[T])
   extends DataViewSpec {
-
-  override def toStateDescriptor: StateDescriptor[_ <: State, _] =
-    new ListStateDescriptor[T](stateId, listViewTypeInfo.elementType)
 
   override def getStateDataViewClass(hasNamespace: Boolean): Class[_] = {
     if (hasNamespace) {
@@ -49,53 +46,39 @@ case class ListViewSpec[T](
     }
   }
 
-  override def getCreateStateCall(hasNamespace: Boolean): String = {
-    if (hasNamespace) {
-      "getSubKeyedListState"
-    } else {
-      "getKeyedListState"
-    }
-  }
+  override def getCreateStateViewCall: String = "getStateListView"
 }
 
 case class MapViewSpec[K, V](
     stateId: String,
     fieldIndex: Int,
-    mapViewTypeInfo: MapViewTypeInfo[K, V])
+    dataViewTypeInfo: MapViewTypeInfo[K, V])
   extends DataViewSpec {
-
-  override def toStateDescriptor: StateDescriptor[_ <: State, _] =
-    new MapStateDescriptor[K, V](stateId, mapViewTypeInfo.keyType, mapViewTypeInfo.valueType)
 
   override def getStateDataViewClass(hasNamespace: Boolean): Class[_] = {
     if (hasNamespace) {
-      classOf[SubKeyedStateMapView[_, _, _, _]]
+      if (dataViewTypeInfo.nullAware) {
+        classOf[NullAwareSubKeyedStateMapView[_, _, _, _]]
+      } else {
+        classOf[SubKeyedStateMapView[_, _, _, _]]
+      }
     } else {
-      classOf[KeyedStateMapView[_, _, _]]
+      if (dataViewTypeInfo.nullAware) {
+        classOf[NullAwareKeyedStateMapView[_, _, _]]
+      } else {
+        classOf[KeyedStateMapView[_, _, _]]
+      }
     }
   }
 
-  override def getCreateStateCall(hasNamespace: Boolean): String = {
-    if (hasNamespace) {
-      "getSubKeyedMapState"
-    } else {
-      "getKeyedMapState"
-    }
-  }
+  override def getCreateStateViewCall: String = "getStateMapView"
 }
 
 case class SortedMapViewSpec[K, V](
     stateId: String,
     fieldIndex: Int,
-    sortedMapViewTypeInfo: SortedMapViewTypeInfo[K, V])
+    dataViewTypeInfo: SortedMapViewTypeInfo[K, V])
   extends DataViewSpec {
-
-  override def toStateDescriptor: StateDescriptor[_ <: State, _] =
-    new SortedMapStateDescriptor[K, V](
-      stateId,
-      sortedMapViewTypeInfo.comparator,
-      sortedMapViewTypeInfo.keyType,
-      sortedMapViewTypeInfo.valueType)
 
   override def getStateDataViewClass(hasNamespace: Boolean): Class[_] = {
     if (hasNamespace) {
@@ -106,11 +89,5 @@ case class SortedMapViewSpec[K, V](
     }
   }
 
-  override def getCreateStateCall(hasNamespace: Boolean): String = {
-    if (hasNamespace) {
-      "getSubKeyedSortedMapState"
-    } else {
-      "getKeyedSortedMapState"
-    }
-  }
+  override def getCreateStateViewCall: String = "getStateSortedMapView"
 }

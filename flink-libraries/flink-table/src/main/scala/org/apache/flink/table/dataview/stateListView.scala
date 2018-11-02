@@ -24,13 +24,18 @@ import org.apache.flink.runtime.state.keyed.KeyedListState
 import org.apache.flink.runtime.state.subkeyed.SubKeyedListState
 import org.apache.flink.table.api.dataview.ListView
 
+// -------------------------------------------------------------------------------------
+//                                State ListView
+// -------------------------------------------------------------------------------------
+
+trait StateListView[K, T] extends ListView[T] with StateDataView[K]
+
 /**
   * [[SubKeyedStateListView]] is a [[SubKeyedListState]] with [[ListView]] interface which works
   * on window aggregate.
   */
 class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T])
-  extends ListView[T]
-  with StateDataView[K]{
+  extends StateListView[K, T] {
 
   private var key: K = _
   private var namespace: N = _
@@ -57,8 +62,7 @@ class SubKeyedStateListView[K, N, T](state: SubKeyedListState[K, N, T])
   * group aggregate.
   */
 class KeyedStateListView[K, E](state: KeyedListState[K, E])
-  extends ListView[E]
-  with StateDataView[K] {
+  extends StateListView[K, E] {
 
   protected var stateKey: K = null.asInstanceOf[K]
 

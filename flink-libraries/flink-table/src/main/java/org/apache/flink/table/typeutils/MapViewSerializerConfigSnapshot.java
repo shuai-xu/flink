@@ -15,30 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.calcite
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.RexLocalRef
-import org.apache.flink.table.types.InternalType
+package org.apache.flink.table.typeutils;
 
-case class RexAggBufferVariable(
-    variableName: String,
-    dataType: RelDataType,
-    internalType: InternalType)
-  extends RexLocalRef(0, dataType) {
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 
-  override def getName: String = variableName
+import java.util.Map;
+
+/**
+ * Configuration snapshot for serializers of MapViews, containing the
+ * configuration snapshot of its map serializer.
+ */
+public class MapViewSerializerConfigSnapshot<K, V> extends CompositeTypeSerializerConfigSnapshot {
+
+	private static final int VERSION = 1;
+
+	/** This empty nullary constructor is required for deserializing the configuration. */
+	public MapViewSerializerConfigSnapshot() {}
+
+	public MapViewSerializerConfigSnapshot(TypeSerializer<Map<K, V>> mapTypeSerializer) {
+		super(mapTypeSerializer);
+	}
+
+	@Override
+	public int getVersion() {
+		return VERSION;
+	}
 }
-
-case class RexAggLocalVariable(
-    fieldTerm: String,
-    nullTerm: String,
-    dataType: RelDataType,
-    internalType: InternalType)
-  extends RexLocalRef(0, dataType)
-
-case class RexDistinctKeyVariable(
-    keyTerm: String,
-    dataType: RelDataType,
-    internalType: InternalType)
-  extends RexLocalRef(0, dataType)

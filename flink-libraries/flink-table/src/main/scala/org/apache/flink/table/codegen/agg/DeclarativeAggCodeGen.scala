@@ -250,7 +250,7 @@ class DeclarativeAggCodeGen(
           if (isDistinctMerge) {  // this is called from distinct merge
             if (function.inputCount == 1) {
               // the distinct key is a BoxedValue
-              ResolvedBoxedValueInputReference(input.name, argTypes(0))
+              ResolvedDistinctKeyReference(input.name, argTypes(0))
             } else {
               // the distinct key is a BaseRow
               ResolvedAggInputReference(input.name, localIndex, argTypes(localIndex))
