@@ -209,6 +209,8 @@ public class CliClient {
 		}
 
 		List<SqlInfo> sqls = SqlLists.getSQLList(statements);
+		int jobCnt = 0;
+		ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(this.context);
 		// To ensure the line number matched with the original file.
 		for (SqlInfo sqlInfo : sqls) {
 			int startLine = sqlInfo.getLine();
@@ -220,11 +222,28 @@ public class CliClient {
 			sqlInfo.setSqlContent(sql);
 
 			final Optional<SqlCommandCall> cmdCall = parseCommand(sql);
+
+			// Count the jobs
+			if (cmdCall.isPresent()) {
+				if (executionContext.isNeedShareEnv()) {
+					// Environment is shared
+					if (cmdCall.get().command.isDML()) {
+						jobCnt++;
+					}
+				} else {
+					// Environment is not shared
+					if (cmdCall.get().command.isJob()) {
+						jobCnt++;
+					}
+				}
+			}
+
+			// If it is command or ddl, execution wil be done here.
 			cmdCall.ifPresent(this::callCommand);
 		}
 
-		ExecutionContext<?> executionContext = executor.getOrCreateExecutionContext(this.context);
-		if (executionContext.isNeedShareEnv()) {
+		if (executionContext.isNeedShareEnv() && jobCnt > 0) {
+			// If the Environment is shared, we will submit the job at the very last.
 			ProgramTargetDescriptor programTarget = executor.submitJob(executionContext);
 			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_SQL_FILE_SUBMITTED).toAnsi());
 			terminal.writer().println(programTarget.toString());

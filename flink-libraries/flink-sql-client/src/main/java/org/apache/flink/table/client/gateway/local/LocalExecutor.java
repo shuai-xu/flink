@@ -427,6 +427,12 @@ public class LocalExecutor implements Executor {
 	private <C> ResultDescriptor executeQueryInternal(ExecutionContext<C> context, String query) {
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
 
+		// Check the result
+		if (context.isNeedShareEnv()) {
+			throw new SqlExecutionException("No query results can be printed when the Shared "
+				+ "Environment are enabled.");
+		}
+
 		// create table
 		final Table table = createTable(envInst.getTableEnvironment(), query);
 

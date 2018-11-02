@@ -119,6 +119,48 @@ public final class SqlCommandParser {
 		public String toString() {
 			return command.toUpperCase();
 		}
+
+		/**
+		 * Whether the command is a SQL query.
+		 * @return true if it is a query, false otherwise.
+		 */
+		public boolean isQuery() {
+			return this.equals(SELECT);
+		}
+
+		/**
+		 * Whether the command is a Data Manipulation Language.
+		 * @return true if it is a DDL, false otherwise.
+		 */
+		public boolean isDML() {
+			return this.equals(INSERT_INTO) || this.equals(ANALYZE);
+		}
+
+		/**
+		 * Whether the command is a CLI command.
+		 * @return true if it is a CLI command, false otherwise.
+		 */
+		public boolean isCommand() {
+			return this.equals(QUIT) || this.equals(EXIT) || this.equals(CLEAR) || this.equals(HELP)
+				|| this.equals(SHOW_TABLES) || this.equals(SHOW_FUNCTIONS) || this.equals(DESCRIBE)
+				|| this.equals(EXPLAIN) || this.equals(SET) || this.equals(RESET) || this.equals(SOURCE);
+		}
+
+		/**
+		 * Whether the command is a Data Definition Language.
+		 * @return true if it is a DDL, false otherwise.
+		 */
+		public boolean isDDL() {
+			return this.equals(CREATE_FUNCTION) || this.equals(CREATE_TABLE) || this.equals(CREATE_VIEW);
+		}
+
+		/**
+		 * Whether the job can be submitted.
+		 * @return true if it is a job, false otherwise.
+		 */
+		public boolean isJob() {
+			return isQuery() || isDML();
+		}
 	}
 
 	/**

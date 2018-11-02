@@ -111,6 +111,7 @@ public class ExecutionContext<T> {
 		this.needAttach = this.needAttach(this.mergedEnv.getExecution());
 
 		this.needShareEnv = this.needShareEnv(this.mergedEnv.getExecution(), singleJobMode);
+
 		if (this.needShareEnv) {
 			// should share environment instance
 			this.environmentInstance = new EnvironmentInstance();
@@ -264,8 +265,8 @@ public class ExecutionContext<T> {
 		private EnvironmentInstance() {
 			// create environments
 			streamExecEnv = createStreamExecutionEnvironment();
-				if (mergedEnv.getExecution().isStreamingExecution()) {
-					tableEnv = TableEnvironment.getTableEnvironment(streamExecEnv);
+			if (mergedEnv.getExecution().isStreamingExecution()) {
+				tableEnv = TableEnvironment.getTableEnvironment(streamExecEnv);
 			} else if (mergedEnv.getExecution().isBatchExecution()) {
 				tableEnv = TableEnvironment.getBatchTableEnvironment(streamExecEnv);
 			} else {

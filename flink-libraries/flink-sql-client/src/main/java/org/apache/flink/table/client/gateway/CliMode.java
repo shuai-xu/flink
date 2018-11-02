@@ -22,7 +22,10 @@ package org.apache.flink.table.client.gateway;
  * The CLI Mode which the client runs.
  */
 public enum CliMode {
+	// Running from a file
 	NON_INTERACTIVE,
+	// Running from an interactive console
 	INTERACTIVE,
+	// Running from the command line arguments
 	SINGLE_STATEMENT
 }
