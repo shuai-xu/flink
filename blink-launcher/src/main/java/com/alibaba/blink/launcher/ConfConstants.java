@@ -25,6 +25,12 @@ public class ConfConstants {
 
 	// state backend type
 	public static final String STATE_BACKEND_TYPE = "state.backend.type"; // gemini, rocksdb, niagara
+	public static final String GEMINI = "gemini";
+	public static final String ROCKSDB = "rocksdb";
+	public static final String NIAGARA = "niagara";
+
+	// replace niagara with rocksdb
+	public static final String REPLACE_NIAGARA = "state.backend.replace.niagara";
 
 	// checkpoint uri
 	public static final String CHECKPOINT_PATH = "blink.checkpoint.path";

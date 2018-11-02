@@ -233,15 +233,31 @@ public class StreamExecEnvUtil {
 	public static void setStateBackend(StreamExecutionEnvironment env, Properties userParams) throws Exception {
 		// set state backend
 		String stateBackendType = userParams.getProperty(ConfConstants.STATE_BACKEND_TYPE);
+		if (StringUtil.isEmpty(stateBackendType)) {
+			if (userParams.contains(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS)) {
+				userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.NIAGARA);
+				stateBackendType = ConfConstants.NIAGARA;
+			} else if (userParams.contains(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS)) {
+				userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.ROCKSDB);
+				stateBackendType = ConfConstants.ROCKSDB;
+			}
+		}
+		if (stateBackendType != null && stateBackendType.equalsIgnoreCase(ConfConstants.NIAGARA) &&
+				userParams.getProperty(ConfConstants.REPLACE_NIAGARA, "true").equalsIgnoreCase("true")) {
+			userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.ROCKSDB);
+			userParams.setProperty(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS,
+					userParams.getProperty(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS));
+		}
+
 		if (!StringUtil.isEmpty(stateBackendType)) {
 			LOG.info(ConfConstants.STATE_BACKEND_TYPE + " : " + stateBackendType);
-			if (stateBackendType.equalsIgnoreCase("gemini")) {
+			if (stateBackendType.equalsIgnoreCase(ConfConstants.GEMINI)) {
 				setStreamGemini(env, userParams);
 				return;
-			} else if (stateBackendType.equalsIgnoreCase("rocksdb")) {
+			} else if (stateBackendType.equalsIgnoreCase(ConfConstants.ROCKSDB)) {
 				setStreamRocksDB(env, userParams);
 				return;
-			} else if (stateBackendType.equalsIgnoreCase("niagara")) {
+			} else if (stateBackendType.equalsIgnoreCase(ConfConstants.NIAGARA)) {
 				setStreamNiagara(env, userParams);
 				return;
 			} else {

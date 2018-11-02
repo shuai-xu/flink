@@ -101,7 +101,7 @@ public class StateBackendUtil {
 	private static boolean isNiagaraStateBackend(Properties userProperties) {
 		String stateBackendType = userProperties.getProperty(ConfConstants.STATE_BACKEND_TYPE);
 		if (!StringUtil.isEmpty(stateBackendType) &&
-			stateBackendType.equalsIgnoreCase("niagara")) {
+			stateBackendType.equalsIgnoreCase(ConfConstants.NIAGARA)) {
 			return true;
 		}
 
@@ -111,7 +111,7 @@ public class StateBackendUtil {
 	private static boolean isGeminiStateBackend(Properties userProperties) {
 		String stateBackendType = userProperties.getProperty(ConfConstants.STATE_BACKEND_TYPE);
 		if (!StringUtil.isEmpty(stateBackendType) &&
-			stateBackendType.equalsIgnoreCase("gemini")) {
+			stateBackendType.equalsIgnoreCase(ConfConstants.GEMINI)) {
 			return true;
 		}
 
