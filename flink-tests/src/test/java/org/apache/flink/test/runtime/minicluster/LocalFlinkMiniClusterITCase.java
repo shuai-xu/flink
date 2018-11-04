@@ -32,6 +32,8 @@ import org.apache.flink.util.TestLogger;
 
 import akka.actor.ActorSystem;
 import akka.testkit.JavaTestKit;
+
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -57,6 +59,7 @@ public class LocalFlinkMiniClusterITCase extends TestLogger {
 		"initialSeedUniquifierGenerator"
 	};
 
+	@Ignore
 	@Test
 	public void testLocalFlinkMiniClusterWithMultipleTaskManagers() {
 
