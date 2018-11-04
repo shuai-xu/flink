@@ -166,7 +166,7 @@ public class JobManagerOptions {
 
 	public static final ConfigOption<Boolean> SLOT_ENABLE_SHARED_SLOT =
 		key("slot.enable-shared-slot")
-			.defaultValue(false)
+			.defaultValue(true)
 			.withDescription("Whether to enable slot sharing group when allocating slots in Slot Pool.");
 
 	public static final ConfigOption<Long> JOB_RECONCILE_TIMEOUT =
