@@ -38,7 +38,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -92,7 +92,7 @@ public class HistoryServerTest extends TestLogger {
 		}
 	}
 
-	@Test
+	@Ignore
 	public void testHistoryServerIntegration() throws Exception {
 		final int numJobs = 2;
 		for (int x = 0; x < numJobs; x++) {

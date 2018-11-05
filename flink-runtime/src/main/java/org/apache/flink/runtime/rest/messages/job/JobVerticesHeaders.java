@@ -34,7 +34,7 @@ public class JobVerticesHeaders implements MessageHeaders<EmptyRequestBody, JobV
 
 	private static final JobVerticesHeaders INSTANCE = new JobVerticesHeaders();
 
-	public static final String URL = String.format("/jobs/:%s/vertices", JobIDPathParameter.KEY);
+	public static final String URL = String.format("/jobs/:%s/vertices/details", JobIDPathParameter.KEY);
 
 	private JobVerticesHeaders() {}
 
