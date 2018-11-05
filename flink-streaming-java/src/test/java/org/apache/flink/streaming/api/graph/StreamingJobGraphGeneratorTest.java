@@ -141,7 +141,6 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 
 		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
 		assertEquals(12345, jobGraph.getSerializedExecutionConfig().deserializeValue(getClass().getClassLoader()).getParallelism());
-		assertEquals("file:///testCachedFile", jobGraph.getJobConfiguration().getString("DISTRIBUTED_CACHE_FILE_PATH_1", null));
 		assertEquals(ScheduleMode.EAGER,
 			ScheduleMode.valueOf(jobGraph.getSchedulingConfiguration().getString(ScheduleMode.class.getName(), null)));
 
