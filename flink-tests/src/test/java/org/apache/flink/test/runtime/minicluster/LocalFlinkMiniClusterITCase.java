@@ -32,7 +32,6 @@ import org.apache.flink.util.TestLogger;
 
 import akka.actor.ActorSystem;
 import akka.testkit.JavaTestKit;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
