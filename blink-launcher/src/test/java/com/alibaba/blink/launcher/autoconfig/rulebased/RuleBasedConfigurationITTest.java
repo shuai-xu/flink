@@ -47,6 +47,8 @@ public class RuleBasedConfigurationITTest {
 
 	// SQL files
 	private static final String JOB_CONFIG_FILE = "autoconf/job.config";
+	private static final String JOB_CONFIG_WITH_ROCKSDB_FILE = "autoconf/job_with_rocksdb.config";
+	private static final String JOB_CONFIG_WITH_NIAGARA_FILE = "autoconf/job_with_niagara.config";
 	private static final String JOB1_MINIBATCH_CONFIG_FILE = "autoconf/job1-minibatch.config";
 	private static final String JOB1_MINIBATCH_PREFER_JSON_CONFIG_FILE = "autoconf/job1-minibatch-prefer-json.config";
 	private static final String JOB1_SQL_FILE = "autoconf/job1.sql";
@@ -56,6 +58,7 @@ public class RuleBasedConfigurationITTest {
 		JOBGRAPH_CHANGED,	// Should detect job graph changed
 		INVALID_OLD_PLAN,	// Invalid old plan
 		NEW,			// When a new job starts with autoconf, and doesn't have old plan
+		NEW_ROCKSDB,    // A new job with backend of rocksdb
 		MINIBATCH_NEW, // A new job with autoconf, enable minibatch
 		MINIBATCH_REUSE, // Reuse minibatch conf in old plan
 		NATIVEMEMORY,	// Emphasis on native memory
@@ -72,6 +75,17 @@ public class RuleBasedConfigurationITTest {
 	@Test
 	public void testSqlInfo_NEW() throws Exception {
 		testRunStream(JOB_CONFIG_FILE, SQL, JOB1_SQL_FILE, INFO, null, getExpectedPlanPath(TestCase.NEW));
+	}
+
+	@Test
+	public void testSqlInfo_ROCKSDB() throws Exception {
+		testRunStream(JOB_CONFIG_WITH_ROCKSDB_FILE, SQL, JOB1_SQL_FILE, INFO, null, getExpectedPlanPath(TestCase.NEW_ROCKSDB));
+	}
+
+	@Test
+	public void testSqlInfo_NIAGARA() throws Exception {
+		// currently niagara is replaced by rocksdb by default
+		testRunStream(JOB_CONFIG_WITH_NIAGARA_FILE, SQL, JOB1_SQL_FILE, INFO, null, getExpectedPlanPath(TestCase.NEW_ROCKSDB));
 	}
 
 	@Test

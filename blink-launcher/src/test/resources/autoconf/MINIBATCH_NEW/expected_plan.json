@@ -36,7 +36,7 @@
     "maxParallelism" : 32768,
     "vcore" : 0.25,
     "heap_memory" : 128,
-    "native_memory" : 384,
+    "native_memory" : 20,
     "minibatch_allow_latency" : 2500,
     "minibatch_size" : 19999
   }, {
@@ -48,7 +48,7 @@
     "maxParallelism" : 32768,
     "vcore" : 0.25,
     "heap_memory" : 128,
-    "native_memory" : 384,
+    "native_memory" : 20,
     "minibatch_allow_latency" : 2500,
     "minibatch_size" : 19999
   }, {

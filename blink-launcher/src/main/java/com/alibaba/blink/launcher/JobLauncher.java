@@ -127,6 +127,9 @@ public class JobLauncher {
 					case "-conf":
 						try (InputStream inputStream = new FileInputStream(args[i++])) {
 							jobConf.load(inputStream);
+							for (String key :jobConf.stringPropertyNames()) {
+								LOG.info("Load user parameter: {}={}", key, jobConf.getProperty(key));
+							}
 						} catch (IOException ignored) {
 						}
 
@@ -337,9 +340,11 @@ public class JobLauncher {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(ExecutionConfig.PARALLELISM_DEFAULT);
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		registerPythonLibFiles(env, jobConf, userPyLibs);
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env, conf);
 		setQueryConfig(tEnv, jobConf);
 		StreamExecEnvUtil.setStreamEnvConfigs(env, jobConf);
+		StreamExecEnvUtil.setConfig(env, jobConf);
 
 		long start = System.currentTimeMillis();
 		if ("sql".equals(type)) {
@@ -353,9 +358,6 @@ public class JobLauncher {
 		}
 		long end = System.currentTimeMillis();
 		LOG.info("build type {}, used time: {} ms", type, end - start);
-
-		registerPythonLibFiles(env, jobConf, userPyLibs);
-		StreamExecEnvUtil.setConfig(env, jobConf);
 
 		tEnv.compile();
 		String jobInfo = execute(env, jobName, jobConf, action, jsonFilePath);

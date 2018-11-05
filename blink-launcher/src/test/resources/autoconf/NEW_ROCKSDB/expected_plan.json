@@ -36,7 +36,7 @@
     "maxParallelism" : 32768,
     "vcore" : 0.25,
     "heap_memory" : 128,
-    "native_memory" : 20
+    "native_memory" : 384
   }, {
     "id" : 6,
     "uid" : "6",

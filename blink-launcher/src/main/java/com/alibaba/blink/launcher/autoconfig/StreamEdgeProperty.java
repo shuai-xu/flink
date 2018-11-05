@@ -35,7 +35,7 @@ import java.util.Set;
  * StreamEdge Properties.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-@JsonIgnoreProperties(value = { "side"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StreamEdgeProperty extends AbstractJsonSerializable implements Comparable<StreamEdgeProperty> {
 	private int source;
 	private int target;

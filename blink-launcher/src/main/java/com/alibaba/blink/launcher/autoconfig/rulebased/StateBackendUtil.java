@@ -110,7 +110,7 @@ public class StateBackendUtil {
 
 	private static boolean isGeminiStateBackend(Properties userProperties) {
 		String stateBackendType = userProperties.getProperty(ConfConstants.STATE_BACKEND_TYPE);
-		if (!StringUtil.isEmpty(stateBackendType) &&
+		if (StringUtil.isEmpty(stateBackendType) ||
 			stateBackendType.equalsIgnoreCase(ConfConstants.GEMINI)) {
 			return true;
 		}

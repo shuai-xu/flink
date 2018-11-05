@@ -41,7 +41,7 @@ import java.util.Map;
  * StreamNode properties.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-@JsonIgnoreProperties(value = { "state_size" })
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StreamNodeProperty extends AbstractJsonSerializable implements Comparable<StreamNodeProperty> {
 	private int id;
 	private String uid;

@@ -40,9 +40,7 @@ import java.util.stream.Collectors;
  * Properties for StreamGraph.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-@JsonIgnoreProperties(value = {
-		"global", "resourceSettings", "autoConfig", "parameters", "vertexAdjustments",
-		"vertices", "workers", "subDags"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StreamGraphProperty extends AbstractJsonSerializable {
 
 	@JsonProperty("nodes")

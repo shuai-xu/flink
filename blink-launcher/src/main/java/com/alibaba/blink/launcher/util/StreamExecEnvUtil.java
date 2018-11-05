@@ -207,6 +207,10 @@ public class StreamExecEnvUtil {
 			map.putAll(currentConfig.toMap());
 		}
 
+		for (String name : userParams.stringPropertyNames()) {
+			map.put(name, userParams.getProperty(name));
+		}
+
 		streamEnv.getConfig().setGlobalJobParameters(ParameterTool.fromMap(map));
 
 		// auto watermark interval
@@ -234,10 +238,10 @@ public class StreamExecEnvUtil {
 		// set state backend
 		String stateBackendType = userParams.getProperty(ConfConstants.STATE_BACKEND_TYPE);
 		if (StringUtil.isEmpty(stateBackendType)) {
-			if (userParams.contains(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS)) {
+			if (userParams.containsKey(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS)) {
 				userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.NIAGARA);
 				stateBackendType = ConfConstants.NIAGARA;
-			} else if (userParams.contains(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS)) {
+			} else if (userParams.containsKey(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS)) {
 				userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.ROCKSDB);
 				stateBackendType = ConfConstants.ROCKSDB;
 			}
@@ -247,6 +251,7 @@ public class StreamExecEnvUtil {
 			userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.ROCKSDB);
 			userParams.setProperty(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS,
 					userParams.getProperty(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS));
+			stateBackendType = ConfConstants.ROCKSDB;
 		}
 
 		if (!StringUtil.isEmpty(stateBackendType)) {
@@ -345,9 +350,9 @@ public class StreamExecEnvUtil {
 		String checkPointPath = userParams.getProperty(ConfConstants.CHECKPOINT_PATH);
 		RocksDBStateBackend backend = null;
 		if (checkPointPath == null) {
-			backend = new RocksDBStateBackend(new MemoryStateBackend());
+			backend = new RocksDBStateBackend(new MemoryStateBackend(), true);
 		} else {
-			backend = new RocksDBStateBackend(checkPointPath);
+			backend = new RocksDBStateBackend(checkPointPath, true);
 		}
 		backend.setOptions(configuration);
 		streamEnv.setStateBackend(backend);
