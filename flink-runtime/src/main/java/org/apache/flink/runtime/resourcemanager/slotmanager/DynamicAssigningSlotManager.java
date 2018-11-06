@@ -27,10 +27,13 @@ import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.clusterframework.types.TaskManagerSlot;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 
+import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -55,19 +58,78 @@ public class DynamicAssigningSlotManager extends SlotManager {
 	 */
 	private ResourceProfile totalResourceOfTaskExecutor;
 
+	private SlotPlacementPolicy slotPlacementPolicy;
+	private Comparator<TaskManagerSlot> slotComparator;
+
+	public DynamicAssigningSlotManager(
+		ScheduledExecutor scheduledExecutor,
+		Time taskManagerRequestTimeout,
+		Time slotRequestTimeout,
+		Time taskManagerTimeout,
+		Time taskManagerCheckerInitialDelay) {
+		this(scheduledExecutor,
+			taskManagerRequestTimeout,
+			slotRequestTimeout,
+			taskManagerTimeout,
+			taskManagerCheckerInitialDelay,
+			SlotPlacementPolicy.RANDOM);
+	}
+
 	public DynamicAssigningSlotManager(
 			ScheduledExecutor scheduledExecutor,
 			Time taskManagerRequestTimeout,
 			Time slotRequestTimeout,
 			Time taskManagerTimeout,
-			Time taskManagerCheckerInitialDelay) {
+			Time taskManagerCheckerInitialDelay,
+			SlotPlacementPolicy slotPlacementPolicy) {
 		super(scheduledExecutor, taskManagerRequestTimeout, slotRequestTimeout, taskManagerTimeout, taskManagerCheckerInitialDelay);
 		this.allocatedSlotsResource = new HashMap<>();
+		this.slotPlacementPolicy = slotPlacementPolicy;
+		switch (slotPlacementPolicy) {
+			case SLOT:
+				slotComparator = new Comparator<TaskManagerSlot>() {
+					@Override
+					public int compare(TaskManagerSlot o1, TaskManagerSlot o2) {
+						ResourceID rid1 = o1.getSlotId().getResourceID();
+						ResourceID rid2 = o2.getSlotId().getResourceID();
+						Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> t1 = allocatedSlotsResource.get(rid1);
+						Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> t2 = allocatedSlotsResource.get(rid2);
+						return (t1 == null ? 0 : t1.f0.size()) - (t2 == null ? 0 : t2.f0.size());
+					}
+				}; break;
+			case RESOURCE:
+				slotComparator = new Comparator<TaskManagerSlot>() {
+					@Override
+					public int compare(TaskManagerSlot o1, TaskManagerSlot o2) {
+						ResourceID rid1 = o1.getSlotId().getResourceID();
+						ResourceID rid2 = o2.getSlotId().getResourceID();
+						Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> t1 = allocatedSlotsResource.get(rid1);
+						Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile> t2 = allocatedSlotsResource.get(rid2);
+						if (t1 != null && t2 != null) {
+							return t2.f1.compareTo(t1.f1);
+						} else if (t1 == null && t2 == null) {
+							return 0;
+						} else {
+							return t1 == null ? -1 : 1;
+						}
+					}
+				}; break;
+			default:
+				slotComparator = null;
+		}
 		setSlotListener(new SlotListenerImpl());
 	}
 
 	@Override
 	protected TaskManagerSlot findMatchingSlot(ResourceProfile requestResourceProfile) {
+		if (slotPlacementPolicy == SlotPlacementPolicy.RANDOM) {
+			return findMatchingSlotRandomly(requestResourceProfile);
+		} else {
+			return findMatchingSlotSpreading(requestResourceProfile);
+		}
+	}
+
+	protected TaskManagerSlot findMatchingSlotRandomly(ResourceProfile requestResourceProfile) {
 		Random random = new Random();
 		List<TaskManagerSlot> resourceSlots = new ArrayList<>(freeSlots.values());
 		int count = 0;
@@ -84,6 +146,19 @@ public class DynamicAssigningSlotManager extends SlotManager {
 		Iterator<Map.Entry<SlotID, TaskManagerSlot>> iterator = freeSlots.entrySet().iterator();
 		while (iterator.hasNext()) {
 			TaskManagerSlot slot = iterator.next().getValue();
+			if (hasEnoughResource(slot.getSlotId().getResourceID(), requestResourceProfile)) {
+				recordAllocatedSlotAndResource(slot.getSlotId(), requestResourceProfile);
+				freeSlots.remove(slot.getSlotId());
+				return slot;
+			}
+		}
+		return null;
+	}
+
+	protected TaskManagerSlot findMatchingSlotSpreading(ResourceProfile requestResourceProfile) {
+		List<TaskManagerSlot> slots = new ArrayList<>(freeSlots.values());
+		Collections.sort(slots, Preconditions.checkNotNull(slotComparator));
+		for (TaskManagerSlot slot : slots) {
 			if (hasEnoughResource(slot.getSlotId().getResourceID(), requestResourceProfile)) {
 				recordAllocatedSlotAndResource(slot.getSlotId(), requestResourceProfile);
 				freeSlots.remove(slot.getSlotId());
@@ -178,5 +253,25 @@ public class DynamicAssigningSlotManager extends SlotManager {
 		public void notifySlotRemoved(SlotID slotId) {
 			removeSlotFromAllocatedResources(slotId);
 		}
+	}
+
+	/**
+	 * Determines how to place tasks among TaskManagers.
+	 */
+	public enum SlotPlacementPolicy {
+		/**
+		 * Randomly allocate matching slots for tasks.
+		 */
+		RANDOM,
+
+		/**
+		 * Spread tasks among TaskManagers based on available slots.
+		 */
+		SLOT,
+
+		/**
+		 * Spread tasks among TaskManagers based on available resource.
+		 */
+		RESOURCE
 	}
 }

@@ -108,7 +108,8 @@ public class YarnSessionClusterEntrypoint extends SessionClusterEntrypoint {
 				configuration.contains(ResourceManagerOptions.TASK_MANAGER_TIMEOUT) ?
 					rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerTimeout() :
 					Time.seconds(AkkaUtils.INF_TIMEOUT().toSeconds()),
-				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay()),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay(),
+				DynamicAssigningSlotManager.SlotPlacementPolicy.valueOf(configuration.getString(ResourceManagerOptions.SLOT_PLACEMENT_POLICY))),
 			metricRegistry,
 			rmRuntimeServices.getJobLeaderIdService(),
 			clusterInformation,

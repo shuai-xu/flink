@@ -44,6 +44,7 @@ package org.apache.flink.runtime.resourcemanager.slotmanager;
 	import java.util.concurrent.CompletableFuture;
 
 	import static org.junit.Assert.assertEquals;
+	import static org.junit.Assert.assertNotEquals;
 	import static org.junit.Assert.assertNotNull;
 	import static org.mockito.Matchers.any;
 	import static org.mockito.Matchers.anyLong;
@@ -299,13 +300,196 @@ public class DynamicAssigningSlotManagerTest {
 		}
 	}
 
+	@Test
+	public void testSlotPlacementPolicyRandom() throws SlotManagerException {
+		final int TM_NUM = 3;
+		final int SLOT_NUM = 100;
+
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+		final JobID jobId = new JobID();
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+			any(SlotID.class),
+			eq(jobId),
+			any(AllocationID.class),
+			any(ResourceProfile.class),
+			anyString(),
+			eq(resourceManagerId),
+			anyLong(),
+			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+		List<ResourceID> resourceIds = new ArrayList<>();
+		List<TaskExecutorConnection> taskExecutorConnections = new ArrayList<>();
+		List<SlotReport> slotReports = new ArrayList<>();
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			ResourceID resourceId = ResourceID.generate();
+			TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceId, taskExecutorGateway);
+
+
+			List<SlotStatus> status = new ArrayList<>();
+			for (int j = 0; j < SLOT_NUM; ++j) {
+				SlotID slotId = new SlotID(resourceId, j);
+				SlotStatus slotStatus = new SlotStatus(slotId, ResourceProfile.UNKNOWN);
+				status.add(slotStatus);
+			}
+			SlotReport slotReport = new SlotReport(status);
+
+			resourceIds.add(resourceId);
+			taskExecutorConnections.add(taskExecutorConnection);
+			slotReports.add(slotReport);
+		}
+
+		DynamicAssigningSlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions, DynamicAssigningSlotManager.SlotPlacementPolicy.RANDOM);
+		Map<ResourceID, Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile>> allocatedSlotsResource = slotManager.getAllocatedSlotsResource();
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			slotManager.registerTaskManager(taskExecutorConnections.get(i), slotReports.get(i));
+		}
+
+		for (int i = 0; i < SLOT_NUM; ++i) {
+			SlotRequest slotRequest = new SlotRequest(jobId, new AllocationID(), ResourceProfile.UNKNOWN, "localhost");
+			slotManager.registerSlotRequest(slotRequest);
+		}
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			assertNotEquals(0, allocatedSlotsResource.get(resourceIds.get(i)).f0.size());
+		}
+	}
+
+	@Test
+	public void testSlotPlacementPolicySlot() throws SlotManagerException {
+		final int TM_NUM = 3;
+		final int SLOT_NUM = 3;
+
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+		final JobID jobId = new JobID();
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+			any(SlotID.class),
+			eq(jobId),
+			any(AllocationID.class),
+			any(ResourceProfile.class),
+			anyString(),
+			eq(resourceManagerId),
+			anyLong(),
+			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+		List<ResourceID> resourceIds = new ArrayList<>();
+		List<TaskExecutorConnection> taskExecutorConnections = new ArrayList<>();
+		List<SlotReport> slotReports = new ArrayList<>();
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			ResourceID resourceId = ResourceID.generate();
+			TaskExecutorConnection taskExecutorConnection = new TaskExecutorConnection(resourceId, taskExecutorGateway);
+
+
+			List<SlotStatus> status = new ArrayList<>();
+			for (int j = 0; j < SLOT_NUM; ++j) {
+				SlotID slotId = new SlotID(resourceId, j);
+				SlotStatus slotStatus = new SlotStatus(slotId, ResourceProfile.UNKNOWN);
+				status.add(slotStatus);
+			}
+			SlotReport slotReport = new SlotReport(status);
+
+			resourceIds.add(resourceId);
+			taskExecutorConnections.add(taskExecutorConnection);
+			slotReports.add(slotReport);
+		}
+
+		DynamicAssigningSlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions, DynamicAssigningSlotManager.SlotPlacementPolicy.SLOT);
+		Map<ResourceID, Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile>> allocatedSlotsResource = slotManager.getAllocatedSlotsResource();
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			slotManager.registerTaskManager(taskExecutorConnections.get(i), slotReports.get(i));
+		}
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			SlotRequest slotRequest = new SlotRequest(jobId, new AllocationID(), ResourceProfile.UNKNOWN, "localhost");
+			slotManager.registerSlotRequest(slotRequest);
+		}
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			assertEquals(1, allocatedSlotsResource.get(resourceIds.get(i)).f0.size());
+		}
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			SlotRequest slotRequest = new SlotRequest(jobId, new AllocationID(), ResourceProfile.UNKNOWN, "localhost");
+			slotManager.registerSlotRequest(slotRequest);
+		}
+
+		for (int i = 0; i < TM_NUM; ++i) {
+			assertEquals(2, allocatedSlotsResource.get(resourceIds.get(i)).f0.size());
+		}
+	}
+
+	@Test
+	public void testSlotPlacementPolicyResource() throws SlotManagerException {
+		ResourceProfile largeResourceProfile = new ResourceProfile(0.3, 512);
+		ResourceProfile smallResourceProfile = new ResourceProfile(0.1, 128);
+
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceActions resourceManagerActions = mock(ResourceActions.class);
+		final JobID jobId = new JobID();
+		final TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);
+		when(taskExecutorGateway.requestSlot(
+			any(SlotID.class),
+			eq(jobId),
+			any(AllocationID.class),
+			any(ResourceProfile.class),
+			anyString(),
+			eq(resourceManagerId),
+			anyLong(),
+			any(Time.class))).thenReturn(CompletableFuture.completedFuture(Acknowledge.get()));
+
+		ResourceID resourceId1 = ResourceID.generate();
+		ResourceID resourceId2 = ResourceID.generate();
+		TaskExecutorConnection taskExecutorConnection1 = new TaskExecutorConnection(resourceId1, taskExecutorGateway);
+		TaskExecutorConnection taskExecutorConnection2 = new TaskExecutorConnection(resourceId2, taskExecutorGateway);
+
+		SlotStatus slotStatus1 = new SlotStatus(new SlotID(resourceId1, 0), ResourceProfile.UNKNOWN, jobId, new AllocationID(), largeResourceProfile, 1L);
+		SlotStatus slotStatus2 = new SlotStatus(new SlotID(resourceId1, 1), ResourceProfile.UNKNOWN);
+		SlotStatus slotStatus3 = new SlotStatus(new SlotID(resourceId1, 2), ResourceProfile.UNKNOWN);
+		SlotStatus slotStatus4 = new SlotStatus(new SlotID(resourceId2, 0), ResourceProfile.UNKNOWN, jobId, new AllocationID(), smallResourceProfile, 1L);
+		SlotStatus slotStatus5 = new SlotStatus(new SlotID(resourceId2, 1), ResourceProfile.UNKNOWN, jobId, new AllocationID(), smallResourceProfile, 1L);
+		SlotStatus slotStatus6 = new SlotStatus(new SlotID(resourceId2, 2), ResourceProfile.UNKNOWN);
+
+		SlotReport slotReport1 = new SlotReport(Arrays.asList(slotStatus1, slotStatus2, slotStatus3));
+		SlotReport slotReport2 = new SlotReport(Arrays.asList(slotStatus4, slotStatus5, slotStatus6));
+
+		DynamicAssigningSlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions, DynamicAssigningSlotManager.SlotPlacementPolicy.RESOURCE);
+		Map<ResourceID, Tuple2<Map<SlotID, ResourceProfile>, ResourceProfile>> allocatedSlotsResource = slotManager.getAllocatedSlotsResource();
+
+		slotManager.registerTaskManager(taskExecutorConnection1, slotReport1);
+		slotManager.registerTaskManager(taskExecutorConnection2, slotReport2);
+
+		assertEquals(1, allocatedSlotsResource.get(resourceId1).f0.size());
+		assertEquals(2, allocatedSlotsResource.get(resourceId2).f0.size());
+
+		SlotRequest slotRequest = new SlotRequest(jobId, new AllocationID(), smallResourceProfile, "localhost");
+		slotManager.registerSlotRequest(slotRequest);
+
+		assertEquals(1, allocatedSlotsResource.get(resourceId1).f0.size());
+		assertEquals(3, allocatedSlotsResource.get(resourceId2).f0.size());
+	}
+
 	private DynamicAssigningSlotManager createSlotManager(ResourceManagerId resourceManagerId, ResourceActions resourceManagerActions) {
+		return createSlotManager(resourceManagerId, resourceManagerActions, DynamicAssigningSlotManager.SlotPlacementPolicy.RANDOM);
+	}
+
+	private DynamicAssigningSlotManager createSlotManager(
+		ResourceManagerId resourceManagerId,
+		ResourceActions resourceManagerActions,
+		DynamicAssigningSlotManager.SlotPlacementPolicy slotPlacementPolicy) {
 		DynamicAssigningSlotManager slotManager = new DynamicAssigningSlotManager(
 			TestingUtils.defaultScheduledExecutor(),
 			TestingUtils.infiniteTime(),
 			TestingUtils.infiniteTime(),
 			TestingUtils.infiniteTime(),
-			TestingUtils.infiniteTime());
+			TestingUtils.infiniteTime(),
+			slotPlacementPolicy);
 
 		slotManager.setTotalResourceOfTaskExecutor(new ResourceProfile(2, 1000));
 		slotManager.start(resourceManagerId, Executors.directExecutor(), resourceManagerActions);

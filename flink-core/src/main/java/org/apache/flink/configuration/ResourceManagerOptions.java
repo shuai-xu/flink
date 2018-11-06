@@ -93,6 +93,10 @@ public class ResourceManagerOptions {
 		.key("slotmanager.taskmanager.checker-initial-delay")
 		.defaultValue(180000L);
 
+	public static final ConfigOption<String> SLOT_PLACEMENT_POLICY = ConfigOptions
+		.key("slotmanager.slot-placement-policy")
+		.defaultValue("RANDOM");
+
 	/**
 	 * Prefix for passing custom environment variables to Flink's master process.
 	 * For example for passing LD_LIBRARY_PATH as an env variable to the AppMaster, set:
