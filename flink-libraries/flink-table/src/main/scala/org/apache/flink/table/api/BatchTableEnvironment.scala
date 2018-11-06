@@ -155,6 +155,16 @@ class BatchTableEnvironment(
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
   }
 
+  def generateStreamGraph(): StreamGraph = {
+    val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
+    ruKeeper.setScheduleConfig(context)
+    val streamGraph = StreamGraphGenerator.generate(context, transformations)
+    ruKeeper.clear()
+    sinkNodes.clear()
+    transformations.clear()
+    streamGraph
+  }
+
   private def executeInternal(streamingTransformations: ArrayBuffer[StreamTransformation[_]],
       jobName: Option[String]): JobExecutionResult = {
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)

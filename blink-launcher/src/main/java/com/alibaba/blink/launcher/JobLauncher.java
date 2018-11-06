@@ -291,8 +291,8 @@ public class JobLauncher {
 		tEnv.compile();
 		long s2 = System.currentTimeMillis();
 		LOG.info("compile used time: {} ms", s2 - s1);
-
-		String jobInfo = execute(env, jobName, jobConf, action, jsonFilePath);
+		StreamGraph streamGraph = tEnv.generateStreamGraph();
+		String jobInfo = execute(env, streamGraph, jobName, jobConf, action, jsonFilePath);
 		return jobInfo;
 	}
 
@@ -360,14 +360,14 @@ public class JobLauncher {
 		LOG.info("build type {}, used time: {} ms", type, end - start);
 
 		tEnv.compile();
-		String jobInfo = execute(env, jobName, jobConf, action, jsonFilePath);
+		StreamGraph streamGraph = env.getStreamGraph();
+		String jobInfo = execute(env, streamGraph, jobName, jobConf, action, jsonFilePath);
 		return jobInfo;
 	}
 
-	private static String execute(StreamExecutionEnvironment env,
+	private static String execute(StreamExecutionEnvironment env, StreamGraph streamGraph,
 			String jobName, Properties jobConf, String action, String jsonFilePath) throws Exception {
 
-		StreamGraph streamGraph = env.getStreamGraph();
 		String jobInfo = null;
 
 		if ("run".equals(action)) {
