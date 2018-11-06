@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
@@ -31,12 +31,9 @@ trait StreamExecRel extends FlinkPhysicalRel {
     * Translates the FlinkRelNode into a Flink operator.
     *
     * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     * @return StreamTransformation of type [[BaseRow]]
     */
-  def translateToPlan(
-    tableEnv: StreamTableEnvironment,
-    queryConfig: StreamQueryConfig): StreamTransformation[BaseRow]
+  def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow]
 
   /**
     * Whether the [[FlinkRelNode]] produces update and delete changes.

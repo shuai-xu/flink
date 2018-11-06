@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.util
 import java.time.Duration
 
 import org.apache.flink.table.api.window.TimeWindow
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.expressions.ExpressionUtils
 import org.apache.flink.table.plan.logical.{LogicalWindow, SessionGroupWindow}
 import org.apache.flink.table.runtime.operator.window.triggers._
@@ -114,26 +114,26 @@ class EmitStrategy(
 }
 
 object EmitStrategy {
-  def apply(queryConfig: StreamQueryConfig, window: LogicalWindow): EmitStrategy = {
+  def apply(tableConfig: TableConfig, window: LogicalWindow): EmitStrategy = {
     val isEventTime = ExpressionUtils.isRowtimeAttribute(window.timeAttribute)
     val isSessionWindow = window.isInstanceOf[SessionGroupWindow]
 
     val allowLateness = if (isSessionWindow) {
       // ignore allow lateness in session window because retraction is not supported
       0L
-    } else if (queryConfig.getMinIdleStateRetentionTime < 0) {
+    } else if (tableConfig.getMinIdleStateRetentionTime < 0) {
       // min idle state retention time is not set, use 0L as default which means not allow lateness
       0L
     } else {
       // use min idle state retention time as allow lateness
-      queryConfig.getMinIdleStateRetentionTime
+      tableConfig.getMinIdleStateRetentionTime
     }
 
     new EmitStrategy(
       isEventTime,
       isSessionWindow,
-      queryConfig.getEarlyFireInterval,
-      queryConfig.getLateFireInterval,
+      tableConfig.getEarlyFireInterval,
+      tableConfig.getLateFireInterval,
       allowLateness)
   }
 }

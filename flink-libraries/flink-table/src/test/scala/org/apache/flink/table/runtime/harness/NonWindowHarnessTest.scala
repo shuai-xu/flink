@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.table.api.{StreamQueryConfig, Types}
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat.GenericRow
@@ -47,12 +47,12 @@ class NonWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode)
     tEnv.registerTable("T", t)
     val t1 = tEnv.sqlQuery("SELECT c, sum(b) FROM T GROUP BY c")
 
-    val queryConfig = new StreamQueryConfig()
+    tEnv.getConfig
       .withIdleStateRetentionTime(
         Time.seconds(2),
         Time.seconds(3))
 
-    val testHarness = createHarnessTester(t1.toRetractStream[Row](queryConfig), "GroupAggregate")
+    val testHarness = createHarnessTester(t1.toRetractStream[Row], "GroupAggregate")
     val assertor = new BaseRowHarnessAssertor(Array(Types.STRING, Types.INT))
 
     testHarness.open()

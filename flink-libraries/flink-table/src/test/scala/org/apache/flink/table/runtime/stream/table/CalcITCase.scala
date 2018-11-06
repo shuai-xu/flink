@@ -19,11 +19,11 @@
 package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Literal
-import org.apache.flink.table.expressions.utils.{Func13, RichFunc1, RichFunc2, SplitUDF}
+import org.apache.flink.table.expressions.utils.{Func13, RichFunc1, RichFunc2}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
@@ -128,9 +128,8 @@ class CalcITCase extends StreamingTestBase {
     val ds = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
 
     val filterDs = ds.filter( Literal(false) )
-    val queryConfig = new StreamQueryConfig()
-    queryConfig.enableValuesSourceInput // enable values source input
-    val results = filterDs.toAppendStream[Row](queryConfig)
+    tEnv.getConfig.enableValuesSourceInput // enable values source input
+    val results = filterDs.toAppendStream[Row]
     val sink = new TestingAppendSink
 
     results.addSink(sink)

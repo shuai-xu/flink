@@ -23,13 +23,12 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
-import org.apache.flink.table.plan.nodes.common.CommonUtils._
 import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
@@ -119,12 +118,9 @@ class StreamExecIncrementalGroupAggregate(
         shuffleKey = Some(shuffleKey)))
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
@@ -165,10 +161,10 @@ class StreamExecIncrementalGroupAggregate(
     val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], partialAccTypes: _*)
     val operator = new KeyedBundleOperator(
       aggFunction,
-      getMiniBatchTrigger(queryConfig, useLocalAgg = true),
+      getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
       valueTypeInfo,
-      queryConfig.getParameters.getBoolean(
-        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableEnv.getConfig.getParameters.getBoolean(
+        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     // partitioned aggregation
     val ret = new OneInputTransformation(

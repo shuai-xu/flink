@@ -20,25 +20,23 @@ package org.apache.flink.table.plan
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.util.TableTestBase
+import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
 
 class RetractionWithTwoStageAggRulesTest extends TableTestBase {
 
-  private val util = streamTestUtil()
+  private var util: StreamTableTestUtil = _
 
   @Before
   def before(): Unit = {
-    val queryConfig = new StreamQueryConfig()
-    queryConfig
+    util = streamTestUtil()
+    util.tableEnv.getConfig
       .withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
-    queryConfig.enableMiniBatch
+    util.tableEnv.getConfig.enableMiniBatch
       .withMiniBatchTriggerTime(1000L)
       .withMiniBatchTriggerSize(3)
-    queryConfig.enableLocalAgg
-    util.tableEnv.setQueryConfig(queryConfig)
+    util.tableEnv.getConfig.enableLocalAgg
   }
 
   // one level unbounded groupBy

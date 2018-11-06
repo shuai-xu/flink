@@ -25,12 +25,10 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{SetOp, Union}
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, UnionTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._
 
@@ -98,13 +96,10 @@ class BatchExecUnion(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    val transformations = getInputs.map(
-      _.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig))
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val transformations = getInputs.map(_.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv))
     new UnionTransformation(transformations)
   }
 }

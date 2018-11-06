@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
-import org.apache.flink.table.api.{BatchQueryConfig, Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms
 import org.apache.flink.table.plan.rules.physical.batch.{BatchExecNestedLoopJoinRule, BatchExecSortMergeJoinRule}
@@ -133,9 +133,8 @@ class PlanUtilTest extends AbstractTestBase {
     * @param sink        table slink to output result
     */
   private def execute(inputOfSink: Table, sink: CollectTableSink[Row]): Unit = {
-    val queryConfig = new BatchQueryConfig
     val sinkTransformation = sink.emitBoundedStream(
-      tableEnv.translate[Row](inputOfSink, sink.getOutputType, sink, queryConfig),
+      tableEnv.translate[Row](inputOfSink, sink.getOutputType, sink),
       tableEnv.getConfig, env.getConfig).getTransformation
     setDumpFileToConfig()
     val streamGraph = StreamGraphGenerator.generate(

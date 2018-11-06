@@ -18,19 +18,15 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
-import org.apache.calcite.rel.RelDistribution.Type._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.calcite.rel.RelDistribution.Type._
-import org.apache.flink.api.common.operators.ResourceSpec.MANAGED_MEMORY_NAME
-import org.apache.flink.api.common.resources.Resource
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.dataformat.BaseRow
@@ -144,12 +140,10 @@ class BatchExecHashAggregate(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val outputRowType = getOutputRowType
     val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]

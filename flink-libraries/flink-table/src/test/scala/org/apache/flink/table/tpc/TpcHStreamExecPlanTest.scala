@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TestingRetractSink
 import org.apache.flink.table.sources.csv.CsvTableSource
@@ -39,34 +39,33 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
 
   private val env = StreamExecutionEnvironment.getExecutionEnvironment
   env.setParallelism(4)
-  val tableConfig = new TableConfig
-  tableConfig.setJoinReorderEnabled(true)
-  private val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
+  var tableConfig: TableConfig = _
+  private var tEnv: StreamTableEnvironment = _
   def getDataFile(tableName: String): String = {
     getClass.getResource(s"/tpch/data/$tableName/$tableName.tbl").getFile
   }
 
   val retractSinkCase = Seq("06", "11", "14", "15", "17", "19")
 
-  for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
-    lazy val tableSource = CsvTableSource.builder()
-        .path(getDataFile(tableName))
-        .fields(schema.getFieldNames, schema.getFieldTypes, schema.getFieldNullables)
-        .fieldDelimiter("|")
-        .lineDelimiter("\n")
-        .uniqueKeys(schema.getUniqueKeys)
-        .build()
-    tEnv.registerTableSource(tableName, tableSource)
-  }
-
   @Before
   def prepare(): Unit = {
-    val queryConfig = new StreamQueryConfig()
+    val tableConfig = new TableConfig
+    tableConfig.setJoinReorderEnabled(true)
     if (twoStageAgg) {
-      queryConfig.enableMiniBatch
-      queryConfig.enableLocalAgg
+      tableConfig.enableMiniBatch
+      tableConfig.enableLocalAgg
     }
-    tEnv.setQueryConfig(queryConfig)
+    tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
+    for ((tableName, schema) <- TpcHSchemaProvider.schemaMap) {
+      lazy val tableSource = CsvTableSource.builder()
+          .path(getDataFile(tableName))
+          .fields(schema.getFieldNames, schema.getFieldTypes, schema.getFieldNullables)
+          .fieldDelimiter("|")
+          .lineDelimiter("\n")
+          .uniqueKeys(schema.getUniqueKeys)
+          .build()
+      tEnv.registerTableSource(tableName, tableSource)
+    }
   }
 
   @Test

@@ -23,9 +23,9 @@ import java.lang.{Long => JLong}
 import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
-import org.apache.flink.table.api.{StreamQueryConfig, Types}
+import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -47,8 +47,8 @@ class RowTimeBoundedRangeOver(
     inputFieldTypes: Seq[InternalType],
     precedingOffset: Long,
     rowTimeIdx: Int,
-    queryConfig: StreamQueryConfig)
-  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig)
+    tableConfig: TableConfig)
+  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig)
   with Logging {
 
   Preconditions.checkNotNull(precedingOffset)

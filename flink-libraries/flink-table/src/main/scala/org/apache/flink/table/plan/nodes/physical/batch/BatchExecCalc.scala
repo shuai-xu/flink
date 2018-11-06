@@ -27,7 +27,7 @@ import org.apache.calcite.rex.{RexCall, RexInputRef, RexProgram}
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.mapping.{Mapping, MappingType, Mappings}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
 import org.apache.flink.table.dataformat.BaseRow
@@ -138,15 +138,12 @@ class BatchExecCalc(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
-    val inputTransform =
-      getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    val inputTransform = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val condition = if (calcProgram.getCondition != null) {
       Some(calcProgram.expandLocalRef(calcProgram.getCondition))
     } else {

@@ -22,7 +22,7 @@ import java.util.{Map => JMap}
 
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.ExecutionContext
@@ -39,13 +39,13 @@ import org.apache.flink.util.Collector
   * @param rowTypeInfo        the type info of the input row.
   * @param generateRetraction the flag whether to generate retractions in this operator.
   * @param rowtimeIndex       the index of rowtime field which is used to order data.
-  * @param queryConfig        the stream query config.
+  * @param tableConfig        the table config.
   */
 class MiniBatchLastRowFunction(
     rowTypeInfo: BaseRowTypeInfo[BaseRow],
     generateRetraction: Boolean,
     rowtimeIndex: Int,
-    queryConfig: StreamQueryConfig)
+    tableConfig: TableConfig)
   extends BundleFunction[BaseRow, BaseRow, BaseRow, BaseRow]
   with LastRowFunctionBase
   with Logging {

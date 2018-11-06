@@ -25,7 +25,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
@@ -86,12 +86,9 @@ class StreamExecTemporalSort(
       null)
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = input.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     // need to identify time between others order fields. Time needs to be first sort element
     val timeType = SortUtil.getFirstSortField(sortCollation, outputSchema.relDataType).getType

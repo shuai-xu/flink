@@ -36,12 +36,11 @@ class StreamingWithAggTestBase(
   @Before
   override def before(): Unit = {
     super.before()
-    val queryConfig = tEnv.queryConfig
-    queryConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
+    tEnv.getConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
     if (aggMode.isLocalAggEnabled) {
-      queryConfig.enableLocalAgg
+      tEnv.getConfig.enableLocalAgg
     } else {
-      queryConfig.disableLocalAgg
+      tEnv.getConfig.disableLocalAgg
     }
   }
 }

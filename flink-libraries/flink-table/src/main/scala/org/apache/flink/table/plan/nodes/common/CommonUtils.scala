@@ -19,8 +19,8 @@
 package org.apache.flink.table.plan.nodes.common
 
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.flink.streaming.api.bundle.{CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger, BundleTrigger}
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.dataformat.BaseRow
 
 import scala.collection.JavaConverters._
@@ -32,24 +32,24 @@ object CommonUtils {
   }
 
   def getMiniBatchTrigger(
-      queryConfig: StreamQueryConfig,
+      tableConfig: TableConfig,
       useLocalAgg: Boolean): CombinedBundleTrigger[BaseRow] = {
     val triggerTime = if (useLocalAgg) {
-      queryConfig.getMiniBatchTriggerTime / 2
+      tableConfig.getMiniBatchTriggerTime / 2
     } else {
-      queryConfig.getMiniBatchTriggerTime
+      tableConfig.getMiniBatchTriggerTime
     }
     val timeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (queryConfig.isMicroBatchEnabled) {
+      if (tableConfig.isMicroBatchEnabled) {
         None
       } else {
         Some(new TimeBundleTrigger[BaseRow](triggerTime))
       }
     val sizeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (queryConfig.getMiniBatchTriggerSize == Long.MinValue) {
+      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
         None
       } else {
-        Some(new CountBundleTrigger[BaseRow](queryConfig.getMiniBatchTriggerSize))
+        Some(new CountBundleTrigger[BaseRow](tableConfig.getMiniBatchTriggerSize))
       }
     new CombinedBundleTrigger[BaseRow](
       Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*

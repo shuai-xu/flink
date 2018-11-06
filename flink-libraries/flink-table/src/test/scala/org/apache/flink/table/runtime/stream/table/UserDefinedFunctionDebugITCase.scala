@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime.stream.table
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils.TestingAppendSink
 import org.apache.flink.types.Row
@@ -39,13 +39,13 @@ class UserDefinedFunctionDebugITCase {
   @Test(expected = classOf[Exception])
   def testDebugEnableCompile(): Unit = {
     val tableConfig = new TableConfig
-    tableConfig.enableCodeGenerateDebug()
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, tableConfig)
+    tEnv.getConfig.enableCodeGenerateDebug
     val stream = env.fromCollection(data)
     val table = stream.toTable(tEnv, 'a, 'b, 'c)
     val result = table.select('a, DebugUDF('b) as 'b, 'c)
-    result.toAppendStream[Row](new StreamQueryConfig())
+    result.toAppendStream[Row]
       .addSink(new TestingAppendSink)
       env.execute()
   }
@@ -53,7 +53,7 @@ class UserDefinedFunctionDebugITCase {
 }
 
 object DebugUDF extends ScalarFunction {
-  def eval(x: Int) = if (x == 3) {
+  def eval(x: Int): Int = if (x == 3) {
     throw new RuntimeException("TestException")
   } else {
     x * x

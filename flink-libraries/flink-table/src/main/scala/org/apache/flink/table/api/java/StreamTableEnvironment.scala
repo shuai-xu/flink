@@ -157,7 +157,9 @@ class StreamTableEnvironment(
     *            make this more explicit in the future, please use toAppendStream() instead.
     */
   @Deprecated
-  def toDataStream[T](table: Table, clazz: Class[T]): DataStream[T] = toAppendStream(table, clazz)
+  def toDataStream[T](
+      table: Table,
+      clazz: Class[T]): DataStream[T] = toAppendStream(table, clazz)
 
   /**
     * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
@@ -176,33 +178,6 @@ class StreamTableEnvironment(
     *
     * @param table The [[Table]] to convert.
     * @param typeInfo The [[TypeInformation]] that specifies the type of the [[DataStream]].
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
-    * @deprecated This method only supports conversion of append-only tables. In order to
-    *            make this more explicit in the future, please use toAppendStream() instead.
-    */
-  @Deprecated
-  def toDataStream[T](table: Table, typeInfo: TypeInformation[T]): DataStream[T] =
-    toAppendStream(table, typeInfo)
-
-  /**
-    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
-    *
-    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
-    * by update or delete changes, the conversion will fail.
-    *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * NOTE: This method only supports conversion of append-only tables. In order to make this
-    * more explicit in the future, please use [[toAppendStream()]] instead.
-    * If add and retract messages are required, use [[toRetractStream()]].
-    *
-    * @param table The [[Table]] to convert.
-    * @param clazz The class of the type of the resulting [[DataStream]].
-    * @param queryConfig The configuration of the query to generate.
     * @tparam T The type of the resulting [[DataStream]].
     * @return The converted [[DataStream]].
     * @deprecated This method only supports conversion of append-only tables. In order to
@@ -211,37 +186,7 @@ class StreamTableEnvironment(
   @Deprecated
   def toDataStream[T](
       table: Table,
-      clazz: Class[T],
-      queryConfig: StreamQueryConfig): DataStream[T] = toAppendStream(table, clazz, queryConfig)
-
-  /**
-    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
-    *
-    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
-    * by update or delete changes, the conversion will fail.
-    *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * NOTE: This method only supports conversion of append-only tables. In order to make this
-    * more explicit in the future, please use [[toAppendStream()]] instead.
-    * If add and retract messages are required, use [[toRetractStream()]].
-    *
-    * @param table The [[Table]] to convert.
-    * @param typeInfo The [[TypeInformation]] that specifies the type of the [[DataStream]].
-    * @param queryConfig The configuration of the query to generate.
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
-    * @deprecated This method only supports conversion of append-only tables. In order to
-    *            make this more explicit in the future, please use toAppendStream() instead.
-    */
-  @Deprecated
-  def toDataStream[T](
-      table: Table,
-      typeInfo: TypeInformation[T],
-      queryConfig: StreamQueryConfig): DataStream[T] = toAppendStream(table, typeInfo, queryConfig)
+      typeInfo: TypeInformation[T]): DataStream[T] = toAppendStream(table, typeInfo)
 
   /**
     * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
@@ -256,57 +201,15 @@ class StreamTableEnvironment(
     *
     * @param table The [[Table]] to convert.
     * @param clazz The class of the type of the resulting [[DataStream]].
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
-    */
-  def toAppendStream[T](table: Table, clazz: Class[T]): DataStream[T] = {
-    toAppendStream(table, clazz, queryConfig)
-  }
-
-  /**
-    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
-    *
-    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
-    * by update or delete changes, the conversion will fail.
-    *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param typeInfo The [[TypeInformation]] that specifies the type of the [[DataStream]].
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
-    */
-  def toAppendStream[T](table: Table, typeInfo: TypeInformation[T]): DataStream[T] = {
-    toAppendStream(table, typeInfo, queryConfig)
-  }
-
-  /**
-    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
-    *
-    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
-    * by update or delete changes, the conversion will fail.
-    *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param clazz The class of the type of the resulting [[DataStream]].
-    * @param queryConfig The configuration of the query to generate.
     * @tparam T The type of the resulting [[DataStream]].
     * @return The converted [[DataStream]].
     */
   def toAppendStream[T](
       table: Table,
-      clazz: Class[T],
-      queryConfig: StreamQueryConfig): DataStream[T] = {
+      clazz: Class[T]): DataStream[T] = {
     val t = DataTypes.extractType(clazz)
     TableEnvironment.validateType(t)
-    translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false, t)
+    translate[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
   }
 
   /**
@@ -322,17 +225,15 @@ class StreamTableEnvironment(
     *
     * @param table The [[Table]] to convert.
     * @param typeInfo The [[TypeInformation]] that specifies the type of the [[DataStream]].
-    * @param queryConfig The configuration of the query to generate.
     * @tparam T The type of the resulting [[DataStream]].
     * @return The converted [[DataStream]].
     */
   def toAppendStream[T](
       table: Table,
-      typeInfo: TypeInformation[T],
-      queryConfig: StreamQueryConfig): DataStream[T] = {
+      typeInfo: TypeInformation[T]): DataStream[T] = {
     val t = DataTypes.of(typeInfo)
     TableEnvironment.validateType(t)
-    translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false, t)
+    translate[T](table, updatesAsRetraction = false, withChangeFlag = false, t)
   }
 
   /**
@@ -356,7 +257,14 @@ class StreamTableEnvironment(
       table: Table,
       clazz: Class[T]): DataStream[JTuple2[JBool, T]] = {
 
-    toRetractStream(table, clazz, queryConfig)
+    val typeInfo = TypeExtractor.createTypeInfo(clazz)
+    TableEnvironment.validateType(DataTypes.of(typeInfo))
+    val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
+    translate[JTuple2[JBool, T]](
+      table,
+      updatesAsRetraction = true,
+      withChangeFlag = true,
+      DataTypes.of(resultType))
   }
 
   /**
@@ -380,66 +288,6 @@ class StreamTableEnvironment(
       table: Table,
       typeInfo: TypeInformation[T]): DataStream[JTuple2[JBool, T]] = {
 
-    toRetractStream(table, typeInfo, queryConfig)
-  }
-
-  /**
-    * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
-    * The message will be encoded as [[JTuple2]]. The first field is a [[JBool]] flag,
-    * the second field holds the record of the specified type [[T]].
-    *
-    * A true [[JBool]] flag indicates an add message, a false flag indicates a retract message.
-    *
-    * The fields of the [[Table]] are mapped to the requested type as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param clazz The class of the requested record type.
-    * @param queryConfig The configuration of the query to generate.
-    * @tparam T The type of the requested record type.
-    * @return The converted [[DataStream]].
-    */
-  def toRetractStream[T](
-      table: Table,
-      clazz: Class[T],
-      queryConfig: StreamQueryConfig): DataStream[JTuple2[JBool, T]] = {
-
-    val typeInfo = TypeExtractor.createTypeInfo(clazz)
-    TableEnvironment.validateType(DataTypes.of(typeInfo))
-    val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
-    translate[JTuple2[JBool, T]](
-      table,
-      queryConfig,
-      updatesAsRetraction = true,
-      withChangeFlag = true,
-      DataTypes.of(resultType))
-  }
-
-  /**
-    * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
-    * The message will be encoded as [[JTuple2]]. The first field is a [[JBool]] flag,
-    * the second field holds the record of the specified type [[T]].
-    *
-    * A true [[JBool]] flag indicates an add message, a false flag indicates a retract message.
-    *
-    * The fields of the [[Table]] are mapped to the requested type as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param typeInfo The [[TypeInformation]] of the requested record type.
-    * @param queryConfig The configuration of the query to generate.
-    * @tparam T The type of the requested record type.
-    * @return The converted [[DataStream]].
-    */
-  def toRetractStream[T](
-      table: Table,
-      typeInfo: TypeInformation[T],
-      queryConfig: StreamQueryConfig): DataStream[JTuple2[JBool, T]] = {
-
     TableEnvironment.validateType(DataTypes.of(typeInfo))
     val resultTypeInfo = new TupleTypeInfo[JTuple2[JBool, T]](
       Types.BOOLEAN,
@@ -447,7 +295,6 @@ class StreamTableEnvironment(
     )
     translate[JTuple2[JBool, T]](
       table,
-      queryConfig,
       updatesAsRetraction = true,
       withChangeFlag = true,
       DataTypes.of(resultTypeInfo))

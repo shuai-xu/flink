@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.rules.physical.stream
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowtimeAttribute
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
@@ -64,7 +64,7 @@ class StreamExecGroupWindowAggregateRule
     val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, requiredTraitSet)
 
-    val config = rel.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+    val config = rel.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
     val emitStrategy = EmitStrategy(config, agg.getWindow)
 
     val inputTimestampIndex = if (isRowtimeAttribute(agg.getWindow.timeAttribute)) {

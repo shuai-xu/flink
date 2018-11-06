@@ -25,7 +25,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{SetOp, Union}
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, UnionTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
@@ -69,9 +69,7 @@ class StreamExecUnion(
     s"Union All(union: (${outputRowType.getFieldNames.mkString(", ")}))"
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputs = getInputs
     val firstInputRowType = inputs.head.getRowType
     val firstInputFields = firstInputRowType.getFieldList.asScala.map(
@@ -105,8 +103,7 @@ class StreamExecUnion(
           diffFields.map(_._2).map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]")))
     }
 
-    val transformations = getInputs.map(_.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig))
+    val transformations = getInputs.map(_.asInstanceOf[StreamExecRel].translateToPlan(tableEnv))
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
     new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
   }

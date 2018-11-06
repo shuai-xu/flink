@@ -31,22 +31,22 @@ abstract class StreamingWithMiniBatchTestBase(minibatch: MiniBatchMode, state: S
   override def before(): Unit = {
     super.before()
     // set mini batch
-    val queryConfig = tEnv.queryConfig
+    val tableConfig = tEnv.getConfig
     minibatch match {
       case MiniBatchOn =>
-        queryConfig
+        tableConfig
         .enableMiniBatch
         .enableMiniBatchJoin
         .withMiniBatchTriggerTime(1000L)
         .withMiniBatchTriggerSize(3)
       case MicroBatchOn =>
-        queryConfig
+        tableConfig
         .enableMicroBatch
         .enableMiniBatchJoin
         .withMicroBatchTriggerTime(1000L)
         .withMiniBatchTriggerSize(3)
       case MiniBatchOff =>
-        queryConfig.disableMiniBatch.disableMiniBatchJoin
+        tableConfig.disableMiniBatch.disableMiniBatchJoin
     }
   }
 

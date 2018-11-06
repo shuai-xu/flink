@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.sort.RecordEqualiser
@@ -36,14 +36,14 @@ import org.apache.flink.util.Collector
   * @param rowTypeInfo        the typeInfo of the input row.
   * @param generateRetraction the flag whether to generate retractions in this operator.
   * @param rowtimeIndex       the index of rowtime field which is used to order data.
-  * @param queryConfig        the stream query config.
+  * @param tableConfig        the table config.
   */
 class LastRowFunction(
    rowTypeInfo: BaseRowTypeInfo[BaseRow],
    generateRetraction: Boolean,
    rowtimeIndex: Int,
-   queryConfig: StreamQueryConfig)
-  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig)
+   tableConfig: TableConfig)
+  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig)
   with LastRowFunctionBase
   with Logging {
 

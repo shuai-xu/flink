@@ -26,7 +26,7 @@ import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
 import org.apache.calcite.rex.{RexNode, RexProgram}
 import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -72,12 +72,10 @@ class StreamExecJoinTable(
     ruleDescription)
   with StreamExecRel {
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     translateToPlanInternal(
-      getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig),
+      getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv),
       tableEnv.execEnv,
       tableEnv.getConfig)
   }

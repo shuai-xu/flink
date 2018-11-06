@@ -26,7 +26,7 @@ import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableEnvironment, TableException}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, TableException}
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.dataformat.BaseRow
@@ -77,11 +77,9 @@ class BatchExecTableSourceScan(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     val fieldIndexes = TableSourceUtil.computeIndexMapping(
       tableSource,

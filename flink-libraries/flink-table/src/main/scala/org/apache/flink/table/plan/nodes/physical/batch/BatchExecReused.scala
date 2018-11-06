@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelWriter, SingleRel}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
@@ -46,11 +46,9 @@ class BatchExecReused(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-    tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
   }
 }

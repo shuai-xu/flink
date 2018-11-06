@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{StreamQueryConfig, Table, Types}
+import org.apache.flink.table.api.{Table, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.Func1
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
@@ -109,16 +109,15 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testWindowAggEarlyFire(): Unit = {
-    val streamQueryConfig = new StreamQueryConfig
-    streamQueryConfig.withEarlyFireInterval(Time.of(1, TimeUnit.MINUTES))
     val util = streamTestUtil()
+    util.tableEnv.getConfig.withEarlyFireInterval(Time.of(1, TimeUnit.MINUTES))
     val table = util.addTable[(Long, Int, String)]('long, 'int, 'string, 'proctime.proctime)
 
     val windowedTable = table
       .window(Tumble over 50.milli on 'proctime as 'w1)
       .groupBy('w1, 'string)
       .select('w1.proctime as 'proctime, 'string, 'int.count)
-    assertMono(null, windowedTable, util, streamQueryConfig)
+    assertMono(null, windowedTable, util)
   }
 
   @Test
@@ -135,18 +134,18 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testOneAggWithLocalGlobal(): Unit = {
-    val streamQueryConfig = new StreamQueryConfig
-    streamQueryConfig.withMiniBatchTriggerTime(1000)
-    streamQueryConfig.enableLocalAgg
-    streamQueryConfig.enableMiniBatch
     val util = streamTestUtil()
+    util.tableEnv.getConfig.withMiniBatchTriggerTime(1000)
+    util.tableEnv.getConfig.enableLocalAgg
+    util.tableEnv.getConfig.enableMiniBatch
+
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
 
     val resultTable = table
       .groupBy('b)
       .select('b, 'a.count, 'a.avg)
     assertMono(new RelModifiedMonotonicity(Array(CONSTANT, INCREASING, NOT_MONOTONIC)),
-               resultTable, util, streamQueryConfig)
+               resultTable, util)
   }
 
   @Test
@@ -164,11 +163,11 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testTwoAggWithLocalGlobal(): Unit = {
-    val streamQueryConfig = new StreamQueryConfig
-    streamQueryConfig.withMiniBatchTriggerTime(1000)
-    streamQueryConfig.enableLocalAgg
-    streamQueryConfig.enableMiniBatch
     val util = streamTestUtil()
+    util.tableEnv.getConfig.withMiniBatchTriggerTime(1000)
+    util.tableEnv.getConfig.enableLocalAgg
+    util.tableEnv.getConfig.enableMiniBatch
+
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
 
     val resultTable = table
@@ -178,7 +177,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
       .select('a, 'c.max)
     assertMono(
       new RelModifiedMonotonicity(Array(CONSTANT, INCREASING)),
-      resultTable, util, streamQueryConfig)
+      resultTable, util)
   }
 
   @Test
@@ -257,24 +256,11 @@ class ModifiedMonotonicityTest extends TableTestBase {
     assertMono(null, resultTable, util)
   }
 
-  def assertMono(expect: RelModifiedMonotonicity, table: Table, util: StreamTableTestUtil) = {
+  def assertMono(expect: RelModifiedMonotonicity, table: Table, util: StreamTableTestUtil): Unit = {
     val relNode = table.getRelNode
     val optimized = util.tableEnv.optimize(relNode, false)
     val mq = util.tableEnv.getRelBuilder.getCluster.getMetadataQuery
     assertEquals(expect,
        mq.asInstanceOf[FlinkRelMetadataQuery].getRelModifiedMonotonicity(optimized))
-  }
-
-  def assertMono(
-    expect: RelModifiedMonotonicity,
-    table: Table,
-    util: StreamTableTestUtil,
-    queryConfig: StreamQueryConfig) = {
-
-    val relNode = table.getRelNode
-    val optimized = util.tableEnv.optimize(relNode, false, queryConfig)
-    val mq = util.tableEnv.getRelBuilder.getCluster.getMetadataQuery
-    assertEquals(expect,
-      mq.asInstanceOf[FlinkRelMetadataQuery].getRelModifiedMonotonicity(optimized))
   }
 }

@@ -27,7 +27,7 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -395,7 +395,7 @@ object RankUtil {
 
   def analyzeRankStrategy(
       cluster: RelOptCluster,
-      queryConfig: StreamQueryConfig,
+      tableConfig: TableConfig,
       rank: StreamExecRank,
       sortCollation: RelCollation): RankStrategy = {
 
@@ -456,7 +456,7 @@ object RankUtil {
             // we can utilize unary rank function to speed up processing
             UnaryUpdateRank(uniqueKeys.iterator().next().toArray)
           } else {
-            if (queryConfig.isTopNApproxEnabled) {
+            if (tableConfig.isTopNApproxEnabled) {
               // if enabled in config, we can use approximate rank function in this scenario.
               // It is accurate in most situations, and faster than retract rank
               ApproxUpdateRank(uniqueKeys.iterator().next().toArray)

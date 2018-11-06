@@ -27,7 +27,7 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedTwoInputStreamOperatorTestHarness, MockStreamConfig}
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig}
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.util.StreamExecUtil
@@ -44,13 +44,13 @@ import org.junit.runners.Parameterized
 @RunWith(classOf[Parameterized])
 class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
 
-  private val queryConfig =
-    new StreamQueryConfig().withIdleStateRetentionTime(Time.milliseconds(200), Time.milliseconds
+  private val tableConfig =
+    new TableConfig().withIdleStateRetentionTime(Time.milliseconds(200), Time.milliseconds
     (400))
-  queryConfig.enableMiniBatch
-  queryConfig.withMiniBatchTriggerTime(5)
-  queryConfig.withMiniBatchTriggerSize(1000)
-  queryConfig.enableMiniBatchJoin
+  tableConfig.enableMiniBatch
+  tableConfig.withMiniBatchTriggerTime(5)
+  tableConfig.withMiniBatchTriggerSize(1000)
+  tableConfig.enableMiniBatchJoin
   private val baseRow = classOf[BaseRow].getCanonicalName
 
   private val rowType = new BaseRowTypeInfo(
@@ -92,8 +92,8 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.ONLY_EQUALITY_CONDITION_EMPTY_MATCH,
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       true,
@@ -101,9 +101,9 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(queryConfig),
-      queryConfig.getParameters.getBoolean(
-        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      getMiniBatchTrigger(tableConfig),
+      tableConfig.getParameters.getBoolean(
+        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -190,16 +190,16 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
       pkProject,
       JoinStateHandler.Type.JOIN_KEY_CONTAIN_PRIMARY_KEY,
       JoinStateHandler.Type.JOIN_KEY_CONTAIN_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       JoinMatchStateHandler.Type.JOIN_KEY_CONTAIN_PRIMARY_KEY_MATCH,
       true,
       true,
       Array[Boolean](false),
-      getMiniBatchTrigger(queryConfig),
-      queryConfig.getParameters.getBoolean(
-        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      getMiniBatchTrigger(tableConfig),
+      tableConfig.getParameters.getBoolean(
+        TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     val testHarness =
       new KeyedTwoInputStreamOperatorTestHarness(
@@ -243,14 +243,14 @@ class MiniBatchStreamJoinHarnessTest(mode: StateBackendMode) extends HarnessTest
     testHarness.close()
   }
 
-  private def getMiniBatchTrigger(queryConfig: StreamQueryConfig) = {
+  private def getMiniBatchTrigger(tableConfig: TableConfig) = {
     val timeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      Some(new TimeCoBundleTrigger[BaseRow, BaseRow](queryConfig.getMiniBatchTriggerTime))
+      Some(new TimeCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerTime))
     val sizeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      if (queryConfig.getMiniBatchTriggerSize == Long.MinValue) {
+      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
         None
       } else {
-        Some(new CountCoBundleTrigger[BaseRow, BaseRow](queryConfig.getMiniBatchTriggerSize))
+        Some(new CountCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerSize))
       }
     new CombinedCoBundleTrigger[BaseRow, BaseRow](
       Array(timeTrigger, sizeTrigger)

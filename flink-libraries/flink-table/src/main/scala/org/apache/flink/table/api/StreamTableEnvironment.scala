@@ -89,11 +89,7 @@ abstract class StreamTableEnvironment(
   // prefix  for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
 
-  override def queryConfig: StreamQueryConfig = this.streamQueryConfig
-
   private val DEFAULT_JOB_NAME = "Flink Streaming Job"
-
-  private var streamQueryConfig: StreamQueryConfig = new StreamQueryConfig
 
   private var isConfigMerged: Boolean = false
 
@@ -136,14 +132,9 @@ abstract class StreamTableEnvironment(
     execEnv.execute(jobName)
   }
 
-  def setQueryConfig(queryConfig: StreamQueryConfig): Unit = streamQueryConfig = queryConfig
-
   override def compile(): Seq[LogicalNodeBlock] = {
 
     mergeParameters()
-
-    //TODO get query config from user
-    val streamQueryConfig = queryConfig
 
     val result = if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
@@ -161,7 +152,7 @@ abstract class StreamTableEnvironment(
             case _ => false
           }
           sinkBlock.setUpdateAsRetraction(retractionFromSink)
-          inferUpdateAsRetraction(sinkBlock, streamQueryConfig, retractionFromSink)
+          inferUpdateAsRetraction(sinkBlock, retractionFromSink)
       }
 
       // propagate updateAsRetraction property to all input blocks
@@ -172,7 +163,7 @@ abstract class StreamTableEnvironment(
       // translates recursively LogicalNodeBlock into DataStream
       blockPlan.foreach {
         sinkBlock =>
-          val result: DataStream[_] = translateLogicalNodeBlock(sinkBlock, streamQueryConfig)
+          val result: DataStream[_] = translateLogicalNodeBlock(sinkBlock)
           sinkBlock.outputNode match {
             case sinkNode: SinkNode => emitDataStream(
               sinkNode.sink.asInstanceOf[TableSink[Any]],
@@ -185,11 +176,11 @@ abstract class StreamTableEnvironment(
     } else {
       Seq.empty
     }
-    if (queryConfig.isMiniBatchEnabled) {
-      if (queryConfig.getMiniBatchTriggerTime <= 0L) {
+    if (getConfig.isMiniBatchEnabled) {
+      if (getConfig.getMiniBatchTriggerTime <= 0L) {
         throw new RuntimeException(TableErrors.INST.sqlCompileMiniBatchTriggerTimeError())
       }
-      MiniBatchHelper.assignTriggerTimeEqually(execEnv, queryConfig.getMiniBatchTriggerTime)
+      MiniBatchHelper.assignTriggerTimeEqually(execEnv, getConfig.getMiniBatchTriggerTime)
     }
      result
   }
@@ -438,27 +429,18 @@ abstract class StreamTableEnvironment(
     *
     * @param table The [[Table]] to write.
     * @param sink The [[TableSink]] to write the [[Table]] to.
-    * @param queryConfig The configuration for the query to generate.
     * @tparam T The expected type of the [[DataStream]] which represents the [[Table]].
     */
   override private[flink] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
-      queryConfig: QueryConfig,
       sinkName: String): Unit = {
-
-    // Check query configuration
-    val streamQueryConfig = queryConfig match {
-      case streamConfig: StreamQueryConfig => streamConfig
-      case _ =>
-        throw new TableException("StreamQueryConfig required to configure stream query.")
-    }
 
     if (config.getSubsectionOptimization) {
       sinkNodes += SinkNode(table.logicalPlan, sink)
     } else {
       val (result: DataStream[T], _) =
-        translate(table, sink, streamQueryConfig)
+        translate(table, sink)
       emitDataStream(sink, result)
     }
   }
@@ -849,21 +831,17 @@ abstract class StreamTableEnvironment(
     *
     * @param relNode The root node of the relational expression tree.
     * @param updatesAsRetraction True if the sink requests updates as retraction messages.
-    * @param queryConfig The configuration for the query to generate.
     * @return The optimized [[RelNode]] tree
     */
   private[flink] def optimize(
       relNode: RelNode,
       updatesAsRetraction: Boolean,
-      queryConfig: QueryConfig = streamQueryConfig,
       isSinkBlock: Boolean = true): RelNode = {
 
     val programs = config.getCalciteConfig.getStreamPrograms
     Preconditions.checkNotNull(programs)
 
     val flinkChainContext = getPlanner.getContext.asInstanceOf[FlinkChainContext]
-
-    flinkChainContext.load(Contexts.of(queryConfig))
 
     val optimizeNode = programs.optimize(relNode, new StreamOptimizeContext() {
       override def getContext: Context = flinkChainContext
@@ -876,7 +854,6 @@ abstract class StreamTableEnvironment(
 
       override def isSinkNode: Boolean = isSinkBlock
     })
-    flinkChainContext.unload(classOf[QueryConfig])
 
     optimizeNode
   }
@@ -888,7 +865,6 @@ abstract class StreamTableEnvironment(
     * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
     *
     * @param table The root node of the relational expression tree.
-    * @param queryConfig The configuration for the query to generate.
     * @param updatesAsRetraction Set to true to encode updates as retraction messages.
     * @param withChangeFlag Set to true to emit records with change flags.
     * @param resultType The [[DataType]] of the resulting [[DataStream]].
@@ -897,7 +873,6 @@ abstract class StreamTableEnvironment(
     */
   protected def translate[A](
       table: Table,
-      queryConfig: StreamQueryConfig,
       updatesAsRetraction: Boolean,
       withChangeFlag: Boolean,
       resultType: DataType): DataStream[A] = {
@@ -905,11 +880,11 @@ abstract class StreamTableEnvironment(
     mergeParameters()
 
     val relNode = table.getRelNode
-    val dataStreamPlan = optimize(relNode, updatesAsRetraction, queryConfig)
+    val dataStreamPlan = optimize(relNode, updatesAsRetraction)
 
     val rowType = getResultType(relNode, dataStreamPlan)
 
-    translate(dataStreamPlan, rowType, queryConfig, withChangeFlag, null, resultType)
+    translate(dataStreamPlan, rowType, withChangeFlag, null, resultType)
   }
 
   /**
@@ -918,7 +893,6 @@ abstract class StreamTableEnvironment(
     * @param logicalPlan The root node of the relational expression tree.
     * @param logicalType The row type of the result. Since the logicalPlan can lose the
     *                    field naming during optimization we pass the row type separately.
-    * @param queryConfig     The configuration for the query to generate.
     * @param withChangeFlag Set to true to emit records with change flags.
     * @param resultType         The [[DataType]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
@@ -927,7 +901,6 @@ abstract class StreamTableEnvironment(
   protected def translate[A](
       logicalPlan: RelNode,
       logicalType: RelDataType,
-      queryConfig: StreamQueryConfig,
       withChangeFlag: Boolean,
       sink: TableSink[_],
       resultType: DataType): DataStream[A] = {
@@ -940,7 +913,7 @@ abstract class StreamTableEnvironment(
     }
 
     // get BaseRow plan
-    val translateStream = translateToBaseRow(logicalPlan, queryConfig)
+    val translateStream = translateToBaseRow(logicalPlan)
 
     val parTransformation = if (sink != null) {
       createPartitionTransformation(sink, translateStream)
@@ -1004,16 +977,14 @@ abstract class StreamTableEnvironment(
       * Translates a logical [[RelNode]] plan into a [[DataStream]] of type [[BaseRow]].
       *
       * @param logicalPlan The logical plan to translate.
-      * @param queryConfig  The configuration for the query to generate.
       * @return The [[DataStream]] of type [[BaseRow]].
       */
     protected def translateToBaseRow(
-        logicalPlan: RelNode,
-        queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+        logicalPlan: RelNode): StreamTransformation[BaseRow] = {
 
       logicalPlan match {
         case node: StreamExecRel =>
-          node.translateToPlan(this, queryConfig)
+          node.translateToPlan(this)
         case _ =>
           throw TableException("Cannot generate DataStream due to an invalid logical plan. " +
             "This is a bug and should not happen. Please file an issue.")
@@ -1028,8 +999,8 @@ abstract class StreamTableEnvironment(
     */
   def explain(table: Table): String = {
     val ast = table.getRelNode
-    val optimizedPlan = optimize(ast, updatesAsRetraction = false, queryConfig)
-    val transformStream = translateToBaseRow(optimizedPlan, queryConfig)
+    val optimizedPlan = optimize(ast, updatesAsRetraction = false)
+    val transformStream = translateToBaseRow(optimizedPlan)
 
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildStreamProperties(execEnv), ArrayBuffer(transformStream))
@@ -1147,31 +1118,29 @@ abstract class StreamTableEnvironment(
     * Infer UpdateAsRetraction property for each block.
     *
     * @param block The [[LogicalNodeBlock]] instance.
-    * @param queryConfig The configuration for the query to generate.
     * @param retractionFromSink Whether the sink need update as retraction messages.
     */
   private def inferUpdateAsRetraction(
       block: LogicalNodeBlock,
-      queryConfig: QueryConfig,
       retractionFromSink: Boolean): Unit = {
 
     block.children.foreach {
       child =>
         if (child.getNewOutputNode.isEmpty) {
-          inferUpdateAsRetraction(child, queryConfig, false)
+          inferUpdateAsRetraction(child, false)
         }
     }
 
     val optimizedPlan = block.getLogicalPlan match {
       case n: SinkNode =>
         val table = new Table(this, n.child) // ignore sink node
-        val optimizedPlan = optimize(table.getRelNode, retractionFromSink, queryConfig, true)
+        val optimizedPlan = optimize(table.getRelNode, retractionFromSink, true)
         block.setOptimizedPlan(optimizedPlan)
         optimizedPlan
 
       case o =>
         val table = new Table(this, o)
-        val optimizedPlan = optimize(table.getRelNode, retractionFromSink, queryConfig, false)
+        val optimizedPlan = optimize(table.getRelNode, retractionFromSink, false)
         val produceUpdates = !UpdatingPlanChecker.isAppendOnly(optimizedPlan)
 
         val name = createUniqueTableName()
@@ -1252,12 +1221,11 @@ abstract class StreamTableEnvironment(
     * @return The [[DataStream]] that corresponds to logical plan of current block.
     */
   private def translateLogicalNodeBlock(
-      block: LogicalNodeBlock,
-      streamQueryConfig: StreamQueryConfig): DataStream[_] = {
+      block: LogicalNodeBlock): DataStream[_] = {
 
     block.children.foreach {
       child => if (child.getNewOutputNode.isEmpty) {
-        translateLogicalNodeBlock(child, queryConfig)
+        translateLogicalNodeBlock(child)
       }
     }
 
@@ -1265,7 +1233,7 @@ abstract class StreamTableEnvironment(
       case n: SinkNode =>
         val table = new Table(this, n.child) // ignore sink node
         val (dataStream, optimizedPlan) = try {
-          translate(table, n.sink, streamQueryConfig)
+          translate(table, n.sink)
         } catch {
           case t: TableException =>
             throw TableException(s"Error happens when translating plan for sink '${n.sink}'", t)
@@ -1279,9 +1247,8 @@ abstract class StreamTableEnvironment(
         val optimizedPlan = optimize(
           table.getRelNode,
           updatesAsRetraction = block.isUpdateAsRetraction,
-          streamQueryConfig,
           isSinkBlock = false)
-        val translateStream = translateToBaseRow(optimizedPlan, streamQueryConfig)
+        val translateStream = translateToBaseRow(optimizedPlan)
 
         val dataStream = new DataStream(execEnv, translateStream)
 
@@ -1322,8 +1289,7 @@ abstract class StreamTableEnvironment(
     */
   private def translate[T](
       table: Table,
-      sink: TableSink[T],
-      streamQueryConfig: StreamQueryConfig): (DataStream[T], RelNode) = {
+      sink: TableSink[T]): (DataStream[T], RelNode) = {
 
     mergeParameters()
 
@@ -1335,12 +1301,11 @@ abstract class StreamTableEnvironment(
         // translate the Table into a DataStream and provide the type that the TableSink expects.
 
         val relNode = table.getRelNode
-        val dataStreamPlan = optimize(relNode, updatesAsRetraction = true, streamQueryConfig)
+        val dataStreamPlan = optimize(relNode, updatesAsRetraction = true)
         val resultType = getResultType(relNode, dataStreamPlan)
         val dataStream = translate[T](
           dataStreamPlan,
           resultType,
-          streamQueryConfig,
           withChangeFlag = true,
           sink,
           outputType)
@@ -1350,7 +1315,7 @@ abstract class StreamTableEnvironment(
       case upsertSink: BaseUpsertStreamTableSink[_] =>
         // optimize plan
         val optimizedPlan = optimize(
-          table.getRelNode, updatesAsRetraction = false, streamQueryConfig)
+          table.getRelNode, updatesAsRetraction = false)
         // check for append only table
         val isAppendOnlyTable = UpdatingPlanChecker.isAppendOnly(optimizedPlan)
         upsertSink.setIsAppendOnly(isAppendOnlyTable)
@@ -1360,7 +1325,6 @@ abstract class StreamTableEnvironment(
         val dataStream = translate[T](
           optimizedPlan,
           resultType,
-          streamQueryConfig,
           withChangeFlag = true,
           sink,
           outputType)
@@ -1369,7 +1333,7 @@ abstract class StreamTableEnvironment(
       case _: AppendStreamTableSink[_] =>
         // optimize plan
         val optimizedPlan = optimize(
-          table.getRelNode, updatesAsRetraction = false, streamQueryConfig)
+          table.getRelNode, updatesAsRetraction = false)
         // verify table is an insert-only (append-only) table
         if (!UpdatingPlanChecker.isAppendOnly(optimizedPlan)) {
           throw new TableException(
@@ -1388,7 +1352,6 @@ abstract class StreamTableEnvironment(
         val dataStream = translate[T](
           optimizedPlan,
           resultType,
-          streamQueryConfig,
           withChangeFlag = false,
           sink,
           outputType)

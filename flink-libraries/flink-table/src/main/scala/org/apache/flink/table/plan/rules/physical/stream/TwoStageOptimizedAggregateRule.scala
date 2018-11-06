@@ -23,7 +23,7 @@ import java.util.{ArrayList => JArrayList}
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTrait}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
@@ -43,7 +43,7 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
       operand(classOf[RelNode], any))), "TwoStageOptimizedAggregateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val queryConfig = call.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+    val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
     val agg = call.rels(0).asInstanceOf[StreamExecGroupAggregate]
     val realInput = call.rels(2)
 
@@ -61,8 +61,8 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
       needRetraction,
       isStateBackendDataViews = true)
 
-    queryConfig.isMiniBatchEnabled &&
-      queryConfig.isLocalAggEnabled &&
+    tableConfig.isMiniBatchEnabled &&
+      tableConfig.isLocalAggEnabled &&
       doAllSupportPartialMerge(aggInfoList.aggInfos) &&
       !satisfyRequiredDistribution(realInput, agg.getGroupings)
   }

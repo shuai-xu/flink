@@ -20,8 +20,6 @@ package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.{Literal, Null}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
@@ -498,13 +496,12 @@ class JoinITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
       .select('bb, 'c.count as 'c)
 
     val sink = new TestingUpsertTableSink(Array(0, 1))
-    val queryConfig = tEnv.queryConfig
-    queryConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
+    tEnv.getConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
 
     leftTableWithPk
       .join(rightTableWithPk, 'b === 'bb)
       .select('a, 'b, 'c)
-      .writeToSink(sink, queryConfig)
+      .writeToSink(sink)
     env.execute()
 
     val expected = Seq("0,1,1", "1,2,3", "2,1,1", "3,1,1", "4,1,1", "5,2,3", "6,0,1")

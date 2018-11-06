@@ -26,7 +26,7 @@ import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
@@ -172,25 +172,21 @@ class BatchExecExchange(
     * Currently, PartitionTransformation wont been reused,
     * its input transformation will been reused if this is reusable.
     */
-  override def translateToPlan(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    translateToPlanInternal(tableEnv, queryConfig)
+  override def translateToPlan(tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    translateToPlanInternal(tableEnv)
   }
 
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val input = reusedInput match {
       case Some(transformation) if isReused => transformation
       case None =>
-        val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+        val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
         if (isReused) {
           reusedInput = Some(input)
         }

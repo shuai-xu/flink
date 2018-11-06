@@ -23,7 +23,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexNode, RexProgram}
 import org.apache.calcite.sql.SemiJoinType
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.utils.TableSqlFunction
@@ -99,12 +99,9 @@ class StreamExecCorrelate(
       .itemIf("condition", condition.orNull, condition.isDefined)
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
       .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
     generateCorrelateTransformation(

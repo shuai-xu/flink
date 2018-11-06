@@ -24,7 +24,7 @@ import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -151,15 +151,13 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
 
-    val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
-    val rightInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val rightInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
 
     val leftType = DataTypes.internal(leftInput.getOutputType).asInstanceOf[BaseRowType]
     val rightType = DataTypes.internal(rightInput.getOutputType).asInstanceOf[BaseRowType]

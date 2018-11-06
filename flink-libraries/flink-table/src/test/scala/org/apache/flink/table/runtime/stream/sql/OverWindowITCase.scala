@@ -22,7 +22,6 @@ import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeProcessOperator
-import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils.{CountNullNonNull, CountPairs, LargerThanCount}
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithStateTestBase, TestingAppendSink}
@@ -256,8 +255,7 @@ class OverWindowITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
 
   @Test
   def testProcTimeUnboundedNonPartitionedRangeOver(): Unit = {
-    val queryConfig = new StreamQueryConfig()
-      .withIdleStateRetentionTime(Time.hours(2), Time.hours(3))
+      tEnv.getConfig.withIdleStateRetentionTime(Time.hours(2), Time.hours(3))
 
     val t1 = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c, 'proctime.proctime)
 
@@ -270,7 +268,7 @@ class OverWindowITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
       "from T1"
 
     val sink = new TestingAppendSink
-    tEnv.sqlQuery(sqlQuery).toAppendStream[Row](queryConfig).addSink(sink)
+    tEnv.sqlQuery(sqlQuery).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = List(

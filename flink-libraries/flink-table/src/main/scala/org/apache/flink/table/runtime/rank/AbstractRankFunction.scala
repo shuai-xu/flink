@@ -23,7 +23,7 @@ import java.util.Comparator
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.metrics.{Counter, Gauge}
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.{StreamQueryConfig, Types}
+import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedRecordEqualiser}
 import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, VariableRankRange}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
@@ -36,13 +36,13 @@ import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.util.Collector
 
 abstract class AbstractRankFunction(
-    queryConfig: StreamQueryConfig,
+    tableConfig: TableConfig,
     rankRange: RankRange,
     inputRowType: BaseRowTypeInfo[_],
     inputArity: Int,
     outputArity: Int,
     generateRetraction: Boolean)
-  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig) {
+  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig) {
 
   protected var isConstantRankEnd: Boolean = _
   protected var rankEnd: Long = -1

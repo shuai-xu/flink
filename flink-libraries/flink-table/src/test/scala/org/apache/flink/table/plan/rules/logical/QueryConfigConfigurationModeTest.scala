@@ -19,22 +19,26 @@
 package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
-import org.apache.flink.table.api.StreamQueryConfig._
-import org.junit.Test
-
-import scala.collection.JavaConverters._
+import org.junit.{Before, Test}
 
 class QueryConfigConfigurationModeTest() extends TableTestBase {
 
-  private val streamUtil: StreamTableTestUtil = streamTestUtil()
-  streamUtil.addTable[(Long, Int, String)](
-    "MyTable", 'a, 'b, 'c)
+  private var streamUtil: StreamTableTestUtil = streamTestUtil()
+
+
+  @Before
+  def setUp(): Unit = {
+    streamUtil = streamTestUtil()
+    streamUtil.addTable[(Long, Int, String)](
+      "MyTable", 'a, 'b, 'c)
+  }
 
   @Test
   def testEnableMicroBatch(): Unit = {
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMicroBatch
       .withMicroBatchTriggerTime(1000L)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
@@ -43,26 +47,26 @@ class QueryConfigConfigurationModeTest() extends TableTestBase {
 
   @Test
   def testEnableMiniBatch(): Unit = {
-    streamUtil.tableEnv.queryConfig.enableMiniBatch
+    streamUtil.tableEnv.getConfig.enableMiniBatch
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }
 
   @Test
   def testEnablePartialAgg(): Unit = {
-    streamUtil.tableEnv.queryConfig.enableMiniBatch.enablePartialAgg
+    streamUtil.tableEnv.getConfig.enableMiniBatch.enablePartialAgg
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }
 
   @Test
   def testEnableByParameters(): Unit = {
-    val parameters: Map[String, String] = Map(
-      BLINK_MINIBATCH_ALLOW_LATENCY.key() -> "6000",
-      BLINK_MINIBATCH_SIZE.key() -> "200",
-      SQL_EXEC_AGG_PARTIAL_ENABLED.key() -> "true"
-    )
-    streamUtil.tableEnv.queryConfig.setParameters(parameters.asJava)
+    streamUtil.tableEnv.getConfig.getParameters.setLong(
+      TableConfig.BLINK_MINIBATCH_ALLOW_LATENCY, 6000L)
+    streamUtil.tableEnv.getConfig.getParameters.setLong(
+      TableConfig.BLINK_MINIBATCH_SIZE, 200)
+    streamUtil.tableEnv.getConfig.getParameters.setBoolean(
+      TableConfig.SQL_EXEC_AGG_PARTIAL_ENABLED, true)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }

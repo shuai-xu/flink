@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
@@ -47,8 +47,8 @@ class GroupAggFunction(
     inputCountIndex: Option[Int],
     generateRetraction: Boolean,
     groupWithoutKey: Boolean,
-    queryConfig: StreamQueryConfig)
-  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig)
+    tableConfig: TableConfig)
+  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig)
   with Logging {
 
   protected var function: AggsHandleFunction = _

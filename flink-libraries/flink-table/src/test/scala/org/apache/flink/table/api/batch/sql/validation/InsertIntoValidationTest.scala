@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.api.batch.sql.validation
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Types, ValidationException}
@@ -74,6 +73,6 @@ class InsertIntoValidationTest extends TableTestBatchExecBase {
     val sql = "INSERT INTO targetTable (d, f) SELECT a, c FROM sourceTable"
 
     // must fail because partial insert is not supported yet.
-    util.tableEnv.sqlUpdate(sql, util.tableEnv.queryConfig)
+    util.tableEnv.sqlUpdate(sql)
   }
 }

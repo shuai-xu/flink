@@ -23,7 +23,7 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonValue
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -51,10 +51,8 @@ class StreamExecValues(
     )
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
-    if (queryConfig.isValuesSourceInputEnabled) {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+    if (tableEnv.getConfig.isValuesSourceInputEnabled) {
       val inputFormat = generatorInputFormat(tableEnv)
       tableEnv.execEnv.createInput(inputFormat, inputFormat.getProducedType).getTransformation
     } else {

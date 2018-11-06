@@ -24,7 +24,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen.operator.LongHashJoinGenerator
@@ -149,16 +149,14 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
 
-    val lInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
-    val rInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    val lInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
+    val rInput = getRight.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
 
     // get type
     val lType = DataTypes.internal(lInput.getOutputType).asInstanceOf[BaseRowType]

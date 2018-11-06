@@ -25,10 +25,10 @@ import org.apache.flink.api.common.state.MapStateDescriptor
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.KeyedMapState
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
 import org.apache.flink.table.plan.util.RankRange
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.CollectionBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
@@ -52,9 +52,9 @@ class AppendRankFunction(
     rankRange: RankRange,
     cacheSize: Long,
     generateRetraction: Boolean,
-    queryConfig: StreamQueryConfig)
+    tableConfig: TableConfig)
   extends AbstractRankFunction(
-    queryConfig,
+    tableConfig,
     rankRange,
     inputRowType,
     inputRowType.getArity,

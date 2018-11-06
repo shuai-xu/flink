@@ -23,11 +23,11 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
-import org.apache.flink.streaming.api.operators.{OneInputStreamOperator, StreamOperator}
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BinaryRow
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
@@ -89,12 +89,10 @@ class BatchExecSort(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val binaryType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
 
     // sort code gen

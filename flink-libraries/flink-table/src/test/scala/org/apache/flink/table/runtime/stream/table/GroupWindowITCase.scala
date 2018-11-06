@@ -23,7 +23,6 @@ import java.math.BigDecimal
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, CountDistinctWithMerge, WeightedAvg, WeightedAvgWithMerge}
 import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingAppendSink}
@@ -31,7 +30,7 @@ import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBack
 import org.apache.flink.table.runtime.utils.TimeTestUtil.TimestampAndWatermarkWithOffset
 import org.apache.flink.types.Row
 import org.junit.Assert._
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
@@ -42,9 +41,6 @@ import org.junit.runners.Parameterized
 @RunWith(classOf[Parameterized])
 class GroupWindowITCase(mode: StateBackendMode)
   extends StreamingWithStateTestBase(mode) {
-
-  private val queryConfig = new StreamQueryConfig()
-  queryConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
 
   val data = List(
     (1L, 1, "Hi"),
@@ -65,6 +61,7 @@ class GroupWindowITCase(mode: StateBackendMode)
 
   @Test
   def testProcessingTimeSlidingGroupWindowOverCount(): Unit = {
+    tEnv.getConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
     val stream = failingDataSource(data)
     val table = stream.toTable(tEnv, 'long, 'int, 'string)
 
@@ -80,7 +77,7 @@ class GroupWindowITCase(mode: StateBackendMode)
         countDistinct('long))
 
     val sink = new TestingAppendSink
-    windowedTable.toAppendStream[Row](queryConfig).addSink(sink)
+    windowedTable.toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(s"Hello world,2,${6.0/2},12,3,2", s"Hello,2,${4.0/2},3,2,2")
@@ -128,6 +125,7 @@ class GroupWindowITCase(mode: StateBackendMode)
 
   @Test
   def testAllProcessingTimeTumblingGroupWindowOverCount(): Unit = {
+    tEnv.getConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
     val stream = failingDataSource(data)
     val table = stream.toTable(tEnv, 'long, 'int, 'string)
     val countFun = new CountAggFunction
@@ -143,7 +141,7 @@ class GroupWindowITCase(mode: StateBackendMode)
       )
 
     val sink = new TestingAppendSink
-    windowedTable.toAppendStream[Row](queryConfig).addSink(sink)
+    windowedTable.toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(s"2,${3.0/2},1,1,2", s"2,${5.0/2},6,2,2")

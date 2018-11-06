@@ -19,7 +19,7 @@
 package org.apache.flink.table.util
 
 import org.apache.flink.api.common.JobExecutionResult
-import org.apache.flink.table.api.{QueryConfig, Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory}
 import org.apache.flink.table.plan.stats.FlinkStatistic
@@ -40,7 +40,6 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
   override private[flink] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
-      queryConfig: QueryConfig,
       sinkName: String): Unit = ???
 
   override protected def getFlinkCostFactory: FlinkCostFactory = DataSetCost.FACTORY

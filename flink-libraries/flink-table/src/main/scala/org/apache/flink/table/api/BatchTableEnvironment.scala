@@ -94,8 +94,6 @@ class BatchTableEnvironment(
 
   private val queryPlans = new ArrayBuffer[String]()
 
-  override def queryConfig: BatchQueryConfig = new BatchQueryConfig
-
   /**
    * `expand` is set as false, and each sub-query becomes a [[org.apache.calcite.rex.RexSubQuery]].
    */
@@ -148,7 +146,7 @@ class BatchTableEnvironment(
         .asInstanceOf[TypeSerializer[T]]
     val id = new AbstractID().toString
     sink.init(typeSerializer, id)
-    val result = translate[T](table, outType, sink, queryConfig)
+    val result = translate[T](table, outType, sink)
     val execSink = emitBoundedStreamSink(sink, result)
     val res = executeInternal(ArrayBuffer(execSink.getTransformation), jobName)
     val accResult: JArrayList[Array[Byte]] = res.getAccumulatorResult(id)
@@ -224,14 +222,8 @@ class BatchTableEnvironment(
   override def writeToSink[T](
       table: Table,
       sink: TableSink[T],
-      conf: QueryConfig,
       sinkName: String): Unit = {
     // Check the query configuration to be a batch one.
-    val batchQueryConfig = queryConfig match {
-      case batchConfig: BatchQueryConfig => batchConfig
-      case _ =>
-        throw new TableException("BatchQueryConfig required to configure batch query.")
-    }
 
     if (config.getSubsectionOptimization) {
       sinkNodes += SinkNode(table.logicalPlan, sink)
@@ -239,11 +231,14 @@ class BatchTableEnvironment(
       sink match {
         case batchExecTableSink: BatchExecTableSink[T] =>
           val outputType = sink.getOutputType
-          val result = translate[T](table, outputType, sink, batchQueryConfig)
+          val result = translate[T](table, outputType, sink)
           transformations.add(emitBoundedStreamSink(batchExecTableSink, result).getTransformation)
         case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
-          val result = translate[T](table, compatibleTableSink.getOutputType, sink,
-            batchQueryConfig, withChangeFlag = true)
+          val result = translate[T](
+            table,
+            compatibleTableSink.getOutputType,
+            sink,
+            withChangeFlag = true)
           transformations.add(emitBoundedStreamSink(compatibleTableSink, result).getTransformation)
         case _ =>
           throw new TableException("BatchExecTableSink or CompatibleStreamTableSink" +
@@ -305,16 +300,14 @@ class BatchTableEnvironment(
         n.sink match {
           case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
             translate(batchExecPlan, relNode.getRowType, withChangeFlag = true,
-              compatibleTableSink.getOutputType, compatibleTableSink, queryConfig)
+              compatibleTableSink.getOutputType, compatibleTableSink)
           case _ =>
             val outputType = n.sink.getOutputType
-            translate(batchExecPlan, relNode.getRowType, withChangeFlag = false, outputType,
-              n.sink, queryConfig)
+            translate(batchExecPlan, relNode.getRowType, withChangeFlag = false, outputType, n.sink)
         }
       case _ =>
         val outputType = DataTypes.createRowType(table.getSchema.getTypes: _*)
-        translate(batchExecPlan, relNode.getRowType, withChangeFlag = false, outputType, null,
-          queryConfig)
+        translate(batchExecPlan, relNode.getRowType, withChangeFlag = false, outputType, null)
     }
 
     if (!blockLogicalPlan.isInstanceOf[SinkNode]) {
@@ -489,7 +482,6 @@ class BatchTableEnvironment(
    *
    * @param table      The root node of the relational expression tree.
    * @param resultType The [[DataType]] of the resulting [[DataStream]].
-    *@param queryConfig The configuration for the query to generate.
    * @tparam A The type of the resulting [[DataStream]].
    * @return The [[DataStream]] that corresponds to the translated [[Table]].
    */
@@ -497,13 +489,12 @@ class BatchTableEnvironment(
       table: Table,
       resultType: DataType,
       sink: TableSink[_],
-      queryConfig: BatchQueryConfig,
       withChangeFlag: Boolean = false)
     : DataStream[A] = {
     val relNode = table.getRelNode
     val boundedStreamPlan = optimize(relNode)
     addQueryPlan(relNode, boundedStreamPlan)
-    translate(boundedStreamPlan, relNode.getRowType, withChangeFlag, resultType, sink, queryConfig)
+    translate(boundedStreamPlan, relNode.getRowType, withChangeFlag, resultType, sink)
   }
 
   /**
@@ -514,7 +505,6 @@ class BatchTableEnvironment(
    * @param logicalType The row type of the result. Since the logicalPlan can lose the
    *                    field naming during optimization we pass the row type separately.
    * @param resultType  The [[DataType]] of the resulting [[DataStream]].
-    *@param queryConfig The configuration for the query to generate.
    * @tparam OUT The type of the resulting [[DataStream]].
    * @return The [[DataStream]] that corresponds to the translated [[Table]].
    */
@@ -523,15 +513,14 @@ class BatchTableEnvironment(
       logicalType: RelDataType,
       withChangeFlag: Boolean,
       resultType: DataType,
-      sink: TableSink[_],
-      queryConfig: BatchQueryConfig): DataStream[OUT] = {
+      sink: TableSink[_]): DataStream[OUT] = {
     TableEnvironment.validateType(resultType)
 
     logicalPlan match {
       case node: RowBatchExecRel =>
         ruKeeper.buildRUs(node)
         ruKeeper.calculateRelResource(node)
-        val plan = node.translateToPlan(this, queryConfig)
+        val plan = node.translateToPlan(this)
 
         val parTransformation = if (sink != null) {
           createPartitionTransformation(sink, plan)
@@ -899,8 +888,7 @@ class BatchTableEnvironment(
       ast.getRowType,
       withChangeFlag = false,
       new BaseRowType(classOf[BinaryRow], fieldTypes: _*),
-      null,
-      queryConfig)
+      null)
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(streamEnv),
       ArrayBuffer(boundedStream.getTransformation))

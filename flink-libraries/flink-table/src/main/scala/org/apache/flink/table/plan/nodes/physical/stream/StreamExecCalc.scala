@@ -25,7 +25,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexProgram
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
@@ -72,12 +72,9 @@ class StreamExecCalc(
     computeSelfCost(calcProgram, planner, metadata, this)
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
-    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     // materialize time attributes in condition
     val condition = if (calcProgram.getCondition != null) {
       val materializedCondition = RelTimeIndicatorConverter.convertExpression(

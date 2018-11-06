@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
@@ -38,8 +38,8 @@ import org.apache.flink.util.Collector
 class ProcTimeUnboundedOver(
     genAggsHandler: GeneratedAggsHandleFunction,
     accTypes: Seq[InternalType],
-    queryConfig: StreamQueryConfig)
-  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig)
+    tableConfig: TableConfig)
+  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig)
   with Logging {
 
   private var function: AggsHandleFunction = _

@@ -25,7 +25,7 @@ import org.apache.calcite.rel._
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
@@ -150,12 +150,10 @@ class BatchExecSortAggregate(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val outputRowType = getOutputRowType
     val ctx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val inputType = DataTypes.internal(input.getOutputType).asInstanceOf[BaseRowType]

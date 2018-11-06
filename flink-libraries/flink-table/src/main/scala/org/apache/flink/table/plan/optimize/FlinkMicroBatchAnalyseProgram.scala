@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.optimize
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.calcite.tools.RuleSets
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions.ExpressionUtils.{isRowtimeAttribute, isTimeIntervalLiteral}
 import org.apache.flink.table.plan.logical.{SessionGroupWindow, SlidingGroupWindow, TumblingGroupWindow}
@@ -36,7 +36,7 @@ import scala.collection.JavaConverters._
 class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimizeProgram[OC] {
 
   override def optimize(input: RelNode, context: OC): RelNode = {
-    val config = context.getContext.unwrap(classOf[StreamQueryConfig])
+    val config = context.getContext.unwrap(classOf[TableConfig])
     if (config.isMicroBatchEnabled && config.getMicroBatchTriggerTime > 0) {
       // step1: validation
       val validation = new MicroBatchValidation

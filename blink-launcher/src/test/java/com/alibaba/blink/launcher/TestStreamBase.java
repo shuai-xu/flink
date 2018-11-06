@@ -19,7 +19,6 @@
 package com.alibaba.blink.launcher;
 
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.StreamTableEnvironment;
 import org.apache.flink.table.api.TableEnvironment;
 
@@ -58,9 +57,7 @@ public abstract class TestStreamBase extends TestJobBase {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
-		StreamQueryConfig queryConfig = new StreamQueryConfig();
-		queryConfig.enableValuesSourceInput();
-		tEnv.setQueryConfig(queryConfig);
+		tEnv.getConfig().enableValuesSourceInput();
 		return tEnv;
 	}
 

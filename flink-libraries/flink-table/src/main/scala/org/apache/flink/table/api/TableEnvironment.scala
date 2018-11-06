@@ -167,13 +167,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   /** Returns the table config to define the runtime behavior of the Table API. */
   def getConfig: TableConfig = config
 
-  /** Returns the [[QueryConfig]] depends on the concrete type of this TableEnvironment. */
-  private[flink] def queryConfig: QueryConfig = this match {
-    case _: BatchTableEnvironment => new BatchQueryConfig
-    case _: StreamTableEnvironment => new StreamQueryConfig
-    case _ => null
-  }
-
   /**
     * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to [[LogicalNodeBlock]],
     * see [[LogicalNodeBlockPlanBuilder]] for details.
@@ -890,30 +883,6 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param stmt The SQL statement to evaluate.
     */
   def sqlUpdate(stmt: String): Unit = {
-    sqlUpdate(stmt, this.queryConfig)
-  }
-
-  /**
-    * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
-    * NOTE: Currently only SQL INSERT statements are supported.
-    *
-    * All tables referenced by the query must be registered in the TableEnvironment.
-    * A [[Table]] is automatically registered when its [[toString]] method is called, for example
-    * when it is embedded into a String.
-    * Hence, SQL queries can directly reference a [[Table]] as follows:
-    *
-    * {{{
-    *   // register the table sink into which the result is inserted.
-    *   tEnv.registerTableSink("sinkTable", fieldNames, fieldsTypes, tableSink)
-    *   val sourceTable: Table = ...
-    *   // sourceTable is not registered to the table environment
-    *   tEnv.sqlUpdate(s"INSERT INTO sinkTable SELECT * FROM $sourceTable")
-    * }}}
-    *
-    * @param stmt The SQL statement to evaluate.
-    * @param config The [[QueryConfig]] to use.
-    */
-  def sqlUpdate(stmt: String, config: QueryConfig): Unit = {
     // parse the sql query
     val parsed = flinkPlanner.parse(stmt)
     parsed match {
@@ -926,7 +895,7 @@ abstract class TableEnvironment(val config: TableConfig) {
           val schema = queryResult.getSchema
           val printTableSink = new PrintTableSink(getConfig.getTimeZone).configure(
             schema.getColumnNames, schema.getTypes.asInstanceOf[Array[DataType]])
-          writeToSink(queryResult, printTableSink, queryConfig, "console")
+          writeToSink(queryResult, printTableSink, "console")
           return
         }
         // validate the insert sql
@@ -943,13 +912,12 @@ abstract class TableEnvironment(val config: TableConfig) {
 
         // set emit configs
         val emit = insert.getEmit
-        if (emit != null && config.isInstanceOf[StreamQueryConfig]) {
-          val streamConfig = config.asInstanceOf[StreamQueryConfig]
+        if (emit != null) {
           if (emit.getBeforeDelayValue >= 0) {
-            streamConfig.withEarlyFireInterval(Time.milliseconds(emit.getBeforeDelayValue))
+            config.withEarlyFireInterval(Time.milliseconds(emit.getBeforeDelayValue))
           }
           if (emit.getAfterDelayValue >= 0) {
-            streamConfig.withLateFireInterval(Time.milliseconds(emit.getAfterDelayValue))
+            config.withLateFireInterval(Time.milliseconds(emit.getAfterDelayValue))
           }
         }
 
@@ -957,8 +925,7 @@ abstract class TableEnvironment(val config: TableConfig) {
         insertInto(
             queryResult,
             targetTable.unwrap(classOf[schema.Table]),
-            StringUtils.join(targetTable.getQualifiedName, ","),
-            config)
+            StringUtils.join(targetTable.getQualifiedName, ","))
       case _ =>
         throw new TableException(
           "Unsupported SQL query! sqlUpdate() only accepts SQL statements of type INSERT.")
@@ -970,13 +937,11 @@ abstract class TableEnvironment(val config: TableConfig) {
     *
     * @param table The [[Table]] to write.
     * @param sink The [[TableSink]] to write the [[Table]] to.
-    * @param conf The [[QueryConfig]] to use.
     * @tparam T The data type that the [[TableSink]] expects.
     */
   private[flink] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
-      conf: QueryConfig,
       sinkName: String = null): Unit
 
   /**
@@ -994,9 +959,8 @@ abstract class TableEnvironment(val config: TableConfig) {
     *
     * @param table The table to write to the TableSink.
     * @param sinkTableName The name of the registered TableSink.
-    * @param conf The query configuration to use.
     */
-  private[flink] def insertInto(table: Table, sinkTableName: String, conf: QueryConfig): Unit = {
+  private[flink] def insertInto(table: Table, sinkTableName: String): Unit = {
 
     // check that sink table exists
     if (null == sinkTableName || sinkTableName.isEmpty) {
@@ -1007,14 +971,13 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
     val targetTable = getTable(sinkTableName).get
 
-    insertInto(table, targetTable, sinkTableName, conf)
+    insertInto(table, targetTable, sinkTableName)
   }
 
   private def insertInto(
       sourceTable: Table,
       targetTable: schema.Table,
-      targetTableName: String,
-      conf: QueryConfig) = {
+      targetTableName: String) = {
     val tableSink = targetTable match {
       case s: CatalogTable => s.tableSink
       case s: TableSinkTable[_] => s.tableSink
@@ -1079,7 +1042,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
 
     // emit the table to the configured table sink
-    writeToSink(sourceTable, tableSink, conf, targetTableName)
+    writeToSink(sourceTable, tableSink, targetTableName)
   }
 
   /**
@@ -1128,7 +1091,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   /**
     * Get a table from either internal or external catalogs.
     *
-    * @param name The name of the table.
+    * @param paths The paths of the table.
     * @return The table registered either internally or externally, None otherwise.
     */
   def getTable(paths: Array[String]): Option[org.apache.calcite.schema.Table] = {

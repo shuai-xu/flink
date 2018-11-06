@@ -23,7 +23,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexNode, RexProgram}
 import org.apache.calcite.sql.SemiJoinType
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.nodes.common.CommonCorrelate
@@ -106,13 +106,10 @@ class BatchExecCorrelate(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    val inputTransformation =
-      getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val inputTransformation = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
     val transformation = generateCorrelateTransformation(
       tableEnv,

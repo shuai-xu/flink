@@ -67,7 +67,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testMaxWithRetractOptimizeWithLocalGlobal(): Unit = {
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(100)
       .enableLocalAgg
@@ -78,7 +78,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testMinWithRetractOptimizeWithLocalGlobal(): Unit = {
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(100)
       .enableLocalAgg
@@ -88,7 +88,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   @Test
   def testMinCanNotOptimizeWithLocalGlobal(): Unit = {
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(100)
       .enableLocalAgg
@@ -276,12 +276,11 @@ class ModifiedMonotonicityTest extends TableTestBase {
     val relNode = table.getRelNode
     val optimized = streamUtil.tableEnv.optimize(
       relNode,
-      updatesAsRetraction = false,
-      streamUtil.tableEnv.queryConfig)
+      updatesAsRetraction = false)
 
     val flinkChainContext =
       optimized.getCluster.getPlanner.getContext.asInstanceOf[FlinkChainContext]
-    flinkChainContext.load(Contexts.of(streamUtil.tableEnv.queryConfig))
+    flinkChainContext.load(Contexts.of(streamUtil.tableEnv.getConfig))
     val actualMono =
       optimized.getCluster.getMetadataQuery.asInstanceOf[FlinkRelMetadataQuery]
         .getRelModifiedMonotonicity(optimized)

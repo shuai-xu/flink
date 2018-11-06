@@ -23,7 +23,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel._
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.dataformat.BaseRow
@@ -104,12 +104,10 @@ class BatchExecLimit(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val inputType = input.getOutputType
     val operator = new LimitOperator(isGlobal, limitStart, limitEnd)
     val transformation = new OneInputTransformation(

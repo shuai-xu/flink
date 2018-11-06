@@ -24,7 +24,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -78,14 +78,12 @@ class BatchExecExpand(
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-    tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+    tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val inputType = DataTypes.internal(input.getOutputType)
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
 

@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.util.StreamExecUtil
@@ -41,8 +41,8 @@ import org.junit.runners.Parameterized
 @RunWith(classOf[Parameterized])
 class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
 
-  private val queryConfig =
-    new StreamQueryConfig().withIdleStateRetentionTime(Time.milliseconds(2), Time.milliseconds(4))
+  private val tableConfig =
+    new TableConfig().withIdleStateRetentionTime(Time.milliseconds(2), Time.milliseconds(4))
 
   private val rowType = new BaseRowTypeInfo(
     classOf[BaseRow],
@@ -107,8 +107,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       Array[Boolean](false))
 
     val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
@@ -181,8 +181,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       Array[Boolean](false))
 
     val testHarness = createTwoInputHarnessTester(operator, leftKeySelector, rightKeySelector)
@@ -252,8 +252,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       Array[Boolean](false))
@@ -335,8 +335,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       Array[Boolean](false))
@@ -423,8 +423,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
@@ -504,8 +504,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.EMPTY_MATCH,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
@@ -591,8 +591,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))
@@ -711,8 +711,8 @@ class JoinHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode) {
       null,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
       JoinStateHandler.Type.WITHOUT_PRIMARY_KEY,
-      queryConfig.getMaxIdleStateRetentionTime,
-      queryConfig.getMinIdleStateRetentionTime,
+      tableConfig.getMaxIdleStateRetentionTime,
+      tableConfig.getMinIdleStateRetentionTime,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH,
       Array[Boolean](false))

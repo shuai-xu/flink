@@ -25,7 +25,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -88,12 +88,11 @@ class StreamExecLastRow(
       .item("select", outputNames.mkString(", "))
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val tableConfig = tableEnv.getConfig
+
+    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val rowTypeInfo = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
 
@@ -111,25 +110,25 @@ class StreamExecLastRow(
       rowTimeFieldIndex.head
     }
 
-    val operator = if (queryConfig.isMiniBatchEnabled || queryConfig.isMicroBatchEnabled) {
+    val operator = if (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) {
       val processFunction = new MiniBatchLastRowFunction(
         rowTypeInfo,
         generateRetraction,
         orderIndex,
-        queryConfig)
+        tableConfig)
 
       new KeyedBundleOperator(
         processFunction,
-        getMiniBatchTrigger(queryConfig),
+        getMiniBatchTrigger(tableConfig),
         rowTypeInfo,
-        queryConfig.getParameters.getBoolean(
-          StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        tableConfig.getParameters.getBoolean(
+          TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val processFunction = new LastRowFunction(
         rowTypeInfo,
         generateRetraction,
         orderIndex,
-        queryConfig)
+        tableConfig)
 
       val operator = new KeyedProcessOperator[BaseRow, BaseRow, BaseRow](processFunction)
       operator.setRequireState(true)
@@ -150,20 +149,20 @@ class StreamExecLastRow(
     ret
   }
 
-  private[flink] def getMiniBatchTrigger(queryConfig: StreamQueryConfig)
+  private[flink] def getMiniBatchTrigger(tableConfig: TableConfig)
   : CombinedBundleTrigger[BaseRow] = {
-    val triggerTime = queryConfig.getMiniBatchTriggerTime
+    val triggerTime = tableConfig.getMiniBatchTriggerTime
     val timeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (queryConfig.isMicroBatchEnabled) {
+      if (tableConfig.isMicroBatchEnabled) {
         None
       } else {
         Some(new TimeBundleTrigger[BaseRow](triggerTime))
       }
     val sizeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (queryConfig.getMiniBatchTriggerSize == Long.MinValue) {
+      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
         None
       } else {
-        Some(new CountBundleTrigger[BaseRow](queryConfig.getMiniBatchTriggerSize))
+        Some(new CountBundleTrigger[BaseRow](tableConfig.getMiniBatchTriggerSize))
       }
     new CombinedBundleTrigger[BaseRow](
       Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*

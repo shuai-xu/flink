@@ -26,7 +26,7 @@ import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.Rank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -63,12 +63,13 @@ class StreamExecRank(
   var strategy: RankStrategy = _
 
   def getStrategy(
-      queryConfig: Option[StreamQueryConfig] = None,
+      tableConfig: Option[TableConfig] = None,
       forceRecompute: Boolean = false): RankStrategy = {
     if (strategy == null || forceRecompute) {
-      val qc: StreamQueryConfig = queryConfig.getOrElse(
-        cluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig]))
-      strategy = RankUtil.analyzeRankStrategy(cluster, qc, this, sortCollation)
+      val tc: TableConfig = tableConfig.getOrElse(
+        cluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+      )
+      strategy = RankUtil.analyzeRankStrategy(cluster, tc, this, sortCollation)
     }
     strategy
   }
@@ -133,10 +134,9 @@ class StreamExecRank(
       .item("select", selectToString)
   }
 
-  override def translateToPlan(
-    tableEnv: StreamTableEnvironment,
-    queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
+    val tableConfig = tableEnv.getConfig
     val rankKind = rankFunction.getKind match {
       case SqlKind.ROW_NUMBER => SqlKind.ROW_NUMBER
       case SqlKind.RANK =>
@@ -147,7 +147,7 @@ class StreamExecRank(
         throw TableException(s"Streaming tables do not support $k rank function.")
     }
 
-    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val inputRowTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], inputSchema.fieldTypeInfos: _*)
     val fieldCollation = sortCollation.getFieldCollations.asScala
@@ -155,9 +155,9 @@ class StreamExecRank(
     val (sortKeyType, sorter) = createSortKeyTypeAndSorter(inputSchema, fieldCollation)
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
-    val cacheSize = queryConfig.getTopNCacheSize
+    val cacheSize = tableConfig.getTopNCacheSize
 
-    val processFunction = getStrategy(Some(queryConfig), forceRecompute = true) match {
+    val processFunction = getStrategy(Some(tableConfig), forceRecompute = true) match {
       case AppendFastRank =>
         new AppendRankFunction(
           inputRowTypeInfo,
@@ -169,7 +169,7 @@ class StreamExecRank(
           rankRange,
           cacheSize,
           generateRetraction,
-          queryConfig)
+          tableConfig)
 
       case UpdateFastRank(primaryKeys) =>
         val rowKeyType = createRowKeyType(primaryKeys, inputSchema)
@@ -185,11 +185,11 @@ class StreamExecRank(
           rankRange,
           cacheSize,
           generateRetraction,
-          queryConfig)
+          tableConfig)
 
       case ApproxUpdateRank(primaryKeys) =>
-        val approxBufferMultiplier = queryConfig.getTopNApproxBufferMultiplier
-        val approxBufferMinSize = queryConfig.getTopNApproxBufferMinSize
+        val approxBufferMultiplier = tableConfig.getTopNApproxBufferMultiplier
+        val approxBufferMinSize = tableConfig.getTopNApproxBufferMinSize
         val rowKeyType = createRowKeyType(primaryKeys, inputSchema)
         val rowKeySelector = createKeySelector(primaryKeys, inputSchema)
         new ApproxUpdateRankFunction(
@@ -205,7 +205,7 @@ class StreamExecRank(
           approxBufferMultiplier,
           approxBufferMinSize,
           generateRetraction,
-          queryConfig)
+          tableConfig)
 
       case UnaryUpdateRank(primaryKeys) =>
         // unary update rank requires a key selector that returns key of other types rather
@@ -226,7 +226,7 @@ class StreamExecRank(
           rankRange,
           cacheSize,
           generateRetraction,
-          queryConfig)
+          tableConfig)
 
       case RetractRank =>
         new RetractRankFunction(
@@ -238,7 +238,7 @@ class StreamExecRank(
           rankKind,
           rankRange,
           generateRetraction,
-          queryConfig)
+          tableConfig)
     }
     val outputBaseInfo = schema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
     val rankOpName = this.toString

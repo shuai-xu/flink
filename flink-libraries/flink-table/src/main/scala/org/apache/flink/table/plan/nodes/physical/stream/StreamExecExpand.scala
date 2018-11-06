@@ -24,7 +24,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
@@ -70,13 +70,10 @@ class StreamExecExpand(
     s"StreamExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val inputType = DataTypes.internal(inputTransformation.getOutputType)
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
 

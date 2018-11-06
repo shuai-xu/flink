@@ -32,7 +32,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{StreamQueryConfig, TableSchema, Types}
+import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -83,7 +83,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "2,15,Hello,Jark",
       "3,15,Fabian,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -110,7 +110,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
 
     val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -126,14 +126,14 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "for system_time as of PROCTIME() AS D ON T.id = D.id AND D.age > 20"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
       "2,15,Hello,Jark",
       "3,15,Fabian,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -149,14 +149,14 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "for system_time as of PROCTIME() AS D ON T.id = D.id WHERE T.len <= D.age"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
       "2,15,Hello,Jark,22",
       "3,15,Fabian,Fabian,33")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -179,7 +179,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "1,12,Julian",
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -202,7 +202,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "1,12,Julian",
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -227,7 +227,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "1,12,Julian",
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -248,7 +248,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
 
     val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -269,7 +269,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
 
     val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -296,7 +296,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "9,12,Fabian"
     )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -322,7 +322,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "8,11,null,null",
       "9,12,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -352,7 +352,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "null,11,null",
       "9,12,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
   @Test
   def testLeftJoinTemporalTableOnMultKeyFields(): Unit = {
@@ -377,7 +377,7 @@ class JoinDimensionTableITCase extends StreamingTestBase {
       "8,11,null,null",
       "9,12,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
 
@@ -466,7 +466,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "1,12,Julian",
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -482,7 +482,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -490,7 +490,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "2,15,Hello,Jark",
       "3,15,Fabian,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -506,14 +506,14 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON T.id = D.id AND D.age > 20"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
       "2,15,Hello,Jark",
       "3,15,Fabian,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -529,14 +529,14 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON T.id = D.id WHERE T.len <= D.age"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
       "2,15,Hello,Jark,22",
       "3,15,Fabian,Fabian,33")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -554,7 +554,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "WHERE T.id > 1"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -563,7 +563,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "8,11,Hello world,null,null",
       "9,12,Hello world!,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -579,14 +579,14 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON T.id = D.id AND T.content = D.name"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
       "1,12,Julian",
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -605,25 +605,23 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "ON mod1(T.id, 4) = D.id AND T.content = D.name"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
       "1,12,Julian",
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
   def testMinibatchAggAndAsyncLeftJoinTemporalTable(): Unit = {
     val stream: DataStream[(Int, Int, String)] = failingDataSource(data)
     val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
-    val queryConfig = new StreamQueryConfig()
-    queryConfig.enableMiniBatch
-    queryConfig.withMiniBatchTriggerSize(1)
-    queryConfig.withMiniBatchTriggerTime(2)
-    tEnv.setQueryConfig(queryConfig)
+    tEnv.getConfig.enableMiniBatch
+    .withMiniBatchTriggerSize(1)
+    .withMiniBatchTriggerTime(2)
     tEnv.registerTable("T", streamTable)
 
     val asyncConfig = new AsyncConfig
@@ -641,7 +639,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON t1.id = D.id"
 
     val sink = new TestingRetractSink
-    tEnv.sql(sql2).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql2).toRetractStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -665,7 +663,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
@@ -675,7 +673,7 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
       "8,11,null,null",
       "9,12,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
-    assertEquals(0, dim.getFetcherResourceCount())
+    assertEquals(0, dim.getFetcherResourceCount)
   }
 
   @Test
@@ -750,8 +748,8 @@ class TestDimensionTableSource(
   async: Boolean = false,
   conf: AsyncConfig = null,
   delayedReturn: Long = 0L) extends DimensionTableSource[BaseRow] {
-  var fetcher: TestDoubleKeyFetcher = null
-  var asyncFetcher: TestAsyncDoubleKeyFetcher = null
+  var fetcher: TestDoubleKeyFetcher = _
+  var asyncFetcher: TestAsyncDoubleKeyFetcher = _
 
   override def getReturnType: DataType =
     DataTypes.internal(
@@ -788,7 +786,7 @@ class TestDimensionTableSource(
     Collections.singleton(IndexKey.of(true, 1)) // primary key(id)
   }
 
-  def getFetcherResourceCount(): Int = {
+  def getFetcherResourceCount: Int = {
     if (async && null != asyncFetcher) {
       asyncFetcher.resourceCounter
     } else if (null != fetcher) {

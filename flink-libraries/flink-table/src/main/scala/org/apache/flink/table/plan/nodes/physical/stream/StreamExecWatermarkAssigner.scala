@@ -21,9 +21,9 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import java.util
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rel.RelNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.WatermarkAssigner
@@ -45,11 +45,9 @@ class StreamExecWatermarkAssigner (
       cluster, traitSet, inputs.get(0), rowtimeField, watermarkOffset)
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val in = input.asInstanceOf[StreamExecRel]
-    val inputTransformation = in.translateToPlan(tableEnv, queryConfig)
+    val inputTransformation = in.translateToPlan(tableEnv)
 
     val rowtimeIndex = getRowType.getFieldNames.indexOf(rowtimeField)
     val watermarkOperator = new WatermarkAssignerOperator(rowtimeIndex, watermarkOffset)

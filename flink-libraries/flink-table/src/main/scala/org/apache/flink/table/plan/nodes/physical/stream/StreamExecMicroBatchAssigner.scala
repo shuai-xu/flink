@@ -22,7 +22,7 @@ import java.util
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.bundle.MicroBatchAssignerOperator
@@ -43,13 +43,11 @@ class StreamExecMicroBatchAssigner(
     super.explainTerms(pw).item("interval", intervalMs + "ms")
   }
 
-  override def translateToPlan(
-    tableEnv: StreamTableEnvironment,
-    queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val in = input.asInstanceOf[StreamExecRel]
-    val inputTransformation = in.translateToPlan(tableEnv, queryConfig)
-    val intervalMs = queryConfig.getMicroBatchTriggerTime
+    val inputTransformation = in.translateToPlan(tableEnv)
+    val intervalMs = tableEnv.getConfig.getMicroBatchTriggerTime
 
     new OneInputTransformation[BaseRow, BaseRow](
       inputTransformation,

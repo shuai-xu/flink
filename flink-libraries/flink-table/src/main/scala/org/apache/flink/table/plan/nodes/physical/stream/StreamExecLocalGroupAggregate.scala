@@ -26,7 +26,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.util.Pair
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -34,7 +34,6 @@ import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{AggregateInfoList, PartialFinalType, StreamExecUtil}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.BundleOperator
 import org.apache.flink.table.types.DataTypes
@@ -139,12 +138,9 @@ class StreamExecLocalGroupAggregate(
     values
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
 
@@ -173,12 +169,12 @@ class StreamExecLocalGroupAggregate(
 
     val operator = new BundleOperator(
       aggFunction,
-      getMiniBatchTrigger(queryConfig, useLocalAgg = true),
+      getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
       selector.getProducedType,
       valueTypeInfo,
       selector,
-      queryConfig.getParameters.getBoolean(
-        StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+      tableEnv.getConfig.getParameters.getBoolean(
+      TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
 
     new OneInputTransformation(
       inputTransformation,

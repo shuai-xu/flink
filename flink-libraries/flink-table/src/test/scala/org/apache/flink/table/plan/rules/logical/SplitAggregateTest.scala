@@ -33,17 +33,18 @@ import scala.collection.JavaConversions._
 @RunWith(classOf[Parameterized])
 class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
 
-  private val streamUtil: StreamTableTestUtil = streamTestUtil()
+  private var streamUtil: StreamTableTestUtil = _
 
   @Before
   def before(): Unit = {
+    streamUtil= streamTestUtil()
     streamUtil.addTable[(Long, Int, String)](
       "MyTable", 'a, 'b, 'c)
-    val queryConfig = streamUtil.tableEnv.queryConfig.enableMiniBatch.enablePartialAgg
+    val tableConfig = streamUtil.tableEnv.getConfig.enableMiniBatch.enablePartialAgg
 
     aggMode match {
-      case LocalGlobalOn => queryConfig.enableLocalAgg
-      case LocalGlobalOff => queryConfig.disableLocalAgg
+      case LocalGlobalOn => tableConfig.enableLocalAgg
+      case LocalGlobalOff => tableConfig.disableLocalAgg
     }
   }
 
@@ -171,7 +172,7 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
 
   @Test
   def testBucketsConfiguration(): Unit = {
-    streamUtil.tableEnv.queryConfig.withPartialBucketNum(100)
+    streamUtil.tableEnv.getConfig.withPartialBucketNum(100)
     val sqlQuery = "SELECT COUNT(DISTINCT c) FROM MyTable"
     streamUtil.verifyPlan(sqlQuery)
   }

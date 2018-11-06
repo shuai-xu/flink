@@ -19,22 +19,27 @@ package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableEnvironment, TableException}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.functions.aggregate.LongSumAggFunction
 import org.apache.flink.table.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.runtime.utils.TestingRetractTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.{Before, Test}
 
 import scala.io.Source
 
 class RankTest extends TableTestBase {
 
-  val streamUtil: StreamTableTestUtil = streamTestUtil()
-  streamUtil.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
-  streamUtil.addFunction("add", new AddUdf)
+  var streamUtil: StreamTableTestUtil = _
+
+  @Before
+  def testSetUp(): Unit = {
+    streamUtil = streamTestUtil()
+    streamUtil.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
+    streamUtil.addFunction("add", new AddUdf)
+  }
 
   @Test
   def testRankEndMustSpecified(): Unit = {
@@ -366,10 +371,8 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    val queryConfig = new StreamQueryConfig()
-      .enableTopNApprox
+      streamUtil.tableEnv.getConfig.enableTopNApprox
       .withTopNApproxBufferMinSize(20)
-    streamUtil.tableEnv.setQueryConfig(queryConfig)
 
     streamUtil.verifyPlanAndTrait(sql)
   }
@@ -486,7 +489,7 @@ class RankTest extends TableTestBase {
   @Test
   def testTopNWithPartialFinalAgg(): Unit = {
     // BLINK-17146809: fix monotonicity derivation not works when partial final optimization
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .enableLocalAgg
       .enablePartialAgg
@@ -587,11 +590,11 @@ class RankTest extends TableTestBase {
          |GROUP BY category, shopId
          |""".stripMargin
 
-    val t = tEnv.sql(subquery)
+    val t = tEnv.sqlQuery(subquery)
     tEnv.registerTable("MyView", t)
 
     val sink1 = new TestingRetractTableSink
-    tEnv.sql(
+    tEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -603,7 +606,7 @@ class RankTest extends TableTestBase {
          |""".stripMargin).writeToSink(sink1)
 
     val sink2 = new TestingRetractTableSink
-    tEnv.sql(
+    tEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -644,7 +647,7 @@ class RankTest extends TableTestBase {
     tEnv.registerTable("MyView", t)
 
     val sink1 = new TestingRetractTableSink
-    tEnv.sql(
+    tEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -655,7 +658,7 @@ class RankTest extends TableTestBase {
          |""".stripMargin).writeToSink(sink1)
 
     val sink2 = new TestingRetractTableSink
-    tEnv.sql(
+    tEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (

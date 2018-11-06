@@ -47,7 +47,7 @@ class AggregateTest extends TableTestBase {
 
   @Test
   def testAggWithMicroBatch(): Unit = {
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMicroBatch
       .withMicroBatchTriggerTime(1000L)
     val sql = "SELECT b, COUNT(DISTINCT a), MAX(b), SUM(c)  FROM MyTable GROUP BY b"
@@ -56,7 +56,7 @@ class AggregateTest extends TableTestBase {
 
   @Test
   def testAggAfterUnionWithMicroBatch(): Unit = {
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMicroBatch
       .withMicroBatchTriggerTime(1000L)
 
@@ -85,7 +85,7 @@ class AggregateTest extends TableTestBase {
   @Test
   def testLocalGlobalAggAfterUnion(): Unit = {
     // enable local global optimize
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .withMiniBatchTriggerTime(1000L)
       .withMiniBatchTriggerSize(3)
@@ -127,7 +127,7 @@ class AggregateTest extends TableTestBase {
   @Test
   def testAggWithFilterClauseWithLocalGlobal(): Unit = {
     streamUtil.addTable[(Int, Long, String, Boolean)]("T", 'a, 'b, 'c, 'd)
-    streamUtil.tableEnv.queryConfig
+    streamUtil.tableEnv.getConfig
       .enableMiniBatch
       .enableLocalAgg
 

@@ -25,7 +25,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
@@ -76,21 +76,15 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
-  protected def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[T]
+  protected def translateToPlanInternal(tableEnv: BatchTableEnvironment): StreamTransformation[T]
 
   /**
     * Translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
-  def translateToPlan(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[T] = {
+  def translateToPlan(tableEnv: BatchTableEnvironment): StreamTransformation[T] = {
     if (!isReused) {
       // the `reusedTransformation` of non-reused node is always None
       require(reusedTransformation.isEmpty)
@@ -98,7 +92,7 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
     reusedTransformation match {
       case Some(transformation) if isReused => transformation
       case _ =>
-        val transformation = translateToPlanInternal(tableEnv, queryConfig)
+        val transformation = translateToPlanInternal(tableEnv)
         if (isReused) {
           reusedTransformation = Some(transformation)
         }

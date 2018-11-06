@@ -47,11 +47,10 @@ class SplitAggregateITCase(
   override def before(): Unit = {
     super.before()
 
-    val queryConfig = tEnv.queryConfig
     if (partialAggMode.isPartialAggEnabled) {
-      queryConfig.enablePartialAgg
+      tEnv.getConfig.enablePartialAgg
     } else {
-      queryConfig.disablePartialAgg
+      tEnv.getConfig.disablePartialAgg
     }
 
     val data = List(

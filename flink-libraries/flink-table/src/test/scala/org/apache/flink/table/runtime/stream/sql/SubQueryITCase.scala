@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingRetractSink}
 import org.apache.flink.types.Row
@@ -172,9 +172,8 @@ class SubQueryITCase extends StreamingTestBase {
 
     tEnv.registerTable("MyTable", env.fromCollection(data).toTable(tEnv).as('a, 'b))
     val sink = new TestingRetractSink
-    val queryConfig = new StreamQueryConfig()
-    queryConfig.enableValuesSourceInput // enable values source input
-    val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row](queryConfig)
+    tEnv.getConfig.enableValuesSourceInput // enable values source input
+    val results = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     results.addSink(sink)
     env.execute()
 

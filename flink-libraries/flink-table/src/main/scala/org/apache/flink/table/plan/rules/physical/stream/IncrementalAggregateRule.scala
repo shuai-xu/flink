@@ -21,7 +21,7 @@ import java.util.Collections
 
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
 import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecGlobalGroupAggregate, StreamExecIncrementalGroupAggregate, StreamExecLocalGroupAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil.{inferLocalAggRowType, transformToStreamAggregateInfoList}
@@ -41,11 +41,11 @@ class IncrementalAggregateRule
     val finalLocalAgg = call.rel[StreamExecLocalGroupAggregate](2)
     val partialAgg = call.rel[StreamExecGlobalGroupAggregate](3)
 
-    val config = partialAgg.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+    val config = partialAgg.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
 
     // whether incremental aggregate is enabled
     val incrAggEnabled = config.getParameters.getBoolean(
-      StreamQueryConfig.SQL_EXEC_AGG_INCREMENTAL_ENABLED)
+      TableConfig.SQL_EXEC_AGG_INCREMENTAL_ENABLED)
 
     partialAgg.partialFinal == PartialFinalType.PARTIAL &&
       finalLocalAgg.partialFinal == PartialFinalType.FINAL &&

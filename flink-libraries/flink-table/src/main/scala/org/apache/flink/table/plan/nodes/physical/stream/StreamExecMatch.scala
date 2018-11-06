@@ -39,12 +39,11 @@ import org.apache.flink.cep.{EventComparator, PatternFlatSelectFunction, Pattern
 import org.apache.flink.cep.nfa.compiler.NFACompiler
 import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCepOperator, SelectCepOperator, SelectTimeoutCepOperator}
 import org.apache.flink.cep.pattern.Pattern
-import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.operators.co.CoStreamMap
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, SideOutputTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.api.windowing.time.Time
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -182,9 +181,7 @@ class StreamExecMatch(
         patternDefinitions.map { case (k, v) => s"$k AS ${v.toString}"}.mkString(", "))
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.config
     val relBuilder = tableEnv.getRelBuilder
@@ -192,7 +189,7 @@ class StreamExecMatch(
       inputSchema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
 
     val inputTransform =
-      getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+      getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val rowtimeFields = inputSchema.relDataType
       .getFieldList.filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))

@@ -100,7 +100,7 @@ class RetractionRulesTest extends TableTestBase {
   @Test
   def testGroupWindowWithEmitStrategy(): Unit = {
     val util = streamTestUtil()
-    util.tableEnv.queryConfig
+    util.tableEnv.getConfig
       .withIdleStateRetentionTime(Time.hours(1L))
       .withEarlyFireInterval(Time.milliseconds(10L))
       .withLateFireInterval(Time.milliseconds(0L))
@@ -119,7 +119,7 @@ class RetractionRulesTest extends TableTestBase {
   @Test
   def testTwoGroupWindowWithEmitStrategy(): Unit = {
     val util = streamTestUtil()
-    util.tableEnv.queryConfig
+    util.tableEnv.getConfig
       .withIdleStateRetentionTime(Time.hours(1L))
       .withEarlyFireInterval(Time.milliseconds(10L))
       .withLateFireInterval(Time.milliseconds(0L))

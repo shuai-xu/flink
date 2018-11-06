@@ -22,7 +22,6 @@ import java.math.BigDecimal
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{ConcatDistinctAggFunction, WeightedAvg}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -141,9 +140,8 @@ class GroupWindowITCase(mode: StateBackendMode)
 
   @Test
   def testEventTimeTumblingWindowWithAllowLateness(): Unit = {
-    val config = new StreamQueryConfig
     // wait 10 millisecond for late elements
-    config.withIdleStateRetentionTime(Time.milliseconds(10L))
+    tEnv.getConfig.withIdleStateRetentionTime(Time.milliseconds(10L))
 
     val data = List(
       (1L, 1, "Hi"),
@@ -195,7 +193,7 @@ class GroupWindowITCase(mode: StateBackendMode)
         |EMIT WITHOUT DELAY AFTER WATERMARK
       """.stripMargin
 
-    tEnv.sqlUpdate(sql, config)
+    tEnv.sqlUpdate(sql)
     env.execute()
 
     val expected = Seq(

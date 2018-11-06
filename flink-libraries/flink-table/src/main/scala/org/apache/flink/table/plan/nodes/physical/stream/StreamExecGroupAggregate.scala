@@ -28,11 +28,10 @@ import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -159,18 +158,17 @@ class StreamExecGroupAggregate(
     values
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    if (groupings.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {
+    val tableConfig = tableEnv.getConfig
+
+    if (groupings.length > 0 && tableConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn("No state retention interval configured for a query which accumulates state. " +
         "Please provide a query configuration with valid retention interval to prevent excessive " +
         "state size. You may specify a retention time of 0 to not clean up the state.")
     }
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
@@ -179,12 +177,12 @@ class StreamExecGroupAggregate(
     val needRetraction = StreamExecRetractionRules.isAccRetract(getInput)
 
     val generator = new AggsHandlerCodeGenerator(
-      CodeGeneratorContext(tableEnv.getConfig, supportReference = true),
+      CodeGeneratorContext(tableConfig, supportReference = true),
       tableEnv.getRelBuilder,
       inputRowType.getFieldTypes.map(DataTypes.internal),
       needRetraction,
       needMerge = false,
-      tableEnv.getConfig.getNullCheck,
+      tableConfig.getNullCheck,
       // TODO: gemini state backend do not copy key currently, we have to copy input field
       // TODO: copy is not need when state backend is rocksdb or niagara, improve this in future
       copyInputField = true)
@@ -194,7 +192,7 @@ class StreamExecGroupAggregate(
     val aggValueTypes = aggInfoList.getActualValueTypes.map(DataTypes.internal)
     val inputCountIndex = aggInfoList.getCount1AccIndex
 
-    val operator = if (queryConfig.isMiniBatchEnabled || queryConfig.isMicroBatchEnabled) {
+    val operator = if (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) {
       val aggFunction = new MiniBatchGroupAggFunction(
         inputRowType.toInternalType,
         aggsHandler,
@@ -212,10 +210,10 @@ class StreamExecGroupAggregate(
 
       new KeyedBundleOperator(
         aggFunction,
-        getMiniBatchTrigger(queryConfig, useLocalAgg = false),
+        getMiniBatchTrigger(tableConfig, useLocalAgg = false),
         valueType,
-        queryConfig.getParameters.getBoolean(
-          StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        tableConfig.getParameters.getBoolean(
+          TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       val aggFunction = new GroupAggFunction(
         aggsHandler,
@@ -224,7 +222,7 @@ class StreamExecGroupAggregate(
         inputCountIndex,
         generateRetraction,
         groupings.isEmpty,
-        queryConfig)
+        tableConfig)
 
       val operator = new KeyedProcessOperator[BaseRow, BaseRow, BaseRow](aggFunction)
       operator.setRequireState(true)

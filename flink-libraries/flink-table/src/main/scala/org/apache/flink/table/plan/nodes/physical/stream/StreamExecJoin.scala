@@ -35,7 +35,7 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
@@ -194,17 +194,16 @@ class StreamExecJoin(
    * @param tableEnv The [[StreamTableEnvironment]] of the translated Table.
    * @return DataStream of type expectedType or RowTypeInfo
    */
-  override def translateToPlan(tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
-    val config = tableEnv.getConfig
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+    val tableConfig = tableEnv.getConfig
 
     val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
 
     // get the equality keys
     val (leftKeys, rightKeys) = checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
 
-    val leftTransform = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
-    val rightTransform = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+    val leftTransform = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val rightTransform = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val leftType = leftTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val rightType = rightTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
@@ -214,17 +213,17 @@ class StreamExecJoin(
     val leftSelect = StreamExecUtil.getKeySelector(leftKeys.toArray, leftType)
     val rightSelect = StreamExecUtil.getKeySelector(rightKeys.toArray, rightType)
 
-    val maxRetentionTime = queryConfig.getMaxIdleStateRetentionTime
-    val minRetentionTime = queryConfig.getMinIdleStateRetentionTime
-    val lPkProj = generatePrimaryKeyProjection(config, left, leftType, leftKeys.toArray)
-    val rPkProj = generatePrimaryKeyProjection(config, right, rightType, rightKeys.toArray)
+    val maxRetentionTime = tableConfig.getMaxIdleStateRetentionTime
+    val minRetentionTime = tableConfig.getMinIdleStateRetentionTime
+    val lPkProj = generatePrimaryKeyProjection(tableConfig, left, leftType, leftKeys.toArray)
+    val rPkProj = generatePrimaryKeyProjection(tableConfig, right, rightType, rightKeys.toArray)
 
     val (lStateType, lMatchStateType, rStateType, rMatchStateType) = getJoinAllStateType
-    val condFunc = generateConditionFunction(config, leftType, rightType)
+    val condFunc = generateConditionFunction(tableConfig, leftType, rightType)
     val leftIsAccRetract = StreamExecRetractionRules.isAccRetract(left)
     val rightIsAccRetract = StreamExecRetractionRules.isAccRetract(right)
 
-    val operator = if (queryConfig.isMiniBatchJoinEnabled) {
+    val operator = if (tableConfig.isMiniBatchJoinEnabled) {
       joinType match {
         case FlinkJoinRelType.INNER =>
           new BatchInnerJoinStreamOperator(
@@ -242,9 +241,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig),
-            queryConfig.getParameters.getBoolean(
-              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            getMiniBatchTrigger(tableConfig),
+            tableConfig.getParameters.getBoolean(
+              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.LEFT =>
           new LeftOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -263,9 +262,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig),
-            queryConfig.getParameters.getBoolean(
-              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            getMiniBatchTrigger(tableConfig),
+            tableConfig.getParameters.getBoolean(
+              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.RIGHT =>
           new RightOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -284,9 +283,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig),
-            queryConfig.getParameters.getBoolean(
-              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            getMiniBatchTrigger(tableConfig),
+            tableConfig.getParameters.getBoolean(
+              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.FULL =>
           new FullOuterBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -305,9 +304,9 @@ class StreamExecJoin(
             leftIsAccRetract,
             rightIsAccRetract,
             filterNulls,
-            getMiniBatchTrigger(queryConfig),
-            queryConfig.getParameters.getBoolean(
-              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            getMiniBatchTrigger(tableConfig),
+            tableConfig.getParameters.getBoolean(
+              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
         case FlinkJoinRelType.ANTI | FlinkJoinRelType.SEMI =>
           new AntiSemiBatchJoinStreamOperator(
             leftType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
@@ -328,9 +327,9 @@ class StreamExecJoin(
             joinType.equals(FlinkJoinRelType.SEMI),
             joinInfo.isEqui,
             filterNulls,
-            getMiniBatchTrigger(queryConfig),
-            queryConfig.getParameters.getBoolean(
-              StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+            getMiniBatchTrigger(tableConfig),
+            tableConfig.getParameters.getBoolean(
+              TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
       }
     } else {
       joinType match {
@@ -564,18 +563,18 @@ class StreamExecJoin(
     }
   }
 
-  private def getMiniBatchTrigger(queryConfig: StreamQueryConfig) = {
+  private def getMiniBatchTrigger(tableConfig: TableConfig) = {
     val timeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      if (queryConfig.isMicroBatchEnabled) {
+      if (tableConfig.isMicroBatchEnabled) {
         None
       } else {
-        Some(new TimeCoBundleTrigger[BaseRow, BaseRow](queryConfig.getMiniBatchTriggerTime))
+        Some(new TimeCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerTime))
       }
     val sizeTrigger: Option[CoBundleTrigger[BaseRow, BaseRow]] =
-      if (queryConfig.getMiniBatchTriggerSize == Long.MinValue) {
+      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
         None
       } else {
-        Some(new CountCoBundleTrigger[BaseRow, BaseRow](queryConfig.getMiniBatchTriggerSize))
+        Some(new CountCoBundleTrigger[BaseRow, BaseRow](tableConfig.getMiniBatchTriggerSize))
       }
     new CombinedCoBundleTrigger[BaseRow, BaseRow](
       Array(timeTrigger, sizeTrigger)

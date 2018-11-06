@@ -24,9 +24,9 @@ import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescript
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.types.{DataTypes, InternalType}
@@ -47,8 +47,8 @@ class ProcTimeBoundedRangeOver(
     accTypes: Seq[InternalType],
     inputFieldTypes: Seq[InternalType],
     precedingTimeBoundary: Long,
-    queryConfig: StreamQueryConfig)
-  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](queryConfig)
+    tableConfig: TableConfig)
+  extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig)
   with Logging {
 
   private var accState: KeyedValueState[BaseRow, BaseRow] = _

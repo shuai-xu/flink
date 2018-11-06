@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.rank
 
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.java.functions.KeySelector
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.GeneratedSorter
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
@@ -43,7 +43,7 @@ class UpdateRankFunction(
     rankRange: RankRange,
     cacheSize: Long,
     generateRetraction: Boolean,
-    queryConfig: StreamQueryConfig)
+    tableConfig: TableConfig)
   extends AbstractUpdateRankFunction(
     inputRowType,
     rowKeyType,
@@ -53,7 +53,7 @@ class UpdateRankFunction(
     rankRange,
     cacheSize,
     generateRetraction,
-    queryConfig) {
+    tableConfig) {
 
   private val inputRowSer =
     inputRowType.createSerializer().asInstanceOf[AbstractRowSerializer[BaseRow]]

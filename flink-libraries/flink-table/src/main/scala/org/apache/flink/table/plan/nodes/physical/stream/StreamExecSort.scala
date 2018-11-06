@@ -24,7 +24,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -95,15 +95,14 @@ class StreamExecSort(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    if (!queryConfig.isNonTemporalSortEnabled) {
+    if (!tableEnv.getConfig.isNonTemporalSortEnabled) {
       throw TableException("Sort on a non-time-attribute field is not supported.")
     }
 
     val inputTransformation = input.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+      tableEnv)
 
     val mangedMemorySize =
       ExecResourceUtil.getPerRequestManagedMemory(

@@ -30,7 +30,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.{SqlAggFunction, SqlKind}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{ImmutableBitSet, ImmutableIntList}
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, StreamExecRelFactories}
 import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct.CountDistinctAggFunction
 import org.apache.flink.table.runtime.functions.aggfunctions.{FirstValueWithRetractAggFunction, LastValueWithRetractAggFunction, MaxWithRetractAggFunction, MinWithRetractAggFunction}
@@ -115,7 +115,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     "StreamExecSplitAggregateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val queryConfig = call.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+    val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
     val agg: StreamExecGroupAggregate = call.rel(0)
     val realInput = if (inputIsExchange) call.rels(2) else call.rels(1)
 
@@ -134,15 +134,15 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
       needDistinctInfo = false)
 
     call.rels(1).isInstanceOf[StreamExecExchange] == inputIsExchange &&
-      queryConfig.isMiniBatchEnabled &&
-      queryConfig.isPartialAggEnabled &&
+      tableConfig.isMiniBatchEnabled &&
+      tableConfig.isPartialAggEnabled &&
       agg.partialFinal == PartialFinalType.NORMAL &&
       containsAggsWithDataView(aggInfoList.aggInfos) &&
       doAllSupportSplit(aggInfoList.aggInfos)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val queryConfig = call.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+    val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
     val originalAggregate: StreamExecGroupAggregate = call.rel(0)
     val realInput = if (inputIsExchange) call.rels(2) else call.rels(1)
     val needRetraction = StreamExecRetractionRules.isAccRetract(realInput)
@@ -173,7 +173,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     }.distinct.diff(originalAggregate.getGroupings).sorted
 
     val hashFieldsMap: mutable.Map[Int, Int] = mutable.Map()
-    val buckets = queryConfig.getPartialBucketNum
+    val buckets = tableConfig.getPartialBucketNum
 
     if (hashFieldIndexes.nonEmpty) {
       val projects = new util.ArrayList[RexNode](relBuilder.fields)

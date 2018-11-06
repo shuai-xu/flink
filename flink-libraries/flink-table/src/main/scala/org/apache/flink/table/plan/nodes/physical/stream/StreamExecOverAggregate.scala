@@ -29,7 +29,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -114,9 +114,8 @@ class StreamExecOverAggregate(
           namedAggregates))
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+    val tableConfig = tableEnv.getConfig
 
     if (logicWindow.groups.size > 1) {
       throw new TableException(
@@ -141,7 +140,7 @@ class StreamExecOverAggregate(
           "The window can only be ordered in ASCENDING mode."))
     }
 
-    val inputDS = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+    val inputDS = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(input)
 
@@ -152,7 +151,7 @@ class StreamExecOverAggregate(
             "Note: Over window aggregation should not follow a non-windowed GroupBy aggregation."))
     }
 
-    if (!logicWindow.groups.get(0).keys.isEmpty && queryConfig.getMinIdleStateRetentionTime < 0) {
+    if (!logicWindow.groups.get(0).keys.isEmpty && tableConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn(
         "No state retention interval configured for a query which accumulates state. " +
         "Please provide a query configuration with valid retention interval to prevent " +
@@ -201,7 +200,7 @@ class StreamExecOverAggregate(
         aggInputType,
         rowTimeIdx,
         isRowsClause,
-        queryConfig,
+        tableConfig,
         tableEnv.getRelBuilder,
         config.getNullCheck)
 
@@ -227,7 +226,7 @@ class StreamExecOverAggregate(
         rowTimeIdx,
         isRowsClause,
         precedingOffset,
-        queryConfig,
+        tableConfig,
         tableEnv.getRelBuilder,
         config.getNullCheck)
 
@@ -283,7 +282,7 @@ class StreamExecOverAggregate(
       aggInputType: RelDataType,
       rowTimeIdx: Option[Int],
       isRowsClause: Boolean,
-      queryConfig: StreamQueryConfig,
+      tableConfig: TableConfig,
       relBuilder: RelBuilder,
       nullCheck: Boolean): ProcessFunction[BaseRow, BaseRow] = {
 
@@ -320,7 +319,7 @@ class StreamExecOverAggregate(
           flattenAccTypes,
           inputSchema.fieldTypes,
           rowTimeIdx.get,
-          queryConfig)
+          tableConfig)
       } else {
         // RANGE unbounded over process function
         new RowTimeUnboundedRangeOver(
@@ -328,13 +327,13 @@ class StreamExecOverAggregate(
           flattenAccTypes,
           inputSchema.fieldTypes,
           rowTimeIdx.get,
-          queryConfig)
+          tableConfig)
       }
     } else {
       new ProcTimeUnboundedOver(
         genAggsHandler,
         flattenAccTypes,
-        queryConfig)
+        tableConfig)
     }
   }
 
@@ -357,7 +356,7 @@ class StreamExecOverAggregate(
       rowTimeIdx: Option[Int],
       isRowsClause: Boolean,
       precedingOffset: Long,
-      queryConfig: StreamQueryConfig,
+      tableConfig: TableConfig,
       relBuilder: RelBuilder,
       nullCheck: Boolean): ProcessFunction[BaseRow, BaseRow] = {
 
@@ -394,7 +393,7 @@ class StreamExecOverAggregate(
           inputSchema.fieldTypes,
           precedingOffset,
           rowTimeIdx.get,
-          queryConfig)
+          tableConfig)
       } else {
         new RowTimeBoundedRangeOver(
           genAggsHandler,
@@ -402,7 +401,7 @@ class StreamExecOverAggregate(
           inputSchema.fieldTypes,
           precedingOffset,
           rowTimeIdx.get,
-          queryConfig)
+          tableConfig)
       }
     } else {
       if (isRowsClause) {
@@ -411,14 +410,14 @@ class StreamExecOverAggregate(
           flattenAccTypes,
           inputSchema.fieldTypes,
           precedingOffset,
-          queryConfig)
+          tableConfig)
       } else {
         new ProcTimeBoundedRangeOver(
           genAggsHandler,
           flattenAccTypes,
           inputSchema.fieldTypes,
           precedingOffset,
-          queryConfig)
+          tableConfig)
       }
     }
   }

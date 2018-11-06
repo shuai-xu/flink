@@ -27,14 +27,13 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.window.{CountWindow, TimeWindow}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.ExpressionUtils.{isTimeIntervalLiteral, _}
-import org.apache.flink.table.expressions.ResolvedFieldReference
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
@@ -122,13 +121,11 @@ class StreamExecGroupWindowAggregate(
       .itemIf("emit", emitStrategy, !emitStrategy.toString.isEmpty)
   }
 
-  override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
 
-    val inputTransform = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+    val inputTransform = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(input)
 
@@ -143,7 +140,8 @@ class StreamExecGroupWindowAggregate(
       case _ => false
     }
 
-    if (isCountWindow && grouping.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {
+    if (isCountWindow && grouping.length > 0 &&
+        tableEnv.getConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn(
         "No state retention interval configured for a query which accumulates state. " +
         "Please provide a query configuration with valid retention interval to prevent excessive " +

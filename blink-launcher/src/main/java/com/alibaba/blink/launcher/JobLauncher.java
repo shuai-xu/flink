@@ -25,7 +25,6 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.LocalStreamEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.graph.StreamGraph;
-import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
@@ -33,8 +32,6 @@ import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.StringUtils;
-
-import org.apache.flink.shaded.guava18.com.google.common.collect.Maps;
 
 import com.alibaba.blink.launcher.autoconfig.StreamGraphConfigurer;
 import com.alibaba.blink.launcher.autoconfig.StreamGraphProperty;
@@ -257,10 +254,7 @@ public class JobLauncher {
 			String previewRecordDelim,
 			String previewQuoteCharacter) throws Exception {
 		//add user config
-		for (Object str : jobConf.keySet()) {
-			String keyStr = String.valueOf(str);
-			conf.getParameters().setString(keyStr, jobConf.getProperty(keyStr));
-		}
+		addUserConfig(conf, jobConf);
 		if (conf.getOperatorMetricCollect()) {
 			// if jobName is defined, set prefix of metric file name to jobName
 			String absolutePathOfMetricFile = generateAbsoluteFilePath(jobName, ".metric", conf.getDumpFileOfPlanWithMetrics());
@@ -342,7 +336,7 @@ public class JobLauncher {
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 		registerPythonLibFiles(env, jobConf, userPyLibs);
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env, conf);
-		setQueryConfig(tEnv, jobConf);
+		addUserConfig(conf, jobConf);
 		StreamExecEnvUtil.setStreamEnvConfigs(env, jobConf);
 		StreamExecEnvUtil.setConfig(env, jobConf);
 
@@ -445,11 +439,12 @@ public class JobLauncher {
 		}
 	}
 
-	private static void setQueryConfig(StreamTableEnvironment tEnv, Properties userParams) {
-		StreamQueryConfig queryConfig = new StreamQueryConfig();
-		// set parameters
-		queryConfig.setParameters(Maps.fromProperties(userParams));
-		tEnv.setQueryConfig(queryConfig);
+	private static void addUserConfig(TableConfig tableConfig, Properties userParams) {
+		//add user config
+		for (Object str : userParams.keySet()) {
+			String keyStr = String.valueOf(str);
+			tableConfig.getParameters().setString(keyStr, userParams.getProperty(keyStr));
+		}
 	}
 
 	private static String generateAbsoluteFilePath(String prefix, String suffix, String directory) {

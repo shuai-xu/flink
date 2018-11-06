@@ -26,7 +26,7 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.Pair
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
@@ -142,17 +142,16 @@ class StreamExecGlobalGroupAggregate(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+    val tableConfig = tableEnv.getConfig
 
-    if (groupings.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {
+    if (groupings.length > 0 && tableConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn("No state retention interval configured for a query which accumulates state. " +
         "Please provide a query configuration with valid retention interval to prevent excessive " +
         "state size. You may specify a retention time of 0 to not clean up the state.")
     }
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(
-      tableEnv, queryConfig)
+    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
 
@@ -164,7 +163,7 @@ class StreamExecGlobalGroupAggregate(
       mergedAccOffset = groupings.length,
       mergedAccOnHeap = true,
       localAggInfoList.getAccTypes,
-      tableEnv.getConfig,
+      tableConfig,
       tableEnv.getRelBuilder,
       // the local aggregate result will be buffered, so need copy
       inputFieldCopy = true)
@@ -175,7 +174,7 @@ class StreamExecGlobalGroupAggregate(
       mergedAccOffset = 0,
       mergedAccOnHeap = true,
       localAggInfoList.getAccTypes,
-      tableEnv.getConfig,
+      tableConfig,
       tableEnv.getRelBuilder,
       // if global aggregate result will be put into state, then not need copy
       // but this global aggregate result will be put into a buffered map first,
@@ -186,7 +185,7 @@ class StreamExecGlobalGroupAggregate(
     val globalAggValueTypes = globalAggInfoList.getActualValueTypes.map(DataTypes.internal)
     val inputCountIndex = globalAggInfoList.getCount1AccIndex
 
-    val operator = if (queryConfig.isMiniBatchEnabled || queryConfig.isMicroBatchEnabled) {
+    val operator = if (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) {
       val aggFunction = new MiniBatchGlobalGroupAggFunction(
         localAggsHandler,
         globalAggsHandler,
@@ -201,10 +200,10 @@ class StreamExecGlobalGroupAggregate(
       val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], localAccTypes: _*)
       new KeyedBundleOperator(
         aggFunction,
-        getMiniBatchTrigger(queryConfig, useLocalAgg = true),
+        getMiniBatchTrigger(tableConfig, useLocalAgg = true),
         valueTypeInfo,
-        queryConfig.getParameters.getBoolean(
-          StreamQueryConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
+        tableConfig.getParameters.getBoolean(
+          TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
       throw new TableException("Local-Global optimization is only worked in minibatch mode")
     }

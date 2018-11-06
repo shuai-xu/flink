@@ -23,7 +23,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableException}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
@@ -138,17 +138,15 @@ class BatchExecSortLimit(
     * Translates the [[BatchExecRel]] node into a Batch operator.
     *
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
     */
   override def translateToPlanInternal(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): StreamTransformation[BaseRow] = {
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
 
     if (limitEnd == Long.MaxValue) {
       throw new TableException("Not support limitEnd is max value now!")
     }
 
-    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv, queryConfig)
+    val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val types = inputType.getFieldTypes
     val binaryType = new BaseRowTypeInfo(classOf[BinaryRow], types: _*)

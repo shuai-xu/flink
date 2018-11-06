@@ -22,11 +22,10 @@ import java.util.Collections
 
 import org.apache.calcite.plan.RelOptRule.{any, none, operand}
 import org.apache.calcite.plan.hep.HepRelVertex
-import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.{TableScan, Union}
 import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecMicroBatchAssigner, StreamExecScan, StreamExecTableSourceScan}
 import org.apache.flink.table.plan.schema.IntermediateDataStreamTable
 
@@ -58,7 +57,7 @@ object MicroBatchAssignerRules {
     override def onMatch(call: RelOptRuleCall): Unit = {
       val parent = call.rel[SingleRel](0)
       val scan = call.rel[TableScan](1)
-      val config = scan.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+      val config = scan.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
       val microBatchNode = new StreamExecMicroBatchAssigner(
         scan.getCluster,
         scan.getTraitSet,
@@ -86,7 +85,7 @@ object MicroBatchAssignerRules {
       val biRel = call.rel[BiRel](0)
       val node1 = call.rel[RelNode](1)
       val node2 = call.rel[RelNode](2)
-      val config = biRel.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+      val config = biRel.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
       val newNode1 = if (isScan(node1)) {
         new StreamExecMicroBatchAssigner(
           node1.getCluster,
@@ -131,7 +130,7 @@ object MicroBatchAssignerRules {
 
     override def onMatch(call: RelOptRuleCall): Unit = {
       val union = call.rel[Union](0)
-      val config = union.getCluster.getPlanner.getContext.unwrap(classOf[StreamQueryConfig])
+      val config = union.getCluster.getPlanner.getContext.unwrap(classOf[TableConfig])
 
       val newNodes = union.getInputs.map {
         case vertex: HepRelVertex =>

@@ -30,7 +30,7 @@ import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation,
   TwoInputTransformation, UnionTransformation}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
@@ -117,9 +117,7 @@ class StreamExecWindowJoin(
     writer.item("windowBounds", windowBounds)
   }
 
-  override def translateToPlan(
-    tableEnv: StreamTableEnvironment,
-    queryConfig: StreamQueryConfig): StreamTransformation[BaseRow] = {
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val config = tableEnv.getConfig
 
@@ -130,8 +128,8 @@ class StreamExecWindowJoin(
         TableErrors.INST.sqlWindowJoinUpdateNotSupported())
     }
 
-    val leftDataStream = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
-    val rightDataStream = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv, queryConfig)
+    val leftDataStream = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val rightDataStream = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     // get the equi-keys and other conditions
     val joinInfo = JoinInfo.of(leftNode, rightNode, joinCondition)

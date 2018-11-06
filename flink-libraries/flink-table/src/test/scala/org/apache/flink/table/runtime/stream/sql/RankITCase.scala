@@ -21,7 +21,6 @@ package org.apache.flink.table.runtime.stream.sql
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingRetractSink, TestingRetractTableSink, TestingUpsertTableSink}
@@ -261,12 +260,11 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num <= 3
       """.stripMargin
 
-    val queryConfig = new StreamQueryConfig()
-      .enableTopNApprox
+      tEnv.getConfig.enableTopNApprox
       .withTopNApproxBufferMinSize(20)
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
-    tEnv.sqlQuery(sql).writeToSink(sink, queryConfig)
+    tEnv.sqlQuery(sql).writeToSink(sink)
     env.execute()
 
     val updatedExpected = List(
@@ -554,7 +552,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val sink = new TestingRetractSink
-    val results = tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
     env.execute()
 
     val expected = List(
@@ -594,12 +592,11 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num <= 2
       """.stripMargin
 
-    val queryConfig = new StreamQueryConfig()
-      .enableTopNApprox
+    tEnv.getConfig.enableTopNApprox
       .withTopNApproxBufferMinSize(20)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
-    tEnv.sqlQuery(sql).writeToSink(tableSink, queryConfig)
+    tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
     val updatedExpected = List(
@@ -686,12 +683,11 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num = 2
       """.stripMargin
 
-    val queryConfig = new StreamQueryConfig()
-      .enableTopNApprox
+     tEnv.getConfig.enableTopNApprox
       .withTopNApproxBufferMinSize(20)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
-    tEnv.sqlQuery(sql).writeToSink(tableSink, queryConfig)
+    tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
     val updatedExpected = List(
@@ -907,8 +903,8 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0))
-    val queryConfig = new StreamQueryConfig().withTopNCacheSize(1)
-    tEnv.sqlQuery(sql).writeToSink(tableSink, queryConfig)
+    tEnv.getConfig.withTopNCacheSize(1)
+    tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
     val expected = List(
@@ -1024,12 +1020,11 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
         |WHERE rank_num <= 4
       """.stripMargin
 
-    val queryConfig = new StreamQueryConfig()
-      .enableTopNApprox
+    tEnv.getConfig.enableTopNApprox
       .withTopNApproxBufferMinSize(0)
 
     val tableSink = new TestingUpsertTableSink(Array(0, 4))
-    tEnv.sqlQuery(sql).writeToSink(tableSink, queryConfig)
+    tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
     val expected = List(
@@ -1189,10 +1184,9 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       """.stripMargin
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
-    val queryConfig = new StreamQueryConfig()
-      .enableTopNApprox
+    tEnv.getConfig.enableTopNApprox
       .withTopNApproxBufferMinSize(0)
-    tEnv.sqlQuery(sql).writeToSink(tableSink, queryConfig)
+    tEnv.sqlQuery(sql).writeToSink(tableSink)
     env.execute()
 
     val expected = List(

@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
 import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecJoin, StreamExecLocalGroupAggregate}
 import org.apache.flink.table.util.RelTraitUtil
@@ -37,12 +36,10 @@ abstract class StreamPlanTestBase extends TableTestBase {
   streamUtil.addTable[(Int, Long, Long)]("A", 'a1, 'a2, 'a3)
   streamUtil.addTable[(Int, Long, Long)]("B", 'b1, 'b2, 'b3)
 
-  protected val queryConfig: StreamQueryConfig = new StreamQueryConfig
-
   def verifyPlanAndTrait(sql: String): Unit = {
     val table = streamUtil.tableEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = streamUtil.tableEnv.optimize(relNode, updatesAsRetraction = false, queryConfig)
+    val optimized = streamUtil.tableEnv.optimize(relNode, updatesAsRetraction = false)
     val traitResult = SystemUtils.LINE_SEPARATOR + RelTraitUtil.toString(optimized)
     val sw = new StringWriter
     val planWriter = new JoinRelWriter(new PrintWriter(sw))

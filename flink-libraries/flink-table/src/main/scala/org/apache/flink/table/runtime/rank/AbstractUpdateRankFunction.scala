@@ -30,7 +30,7 @@ import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.runtime.state.keyed.KeyedMapState
 import org.apache.flink.runtime.state.{FunctionInitializationContext, FunctionSnapshotContext}
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
-import org.apache.flink.table.api.StreamQueryConfig
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{Compiler, GeneratedSorter}
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
@@ -52,9 +52,9 @@ abstract class AbstractUpdateRankFunction(
     rankRange: RankRange,
     cacheSize: Long,
     generateRetraction: Boolean,
-    queryConfig: StreamQueryConfig)
+    tableConfig: TableConfig)
   extends AbstractRankFunction(
-    queryConfig,
+    tableConfig,
     rankRange,
     inputRowType,
     inputRowType.getArity,
