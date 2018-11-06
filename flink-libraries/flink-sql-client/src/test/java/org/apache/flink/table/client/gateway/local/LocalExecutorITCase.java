@@ -270,6 +270,7 @@ public class LocalExecutorITCase extends TestLogger {
 		executeStreamQueryTable(replaceVars, query, expectedResults);
 	}
 
+	@Ignore
 	@Test(timeout = 30_000L)
 	public void testBatchQueryExecution() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
@@ -352,6 +353,7 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
+	@Ignore
 	@Test(timeout = 30_000L)
 	public void testBatchQueryExecutionSink() throws Exception {
 		final String csvOutputPath = new File(tempFolder.newFolder().getAbsolutePath(), "test-out.csv").toURI().toString();
