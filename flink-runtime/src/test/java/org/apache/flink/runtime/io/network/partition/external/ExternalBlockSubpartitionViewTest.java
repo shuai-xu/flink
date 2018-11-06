@@ -64,8 +64,8 @@ import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -124,25 +124,33 @@ public class ExternalBlockSubpartitionViewTest {
 		final int subpartitionIndex = 2;
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
-		ExecutorService executor = Executors.newFixedThreadPool(1);
+		ExecutorService executor = null;
 
-		ViewReader viewReader = new ViewReader();
-		ExternalBlockSubpartitionView view = new ExternalBlockSubpartitionView(meta,
-			subpartitionIndex,
-			executor,
-			meta.getResultPartitionID(),
-			bufferPool,
-			0,
-			viewReader);
-		viewReader.setView(view);
+		try {
+			executor = Executors.newFixedThreadPool(1);
 
-		view.notifyCreditAdded(2);
-		checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 0);
-		checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 1);
+			ViewReader viewReader = new ViewReader();
+			ExternalBlockSubpartitionView view = new ExternalBlockSubpartitionView(meta,
+				subpartitionIndex,
+				executor,
+				meta.getResultPartitionID(),
+				bufferPool,
+				0,
+				viewReader);
+			viewReader.setView(view);
 
-		verify(meta).initialize();
-		assertEquals(TOTAL_BUFFERS_EACH_SUBPARTITION[subpartitionIndex], view.getTotalBuffers());
-		assertNotNull(view.getMetaIterator());
+			view.notifyCreditAdded(2);
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 0);
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 1);
+
+			verify(meta).initialize();
+			assertEquals(TOTAL_BUFFERS_EACH_SUBPARTITION[subpartitionIndex], view.getTotalBuffers());
+			assertNotNull(view.getMetaIterator());
+		} finally {
+			if (executor != null) {
+				executor.shutdownNow();
+			}
+		}
 	}
 
 	@Test(timeout = 60000)
@@ -150,31 +158,47 @@ public class ExternalBlockSubpartitionViewTest {
 		final int subpartitionIndex = 2;
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
-		ExecutorService executor = spy(Executors.newFixedThreadPool(1));
 
-		ViewReader viewReader = new ViewReader();
-		ExternalBlockSubpartitionView view = new ExternalBlockSubpartitionView(meta,
-			subpartitionIndex,
-			executor,
-			meta.getResultPartitionID(),
-			bufferPool,
-			0,
-			viewReader);
-		viewReader.setView(view);
+		ExecutorService executor = null;
 
-		view.notifyCreditAdded(2);
-		verify(executor).submit(eq(view));
-		reset(executor);
+		try {
+			executor = spy(Executors.newFixedThreadPool(1));
 
-		checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 0);
-		checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 1);
+			ViewReader viewReader = new ViewReader();
+			ExternalBlockSubpartitionView view = new ExternalBlockSubpartitionView(meta,
+				subpartitionIndex,
+				executor,
+				meta.getResultPartitionID(),
+				bufferPool,
+				0,
+				viewReader);
+			viewReader.setView(view);
 
-		assertEquals(0, view.getCurrentCredit());
-		view.notifyCreditAdded(2);
-		verify(executor).submit(eq(view));
+			view.notifyCreditAdded(2);
 
-		checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 2);
-		checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 3);
+			// Check the executor is submitting on the first batch of credits.
+			verify(executor).submit(eq(view));
+
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 0);
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 1);
+			assertEquals(0, view.getCurrentCredit());
+
+			// Wait till the view actually exit from the ThreadPool.
+			while (view.isRunning()) {
+				Thread.sleep(500);
+			}
+
+			// Check the view get re-submitted on new credits.
+			view.notifyCreditAdded(2);
+			verify(executor, times(2)).submit(eq(view));
+
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 2);
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 3);
+		} finally {
+			if (executor != null) {
+				executor.shutdownNow();
+			}
+		}
 	}
 
 	@Test(timeout = 60000)
@@ -182,46 +206,55 @@ public class ExternalBlockSubpartitionViewTest {
 		final int subpartitionIndex = 2;
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
-		ExecutorService executor = spy(Executors.newFixedThreadPool(1));
 
-		ViewReader viewReader = new ViewReader();
-		ExternalBlockSubpartitionView view = new ExternalBlockSubpartitionView(meta,
-			subpartitionIndex,
-			executor,
-			meta.getResultPartitionID(),
-			bufferPool,
-			0,
-			viewReader);
-		viewReader.setView(view);
+		ExecutorService executor = null;
 
-		Random random = new Random();
-		int nextBufferIndex = 0;
+		try {
+			executor = spy(Executors.newFixedThreadPool(1));
 
-		int remainBuffer = TOTAL_BUFFERS_EACH_SUBPARTITION[subpartitionIndex];
-		while (remainBuffer > 1) {
-			int nextCredit = random.nextInt(remainBuffer - 1) + 1;
-			view.notifyCreditAdded(nextCredit);
+			ViewReader viewReader = new ViewReader();
+			ExternalBlockSubpartitionView view = new ExternalBlockSubpartitionView(meta,
+				subpartitionIndex,
+				executor,
+				meta.getResultPartitionID(),
+				bufferPool,
+				0,
+				viewReader);
+			viewReader.setView(view);
 
-			for (int i = 0; i < nextCredit; ++i) {
-				checkBufferAndRecycle(viewReader.getNextBufferBlocking(), nextBufferIndex++);
+			Random random = new Random();
+			int nextBufferIndex = 0;
 
-				if (i == nextCredit - 1) {
-					assertFalse(view.isAvailable());
+			int remainBuffer = TOTAL_BUFFERS_EACH_SUBPARTITION[subpartitionIndex];
+			while (remainBuffer > 1) {
+				int nextCredit = random.nextInt(remainBuffer - 1) + 1;
+				view.notifyCreditAdded(nextCredit);
+
+				for (int i = 0; i < nextCredit; ++i) {
+					checkBufferAndRecycle(viewReader.getNextBufferBlocking(), nextBufferIndex++);
+
+					if (i == nextCredit - 1) {
+						assertFalse(view.isAvailable());
+					}
 				}
+
+				remainBuffer -= nextCredit;
 			}
 
-			remainBuffer -= nextCredit;
-		}
+			view.notifyCreditAdded(remainBuffer);
+			for (int i = 0; i < remainBuffer; ++i) {
+				checkBufferAndRecycle(viewReader.getNextBufferBlocking(), nextBufferIndex++);
+			}
 
-		view.notifyCreditAdded(remainBuffer);
-		for (int i = 0; i < remainBuffer; ++i) {
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), nextBufferIndex++);
+			Buffer eof = viewReader.getNextBufferBlocking();
+			assertFalse(eof.isBuffer());
+			assertEquals(EndOfPartitionEvent.INSTANCE, EventSerializer.fromBuffer(eof, this.getClass().getClassLoader()));
+			assertFalse(view.isAvailable());
+		} finally {
+			if (executor != null) {
+				executor.shutdownNow();
+			}
 		}
-
-		Buffer eof = viewReader.getNextBufferBlocking();
-		assertFalse(eof.isBuffer());
-		assertEquals(EndOfPartitionEvent.INSTANCE, EventSerializer.fromBuffer(eof, this.getClass().getClassLoader()));
-		assertFalse(view.isAvailable());
 	}
 
 	@Test
@@ -229,33 +262,42 @@ public class ExternalBlockSubpartitionViewTest {
 		final int subpartitionIndex = 2;
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
-		ExecutorService executor = spy(Executors.newFixedThreadPool(1));
 
-		BufferAvailabilityListener availabilityListener = mock(BufferAvailabilityListener.class);
-		ExternalBlockSubpartitionView view = spy(new ExternalBlockSubpartitionView(meta,
-			subpartitionIndex,
-			executor,
-			meta.getResultPartitionID(),
-			bufferPool,
-			0,
-			availabilityListener));
+		ExecutorService executor = null;
 
-		// Remove the data files directly
-		int numFilesToRemove = (fileType == PersistentFileType.HASH_PARTITION_FILE ? TOTAL_BUFFERS_EACH_SUBPARTITION.length : MERGED_FILE_TOTAL_FILES);
-		for (int i = 0; i < numFilesToRemove; ++i) {
-			boolean success =
-				new File(ExternalBlockShuffleUtils.generateDataPath(meta.getResultPartitionDir(), i)).delete();
-			assertTrue("Delete the data file failed", success);
+		try {
+			executor = spy(Executors.newFixedThreadPool(1));
+
+			BufferAvailabilityListener availabilityListener = mock(BufferAvailabilityListener.class);
+			ExternalBlockSubpartitionView view = spy(new ExternalBlockSubpartitionView(meta,
+				subpartitionIndex,
+				executor,
+				meta.getResultPartitionID(),
+				bufferPool,
+				0,
+				availabilityListener));
+
+			// Remove the data files directly
+			int numFilesToRemove = (fileType == PersistentFileType.HASH_PARTITION_FILE ? TOTAL_BUFFERS_EACH_SUBPARTITION.length : MERGED_FILE_TOTAL_FILES);
+			for (int i = 0; i < numFilesToRemove; ++i) {
+				boolean success =
+					new File(ExternalBlockShuffleUtils.generateDataPath(meta.getResultPartitionDir(), i)).delete();
+				assertTrue("Delete the data file failed", success);
+			}
+
+			view.notifyCreditAdded(1);
+
+			// Should be notified in expected period.
+			verify(availabilityListener, timeout(10000)).notifyDataAvailable();
+
+			assertTrue(view.nextBufferIsEvent());
+			assertNull(view.getNextBuffer());
+			assertNotNull(view.getFailureCause());
+		} finally {
+			if (executor != null) {
+				executor.shutdownNow();
+			}
 		}
-
-		view.notifyCreditAdded(1);
-
-		// Should be notified in expected period.
-		verify(availabilityListener, timeout(10000)).notifyDataAvailable();
-
-		assertTrue(view.nextBufferIsEvent());
-		assertNull(view.getNextBuffer());
-		assertNotNull(view.getFailureCause());
 	}
 
 	// -------------------------------- Internal Utilities ------------------------------------

@@ -452,4 +452,11 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 			return currentCredit;
 		}
 	}
+
+	@VisibleForTesting
+	public boolean isRunning() {
+		synchronized (lock) {
+			return isRunning;
+		}
+	}
 }

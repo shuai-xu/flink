@@ -196,9 +196,14 @@ public class YarnShuffleServiceITCase extends TestLogger {
 					NUM_THREAD);
 
 				mockYarnShuffleService.start();
+				break;
 			} catch (Exception e) {
 				failCause = e;
-				mockYarnShuffleService = null;
+
+				if (mockYarnShuffleService != null) {
+					mockYarnShuffleService.stop();
+					mockYarnShuffleService = null;
+				}
 			}
 		}
 
@@ -242,6 +247,8 @@ public class YarnShuffleServiceITCase extends TestLogger {
 			throw new IllegalArgumentException("Invalid configuration for ExternalFileType");
 		}
 
+		configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 1L << 20);
+		configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 1L << 20);
 		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL, 4);
 
 		configuration.setString(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE, BlockingShuffleType.YARN.toString());
@@ -282,6 +289,9 @@ public class YarnShuffleServiceITCase extends TestLogger {
 
 			JobResult jobResult = resultFuture.get();
 			assertThat(jobResult.getSerializedThrowable().toString(), jobResult.getSerializedThrowable().isPresent(), is(false));
+
+			// Try best to release the direct memory by GC the DirectByteBuffer objects.
+			System.gc();
 		}
 	}
 
@@ -354,14 +364,9 @@ public class YarnShuffleServiceITCase extends TestLogger {
 		public void start() throws Exception {
 			// Postpone the creation of shuffle service till start to avoid startings all the thread pool in advance.
 			shuffleService = new ExternalBlockShuffleService(YarnShuffleService.fromHadoopConfiguration(hadoopConf));
-			try {
-				shuffleService.start();
-				// shuffle service need to use this message to map appId to user
-				shuffleService.initializeApplication(user, appId);
-			} catch (IOException e) {
-				e.printStackTrace();
-				assert false;
-			}
+			shuffleService.start();
+			// shuffle service need to use this message to map appId to user
+			shuffleService.initializeApplication(user, appId);
 		}
 
 		public void stop() {
