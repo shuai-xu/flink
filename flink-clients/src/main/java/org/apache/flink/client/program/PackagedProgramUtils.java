@@ -19,6 +19,7 @@
 package org.apache.flink.client.program;
 
 import org.apache.flink.api.common.Plan;
+import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.optimizer.DataStatistics;
@@ -30,6 +31,7 @@ import org.apache.flink.optimizer.plan.StreamingPlan;
 import org.apache.flink.optimizer.plantranslate.JobGraphGenerator;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
@@ -92,6 +94,17 @@ public class PackagedProgramUtils {
 			} catch (URISyntaxException e) {
 				throw new ProgramInvocationException("Invalid URL for jar file: " + url + '.', e);
 			}
+		}
+
+		for (URI libjar : packagedProgram.getLibjars()) {
+			jobGraph.addJar(new Path(libjar));
+		}
+
+		for (URI file : packagedProgram.getFiles()) {
+			final String fileKey = file.getFragment() != null ? file.getFragment() : new Path(file).getName();
+			// Remove the part after '#' in file path since this part has been already set to file key.
+			jobGraph.addUserArtifact(fileKey, new DistributedCache.DistributedCacheEntry(
+					org.apache.commons.lang3.StringUtils.substringBeforeLast(file.toString(), "#"), false, false));
 		}
 
 		jobGraph.setClasspaths(packagedProgram.getClasspaths());

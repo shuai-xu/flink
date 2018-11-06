@@ -27,6 +27,7 @@ import org.apache.flink.optimizer.plan.OptimizedPlan;
 import org.apache.flink.optimizer.plandump.PlanJSONDumpGenerator;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 
@@ -41,15 +42,22 @@ public class ContextEnvironment extends ExecutionEnvironment {
 
 	protected final List<URL> classpathsToAttach;
 
+	protected final List<URI> libjars;
+
+	protected final List<URI> files;
+
 	protected final ClassLoader userCodeClassLoader;
 
 	protected final SavepointRestoreSettings savepointSettings;
 
 	public ContextEnvironment(ClusterClient<?> remoteConnection, List<URL> jarFiles, List<URL> classpaths,
+				List<URI> libjars, List<URI> files,
 				ClassLoader userCodeClassLoader, SavepointRestoreSettings savepointSettings) {
 		this.client = remoteConnection;
 		this.jarFilesToAttach = jarFiles;
 		this.classpathsToAttach = classpaths;
+		this.libjars = libjars;
+		this.files = files;
 		this.userCodeClassLoader = userCodeClassLoader;
 		this.savepointSettings = savepointSettings;
 	}
@@ -58,7 +66,7 @@ public class ContextEnvironment extends ExecutionEnvironment {
 	public JobExecutionResult execute(String jobName) throws Exception {
 		Plan p = createProgramPlan(jobName);
 		JobWithJars toRun = new JobWithJars(p, this.jarFilesToAttach, this.classpathsToAttach,
-				this.userCodeClassLoader);
+				libjars, files, this.userCodeClassLoader);
 		this.lastJobExecutionResult = client.run(toRun, getParallelism(), savepointSettings).getJobExecutionResult();
 		return this.lastJobExecutionResult;
 	}
@@ -94,6 +102,14 @@ public class ContextEnvironment extends ExecutionEnvironment {
 
 	public List<URL> getClasspaths(){
 		return classpathsToAttach;
+	}
+
+	public List<URI> getLibjars() {
+		return libjars;
+	}
+
+	public List<URI> getFiles() {
+		return files;
 	}
 
 	public ClassLoader getUserCodeClassLoader() {

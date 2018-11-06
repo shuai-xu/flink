@@ -27,7 +27,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.net.URI;
 import java.util.Collections;
+import java.util.List;
 
 import static org.apache.flink.client.cli.CliFrontendTestUtils.getTestJarPath;
 import static org.junit.Assert.assertEquals;
@@ -106,6 +108,28 @@ public class CliFrontendRunTest extends CliFrontendTestBase {
 			assertEquals("justavalue", options.getProgramArgs()[2]);
 			assertEquals("--arg2", options.getProgramArgs()[3]);
 			assertEquals("value2", options.getProgramArgs()[4]);
+		}
+
+		// test libjars, files
+		{
+			final String libjar1 = "file:///tmp/libjar1.jar";
+			final String file = "/tmp/file.txt#newname";
+
+			String[] parameters = {
+				"--libjars", libjar1,
+				"--files", file,
+				getTestJarPath()};
+
+			RunOptions options = CliFrontendParser.parseRunCommand(parameters);
+
+			final List<URI> libjars = options.getLibjars();
+			assertEquals(1, libjars.size());
+			assertEquals(new URI(libjar1), libjars.get(0));
+
+			final List<URI> files = options.getFiles();
+			assertEquals(1, files.size());
+			assertEquals(new URI("file://" + file), files.get(0));
+			assertEquals("newname", files.get(0).getFragment());
 		}
 	}
 

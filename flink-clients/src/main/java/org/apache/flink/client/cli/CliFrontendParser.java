@@ -104,6 +104,25 @@ public class CliFrontendParser {
 
 	static final Option MODIFY_PARALLELISM_OPTION = new Option("p", "parallelism", true, "New parallelism for the specified job.");
 
+	static final String MULTIPLE_VALUE_SEPARATOR = ",";
+
+	static final Option LIBJARS_OPTION = new Option(null, "libjars", true,
+			"Attach custom library jars for job. Directory could not be supported. " +
+			"Use '" + MULTIPLE_VALUE_SEPARATOR + "' to separate multiple jars. " +
+			"The jars could be in local file system or distributed file system. " +
+			"Use URI schema to specify which file system the jar belongs. " +
+			"If schema is missing, would try to get the jars in local file system. " +
+			"(eg: --libjars file:///tmp/dependency1.jar,hdfs:///$namenode_address/tmp/dependency2.jar)");
+
+	static final Option FILES_OPTION = new Option(null, "files", true,
+			"Attach custom files for job. Directory could not be supported. " +
+			"Use '" + MULTIPLE_VALUE_SEPARATOR + "' to separate multiple files. " +
+			"The files could be in local file system or distributed file system. " +
+			"Use URI schema to specify which file system the file belongs. " +
+			"If schema is missing, would try to get the file in local file system. " +
+			"Use '#' after the file path to specify retrieval key in runtime. " +
+			"(eg: --file file:///tmp/a.txt#file_key,hdfs:///$namenode_address/tmp/b.txt)");
+
 	static {
 		HELP_OPTION.setRequired(false);
 
@@ -147,6 +166,12 @@ public class CliFrontendParser {
 
 		MODIFY_PARALLELISM_OPTION.setRequired(false);
 		MODIFY_PARALLELISM_OPTION.setArgName("newParallelism");
+
+		LIBJARS_OPTION.setRequired(false);
+		LIBJARS_OPTION.setArgName("libraryJars");
+
+		FILES_OPTION.setRequired(false);
+		FILES_OPTION.setArgName("files");
 	}
 
 	private static final Options RUN_OPTIONS = getRunCommandOptions();
@@ -167,6 +192,8 @@ public class CliFrontendParser {
 		options.addOption(LOGGING_OPTION);
 		options.addOption(DETACHED_OPTION);
 		options.addOption(YARN_DETACHED_OPTION);
+		options.addOption(LIBJARS_OPTION);
+		options.addOption(FILES_OPTION);
 		return options;
 	}
 
@@ -176,6 +203,8 @@ public class CliFrontendParser {
 		options.addOption(PARALLELISM_OPTION);
 		options.addOption(LOGGING_OPTION);
 		options.addOption(DETACHED_OPTION);
+		options.addOption(LIBJARS_OPTION);
+		options.addOption(FILES_OPTION);
 		return options;
 	}
 

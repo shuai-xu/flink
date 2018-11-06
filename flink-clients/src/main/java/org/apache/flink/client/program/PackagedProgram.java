@@ -41,6 +41,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -90,6 +91,10 @@ public class PackagedProgram {
 
 	private SavepointRestoreSettings savepointSettings = SavepointRestoreSettings.none();
 
+	private final List<URI> libjars;
+
+	private final List<URI> files;
+
 	/**
 	 * Creates an instance that wraps the plan defined in the jar file using the given
 	 * argument.
@@ -105,7 +110,7 @@ public class PackagedProgram {
 	 *         may be a missing / wrong class or manifest files.
 	 */
 	public PackagedProgram(File jarFile, String... args) throws ProgramInvocationException {
-		this(jarFile, Collections.<URL>emptyList(), null, args);
+		this(jarFile, Collections.<URL>emptyList(), null, Collections.emptyList(), Collections.emptyList(), args);
 	}
 
 	/**
@@ -117,6 +122,10 @@ public class PackagedProgram {
 	 *        the program-class
 	 * @param classpaths
 	 *        Additional classpath URLs needed by the Program.
+	 * @param libjars
+	 *        Library jar files for the job.
+	 * @param files
+	 *        Normal files for the job.
 	 * @param args
 	 *        Optional. The arguments used to create the pact plan, depend on
 	 *        implementation of the pact plan. See getDescription().
@@ -124,8 +133,14 @@ public class PackagedProgram {
 	 *         This invocation is thrown if the Program can't be properly loaded. Causes
 	 *         may be a missing / wrong class or manifest files.
 	 */
-	public PackagedProgram(File jarFile, List<URL> classpaths, String... args) throws ProgramInvocationException {
-		this(jarFile, classpaths, null, args);
+	public PackagedProgram(
+			File jarFile,
+			List<URL> classpaths,
+			List<URI> libjars,
+			List<URI> files,
+			String... args) throws ProgramInvocationException {
+
+		this(jarFile, classpaths, null, libjars, files, args);
 	}
 
 	/**
@@ -146,7 +161,7 @@ public class PackagedProgram {
 	 *         may be a missing / wrong class or manifest files.
 	 */
 	public PackagedProgram(File jarFile, @Nullable String entryPointClassName, String... args) throws ProgramInvocationException {
-		this(jarFile, Collections.<URL>emptyList(), entryPointClassName, args);
+		this(jarFile, Collections.<URL>emptyList(), entryPointClassName, Collections.emptyList(), Collections.emptyList(), args);
 	}
 
 	/**
@@ -161,6 +176,10 @@ public class PackagedProgram {
 	 * @param entryPointClassName
 	 *        Name of the class which generates the plan. Overrides the class defined
 	 *        in the jar file manifest
+	 * @param libjars
+	 *        Library jar files for the job.
+	 * @param files
+	 *        Normal files for the job.
 	 * @param args
 	 *        Optional. The arguments used to create the pact plan, depend on
 	 *        implementation of the pact plan. See getDescription().
@@ -168,7 +187,7 @@ public class PackagedProgram {
 	 *         This invocation is thrown if the Program can't be properly loaded. Causes
 	 *         may be a missing / wrong class or manifest files.
 	 */
-	public PackagedProgram(File jarFile, List<URL> classpaths, @Nullable String entryPointClassName, String... args) throws ProgramInvocationException {
+	public PackagedProgram(File jarFile, List<URL> classpaths, @Nullable String entryPointClassName, List<URI> libjars, List<URI> files, String... args) throws ProgramInvocationException {
 		if (jarFile == null) {
 			throw new IllegalArgumentException("The jar file must not be null.");
 		}
@@ -189,6 +208,9 @@ public class PackagedProgram {
 		if (entryPointClassName == null) {
 			entryPointClassName = getEntryPointClassNameFromJar(jarFileUrl);
 		}
+
+		this.libjars = libjars;
+		this.files = files;
 
 		// now that we have an entry point, we can extract the nested jar files (if any)
 		this.extractedTempLibraries = extractContainedLibraries(jarFileUrl);
@@ -226,6 +248,9 @@ public class PackagedProgram {
 	PackagedProgram(Class<?> entryPointClass, String... args) throws ProgramInvocationException {
 		this.jarFile = null;
 		this.args = args == null ? new String[0] : args;
+
+		this.libjars = Collections.emptyList();
+		this.files = Collections.emptyList();
 
 		this.extractedTempLibraries = Collections.emptyList();
 		this.classpaths = Collections.emptyList();
@@ -291,7 +316,7 @@ public class PackagedProgram {
 	 */
 	public JobWithJars getPlanWithoutJars() throws ProgramInvocationException {
 		if (isUsingProgramEntryPoint()) {
-			return new JobWithJars(getPlan(), Collections.<URL>emptyList(), classpaths, userCodeClassLoader);
+			return new JobWithJars(getPlan(), Collections.<URL>emptyList(), classpaths, libjars, files, userCodeClassLoader);
 		} else {
 			throw new ProgramInvocationException("Cannot create a " + JobWithJars.class.getSimpleName() +
 				" for a program that is using the interactive mode.");
@@ -306,7 +331,7 @@ public class PackagedProgram {
 	 */
 	public JobWithJars getPlanWithJars() throws ProgramInvocationException {
 		if (isUsingProgramEntryPoint()) {
-			return new JobWithJars(getPlan(), getAllLibraries(), classpaths, userCodeClassLoader);
+			return new JobWithJars(getPlan(), getAllLibraries(), classpaths, libjars, files, userCodeClassLoader);
 		} else {
 			throw new ProgramInvocationException("Cannot create a " + JobWithJars.class.getSimpleName() +
 					" for a program that is using the interactive mode.");
@@ -468,6 +493,14 @@ public class PackagedProgram {
 	public void deleteExtractedLibraries() {
 		deleteExtractedLibraries(this.extractedTempLibraries);
 		this.extractedTempLibraries.clear();
+	}
+
+	public List<URI> getLibjars() {
+		return libjars;
+	}
+
+	public List<URI> getFiles() {
+		return files;
 	}
 
 	/**

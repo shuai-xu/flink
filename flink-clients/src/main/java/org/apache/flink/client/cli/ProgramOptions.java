@@ -22,8 +22,11 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,8 +36,11 @@ import static org.apache.flink.client.cli.CliFrontendParser.ARGS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.CLASSPATH_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.CLASS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.DETACHED_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.FILES_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.JAR_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.LIBJARS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.LOGGING_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.MULTIPLE_VALUE_SEPARATOR;
 import static org.apache.flink.client.cli.CliFrontendParser.PARALLELISM_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.SAVEPOINT_ALLOW_NON_RESTORED_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.SAVEPOINT_PATH_OPTION;
@@ -60,6 +66,10 @@ public abstract class ProgramOptions extends CommandLineOptions {
 	private final boolean detachedMode;
 
 	private final SavepointRestoreSettings savepointSettings;
+
+	private final List<URI> libjars;
+
+	private final List<URI> files;
 
 	protected ProgramOptions(CommandLine line) throws CliArgsException {
 		super(line);
@@ -123,6 +133,9 @@ public abstract class ProgramOptions extends CommandLineOptions {
 		} else {
 			this.savepointSettings = SavepointRestoreSettings.none();
 		}
+
+		libjars = extractMultipleURIOption(LIBJARS_OPTION.getLongOpt(), line);
+		files = extractMultipleURIOption(FILES_OPTION.getLongOpt(), line);
 	}
 
 	public String getJarFilePath() {
@@ -155,5 +168,35 @@ public abstract class ProgramOptions extends CommandLineOptions {
 
 	public SavepointRestoreSettings getSavepointRestoreSettings() {
 		return savepointSettings;
+	}
+
+	public List<URI> getLibjars() {
+		return libjars;
+	}
+
+	public List<URI> getFiles() {
+		return files;
+	}
+
+	private List<URI> extractMultipleURIOption(String opt, CommandLine line) throws CliArgsException {
+
+		final List<URI> uris = new ArrayList<>();
+
+		if (line.hasOption(opt)) {
+			for (String items : line.getOptionValues(opt)) {
+				if (!StringUtils.isEmpty(items)) {
+					for (String item : items.split(MULTIPLE_VALUE_SEPARATOR)) {
+						try {
+							URI uri = new URI(item);
+							uris.add(uri.isAbsolute() ? uri : new URI("file://" + item));
+						} catch (URISyntaxException e) {
+							throw new CliArgsException("Bad syntax for URI: " + item);
+						}
+					}
+				}
+			}
+		}
+
+		return uris;
 	}
 }

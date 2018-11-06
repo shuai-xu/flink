@@ -18,9 +18,14 @@
 
 package org.apache.flink.runtime.entrypoint;
 
+import org.apache.flink.api.common.cache.DistributedCache;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.core.fs.Path;
+import org.apache.flink.runtime.blob.BlobClient;
 import org.apache.flink.runtime.blob.BlobServer;
 import org.apache.flink.runtime.blob.TransientBlobService;
+import org.apache.flink.runtime.client.ClientUtils;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 import org.apache.flink.runtime.dispatcher.ArchivedExecutionGraphStore;
@@ -47,6 +52,11 @@ import org.apache.flink.util.FlinkException;
 
 import javax.annotation.Nullable;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -132,6 +142,25 @@ public abstract class JobClusterEntrypoint extends ClusterEntrypoint {
 			leaderShipLostHandler);
 
 		registerShutdownActions(dispatcher.getJobTerminationFuture());
+
+		// Only in detach mode for perjob, need to upload user artifacts to the blob server
+		// Do not need to upload user libjars, as it has been processed with user jar files together
+		if (executionMode == ExecutionMode.DETACHED && jobGraph.getUserArtifacts() != null) {
+			final InetSocketAddress address = new InetSocketAddress(blobServer.getPort());
+			List<Tuple2<String, Path>> userArtifacts = new ArrayList<>();
+			for (Map.Entry<String, DistributedCache.DistributedCacheEntry> entry : jobGraph.getUserArtifacts().entrySet()) {
+				if (!new Path(entry.getValue().filePath).getFileSystem().isDistributedFS()) {
+					userArtifacts.add(new Tuple2<>(entry.getKey(), new Path(entry.getKey())));
+				} else {
+					userArtifacts.add(new Tuple2<>(entry.getKey(), new Path(entry.getValue().filePath)));
+				}
+			}
+			try {
+				ClientUtils.uploadJobGraphFiles(jobGraph, Collections.emptyList(), userArtifacts, () -> new BlobClient(address, configuration));
+			} catch (FlinkException e) {
+				throw new FlinkException("Failed to upload artifacts.", e);
+			}
+		}
 
 		return dispatcher;
 	}

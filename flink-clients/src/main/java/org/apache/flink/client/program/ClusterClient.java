@@ -23,6 +23,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.Plan;
 import org.apache.flink.api.common.accumulators.AccumulatorHelper;
+import org.apache.flink.api.common.cache.DistributedCache.DistributedCacheEntry;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
@@ -76,6 +77,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -395,7 +397,8 @@ public abstract class ClusterClient<T> {
 			}
 
 			ContextEnvironmentFactory factory = new ContextEnvironmentFactory(this, libraries,
-					prog.getClasspaths(), prog.getUserCodeClassLoader(), parallelism, isDetached(),
+					prog.getClasspaths(), prog.getLibjars(), prog.getFiles(),
+					prog.getUserCodeClassLoader(), parallelism, isDetached(),
 					prog.getSavepointSettings());
 			ContextEnvironment.setAsContext(factory);
 
@@ -449,18 +452,21 @@ public abstract class ClusterClient<T> {
 		}
 
 		OptimizedPlan optPlan = getOptimizedPlan(compiler, jobWithJars, parallelism);
-		return run(optPlan, jobWithJars.getJarFiles(), jobWithJars.getClasspaths(), classLoader, savepointSettings);
+		return run(optPlan, jobWithJars.getJarFiles(), jobWithJars.getClasspaths(),
+				jobWithJars.getLibjars(), jobWithJars.getFiles(), classLoader, savepointSettings);
 	}
 
 	public JobSubmissionResult run(
 			FlinkPlan compiledPlan, List<URL> libraries, List<URL> classpaths, ClassLoader classLoader) throws ProgramInvocationException {
-		return run(compiledPlan, libraries, classpaths, classLoader, SavepointRestoreSettings.none());
+		return run(compiledPlan, libraries, classpaths,
+				Collections.emptyList(), Collections.emptyList(), classLoader, SavepointRestoreSettings.none());
 	}
 
 	public JobSubmissionResult run(FlinkPlan compiledPlan,
-			List<URL> libraries, List<URL> classpaths, ClassLoader classLoader, SavepointRestoreSettings savepointSettings)
+			List<URL> libraries, List<URL> classpaths, List<URI> libjars, List<URI> files,
+			ClassLoader classLoader, SavepointRestoreSettings savepointSettings)
 			throws ProgramInvocationException {
-		JobGraph job = getJobGraph(flinkConfig, compiledPlan, libraries, classpaths, savepointSettings);
+		JobGraph job = getJobGraph(flinkConfig, compiledPlan, libraries, classpaths, libjars, files, savepointSettings);
 		return submitJob(job, classLoader);
 	}
 
@@ -883,10 +889,14 @@ public abstract class ClusterClient<T> {
 	}
 
 	public static JobGraph getJobGraph(Configuration flinkConfig, PackagedProgram prog, FlinkPlan optPlan, SavepointRestoreSettings savepointSettings) throws ProgramInvocationException {
-		return getJobGraph(flinkConfig, optPlan, prog.getAllLibraries(), prog.getClasspaths(), savepointSettings);
+		return getJobGraph(flinkConfig, optPlan, prog.getAllLibraries(), prog.getClasspaths(), prog.getLibjars(), prog.getFiles(), savepointSettings);
 	}
 
 	public static JobGraph getJobGraph(Configuration flinkConfig, FlinkPlan optPlan, List<URL> jarFiles, List<URL> classpaths, SavepointRestoreSettings savepointSettings) {
+		return getJobGraph(flinkConfig, optPlan, jarFiles, classpaths, Collections.emptyList(), Collections.emptyList(), savepointSettings);
+	}
+
+	public static JobGraph getJobGraph(Configuration flinkConfig, FlinkPlan optPlan, List<URL> jarFiles, List<URL> classpaths, List<URI> libjars, List<URI> files, SavepointRestoreSettings savepointSettings) {
 		JobGraph job;
 		if (optPlan instanceof StreamingPlan) {
 			job = ((StreamingPlan) optPlan).getJobGraph();
@@ -895,13 +905,23 @@ public abstract class ClusterClient<T> {
 			JobGraphGenerator gen = new JobGraphGenerator(flinkConfig);
 			job = gen.compileJobGraph((OptimizedPlan) optPlan);
 		}
-
 		for (URL jar : jarFiles) {
 			try {
 				job.addJar(new Path(jar.toURI()));
 			} catch (URISyntaxException e) {
 				throw new RuntimeException("URL is invalid. This should not happen.", e);
 			}
+		}
+
+		for (URI libjar : libjars) {
+			job.addJar(new Path(libjar));
+		}
+
+		for (URI file : files) {
+			final String fileKey = file.getFragment() != null ? file.getFragment() : new Path(file).getName();
+			// Remove the part after '#' in file path since this part has been already set to file key.
+			job.addUserArtifact(fileKey, new DistributedCacheEntry(
+				org.apache.commons.lang3.StringUtils.substringBeforeLast(file.toString(), "#"), false, false));
 		}
 
 		job.setClasspaths(classpaths);

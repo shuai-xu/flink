@@ -18,6 +18,7 @@
 
 package org.apache.flink.yarn;
 
+import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.client.deployment.ClusterDeploymentException;
 import org.apache.flink.client.deployment.ClusterDescriptor;
@@ -26,6 +27,7 @@ import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ConfigurationUtils;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.HighAvailabilityOptions;
 import org.apache.flink.configuration.IllegalConfigurationException;
@@ -41,6 +43,7 @@ import org.apache.flink.runtime.entrypoint.ClusterEntrypoint;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmanager.HighAvailabilityMode;
 import org.apache.flink.runtime.taskexecutor.TaskManagerServices;
+import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ShutdownHookUtil;
@@ -790,7 +793,17 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		if (jobGraph != null) {
 			// add the user code jars from the provided JobGraph
 			for (org.apache.flink.core.fs.Path path : jobGraph.getUserJars()) {
-				userJarFiles.add(new File(path.toUri()));
+				if (!path.getFileSystem().isDistributedFS()) {
+					userJarFiles.add(new File(path.toUri()));
+				} else {
+					// Download to local and add to user jars, because it may not be processed by Yarn distributed cache
+					org.apache.flink.core.fs.Path localTempDir = new org.apache.flink.core.fs.Path(ConfigurationUtils.parseTempDirectories(configuration)[0]);
+					File localFile = new File(localTempDir.getPath(), path.getName());
+					LOG.info("Copying {} to {}", path.toString(), localFile.getAbsolutePath());
+					FileUtils.copy(path, new org.apache.flink.core.fs.Path(localFile.getAbsolutePath()), false);
+					userJarFiles.add(localFile);
+					localFile.deleteOnExit();
+				}
 			}
 		}
 
@@ -810,6 +823,23 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 			paths,
 			localResources,
 			envShipFileList);
+
+		// upload and register user artifacts, specified through --files
+		if (jobGraph != null && jobGraph.getUserArtifacts() != null) {
+			for (Map.Entry<String, DistributedCache.DistributedCacheEntry> entry : jobGraph.getUserArtifacts().entrySet()) {
+				if (!new org.apache.flink.core.fs.Path(entry.getValue().filePath).getFileSystem().isDistributedFS()) {
+					setupSingleLocalResource(
+							entry.getKey(),
+							fs,
+							appId,
+							new Path(entry.getValue().filePath),
+							localResources,
+							homeDir,
+							"",
+							null);
+				}
+			}
+		}
 
 		List<String> userClassPaths;
 		if (userJarInclusion != YarnConfigOptions.UserJarInclusion.DISABLED) {

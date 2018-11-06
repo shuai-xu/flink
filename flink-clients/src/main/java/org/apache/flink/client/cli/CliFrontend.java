@@ -70,6 +70,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -817,6 +818,9 @@ public class CliFrontend {
 		String jarFilePath = options.getJarFilePath();
 		List<URL> classpaths = options.getClasspaths();
 
+		final List<URI> libjars = options.getLibjars();
+		final List<URI> files = options.getFiles();
+
 		if (jarFilePath == null) {
 			throw new IllegalArgumentException("The program JAR file was not specified.");
 		}
@@ -835,8 +839,8 @@ public class CliFrontend {
 		String entryPointClass = options.getEntryPointClassName();
 
 		PackagedProgram program = entryPointClass == null ?
-				new PackagedProgram(jarFile, classpaths, programArgs) :
-				new PackagedProgram(jarFile, classpaths, entryPointClass, programArgs);
+				new PackagedProgram(jarFile, classpaths, libjars, files, programArgs) :
+				new PackagedProgram(jarFile, classpaths, entryPointClass, libjars, files, programArgs);
 
 		program.setSavepointRestoreSettings(options.getSavepointRestoreSettings());
 
