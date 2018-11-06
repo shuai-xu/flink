@@ -170,7 +170,7 @@ class CsvTableSink(
     outputFormat
   }
 
-  override def emitDataStream(dataStream: DataStream[BaseRow]): DataStreamSink[_] = {
+  override def emitDataStream(dataStream: DataStream[BaseRow]): Unit = {
     val sink = dataStream.addSink(new OutputFormatSinkFunction(newOutputFormat()))
     sink.name(name)
     if (numFiles.isDefined) {

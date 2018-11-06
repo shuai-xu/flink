@@ -361,8 +361,8 @@ public class CollectionTableFactory implements TableFactory {
 		}
 
 		@Override
-		public DataStreamSink<Row> emitDataStream(DataStream<Row> dataStream) {
-			return dataStream.addSink(new UnsafeMemorySinkFunction()).setParallelism(1);
+		public void emitDataStream(DataStream<Row> dataStream) {
+			dataStream.addSink(new UnsafeMemorySinkFunction()).setParallelism(1);
 		}
 	}
 }

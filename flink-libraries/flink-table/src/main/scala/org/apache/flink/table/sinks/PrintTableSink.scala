@@ -26,7 +26,7 @@ import java.sql.Time
 import java.sql.Timestamp
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext
 import org.apache.flink.types.Row
@@ -44,7 +44,7 @@ class PrintTableSink(tz: TimeZone)
   with BatchExecCompatibleStreamTableSink[JTuple2[JBool, Row]]
   with UpsertStreamTableSink[Row] {
 
-  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]) = {
+  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): Unit = {
     val sink: PrintSinkFunction = new PrintSinkFunction(tz)
     dataStream.addSink(sink).name(sink.toString)
   }

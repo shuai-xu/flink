@@ -28,7 +28,7 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.{FileSystem, Path}
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSinkBase}
 import org.apache.flink.table.types.{DataType, DataTypes}
@@ -109,7 +109,7 @@ extends TableSinkBase[JTuple2[JBool, Row]] with RetractStreamTableSink[Row] {
 
   override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes: _*)
 
-  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]])= {
+  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): Unit = {
     val sink = dataStream.addSink(new RetractMergeRowSinkFunction(
       path,
       fieldDelim.getOrElse(AbstractCsvOutputFormat.DEFAULT_FIELD_DELIMITER),
@@ -126,7 +126,6 @@ extends TableSinkBase[JTuple2[JBool, Row]] with RetractStreamTableSink[Row] {
     if (numFiles.isDefined) {
       sink.setParallelism(numFiles.get)
     }
-    sink
   }
 }
 

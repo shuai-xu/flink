@@ -17,7 +17,7 @@
  */
 package com.alibaba.blink.launcher
 
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{RichTableSchema, TableFactory, TableProperties, TableSchema}
 import org.apache.flink.table.sinks.{AppendStreamTableSink, TableSink, TableSinkBase}
@@ -72,7 +72,7 @@ case class TestingTableSink(
 
   override def getFieldTypes: Array[DataType] = schema.getColumnTypes.asInstanceOf[Array[DataType]]
 
-  override def emitDataStream(dataStream: DataStream[Row]): DataStreamSink[_] = ???
+  override def emitDataStream(dataStream: DataStream[Row]): Unit = ???
 
   override protected def copy: TableSinkBase[Row] = TestingTableSink(tableName, schema, properties)
 }
