@@ -451,7 +451,7 @@ public class LocalExecutorITCase extends TestLogger {
 			Collections.emptyList(),
 			clusterClient.getFlinkConfiguration(),
 			new DummyCustomCommandLine<T>(clusterClient),
-			SingleJobMode.DEFAULT);
+			SingleJobMode.MULTIPLE);
 
 		// prepare tables
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
