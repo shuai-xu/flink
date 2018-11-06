@@ -291,7 +291,7 @@ class ImperativeAggCodeGen(
         val inputExpr = generator
           .generateExpression(inputRef.toRexNode(relBuilder))
           // TODO: the copy result is not resued (i.e. MAX(a), MIN(a))
-          .copyResultIfNeeded(inputFieldCopy)
+          .copyResultIfNeeded(ctx, inputFieldCopy)
         codes += inputExpr.code
         var term = s"${genToExternal(ctx, externalUDITypes(index), inputExpr.resultTerm)}"
         // TODO: we have to keep this currently, because copy maybe not enabled

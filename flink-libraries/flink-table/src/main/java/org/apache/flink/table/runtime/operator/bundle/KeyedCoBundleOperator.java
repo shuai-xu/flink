@@ -36,6 +36,7 @@ import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
+import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
@@ -79,6 +80,8 @@ public abstract class KeyedCoBundleOperator
 	private TypeSerializer<BaseRow> lTypeSerializer;
 	private TypeSerializer<BaseRow> rTypeSerializer;
 	private transient volatile boolean isInFinishingBundle = false;
+	private AbstractRowSerializer<BaseRow> inputSer1;
+	private AbstractRowSerializer<BaseRow> inputSer2;
 
 	public KeyedCoBundleOperator(CoBundleTrigger<BaseRow, BaseRow> coBundleTrigger, boolean finishBundleBeforeSnapshot) {
 		this.finishBundleBeforeSnapshot = finishBundleBeforeSnapshot;
@@ -96,7 +99,7 @@ public abstract class KeyedCoBundleOperator
 		BaseRow row = element.getValue();
 		List<BaseRow> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		if (!(row instanceof BinaryRow)) {
-			row = row.copy();
+			row = inputSer1.copy(row);
 		}
 		records.add(row);
 		coBundleTrigger.onLeftElement(row);
@@ -112,7 +115,7 @@ public abstract class KeyedCoBundleOperator
 		BaseRow row = element.getValue();
 		List<BaseRow> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
 		if (!(row instanceof BinaryRow)) {
-			row = row.copy();
+			row = inputSer2.copy(row);
 		}
 		records.add(row);
 		coBundleTrigger.onRightElement(row);
@@ -214,20 +217,19 @@ public abstract class KeyedCoBundleOperator
 		this.collector = new StreamRecordCollector<>(output);
 		this.leftBuffer = new HashMap<>();
 		this.rightBuffer = new HashMap<>();
+		inputSer1 = (AbstractRowSerializer) (lTypeSerializer == null ?
+				config.getTypeSerializerIn1(getUserCodeClassloader()) : lTypeSerializer);
+		inputSer2 = (AbstractRowSerializer) (rTypeSerializer == null ?
+				config.getTypeSerializerIn2(getUserCodeClassloader()) : rTypeSerializer);
 
 		// create & restore state
 		if (!finishBundleBeforeSnapshot) {
-			TypeSerializer<BaseRow> leftSerializer =
-					this.lTypeSerializer == null ? config.getTypeSerializerIn1(getRuntimeContext().getUserCodeClassLoader()) : this.lTypeSerializer;
-			TypeSerializer<BaseRow> rightSerializer =
-					this.rTypeSerializer == null ? config.getTypeSerializerIn2(getRuntimeContext().getUserCodeClassLoader()) : this.rTypeSerializer;
-
 			// create & restore state
 			//noinspection unchecked
 			KeyedValueStateDescriptor<BaseRow, List<BaseRow>> leftBufferStateDesc = new KeyedValueStateDescriptor<>(
 					LEFT_STATE_NAME,
 					(TypeSerializer) getKeySerializer(),
-					new ListSerializer<>(leftSerializer));
+					new ListSerializer<>(inputSer1));
 			this.leftBufferState = getKeyedState(leftBufferStateDesc);
 			this.leftBuffer.putAll(leftBufferState.getAll());
 			leftBufferState.removeAll();
@@ -236,7 +238,7 @@ public abstract class KeyedCoBundleOperator
 			KeyedValueStateDescriptor<BaseRow, List<BaseRow>> rightBufferStateDesc = new KeyedValueStateDescriptor<>(
 					RIGHT_STATE_NAME,
 					(TypeSerializer) getKeySerializer(),
-					new ListSerializer<>(rightSerializer));
+					new ListSerializer<>(inputSer2));
 			this.rightBufferState = getKeyedState(rightBufferStateDesc);
 		}
 

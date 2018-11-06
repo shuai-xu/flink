@@ -541,12 +541,10 @@ public final class BinaryRow implements BaseRow {
 		return false;
 	}
 
-	@Override
 	public BinaryRow copy() {
 		return copy(new BinaryRow(arity));
 	}
 
-	@Override
 	public BinaryRow copy(BaseRow reuse) {
 		return copyInternal((BinaryRow) reuse);
 	}

@@ -19,8 +19,6 @@ package org.apache.flink.table.dataformat;
 
 import org.apache.flink.table.types.DataType;
 
-import static org.apache.flink.util.Preconditions.checkArgument;
-
 /**
  * A GenericRow can have arbitrary number of fields and contain a set of fields, which may all be
  * different types. The fields in GenericRow can be null.
@@ -122,46 +120,6 @@ public final class GenericRow extends ObjectArrayRow {
 	}
 
 	@Override
-	public GenericRow copy() {
-		return copy(new GenericRow(fields.length));
-	}
-
-	@Override
-	public GenericRow copy(BaseRow reuse) {
-		checkArgument(reuse instanceof GenericRow, "reuse row is not GenericRow");
-		GenericRow ret = (GenericRow) reuse;
-		ret.setHeader(getHeader());
-		for (int i = 0; i < fields.length; i++) {
-			ret.fields[i] = copyValue(fields[i]);
-		}
-		return ret;
-	}
-
-	public static Object copyValue(Object o) {
-		if (o == null) {
-			return null;
-		} else {
-			return copyValueNotNull(o);
-		}
-	}
-
-	public static Object copyValueNotNull(Object o) {
-		if (o instanceof BinaryString) {
-			return ((BinaryString) o).copy();
-		} else if (o instanceof Decimal) {
-			return ((Decimal) o).copy();
-		} else if (o instanceof BaseRow) {
-			return ((BaseRow) o).copy();
-		} else if (o instanceof BinaryArray) {
-			return ((BinaryArray) o).copy();
-		} else if (o instanceof BinaryMap) {
-			return ((BinaryMap) o).copy();
-		} else {
-			return o;
-		}
-	}
-
-	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
 			return true;
@@ -207,6 +165,13 @@ public final class GenericRow extends ObjectArrayRow {
 		GenericRow row = new GenericRow(1);
 		row.update(0, o);
 		return row;
+	}
+
+	public static GenericRow copyReference(GenericRow row) {
+		final GenericRow newRow = new GenericRow(row.fields.length);
+		System.arraycopy(row.fields, 0, newRow.fields, 0, row.fields.length);
+		newRow.setHeader(row.getHeader());
+		return newRow;
 	}
 }
 

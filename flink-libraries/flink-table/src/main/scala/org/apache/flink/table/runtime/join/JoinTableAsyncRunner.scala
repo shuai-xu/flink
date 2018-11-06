@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.collector.{JoinedRowAsyncCollector, TableAsyncCollector}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.types.{DataTypes, InternalType}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
@@ -55,8 +55,11 @@ class JoinTableAsyncRunner(
   var collectorClass: Class[TableAsyncCollector[BaseRow]] = _
   val rightArity: Int = returnType.getArity - inputFieldTypes.length
   var leftKeyTypes: Array[InternalType] = _
+  var keySer: BaseRowSerializer[GenericRow] = _
   var leftKeySerializers: Array[TypeSerializer[_]] = _
   var (inRowSrcIdx, keysRowTargetIdx) = prepareIdxHelper()
+  private val rightTypes = returnType.getFieldTypes.map(DataTypes.internal)
+      .drop(inputFieldTypes.length)
 
   @transient var keysRow: GenericRow = _
 
@@ -80,7 +83,8 @@ class JoinTableAsyncRunner(
         collectorQueue,
         getDimensionTableCollector,
         rightArity,
-        leftOuterJoin)
+        leftOuterJoin,
+        rightTypes)
       // throws exception immediately if the queue is full which should never happen
       collectorQueue.add(c)
     }
@@ -90,6 +94,7 @@ class JoinTableAsyncRunner(
 
     LOG.info(s"left key to key row index mapping:$leftKeyIdx2KeyRowIdx")
     leftKeyTypes = inRowSrcIdx.map(inputFieldTypes(_))
+    keySer = new BaseRowSerializer[GenericRow](classOf[GenericRow], leftKeyTypes)
     val config = getRuntimeContext.getExecutionConfig
     leftKeySerializers = leftKeyTypes.map(DataTypes.toTypeInfo(_).createSerializer(config))
     LOG.info(s"left keys:$inRowSrcIdx, types:$leftKeyTypes, right keys:$keysRowTargetIdx")
@@ -124,7 +129,7 @@ class JoinTableAsyncRunner(
       }
     }
     // fill left keys to new keyRow instance because reuse it is not definitely safe here
-    val thisKeyRow = keysRow.copy()
+    val thisKeyRow = keySer.copy(keysRow)
     fillKeyRow(in, thisKeyRow)
 
     fetcher.asyncInvoke(thisKeyRow, collector)

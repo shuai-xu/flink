@@ -63,16 +63,6 @@ public interface BaseRow extends TypeGetterSetters {
 	void setNullAt(int ordinal);
 
 	/**
-	 * Copy without object reuse.
-	 */
-	BaseRow copy();
-
-	/**
-	 * Copy with object reuse.
-	 */
-	BaseRow copy(BaseRow reuse);
-
-	/**
 	 * Equals without header compare. Do not compare their types, only compare internal values.
 	 */
 	boolean equalsWithoutHeader(BaseRow other);

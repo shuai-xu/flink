@@ -51,6 +51,7 @@ class MiniBatchLastRowFunction(
   with Logging {
 
   protected var pkRow: KeyedValueState[BaseRow, BaseRow] = _
+  private val ser = rowTypeInfo.createSerializer()
 
   @transient
   private var equaliser: RecordEqualiser = _
@@ -71,7 +72,7 @@ class MiniBatchLastRowFunction(
       if (input.isInstanceOf[BinaryRow]) {
         input
       } else {
-        input.copy()
+        ser.copy(input)
       }
     } else {
       // the input is not last row, ignore it

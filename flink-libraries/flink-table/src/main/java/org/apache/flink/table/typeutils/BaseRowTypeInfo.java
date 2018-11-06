@@ -26,6 +26,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.TupleTypeInfoBase;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.types.BaseRowType;
+import org.apache.flink.table.types.DataTypes;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -144,11 +146,19 @@ public class BaseRowTypeInfo<T extends BaseRow> extends TupleTypeInfoBase<T> {
 
 	@Override
 	public TypeSerializer<T> createSerializer(ExecutionConfig config) {
+		return createSerializer();
+	}
+
+	public AbstractRowSerializer<T> createSerializer() {
 		if (getTypeClass() == BinaryRow.class) {
-			return (TypeSerializer) new BinaryRowSerializer(types);
+			return (AbstractRowSerializer<T>) new BinaryRowSerializer(types);
 		} else {
-			return (TypeSerializer) new BaseRowSerializer(getTypeClass(), types);
+			return new BaseRowSerializer<>(getTypeClass(), types);
 		}
+	}
+
+	public BaseRowType toInternalType() {
+		return (BaseRowType) DataTypes.internal(this);
 	}
 
 	/**

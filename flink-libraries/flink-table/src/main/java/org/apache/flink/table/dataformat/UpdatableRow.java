@@ -20,8 +20,6 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.table.types.GenericType;
 
-import static org.apache.flink.util.Preconditions.checkArgument;
-
 /**
  * Wrap row to a updatable Generic Row.
  */
@@ -35,6 +33,10 @@ public final class UpdatableRow implements BaseRow {
 		this.row = row;
 		this.fields = new Object[arity];
 		this.updated = new boolean[arity];
+	}
+
+	public BaseRow getRow() {
+		return row;
 	}
 
 	@Override
@@ -197,21 +199,6 @@ public final class UpdatableRow implements BaseRow {
 	public void update(int ordinal, Object value) {
 		updated[ordinal] = true;
 		fields[ordinal] = value;
-	}
-
-	@Override
-	public UpdatableRow copy() {
-		return copy(new UpdatableRow(row, fields.length));
-	}
-
-	@Override
-	public UpdatableRow copy(BaseRow reuse) {
-		checkArgument(reuse instanceof UpdatableRow, "reuse row is not GenericRow");
-		UpdatableRow ret = (UpdatableRow) reuse;
-		ret.row = row.copy();
-		System.arraycopy(updated, 0, ret.updated, 0, updated.length);
-		System.arraycopy(fields, 0, ret.fields, 0, fields.length);
-		return ret;
 	}
 
 	@Override

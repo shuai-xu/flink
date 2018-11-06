@@ -33,7 +33,7 @@ import org.apache.flink.table.runtime.aggregate.CollectionBaseRowComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.sort.RecordComparator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.table.util.{LRUMap, Logging}
 import org.apache.flink.util.Collector
 
@@ -62,6 +62,9 @@ class AppendRankFunction(
     generateRetraction)
   with Compiler[RecordComparator]
   with Logging {
+
+  private val inputRowSer =
+    inputRowType.createSerializer().asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   @transient
   // a map state stores mapping from sort key to records list which is in topN
@@ -144,7 +147,7 @@ class AppendRankFunction(
     // check whether the sortKey is in the topN range
     if (checkSortKeyInBufferRange(sortKey, sortedMap, sortKeyComparator)) {
       // insert sort key into sortedMap
-      sortedMap.put(sortKey, inputBaseRow.copy())
+      sortedMap.put(sortKey, inputRowSer.copy(inputBaseRow))
       val inputs = sortedMap.get(sortKey)
       // update data state
       dataState.add(currentKey, sortKey, inputs.asInstanceOf[JList[BaseRow]])

@@ -23,6 +23,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.sort.RecordComparator
+import org.apache.flink.table.typeutils.AbstractRowSerializer
 
 class RankOperator(
     var partitionByGeneratedSorter: GeneratedSorter,
@@ -52,8 +53,13 @@ class RankOperator(
 
   private var collector: StreamRecordCollector[BaseRow] = _
 
+  private var inputSer: AbstractRowSerializer[BaseRow] = _
+
   override def open(): Unit = {
     super.open()
+
+    inputSer = getOperatorConfig.getTypeSerializerIn1(getUserCodeClassloader)
+        .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
     partitionBySorter = CodeGenUtils.compile(
       Thread.currentThread.getContextClassLoader,
@@ -94,7 +100,7 @@ class RankOperator(
     }
 
     emitInternal(input)
-    lastInput = input.copy()
+    lastInput = inputSer.copy(input)
   }
 
   private def emitInternal(element: BaseRow): Unit = {

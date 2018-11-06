@@ -24,7 +24,7 @@ import org.apache.flink.table.codegen.GeneratedSorter
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.util.Collector
 
 /**
@@ -54,6 +54,9 @@ class UpdateRankFunction(
     cacheSize,
     generateRetraction,
     queryConfig) {
+
+  private val inputRowSer =
+    inputRowType.createSerializer().asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   override def processElement(
     inputBaseRow: BaseRow,
@@ -89,7 +92,7 @@ class UpdateRankFunction(
           case SqlKind.ROW_NUMBER =>
             // sort key is not changed, so the rank is the same, only output the row
             val (rank, innerRank) = rowNumber(sortKey, rowKey, sortedMap)
-            rowKeyMap.put(rowKey, RankRow(inputRow.copy(), innerRank, dirty = true))
+            rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), innerRank, dirty = true))
             retract(out, oldRow.row, rank) // retract old record
             collect(out, inputRow, rank)
 
@@ -103,7 +106,7 @@ class UpdateRankFunction(
       sortedMap.remove(oldSortKey, rowKey)
       // add new sort key
       val size = sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, RankRow(inputRow.copy(), size, dirty = true))
+      rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
       // update inner rank of records under the old sort key
       updateInnerRank(oldSortKey)
 
@@ -118,7 +121,7 @@ class UpdateRankFunction(
       // it is an unique record but is in the topN
       // insert sort key into sortedMap
       val size = sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, RankRow(inputRow.copy(), size, dirty = true))
+      rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
 
       // emit records
       rankKind match {
@@ -147,7 +150,7 @@ class UpdateRankFunction(
         sortedMap.remove(oldSortKey, rowKey)
         // add new sort key
         val size = sortedMap.put(sortKey, rowKey)
-        rowKeyMap.put(rowKey, RankRow(inputRow.copy, size, dirty = true))
+        rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
         // update inner rank of records under the old sort key
         updateInnerRank(oldSortKey)
       }
@@ -156,7 +159,7 @@ class UpdateRankFunction(
       // it is an unique record but is in the topN
       // insert sort key into sortedMap
       val size = sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, RankRow(inputRow.copy, size, dirty = true))
+      rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
       collect(out, inputRow)
       // remove retired element
       if (sortedMap.getCurrentTopNum > rankEnd) {

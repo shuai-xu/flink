@@ -353,7 +353,7 @@ class DistinctAggCodeGen(
       generator.input1Term,
       _,
       nullableInput = false,
-      nullCheck = true).copyResultIfNeeded(inputFieldCopy))
+      nullCheck = true).copyResultIfNeeded(ctx, inputFieldCopy))
 
     // the key expression of MapView
     if (fieldExprs.length > 1) {

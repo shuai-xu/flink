@@ -32,7 +32,6 @@ import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregate
 import org.apache.flink.table.plan.util.AggregateInfoList
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext, SubKeyedAggsHandleFunction}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**
   * A code generator for generating [[AggsHandleFunction]].
@@ -67,6 +66,8 @@ class AggsHandlerCodeGenerator(
   private var mergedAccOnHeap: Boolean = false
 
   private var ignoreAggValues: Array[Int] = Array()
+
+  var valueType: BaseRowType = _
 
   /**
     * The [[aggBufferCodeGens]] and [[aggActionCodeGens]] will be both created when code generate
@@ -652,13 +653,12 @@ class AggsHandlerCodeGenerator(
     }
 
     val aggValueTerm = newName("aggValue")
-    val valueType = new BaseRowTypeInfo(classOf[GenericRow],
-      valueExprs.map(_.resultType).map(DataTypes.toTypeInfo): _*)
+    valueType = new BaseRowType(classOf[GenericRow], valueExprs.map(_.resultType): _*)
 
     // always create a new result row
     val resultExpr = exprGenerator.generateResultExpression(
       valueExprs,
-      DataTypes.internal(valueType).asInstanceOf[BaseRowType],
+      valueType,
       outRow = aggValueTerm,
       reusedOutRow = false)
 

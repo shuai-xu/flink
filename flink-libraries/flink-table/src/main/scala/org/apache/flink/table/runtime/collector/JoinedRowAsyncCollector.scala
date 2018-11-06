@@ -24,6 +24,8 @@ import java.util.concurrent.BlockingQueue
 
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.types.{BaseRowType, InternalType}
+import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
 
 /**
   * The [[JoinedRowAsyncCollector]] is used to wrap left [[BaseRow]] and
@@ -33,13 +35,16 @@ class JoinedRowAsyncCollector(
     val collectorQueue: BlockingQueue[JoinedRowAsyncCollector],
     val joinConditionCollector: TableAsyncCollector[BaseRow],
     val rightArity: Int,
-    val leftOuterJoin: Boolean) extends ResultFuture[BaseRow] {
+    val leftOuterJoin: Boolean,
+    val rightTypes: Array[InternalType]) extends ResultFuture[BaseRow] {
 
   var leftRow: BaseRow = _
   var realOutput: ResultFuture[BaseRow] = _
 
   val nullRow: GenericRow = new GenericRow(rightArity)
   val delegate = new DelegateResultFuture
+  private val rightSer = TypeUtils.createSerializer(
+    new BaseRowType(classOf[GenericRow], rightTypes: _*)).asInstanceOf[BaseRowSerializer[BaseRow]]
 
   def reset(row: BaseRow, realOutput: ResultFuture[BaseRow]): Unit = {
     this.realOutput = realOutput
@@ -73,7 +78,7 @@ class JoinedRowAsyncCollector(
       // TODO: currently, collection should only contain one element
       val rightRow = resultCollection.iterator().next()
       // copy right row to avoid object reuse in async collector
-      val outRow: BaseRow = new JoinedRow(leftRow, rightRow.copy())
+      val outRow: BaseRow = new JoinedRow(leftRow, rightSer.copy(rightRow))
       outRow.setHeader(leftRow.getHeader)
       realOutput.complete(Collections.singleton(outRow))
     }

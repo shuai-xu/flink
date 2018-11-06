@@ -196,6 +196,7 @@ class StreamExecGroupAggregate(
 
     val operator = if (queryConfig.isMiniBatchEnabled || queryConfig.isMicroBatchEnabled) {
       val aggFunction = new MiniBatchGroupAggFunction(
+        inputRowType.toInternalType,
         aggsHandler,
         accTypes,
         aggValueTypes,

@@ -326,7 +326,7 @@ trait BatchExecAggregateCodeGen {
            |${accExpr.code}
            |${aggBufVar.nullTerm} = ${accExpr.nullTerm};
            |if (!${accExpr.nullTerm}) {
-           |  ${accExpr.copyResultTermToTargetIfChanged(aggBufVar.resultTerm)}
+           |  ${accExpr.copyResultTermToTargetIfChanged(ctx, aggBufVar.resultTerm)}
            |}
            """.stripMargin, aggCall.filterArg)
       // UserDefinedAggregateFunction
@@ -412,7 +412,7 @@ trait BatchExecAggregateCodeGen {
            |${mergeExpr.code}
            |${aggBufVar.nullTerm} = ${mergeExpr.nullTerm};
            |if (!${mergeExpr.nullTerm}) {
-           |  ${mergeExpr.copyResultTermToTargetIfChanged(aggBufVar.resultTerm)}
+           |  ${mergeExpr.copyResultTermToTargetIfChanged(ctx, aggBufVar.resultTerm)}
            |}
            """.stripMargin.trim
       // UserDefinedAggregateFunction

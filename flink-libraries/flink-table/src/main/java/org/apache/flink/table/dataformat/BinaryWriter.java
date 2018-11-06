@@ -359,7 +359,7 @@ public abstract class BinaryWriter {
 		} else if (type instanceof MapType) {
 			writeBinaryMap(pos, (BinaryMap) o);
 		} else if (type instanceof BaseRowType) {
-			writeBaseRow(pos, (BaseRow) o, ((BaseRowType) type).getSerializer());
+			writeBaseRow(pos, (BaseRow) o, ((BaseRowType) type).getBaseRowSerializer());
 		} else {
 			writeGeneric(pos, o, (GenericType) type);
 		}

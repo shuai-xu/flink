@@ -43,10 +43,16 @@ public abstract class AbstractRowSerializer<T extends BaseRow> extends TypeSeria
 
 	protected final int numFields;
 	protected final TypeInformation<?>[] types;
+	protected final TypeSerializer[] serializers;
 
 	public AbstractRowSerializer(TypeInformation<?>[] types) {
 		this.types = checkNotNull(types);
 		this.numFields = types.length;
+		TypeSerializer[] fieldSerializers = new TypeSerializer[types.length];
+		for (int i = 0; i < types.length; i++) {
+			fieldSerializers[i] = TypeUtils.createSerializer(types[i]);
+		}
+		this.serializers = fieldSerializers;
 	}
 
 	public int getNumFields() {
@@ -59,23 +65,15 @@ public abstract class AbstractRowSerializer<T extends BaseRow> extends TypeSeria
 
 	public abstract BinaryRow baseRowToBinary(T baseRow) throws IOException;
 
-	private TypeSerializer[] createFieldSerializers() {
-		TypeSerializer[] fieldSerializers = new TypeSerializer[types.length];
-		for (int i = 0; i < types.length; i++) {
-			fieldSerializers[i] = TypeUtils.createSerializer(types[i]);
-		}
-		return fieldSerializers;
-	}
-
 	@Override
 	public TypeSerializerConfigSnapshot snapshotConfiguration() {
-		return new RowSerializerConfigSnapshot(createFieldSerializers());
+		return new RowSerializerConfigSnapshot(serializers);
 	}
 
 	@Override
 	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof RowSerializerConfigSnapshot) {
-			TypeSerializer[] fieldSerializers = createFieldSerializers();
+			TypeSerializer[] fieldSerializers = serializers;
 			List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> previousFieldSerializersAndConfigs =
 					((RowSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 

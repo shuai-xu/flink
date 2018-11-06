@@ -39,7 +39,9 @@ import org.apache.flink.table.types.BaseRowType;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
+import org.apache.flink.table.typeutils.TypeUtils;
 import org.apache.flink.util.Collector;
 
 import java.util.ArrayList;
@@ -209,6 +211,7 @@ class CsvRowFetcher extends DimJoinFetcher implements FlatMapFunction<BaseRow, B
 	private String ignoreComments = null;
 	private Boolean lenient = false;
 	private BaseRowType rowType;
+	private AbstractRowSerializer<BaseRow> rowSerializer;
 
 	private TimeZone timezone = null;
 
@@ -239,6 +242,7 @@ class CsvRowFetcher extends DimJoinFetcher implements FlatMapFunction<BaseRow, B
 		this.fieldNames = fieldNames;
 		this.fieldTypes = fieldTypes;
 		this.rowType = rowType;
+		this.rowSerializer = (AbstractRowSerializer<BaseRow>) TypeUtils.createSerializer(rowType);
 		this.fieldLength = rowType.getArity();
 		this.uniqueIndex = checkedIndex.isUnique();
 		List<Integer> indexCols = checkedIndex.getDefinedColumns();
@@ -296,20 +300,20 @@ class CsvRowFetcher extends DimJoinFetcher implements FlatMapFunction<BaseRow, B
 			inputFormat.open(split);
 			GenericRow row = new GenericRow(rowType.getArity());
 			while (true) {
-				BaseRow r = inputFormat.nextRecord(row.copy());
+				BaseRow r = inputFormat.nextRecord(row);
 				if (r == null) {
 					break;
 				} else {
 					Object key = getTargetKey(r);
 					if (uniqueIndex) {
 						// TODO exception when duplicate data on uk ?
-						one2oneDataMap.put(key, r.copy());
+						one2oneDataMap.put(key, rowSerializer.copy(r));
 					} else {
 						if (one2manyDataMap.containsKey(key)) {
-							one2manyDataMap.get(key).add(r.copy());
+							one2manyDataMap.get(key).add(rowSerializer.copy(r));
 						} else {
 							List<BaseRow> rows = new ArrayList<>();
-							rows.add(r.copy());
+							rows.add(rowSerializer.copy(r));
 							one2manyDataMap.put(key, rows);
 						}
 					}

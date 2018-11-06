@@ -467,6 +467,16 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 	}
 
+	public BinaryString copy(BinaryString reuse) {
+		if (segments == null) {
+			reuse.pointToString(javaString);
+		} else {
+			byte[] copy = BinaryRowUtil.copy(segments, offset, numBytes);
+			reuse.pointTo(copy, 0, copy.length, javaString);
+		}
+		return reuse;
+	}
+
 	public BinaryString cloneReference() {
 		if (segments == null) {
 			return new BinaryString(javaString);

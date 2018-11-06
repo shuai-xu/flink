@@ -23,6 +23,8 @@ import java.util
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedAggsHandleFunction, GeneratedBoundComparator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
+import org.apache.flink.table.types.BaseRowType
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, TypeUtils}
 import org.apache.flink.table.util.ResettableExternalBuffer
 
 /**
@@ -119,8 +121,12 @@ class UnboundedPrecedingOverWindowFrame(
  */
 class UnboundedFollowingOverWindowFrame(
     aggsHandleFunction: GeneratedAggsHandleFunction,
-    var boundComparator: GeneratedBoundComparator)
+    var boundComparator: GeneratedBoundComparator,
+    valueType: BaseRowType)
   extends OverWindowFrame(aggsHandleFunction) {
+
+  private val valueSer = TypeUtils.createSerializer(valueType)
+      .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   private[this] var processor: AggsHandleFunction = _
   private[this] var accValue: BaseRow = _
@@ -178,7 +184,7 @@ class UnboundedFollowingOverWindowFrame(
       while (iterator.advanceNext()) {
         processor.accumulate(iterator.getRow)
       }
-      accValue = processor.getValue.copy()
+      accValue = valueSer.copy(processor.getValue)
     }
     iterator.close()
     accValue
@@ -191,10 +197,14 @@ class UnboundedFollowingOverWindowFrame(
  * ... BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
  */
 class UnboundedOverWindowFrame(
-    aggsHandleFunction: GeneratedAggsHandleFunction)
+    aggsHandleFunction: GeneratedAggsHandleFunction,
+    valueType: BaseRowType)
   extends OverWindowFrame(aggsHandleFunction) {
   private[this] var processor: AggsHandleFunction = _
   private[this] var accValue: BaseRow = _
+
+  private val valueSer = TypeUtils.createSerializer(valueType)
+      .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   override def open(ctx: ExecutionContext): Unit = {
     processor = aggsHandleFunction.newInstance(Thread.currentThread.getContextClassLoader)
@@ -209,7 +219,7 @@ class UnboundedOverWindowFrame(
     while (iterator.advanceNext()) {
       processor.accumulate(iterator.getRow)
     }
-    accValue = processor.getValue.copy()
+    accValue = valueSer.copy(processor.getValue)
     iterator.close()
   }
 
@@ -226,10 +236,17 @@ class UnboundedOverWindowFrame(
  * @param rboundComparator comparator used to identify the upper bound of an output row.
  */
 class SlidingOverWindowFrame(
+    inputType: BaseRowType,
+    valueType: BaseRowType,
     aggsHandleFunction: GeneratedAggsHandleFunction,
     var lboundComparator: GeneratedBoundComparator,
     var rboundComparator: GeneratedBoundComparator)
   extends OverWindowFrame(aggsHandleFunction) {
+
+  private val inputSer = TypeUtils.createSerializer(inputType)
+      .asInstanceOf[AbstractRowSerializer[BaseRow]]
+  private val valueSer = TypeUtils.createSerializer(valueType)
+      .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   private[this] var processor: AggsHandleFunction = _
   private[this] var accValue: BaseRow = _
@@ -303,7 +320,7 @@ class SlidingOverWindowFrame(
       if (lbound.compare(nextRow, inputLowIndex, current, index) < 0) {
         inputLowIndex += 1
       } else {
-        buffer.add(nextRow.copy())
+        buffer.add(inputSer.copy(nextRow))
         bufferUpdated = true
       }
       nextRow = OverWindowFrame.getNextOrNull(inputIterator)
@@ -318,7 +335,7 @@ class SlidingOverWindowFrame(
       while (iter.hasNext) {
         processor.accumulate(iter.next())
       }
-      accValue = processor.getValue.copy()
+      accValue = valueSer.copy(processor.getValue)
     }
     accValue
   }

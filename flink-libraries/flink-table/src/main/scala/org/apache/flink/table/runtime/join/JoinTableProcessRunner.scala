@@ -30,7 +30,7 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.types.{DataTypes, InternalType}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{BaseRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
 
@@ -40,6 +40,7 @@ class JoinTableProcessRunner(
     fetcher: FlatMapFunction[BaseRow, BaseRow],
     collectorName: String,
     var collectorCode: String,
+    objectReuse: Boolean,
     leftOuterJoin: Boolean,
     inputFieldTypes: Array[InternalType],
     rightKeysInDefineOrder: List[Int],
@@ -52,6 +53,7 @@ class JoinTableProcessRunner(
   with Logging {
   var collector: TableFunctionCollector[BaseRow] = _
   var leftKeyTypes: Array[InternalType] = _
+  var keySer: BaseRowSerializer[GenericRow] = _
   var leftKeySerializers: Array[TypeSerializer[_]] = _
   var (inRowSrcIdx, keysRowTargetIdx) = prepareIdxHelper()
   val rightArity: Int = returnType.getArity - inputFieldTypes.length
@@ -95,6 +97,11 @@ class JoinTableProcessRunner(
         LOG.info(s"init constant key index[$targetIdx]=[${key._2._2}]")
       }
     }
+
+    val keyTypes = new Array[InternalType](inRowSrcIdx.length + constantKeys.size())
+    inRowSrcIdx.indices.foreach((i) => keyTypes(keysRowTargetIdx(i)) = leftKeyTypes(i))
+    for ((i, (t, _)) <- constantKeys.asScala) keyTypes(rightKeysInDefineOrder.indexOf(i)) = t
+    keySer = new BaseRowSerializer[GenericRow](classOf[GenericRow], keyTypes)
   }
 
   override def processElement(
@@ -120,7 +127,11 @@ class JoinTableProcessRunner(
     // fill left keys to keyRow
     fillKeyRow(in)
 
-    fetcher.flatMap(keysRow, getFetcherCollector)
+    if (objectReuse) {
+      fetcher.flatMap(keySer.copy(keysRow), getFetcherCollector)
+    } else {
+      fetcher.flatMap(keysRow, getFetcherCollector)
+    }
 
     if (leftOuterJoin && !collector.isCollected) {
       outRow.replace(in, nullRow)

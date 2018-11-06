@@ -48,12 +48,12 @@ public final class BinaryStringSerializer extends TypeSerializerSingleton<Binary
 
 	@Override
 	public BinaryString copy(BinaryString from) {
-		return BinaryString.fromBytes(from.getBytes());
+		return from.copy();
 	}
 
 	@Override
 	public BinaryString copy(BinaryString from, BinaryString reuse) {
-		return from;
+		return from.copy(reuse);
 	}
 
 	@Override

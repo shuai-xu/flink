@@ -20,14 +20,11 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.types.BooleanValue;
 import org.apache.flink.types.ByteValue;
 import org.apache.flink.types.CharValue;
-import org.apache.flink.types.CopyableValue;
 import org.apache.flink.types.DoubleValue;
 import org.apache.flink.types.FloatValue;
 import org.apache.flink.types.IntValue;
 import org.apache.flink.types.LongValue;
 import org.apache.flink.types.ShortValue;
-
-import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * A {@link ObjectArrayRow} that wrap primitive type to boxed object to reuse.
@@ -160,32 +157,6 @@ public class BoxedWrapperRow extends ObjectArrayRow {
 
 	public void setNonPrimitiveValue(int i, Object value) {
 		fields[i] = value;
-	}
-
-	@Override
-	public BaseRow copy() {
-		return copy(new BoxedWrapperRow(fields.length));
-	}
-
-	@Override
-	public BaseRow copy(BaseRow reuse) {
-		checkArgument(reuse instanceof BoxedWrapperRow, "reuse row is not GenericRow");
-		BoxedWrapperRow ret = (BoxedWrapperRow) reuse;
-		ret.setHeader(getHeader());
-		for (int i = 0; i < fields.length; i++) {
-			ret.fields[i] = copyValue(fields[i]);
-		}
-		return ret;
-	}
-
-	public static Object copyValue(Object o) {
-		if (o == null) {
-			return null;
-		} else if (o instanceof CopyableValue) {
-			return ((CopyableValue) o).copy();
-		} else {
-			return GenericRow.copyValueNotNull(o);
-		}
 	}
 
 	@Override

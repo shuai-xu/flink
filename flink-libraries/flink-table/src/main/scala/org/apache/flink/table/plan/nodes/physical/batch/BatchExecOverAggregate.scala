@@ -331,8 +331,7 @@ class BatchExecOverAggregate(
     }
   }
 
-  def createOverWindowFrames(
-      tableEnv: BatchTableEnvironment, inType: BaseRowType)
+  def createOverWindowFrames(tableEnv: BatchTableEnvironment, inType: BaseRowType)
     : Array[OverWindowFrame] = {
     val config = tableEnv.getConfig
     val constants = logicWindow.constants
@@ -413,7 +412,7 @@ class BatchExecOverAggregate(
 
           mode match {
             case OverWindowMode.Range if isUnboundedWindow(windowGroup) =>
-              Array(new UnboundedOverWindowFrame(genAggsHandler))
+              Array(new UnboundedOverWindowFrame(genAggsHandler, generator.valueType))
 
             case OverWindowMode.Range if isUnboundedPrecedingWindow(windowGroup) =>
               val genBoundComparator = createBoundOrdering(isRow = false, config, inType,
@@ -425,7 +424,8 @@ class BatchExecOverAggregate(
               val genBoundComparator = createBoundOrdering(isRow = false, config, inType,
                 windowGroup,
                 windowGroup.lowerBound, isLowerBound = true)
-              Array(new UnboundedFollowingOverWindowFrame(genAggsHandler, genBoundComparator))
+              Array(new UnboundedFollowingOverWindowFrame(
+                genAggsHandler, genBoundComparator, generator.valueType))
 
             case OverWindowMode.Range if isSlidingWindow(windowGroup) =>
               val genlBoundComparator = createBoundOrdering(isRow = false, config, inType,
@@ -436,10 +436,11 @@ class BatchExecOverAggregate(
                 windowGroup,
                 windowGroup.upperBound, isLowerBound = false)
               Array(new SlidingOverWindowFrame(
+                inType, generator.valueType,
                 genAggsHandler, genlBoundComparator, genrBoundComparator))
 
             case OverWindowMode.Row if isUnboundedWindow(windowGroup) =>
-              Array(new UnboundedOverWindowFrame(genAggsHandler))
+              Array(new UnboundedOverWindowFrame(genAggsHandler, generator.valueType))
 
             case OverWindowMode.Row if isUnboundedPrecedingWindow(windowGroup) =>
               val genBoundComparator = createBoundOrdering(
@@ -453,7 +454,8 @@ class BatchExecOverAggregate(
                 isRow = true, config, inType,
                 windowGroup,
                 windowGroup.lowerBound, isLowerBound = true)
-              Array(new UnboundedFollowingOverWindowFrame(genAggsHandler, genBoundComparator))
+              Array(new UnboundedFollowingOverWindowFrame(
+                genAggsHandler, genBoundComparator, generator.valueType))
 
             case OverWindowMode.Row if isSlidingWindow(windowGroup) =>
               val genlBoundComparator = createBoundOrdering(
@@ -465,6 +467,7 @@ class BatchExecOverAggregate(
                 windowGroup,
                 windowGroup.upperBound, isLowerBound = false)
               Array(new SlidingOverWindowFrame(
+                inType, generator.valueType,
                 genAggsHandler, genlBoundComparator, genrBoundComparator))
 
             case OverWindowMode.Insensitive => Array(new InsensitiveWindowFrame(genAggsHandler))

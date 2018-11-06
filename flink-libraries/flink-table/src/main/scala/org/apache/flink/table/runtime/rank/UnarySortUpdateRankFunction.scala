@@ -37,7 +37,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.types.DataType
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, OrderedTypeUtils}
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, OrderedTypeUtils}
 import org.apache.flink.table.util.{LRUMap, Logging, StateUtil}
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.util.Collector
@@ -89,6 +89,9 @@ class UnarySortUpdateRankFunction[K](
     generateRetraction)
     with Compiler[RecordComparator]
     with Logging {
+
+  private val inputRowSer =
+    inputRowType.createSerializer().asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   @transient
   // a keyed sorted map state stores mapping from sort key to row key list
@@ -148,9 +151,11 @@ class UnarySortUpdateRankFunction[K](
       genSortKeyExtractor.name,
       genSortKeyExtractor.code).newInstance.asInstanceOf[FieldAccess[BaseRow,K]]
 
+    val rowKeyBaseRowType = new BaseRowTypeInfo(classOf[BaseRow], rowKeyType.getFieldTypes: _*)
+        .asInstanceOf[TypeInformation[BaseRow]]
+
     // get keyed sorted state
-    val valueTypeInfo = new ListTypeInfo[BaseRow](
-      inputRowType.asInstanceOf[TypeInformation[BaseRow]])
+    val valueTypeInfo = new ListTypeInfo[BaseRow](rowKeyBaseRowType)
 
     val sortedMapStateDesc =
       new SortedMapStateDescriptor(
@@ -167,8 +172,7 @@ class UnarySortUpdateRankFunction[K](
     val mapStateDesc =
       new MapStateDescriptor[BaseRow, BaseRow](
         "rowkey-state-with-unary-update",
-        new BaseRowTypeInfo(classOf[BaseRow], rowKeyType.getFieldTypes: _*)
-          .asInstanceOf[TypeInformation[BaseRow]],
+        rowKeyBaseRowType,
         inputRowType.asInstanceOf[TypeInformation[BaseRow]])
 
     rowkeyState = ctx.getKeyedMapState(mapStateDesc)
@@ -941,7 +945,7 @@ class UnarySortUpdateRankFunction[K](
     if (inHeap) {
       /* update in-memory content */
       sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, inputRow.copy())
+      rowKeyMap.put(rowKey, inputRowSer.copy(inputRow))
     }
 
     val rowkeyList = if (inHeap) {

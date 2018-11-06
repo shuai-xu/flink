@@ -319,17 +319,6 @@ public final class JoinedRow implements BaseRow {
 	}
 
 	@Override
-	public BaseRow copy() {
-		JoinedRow newRow = new JoinedRow(row1.copy(), row2.copy());
-		newRow.setHeader(this.header);
-		return newRow;
-	}
-
-	@Override
-	public BaseRow copy(BaseRow reuse) {
-		return copy();
-	}
-
 	public boolean equalsWithoutHeader(BaseRow o) {
 		if (this == o) {
 			return true;

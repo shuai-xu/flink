@@ -73,6 +73,7 @@ object CodeGenUtils {
     case _: ArrayType => true
     case _: MapType => true
     case _: BaseRowType => true
+    case _: GenericType[_] => true
     case _ => false
   }
 
@@ -433,7 +434,7 @@ object CodeGenUtils {
       fieldCopy: Boolean): GeneratedExpression = {
     val expr = generateFieldAccess(ctx, inputType, inputTerm, index, nullCheck)
     if (fieldCopy) {
-      expr.copyResultIfNeeded(fieldCopy)
+      expr.copyResultIfNeeded(ctx, fieldCopy)
     } else {
       expr
     }

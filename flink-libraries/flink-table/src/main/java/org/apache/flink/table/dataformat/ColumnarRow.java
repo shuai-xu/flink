@@ -230,25 +230,6 @@ public final class ColumnarRow implements BaseRow {
 	}
 
 	@Override
-	public BaseRow copy() {
-		return copy(new GenericRow(getArity()));
-	}
-
-	@Override
-	public BaseRow copy(BaseRow reuse) {
-		GenericRow row;
-		if (reuse instanceof GenericRow) {
-			row = (GenericRow) reuse;
-		} else {
-			row = new GenericRow(getArity());
-		}
-		for (int i = 0; i < getArity(); i++) {
-			row.update(i, internalObject(i));
-		}
-		return row;
-	}
-
-	@Override
 	public boolean equalsWithoutHeader(BaseRow other) {
 		if (this == other) {
 			return true;

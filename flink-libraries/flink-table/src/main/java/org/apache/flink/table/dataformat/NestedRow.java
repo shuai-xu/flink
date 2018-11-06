@@ -335,12 +335,10 @@ public final class NestedRow implements BaseRow {
 		return BinaryRow.getByteArray(segments, baseOffset, fieldOffset, offsetAndSize);
 	}
 
-	@Override
 	public NestedRow copy() {
 		return copy(new NestedRow(arity));
 	}
 
-	@Override
 	public NestedRow copy(BaseRow reuse) {
 		return copyInternal((NestedRow) reuse);
 	}

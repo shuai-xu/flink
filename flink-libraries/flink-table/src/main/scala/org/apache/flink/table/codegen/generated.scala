@@ -60,11 +60,13 @@ case class GeneratedExpression(
     * @param target the target term that cannot be assigned a reusable reference.
     * @return code.
     */
-  def copyResultTermToTargetIfChanged(target: String): String = {
+  def copyResultTermToTargetIfChanged(ctx: CodeGeneratorContext, target: String): String = {
     if (CodeGenUtils.needCopyForType(resultType)) {
+      val typeTerm = boxedTypeTermForType(resultType)
+      val serTerm = ctx.addReusableTypeSerializer(resultType)
       s"""
          |if ($target != $resultTerm) {
-         |  $target = ($resultTerm).copy();
+         |  $target = (($typeTerm) $serTerm.copy($resultTerm));
          |}
        """.stripMargin
     } else {
@@ -79,17 +81,18 @@ case class GeneratedExpression(
     *
     * @param copyResult copy result if true
     */
-  def copyResultIfNeeded(copyResult: Boolean): GeneratedExpression = {
+  def copyResultIfNeeded(ctx: CodeGeneratorContext, copyResult: Boolean): GeneratedExpression = {
     if (copyResult && CodeGenUtils.needCopyForType(resultType)) {
       val newResult = newName("field")
       // if the type need copy, it must be a boxed type
       val typeTerm = boxedTypeTermForType(resultType)
+      val serTerm = ctx.addReusableTypeSerializer(resultType)
       val newCode =
         s"""
           |$code
           |$typeTerm $newResult = $resultTerm;
           |if (!$nullTerm) {
-          |  $newResult = $newResult.copy();
+          |  $newResult = ($typeTerm) ($serTerm.copy($newResult));
           |}
         """.stripMargin
       this.copy(resultTerm = newResult, code = newCode)

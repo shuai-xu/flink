@@ -90,7 +90,7 @@ class DeclarativeAggCodeGen(
         ctx.addReusableMember(s"private $typeTerm $memberName;")
         ctx.addReusableMember(s"private boolean $memberNullTerm;")
         s"""
-           |${access.copyResultTermToTargetIfChanged(memberName)};
+           |${access.copyResultTermToTargetIfChanged(ctx, memberName)};
            |$memberNullTerm = ${access.nullTerm};
          """.stripMargin
     }
@@ -139,7 +139,7 @@ class DeclarativeAggCodeGen(
     val codes = exprs.zipWithIndex.map { case (expr, index) =>
       s"""
          |${expr.code}
-         |${expr.copyResultTermToTargetIfChanged(bufferTerms(index))};
+         |${expr.copyResultTermToTargetIfChanged(ctx, bufferTerms(index))};
          |${bufferNullTerms(index)} = ${expr.nullTerm};
        """.stripMargin
     }
@@ -175,7 +175,7 @@ class DeclarativeAggCodeGen(
     val codes = exprs.zipWithIndex.map { case (expr, index) =>
       s"""
          |${expr.code}
-         |${expr.copyResultTermToTargetIfChanged(bufferTerms(index))};
+         |${expr.copyResultTermToTargetIfChanged(ctx, bufferTerms(index))};
          |${bufferNullTerms(index)} = ${expr.nullTerm};
        """.stripMargin
     }
@@ -202,7 +202,7 @@ class DeclarativeAggCodeGen(
     val codes = exprs.zipWithIndex.map { case (expr, index) =>
       s"""
          |${expr.code}
-         |${expr.copyResultTermToTargetIfChanged(bufferTerms(index))};
+         |${expr.copyResultTermToTargetIfChanged(ctx, bufferTerms(index))};
          |${bufferNullTerms(index)} = ${expr.nullTerm};
        """.stripMargin
     }

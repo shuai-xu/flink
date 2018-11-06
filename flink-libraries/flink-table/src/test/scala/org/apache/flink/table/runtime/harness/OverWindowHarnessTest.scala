@@ -268,11 +268,13 @@ class OverWindowHarnessTest(mode: StateBackendMode) extends HarnessTestBase(mode
     testHarness.setProcessingTime(20000)
 
     // timer registered for 23000
-    testHarness.processElement(new StreamRecord(binaryRow(0L: JLong, "ccc", 10L: JLong)))
+    testHarness.processElement(new StreamRecord(
+      binaryRow(0L: JLong, "ccc", 10L: JLong, hasProcTime = true)))
 
     // update clean-up timer to 25500. Previous timer should not clean up
     testHarness.setProcessingTime(22500)
-    testHarness.processElement(new StreamRecord(binaryRow(0L: JLong, "ccc", 10L: JLong)))
+    testHarness.processElement(new StreamRecord(
+      binaryRow(0L: JLong, "ccc", 10L: JLong, hasProcTime = true)))
 
     // 23000 clean-up timer should fire but not fail with an NPE
     testHarness.setProcessingTime(23001)

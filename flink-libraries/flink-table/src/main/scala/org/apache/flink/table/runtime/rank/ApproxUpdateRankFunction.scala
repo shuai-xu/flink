@@ -21,10 +21,10 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.codegen.GeneratedSorter
-import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.runtime.functions.ProcessFunction.Context
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.util.Collector
 
 class ApproxUpdateRankFunction(
@@ -51,6 +51,9 @@ class ApproxUpdateRankFunction(
     cacheSize,
     generateRetraction,
     queryConfig) {
+
+  private val inputRowSer =
+    inputRowType.createSerializer().asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   // indicate whether sort map have overflowed when adding new record exceeds its limit
   private var isSortMapOverFlowed: Boolean = false
@@ -91,7 +94,7 @@ class ApproxUpdateRankFunction(
           case SqlKind.ROW_NUMBER =>
             // sort key is not changed, so the rank is the same, only output the row
             val (rank, innerRank) = rowNumber(sortKey, rowKey, sortedMap)
-            rowKeyMap.put(rowKey, RankRow(inputRow.copy(), innerRank, dirty = true))
+            rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), innerRank, dirty = true))
             retract(out, oldRow.row, rank) // retract old record
             collect(out, inputRow, rank)   // and then emit updated record
 
@@ -103,7 +106,7 @@ class ApproxUpdateRankFunction(
       // update in-memory map
       sortedMap.remove(oldSortKey, rowKey)
       val innerSize = sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, RankRow(inputRow.copy(), innerSize, dirty = true))
+      rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), innerSize, dirty = true))
       updateInnerRank(oldSortKey)   // update inner rank of records under the old sort key
 
       // emit records
@@ -116,7 +119,7 @@ class ApproxUpdateRankFunction(
     } else if (checkSortKeyInBufferRange(sortKey, sortedMap, sortKeyComparator)) {
       // it is an unique record but is in the topN, insert sort key into sortedMap
       val innerSize = sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, RankRow(inputRow.copy(), innerSize, dirty = true))
+      rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), innerSize, dirty = true))
 
       // emit records
       rankKind match {
@@ -146,7 +149,7 @@ class ApproxUpdateRankFunction(
         sortedMap.remove(oldSortKey, rowKey)
         // add new sort key
         val size = sortedMap.put(sortKey, rowKey)
-        rowKeyMap.put(rowKey, RankRow(inputRow.copy, size, dirty = true))
+        rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
         // update inner rank of records under the old sort key
         updateInnerRank(oldSortKey)
       }
@@ -182,7 +185,7 @@ class ApproxUpdateRankFunction(
       // it is an unique record but is in the topN
       // insert sort key into sortedMap
       val size = sortedMap.put(sortKey, rowKey)
-      rowKeyMap.put(rowKey, RankRow(inputRow.copy, size, dirty = true))
+      rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
       val (rank, _) = rowNumber(sortKey, rowKey, sortedMap)
       if (isInRankEnd(rank)) {
         collect(out, inputRow)   //emit this new row

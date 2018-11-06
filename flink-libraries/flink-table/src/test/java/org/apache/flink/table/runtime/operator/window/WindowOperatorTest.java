@@ -827,7 +827,7 @@ public class WindowOperatorTest {
 		testHarness.processWatermark(new Watermark(6000));
 
 		// this is 1 and not 3 because the trigger fires and purges
-		BaseRow key2Retract = BaseRowUtil.setRetract(key2Result.copy());
+		BaseRow key2Retract = BaseRowUtil.setRetract(GenericRow.copyReference(key2Result));
 		expectedOutput.add(new StreamRecord<>(key2Retract));
 		expectedOutput.add(record("key2", 3L, 3L, 0L, 2000L, 1999L));
 		expectedOutput.add(new Watermark(6000));

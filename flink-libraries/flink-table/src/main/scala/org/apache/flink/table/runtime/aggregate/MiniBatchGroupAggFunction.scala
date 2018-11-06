@@ -26,8 +26,8 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction
 import org.apache.flink.table.runtime.sort.RecordEqualiser
-import org.apache.flink.table.types.{DataTypes, InternalType}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BaseRowUtil, BinaryRowUtil, Logging}
 import org.apache.flink.util.Collector
 
@@ -43,6 +43,7 @@ import org.apache.flink.util.Collector
   * @param generateRetraction whether this operator will generate retraction
   */
 class MiniBatchGroupAggFunction(
+    inputType: BaseRowType,
     genAggsHandler: GeneratedAggsHandleFunction,
     accTypes: Array[InternalType],
     aggValueTypes: Array[InternalType],
@@ -66,6 +67,9 @@ class MiniBatchGroupAggFunction(
 
   @transient
   private var equaliser: RecordEqualiser = _
+
+  private val inputSer = TypeUtils.createSerializer(inputType)
+      .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
   override def open(ctx: ExecutionContext): Unit = {
     super.open(ctx)
@@ -102,7 +106,7 @@ class MiniBatchGroupAggFunction(
     val inputCopied = if (input.isInstanceOf[BinaryRow]) {
       input
     } else {
-      input.copy()
+      inputSer.copy(input)
     }
     acc.add(inputCopied)
     acc

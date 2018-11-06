@@ -20,9 +20,11 @@ package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.types.Row;
 
@@ -35,9 +37,11 @@ import org.apache.parquet.filter2.predicate.FilterPredicate;
 public class VectorizedGenericRowInputParquetFormat extends ParquetInputFormat<GenericRow, GenericRow> implements ResultTypeQueryable<GenericRow> {
 
 	private static final long serialVersionUID = -2569974518641072883L;
+	private BaseRowSerializer<BaseRow> serializer;
 
 	public VectorizedGenericRowInputParquetFormat(Path filePath, InternalType[] fieldTypes, String[] fieldNames) {
 		super(filePath, fieldTypes, fieldNames);
+		this.serializer = new BaseRowSerializer<>(fieldTypes);
 	}
 
 	@Override
@@ -53,7 +57,7 @@ public class VectorizedGenericRowInputParquetFormat extends ParquetInputFormat<G
 	@Override
 	protected GenericRow convert(GenericRow current, GenericRow reuse) {
 		if (reuse == null) {
-			return current.copy();
+			return (GenericRow) serializer.copy(current);
 		} else {
 			for (int i = 0; i < current.getArity(); ++i) {
 				reuse.update(i, current.getField(i));

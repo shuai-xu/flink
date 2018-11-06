@@ -26,6 +26,7 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.table.runtime.sort.RecordComparator;
+import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.util.Collector;
 
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ public class SortLimitOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 	private transient PriorityQueue<BaseRow> heap;
 	private transient Collector<BaseRow> collector;
 	private transient RecordComparator comparator;
+	private transient AbstractRowSerializer<BaseRow> inputSer;
 
 	public SortLimitOperator(
 			boolean isGlobal, long limitStart, long limitEnd, GeneratedSorter gSorter) {
@@ -60,6 +62,7 @@ public class SortLimitOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 	public void open() throws Exception {
 		super.open();
 
+		inputSer = (AbstractRowSerializer) getOperatorConfig().getTypeSerializerIn1(getUserCodeClassloader());
 		comparator = (RecordComparator) CodeGenUtils.compile(
 				getContainingTask().getUserCodeClassLoader(),
 				gSorter.comparator().name(), gSorter.comparator().code()).newInstance();
@@ -86,10 +89,10 @@ public class SortLimitOperator extends AbstractStreamOperatorWithMetrics<BaseRow
 			BaseRow peek = heap.peek();
 			if (comparator.compare(peek, record) > 0) {
 				heap.poll();
-				heap.add(record.copy());
+				heap.add(inputSer.copy(record));
 			} // else fail, this record don't need insert to the heap.
 		} else {
-			heap.add(record.copy());
+			heap.add(inputSer.copy(record));
 		}
 	}
 

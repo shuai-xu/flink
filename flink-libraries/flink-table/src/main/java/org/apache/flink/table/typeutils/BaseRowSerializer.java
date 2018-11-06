@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.table.api.TableConfig;
@@ -31,13 +32,19 @@ import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.codegen.ProjectionCodeGenerator;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.dataformat.BinaryArray;
+import org.apache.flink.table.dataformat.BinaryMap;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.BoxedWrapperRow;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.dataformat.NestedRow;
 import org.apache.flink.table.types.BaseRowType;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.util.BinaryRowUtil;
+import org.apache.flink.types.CopyableValue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -66,6 +73,10 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 			typeInfos[i] = DataTypes.toTypeInfo(types[i]);
 		}
 		return typeInfos;
+	}
+
+	public BaseRowSerializer(Class<T> rowType, InternalType[] types) {
+		this(rowType, toTypeInfos(types));
 	}
 
 	public BaseRowSerializer(Class<T> rowType, TypeInformation<?>... types) {
@@ -129,13 +140,101 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 	@SuppressWarnings("unchecked")
 	@Override
 	public T copy(T from) {
-		return (T) from.copy();
+		if (from.getArity() != types.length) {
+			throw new IllegalArgumentException("Row arity: " + from.getArity() +
+					", but serializer arity: " + types.length);
+		}
+		if (from.getClass() == BinaryRow.class) {
+			return (T) ((BinaryRow) from).copy();
+		} else if (from.getClass() == BoxedWrapperRow.class) {
+			return (T) copyBoxedWrapperRow((BoxedWrapperRow) from, new BoxedWrapperRow(from.getArity()));
+		} else if (from.getClass() == NestedRow.class) {
+			return (T) copyNestedRow((NestedRow) from, new NestedRow(from.getArity()));
+		} else {
+			return (T) copyBaseRow(from, new GenericRow(from.getArity()));
+		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public T copy(T from, T reuse) {
-		//noinspection unchecked
-		return (T) from.copy(reuse);
+		if (from.getArity() != types.length) {
+			throw new IllegalArgumentException("Row arity: " + from.getArity() +
+					", but serializer arity: " + types.length);
+		}
+		if (from.getClass() == BinaryRow.class) {
+			return (T) ((BinaryRow) from).copy(reuse);
+		} else if (from.getClass() == BoxedWrapperRow.class) {
+			return (T) copyBoxedWrapperRow((BoxedWrapperRow) from, reuse);
+		} else if (from.getClass() == NestedRow.class) {
+			return (T) copyNestedRow((NestedRow) from, (NestedRow) reuse);
+		} else {
+			return (T) copyBaseRow(from, reuse);
+		}
+	}
+
+	private BaseRow copyBaseRow(BaseRow from, BaseRow reuse) {
+		GenericRow ret;
+		if (reuse instanceof GenericRow) {
+			ret = (GenericRow) reuse;
+		} else {
+			ret = new GenericRow(from.getArity());
+		}
+		ret.setHeader(from.getHeader());
+		for (int i = 0; i < from.getArity(); i++) {
+			if (!from.isNullAt(i)) {
+				ret.update(i, copyValueNotNull(from.get(i, types[i], serializers[i]), i));
+			} else {
+				ret.setNullAt(i);
+			}
+		}
+		return ret;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object copyValueNotNull(Object o, int index) {
+		if (o instanceof BinaryString) {
+			return ((BinaryString) o).copy();
+		} else if (o instanceof BinaryArray) {
+			return ((BinaryArray) o).copy();
+		} else if (o instanceof BinaryMap) {
+			return ((BinaryMap) o).copy();
+		} else {
+			return serializers[index].copy(o);
+		}
+	}
+
+	private BaseRow copyBoxedWrapperRow(BoxedWrapperRow from, BaseRow reuse) {
+		GenericRow ret;
+		if (reuse instanceof GenericRow) {
+			ret = (GenericRow) reuse;
+		} else {
+			ret = new GenericRow(from.getArity());
+		}
+		ret.setHeader(from.getHeader());
+		for (int i = 0; i < from.getArity(); i++) {
+			if (!from.isNullAt(i)) {
+				ret.update(i, copyNotNullFromBoxedWrapperRow(
+						from.get(i, types[i], serializers[i]), i));
+			} else {
+				ret.setNullAt(i);
+			}
+		}
+		return ret;
+	}
+
+	private Object copyNotNullFromBoxedWrapperRow(Object o, int index) {
+		if (o instanceof CopyableValue) {
+			return ((CopyableValue) o).copy();
+		} else {
+			return copyValueNotNull(o, index);
+		}
+	}
+
+	private BaseRow copyNestedRow(NestedRow from, NestedRow reuse) {
+		byte[] bytes = BinaryRowUtil.copy(from.getSegments(), from.getBaseOffset(), from.getSizeInBytes());
+		reuse.pointTo(MemorySegmentFactory.wrap(bytes), 0, from.getSizeInBytes());
+		return reuse;
 	}
 
 	@Override

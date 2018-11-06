@@ -176,8 +176,10 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
 
     val condExpr = exprGenerator.generateExpression(getCondition)
 
+    val buildRowSer = ctx.addReusableTypeSerializer(if (leftIsBuild) leftType else rightType)
+
     val buildProcessCode = if (singleRowJoin) {
-      s"this.$buildRow = ($BASE_ROW) $buildRow.copy();"
+      s"this.$buildRow = ($BASE_ROW) $buildRowSer.copy($buildRow);"
     } else {
       s"""
          |if ($isFirstRow) {
@@ -193,7 +195,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
          |}
          |
          |if ($isBinaryRow) {
-         |  $buffer.add(($BINARY_ROW) $buildRow.copy());
+         |  $buffer.add((($BINARY_ROW) $buildRow).copy());
          |} else {
          |  $buffer.add($baseRowSerializer.baseRowToBinary($buildRow));
          |}

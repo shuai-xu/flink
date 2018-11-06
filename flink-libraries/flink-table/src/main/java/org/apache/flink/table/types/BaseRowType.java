@@ -21,7 +21,6 @@ package org.apache.flink.table.types;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
-import org.apache.flink.table.typeutils.TypeUtils;
 
 import java.util.Arrays;
 
@@ -54,9 +53,9 @@ public class BaseRowType implements InternalType {
 		this.fieldNames = fieldNames;
 	}
 
-	public BaseRowSerializer getSerializer() {
+	public BaseRowSerializer getBaseRowSerializer() {
 		if (serializer == null) {
-			this.serializer = (BaseRowSerializer) TypeUtils.createSerializer(this);
+			this.serializer = new BaseRowSerializer(types);
 		}
 		return serializer;
 	}

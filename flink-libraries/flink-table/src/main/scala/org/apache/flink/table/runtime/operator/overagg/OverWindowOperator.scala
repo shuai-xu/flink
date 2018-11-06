@@ -89,10 +89,9 @@ class BufferDataOverWindowOperator(
       processCurrentData()
       currentData.reset()
     }
-    lastInput = if (input.isInstanceOf[BinaryRow]) {
-      input.copy().asInstanceOf[BinaryRow]
-    } else {
-      baseRowSerializer.baseRowToBinary(input).copy()
+    lastInput = input match {
+      case row: BinaryRow => row.copy()
+      case _ => baseRowSerializer.baseRowToBinary(input).copy()
     }
     currentData.add(lastInput)
   }
@@ -149,8 +148,13 @@ class OverWindowOperator(
 
   private var collector: StreamRecordCollector[BaseRow] = _
 
+  private var inputRowSerializer: AbstractRowSerializer[BaseRow] = _
+
   override def open(): Unit = {
     super.open()
+
+    inputRowSerializer = getOperatorConfig.getTypeSerializerIn1(getUserCodeClassloader)
+        .asInstanceOf[AbstractRowSerializer[BaseRow]]
 
     partitionComparator = CodeGenUtils.compile(
       Thread.currentThread.getContextClassLoader,
@@ -192,6 +196,6 @@ class OverWindowOperator(
           processor.setAccumulators(processor.createAccumulators())
         }
     }
-    lastInput = input.copy()
+    lastInput = inputRowSerializer.copy(input)
   }
 }
