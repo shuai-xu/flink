@@ -24,6 +24,9 @@ import org.apache.flink.runtime.clusterframework.standalone.TaskManagerResourceC
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class TaskManagerResourceCalculatorTest {
 
   @Test
@@ -35,11 +38,20 @@ public class TaskManagerResourceCalculatorTest {
     flinkConfig.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 1024L);
     flinkConfig.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 1024L);
 
-    String taskManagerResource = "TotalHeapMemory:2176,YoungHeapMemory:204,TotalDirectMemory:320";
+    String taskManagerResource = "TotalHeapMemory:2176,YoungHeapMemory:204,TotalDirectMemory:1280";
     Assert.assertEquals(taskManagerResource, TaskManagerResourceCalculator.getTaskManagerResourceFromConf(flinkConfig));
 
     flinkConfig.setBoolean(TaskManagerOptions.MEMORY_OFF_HEAP, true);
-    taskManagerResource = "TotalHeapMemory:2176,YoungHeapMemory:544,TotalDirectMemory:2368";
+    taskManagerResource = "TotalHeapMemory:2176,YoungHeapMemory:544,TotalDirectMemory:3328";
     Assert.assertEquals(taskManagerResource, TaskManagerResourceCalculator.getTaskManagerResourceFromConf(flinkConfig));
+  }
+
+  @Test
+  public void testCalculateNetworkBufferMemory() {
+    Configuration flinkConf = mock(Configuration.class);
+    when(flinkConf.getFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION)).thenReturn(0.2f);
+    when(flinkConf.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN)).thenReturn(128L << 20);
+    when(flinkConf.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX)).thenReturn(512L << 20);
+    Assert.assertEquals(512L << 20, TaskManagerResourceCalculator.calculateNetworkBufferMemory(flinkConf));
   }
 }

@@ -92,6 +92,7 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 		Configuration conf = new Configuration();
 		conf.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 128);
 		conf.setLong(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE, 256);
+		conf.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 64 << 20);
 		ResourceManagerConfiguration rmConfig =
 			new ResourceManagerConfiguration(Time.seconds(1), Time.seconds(10));
 		final HighAvailabilityServices highAvailabilityServices = mock(HighAvailabilityServices.class);

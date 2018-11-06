@@ -72,8 +72,8 @@ public class TaskManagerResource {
 	/** The number of slots in TaskManager. */
 	private final int slotNum;
 
-	/** The memory segment size for network and managed buffers. */
-	private final int pageSize;
+	/** The default network memory size in MB when no network memory is specified in resource profile. */
+	private final int defaultNetworkMemMB;
 
 	private TaskManagerResource(
 		int taskManagerNettyMemorySizeMB,
@@ -81,7 +81,7 @@ public class TaskManagerResource {
 		int taskManagerHeapMemorySizeMB,
 		float managedMemoryFraction,
 		boolean offHeap,
-		int pageSize,
+		int defaultNetworkMemMB,
 		double dynamicYoungHeapRatio,
 		double persistentYoungHeapRatio,
 		ResourceProfile taskResourceProfile,
@@ -92,7 +92,7 @@ public class TaskManagerResource {
 		this.taskManagerHeapMemorySizeMB = taskManagerHeapMemorySizeMB;
 		this.managedMemoryFraction = managedMemoryFraction;
 		this.offHeap = offHeap;
-		this.pageSize = pageSize;
+		this.defaultNetworkMemMB = defaultNetworkMemMB;
 		this.taskResourceProfile = taskResourceProfile;
 		this.slotNum = slotNum;
 		this.persistentYoungHeapRatio = persistentYoungHeapRatio;
@@ -139,7 +139,8 @@ public class TaskManagerResource {
 	 * @return the network memory for all tasks in the task executor.
 	 */
 	public int getNetworkMemorySize() {
-		return taskResourceProfile.getNetworkMemoryInMB() * slotNum;
+		int networkMemoryInMB = taskResourceProfile.getNetworkMemoryInMB() * slotNum;
+		return networkMemoryInMB > 0 ? networkMemoryInMB : defaultNetworkMemMB;
 	}
 
 	public int getTotalNativeMemory() {
@@ -220,10 +221,6 @@ public class TaskManagerResource {
 		return taskResourceProfile.getCpuCores() * slotNum;
 	}
 
-	public int getPageSize() {
-		return pageSize;
-	}
-
 	// --------------------------------------------------------------------------------------------
 	//  Parsing configuration
 	// --------------------------------------------------------------------------------------------
@@ -253,8 +250,7 @@ public class TaskManagerResource {
 
 		// check whether we use heap or off-heap memory
 		final boolean useOffHeap = configuration.getBoolean(TaskManagerOptions.MEMORY_OFF_HEAP);
-
-		final int pageSize = configuration.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
+		final int defaultNetworkMemMB = (int) Math.ceil(configuration.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX) / (1024.0 * 1024.0));
 
 		return new TaskManagerResource(
 				taskManagerNettyMemorySizeMB,
@@ -262,7 +258,7 @@ public class TaskManagerResource {
 				taskManagerHeapMemorySizeMB,
 				managedMemoryFraction,
 				useOffHeap,
-				pageSize,
+				defaultNetworkMemMB,
 				dynamicYoungRatio,
 				persistentYoungRatio,
 				resourceProfile,

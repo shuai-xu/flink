@@ -28,6 +28,7 @@ import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.runtime.clusterframework.ContaineredTaskManagerParameters;
+import org.apache.flink.runtime.clusterframework.standalone.TaskManagerResourceCalculator;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.TaskManagerResource;
@@ -47,7 +48,6 @@ import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.taskexecutor.TaskManagerConfiguration;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
-import org.apache.flink.util.MathUtils;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.commons.net.util.Base64;
@@ -413,10 +413,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		int heapMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
 		int nativeMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_NATIVE_MEMORY);
 		int directMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_DIRECT_MEMORY);
-
-		int networkBuffersNum = flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS);
-		long pageSize = flinkConfig.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
-		int networkMemory = (int) Math.ceil((pageSize * networkBuffersNum) / (1024.0 * 1024.0));
+		int networkMemory = (int) Math.ceil(TaskManagerResourceCalculator.calculateNetworkBufferMemory(flinkConfig) / (1024.0 * 1024.0));
 
 		// Add managed memory to extended resources.
 		long managedMemory = flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
@@ -560,12 +557,6 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 		// config the floating managed memory for task manager
 		final int floatingMemory = taskManagerResource.getFloatingManagedMemorySize();
 		taskManagerConfig.setInteger(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.key(), floatingMemory);
-
-		// config the network memory for task manager
-		final int networkBuffersNum = MathUtils.checkedDownCast(taskManagerResource.getNetworkMemorySize()
-				* 1024L * 1024L / taskManagerResource.getPageSize());
-		taskManagerConfig.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS.key(),
-				networkBuffersNum > 1 ? networkBuffersNum : 1);
 
 		// config the netty framework memory of task manager
 		taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY.key(),

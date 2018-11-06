@@ -24,6 +24,7 @@ import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ResourceManagerOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
@@ -136,6 +137,7 @@ public class YarnResourceManagerTest extends TestLogger {
 	@Before
 	public void setup() {
 		flinkConfig.setInteger(ResourceManagerOptions.CONTAINERIZED_HEAP_CUTOFF_MIN, 100);
+		flinkConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 64);
 		File root = folder.getRoot();
 		File home = new File(root, "home");
 		boolean created = home.mkdir();

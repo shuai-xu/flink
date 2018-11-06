@@ -667,7 +667,9 @@ public final class Utils {
 		}
 		containerEnv.put(YarnConfigKeys.ENV_TM_RESOURCE_PROFILE_KEY, taskManagerConfig.getString(TaskManagerOptions.TASK_MANAGER_RESOURCE_PROFILE_KEY));
 		containerEnv.put(YarnConfigKeys.ENV_TM_MANAGED_MEMORY_SIZE, String.valueOf(taskManagerConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE)));
-		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_NUM_BUFFERS, String.valueOf(taskManagerConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS)));
+		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_FRACTION, String.valueOf(taskManagerConfig.getFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION)));
+		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN, String.valueOf(taskManagerConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN)));
+		containerEnv.put(YarnConfigKeys.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX, String.valueOf(taskManagerConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX)));
 		containerEnv.put(YarnConfigKeys.ENV_TM_PROCESS_NETTY_MEMORY, String.valueOf(taskManagerConfig.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY)));
 
 		ctx.setEnvironment(containerEnv);
@@ -743,5 +745,4 @@ public final class Utils {
 			throw new RuntimeException(String.format(message, values));
 		}
 	}
-
 }

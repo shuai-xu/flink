@@ -55,7 +55,9 @@ public class YarnConfigKeys {
 	public static final String ENV_TM_NUM_TASK_SLOT = "_TM_NUM_TASK_SLOT";
 	public static final String ENV_TM_RESOURCE_PROFILE_KEY = "_TM_RESOURCE_PROFILE_KEY";
 	public static final String ENV_TM_MANAGED_MEMORY_SIZE = "_TM_MANAGED_MEMORY_SIZE";
-	public static final String ENV_TM_NETWORK_NUM_BUFFERS = "_TM_NETWORK_NUM_BUFFERS";
+	public static final String ENV_TM_NETWORK_BUFFERS_MEMORY_FRACTION = "_TM_NETWORK_BUFFERS_MEMORY_FRACTION";
+	public static final String ENV_TM_NETWORK_BUFFERS_MEMORY_MIN = "_NETWORK_BUFFERS_MEMORY_MIN";
+	public static final String ENV_TM_NETWORK_BUFFERS_MEMORY_MAX = "_NETWORK_BUFFERS_MEMORY_MAX";
 	public static final String ENV_TM_PROCESS_NETTY_MEMORY = "_TM_PROCESS_NETTY_MEMORY";
 
 	// ------------------------------------------------------------------------

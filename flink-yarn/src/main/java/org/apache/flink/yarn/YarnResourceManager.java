@@ -44,7 +44,6 @@ import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
-import org.apache.flink.util.MathUtils;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.commons.net.util.Base64;
@@ -675,13 +674,14 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		final int floatingManagedMemory = tmResource.getFloatingManagedMemorySize();
 		taskManagerConfig.setInteger(TaskManagerOptions.FLOATING_MANAGED_MEMORY_SIZE.key(), floatingManagedMemory);
 
-		final int networkBuffersNum = MathUtils.checkedDownCast(tmResource.getNetworkMemorySize()
-			* 1024L * 1024L / tmResource.getPageSize());
-		taskManagerConfig.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS.key(),
-			networkBuffersNum > 1 ? networkBuffersNum : flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS));
-
 		taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY.key(),
 			tmResource.getTaskManagerNettyMemorySizeMB());
+
+		taskManagerConfig.setFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION,
+				flinkConfig.getFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION));
+		long networkBufBytes = tmResource.getNetworkMemorySize() << 20;
+		taskManagerConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, networkBufBytes);
+		taskManagerConfig.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, networkBufBytes);
 
 		log.debug("TaskManager configuration: {}", taskManagerConfig);
 

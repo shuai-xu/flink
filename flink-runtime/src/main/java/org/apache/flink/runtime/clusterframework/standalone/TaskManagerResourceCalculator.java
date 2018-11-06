@@ -28,6 +28,7 @@ import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.TaskManagerResource;
+import org.apache.flink.runtime.taskexecutor.TaskManagerServicesConfiguration;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,15 +61,30 @@ public class TaskManagerResourceCalculator {
         taskManagerResource.getTotalDirectMemory());
   }
 
+  /**
+   * Calculates the amount of memory used for network buffers to be allocated for TaskManager.
+   * @return memory to use for network buffers (in bytes)
+   */
+  public static long calculateNetworkBufferMemory(Configuration flinkConfig) {
+    long networkBufBytes;
+    if (TaskManagerServicesConfiguration.hasNewNetworkBufConf(flinkConfig)) {
+      // new configuration based on max
+      networkBufBytes = flinkConfig.getLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX);
+    } else {
+      // use old (deprecated) network buffers parameter
+      int networkBuffersNum = flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS);
+      long pageSize = flinkConfig.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
+      networkBufBytes = pageSize * networkBuffersNum;
+    }
+    return networkBufBytes;
+  }
+
   public static ResourceProfile initContainerResourceConfig(Configuration flinkConfig) {
     double core = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_CORE);
     int heapMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_HEAP_MEMORY);
     int nativeMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_NATIVE_MEMORY);
     int directMemory = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_DIRECT_MEMORY);
-
-    int networkBuffersNum = flinkConfig.getInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS);
-    long pageSize = flinkConfig.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
-    int networkMemory = (int) Math.ceil((pageSize * networkBuffersNum) / (1024.0 * 1024.0));
+    int networkMemory = (int) Math.ceil(calculateNetworkBufferMemory(flinkConfig) / (1024.0 * 1024.0));
 
     // Add managed memory to extended resources.
     long managedMemory = flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
