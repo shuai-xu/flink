@@ -91,7 +91,7 @@ public class JobVerticesInfoHandler extends AbstractExecutionGraphHandler<JobVer
 
 	@Override
 	public Collection<ArchivedJson> archiveJsonWithPath(AccessExecutionGraph graph) throws IOException {
-		ResponseBody json = createJobVerticesInfo(graph, null);
+		ResponseBody json = createJobVerticesInfo(graph, metricFetcher);
 		String path = getMessageHeaders().getTargetRestEndpointURL()
 			.replace(':' + JobIDPathParameter.KEY, graph.getJobID().toString());
 		return Collections.singleton(new ArchivedJson(path, json));
