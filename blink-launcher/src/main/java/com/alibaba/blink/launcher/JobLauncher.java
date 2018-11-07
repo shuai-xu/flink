@@ -19,6 +19,7 @@
 package com.alibaba.blink.launcher;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -374,7 +375,9 @@ public class JobLauncher {
 
 			StreamGraphConfigurer.configure(streamGraph, property);
 			streamGraph.setJobName(jobName);
-			env.execute(streamGraph);
+			JobSubmissionResult result = env.execute(streamGraph);
+
+			logAndSysout(String.format("Submitted job %s to flink cluster.", result.getJobID()));
 
 		} else if ("info".equals(action)) {
 			long s1 = System.currentTimeMillis();
@@ -502,5 +505,10 @@ public class JobLauncher {
 		if (!StringUtil.isEmpty(dcFileKeys)) {
 			jobConf.setProperty(PythonUDFUtil.PYFLINK_CACHED_USR_LIB_IDS, dcFileKeys);
 		}
+	}
+
+	private static void logAndSysout(String content) {
+		LOG.info(content);
+		System.out.println(content);
 	}
 }
