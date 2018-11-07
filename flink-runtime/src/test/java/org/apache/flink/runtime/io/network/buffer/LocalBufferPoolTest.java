@@ -409,10 +409,15 @@ public class LocalBufferPoolTest {
 			AtomicInteger times = new AtomicInteger(0);
 
 			@Override
-			public boolean notifyBufferAvailable(Buffer buffer) {
+			public NotificationResult notifyBufferAvailable(Buffer buffer) {
 				int newCount = times.incrementAndGet();
 				buffer.recycleBuffer();
-				return newCount < notificationTimes;
+
+				if (newCount < notificationTimes) {
+					return NotificationResult.BUFFER_USED_NEED_MORE;
+				} else {
+					return NotificationResult.BUFFER_USED_FINISHED;
+				}
 			}
 
 			@Override

@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.io.network.buffer;
 
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.runtime.io.network.buffer.BufferListener.NotificationResult;
 import org.apache.flink.util.ExceptionUtils;
 
 import org.slf4j.Logger;
@@ -258,56 +259,35 @@ class LocalBufferPool implements BufferPool {
 	@Override
 	public void recycle(MemorySegment segment) {
 		BufferListener listener;
-		synchronized (availableMemorySegments) {
-			if (isDestroyed || numberOfRequestedMemorySegments > currentPoolSize) {
-				returnMemorySegment(segment);
-				return;
-			}
-			else {
-				listener = registeredListeners.poll();
+		NotificationResult notificationResult = NotificationResult.NONE;
 
-				if (listener == null) {
-					availableMemorySegments.add(segment);
-					availableMemorySegments.notify();
+		while (!notificationResult.bufferUsed()) {
+			synchronized (availableMemorySegments) {
+				if (isDestroyed || numberOfRequestedMemorySegments > currentPoolSize) {
+					returnMemorySegment(segment);
 					return;
+				} else {
+					listener = registeredListeners.poll();
+
+					if (listener == null) {
+						availableMemorySegments.add(segment);
+						availableMemorySegments.notify();
+						return;
+					}
 				}
 			}
-		}
 
-		// We do not know which locks have been acquired before the recycle() or are needed in the
-		// notification and which other threads also access them.
-		// -> call notifyBufferAvailable() outside of the synchronized block to avoid a deadlock (FLINK-9676)
-		boolean success = false;
-		boolean needMoreBuffers = false;
-		try {
-			needMoreBuffers = listener.notifyBufferAvailable(new NetworkBuffer(segment, this));
-			success = true;
-		} catch (Throwable ignored) {
-			// handled below, under the lock
-		}
+			// We do not know which locks have been acquired before the recycle() or are needed in the
+			// notification and which other threads also access them.
+			// -> call notifyBufferAvailable() outside of the synchronized block to avoid a deadlock (FLINK-9676)
+			notificationResult = listener.notifyBufferAvailable(new NetworkBuffer(segment, this));
 
-		if (!success || needMoreBuffers) {
-			synchronized (availableMemorySegments) {
+			if (notificationResult.needsMoreBuffers()) {
 				if (isDestroyed) {
 					// cleanup tasks how they would have been done if we only had one synchronized block
-					if (needMoreBuffers) {
-						listener.notifyBufferDestroyed();
-					}
-					if (!success) {
-						returnMemorySegment(segment);
-					}
+					listener.notifyBufferDestroyed();
 				} else {
-					if (needMoreBuffers) {
-						registeredListeners.add(listener);
-					}
-					if (!success) {
-						if (numberOfRequestedMemorySegments > currentPoolSize) {
-							returnMemorySegment(segment);
-						} else {
-							availableMemorySegments.add(segment);
-							availableMemorySegments.notify();
-						}
-					}
+					registeredListeners.add(listener);
 				}
 			}
 		}

@@ -473,6 +473,12 @@ public class SingleInputGate implements InputGate {
 						retriggerLocalRequestTimer.cancel();
 					}
 
+					// The buffer pool can actually be destroyed immediately after the
+					// reader received all of the data from the input channels.
+					if (bufferPool != null) {
+						bufferPool.lazyDestroy();
+					}
+
 					for (InputChannel inputChannel : inputChannels.values()) {
 						try {
 							inputChannel.releaseAllResources();
@@ -480,12 +486,6 @@ public class SingleInputGate implements InputGate {
 						catch (IOException e) {
 							LOG.warn("Error during release of channel resources: " + e.getMessage(), e);
 						}
-					}
-
-					// The buffer pool can actually be destroyed immediately after the
-					// reader received all of the data from the input channels.
-					if (bufferPool != null) {
-						bufferPool.lazyDestroy();
 					}
 				}
 				finally {

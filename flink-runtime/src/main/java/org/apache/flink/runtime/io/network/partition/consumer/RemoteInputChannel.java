@@ -374,43 +374,42 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	 * by one.
 	 *
 	 * @param buffer Buffer that becomes available in buffer pool.
-	 * @return True when this channel is waiting for more floating buffers, otherwise false.
+	 * @return NotificationResult indicates whether this channel accepts the buffer and is waiting for
+	 *  	more floating buffers.
 	 */
 	@Override
-	public boolean notifyBufferAvailable(Buffer buffer) {
-		// Check the isReleased state outside synchronized block first to avoid
-		// deadlock with releaseAllResources running in parallel.
-		if (isReleased.get()) {
-			buffer.recycleBuffer();
-			return false;
-		}
+	public NotificationResult notifyBufferAvailable(Buffer buffer) {
+		NotificationResult notificationResult = NotificationResult.NONE;
 
-		boolean needMoreBuffers = false;
-		synchronized (bufferQueue) {
-			checkState(isWaitingForFloatingBuffers, "This channel should be waiting for floating buffers.");
+		try {
+			synchronized (bufferQueue) {
+				checkState(isWaitingForFloatingBuffers, "This channel should be waiting for floating buffers.");
 
-			// Important: double check the isReleased state inside synchronized block, so there is no
-			// race condition when notifyBufferAvailable and releaseAllResources running in parallel.
-			if (isReleased.get() || bufferQueue.getAvailableBufferSize() >= numRequiredBuffers) {
-				isWaitingForFloatingBuffers = false;
-				buffer.recycleBuffer();
-				return false;
+				// Important: double check the isReleased state inside synchronized block, so there is no
+				// race condition when notifyBufferAvailable and releaseAllResources running in parallel.
+				if (isReleased.get() || bufferQueue.getAvailableBufferSize() >= numRequiredBuffers) {
+					isWaitingForFloatingBuffers = false;
+					return notificationResult;
+				}
+
+				bufferQueue.addFloatingBuffer(buffer);
+
+				if (bufferQueue.getAvailableBufferSize() == numRequiredBuffers) {
+					isWaitingForFloatingBuffers = false;
+					notificationResult = NotificationResult.BUFFER_USED_FINISHED;
+				} else {
+					notificationResult = NotificationResult.BUFFER_USED_NEED_MORE;
+				}
 			}
 
-			bufferQueue.addFloatingBuffer(buffer);
-
-			if (bufferQueue.getAvailableBufferSize() == numRequiredBuffers) {
-				isWaitingForFloatingBuffers = false;
-			} else {
-				needMoreBuffers =  true;
+			if (unannouncedCredit.getAndAdd(1) == 0) {
+				notifyCreditAvailable();
 			}
+		} catch (Throwable t) {
+			setError(t);
 		}
 
-		if (unannouncedCredit.getAndAdd(1) == 0) {
-			notifyCreditAvailable();
-		}
-
-		return needMoreBuffers;
+		return notificationResult;
 	}
 
 	@Override
