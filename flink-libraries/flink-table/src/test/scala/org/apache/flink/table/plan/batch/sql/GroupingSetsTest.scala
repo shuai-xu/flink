@@ -23,7 +23,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan._
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.util.{TableTestBatchExecBase, TestTableSourceWithFieldNullables}
 import org.junit.{Before, Test}
 
@@ -35,7 +35,7 @@ class GroupingSetsTest extends TableTestBatchExecBase {
   def before(): Unit = {
     util.addTable[(Int, Long, Int)]("MyTable", 'a, 'b, 'c)
     util.tableEnv.getConfig.getCalciteConfig.
-      getBatchExecPrograms.remove(FlinkBatchExecPrograms.PHYSICAL)
+      getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
   }
 
   @Test

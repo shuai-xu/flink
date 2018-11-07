@@ -39,7 +39,7 @@ class TestLimitableTableSource(
     rowType: RowTypeInfo,
     var limit: Long = -1,
     var limitablePushedDown: Boolean = false)
-  extends BatchExecTableSource[Row]
+  extends BatchTableSource[Row]
   with LimitableTableSource {
 
   /**

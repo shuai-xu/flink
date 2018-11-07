@@ -37,16 +37,16 @@ class FlinkAggregateJoinTransposeRuleITCase extends QueryTest {
 
   @Before
   def before(): Unit = {
-    val programs = tEnv.getConfig.getCalciteConfig.getBatchExecPrograms
+    val programs = tEnv.getConfig.getCalciteConfig.getBatchPrograms
     // remove FlinkAggregateJoinTransposeRule from logical program (volcano planner)
-    programs.getFlinkRuleSetProgram(FlinkBatchExecPrograms.LOGICAL)
-      .getOrElse(throw new TableException(s"${FlinkBatchExecPrograms.LOGICAL} does not exist"))
+    programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
+      .getOrElse(throw new TableException(s"${FlinkBatchPrograms.LOGICAL} does not exist"))
       .remove(RuleSets.ofList(FlinkAggregateJoinTransposeRule.EXTENDED))
 
     // add FlinkAggregateJoinTransposeRule to hep program
     // to make sure that the aggregation must be pushed down
     programs.addBefore(
-      FlinkBatchExecPrograms.LOGICAL,
+      FlinkBatchPrograms.LOGICAL,
       "FlinkAggregateJoinTransposeRule",
       FlinkHepRuleSetProgramBuilder.newBuilder
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)

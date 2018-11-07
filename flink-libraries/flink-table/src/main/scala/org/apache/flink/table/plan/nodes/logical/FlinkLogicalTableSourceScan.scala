@@ -35,7 +35,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.sources.{BatchExecTableSource, _}
+import org.apache.flink.table.sources._
 
 import scala.collection.JavaConverters._
 
@@ -64,7 +64,7 @@ class FlinkLogicalTableSourceScan(
     tableSource match {
       case s: StreamTableSource[_] =>
         TableSourceUtil.getRelDataType(s, None, streaming = true, flinkTypeFactory)
-      case _: BatchExecTableSource[_] | _: DimensionTableSource[_]=>
+      case _: BatchTableSource[_] | _: DimensionTableSource[_]=>
         flinkTypeFactory.buildLogicalRowType(tableSource.getTableSchema, false)
       case _ => throw new TableException("Unknown TableSource type.")
     }

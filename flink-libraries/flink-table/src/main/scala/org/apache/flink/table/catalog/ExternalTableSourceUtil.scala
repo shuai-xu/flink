@@ -26,7 +26,7 @@ import org.apache.flink.table.annotation.TableType
 import org.apache.flink.table.api.{NoMatchedTableSourceConverterException}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.sources.{BatchExecTableSource, DimensionTableSource, StreamTableSource, TableSource}
+import org.apache.flink.table.sources.{BatchTableSource, DimensionTableSource, StreamTableSource, TableSource}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.InstantiationUtil
 import org.reflections.Reflections
@@ -147,7 +147,7 @@ object ExternalTableSourceUtil extends Logging {
 
           tableSource match {
             case s: StreamTableSource[_] => new StreamTableSourceTable(s, flinkStatistic)
-            case s: BatchExecTableSource[_] => new BatchTableSourceTable(s, flinkStatistic)
+            case s: BatchTableSource[_] => new BatchTableSourceTable(s, flinkStatistic)
             case s: DimensionTableSource[_] if s.isTemporal =>
               new TemporalDimensionTableSourceTable(s, flinkStatistic)
             case s: DimensionTableSource[_] if !s.isTemporal =>

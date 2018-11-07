@@ -34,7 +34,7 @@ import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
-import org.apache.flink.table.sources.BatchExecTableSource
+import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.types.Row
@@ -65,7 +65,7 @@ class GroupWindowITCase extends QueryTest {
       "a" -> ColumnStats(10000000L, 1L, 8D, 8, 5, -5),
       "b" -> ColumnStats(8000000L, 0L, 4D, 32, 6.1D, 0D),
       "c" -> ColumnStats(9000000L, 0L, 1024D, 32, 6.1D, 0D))
-    val table = new BatchExecTableSource[Row] {
+    val table = new BatchTableSource[Row] {
       override def getReturnType: DataType =
         DataTypes.createRowType(
           tableSchema.getTypes.asInstanceOf[Array[DataType]], tableSchema.getColumnNames)

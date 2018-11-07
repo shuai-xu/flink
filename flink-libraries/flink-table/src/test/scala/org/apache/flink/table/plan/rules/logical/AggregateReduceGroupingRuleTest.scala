@@ -38,12 +38,12 @@ class AggregateReduceGroupingRuleTest(plan: String) extends TableTestBatchExecBa
   @Before
   def setup(): Unit = {
     if (plan == "logical") {
-      val programs = util.tableEnv.getConfig.getCalciteConfig.getBatchExecPrograms
+      val programs = util.tableEnv.getConfig.getCalciteConfig.getBatchPrograms
       var startRemove = false
       programs.getProgramNames.foreach { name =>
         if (startRemove) {
           programs.remove(name)
-        } else if (name eq FlinkBatchExecPrograms.LOGICAL) {
+        } else if (name eq FlinkBatchPrograms.LOGICAL) {
           startRemove = true
         }
       }
@@ -57,8 +57,8 @@ class AggregateReduceGroupingRuleTest(plan: String) extends TableTestBatchExecBa
 
   @Test
   def testAggWithoutAggCall(): Unit = {
-    val programs = util.tableEnv.getConfig.getCalciteConfig.getBatchExecPrograms
-    programs.getFlinkRuleSetProgram(FlinkBatchExecPrograms.LOGICAL)
+    val programs = util.tableEnv.getConfig.getCalciteConfig.getBatchPrograms
+    programs.getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(AggregateRemoveRule.INSTANCE)) // to prevent the agg from removing
     util.verifyPlan("SELECT a1, b1, c1 FROM T1 GROUP BY a1, b1, c1")
   }

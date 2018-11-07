@@ -28,7 +28,7 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.physical.batch.{BatchExecNestedLoopJoinRule, BatchExecSortMergeJoinRule}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.TestData._
@@ -84,8 +84,8 @@ class PlanUtilTest extends AbstractTestBase {
   @Test
   def testDumpPlanWithMetricsOfJoin(): Unit = {
     tableEnv.getConfig.setJoinReorderEnabled(true)
-    val program = tableEnv.getConfig.getCalciteConfig.getBatchExecPrograms
-        .getFlinkRuleSetProgram(FlinkBatchExecPrograms.PHYSICAL)
+    val program = tableEnv.getConfig.getCalciteConfig.getBatchPrograms
+        .getFlinkRuleSetProgram(FlinkBatchPrograms.PHYSICAL)
     program.get.remove(RuleSets.ofList(
       BatchExecSortMergeJoinRule.INSTANCE,
       BatchExecNestedLoopJoinRule.INSTANCE))

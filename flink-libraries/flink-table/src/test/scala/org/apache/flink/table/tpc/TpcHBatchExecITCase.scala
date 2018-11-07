@@ -21,8 +21,8 @@ import java.util
 
 import org.apache.flink.configuration.TaskManagerOptions
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.runtime.batchexec.sql.{OptionalModeQueryTest, PartitionShufflerMode}
-import org.apache.flink.table.runtime.batchexec.sql.PartitionShufflerMode.PartitionShufflerMode
+import org.apache.flink.table.runtime.batch.sql.{OptionalModeQueryTest, PartitionShufflerMode}
+import org.apache.flink.table.runtime.batch.sql.PartitionShufflerMode.PartitionShufflerMode
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.test.util.TestBaseUtils

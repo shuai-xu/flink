@@ -49,7 +49,7 @@ class FlinkAggregateJoinTransposeRuleTest extends TableTestBatchExecBase {
           FlinkAggregateJoinTransposeRule.EXTENDED
         )).build()
     )
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchExecPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Int, String)]("T", 'a, 'b, 'c)

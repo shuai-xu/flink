@@ -24,7 +24,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.plan.stats.TableStats;
-import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.ProjectableTableSource;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
@@ -61,7 +61,7 @@ import scala.Option;
  * </pre>
  *
  */
-public class HBaseTableSource implements BatchExecTableSource<GenericRow>, ProjectableTableSource {
+public class HBaseTableSource implements BatchTableSource<GenericRow>, ProjectableTableSource {
 
 	private Configuration conf;
 	private String tableName;

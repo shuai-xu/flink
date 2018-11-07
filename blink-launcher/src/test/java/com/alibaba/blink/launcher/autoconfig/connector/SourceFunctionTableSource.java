@@ -29,7 +29,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.plan.stats.TableStats;
-import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
@@ -42,7 +42,7 @@ import scala.Option;
 /**
  * A simplified class, mostly copied from blink-connector, for IT test only.
  */
-public class SourceFunctionTableSource<OUT> implements BatchExecTableSource<OUT>, StreamTableSource<OUT>, Serializable {
+public class SourceFunctionTableSource<OUT> implements BatchTableSource<OUT>, StreamTableSource<OUT>, Serializable {
 	private static final long serialVersionUID = 7078000231877526561L;
 	protected TypeInformation<OUT> returnTypeInfo;
 	private transient DataStream dataStream;

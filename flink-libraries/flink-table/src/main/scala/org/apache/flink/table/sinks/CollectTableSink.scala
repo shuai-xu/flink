@@ -32,7 +32,7 @@ import org.apache.flink.types.Row
   * A simple [[TableSink]] to emit data as T to a collection.
   */
 class CollectTableSink[T](produceOutputType: (Array[DataType] => DataType))
-    extends TableSinkBase[T] with BatchExecTableSink[T] {
+    extends TableSinkBase[T] with BatchTableSink[T] {
 
   private var collectOutputFormat: CollectOutputFormat[T] = _
 

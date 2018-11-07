@@ -32,13 +32,13 @@ class FlinkLogicalConstantRankRuleTest extends TableTestBatchExecBase {
   def setup(): Unit = {
     var startRemove = false
     val calciteConfig = util.tableEnv.getConfig.getCalciteConfig
-    calciteConfig.getBatchExecPrograms.getProgramNames.foreach {
+    calciteConfig.getBatchPrograms.getProgramNames.foreach {
       name =>
         if (name.equals(FlinkStreamPrograms.PHYSICAL)) {
           startRemove = true
         }
         if (startRemove) {
-          calciteConfig.getBatchExecPrograms.remove(name)
+          calciteConfig.getBatchPrograms.remove(name)
         }
     }
 

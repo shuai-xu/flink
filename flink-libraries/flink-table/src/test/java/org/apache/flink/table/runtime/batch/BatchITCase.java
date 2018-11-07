@@ -26,7 +26,7 @@ import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.runtime.utils.CommonTestData;
 import org.apache.flink.table.sinks.csv.CsvTableSink;
-import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.csv.CsvTableSource;
 import org.apache.flink.table.util.ExecResourceUtil;
 import org.apache.flink.table.util.FinalizeCsvSink;
@@ -52,7 +52,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Integration tests for {@link BatchExecTableSource}.
+ * Integration tests for {@link BatchTableSource}.
  */
 public class BatchITCase extends AbstractTestBase {
 	private File tmpFile = new File("/tmp/123");
@@ -127,7 +127,7 @@ public class BatchITCase extends AbstractTestBase {
 	@Test
 	public void testBatchExecSink() throws Exception {
 		env.setParallelism(1);
-		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
+		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
 
@@ -152,7 +152,7 @@ public class BatchITCase extends AbstractTestBase {
 	@Test(expected = TableException.class)
 	public void testNoTableSink() {
 		env.setParallelism(1);
-		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
+		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
 
@@ -165,7 +165,7 @@ public class BatchITCase extends AbstractTestBase {
 	@Test
 	public void testIOVertex() throws IOException {
 		env.setParallelism(1);
-		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
+		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
 
@@ -194,7 +194,7 @@ public class BatchITCase extends AbstractTestBase {
 	@Test
 	public void testSinkParallelism() throws IOException {
 		tableEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SINK_PARALLELISM(), 5);
-		BatchExecTableSource csvTable = CommonTestData.getCsvTableSource();
+		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
 

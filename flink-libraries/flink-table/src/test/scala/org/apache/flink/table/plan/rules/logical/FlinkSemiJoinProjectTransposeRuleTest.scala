@@ -35,7 +35,7 @@ class FlinkSemiJoinProjectTransposeRuleTest(fieldsNullable: Boolean)
   def setup(): Unit = {
     util.tableEnv.config
       .getCalciteConfig
-      .getBatchExecPrograms
+      .getBatchPrograms
       .addLast("semi_join_transpose",
         FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)

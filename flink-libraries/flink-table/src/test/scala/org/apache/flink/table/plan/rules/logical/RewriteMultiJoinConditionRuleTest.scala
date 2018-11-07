@@ -170,7 +170,7 @@ class RewriteMultiJoinConditionRuleTest extends TableTestBatchExecBase {
       programs
     }
     val builder = new CalciteConfigBuilder()
-      .replaceBatchExecPrograms(buildPrograms())
+      .replaceBatchPrograms(buildPrograms())
     util.tableEnv.config.setCalciteConfig(builder.build())
     util.setJoinReorderEnabled(true)
 

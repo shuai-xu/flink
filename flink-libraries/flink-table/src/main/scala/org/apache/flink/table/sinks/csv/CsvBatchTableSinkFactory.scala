@@ -22,7 +22,7 @@ import java.util
 
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.BatchTableSinkFactory
-import org.apache.flink.table.sinks.BatchExecTableSink
+import org.apache.flink.table.sinks.BatchTableSink
 
 /**
   * Factory base for creating configured instances of [[CsvTableSink]] in a batch environment.
@@ -33,7 +33,7 @@ class CsvBatchTableSinkFactory
 
   override def createBatchTableSink(
       properties: util.Map[String, String])
-    : BatchExecTableSink[BaseRow] = {
+    : BatchTableSink[BaseRow] = {
     createTableSink(isStreaming = false, properties)
   }
 }

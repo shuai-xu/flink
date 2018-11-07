@@ -27,7 +27,7 @@ import org.apache.flink.table.plan.rules.logical.{JoinDependentFilterPushdownRul
 /**
   * Defines a sequence of programs to optimize flink batch exec table plan.
   */
-object FlinkBatchExecPrograms {
+object FlinkBatchPrograms {
   val QUERY_REWRITE = "query_rewrite"
   val TABLE_REF = "table_ref"
   val DECORRELATE = "decorrelate"

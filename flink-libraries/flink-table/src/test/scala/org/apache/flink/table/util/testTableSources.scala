@@ -43,7 +43,7 @@ class TestTableSourceWithTime[T](
     proctime: String = null,
     mapping: Map[String, String] = null)
   extends StreamTableSource[T]
-    with BatchExecTableSource[T]
+    with BatchTableSource[T]
     with DefinedRowtimeAttributes
     with DefinedProctimeAttribute
     with DefinedFieldMapping {

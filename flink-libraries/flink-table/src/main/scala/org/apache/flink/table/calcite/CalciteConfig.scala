@@ -34,9 +34,9 @@ import org.apache.flink.util.Preconditions
 class CalciteConfigBuilder {
 
   /**
-    * Defines the optimize programs for batch exec table plan.
+    * Defines the optimize programs for batch table plan.
     */
-  private var batchExecPrograms = FlinkBatchExecPrograms.buildPrograms()
+  private var batchPrograms = FlinkBatchPrograms.buildPrograms()
 
   /**
     * Defines the optimize programs for stream table plan.
@@ -50,19 +50,19 @@ class CalciteConfigBuilder {
   private var operatorTables: List[SqlOperatorTable] = Nil
 
   /**
-    * Gets batch exec table optimize programs.
+    * Gets batch table optimize programs.
     *
-    * @return batch exec table optimize programs instance.
+    * @return batch table optimize programs instance.
     */
-  def getBatchExecPrograms: FlinkChainedPrograms[BatchOptimizeContext] = batchExecPrograms
+  def getBatchPrograms: FlinkChainedPrograms[BatchOptimizeContext] = batchPrograms
 
   /**
-    * Replaces the built-in batch exec table optimize programs.
+    * Replaces the built-in batch table optimize programs.
     */
-  def replaceBatchExecPrograms(
+  def replaceBatchPrograms(
       programs: FlinkChainedPrograms[BatchOptimizeContext])
   : CalciteConfigBuilder = {
-    batchExecPrograms = Preconditions.checkNotNull(programs)
+    batchPrograms = Preconditions.checkNotNull(programs)
     this
   }
 
@@ -128,7 +128,7 @@ class CalciteConfigBuilder {
   }
 
   private class CalciteConfigImpl(
-      val getBatchExecPrograms: FlinkChainedPrograms[BatchOptimizeContext],
+      val getBatchPrograms: FlinkChainedPrograms[BatchOptimizeContext],
       val getStreamPrograms: FlinkChainedPrograms[StreamOptimizeContext],
       val getSqlOperatorTable: Option[SqlOperatorTable],
       val replacesSqlOperatorTable: Boolean,
@@ -140,7 +140,7 @@ class CalciteConfigBuilder {
     * Builds a new [[CalciteConfig]].
     */
   def build(): CalciteConfig = new CalciteConfigImpl(
-    getBatchExecPrograms,
+    getBatchPrograms,
     getStreamPrograms,
     operatorTables match {
       case Nil => None
@@ -160,9 +160,9 @@ class CalciteConfigBuilder {
 trait CalciteConfig {
 
   /**
-    * Returns batch exec table optimize programs.
+    * Returns batch table optimize programs.
     */
-  def getBatchExecPrograms: FlinkChainedPrograms[BatchOptimizeContext]
+  def getBatchPrograms: FlinkChainedPrograms[BatchOptimizeContext]
 
   /**
     * Returns stream table optimize programs.

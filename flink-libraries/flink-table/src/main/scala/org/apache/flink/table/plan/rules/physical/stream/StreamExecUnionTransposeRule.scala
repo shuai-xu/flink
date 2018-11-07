@@ -28,7 +28,7 @@ import scala.collection.JavaConversions._
 /**
   * Planner rule that transpose a stream RelNode with specified type into a [[StreamExecUnion]].
   */
-class StreamUnionTransposeRule[T <: StreamExecRel](
+class StreamExecUnionTransposeRule[T <: StreamExecRel](
     outputClass: Class[T],
     description: String)
   extends RelOptRule(operand(outputClass, operand(classOf[StreamExecUnion], any)), description) {
@@ -57,17 +57,17 @@ class StreamUnionTransposeRule[T <: StreamExecRel](
 
 }
 
-object StreamUnionTransposeRule {
+object StreamExecUnionTransposeRule {
 
-  val CALC_INSTANCE = new StreamUnionTransposeRule(
+  val CALC_INSTANCE = new StreamExecUnionTransposeRule(
       classOf[StreamExecCalc],
       "StreamExecUnionCalcTransposeRule")
 
-  val EXPAND_INSTANCE = new StreamUnionTransposeRule(
+  val EXPAND_INSTANCE = new StreamExecUnionTransposeRule(
     classOf[StreamExecExpand],
     "StreamExecUnionExpandTransposeRule")
 
-  val LOCAL_GROUP_AGG_INSTANCE = new StreamUnionTransposeRule(
+  val LOCAL_GROUP_AGG_INSTANCE = new StreamExecUnionTransposeRule(
     classOf[StreamExecLocalGroupAggregate],
     "StreamExecUnionLocalGroupAggTransposeRule")
 

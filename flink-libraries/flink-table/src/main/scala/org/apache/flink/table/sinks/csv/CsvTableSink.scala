@@ -49,7 +49,7 @@ class CsvTableSink(
     outputFieldNames: Option[Boolean],
     timezone: Option[TimeZone])
   extends TableSinkBase[BaseRow]
-    with BatchExecTableSink[BaseRow]
+    with BatchTableSink[BaseRow]
     with AppendStreamTableSink[BaseRow] {
 
   private val name = "csv sink: " + path

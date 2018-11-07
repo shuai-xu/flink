@@ -61,7 +61,7 @@ class SubQueryTestBase(fieldsNullable: Boolean) extends TableTestBatchExecBase {
       .withExpand(false)
       .withInSubQueryThreshold(3)
       .build())
-    .replaceBatchExecPrograms(buildPrograms())
+    .replaceBatchPrograms(buildPrograms())
 
   util.tableEnv.config.setCalciteConfig(builder.build())
 }

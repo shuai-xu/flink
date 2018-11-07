@@ -1167,7 +1167,7 @@ under the License.
 						<exclude>flink-libraries/flink-table/src/test/resources/tpch/queries-stream/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/tpch/data/*/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/tpch/result/*</exclude>
-						<exclude>flink-libraries/flink-table/src/test/resources/runtime/batchexec/*</exclude>
+						<exclude>flink-libraries/flink-table/src/test/resources/runtime/batch/*</exclude>
 						<exclude>blink-table/src/test/resources/**</exclude>
 						<exclude>blink-launcher/src/test/resources/**</exclude>
 						<!-- netty test file, still Apache License 2.0 but with a different header -->

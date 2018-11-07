@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.util.{TableTestBatchExecBase, TestTableSourceWithFieldNullables}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -38,7 +38,7 @@ class DistinctAggregateTest(fieldsNullable: Boolean) extends TableTestBatchExecB
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     util.addTable[(Int, Long, String, String, String)]("MyTable5", 'a, 'b, 'c, 'd, 'e)
     util.tableEnv.getConfig.getCalciteConfig.
-      getBatchExecPrograms.remove(FlinkBatchExecPrograms.PHYSICAL)
+      getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
   }
 
   @Test

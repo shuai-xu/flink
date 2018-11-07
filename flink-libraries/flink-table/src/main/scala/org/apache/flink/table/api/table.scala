@@ -854,7 +854,7 @@ class Table(
     * Writes the [[Table]] to a [[TableSink]]. A [[TableSink]] defines an external storage location.
     *
     * A batch [[Table]] can only be written to a
-    * [[org.apache.flink.table.sinks.BatchExecTableSink]], a streaming [[Table]] requires a
+    * [[org.apache.flink.table.sinks.BatchTableSink]], a streaming [[Table]] requires a
     * [[org.apache.flink.table.sinks.AppendStreamTableSink]], a
     * [[org.apache.flink.table.sinks.RetractStreamTableSink]], or an
     * [[org.apache.flink.table.sinks.UpsertStreamTableSink]].
@@ -885,7 +885,7 @@ class Table(
     * Writes the [[Table]] to a [[TableSink]] that was registered under the specified name.
     *
     * A batch [[Table]] can only be written to a
-    * [[org.apache.flink.table.sinks.BatchExecTableSink]], a streaming [[Table]] requires a
+    * [[org.apache.flink.table.sinks.BatchTableSink]], a streaming [[Table]] requires a
     * [[org.apache.flink.table.sinks.AppendStreamTableSink]], a
     * [[org.apache.flink.table.sinks.RetractStreamTableSink]], or an
     * [[org.apache.flink.table.sinks.UpsertStreamTableSink]].

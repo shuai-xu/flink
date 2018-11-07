@@ -21,7 +21,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.sources.BatchExecTableSource
+import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.apache.flink.types.Row
@@ -48,7 +48,7 @@ class AggregateTest extends TableTestBatchExecBase {
       "customerId" -> ColumnStats(10000000L, 1L, 8D, 8, 5, -5),
       "productId" -> ColumnStats(50000L, 0L, 4D, 32, 6.1D, 0D),
       "colLarge" -> ColumnStats(80000L, 0L, 1024D, 32, 6.1D, 0D))
-    val table = new BatchExecTableSource[Row] {
+    val table = new BatchTableSource[Row] {
       override def getReturnType: DataType =
         DataTypes.createRowType(
           tableSchema.getTypes.asInstanceOf[Array[DataType]],

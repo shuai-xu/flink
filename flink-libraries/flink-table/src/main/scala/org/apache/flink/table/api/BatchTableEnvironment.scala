@@ -52,7 +52,7 @@ import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescri
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources.{BatchExecTableSource, _}
+import org.apache.flink.table.sources.{BatchTableSource, _}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil}
@@ -229,11 +229,11 @@ class BatchTableEnvironment(
       sinkNodes += SinkNode(table.logicalPlan, sink)
     } else {
       sink match {
-        case batchExecTableSink: BatchExecTableSink[T] =>
+        case batchTableSink: BatchTableSink[T] =>
           val outputType = sink.getOutputType
           val result = translate[T](table, outputType, sink)
-          transformations.add(emitBoundedStreamSink(batchExecTableSink, result).getTransformation)
-        case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
+          transformations.add(emitBoundedStreamSink(batchTableSink, result).getTransformation)
+        case compatibleTableSink: BatchCompatibleStreamTableSink[_] =>
           val result = translate[T](
             table,
             compatibleTableSink.getOutputType,
@@ -241,8 +241,8 @@ class BatchTableEnvironment(
             withChangeFlag = true)
           transformations.add(emitBoundedStreamSink(compatibleTableSink, result).getTransformation)
         case _ =>
-          throw new TableException("BatchExecTableSink or CompatibleStreamTableSink" +
-            " can be registered in BatchExecTableEnvironment")
+          throw new TableException("BatchTableSink or CompatibleStreamTableSink" +
+            " can be registered in BatchTableEnvironment")
       }
     }
   }
@@ -298,7 +298,7 @@ class BatchTableEnvironment(
     val boundedStream: DataStream[_] = blockLogicalPlan match {
       case n: SinkNode =>
         n.sink match {
-          case compatibleTableSink: BatchExecCompatibleStreamTableSink[_] =>
+          case compatibleTableSink: BatchCompatibleStreamTableSink[_] =>
             translate(batchExecPlan, relNode.getRowType, withChangeFlag = true,
               compatibleTableSink.getOutputType, compatibleTableSink)
           case _ =>
@@ -333,16 +333,16 @@ class BatchTableEnvironment(
   private def emitBoundedStreamSink[T](
       sink: TableSink[T], boundedStream: DataStream[T]): DataStreamSink[_] = {
     sink match {
-      case sinkBatch: BatchExecTableSink[T] =>
+      case sinkBatch: BatchTableSink[T] =>
         val boundedSink = sinkBatch.emitBoundedStream(boundedStream, config, streamEnv.getConfig)
         assignDefaultResourceAndParallelism(boundedStream, boundedSink)
         boundedSink
-      case compatible: BatchExecCompatibleStreamTableSink[T] =>
+      case compatible: BatchCompatibleStreamTableSink[T] =>
         val boundedSink = compatible.emitBoundedStream(
           boundedStream.asInstanceOf[DataStream[T]])
         assignDefaultResourceAndParallelism(boundedStream, boundedSink)
         boundedSink
-      case _ => throw new TableException("BatchExecTableSink or " +
+      case _ => throw new TableException("BatchTableSink or " +
           "CompatibleStreamTableSink required to emit batch exec Table")
     }
   }
@@ -606,7 +606,7 @@ class BatchTableEnvironment(
    * @return The optimized [[RelNode]] tree
    */
   private[flink] def optimize(relNode: RelNode): RelNode = {
-    val programs = config.getCalciteConfig.getBatchExecPrograms
+    val programs = config.getCalciteConfig.getBatchPrograms
     Preconditions.checkNotNull(programs)
 
     val optimizedPlan = programs.optimize(relNode, new BatchOptimizeContext {
@@ -665,7 +665,7 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Registers an internal [[BatchExecTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[BatchTableSource]] in this [[TableEnvironment]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -680,7 +680,7 @@ class BatchTableEnvironment(
     tableSource match {
 
       // check for proper batch table source
-      case batchTableSource: BatchExecTableSource[_] =>
+      case batchTableSource: BatchTableSource[_] =>
         // check if a table (source or sink) is registered
         getTable(name) match {
 
@@ -815,7 +815,7 @@ class BatchTableEnvironment(
     configuredSink match {
 
       // check for proper batch table sink
-      case _: BatchExecTableSink[_] | _: BatchExecCompatibleStreamTableSink[_] =>
+      case _: BatchTableSink[_] | _: BatchCompatibleStreamTableSink[_] =>
 
         // check if a table (source or sink) is registered
         getTable(name) match {

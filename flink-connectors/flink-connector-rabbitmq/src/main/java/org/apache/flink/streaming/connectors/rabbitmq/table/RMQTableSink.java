@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.connectors.rabbitmq.RMQSink;
 import org.apache.flink.streaming.connectors.rabbitmq.common.RMQConnectionConfig;
 import org.apache.flink.table.api.RichTableSchema;
-import org.apache.flink.table.sinks.BatchExecCompatibleStreamTableSink;
+import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.UpsertStreamTableSink;
 import org.apache.flink.table.types.DataType;
@@ -41,7 +41,7 @@ import java.io.Serializable;
  * Rabbit MQ table sink which publishes message directly to a queue.
  */
 public class RMQTableSink implements UpsertStreamTableSink<Row>,
-		BatchExecCompatibleStreamTableSink<Tuple2<Boolean, Row>>, Serializable {
+		BatchCompatibleStreamTableSink<Tuple2<Boolean, Row>>, Serializable {
 
 	private RMQConnectionConfig connectionConfig;
 

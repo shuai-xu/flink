@@ -44,11 +44,10 @@ import scala.collection.mutable
   * This source can only handle simple comparision with field "amount".
   * Supports ">, <, >=, <=, =, <>" with an integer.
   */
-class TestFilterableTableSource(
-    val recordNum: Int = 33)
-    extends BatchExecTableSource[Row]
-        with StreamTableSource[Row]
-        with FilterableTableSource {
+class TestFilterableTableSource(val recordNum: Int = 33)
+  extends BatchTableSource[Row]
+  with StreamTableSource[Row]
+  with FilterableTableSource {
 
   var filterPushedDown: Boolean = false
 

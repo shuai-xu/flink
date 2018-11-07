@@ -33,7 +33,7 @@ import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.resource.batch.BatchExecResourceTest.MockTableSource
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource, TableSource}
+import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.table.tpc.{STATS_MODE, Schema, TpcHSchemaProvider, TpchTableStatsProvider}
 import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.{ExecResourceUtil, TableTestBatchExecBase}
@@ -264,7 +264,7 @@ object BatchExecResourceTest {
 
   class MockTableSource(
       schema: Schema,
-      stats: TableStats) extends BatchExecTableSource[Row] with LimitableTableSource {
+      stats: TableStats) extends BatchTableSource[Row] with LimitableTableSource {
     var isLimitPushdown = false
 
     override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {

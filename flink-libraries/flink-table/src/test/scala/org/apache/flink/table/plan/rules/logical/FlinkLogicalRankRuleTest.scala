@@ -35,7 +35,7 @@ class FlinkLogicalRankRuleTest extends TableTestBase {
     val calciteConfig = util.tableEnv.getConfig.getCalciteConfig
     calciteConfig.getStreamPrograms.getProgramNames.foreach {
       name =>
-        if (name.equals(FlinkBatchExecPrograms.PHYSICAL)) {
+        if (name.equals(FlinkBatchPrograms.PHYSICAL)) {
           startRemove = true
         }
         if (startRemove) {

@@ -30,7 +30,7 @@ import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, Tabl
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.sources.{BatchExecTableSource, LimitableTableSource, TableSourceUtil}
+import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
 import java.lang.{Boolean => JBoolean}
@@ -39,7 +39,7 @@ import java.lang.{Integer => JInteger}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 /**
-  * Flink RelNode to read data from an external source defined by a [[BatchExecTableSource]].
+  * Flink RelNode to read data from an external source defined by a [[BatchTableSource]].
   */
 class BatchExecTableSourceScan(
     cluster: RelOptCluster,
@@ -121,7 +121,7 @@ class BatchExecTableSourceScan(
 
   private def getSourceTransformation(streamEnv: StreamExecutionEnvironment):
     StreamTransformation[_] = {
-    tableSource.asInstanceOf[BatchExecTableSource[_]]
+    tableSource.asInstanceOf[BatchTableSource[_]]
       .getBoundedStream(streamEnv).getTransformation
   }
 

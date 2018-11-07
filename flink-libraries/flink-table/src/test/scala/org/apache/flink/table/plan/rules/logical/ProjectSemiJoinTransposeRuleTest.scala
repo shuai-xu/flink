@@ -33,7 +33,7 @@ class ProjectSemiJoinTransposeRuleTest(fieldsNullable: Boolean)
   def setup(): Unit = {
     util.tableEnv.config
       .getCalciteConfig
-      .getBatchExecPrograms
+      .getBatchPrograms
       .getFlinkRuleSetProgram("semi_join")
       .get.add(RuleSets.ofList(ProjectSemiJoinTransposeRule.INSTANCE))
 

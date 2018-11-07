@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.csv.BaseRowCsvOutputFormat
-import org.apache.flink.table.sinks.{BatchExecTableSink, TableSinkBase}
+import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 
 class FinalizeCsvSink(
@@ -36,7 +36,7 @@ class FinalizeCsvSink(
     outputFieldNames: Option[Boolean],
     markPath: Option[String])
   extends TableSinkBase[BaseRow]
-  with BatchExecTableSink[BaseRow] {
+  with BatchTableSink[BaseRow] {
 
   private val name = "csv sink: " + path
 

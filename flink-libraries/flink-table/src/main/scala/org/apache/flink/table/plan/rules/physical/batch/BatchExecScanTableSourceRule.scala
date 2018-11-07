@@ -26,7 +26,7 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableSourceScan
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.sources.BatchExecTableSource
+import org.apache.flink.table.sources.BatchTableSource
 
 class BatchExecScanTableSourceRule
   extends ConverterRule(
@@ -35,14 +35,14 @@ class BatchExecScanTableSourceRule
     FlinkConventions.BATCHEXEC,
     "BatchExecScanTableSourceRule") {
 
-  /** Rule must only match if TableScan targets a [[BatchExecTableSource]] */
+  /** Rule must only match if TableScan targets a [[BatchTableSource]] */
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan: TableScan = call.rel(0).asInstanceOf[TableScan]
     val dataSetTable = scan.getTable.unwrap(classOf[TableSourceTable])
     dataSetTable match {
       case tst: TableSourceTable =>
         tst.tableSource match {
-          case _: BatchExecTableSource[_] => true
+          case _: BatchTableSource[_] => true
           case _ => false
         }
       case _ => false

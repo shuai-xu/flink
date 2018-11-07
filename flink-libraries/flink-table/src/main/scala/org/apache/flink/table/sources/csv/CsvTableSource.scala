@@ -38,7 +38,7 @@ import _root_.scala.collection.mutable
 import _root_.scala.collection.JavaConversions._
 
 /**
-  * A [[BatchExecTableSource]] and [[StreamTableSource]] for simple CSV files with a
+  * A [[BatchTableSource]] and [[StreamTableSource]] for simple CSV files with a
   * (logically) unlimited number of fields.
   *
   * @param path            The path to the CSV file.
@@ -70,7 +70,7 @@ class CsvTableSource(
     private var uniqueKeySet: JSet[JSet[String]] = null,
     private var timezone: TimeZone = null,
     private var nestedEnumerate: Boolean = true)
-  extends BatchExecTableSource[BaseRow]
+  extends BatchTableSource[BaseRow]
   with StreamTableSource[BaseRow]
   with LimitableTableSource
   with ProjectableTableSource

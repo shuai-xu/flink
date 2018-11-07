@@ -16,20 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
+package org.apache.flink.table.sources
 
-import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
-import org.apache.flink.table.api._
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
-/** Defines an external [[TableSink]] to emit a batch [[Table]].
+/** Defines an external batch exec table and provides access to its data.
   *
-  * @tparam T Type of [[DataStream]] that this [[TableSink]] expects and supports.
+  * @tparam T Type of the [[DataStream]] created by this [[TableSource]].
   */
-trait BatchExecTableSink[T] extends TableSink[T] {
+trait BatchTableSource[T] extends TableSource {
 
-  /** Emits the DataStream. */
-  def emitBoundedStream(boundedStream: DataStream[T],
-                         tableConfig: TableConfig,
-                         executionConfig: ExecutionConfig): DataStreamSink[_]
+  /**
+    * Returns the data of the table as a [[DataStream]].
+    *
+    * NOTE: This method is for internal use only for defining a [[TableSource]].
+    *       Do not use it in Table API programs.
+    */
+  def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[T]
 }

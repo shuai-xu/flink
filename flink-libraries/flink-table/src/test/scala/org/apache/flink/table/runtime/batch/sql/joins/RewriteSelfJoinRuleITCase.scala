@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.batchexec.sql
+package org.apache.flink.table.runtime.batch.sql.joins
 
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.runtime.batch.sql.QueryTest

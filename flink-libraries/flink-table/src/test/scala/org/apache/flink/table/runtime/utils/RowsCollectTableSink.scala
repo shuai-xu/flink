@@ -26,7 +26,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.sinks.{BatchExecTableSink, TableSink, TableSinkBase}
+import org.apache.flink.table.sinks.{BatchTableSink, TableSink, TableSinkBase}
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 
@@ -37,7 +37,7 @@ import scala.collection.mutable
   *
   */
 @Internal
-class RowsCollectTableSink extends TableSinkBase[Row] with BatchExecTableSink[Row] {
+class RowsCollectTableSink extends TableSinkBase[Row] with BatchTableSink[Row] {
 
   private var rowsCollectOutputFormat: RowsCollectOutputFormat = _
 

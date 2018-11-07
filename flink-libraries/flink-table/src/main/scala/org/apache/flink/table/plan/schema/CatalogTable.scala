@@ -28,7 +28,7 @@ import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.{ConfigurableTable, TemporalTable}
 import org.apache.flink.table.api.TableSourceParser
 import org.apache.flink.table.sinks.TableSink
-import org.apache.flink.table.sources.{BatchExecTableSource, DimensionTableSource, StreamTableSource}
+import org.apache.flink.table.sources.{BatchTableSource, DimensionTableSource, StreamTableSource}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -148,12 +148,12 @@ class CatalogTable(val name:String, val table: ExternalCatalogTable, val isStrea
    * Create a batch table source from external catalog table.
    * @return the batch table source
    */
-  def batchTableSource: BatchExecTableSource[Any] =
+  def batchTableSource: BatchTableSource[Any] =
     if (isStreaming) {
       null
     } else {
       ExternalTableUtil.toTableSource(name, table, false, false) match {
-        case t: BatchExecTableSource[Any] => t
+        case t: BatchTableSource[Any] => t
         case _ => null
       }
     }

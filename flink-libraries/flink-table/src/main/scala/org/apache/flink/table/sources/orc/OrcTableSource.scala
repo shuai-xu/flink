@@ -31,7 +31,7 @@ import org.apache.flink.table.util.Logging
 import org.apache.orc.storage.ql.io.sarg.SearchArgument
 
 /**
-  * A [[BatchExecTableSource]] for Orc files.
+  * A [[BatchTableSource]] for Orc files.
   *
   * @param filePath The path to the orc file.
   * @param fieldTypes The types of the table fields.
@@ -47,7 +47,7 @@ abstract class OrcTableSource[T](
     fieldNames: Array[String],
     fieldNullables: Array[Boolean],
     enumerateNestedFiles: Boolean)
-  extends BatchExecTableSource[T]
+  extends BatchTableSource[T]
   with StreamTableSource[T]
   with FilterableTableSource
   with ProjectableTableSource

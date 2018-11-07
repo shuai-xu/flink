@@ -43,7 +43,7 @@ import org.apache.flink.table.functions.UserDefinedFunction;
 import org.apache.flink.table.plan.stats.AnalyzeStatistic;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
-import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
@@ -510,7 +510,7 @@ public class SqlJobUtil {
 	}
 
 	private static class MockTableSource
-			implements BatchExecTableSource<BaseRow>, StreamTableSource<BaseRow> {
+			implements BatchTableSource<BaseRow>, StreamTableSource<BaseRow> {
 
 		private String name;
 		private TableSchema schema;

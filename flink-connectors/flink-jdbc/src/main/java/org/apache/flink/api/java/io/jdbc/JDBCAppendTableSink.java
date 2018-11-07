@@ -24,7 +24,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.sinks.AppendStreamTableSink;
-import org.apache.flink.table.sinks.BatchExecTableSink;
+import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.DataTypes;
@@ -46,7 +46,7 @@ import java.util.stream.Stream;
  * (e.g., <code>REPLACE</code> or <code>INSERT OVERWRITE</code>) to upsert into the database and
  * achieve exactly-once semantic.</p>
  */
-public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchExecTableSink<Row> {
+public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchTableSink<Row> {
 
 	private final JDBCOutputFormat outputFormat;
 

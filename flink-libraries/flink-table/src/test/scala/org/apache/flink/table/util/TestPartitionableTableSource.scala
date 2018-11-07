@@ -45,7 +45,7 @@ class TestPartitionableTableSource(
   val prunedPartitions: JList[Partition] = new JArrayList()
 ) extends PartitionableTableSource
   with StreamTableSource[Row]
-  with BatchExecTableSource[Row] {
+  with BatchTableSource[Row] {
 
   private val fieldTypes: Array[TypeInformation[_]] = Array(
     BasicTypeInfo.INT_TYPE_INFO,

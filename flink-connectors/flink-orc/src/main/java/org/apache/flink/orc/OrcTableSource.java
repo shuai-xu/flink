@@ -40,7 +40,7 @@ import org.apache.flink.table.expressions.NotEqualTo;
 import org.apache.flink.table.expressions.Or;
 import org.apache.flink.table.expressions.UnaryExpression;
 import org.apache.flink.table.plan.stats.TableStats;
-import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.FilterableTableSource;
 import org.apache.flink.table.sources.ProjectableTableSource;
 import org.apache.flink.table.sources.TableSource;
@@ -83,7 +83,7 @@ import java.util.List;
  * </pre>
  */
 public class OrcTableSource
-	implements BatchExecTableSource<Row>, ProjectableTableSource, FilterableTableSource {
+	implements BatchTableSource<Row>, ProjectableTableSource, FilterableTableSource {
 
 	private static final Logger LOG = LoggerFactory.getLogger(OrcTableSource.class);
 

@@ -26,13 +26,13 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.sinks.{BatchExecTableSink, TableSinkBase}
+import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.hadoop.fs.FileUtil
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 /**
-  * A subclass of [[BatchExecTableSink]] to write [[BaseRow]] to Parquet files.
+  * A subclass of [[BatchTableSink]] to write [[BaseRow]] to Parquet files.
   *
   * @param dir         The output path to write the Table to.
   * @param writeMode   The write mode to specify whether existing files are overwritten or not.
@@ -43,7 +43,7 @@ class ParquetTableSink(
     writeMode: Option[WriteMode] = None,
     compression: CompressionCodecName = CompressionCodecName.UNCOMPRESSED)
     extends TableSinkBase[BaseRow]
-    with BatchExecTableSink[BaseRow]{
+    with BatchTableSink[BaseRow]{
 
   /** Return a deep copy of the [[org.apache.flink.table.sinks.TableSink]]. */
   override protected def copy: TableSinkBase[BaseRow] = {

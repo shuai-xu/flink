@@ -438,7 +438,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
 }
 
 final class TestingAppendTableSink extends AppendStreamTableSink[Row]
-  with BatchExecTableSink[Row]{
+  with BatchTableSink[Row]{
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _
   var sink = new TestingAppendSink
@@ -480,7 +480,7 @@ final class TestingAppendTableSink extends AppendStreamTableSink[Row]
 }
 
 final class TestingRetractTableSink extends RetractStreamTableSink[Row]
-  with BatchExecCompatibleStreamTableSink[JTuple2[JBoolean, Row]] with DefinedDistribution {
+  with BatchCompatibleStreamTableSink[JTuple2[JBoolean, Row]] with DefinedDistribution {
 
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _

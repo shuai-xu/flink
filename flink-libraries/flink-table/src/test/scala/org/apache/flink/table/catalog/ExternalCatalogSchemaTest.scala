@@ -30,7 +30,7 @@ import org.apache.flink.table.api.ExternalCatalogAlreadyExistException
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.plan.schema.CatalogTable
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.sources.{BatchExecTableSource, TableSource}
+import org.apache.flink.table.sources.{BatchTableSource, TableSource}
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.junit.Assert._
 import org.junit.{Before, Test}

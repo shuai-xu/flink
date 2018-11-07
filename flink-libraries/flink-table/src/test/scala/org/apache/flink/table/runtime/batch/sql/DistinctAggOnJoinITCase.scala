@@ -45,13 +45,13 @@ class DistinctAggOnJoinITCase extends QueryTest {
   def before(): Unit = {
     registerCollection(t1Name, t1Data, t1Types, t1FieldNames, t1Nullables)
     registerCollection(t2Name, t2Data, t2Types, t2FieldNames, t2Nullables)
-    val logicalProgram = tEnv.getConfig.getCalciteConfig.getBatchExecPrograms
-        .get(FlinkBatchExecPrograms.LOGICAL).get
+    val logicalProgram = tEnv.getConfig.getCalciteConfig.getBatchPrograms
+        .get(FlinkBatchPrograms.LOGICAL).get
     assert(logicalProgram.isInstanceOf[FlinkRuleSetProgram[_]])
     logicalProgram.asInstanceOf[FlinkRuleSetProgram[_]].remove(
       RuleSets.ofList(FlinkAggregateJoinTransposeRule.EXTENDED))
-    tEnv.getConfig.getCalciteConfig.getBatchExecPrograms.addBefore(
-      FlinkBatchExecPrograms.LOGICAL,
+    tEnv.getConfig.getCalciteConfig.getBatchPrograms.addBefore(
+      FlinkBatchPrograms.LOGICAL,
       "aggregateTranspose",
       FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)

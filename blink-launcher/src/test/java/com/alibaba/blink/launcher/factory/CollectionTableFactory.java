@@ -36,10 +36,10 @@ import org.apache.flink.table.api.TableProperties;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.TableSourceParser;
 import org.apache.flink.table.sinks.AppendStreamTableSink;
-import org.apache.flink.table.sinks.BatchExecTableSink;
+import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sources.AbstractTableSource;
-import org.apache.flink.table.sources.BatchExecTableSource;
+import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.DimensionTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.sources.TableSource;
@@ -156,7 +156,7 @@ public class CollectionTableFactory implements TableFactory {
 	 */
 	public static class CollectionTableSource<T>
 		extends AbstractTableSource
-		implements BatchExecTableSource<T>, StreamTableSource<T> {
+		implements BatchTableSource<T>, StreamTableSource<T> {
 
 		private String name;
 
@@ -213,7 +213,7 @@ public class CollectionTableFactory implements TableFactory {
 	 * Table sink of collection.
 	 */
 	public static class CollectionTableSink
-		implements BatchExecTableSink<Row>, AppendStreamTableSink<Row> {
+		implements BatchTableSink<Row>, AppendStreamTableSink<Row> {
 
 		private String name;
 

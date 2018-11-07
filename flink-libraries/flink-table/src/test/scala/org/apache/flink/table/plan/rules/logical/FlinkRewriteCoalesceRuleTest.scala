@@ -24,7 +24,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms.{DECORRELATE,
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.{DECORRELATE,
   NORMALIZATION, QUERY_REWRITE}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
@@ -75,7 +75,7 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
         .add(FlinkBatchExecRuleSets.BATCH_EXEC_NORM_RULES)
         .build())
 
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchExecPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, String, String, Int, Date, Double, Double, Int)]("scott_emp",

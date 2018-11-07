@@ -28,7 +28,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.types.{DataType, DataTypes}
@@ -76,7 +76,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     util.tableEnv.registerTableSource("dimTemporal", new TestDimensionTable(true))
     util.tableEnv.registerTableSource("dimStatic", new TestDimensionTable(false))
     util.tableEnv.getConfig.getCalciteConfig.
-        getBatchExecPrograms.remove(FlinkBatchExecPrograms.PHYSICAL)
+        getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
     util.verifyPlan(sql)
   }
 
@@ -87,7 +87,7 @@ class JoinTableTest extends TableTestBatchExecBase {
     util.addTable[(Int, String, Long, Double)]("T1", 'a, 'b, 'c, 'd)
     util.tableEnv.registerTableSource("dimTemporal", new TestDimensionTable(true))
     util.tableEnv.getConfig.getCalciteConfig.
-      getBatchExecPrograms.remove(FlinkBatchExecPrograms.PHYSICAL)
+      getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
     util.verifyPlan("SELECT * FROM MyTable AS T JOIN LATERAL dimTemporal "
       + "FOR SYSTEM_TIME AS OF PROCTIME() AS D ON T.b = D.id")
   }

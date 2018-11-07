@@ -37,7 +37,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.sources.{AsyncConfig, BatchExecTableSource, DimensionTableSource, IndexKey}
+import org.apache.flink.table.sources.{AsyncConfig, BatchTableSource, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.util.Collector
@@ -345,7 +345,7 @@ class JoinDimensionTableITCase extends QueryTest {
   class TestDimensionTableSourceCombinedWithBatchTableSource(
       async: Boolean = false,
       temporal: Boolean = true,
-      rowCount: Long = 1) extends DimensionTableSource[BaseRow] with BatchExecTableSource[BaseRow] {
+      rowCount: Long = 1) extends DimensionTableSource[BaseRow] with BatchTableSource[BaseRow] {
 
     var fetcher: TestDoubleKeyFetcher = null
     var asyncFetcher: TestAsyncDoubleKeyFetcher = null

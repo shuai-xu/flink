@@ -25,7 +25,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalNativeTableScan}
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms.{LOGICAL, TABLE_REF}
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.{LOGICAL, TABLE_REF}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -56,7 +56,7 @@ class FlinkCalcMergeRuleTest extends TableTestBatchExecBase {
         ))
         .setTargetTraits(Array(FlinkConventions.LOGICAL))
         .build())
-    val calciteConfig = new CalciteConfigBuilder().replaceBatchExecPrograms(programs).build()
+    val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
     util.addTable[(Int, Int, String)]("MyTable", 'a, 'b, 'c)

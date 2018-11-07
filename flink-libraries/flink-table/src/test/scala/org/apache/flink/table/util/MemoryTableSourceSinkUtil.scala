@@ -31,7 +31,7 @@ import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.connector.DefinedDistribution
-import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchExecTableSink, TableSinkBase}
+import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
@@ -53,7 +53,7 @@ object MemoryTableSourceSinkUtil {
     rowtimeAttributeDescriptor: util.List[RowtimeAttributeDescriptor],
     proctime: String,
     val terminationCount: Int)
-    extends BatchExecTableSource[Row]
+    extends BatchTableSource[Row]
       with StreamTableSource[Row]
       with DefinedProctimeAttribute
       with DefinedRowtimeAttributes {
@@ -99,7 +99,7 @@ object MemoryTableSourceSinkUtil {
 
   final class UnsafeMemoryAppendTableSink
     extends TableSinkBase[Row]
-    with BatchExecTableSink[Row]
+    with BatchTableSink[Row]
     with AppendStreamTableSink[Row]
     with DefinedDistribution {
 

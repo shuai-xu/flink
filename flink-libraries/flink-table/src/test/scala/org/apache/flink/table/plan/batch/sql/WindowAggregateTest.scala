@@ -26,7 +26,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.sources.BatchExecTableSource
+import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.apache.flink.types.Row
@@ -55,7 +55,7 @@ class WindowAggregateTest extends TableTestBatchExecBase {
     val tableSchema = new TableSchema(
       Array("ts", "customerId", "productId", "colLarge"),
       Array(DataTypes.TIMESTAMP, DataTypes.LONG, DataTypes.INT, DataTypes.STRING))
-    val table = new BatchExecTableSource[Row] {
+    val table = new BatchTableSource[Row] {
       override def getReturnType: DataType = DataTypes.createRowType(
           tableSchema.getTypes.asInstanceOf[Array[DataType]], tableSchema.getColumnNames)
 

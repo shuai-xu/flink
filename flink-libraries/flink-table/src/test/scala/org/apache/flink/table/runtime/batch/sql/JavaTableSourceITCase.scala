@@ -25,7 +25,7 @@ import org.junit.Test
 import scala.collection.JavaConverters._
 
 /**
- * Integration tests for [[org.apache.flink.table.sources.BatchExecTableSource]].
+ * Integration tests for [[org.apache.flink.table.sources.BatchTableSource]].
  */
 class JavaTableSourceITCase extends QueryTest {
 

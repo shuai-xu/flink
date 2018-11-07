@@ -30,7 +30,7 @@ import scala.collection.Seq
 class ScalaSubqueryITCase extends QueryTest {
 
   def getDataFile(tableName: String): String = {
-    getClass.getResource(s"/runtime/batchexec/$tableName").getFile
+    getClass.getResource(s"/runtime/batch/$tableName").getFile
   }
 
   private lazy val tableSchema = Seq[InternalType](

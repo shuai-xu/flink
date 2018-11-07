@@ -18,14 +18,18 @@
 
 package org.apache.flink.table.sinks
 
-import org.apache.flink.table.api._
+import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.table.api._
 
-/** Defines an external [[TableSink]] to emit a batch [[Table]] for
-  * compatible with stream connect plugin.
+/** Defines an external [[TableSink]] to emit a batch [[Table]].
+  *
+  * @tparam T Type of [[DataStream]] that this [[TableSink]] expects and supports.
   */
-trait BatchExecCompatibleStreamTableSink[T] extends TableSink[T] {
+trait BatchTableSink[T] extends TableSink[T] {
 
   /** Emits the DataStream. */
-  def emitBoundedStream(boundedStream: DataStream[T]): DataStreamSink[_]
+  def emitBoundedStream(boundedStream: DataStream[T],
+                         tableConfig: TableConfig,
+                         executionConfig: ExecutionConfig): DataStreamSink[_]
 }

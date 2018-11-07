@@ -20,7 +20,7 @@ package org.apache.flink.table.factories
 
 import java.util
 
-import org.apache.flink.table.sinks.BatchExecTableSink
+import org.apache.flink.table.sinks.BatchTableSink
 
 /**
   * A factory to create configured table sink instances in a streaming environment based on
@@ -31,11 +31,11 @@ import org.apache.flink.table.sinks.BatchExecTableSink
 trait BatchTableSinkFactory[T] extends TableFactory {
 
   /**
-    * Creates and configures a [[org.apache.flink.table.sinks.BatchExecTableSink]]
+    * Creates and configures a [[org.apache.flink.table.sinks.BatchTableSink]]
     * using the given properties.
     *
     * @param properties normalized properties describing a table sink.
     * @return the configured table sink.
     */
-  def createBatchTableSink(properties: util.Map[String, String]): BatchExecTableSink[T]
+  def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[T]
 }

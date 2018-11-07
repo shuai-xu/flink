@@ -29,7 +29,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
 import org.apache.flink.table.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
-import org.apache.flink.table.plan.optimize.FlinkBatchExecPrograms
+import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -44,8 +44,8 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
   def before(): Unit = {
     // For #testReuseSubPlan_Limit
     util.tableEnv.getConfig.getCalciteConfig
-      .getBatchExecPrograms
-      .getFlinkRuleSetProgram(FlinkBatchExecPrograms.LOGICAL)
+      .getBatchPrograms
+      .getFlinkRuleSetProgram(FlinkBatchPrograms.LOGICAL)
       .get.remove(RuleSets.ofList(PushLimitIntoTableSourceScanRule.INSTANCE))
 
     // clear parameters

@@ -32,7 +32,7 @@ import org.apache.flink.table.util.Logging
 import org.apache.parquet.filter2.predicate.FilterPredicate
 
 /**
-  * A [[BatchExecTableSource]] for Parquet files.
+  * A [[BatchTableSource]] for Parquet files.
   *
   * @param filePath The path to the parquet file.
   * @param fieldTypes The types of the table fields.
@@ -47,7 +47,7 @@ abstract class ParquetTableSource[T](
     fieldNames: Array[String],
     fieldNullables: Array[Boolean],
     enumerateNestedFiles: Boolean)
-  extends BatchExecTableSource[T]
+  extends BatchTableSource[T]
   with StreamTableSource[T]
   with FilterableTableSource
   with LimitableTableSource
