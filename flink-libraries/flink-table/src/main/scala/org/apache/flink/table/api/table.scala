@@ -882,6 +882,24 @@ class Table(
   }
 
   /**
+    * Writes the [[Table]] to a [[TableSink]]. A [[TableSink]] defines an external storage location.
+    *
+    * A batch [[Table]] can only be written to a
+    * [[org.apache.flink.table.sinks.BatchExecTableSink]], a streaming [[Table]] requires a
+    * [[org.apache.flink.table.sinks.AppendStreamTableSink]], a
+    * [[org.apache.flink.table.sinks.RetractStreamTableSink]], or an
+    * [[org.apache.flink.table.sinks.UpsertStreamTableSink]].
+    *
+    * @param sink The [[TableSink]] to which the [[Table]] is written.
+    * @param conf The configuration for the query that writes to the sink.
+    * @tparam T The data type that the [[TableSink]] expects.
+    */
+  def writeToSink[T](sink: TableSink[T], conf: QueryConfig): Unit = {
+    conf.overrideTableConfig(tableEnv.getConfig)
+    writeToSink(sink)
+  }
+
+  /**
     * Writes the [[Table]] to a [[TableSink]] that was registered under the specified name.
     *
     * A batch [[Table]] can only be written to a
@@ -893,6 +911,23 @@ class Table(
     * @param tableName Name of the registered [[TableSink]] to which the [[Table]] is written.
     */
   def insertInto(tableName: String): Unit = {
+    tableEnv.insertInto(this, tableName)
+  }
+
+  /**
+    * Writes the [[Table]] to a [[TableSink]] that was registered under the specified name.
+    *
+    * A batch [[Table]] can only be written to a
+    * [[org.apache.flink.table.sinks.BatchExecTableSink]], a streaming [[Table]] requires a
+    * [[org.apache.flink.table.sinks.AppendStreamTableSink]], a
+    * [[org.apache.flink.table.sinks.RetractStreamTableSink]], or an
+    * [[org.apache.flink.table.sinks.UpsertStreamTableSink]].
+    *
+    * @param tableName Name of the [[TableSink]] to which the [[Table]] is written.
+    * @param conf The [[QueryConfig]] to use.
+    */
+  def insertInto(tableName: String, conf: QueryConfig): Unit = {
+    conf.overrideTableConfig(tableEnv.getConfig)
     tableEnv.insertInto(this, tableName)
   }
 

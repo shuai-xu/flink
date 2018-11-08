@@ -35,7 +35,9 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.graph.StreamGraph;
-import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.BatchQueryConfig;
+import org.apache.flink.table.api.QueryConfig;
+import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.catalog.ExternalCatalog;
 import org.apache.flink.table.catalog.InMemoryExternalCatalog;
@@ -256,6 +258,7 @@ public class ExecutionContext<T> {
 	 */
 	public class EnvironmentInstance {
 
+		private final QueryConfig queryConfig;
 		private final StreamExecutionEnvironment streamExecEnv;
 		private final TableEnvironment tableEnv;
 
@@ -272,13 +275,17 @@ public class ExecutionContext<T> {
 
 			Thread.currentThread().setContextClassLoader(classLoader);
 
-			// set table config
-			initTableConfig(tableEnv.getConfig());
+			// create query config
+			queryConfig = createQueryConfig();
 
 			// TODO: use hive catalog when storing ExternalCatalogTable supported.
 			tableEnv.registerExternalCatalog(
 					TableEnvironment.DEFAULT_SCHEMA(),
 					externalCatalog);
+		}
+
+		public QueryConfig getQueryConfig() {
+			return queryConfig;
 		}
 
 		public StreamExecutionEnvironment getStreamExecutionEnvironment() {
@@ -321,12 +328,16 @@ public class ExecutionContext<T> {
 			return env;
 		}
 
-		private void initTableConfig(TableConfig tableConfig) {
+		private QueryConfig createQueryConfig() {
 			if (mergedEnv.getExecution().isStreamingExecution()) {
+				final StreamQueryConfig config = new StreamQueryConfig();
 				final long minRetention = mergedEnv.getExecution().getMinStateRetention();
 				final long maxRetention = mergedEnv.getExecution().getMaxStateRetention();
-				tableConfig.withIdleStateRetentionTime(Time.milliseconds(minRetention), Time.milliseconds(maxRetention));
-			} else if (!mergedEnv.getExecution().isBatchExecution()) {
+				config.withIdleStateRetentionTime(Time.milliseconds(minRetention), Time.milliseconds(maxRetention));
+				return config;
+			} else if (mergedEnv.getExecution().isBatchExecution()) {
+				return new BatchQueryConfig();
+			} else {
 				throw new RuntimeException("Neither Batch Execution nor Streaming Execution");
 			}
 		}

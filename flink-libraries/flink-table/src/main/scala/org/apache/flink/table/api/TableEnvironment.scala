@@ -167,6 +167,13 @@ abstract class TableEnvironment(val config: TableConfig) {
   /** Returns the table config to define the runtime behavior of the Table API. */
   def getConfig: TableConfig = config
 
+  /** Returns the [[QueryConfig]] depends on the concrete type of this TableEnvironment. */
+  private[flink] def queryConfig: QueryConfig = this match {
+    case _: BatchTableEnvironment => new BatchQueryConfig
+    case _: StreamTableEnvironment => new StreamQueryConfig
+    case _ => null
+  }
+
   /**
     * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to [[LogicalNodeBlock]],
     * see [[LogicalNodeBlockPlanBuilder]] for details.
@@ -912,12 +919,12 @@ abstract class TableEnvironment(val config: TableConfig) {
 
         // set emit configs
         val emit = insert.getEmit
-        if (emit != null) {
+        if (emit != null && this.isInstanceOf[StreamTableEnvironment]) {
           if (emit.getBeforeDelayValue >= 0) {
-            config.withEarlyFireInterval(Time.milliseconds(emit.getBeforeDelayValue))
+            getConfig.withEarlyFireInterval(Time.milliseconds(emit.getBeforeDelayValue))
           }
           if (emit.getAfterDelayValue >= 0) {
-            config.withLateFireInterval(Time.milliseconds(emit.getAfterDelayValue))
+            getConfig.withLateFireInterval(Time.milliseconds(emit.getAfterDelayValue))
           }
         }
 
@@ -930,6 +937,31 @@ abstract class TableEnvironment(val config: TableConfig) {
         throw new TableException(
           "Unsupported SQL query! sqlUpdate() only accepts SQL statements of type INSERT.")
     }
+  }
+
+  /**
+    * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
+    * NOTE: Currently only SQL INSERT statements are supported.
+    *
+    * All tables referenced by the query must be registered in the TableEnvironment.
+    * A [[Table]] is automatically registered when its [[toString]] method is called, for example
+    * when it is embedded into a String.
+    * Hence, SQL queries can directly reference a [[Table]] as follows:
+    *
+    * {{{
+    *   // register the table sink into which the result is inserted.
+    *   tEnv.registerTableSink("sinkTable", fieldNames, fieldsTypes, tableSink)
+    *   val sourceTable: Table = ...
+    *   // sourceTable is not registered to the table environment
+    *   tEnv.sqlUpdate(s"INSERT INTO sinkTable SELECT * FROM $sourceTable")
+    * }}}
+    *
+    * @param stmt The SQL statement to evaluate.
+    * @param config The [[QueryConfig]] to use.
+    */
+  def sqlUpdate(stmt: String, config: QueryConfig): Unit = {
+    config.overrideTableConfig(getConfig)
+    sqlUpdate(stmt)
   }
 
   /**

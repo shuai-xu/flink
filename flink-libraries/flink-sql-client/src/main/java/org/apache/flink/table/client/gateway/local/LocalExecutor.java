@@ -34,6 +34,7 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
 import org.apache.flink.sql.parser.plan.SqlParseException;
+import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
@@ -380,7 +381,7 @@ public class LocalExecutor implements Executor {
 	private <C> ProgramTargetDescriptor executeUpdateInternal(ExecutionContext<C> context, String statement) {
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
 
-		applyUpdate(envInst.getTableEnvironment(), statement);
+		applyUpdate(envInst.getTableEnvironment(), envInst.getQueryConfig(), statement);
 
 		if (context.isNeedShareEnv()) {
 			return null;
@@ -445,7 +446,7 @@ public class LocalExecutor implements Executor {
 		final String jobName = context.getSessionContext().getName() + ": " + query;
 		final JobGraph jobGraph;
 		try {
-			table.writeToSink(result.getTableSink());
+			table.writeToSink(result.getTableSink(), envInst.getQueryConfig());
 			jobGraph = envInst.createJobGraph(jobName);
 		} catch (Throwable t) {
 			// the result needs to be closed as long as
@@ -490,10 +491,10 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Applies the given update statement to the given table environment with query configuration.
 	 */
-	private void applyUpdate(TableEnvironment tableEnv, String updateStatement) {
+	private void applyUpdate(TableEnvironment tableEnv, QueryConfig queryConfig, String updateStatement) {
 		// parse and validate statement
 		try {
-			tableEnv.sqlUpdate(updateStatement);
+			tableEnv.sqlUpdate(updateStatement, queryConfig);
 		} catch (Throwable t) {
 			// catch everything such that the statement does not crash the executor
 			throw new SqlExecutionException("Invalid SQL update statement.", t);
