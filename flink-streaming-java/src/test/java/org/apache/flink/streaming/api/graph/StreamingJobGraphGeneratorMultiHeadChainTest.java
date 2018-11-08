@@ -19,7 +19,6 @@ package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
@@ -45,7 +44,11 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
 import org.apache.flink.shaded.guava18.com.google.common.collect.Sets;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -61,7 +64,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 	/**
 	 * Tests the following topology.
 	 *
-	 * <pre>
+	 * <p><pre>
 	 *     CHAIN(Source1  -+            +- Sink1)
 	 *          (          | -> Map1 -> |       )
 	 *          (Source2  -+            +- Sink2)
@@ -109,10 +112,10 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 	/**
 	 * Tests the following topology.
 	 *
-	 * <pre>
-	 *     CHAIN(Source1 -> Filter1) -+
-	 *          (   |              )  | -> CHAIN(Join1 -> Sink1)
-	 *          (   |__  ->        ) -+
+	 * <p><pre>
+	 *     CHAIN(Source1) -> CHAIN(Filter1 -+                 )
+	 *          (   |   )         (         | -> Map1 -> Sink1)
+	 *          (   |_  ) ->      (        -+                 )
 	 * </pre>
 	 */
 	@Test
@@ -126,10 +129,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 		ClassLoader cl = getClass().getClassLoader();
 
 		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
-		DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+		DataStream<String> filter1 = source1.rescale().filter(new NoOpFilterFunction()).name("filter1");
 
-		DataStream<String> join1 = filter1.connect(source1).process(new NoOpCoProcessFuntion()).name("join1");
-		join1.addSink(new NoOpSinkFunction()).name("sink1");
+		DataStream<String> map1 = filter1.connect(source1)
+			.map(new NoOpCoMapFunction()).name("map1");
+		map1.addSink(new NoOpSinkFunction()).name("sink1");
 
 		StreamGraph streamGraph = env.getStreamGraph();
 		for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
@@ -149,89 +153,23 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
 				Collections.emptyList(),
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("Source: source1", "join1")),
-				Sets.newHashSet("Source: source1", "filter1"),
+				Lists.newArrayList(Tuple2.of("Source: source1", "map1"), Tuple2.of("Source: source1", "filter1")),
+				Sets.newHashSet("Source: source1"),
 				Sets.newHashSet("Source: source1"),
 				taskonfig);
 		}
 
-		// CHAIN(Join1 -> Sink1) vertex
+		// CHAIN(Map1 -> Sink1) vertex
 		{
 			JobVertex vertex = verticesSorted.get(1);
 			assertEquals(2, vertex.getInputs().size());
 
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("Source: source1", "join1")),
+				Lists.newArrayList(Tuple2.of("Source: source1", "map1"), Tuple2.of("Source: source1", "filter1")),
 				Collections.emptyList(),
-				Sets.newHashSet("join1", "Sink: sink1"),
-				Sets.newHashSet("join1"),
-				taskonfig);
-		}
-	}
-
-
-	/**
-	 * Tests the following topology.
-	 *
-	 * <pre>
-	 *     CHAIN( Source1 -> +-  ->) -+
-	 *          (            |     )  | -> CHAIN(Join1 -> Sink1)
-	 *          (Source2 -> Filter1) -+
-	 * </pre>
-	 */
-	@Test
-	public void testMultiHeadTriangleTopology() throws Exception {
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
-		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
-		env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
-		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
-		env.setMultiHeadChainMode(true);
-
-		ClassLoader cl = getClass().getClassLoader();
-
-		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
-		DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
-		DataStream<String> filter1 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter1");
-
-		DataStream<String> join1 = source1.connect(filter1).process(new NoOpCoProcessFuntion()).name("join1");
-		join1.addSink(new NoOpSinkFunction()).name("sink1");
-
-		StreamGraph streamGraph = env.getStreamGraph();
-		for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
-			pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
-		}
-
-		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
-		assertEquals(2, jobGraph.getNumberOfVertices());
-
-		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
-
-		// CHAIN((Source1, Source2) -> Filter1) vertex
-		{
-			JobVertex vertex = verticesSorted.get(0);
-			assertEquals(0, vertex.getInputs().size());
-
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Collections.emptyList(),
-				Lists.newArrayList(Tuple2.of("Source: source1", "join1"), Tuple2.of("filter1", "join1")),
-				Sets.newHashSet("Source: source1", "Source: source2", "filter1"),
-				Sets.newHashSet("Source: source1", "Source: source2"),
-				taskonfig);
-		}
-
-		// CHAIN(Join1 -> Sink1) vertex
-		{
-			JobVertex vertex = verticesSorted.get(1);
-			assertEquals(2, vertex.getInputs().size());
-
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("Source: source1", "join1"), Tuple2.of("filter1", "join1")),
-				Collections.emptyList(),
-				Sets.newHashSet("join1", "Sink: sink1"),
-				Sets.newHashSet("join1"),
+				Sets.newHashSet("filter1", "map1", "Sink: sink1"),
+				Sets.newHashSet("filter1", "map1"),
 				taskonfig);
 		}
 	}
@@ -239,10 +177,10 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 	/**
 	 * Tests the following topology.
 	 *
-	 * <pre>
-	 *     CHAIN(Source1 -> Filter1) -+
-	 *          (   |              )  | -> CHAIN(Join1 -> Sink1)
-	 *          (   |_   -> Filter2) -+
+	 * <p><pre>
+	 *     CHAIN(Source1 -> Filter1) -> CHAIN(        -+                     )
+	 *          (   |              )         (         | -> Process1 -> Sink1)
+	 *          (   |_  -> Map1    ) ->      (Filter2 -+                     )
 	 * </pre>
 	 */
 	@Test
@@ -257,11 +195,13 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
 		DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-		DataStream<String> filter2 = source1.filter(new NoOpFilterFunction()).name("filter2");
 
-		DataStream<String> join1 = filter1.connect(filter2)
-			.keyBy(new NoOpKeySelector(), new NoOpKeySelector()).process(new NoOpCoProcessFuntion()).name("join1");
-		join1.addSink(new NoOpSinkFunction()).name("sink1");
+		DataStream<String> filter2 = source1.map(new NoOpMapFunction()).name("map1").rescale()
+			.filter(new NoOpFilterFunction()).name("filter2");
+
+		DataStream<String> process1 = filter2.connect(filter1)
+			.process(new NoOpCoProcessFuntion()).name("process1");
+		process1.addSink(new NoOpSinkFunction()).name("sink1");
 
 		StreamGraph streamGraph = env.getStreamGraph();
 		for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
@@ -273,7 +213,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
 
-		// CHAIN(Source1 -> Filter[1,2]) vertex
+		// CHAIN([Source1 -> (Filter1, Map1), Map1 -> Filter2]) vertex
 		{
 			JobVertex vertex = verticesSorted.get(0);
 			assertEquals(0, vertex.getInputs().size());
@@ -281,212 +221,586 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
 				Collections.emptyList(),
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("filter2", "join1")),
-				Sets.newHashSet("Source: source1", "filter1", "filter2"),
+				Lists.newArrayList(Tuple2.of("filter1", "process1"), Tuple2.of("map1", "filter2")),
+				Sets.newHashSet("Source: source1", "filter1", "map1"),
 				Sets.newHashSet("Source: source1"),
 				taskonfig);
 		}
 
-		// CHAIN(Join1 -> Sink1) vertex
+		// CHAIN(Process1 -> Sink1) vertex
 		{
 			JobVertex vertex = verticesSorted.get(1);
 			assertEquals(2, vertex.getInputs().size());
 
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("filter2", "join1")),
+				Lists.newArrayList(Tuple2.of("filter1", "process1"), Tuple2.of("map1", "filter2")),
 				Collections.emptyList(),
-				Sets.newHashSet("join1", "Sink: sink1"),
-				Sets.newHashSet("join1"),
+				Sets.newHashSet("filter2", "process1", "Sink: sink1"),
+				Sets.newHashSet("filter2", "process1"),
 				taskonfig);
 		}
 	}
 
 	/**
-	 * Tests the following topology.
-	 *
-	 * <pre>
-	 *     CHAIN(Source1 -> Filter1        ) -+
-	 *          (   |                      )  | -> CHAIN(Join1 -> Sink1)
-	 *          (   |_   -> Map1 -> Filter2) -+
-	 *          (                     |    )
-	 *          (Source2     ->      _|    )
-	 * </pre>
+	 * Tests for breaking off chains.
 	 */
-	@Test
-	public void testMultiHeadRhombusTopology() throws Exception {
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
-		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
-		env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
-		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
-		env.setMultiHeadChainMode(true);
+	@RunWith(Parameterized.class)
+	public static class ParameterizedBreakingOffTest {
+		private final int breakingOffType;
 
-		ClassLoader cl = getClass().getClassLoader();
-
-		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
-		DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
-		DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
-
-		DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
-		DataStream<String> filter2 = map1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter2");
-
-		DataStream<String> join1 = filter1.connect(filter2)
-			.keyBy(new NoOpKeySelector(), new NoOpKeySelector()).process(new NoOpCoProcessFuntion()).name("join1");
-		join1.addSink(new NoOpSinkFunction()).name("sink1");
-
-		StreamGraph streamGraph = env.getStreamGraph();
-		for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
-			pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+		@Parameterized.Parameters(name = "breakingOffType={0}")
+		public static Collection<Integer> getParameters() {
+			return Arrays.asList(new Integer[]{
+				0, 1, 2, 3
+			});
 		}
 
-		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
-		assertEquals(2, jobGraph.getNumberOfVertices());
-
-		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
-
-		// CHAIN([Source1 -> (Filter1, Map1), (Map1, Source2) -> Filter2]) vertex
-		{
-			JobVertex vertex = verticesSorted.get(0);
-			assertEquals(0, vertex.getInputs().size());
-
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Collections.emptyList(),
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("filter2", "join1")),
-				Sets.newHashSet("Source: source1", "Source: source2", "map1", "filter1", "filter2"),
-				Sets.newHashSet("Source: source1", "Source: source2"),
-				taskonfig);
+		public ParameterizedBreakingOffTest(int breakOffChainType) {
+			this.breakingOffType = breakOffChainType;
 		}
 
-		// CHAIN(Join1 -> Sink1) vertex
-		{
-			JobVertex vertex = verticesSorted.get(1);
-			assertEquals(2, vertex.getInputs().size());
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1 -> Filter1) -+
+		 *          (   |              )  | -> CHAIN(Map1 -> Sink1)
+		 *          (   |_             ) -+
+		 * </pre>
+		 */
+		@Test
+		public void testTriangleTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
 
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("filter2", "join1")),
-				Collections.emptyList(),
-				Sets.newHashSet("join1", "Sink: sink1"),
-				Sets.newHashSet("join1"),
-				taskonfig);
-		}
-	}
+			ClassLoader cl = getClass().getClassLoader();
 
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
-	/**
-	 * Tests the following topology.
-	 *
-	 * <pre>
-	 *     CHAIN(Source1 -> Map1 -> Filter1    ) -+
-	 *          (   |                          )  | -> CHAIN(Join1 -> Sink1)
-	 *          (   |_   -> Map2 -> Filter2    ) -+
-	 *          (                     |        )  | -> CHAIN(Join2 -> Sink2)
-	 *          (Source2 -> Map3 ->  +-  ->    ) -+
-	 *          (            |                 )
-	 *          (            |__  -> Map4      ) -> CHAIN(Filter3 -> Sink3)
-	 * </pre>
-	 */
-	@Test
-	public void testComplexTopology() throws Exception {
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
-		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
-		env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
-		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
-		env.setMultiHeadChainMode(true);
+			DataStream<String> map1 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? source1.rescale() : source1)
+				.map(new NoOpCoMapFunction()).name("map1");
+			map1.addSink(new NoOpSinkFunction()).name("sink1");
 
-		ClassLoader cl = getClass().getClassLoader();
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
 
-		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
-		DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
-		DataStream<String> filter1 =  map1.filter(new NoOpFilterFunction()).name("filter1");
-		DataStream<String> map2 = source1.map(new NoOpMapFunction()).name("map2");
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(2, jobGraph.getNumberOfVertices());
 
-		DataStream<String> map3 = env.addSource(new NoOpSourceFunction()).name("source2")
-			.map(new NoOpMapFunction()).name("map3");
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
 
-		DataStream<String> filter2 = map2.connect(map3).process(new NoOpCoProcessFuntion()).name("filter2");
-		DataStream<String> join1 = filter1.connect(filter2)
-			.keyBy(new NoOpKeySelector(), new NoOpKeySelector()).process(new NoOpCoProcessFuntion()).name("join1");
-		join1.addSink(new NoOpSinkFunction()).name("sink1");
+			// CHAIN(Source1 -> Filter1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
 
-		DataStream<String> join2 = filter2.connect(map3)
-			.keyBy(new NoOpKeySelector(), new NoOpKeySelector()).process(new NoOpCoProcessFuntion()).name("join2");
-		join2.addSink(new NoOpSinkFunction()).name("sink2");
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+					Sets.newHashSet("Source: source1", "filter1"),
+					Sets.newHashSet("Source: source1"),
+					taskonfig);
+			}
 
-		DataStream<String> map4 = map3.map(new NoOpMapFunction()).name("map4");
-		map4.filter(new NoOpFilterFunction()).name("filter3")
-			.addSink(new NoOpSinkFunction()).name("sink3");
+			// CHAIN(Map1 -> Sink1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(2, vertex.getInputs().size());
 
-		StreamGraph streamGraph = env.getStreamGraph();
-		for (StreamNode node : streamGraph.getStreamNodes()) {
-			if ("filter3".equals(node.getOperatorName())) {
-				node.getOperator().setChainingStrategy(ChainingStrategy.HEAD);
-			} else {
-				node.getOperator().setChainingStrategy(ChainingStrategy.ALWAYS);
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+					Collections.emptyList(),
+					Sets.newHashSet("map1", "Sink: sink1"),
+					Sets.newHashSet("map1"),
+					taskonfig);
 			}
 		}
 
-		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
-		assertEquals(4, jobGraph.getNumberOfVertices());
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1 -> Filter1) -+
+		 *          (   |              )  | -> CHAIN(Map1 -> Sink1)
+		 *          (   |_             ) -+           |_ -+
+		 *          (   |              )                  | -> CHAIN(Map2 -> Sink2)
+		 *          (   |_             ) ->              -+
+		 * </pre>
+		 */
+		@Test
+		public void testTwoTrianglesTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
 
-		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			ClassLoader cl = getClass().getClassLoader();
 
-		// CHAIN1 vertex
-		{
-			JobVertex vertex = verticesSorted.get(0);
-			assertEquals(0, vertex.getInputs().size());
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Collections.emptyList(),
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("filter2", "join1"),
-					Tuple2.of("filter2", "join2"), Tuple2.of("map3", "join2"), Tuple2.of("map4", "filter3")),
-				Sets.newHashSet("Source: source1", "Source: source2", "map1", "map2", "map3", "map4", "filter1", "filter2"),
-				Sets.newHashSet("Source: source1", "Source: source2"),
-				taskonfig);
+			DataStream<String> map1 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? source1.rescale() : source1)
+				.map(new NoOpCoMapFunction()).name("map1");
+			map1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			DataStream<String> map2 = map1.connect(source1).map(new NoOpCoMapFunction()).name("map2");
+			map2.addSink(new NoOpSinkFunction()).name("sink2");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(2, jobGraph.getNumberOfVertices());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+			// CHAIN(Source1 -> Filter1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("Source: source1", "map2"),
+						Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+					Sets.newHashSet("Source: source1", "filter1"),
+					Sets.newHashSet("Source: source1"),
+					taskonfig);
+			}
+
+			// CHAIN([Map1 -> (Sink1, Map2), Map2 -> Sink2 ]) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(3, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("Source: source1", "map2"),
+						Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+					Collections.emptyList(),
+					Sets.newHashSet("map1", "Sink: sink1", "map2", "Sink: sink2"),
+					Sets.newHashSet("map1", "map2"),
+					taskonfig);
+			}
 		}
 
-		// CHAIN(Join1 -> Sink1) vertex
-		{
-			JobVertex vertex = verticesSorted.get(1);
-			assertEquals(2, vertex.getInputs().size());
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1              ) -+
+		 *          (   |_   -+           )  | -> CHAIN(Map1 -> Sink1)
+		 *          (         | -> Filter1) -+
+		 *          (Source2 -+           )
+		 * </pre>
+		 */
+		@Test
+		public void testMultiHeadTriangleTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
 
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("filter1", "join1"), Tuple2.of("filter2", "join1")),
-				Collections.emptyList(),
-				Sets.newHashSet("join1", "Sink: sink1"),
-				Sets.newHashSet("join1"),
-				taskonfig);
+			ClassLoader cl = getClass().getClassLoader();
+
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
+
+			DataStream<String> filter1 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter1");
+
+			DataStream<String> map1 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? source1.rescale() : source1)
+				.map(new NoOpCoMapFunction()).name("map1");
+			map1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(2, jobGraph.getNumberOfVertices());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+			// CHAIN((Source1, Source2) -> Filter1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+					Sets.newHashSet("Source: source1", "Source: source2", "filter1"),
+					Sets.newHashSet("Source: source1", "Source: source2"),
+					taskonfig);
+			}
+
+			// CHAIN(Map1 -> Sink1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(2, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+					Collections.emptyList(),
+					Sets.newHashSet("map1", "Sink: sink1"),
+					Sets.newHashSet("map1"),
+					taskonfig);
+			}
 		}
 
-		// CHAIN(Join2 -> Sink2) vertex
-		{
-			JobVertex vertex = verticesSorted.get(2);
-			assertEquals(2, vertex.getInputs().size());
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1 -> Filter1       ) -+
+		 *          (   |                     )  | -> CHAIN(Process1 -> Sink1)
+		 *          (   |_  -> Map1 -> Filter2) -+
+		 * </pre>
+		 */
+		@Test
+		public void testRhombusTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
 
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("filter2", "join2"), Tuple2.of("map3", "join2")),
-				Collections.emptyList(),
-				Sets.newHashSet("join2", "Sink: sink2"),
-				Sets.newHashSet("join2"),
-				taskonfig);
+			ClassLoader cl = getClass().getClassLoader();
+
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+
+			DataStream<String> filter2 = source1.map(new NoOpMapFunction()).name("map1")
+				.filter(new NoOpFilterFunction()).name("filter2");
+
+			DataStream<String> process1 = (breakingOffType == 1 || breakingOffType == 3 ? filter2.rescale() : filter2)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.process(new NoOpCoProcessFuntion()).name("process1");
+			process1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(2, jobGraph.getNumberOfVertices());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+			// CHAIN([Source1 -> (Filter1, Map1), Map1 -> Filter2]) vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
+					Sets.newHashSet("Source: source1", "map1", "filter1", "filter2"),
+					Sets.newHashSet("Source: source1"),
+					taskonfig);
+			}
+
+			// CHAIN(Process1 -> Sink1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(2, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
+					Collections.emptyList(),
+					Sets.newHashSet("process1", "Sink: sink1"),
+					Sets.newHashSet("process1"),
+					taskonfig);
+			}
 		}
 
-		// CHAIN(Filter4 -> Sink3) vertex
-		{
-			JobVertex vertex = verticesSorted.get(3);
-			assertEquals(1, vertex.getInputs().size());
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1 -> Filter1       ) -+
+		 *          (   |                     )  | -> CHAIN(Process1 -> Sink1)
+		 *          (   |_  -> Map1 -> Filter2) -+             |_ -+
+		 *          (   |                     )                    | -> CHAIN(Process2 -> Sink2)
+		 *          (   |_                    ) ->                -+
+		 * </pre>
+		 */
+		@Test
+		public void testTwoRhombusesTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
 
-			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
-			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
-				Lists.newArrayList(Tuple2.of("map4", "filter3")),
-				Collections.emptyList(),
-				Sets.newHashSet("filter3", "Sink: sink3"),
-				Sets.newHashSet("filter3"),
-				taskonfig);
+			ClassLoader cl = getClass().getClassLoader();
+
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+
+			DataStream<String> filter2 = source1.map(new NoOpMapFunction()).name("map1")
+				.filter(new NoOpFilterFunction()).name("filter2");
+
+			DataStream<String> process1 = (breakingOffType == 1 || breakingOffType == 3 ? filter2.rescale() : filter2)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.process(new NoOpCoProcessFuntion()).name("process1");
+			process1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			DataStream<String> map2 = process1.connect(source1).process(new NoOpCoProcessFuntion()).name("process2");
+			map2.addSink(new NoOpSinkFunction()).name("sink2");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(2, jobGraph.getNumberOfVertices());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+			// CHAIN([Source1 -> (Filter1, Map1), Map1 -> Filter2]) vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("Source: source1", "process2"),
+						Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
+					Sets.newHashSet("Source: source1", "map1", "filter1", "filter2"),
+					Sets.newHashSet("Source: source1"),
+					taskonfig);
+			}
+
+			// CHAIN([Process1 -> (Sink1, Process2)], Process2 -> Sink2) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(3, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("Source: source1", "process2"),
+						Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
+					Collections.emptyList(),
+					Sets.newHashSet("process1", "Sink: sink1", "process2", "Sink: sink2"),
+					Sets.newHashSet("process1", "process2"),
+					taskonfig);
+			}
+		}
+
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1 -> Filter1        ) -+
+		 *          (   |                      )  | -> CHAIN(Process1 -> Sink1)
+		 *          (   |_   -> Map1 -> Filter2) -+
+		 *          (                     |    )
+		 *          (Source2     ->      _|    )
+		 * </pre>
+		 */
+		@Test
+		public void testMultiHeadRhombusTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
+
+			ClassLoader cl = getClass().getClassLoader();
+
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+
+			DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
+			DataStream<String> filter2 = map1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter2");
+
+			DataStream<String> process1 = (breakingOffType == 1 || breakingOffType == 3 ? filter2.rescale() : filter2)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.process(new NoOpCoProcessFuntion()).name("process1");
+			process1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+				pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+			}
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(2, jobGraph.getNumberOfVertices());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+			// CHAIN([Source1 -> (Filter1, Map1), (Map1, Source2) -> Filter2]) vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
+					Sets.newHashSet("Source: source1", "Source: source2", "map1", "filter1", "filter2"),
+					Sets.newHashSet("Source: source1", "Source: source2"),
+					taskonfig);
+			}
+
+			// CHAIN(Process1 -> Sink1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(2, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("filter2", "process1"), Tuple2.of("filter1", "process1")),
+					Collections.emptyList(),
+					Sets.newHashSet("process1", "Sink: sink1"),
+					Sets.newHashSet("process1"),
+					taskonfig);
+			}
+		}
+
+
+		/**
+		 * Tests the following topology.
+		 *
+		 * <p><pre>
+		 *     CHAIN(Source1 -> Map0 -> Map1              ) -+
+		 *          (           |                         )  |
+		 *          (           |_   -> Map2 -+           )  | -> CHAIN(Process1 -> Sink1)
+		 *          (                         | -> Filter1) -+
+		 *          (Source2 -> Map3         -+           )  | -> CHAIN(Map5 -> Sink2)
+		 *          (            |_                       ) -+
+		 *          (            |_  -> Map4              ) -> CHAIN(Filter2 -> Sink3)
+		 * </pre>
+		 */
+		@Test
+		public void testComplexTopology() throws Exception {
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+			env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+			env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+			env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+			env.setMultiHeadChainMode(true);
+
+			ClassLoader cl = getClass().getClassLoader();
+
+			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> map0 = source1.map(new NoOpMapFunction()).name("map0");
+			DataStream<String> map1 = map0.map(new NoOpMapFunction()).name("map1");
+			DataStream<String> map2 = map0.map(new NoOpMapFunction()).name("map2");
+
+			DataStream<String> map3 = env.addSource(new NoOpSourceFunction()).name("source2")
+				.map(new NoOpMapFunction()).name("map3");
+			DataStream<String> filter1 = map2.connect(map3).process(new NoOpCoProcessFuntion()).name("filter1");
+			DataStream<String> map4 = map3.map(new NoOpMapFunction()).name("map4");
+
+			DataStream<String> process1 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? map1.rescale() : map1)
+				.process(new NoOpCoProcessFuntion()).name("process1");
+			process1.addSink(new NoOpSinkFunction()).name("sink1");
+
+			DataStream<String> map5 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
+				.connect(breakingOffType == 2 || breakingOffType == 3 ? map3.rescale() : map3)
+				.map(new NoOpCoMapFunction()).name("map5");
+			map5.addSink(new NoOpSinkFunction()).name("sink2");
+
+			map4.filter(new NoOpFilterFunction()).name("filter2").addSink(new NoOpSinkFunction()).name("sink3");
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			for (StreamNode node : streamGraph.getStreamNodes()) {
+				if ("filter2".equals(node.getOperatorName())) {
+					node.getOperator().setChainingStrategy(ChainingStrategy.HEAD);
+				} else {
+					node.getOperator().setChainingStrategy(ChainingStrategy.ALWAYS);
+				}
+			}
+
+			JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+			assertEquals(4, jobGraph.getNumberOfVertices());
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+			// CHAIN1 vertex
+			{
+				JobVertex vertex = verticesSorted.get(0);
+				assertEquals(0, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Collections.emptyList(),
+					Lists.newArrayList(Tuple2.of("filter1", "process1"), Tuple2.of("map1", "process1"),
+						Tuple2.of("filter1", "map5"), Tuple2.of("map3", "map5"), Tuple2.of("map4", "filter2")),
+					Sets.newHashSet("Source: source1", "Source: source2", "map0", "map1", "map2", "map3", "map4", "filter1"),
+					Sets.newHashSet("Source: source1", "Source: source2"),
+					taskonfig);
+			}
+
+			// CHAIN(Process1 -> Sink1) vertex
+			{
+				JobVertex vertex = verticesSorted.get(1);
+				assertEquals(2, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("filter1", "process1"), Tuple2.of("map1", "process1")),
+					Collections.emptyList(),
+					Sets.newHashSet("process1", "Sink: sink1"),
+					Sets.newHashSet("process1"),
+					taskonfig);
+			}
+
+			// CHAIN(Map5 -> Sink2) vertex
+			{
+				JobVertex vertex = verticesSorted.get(2);
+				assertEquals(2, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("filter1", "map5"), Tuple2.of("map3", "map5")),
+					Collections.emptyList(),
+					Sets.newHashSet("map5", "Sink: sink2"),
+					Sets.newHashSet("map5"),
+					taskonfig);
+			}
+
+			// CHAIN(Filter2 -> Sink3) vertex
+			{
+				JobVertex vertex = verticesSorted.get(3);
+				assertEquals(1, vertex.getInputs().size());
+
+				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+					Lists.newArrayList(Tuple2.of("map4", "filter2")),
+					Collections.emptyList(),
+					Sets.newHashSet("filter2", "Sink: sink3"),
+					Sets.newHashSet("filter2"),
+					taskonfig);
+			}
 		}
 	}
 
@@ -548,14 +862,6 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 		@Override
 		public boolean filter(String value) throws Exception {
 			return true;
-		}
-	}
-
-	private static class NoOpKeySelector implements KeySelector<String, String> {
-
-		@Override
-		public String getKey(String value) throws Exception {
-			return value;
 		}
 	}
 }

@@ -356,7 +356,7 @@ public class StreamingJobGraphGenerator {
 		StreamNode upstreamStreamNode = streamGraph.getStreamNode(upstreamNodeId);
 		ChainingStreamNode upstreamNode = layeredNodeMap.get(upstreamNodeId);
 
-		upstreamNode.mergePath();
+		upstreamNode.mergeChainablePath();
 		if (upstreamNode.isChainHeadNode()) {
 			chainingHeadNodes.add(upstreamStreamNode);
 		}
@@ -773,6 +773,10 @@ public class StreamingJobGraphGenerator {
 			JobVertex upstreamVertex = nodeToJobVertexMap.get(edge.getSourceId());
 			JobVertex downstreamVertex = nodeToJobVertexMap.get(edge.getTargetId());
 
+			if (upstreamVertex.getID().equals(downstreamVertex.getID())) {
+				throw new RuntimeException("The graph is cyclic.");
+			}
+
 			StreamPartitioner<?> partitioner = edge.getPartitioner();
 			IntermediateDataSetID dataSetID = new IntermediateDataSetID(edge.getEdgeID());
 			JobEdge jobEdge;
@@ -1047,10 +1051,12 @@ public class StreamingJobGraphGenerator {
 		private int breadthFirstNumber = -1;
 
 		private int initNodeCountOfPath;
-		private Map<Integer, PassingPath> pathMap;
+		private Map<Integer, PassingPath> chainablePathMap;
 
-		private boolean isPathMerged;
-		private PassingPath mergedPath;
+		private boolean isChainablePathMerged;
+		private PassingPath mergedChainablePath;
+
+		private PassingPath mergedNonChainablePath;
 
 		private Set<Integer> chainableToSet;
 
@@ -1085,7 +1091,7 @@ public class StreamingJobGraphGenerator {
 		}
 
 		boolean isChainHeadNode() {
-			checkState(isPathMerged, "Chainning of the current node(nodeId: " + nodeId + ") has not completed yet.");
+			checkState(isChainablePathMerged, "Chainning of the current node(nodeId: " + nodeId + ") has not completed yet.");
 
 			return inEdgeCount == 0 || inEdgeCount > (chainableToSet == null ? 0 : chainableToSet.size());
 		}
@@ -1098,60 +1104,80 @@ public class StreamingJobGraphGenerator {
 			this.initNodeCountOfPath = initNodeCountOfPath;
 		}
 
-		void mergePath() {
-			checkState(!isPathMerged, "The passing paths of the current node(nodeId: " + nodeId + ") have merged.");
+		void mergeChainablePath() {
+			checkState(!isChainablePathMerged, "The passing paths of the current node(nodeId: " + nodeId + ") have merged.");
 
-			if (pathMap == null || pathMap.size() == 0) {
-				mergedPath = null;
+			if (chainablePathMap == null || chainablePathMap.size() == 0) {
+				mergedChainablePath = null;
 			} else {
-				for (PassingPath path : pathMap.values()) {
+				for (PassingPath path : chainablePathMap.values()) {
 					if (path.isMarkedAsDeleted()) {
 						continue;
 					}
-					if (mergedPath == null) {
-						mergedPath = path;
+					if (mergedChainablePath == null) {
+						mergedChainablePath = path;
 					} else {
-						mergedPath.merge(path);
+						mergedChainablePath.merge(path);
 					}
 				}
 			}
 
-			pathMap = null;
-			isPathMerged = true;
+			chainablePathMap = null;
+			isChainablePathMerged = true;
 		}
 
 		void chainTo(ChainingStreamNode upstreamNode, StreamEdge edge, StreamGraph streamGraph) {
-			checkState(upstreamNode.isPathMerged, "The passing paths of the upstream node(nodeId: " + upstreamNode.nodeId + ") have not been merged yet.");
+			checkState(upstreamNode.isChainablePathMerged, "The passing paths of the upstream node(nodeId: " + upstreamNode.nodeId + ") have not been merged yet.");
 
-			boolean isChainable;
+			boolean isChainable = true;
 
 			if (streamGraph.isMultiHeadChainMode()) {
-				isChainable = isEdgeChainableOnMultiHeadMode(edge, streamGraph.isChainEagerlyEnabled());
+				/**
+				 *  Checks paths overlapping for the following purpose:
+				 *  1. No cycle when connecting edges of the job graph.
+				 *  2. No deadlock occurs when dynamic selection reading,
+				 *     see {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord1(StreamRecord)}
+				 *     and {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord2(StreamRecord)}.
+				 */
 
-				/*
-				  Checks whether exists paths conflict for dynamic selection reading,
-				  see {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord1(StreamRecord)}
-				  and {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator#processRecord2(StreamRecord)}.
- 				 */
+				if (chainablePathMap == null) { // lazy assignment
+					chainablePathMap = new HashMap<>(inEdgeCount);
+				}
+				for (Map.Entry<Integer, PassingPath> entry : chainablePathMap.entrySet()) {
+					PassingPath path = entry.getValue();
+
+					boolean isRemoveChainableNode = false;
+					if (path.exist(upstreamNode.breadthFirstNumber) || path.intersects(upstreamNode.mergedChainablePath)) {
+						isRemoveChainableNode = true;
+						isChainable = false;
+					} else if (path.intersects(upstreamNode.mergedNonChainablePath)) {
+						isRemoveChainableNode = true;
+					}
+
+					if (isRemoveChainableNode) {
+						Integer otherUpstreamNodeId = entry.getKey();
+
+						PassingPath removedPath = removeChainablePath(otherUpstreamNodeId);
+						addNonChainablePath(removedPath);
+
+						removeChainableToNode(otherUpstreamNodeId);
+					}
+				}
+
+				addNonChainablePath(upstreamNode.mergedNonChainablePath);
 				if (isChainable) {
-					// lazy assignment
-					if (pathMap == null) {
-						pathMap = new HashMap<>(inEdgeCount);
+					if (mergedNonChainablePath.exist(upstreamNode.breadthFirstNumber)
+						|| mergedNonChainablePath.intersects(upstreamNode.mergedChainablePath)) {
+						isChainable = false;
+					} else {
+						isChainable = isEdgeChainableOnMultiHeadMode(edge, streamGraph.isChainEagerlyEnabled());
 					}
+				}
 
-					for (Map.Entry<Integer, PassingPath> entry : pathMap.entrySet()) {
-						PassingPath path = entry.getValue();
-						if (path.exist(upstreamNode.breadthFirstNumber) || path.intersects(upstreamNode.mergedPath)) {
-							Integer upstreamNodeId = entry.getKey();
-							removePath(upstreamNodeId);
-							removeChainableToNode(upstreamNodeId);
-							isChainable = false;
-						}
-					}
-
-					if (isChainable) {
-						addPath(upstreamNode);
-					}
+				if (isChainable) {
+					addChainablePath(upstreamNode);
+				} else {
+					addNonChainablePath(upstreamNode);
 				}
 			} else {
 				isChainable = isEdgeChainable(edge, streamGraph.isChainEagerlyEnabled());
@@ -1162,24 +1188,42 @@ public class StreamingJobGraphGenerator {
 			}
 		}
 
-		private void addPath(ChainingStreamNode upstreamNode) {
+		private void addChainablePath(ChainingStreamNode upstreamNode) {
 			PassingPath newPath;
-			if (upstreamNode.mergedPath != null) {
-				newPath = upstreamNode.mergedPath.clone();
+			if (upstreamNode.mergedChainablePath != null) {
+				newPath = upstreamNode.mergedChainablePath.clone();
 			} else {
 				newPath = new PassingPath(initNodeCountOfPath);
 			}
 			newPath.add(upstreamNode.breadthFirstNumber);
 
-			pathMap.put(upstreamNode.nodeId, newPath);
+			chainablePathMap.put(upstreamNode.nodeId, newPath);
 		}
 
-		private void removePath(Integer upstreamNodeId) {
-			if (pathMap != null) {
-				PassingPath path = pathMap.get(upstreamNodeId);
+		private PassingPath removeChainablePath(Integer upstreamNodeId) {
+			PassingPath path = null;
+
+			if (chainablePathMap != null) {
+				path = chainablePathMap.get(upstreamNodeId);
 				if (path != null) {
 					path.setMarkedAsDeleted(true);
 				}
+			}
+
+			return path;
+		}
+
+		private void addNonChainablePath(ChainingStreamNode upstreamNode) {
+			addNonChainablePath(upstreamNode.mergedChainablePath);
+			mergedNonChainablePath.add(upstreamNode.breadthFirstNumber);
+		}
+
+		private void addNonChainablePath(PassingPath path) {
+			if (mergedNonChainablePath == null) {
+				mergedNonChainablePath = new PassingPath(initNodeCountOfPath);
+			}
+			if (path != null) {
+				mergedNonChainablePath.merge(path);
 			}
 		}
 
@@ -1261,14 +1305,14 @@ public class StreamingJobGraphGenerator {
 			passingNodes.set(nodeNumber);
 		}
 
-		public void merge(PassingPath path) {
-			if (path != null) {
-				passingNodes.or(path.passingNodes);
+		public void merge(PassingPath other) {
+			if (other != null) {
+				passingNodes.or(other.passingNodes);
 			}
 		}
 
-		public boolean intersects(PassingPath path) {
-			return path != null && passingNodes.intersects(path.passingNodes);
+		public boolean intersects(PassingPath other) {
+			return other != null && passingNodes.intersects(other.passingNodes);
 		}
 
 		@SuppressWarnings("MethodDoesntCallSuperMethod")
