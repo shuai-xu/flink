@@ -26,6 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
@@ -37,7 +38,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
  */
 public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableObjectIterator<E>
 {
-	private final ChannelReaderInputView inView;
+	private final AbstractChannelReaderInputView inView;
 	
 	private final TypeSerializer<E> accessors;
 	
@@ -68,7 +69,7 @@ public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableO
 		this.inView = new ChannelReaderInputView(reader, segments, numBlocks, false);
 	}
 	
-	public ChannelReaderInputViewIterator(ChannelReaderInputView inView, List<MemorySegment> freeMemTarget, TypeSerializer<E> accessors)
+	public ChannelReaderInputViewIterator(AbstractChannelReaderInputView inView, List<MemorySegment> freeMemTarget, TypeSerializer<E> accessors)
 	{
 		this.inView = inView;
 		this.freeMemTarget = freeMemTarget;
@@ -83,7 +84,7 @@ public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableO
 		try {
 			return this.accessors.deserialize(reuse, this.inView);
 		} catch (EOFException eofex) {
-			final List<MemorySegment> freeMem = this.inView.close();
+			final List<MemorySegment> freeMem = inView.close();
 			if (this.freeMemTarget != null) {
 				this.freeMemTarget.addAll(freeMem);
 			}
@@ -97,7 +98,7 @@ public class ChannelReaderInputViewIterator<E> implements ChannelBackendMutableO
 		try {
 			return this.accessors.deserialize(this.inView);
 		} catch (EOFException eofex) {
-			final List<MemorySegment> freeMem = this.inView.close();
+			final List<MemorySegment> freeMem = inView.close();
 			if (this.freeMemTarget != null) {
 				this.freeMemTarget.addAll(freeMem);
 			}

@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.operator.join.batch;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -69,7 +70,6 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 	private final long externalBufferMemory;
 	private final FlinkJoinRelType type;
 	private final boolean leftIsSmaller;
-	private final int maxNumFileHandles;
 
 	// generated code to cook
 	private GeneratedJoinConditionFunction condFuncCode;
@@ -82,6 +82,7 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 
 	private transient CookedClasses classes;
 
+	private transient Configuration conf;
 	private transient MemoryManager memManager;
 	private transient IOManager ioManager;
 	private transient TypeSerializer<BaseRow> inputSerializer1;
@@ -108,10 +109,10 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 			GeneratedJoinConditionFunction condFuncCode,
 			GeneratedProjection projectionCode1, GeneratedProjection projectionCode2,
 			GeneratedSorter gSorter1, GeneratedSorter gSorter2, GeneratedSorter keyGSorter,
-			boolean[] filterNulls, int maxNumFileHandles) {
+			boolean[] filterNulls) {
 		this(reservedSortMemory, preferredSortMemory, reservedSortMemory, preferredSortMemory, perRequestMemory,
 				externalBufferMemory, type, leftIsSmaller, condFuncCode, projectionCode1, projectionCode2, gSorter1,
-				gSorter2, keyGSorter, filterNulls, maxNumFileHandles);
+				gSorter2, keyGSorter, filterNulls);
 	}
 
 	public SortMergeJoinOperator(
@@ -121,7 +122,7 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 			GeneratedJoinConditionFunction condFuncCode,
 			GeneratedProjection projectionCode1, GeneratedProjection projectionCode2,
 			GeneratedSorter gSorter1, GeneratedSorter gSorter2, GeneratedSorter keyGSorter,
-			boolean[] filterNulls, int maxNumFileHandles) {
+			boolean[] filterNulls) {
 		this.reservedSortMemory1 = reservedSortMemory1;
 		this.preferredSortMemory1 = preferredSortMemory1;
 		this.reservedSortMemory2 = reservedSortMemory2;
@@ -137,12 +138,13 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 		this.gSorter2 = checkNotNull(gSorter2);
 		this.keyGSorter = checkNotNull(keyGSorter);
 		this.filterNulls = filterNulls;
-		this.maxNumFileHandles = maxNumFileHandles;
 	}
 
 	@Override
 	public void open() throws Exception {
 		super.open();
+
+		conf = getContainingTask().getJobConfiguration();
 
 		// code gen classes.
 		this.classes = cookGeneratedClasses(getContainingTask().getUserCodeClassLoader());
@@ -210,7 +212,7 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 		comparator1.init(gSorter1.serializers(), gSorter1.comparators());
 		this.sorter1 = new BinaryExternalSorter(this.getContainingTask(),
 				memManager, reservedSortMemory1, preferredSortMemory1, perRequestMemory,
-				ioManager, inputSerializer1, serializer1, computer1, comparator1, maxNumFileHandles);
+				ioManager, inputSerializer1, serializer1, computer1, comparator1, conf);
 		this.sorter1.startThreads();
 
 		// sorter2
@@ -220,7 +222,7 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 		comparator2.init(gSorter2.serializers(), gSorter2.comparators());
 		this.sorter2 = new BinaryExternalSorter(this.getContainingTask(), memManager, reservedSortMemory2,
 				preferredSortMemory2, perRequestMemory, ioManager, inputSerializer2, serializer2, computer2,
-				comparator2, maxNumFileHandles);
+				comparator2, conf);
 		this.sorter2.startThreads();
 	}
 

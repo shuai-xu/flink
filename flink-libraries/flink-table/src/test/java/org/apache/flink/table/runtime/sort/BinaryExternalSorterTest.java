@@ -22,9 +22,11 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
@@ -34,10 +36,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -47,6 +53,7 @@ import static org.apache.flink.table.runtime.sort.InMemorySortTest.getStringSort
 /**
  * Sort test for binary row.
  */
+@RunWith(Parameterized.class)
 public class BinaryExternalSorterTest {
 
 	private static final int MEMORY_SIZE = 1024 * 1024 * 32;
@@ -54,6 +61,24 @@ public class BinaryExternalSorterTest {
 	private IOManager ioManager;
 	private MemoryManager memoryManager;
 	private BinaryRowSerializer serializer;
+	private Configuration conf;
+
+	public BinaryExternalSorterTest(boolean useBufferedIO, boolean spillCompress) {
+		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
+		conf = new Configuration();
+		if (!spillCompress) {
+			conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), false);
+		}
+	}
+
+	@Parameterized.Parameters(name = "useBufferedIO-{0} spillCompress-{1}")
+	public static Collection<Boolean[]> parameters() {
+		return Arrays.asList(
+				new Boolean[]{true, true},
+				new Boolean[]{true, false},
+				new Boolean[]{false, false},
+				new Boolean[]{false, true});
+	}
 
 	private static String getString(int count) {
 		StringBuilder builder = new StringBuilder();
@@ -67,8 +92,6 @@ public class BinaryExternalSorterTest {
 	@Before
 	public void beforeTest() {
 		this.memoryManager = new MemoryManager(MEMORY_SIZE, 1);
-		this.ioManager = new IOManagerAsync();
-
 		TypeInformation[] types = new TypeInformation[]{Types.INT, Types.STRING};
 		this.serializer = new BinaryRowSerializer(types);
 	}
@@ -109,7 +132,7 @@ public class BinaryExternalSorterTest {
 				minMemorySize,
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 1f);
+				conf, 1f);
 		sorter.startThreads();
 		sorter.write(reader);
 
@@ -145,7 +168,7 @@ public class BinaryExternalSorterTest {
 				minMemorySize,
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 0.7f);
+				conf, 0.7f);
 		sorter.startThreads();
 		sorter.write(reader);
 
@@ -179,7 +202,7 @@ public class BinaryExternalSorterTest {
 				minMemorySize,
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 0.7f);
+				conf, 0.7f);
 		sorter.startThreads();
 		sorter.write(reader);
 
@@ -219,7 +242,7 @@ public class BinaryExternalSorterTest {
 				minMemorySize,
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 0.7f);
+				conf, 0.7f);
 		sorter.startThreads();
 		sorter.write(reader);
 
@@ -253,7 +276,7 @@ public class BinaryExternalSorterTest {
 				4 * minMemorySize,
 				MemoryManager.DEFAULT_PAGE_SIZE,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 0.7f);
+				conf, 0.7f);
 		sorter.startThreads();
 		sorter.write(reader);
 
@@ -287,7 +310,7 @@ public class BinaryExternalSorterTest {
 				minMemorySize,
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 0.7f);
+				conf, 0.7f);
 		sorter.startThreads();
 		sorter.write(reader);
 
@@ -327,7 +350,7 @@ public class BinaryExternalSorterTest {
 				minMemorySize,
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
-				64, 0.7f);
+				conf, 0.7f);
 		sorter.startThreads();
 
 		List<BinaryRow> data = new ArrayList<>();

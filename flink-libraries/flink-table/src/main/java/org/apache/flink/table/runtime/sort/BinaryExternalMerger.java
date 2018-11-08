@@ -19,8 +19,9 @@
 package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.runtime.io.disk.ChannelReaderInputViewIterator;
-import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
+import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
@@ -49,14 +50,17 @@ public class BinaryExternalMerger extends AbstractBinaryExternalMerger<BinaryRow
 			int maxFanIn,
 			SpillChannelManager channelManager,
 			BinaryRowSerializer serializer,
-			RecordComparator comparator) {
-		super(ioManager, pageSize, maxFanIn, channelManager);
+			RecordComparator comparator,
+			boolean compressionEnable,
+			String compressionCodec,
+			int compressionBlockSize) {
+		super(ioManager, pageSize, maxFanIn, channelManager, compressionEnable, compressionCodec, compressionBlockSize);
 		this.serializer = serializer;
 		this.comparator = comparator;
 	}
 
 	@Override
-	protected MutableObjectIterator<BinaryRow> channelReaderInputViewIterator(ChannelReaderInputView inView) {
+	protected MutableObjectIterator<BinaryRow> channelReaderInputViewIterator(AbstractChannelReaderInputView inView) {
 		return new ChannelReaderInputViewIterator<>(inView, null, serializer.duplicate());
 	}
 
@@ -77,7 +81,7 @@ public class BinaryExternalMerger extends AbstractBinaryExternalMerger<BinaryRow
 	@Override
 	protected void writeMergingOutput(
 			MutableObjectIterator<BinaryRow> mergeIterator,
-			HeaderlessChannelWriterOutputView output) throws IOException {
+			AbstractPagedOutputView output) throws IOException {
 		// read the merged stream and write the data back
 		BinaryRow rec = serializer.createInstance();
 		while ((rec = mergeIterator.next(rec)) != null) {

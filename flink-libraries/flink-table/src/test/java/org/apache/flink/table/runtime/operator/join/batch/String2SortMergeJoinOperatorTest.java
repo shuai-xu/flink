@@ -170,7 +170,7 @@ public class String2SortMergeJoinOperatorTest {
 					null, null, null,
 					new GeneratedSorter(null, null, null, null),
 					new GeneratedSorter(null, null, null, null),
-					new GeneratedSorter(null, null, null, null), new boolean[]{true}, 128);
+					new GeneratedSorter(null, null, null, null), new boolean[]{true});
 		}
 
 		@Override

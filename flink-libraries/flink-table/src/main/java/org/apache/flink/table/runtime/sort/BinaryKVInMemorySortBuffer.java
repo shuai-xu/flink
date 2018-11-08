@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.sort;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
+import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.MemorySegmentPool;
@@ -63,7 +64,8 @@ public class BinaryKVInMemorySortBuffer extends BinaryIndexedSortable {
 		this.valueSerializer = valueSerializer;
 	}
 
-	public void writeToOutput(HeaderlessChannelWriterOutputView output) throws IOException {
+	@Override
+	public void writeToOutput(AbstractPagedOutputView output) throws IOException {
 		final int numRecords = this.numRecords;
 		int currentMemSeg = 0;
 		int currentRecord = 0;

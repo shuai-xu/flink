@@ -21,11 +21,13 @@ package org.apache.flink.table.runtime.sort;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.SimpleCollectingOutputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
@@ -61,7 +63,16 @@ public class BufferedKVExternalSorterTest {
 	private int spillNumber;
 	private int recordNumberPerFile;
 
-	public BufferedKVExternalSorterTest(int spillNumber, int recordNumberPerFile) {
+	private Configuration conf;
+
+	public BufferedKVExternalSorterTest(
+			int spillNumber, int recordNumberPerFile,
+			boolean useBufferedIO, boolean spillCompress) {
+		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
+		conf = new Configuration();
+		if (!spillCompress) {
+			conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), false);
+		}
 		this.spillNumber = spillNumber;
 		this.recordNumberPerFile = recordNumberPerFile;
 	}
@@ -69,9 +80,12 @@ public class BufferedKVExternalSorterTest {
 	@Parameterized.Parameters
 	public static List<Object[]> getDataSize() {
 		List<Object[]> paras = new ArrayList<>();
-		paras.add(new Object[]{3, 1000});
-		paras.add(new Object[]{10, 1000});
-		paras.add(new Object[]{10, 10000});
+		paras.add(new Object[]{3, 1000, true, true});
+		paras.add(new Object[]{3, 1000, false, false});
+		paras.add(new Object[]{10, 1000, true, true});
+		paras.add(new Object[]{10, 1000, false, false});
+		paras.add(new Object[]{10, 10000, true, true});
+		paras.add(new Object[]{10, 10000, false, false});
 		return paras;
 	}
 
@@ -103,7 +117,7 @@ public class BufferedKVExternalSorterTest {
 		BufferedKVExternalSorter sorter =
 				new BufferedKVExternalSorter(
 						ioManager, keySerializer, valueSerializer, computer, comparator,
-						5, PAGE_SIZE);
+						PAGE_SIZE, conf);
 		InMemorySortTest.TestMemorySegmentPool pool =
 				new InMemorySortTest.TestMemorySegmentPool(PAGE_SIZE);
 		List<Integer> expected = new ArrayList<>();

@@ -636,8 +636,8 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
        |    new $binaryRowSerializerTypeTerm($groupKeyTypesTerm),
        |    new $binaryRowSerializerTypeTerm($aggBufferTypesTerm),
        |    $keyComputerTerm, $recordComparatorTerm,
-       |    org.apache.flink.configuration.ConfigConstants.DEFAULT_SPILLING_MAX_FAN,
-       |    getContainingTask().getEnvironment().getMemoryManager().getPageSize()
+       |    getContainingTask().getEnvironment().getMemoryManager().getPageSize(),
+       |    getContainingTask().getJobConfiguration()
        |  );
        """.stripMargin
   }

@@ -205,8 +205,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       newGeneratedSorter(leftAllKey.toArray, leftType),
       newGeneratedSorter(rightAllKey.toArray, rightType),
       newGeneratedSorter(leftAllKey.indices.toArray, keyType),
-      filterNulls,
-      tableEnv.getConfig.getParameters.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES))
+      filterNulls)
 
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftInput,

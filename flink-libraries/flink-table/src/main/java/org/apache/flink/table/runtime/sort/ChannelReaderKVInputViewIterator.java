@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.sort;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
@@ -35,7 +36,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  */
 public class ChannelReaderKVInputViewIterator<K, V> implements MutableObjectIterator<Tuple2<K, V>> {
-	private final ChannelReaderInputView inView;
+	private final AbstractChannelReaderInputView inView;
 	private final TypeSerializer<K> keySerializer;
 	private final TypeSerializer<V> valueSerializer;
 	private final List<MemorySegment> freeMemTarget;
@@ -78,7 +79,7 @@ public class ChannelReaderKVInputViewIterator<K, V> implements MutableObjectIter
 	}
 
 	public ChannelReaderKVInputViewIterator(
-			ChannelReaderInputView inView,
+			AbstractChannelReaderInputView inView,
 			List<MemorySegment> freeMemTarget,
 			TypeSerializer<K> keySerializer,
 			TypeSerializer<V> valueSerializer) {

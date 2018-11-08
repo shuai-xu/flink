@@ -18,13 +18,17 @@
 package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
+import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.operators.sort.IndexedSorter;
 import org.apache.flink.runtime.operators.sort.QuickSort;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputView;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryMergeIterator;
 import org.apache.flink.table.util.ChannelWithMeta;
@@ -68,38 +72,51 @@ public class BufferedKVExternalSorter {
 	private final List<ChannelWithMeta> channelIDs = new ArrayList<>();
 	private final SpillChannelManager channelManager;
 
+	private final int writeNumMemory;
+
+	private final boolean compressionEnable;
+	private final String compressionCodec;
+	private final int compressionBlockSize;
+
 	public BufferedKVExternalSorter(
 			IOManager ioManager,
 			BinaryRowSerializer keySerializer,
 			BinaryRowSerializer valueSerializer,
 			NormalizedKeyComputer nKeyComputer,
 			RecordComparator comparator,
-			int maxNumFileHandles,
-			int pageSize) throws IOException {
+			int pageSize,
+			Configuration conf) throws IOException {
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 		this.nKeyComputer = nKeyComputer;
 		this.comparator = comparator;
 		this.sorter = new QuickSort();
-		this.maxNumFileHandles = maxNumFileHandles;
+		this.maxNumFileHandles = conf.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES());
+		this.compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
+		this.compressionCodec = conf.getString(TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC());
+		this.compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
+		this.writeNumMemory = compressionEnable ? 0 : WRITE_MEMORY_NUM;
 		this.ioManager = ioManager;
 		this.enumerator = this.ioManager.createChannelEnumerator();
 		this.channelManager = new SpillChannelManager();
 		this.merger = new BinaryKVExternalMerger(
 				ioManager, pageSize,
 				maxNumFileHandles, channelManager,
-				keySerializer, valueSerializer, comparator);
+				keySerializer, valueSerializer, comparator,
+				compressionEnable,
+				compressionCodec,
+				compressionBlockSize);
 	}
 
 	public MutableObjectIterator<Tuple2<BinaryRow, BinaryRow>> getKVIterator(
 			MemorySegmentPool pool) throws IOException {
-		return getKVIterator(new ArrayList<MemorySegment>(), pool);
+		return getKVIterator(new ArrayList<>(), pool);
 	}
 
 	public MutableObjectIterator<Tuple2<BinaryRow, BinaryRow>> getKVIterator(
 			List<MemorySegment> memorySegments, MemorySegmentPool pool) throws IOException {
 
-		int totalNeedSegs = WRITE_MEMORY_NUM + Math.min(channelIDs.size(), maxNumFileHandles);
+		int totalNeedSegs = writeNumMemory + Math.min(channelIDs.size(), maxNumFileHandles);
 		int nowSegs = memorySegments.size();
 		if (totalNeedSegs > nowSegs) {
 			memorySegments = new ArrayList<>(memorySegments);
@@ -110,9 +127,9 @@ public class BufferedKVExternalSorter {
 
 		// 1. merge if more than maxNumFile
 		List<MemorySegment> writeMemory =
-				new ArrayList<>(memorySegments.subList(0, WRITE_MEMORY_NUM));
+				new ArrayList<>(memorySegments.subList(0, writeNumMemory));
 		List<MemorySegment> mergeReadMemory =
-				new ArrayList<>(memorySegments.subList(WRITE_MEMORY_NUM, memorySegments.size()));
+				new ArrayList<>(memorySegments.subList(writeNumMemory, memorySegments.size()));
 
 		// merge channels until sufficient file handles are available
 		List<ChannelWithMeta> channelIDs = this.channelIDs;
@@ -152,17 +169,30 @@ public class BufferedKVExternalSorter {
 		channelManager.addChannel(channel);
 
 		// create writer
-		BlockChannelWriter<MemorySegment> writer = null;
-		int bytesInLastBuffer;
+		FileIOChannel writer = null;
+		int bytesInLastBuffer = -1;
 		int blockCount;
 		try {
-			writer = this.ioManager.createBlockChannelWriter(channel);
-			HeaderlessChannelWriterOutputView output = new HeaderlessChannelWriterOutputView(
-					writer, Arrays.asList(pool.nextSegment(), pool.nextSegment()), pool.pageSize());
-			buffer.writeToOutput(output);
-			LOG.info("here spill the kv external buffer data with {} bytes", writer.getSize());
-			bytesInLastBuffer = output.close();
-			blockCount = output.getBlockCount();
+			if (compressionEnable) {
+				BufferFileWriter bufferWriter = this.ioManager.createBufferFileWriter(channel);
+				writer = bufferWriter;
+				CompressedHeaderlessChannelWriterOutputView output = new CompressedHeaderlessChannelWriterOutputView(
+						bufferWriter, compressionCodec, compressionBlockSize);
+				buffer.writeToOutput(output);
+				output.close();
+				blockCount = output.getBlockCount();
+				LOG.info("here spill the kv external buffer data with {} bytes and {} compressed bytes",
+						output.getNumBytes(), output.getNumCompressedBytes());
+			} else {
+				BlockChannelWriter<MemorySegment> blockWriter = this.ioManager.createBlockChannelWriter(channel);
+				writer = blockWriter;
+				HeaderlessChannelWriterOutputView output = new HeaderlessChannelWriterOutputView(
+						blockWriter, Arrays.asList(pool.nextSegment(), pool.nextSegment()), pool.pageSize());
+				buffer.writeToOutput(output);
+				LOG.info("here spill the kv external buffer data with {} bytes", writer.getSize());
+				bytesInLastBuffer = output.close();
+				blockCount = output.getBlockCount();
+			}
 		} catch (IOException e) {
 			if (writer != null) {
 				writer.closeAndDelete();

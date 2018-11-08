@@ -824,6 +824,18 @@ object TableConfig {
           "Sort merge's maximum number of roads, too many roads, may cause too many files to be" +
               " read at the same time, resulting in excessive use of memory.")
 
+  val SQL_EXEC_SPILL_COMPRESSION_ENABLE: ConfigOption[JBoolean] =
+    ConfigOptions.key("sql.exec.spill.compression.enable")
+        .defaultValue(new JBoolean(true))
+
+  val SQL_EXEC_SPILL_COMPRESSION_CODEC: ConfigOption[String] =
+    ConfigOptions.key("sql.exec.spill.compression.codec")
+        .defaultValue("lz4")
+
+  val SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE: ConfigOption[Integer] =
+    ConfigOptions.key("sql.exec.spill.compression.block-size")
+        .defaultValue(new Integer(64 * 1024))
+
   // =================================== Join ===================================
   /**
     * Sets the HashTable reserved memory for hashJoin operator. It defines the lower limit for.

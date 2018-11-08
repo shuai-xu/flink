@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
+import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.runtime.operators.sort.IndexedSortable;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
@@ -229,7 +230,7 @@ public abstract class BinaryIndexedSortable implements IndexedSortable {
 	/**
 	 * Spill: Write all records to a {@link HeaderlessChannelWriterOutputView}.
 	 */
-	public void writeToOutput(HeaderlessChannelWriterOutputView output) throws IOException {
+	public void writeToOutput(AbstractPagedOutputView output) throws IOException {
 		final int numRecords = this.numRecords;
 		int currentMemSeg = 0;
 		int currentRecord = 0;

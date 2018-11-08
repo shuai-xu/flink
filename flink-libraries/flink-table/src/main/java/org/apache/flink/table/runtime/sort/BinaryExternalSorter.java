@@ -21,8 +21,10 @@ package org.apache.flink.table.runtime.sort;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
+import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
@@ -33,8 +35,10 @@ import org.apache.flink.runtime.operators.sort.QuickSort;
 import org.apache.flink.runtime.operators.sort.SortedDataFile;
 import org.apache.flink.runtime.operators.sort.Sorter;
 import org.apache.flink.runtime.util.EmptyMutableObjectIterator;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputView;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryMergeIterator;
 import org.apache.flink.table.util.ChannelWithMeta;
@@ -174,6 +178,11 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 	private final BinaryExternalMerger merger;
 
+	private final boolean compressionEnable;
+	private final String compressionCodec;
+	private final int compressionBlockSize;
+
+
 	// ------------------------------------------------------------------------
 	//                         Constructor & Shutdown
 	// ------------------------------------------------------------------------
@@ -183,15 +192,16 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	//metric
 	private long numSpillFiles;
 	private long spillInBytes;
+	private long spillInCompressedBytes;
 
 	public BinaryExternalSorter(
 			final Object owner, MemoryManager memoryManager, long reservedMemorySize, long maxMemorySize,
 			long perRequestMemorySize, IOManager ioManager, TypeSerializer<BaseRow> inputSerializer,
 			BinaryRowSerializer serializer, NormalizedKeyComputer normalizedKeyComputer,
-			RecordComparator comparator, int maxNumFileHandles) throws IOException {
+			RecordComparator comparator, Configuration conf) throws IOException {
 		this(owner, memoryManager, reservedMemorySize, maxMemorySize, perRequestMemorySize, ioManager,
 				inputSerializer, serializer, normalizedKeyComputer, comparator,
-				maxNumFileHandles, ConfigConstants.DEFAULT_SORT_SPILLING_THRESHOLD);
+				conf, ConfigConstants.DEFAULT_SORT_SPILLING_THRESHOLD);
 	}
 
 	public BinaryExternalSorter(
@@ -199,8 +209,12 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 			long perRequestMemorySize, IOManager ioManager, TypeSerializer<BaseRow> inputSerializer,
 			BinaryRowSerializer serializer,
 			NormalizedKeyComputer normalizedKeyComputer,
-			RecordComparator comparator, int maxNumFileHandles,
+			RecordComparator comparator, Configuration conf,
 			float startSpillingFraction) throws IOException {
+		int maxNumFileHandles = conf.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES());
+		compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
+		compressionCodec = conf.getString(TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC());
+		compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
 		checkArgument(maxNumFileHandles >= 2);
 		checkNotNull(ioManager);
 		checkNotNull(normalizedKeyComputer);
@@ -223,17 +237,22 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		// determine how many buffers we have when we do a full mere with maximal fan-in
 		final int minBuffersForMerging = maxNumFileHandles + MIN_NUM_WRITE_BUFFERS;
 
-		if (minBuffersForMerging > numMinPagesTotal) {
-			numWriteBuffers = MIN_NUM_WRITE_BUFFERS;
-			maxNumFileHandles = numMinPagesTotal - MIN_NUM_WRITE_BUFFERS;
+		if (compressionEnable) {
+			// compression don't need this memory.
+			numWriteBuffers = 0;
 		} else {
-			// we are free to choose. make sure that we do not eat up too much memory for writing
-			final int fractionalAuxBuffers = numMinPagesTotal / (100);
-
-			if (fractionalAuxBuffers >= MAX_NUM_WRITE_BUFFERS) {
-				numWriteBuffers = MAX_NUM_WRITE_BUFFERS;
+			if (minBuffersForMerging > numMinPagesTotal) {
+				numWriteBuffers = MIN_NUM_WRITE_BUFFERS;
+				maxNumFileHandles = numMinPagesTotal - MIN_NUM_WRITE_BUFFERS;
 			} else {
-				numWriteBuffers = Math.max(MIN_NUM_WRITE_BUFFERS, fractionalAuxBuffers); // at least the lower bound
+				// we are free to choose. make sure that we do not eat up too much memory for writing
+				final int fractionalAuxBuffers = numMinPagesTotal / (100);
+
+				if (fractionalAuxBuffers >= MAX_NUM_WRITE_BUFFERS) {
+					numWriteBuffers = MAX_NUM_WRITE_BUFFERS;
+				} else {
+					numWriteBuffers = Math.max(MIN_NUM_WRITE_BUFFERS, fractionalAuxBuffers); // at least the lower bound
+				}
 			}
 		}
 
@@ -321,7 +340,8 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		this.merger = new BinaryExternalMerger(
 				ioManager, memoryManager.getPageSize(),
 				maxNumFileHandles, channelManager,
-				(BinaryRowSerializer) serializer.duplicate(), comparator);
+				(BinaryRowSerializer) serializer.duplicate(), comparator,
+				compressionEnable, compressionCodec, compressionBlockSize);
 
 		// start the thread that sorts the buffers
 		this.sortThread = getSortingThread(exceptionHandler, circularQueues);
@@ -1024,20 +1044,35 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 					channelManager.addChannel(channel);
 
 					// create writer
-					BlockChannelWriter<MemorySegment> writer = null;
-					int bytesInLastBuffer;
+					FileIOChannel writer = null;
+					int bytesInLastBuffer = -1;
 					int blockCount;
 
 					try {
-						writer = this.ioManager.createBlockChannelWriter(channel);
-						HeaderlessChannelWriterOutputView output = new HeaderlessChannelWriterOutputView(
-								writer, this.writeMemory, this.memManager.getPageSize());
-						element.buffer.writeToOutput(output);
 						numSpillFiles++;
-						spillInBytes += writer.getSize();
-						LOG.info("here spill the {}th sort buffer data with {} bytes", numSpillFiles, spillInBytes);
-						bytesInLastBuffer = output.close();
-						blockCount = output.getBlockCount();
+						if (compressionEnable) {
+							BufferFileWriter bufferWriter = this.ioManager.createBufferFileWriter(channel);
+							writer = bufferWriter;
+							CompressedHeaderlessChannelWriterOutputView output = new CompressedHeaderlessChannelWriterOutputView(
+									bufferWriter, compressionCodec, compressionBlockSize);
+							element.buffer.writeToOutput(output);
+							output.close();
+							spillInBytes += output.getNumBytes();
+							spillInCompressedBytes += output.getNumCompressedBytes();
+							blockCount = output.getBlockCount();
+							LOG.info("here spill the {}th sort buffer data with {} bytes and {} compressed bytes",
+									numSpillFiles, spillInBytes, spillInCompressedBytes);
+						} else {
+							BlockChannelWriter<MemorySegment> blockWriter = this.ioManager.createBlockChannelWriter(channel);
+							writer = blockWriter;
+							HeaderlessChannelWriterOutputView output = new HeaderlessChannelWriterOutputView(
+									blockWriter, this.writeMemory, this.memManager.getPageSize());
+							element.buffer.writeToOutput(output);
+							spillInBytes += writer.getSize();
+							bytesInLastBuffer = output.close();
+							blockCount = output.getBlockCount();
+							LOG.info("here spill the {}th sort buffer data with {} bytes", numSpillFiles, spillInBytes);
+						}
 					} catch (IOException e) {
 						if (writer != null) {
 							writer.closeAndDelete();

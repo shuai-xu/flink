@@ -18,8 +18,9 @@
 package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
+import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
@@ -49,8 +50,11 @@ public class BinaryKVExternalMerger extends AbstractBinaryExternalMerger<Tuple2<
 			SpillChannelManager channelManager,
 			BinaryRowSerializer keySerializer,
 			BinaryRowSerializer valueSerializer,
-			RecordComparator comparator) {
-		super(ioManager, pageSize, maxFanIn, channelManager);
+			RecordComparator comparator,
+			boolean compressionEnable,
+			String compressionCodec,
+			int compressionBlockSize) {
+		super(ioManager, pageSize, maxFanIn, channelManager, compressionEnable, compressionCodec, compressionBlockSize);
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 		this.comparator = comparator;
@@ -68,7 +72,7 @@ public class BinaryKVExternalMerger extends AbstractBinaryExternalMerger<Tuple2<
 
 	@Override
 	protected MutableObjectIterator<Tuple2<BinaryRow, BinaryRow>> channelReaderInputViewIterator(
-			ChannelReaderInputView inView) {
+			AbstractChannelReaderInputView inView) {
 		return new ChannelReaderKVInputViewIterator<>(
 				inView, null, keySerializer.duplicate(), valueSerializer.duplicate());
 	}
@@ -81,7 +85,7 @@ public class BinaryKVExternalMerger extends AbstractBinaryExternalMerger<Tuple2<
 	@Override
 	protected void writeMergingOutput(
 			MutableObjectIterator<Tuple2<BinaryRow, BinaryRow>> mergeIterator,
-			HeaderlessChannelWriterOutputView output) throws IOException {
+			AbstractPagedOutputView output) throws IOException {
 		// read the merged stream and write the data back
 		Tuple2<BinaryRow, BinaryRow> kv = new Tuple2<>(
 				keySerializer.createInstance(), valueSerializer.createInstance());

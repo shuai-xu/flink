@@ -19,12 +19,16 @@
 package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
-import org.apache.flink.runtime.io.disk.iomanager.ChannelReaderInputView;
+import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.memory.AbstractPagedOutputView;
+import org.apache.flink.table.runtime.CompressedHeaderlessChannelReaderInputView;
+import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputView;
 import org.apache.flink.table.util.BinaryMergeIterator;
 import org.apache.flink.table.util.ChannelWithMeta;
 import org.apache.flink.util.MutableObjectIterator;
@@ -51,16 +55,25 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 	protected final IOManager ioManager;
 	protected final int maxFanIn;
 	protected final SpillChannelManager channelManager;
+	private final boolean compressionEnable;
+	private final String compressionCodec;
+	private final int compressionBlockSize;
 
 	public AbstractBinaryExternalMerger(
 			IOManager ioManager,
 			int pageSize,
 			int maxFanIn,
-			SpillChannelManager channelManager) {
+			SpillChannelManager channelManager,
+			boolean compressionEnable,
+			String compressionCodec,
+			int compressionBlockSize) {
 		this.ioManager = ioManager;
 		this.pageSize = pageSize;
 		this.maxFanIn = maxFanIn;
 		this.channelManager = channelManager;
+		this.compressionEnable = compressionEnable;
+		this.compressionCodec = compressionCodec;
+		this.compressionBlockSize = compressionBlockSize;
 	}
 
 	@Override
@@ -94,15 +107,20 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 			final ChannelWithMeta channel = channelIDs.get(i);
 			final List<MemorySegment> segsForChannel = readBuffers.get(i);
 
-			// create a reader. if there are multiple segments for the reader, issue multiple together per I/O request
-			final BlockChannelReader<MemorySegment> reader =
-					ioManager.createBlockChannelReader(channel.getChannel());
+			AbstractChannelReaderInputView inView;
+			if (compressionEnable) {
+				CompressedHeaderlessChannelReaderInputView in = new CompressedHeaderlessChannelReaderInputView(
+						channel.getChannel(), ioManager, compressionCodec, compressionBlockSize, channel.getBlockCount());
+				inView = in;
+				openChannels.add(in.getReader());
+			} else {
+				BlockChannelReader<MemorySegment> reader =
+						ioManager.createBlockChannelReader(channel.getChannel());
+				openChannels.add(reader);
+				inView = new HeaderlessChannelReaderInputView(reader, segsForChannel, channel.getBlockCount(),
+						channel.getNumBytesInLastBlock(), false);
+			}
 
-			openChannels.add(reader);
-
-			// wrap channel reader as a view, to get block spanning record deserialization
-			final ChannelReaderInputView inView = new HeaderlessChannelReaderInputView(
-							reader, segsForChannel, channel.getBlockCount(), channel.getNumBytesInLastBlock(), false);
 			iterators.add(channelReaderInputViewIterator(inView));
 		}
 
@@ -184,18 +202,28 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 		// create a new channel writer
 		final FileIOChannel.ID mergedChannelID = ioManager.createChannel();
 		channelManager.addChannel(mergedChannelID);
-		BlockChannelWriter<MemorySegment> writer = null;
+		FileIOChannel writer = null;
 
-		int numBytesInLastBlock;
+		int numBytesInLastBlock = -1;
 		int numBlocksWritten;
 		try {
-			writer = ioManager.createBlockChannelWriter(mergedChannelID);
-			HeaderlessChannelWriterOutputView output =
-					new HeaderlessChannelWriterOutputView(writer, writeBuffers, pageSize);
-			// read the merged stream and write the data back
-			writeMergingOutput(mergeIterator, output);
-			numBytesInLastBlock = output.close();
-			numBlocksWritten = output.getBlockCount();
+			if (compressionEnable) {
+				BufferFileWriter bufferWriter = this.ioManager.createBufferFileWriter(mergedChannelID);
+				writer = bufferWriter;
+				CompressedHeaderlessChannelWriterOutputView output = new CompressedHeaderlessChannelWriterOutputView(
+						bufferWriter, compressionCodec, compressionBlockSize);
+				writeMergingOutput(mergeIterator, output);
+				output.close();
+				numBlocksWritten = output.getBlockCount();
+			} else {
+				BlockChannelWriter<MemorySegment> blockWriter = this.ioManager.createBlockChannelWriter(mergedChannelID);
+				writer = blockWriter;
+				HeaderlessChannelWriterOutputView output = new HeaderlessChannelWriterOutputView(
+						blockWriter, writeBuffers, pageSize);
+				writeMergingOutput(mergeIterator, output);
+				numBytesInLastBlock = output.close();
+				numBlocksWritten = output.getBlockCount();
+			}
 		} catch (IOException e) {
 			if (writer != null) {
 				writer.closeAndDelete();
@@ -222,7 +250,7 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 	 * @return entry iterator reading from inView.
 	 */
 	protected abstract MutableObjectIterator<Entry> channelReaderInputViewIterator(
-			ChannelReaderInputView inView);
+			AbstractChannelReaderInputView inView);
 
 	/**
 	 * @return merging comparator used in merging.
@@ -239,7 +267,7 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 	 */
 	protected abstract void writeMergingOutput(
 			MutableObjectIterator<Entry> mergeIterator,
-			HeaderlessChannelWriterOutputView output) throws IOException;
+			AbstractPagedOutputView output) throws IOException;
 
 	// -------------------------------------------------------------------------------------------
 
