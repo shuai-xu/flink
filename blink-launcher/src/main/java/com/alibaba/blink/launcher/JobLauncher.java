@@ -42,6 +42,7 @@ import com.alibaba.blink.launcher.autoconfig.rulebased.RuleBasedStreamGraphPrope
 import com.alibaba.blink.launcher.util.EnvUtil;
 import com.alibaba.blink.launcher.util.JobBuildHelper;
 import com.alibaba.blink.launcher.util.NumUtil;
+import com.alibaba.blink.launcher.util.PropertiesUtil;
 import com.alibaba.blink.launcher.util.SqlJobAdapter;
 import com.alibaba.blink.launcher.util.StreamExecEnvUtil;
 import com.alibaba.blink.launcher.util.StringUtil;
@@ -124,8 +125,8 @@ public class JobLauncher {
 						break;
 					case "-conf":
 						try (InputStream inputStream = new FileInputStream(args[i++])) {
-							jobConf.load(inputStream);
-							for (String key :jobConf.stringPropertyNames()) {
+							PropertiesUtil.loadWithTrimmedValues(inputStream, jobConf);
+							for (String key : jobConf.stringPropertyNames()) {
 								LOG.info("Load user parameter: {}={}", key, jobConf.getProperty(key));
 							}
 						} catch (IOException ignored) {
