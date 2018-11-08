@@ -1095,6 +1095,61 @@ public class JobMasterFailoverTest extends TestLogger {
 		}
 	}
 
+	/**
+	 * Tests that the JobMaster is able to continue to schedule a execution after replaying a empty log.
+	 */
+	@Test
+	public void testContinueScheduleAfterReplayingEmptyLog() throws Exception {
+		TestingEagerSchedulingPlugin.init();
+		configuration.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, TestingEagerSchedulingPlugin.class.getName());
+		final JobGraph producerConsumerJobGraph = producerConsumerJobGraph(configuration, ResultPartitionType.PIPELINED);
+		final JobMaster jobMaster = createJobMaster(
+				configuration,
+				producerConsumerJobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().build(),
+				heartbeatServices);
+
+		//clear the log genereated by other cases;
+		jobMaster.getExecutionGraph().getGraphManager().reset();
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			ExecutionGraphTestUtils.waitUntilExecutionState(
+					jobMaster.getExecutionGraph().getRegisteredExecutions().values().iterator().next(),
+					ExecutionState.SCHEDULED,
+					2000L);
+
+			// Another master can replay the log as the use the same log store.
+			final JobMaster newJobMaster = createJobMaster(
+					configuration,
+					producerConsumerJobGraph,
+					haServices,
+					new TestingJobManagerSharedServicesBuilder().build(),
+					heartbeatServices);
+
+			// let the new job master replay log
+			newJobMaster.reconcile();
+
+			// check that the status are the same with before failover.
+
+			newJobMaster.start(jobMasterId, testingTimeout).get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			ExecutionGraphTestUtils.waitUntilExecutionState(
+					newJobMaster.getExecutionGraph().getRegisteredExecutions().values().iterator().next(),
+					ExecutionState.SCHEDULED,
+					2000L);
+
+			RpcUtils.terminateRpcEndpoint(newJobMaster, testingTimeout);
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
 	private JobGraph producerConsumerJobGraph(Configuration configuration, ResultPartitionType resultPartitionType) {
 		final SlotSharingGroup sharingGroup = new SlotSharingGroup();
 

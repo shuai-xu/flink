@@ -1233,13 +1233,13 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		log.info("Starting execution of job {} ({})", jobGraph.getName(), jobGraph.getJobID());
 
 		// For a new job, schedule it directly. If in RECONCILING, it will be scheduled after reconcile finish.
-		if (JobStatus.CREATED.equals(executionGraph.getState())) {
+		if (JobStatus.CREATED.equals(executionGraph.getState()) && !graphManager.isReconciling()) {
 			scheduleExecutionGraph();
 		} else {
 			executionGraph.getReconcileFuture().thenApplyAsync(
 					(Collection<ExecutionAttemptID> reconcileFailedExecutions) -> {
+						graphManager.leaveReconcile();
 						if (JobStatus.RUNNING.equals(executionGraph.getState())) {
-							graphManager.leaveReconcile();
 							for (ExecutionAttemptID executionAttemptId : reconcileFailedExecutions) {
 								if (executionAttemptId != null) {
 									Execution execution = executionGraph.getRegisteredExecutions().get(executionAttemptId);
@@ -1252,6 +1252,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 									}
 								}
 							}
+						}
+						else if (JobStatus.CREATED.equals(executionGraph.getState())) {
+							scheduleExecutionGraph();
 						} else {
 							log.error("When reconcile finished, the job is in {}, this is a logical error.", executionGraph.getState());
 						}

@@ -1171,7 +1171,19 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 			reconcileFuture = FutureUtils.combineAll(executionReconcileFutures).whenComplete(
 					(ignore, throwable) -> {
-						if (!transitionState(JobStatus.RECONCILING, JobStatus.RUNNING)) {
+						boolean allCreaated = true;
+						for (ExecutionJobVertex ejv : getAllVertices().values()) {
+							if (ejv.getAggregateState() != ExecutionState.CREATED) {
+								allCreaated = false;
+								break;
+							}
+						}
+						if (allCreaated) {
+							if (!transitionState(JobStatus.RECONCILING, JobStatus.CREATED)) {
+								LOG.error("When reconcile finish, the job is in {}, this is a logical error.", state);
+							}
+						}
+						else if (!transitionState(JobStatus.RECONCILING, JobStatus.RUNNING)) {
 							LOG.error("When reconcile finish, the job is in {}, this is a logical error.", state);
 						}
 					}
