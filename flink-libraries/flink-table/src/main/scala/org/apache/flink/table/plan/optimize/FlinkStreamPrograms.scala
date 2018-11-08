@@ -43,10 +43,9 @@ object FlinkStreamPrograms {
   val MICRO_BATCH = "micro_batch"
   val TOPN = "topn"
   val LAST_ROW = "last_row"
+  val AGG_SPLIT = "agg_split"
   val PHYSICAL = "physical"
   val DECORATE = "decorate"
-  val AGG_SPLIT = "agg_split"
-  val DECORATE_2 = "decorate_2"
   val POST = "post"
 
   def buildPrograms(): FlinkChainedPrograms[StreamOptimizeContext] = {
@@ -193,6 +192,15 @@ object FlinkStreamPrograms {
         .add(FlinkStreamExecRuleSets.STREAM_EXEC_LAST_ROW_RULES)
         .build())
 
+    // agg split
+    programs.addLast(
+      AGG_SPLIT,
+      FlinkHepRuleSetProgramBuilder.newBuilder
+        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+        .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
+        .add(FlinkStreamExecRuleSets.STREAM_EXEC_AGG_SPLIT_RULES)
+        .build())
+
     // optimize the physical Flink plan
     programs.addLast(
       PHYSICAL,
@@ -204,24 +212,6 @@ object FlinkStreamPrograms {
     // decorate the optimized plan
     programs.addLast(
       DECORATE,
-      FlinkDecorateProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_DECORATE_RULES)
-        .build())
-
-    // agg split
-    programs.addLast(
-      AGG_SPLIT,
-      FlinkDecorateProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-        .add(FlinkStreamExecRuleSets.STREAM_EXEC_AGG_SPLIT_RULES)
-        .build())
-
-    // decorate the optimized plan
-    programs.addLast(
-      DECORATE_2,
       FlinkDecorateProgramBuilder.newBuilder
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
         .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)

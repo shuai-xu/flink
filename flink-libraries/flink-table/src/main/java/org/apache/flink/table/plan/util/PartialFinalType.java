@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.util;
 
 /**
  * Enumerations for partial final aggregate types.
- * @see org.apache.flink.table.plan.rules.physical.stream.StreamExecSplitAggregateRule
+ * @see org.apache.flink.table.plan.rules.physical.stream.SplitAggregateRule
  */
 public enum PartialFinalType {
 	/** partial aggregate type. */

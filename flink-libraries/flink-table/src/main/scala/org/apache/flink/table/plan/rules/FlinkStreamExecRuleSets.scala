@@ -302,6 +302,10 @@ object FlinkStreamExecRuleSets {
   val STREAM_EXEC_LAST_ROW_RULES: RuleSet = RuleSets.ofList(
     LastRowCalcTransposeRule.INSTANCE)
 
+  val STREAM_EXEC_AGG_SPLIT_RULES: RuleSet = RuleSets.ofList(
+    SplitAggregateRule.INSTANCE,
+    CalcMergeRule.INSTANCE)
+
   /**
     * RuleSet to optimize plans for streamExec / DataStream execution
     */
@@ -338,11 +342,6 @@ object FlinkStreamExecRuleSets {
     StreamExecRetractionRules.DEFAULT_RETRACTION_INSTANCE,
     StreamExecRetractionRules.UPDATES_AS_RETRACTION_INSTANCE,
     StreamExecRetractionRules.ACCMODE_INSTANCE)
-
-  val STREAM_EXEC_AGG_SPLIT_RULES: RuleSet = RuleSets.ofList(
-    StreamExecSplitAggregateRule.INSTANCE_WITHOUT_EXCHANGE,
-    StreamExecSplitAggregateRule.INSTANCE_WITH_EXCHANGE,
-    CalcMergeRule.INSTANCE)
 
   /**
     * RuleSet to optimize plans after stream exec execution.

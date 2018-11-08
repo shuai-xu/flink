@@ -31,6 +31,7 @@ import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
+import org.apache.flink.table.plan.util.PartialFinalType
 
 import scala.collection.JavaConversions._
 
@@ -43,11 +44,11 @@ class FlinkLogicalAggregate(
     groupSets: JList[ImmutableBitSet],
     aggCalls: JList[AggregateCall],
     /* flag indicating whether to skip StreamExecSplitAggregateRule */
-    var skipSplit: Boolean = false)
+    var partialFinal: PartialFinalType = PartialFinalType.NORMAL)
   extends Aggregate(cluster, traitSet, child, indicator, groupSet, groupSets, aggCalls)
   with FlinkLogicalRel {
 
-  def setSkipSplit(skipSplit: Boolean): Unit = this.skipSplit = skipSplit
+  def setPartialFinal(partialFinal: PartialFinalType): Unit = this.partialFinal = partialFinal
 
   override def copy(
       traitSet: RelTraitSet,
@@ -57,7 +58,7 @@ class FlinkLogicalAggregate(
       groupSets: JList[ImmutableBitSet],
       aggCalls: JList[AggregateCall]): Aggregate = {
     new FlinkLogicalAggregate(
-      cluster, traitSet, input, indicator, groupSet, groupSets, aggCalls, skipSplit)
+      cluster, traitSet, input, indicator, groupSet, groupSets, aggCalls, partialFinal)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {

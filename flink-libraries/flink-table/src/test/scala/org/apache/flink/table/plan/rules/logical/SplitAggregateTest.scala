@@ -24,7 +24,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
-import org.junit.{Before, Test}
+import org.junit.{Before, Ignore, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
@@ -55,8 +55,37 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
   }
 
   @Test
-  def testMultiCountDistinctAgg(): Unit = {
-    val sqlQuery = "SELECT COUNT(DISTINCT a), COUNT(DISTINCT b) FROM MyTable"
+  def testSingleMinAgg(): Unit = {
+    val sqlQuery = "SELECT MIN(c) FROM MyTable"
+    streamUtil.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testSingleFirstValueAgg(): Unit = {
+    val sqlQuery = "SELECT FIRST_VALUE(c) FROM MyTable GROUP BY a"
+    streamUtil.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testMultiDistinctAgg(): Unit = {
+    val sqlQuery = "SELECT COUNT(DISTINCT a), SUM(DISTINCT b) FROM MyTable"
+    streamUtil.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testSingleMaxWithDistinctAgg(): Unit = {
+     val sqlQuery =
+      """
+        |SELECT a, COUNT(DISTINCT b), MAX(c)
+        |FROM MyTable
+        |GROUP BY a
+      """.stripMargin
+    streamUtil.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testSingleFirstValueWithDistinctAgg(): Unit = {
+    val sqlQuery = "SELECT a, FIRST_VALUE(c), COUNT(DISTINCT b) FROM MyTable GROUP BY a"
     streamUtil.verifyPlan(sqlQuery)
   }
 
@@ -79,7 +108,7 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
 
   @Test
   def testSingleDistinctAggWithAndNonDistinctAggOnSameColumn(): Unit = {
-    val sqlQuery = "SELECT a, COUNT(DISTINCT b), MAX(b), MIN(b) FROM MyTable GROUP BY a"
+    val sqlQuery = "SELECT a, COUNT(DISTINCT b), SUM(b), AVG(b) FROM MyTable GROUP BY a"
     streamUtil.verifyPlan(sqlQuery)
   }
 
@@ -97,8 +126,8 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
          |SELECT
          |  a,
          |  COUNT(DISTINCT b) filter (where not b = 2),
-         |  MAX(b) filter (where not b = 5),
-         |  MIN(b) filter (where not b = 2)
+         |  SUM(b) filter (where not b = 5),
+         |  SUM(b) filter (where not b = 2)
          |FROM MyTable
          |GROUP BY a
        """.stripMargin
@@ -127,7 +156,7 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
          |  c, MIN(b), MAX(b), SUM(b), COUNT(*), COUNT(DISTINCT a)
          |FROM(
          |  SELECT
-         |    a, AVG(b) as b, MAX(c) as c
+         |    a, AVG(c) as b, MAX(c) as c
          |  FROM MyTable
          |  GROUP BY a
          |) GROUP BY c
@@ -140,7 +169,7 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
     val sqlQuery =
       s"""
          |SELECT
-         |  b, FIRST_VALUE(c, a), LAST_VALUE(c, a), FIRST_VALUE(c), LAST_VALUE(c), COUNT(DISTINCT c)
+         |  b, FIRST_VALUE(c), LAST_VALUE(c), COUNT(DISTINCT c)
          |FROM(
          |  SELECT
          |    a, COUNT(DISTINCT b) as b, MAX(b) as c
@@ -158,10 +187,10 @@ class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
          |SELECT *
          |FROM(
          |  SELECT
-         |    c, MIN(b) as b, MAX(b) as d, COUNT(DISTINCT a) as a
+         |    c, SUM(b) as b, SUM(b) as d, COUNT(DISTINCT a) as a
          |  FROM(
          |    SELECT
-         |      a, COUNT(DISTINCT b) as b, MAX(b) as c, MIN(b) as d
+         |      a, COUNT(DISTINCT b) as b, SUM(b) as c, SUM(b) as d
          |    FROM MyTable
          |    GROUP BY a
          |  ) GROUP BY c

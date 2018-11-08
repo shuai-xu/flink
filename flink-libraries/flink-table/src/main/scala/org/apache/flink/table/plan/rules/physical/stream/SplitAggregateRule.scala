@@ -22,37 +22,34 @@ import java.util
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
-import org.apache.calcite.rel.RelNode
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.{RexInputRef, RexNode}
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.calcite.sql.fun.{SqlMinMaxAggFunction, SqlStdOperatorTable}
 import org.apache.calcite.sql.{SqlAggFunction, SqlKind}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{ImmutableBitSet, ImmutableIntList}
 import org.apache.flink.table.api.{TableConfig, TableException}
-import org.apache.flink.table.calcite.{FlinkRelBuilder, StreamExecRelFactories}
-import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct.CountDistinctAggFunction
-import org.apache.flink.table.runtime.functions.aggfunctions.{FirstValueWithRetractAggFunction, LastValueWithRetractAggFunction, MaxWithRetractAggFunction, MinWithRetractAggFunction}
-import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
+import org.apache.flink.table.calcite.{FlinkLogicalRelFactories, FlinkRelBuilder}
+import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions.DIVIDE
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecExchange, StreamExecGroupAggregate}
-import org.apache.flink.table.plan.rules.physical.stream.StreamExecSplitAggregateRule._
+import org.apache.flink.table.plan.nodes.FlinkRelNode
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
+import org.apache.flink.table.plan.rules.physical.stream.SplitAggregateRule._
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.plan.util.{AggregateInfo, AggregateUtil, PartialFinalType}
-import org.apache.flink.table.plan.util.AggregateUtil.{doAllSupportSplit, transformToStreamAggregateInfoList}
+import org.apache.flink.table.plan.util.PartialFinalType
+import org.apache.flink.table.plan.util.AggregateUtil.doAllAggSupportSplit
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 /**
-  * Planner rule that convert aggregations containing DataView
-  * to partial aggregations and final aggregations.
+  * Planner rule that splits aggregations containing distinct aggregates, e.g, count distinct,
+  * into partial aggregations and final aggregations.
   *
-  * This rule rewrites an aggregate query with aggregations containing DataView such as
-  * count distinct aggregations into an expanded double aggregation. The first aggregation compute
-  * the results in sub partition and the results are combined by the second aggregation.
+  * This rule rewrites an aggregate query with distinct aggregations into an expanded
+  * double aggregation. The first aggregation compute the results in sub partition and the
+  * results are combined by the second aggregation.
   *
   * Examples:
   *
@@ -74,103 +71,72 @@ import scala.collection.mutable
   *
   * Plan:
   * {{{
-  * StreamExecCalc(select=[$f1 AS EXPR$0, $f2 AS EXPR$1, CAST(/($f3, $f4)) AS EXPR$2])
-  *   StreamExecGroupAggregate(groupBy=[a], select=[a, SUM($f2) AS $f1, $SUM0($f3_0) AS $f2,
-  *       $SUM0($f4) AS $f3, $SUM0($f5) AS $f4])
-  *     StreamExecExchange(distribution=[hash[a]])
-  *       StreamExecGroupAggregate(groupBy=[a, $f3], select=[a, $f3, SUM(b) FILTER $g_1 AS $f2,
-  *           COUNT(DISTINCT c) FILTER $g_0 AS $f3_0, $SUM0(b) FILTER $g_1 AS $f4,
-  *           COUNT(b) FILTER $g_1 AS $f5])
-  *         StreamExecExchange(distribution=[hash[a, $f3]])
-  *           StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0])
-  *             StreamExecExpand(expand=[a, b, c, $f3, $e])
-  *               StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 1024) AS $f3])
-  *                 StreamExecScan(table=[[_DataStreamTable_0]])
+  * FlinkLogicalCalc(select=[$f1 AS EXPR$0, $f2 AS EXPR$1, CAST(/($f3, $f4)) AS EXPR$2])
+  * +- FlinkLogicalAggregate(group=[{0}], agg#0=[SUM($2)], agg#1=[$SUM0($3)], agg#2=[$SUM0($4)],
+  *         agg#3=[$SUM0($5)])
+  *    +- FlinkLogicalAggregate(group=[{0, 3}], agg#0=[SUM($1) FILTER $4], agg#1=[COUNT(DISTINCT $2)
+  *           FILTER $5], agg#2=[$SUM0($1) FILTER $4], agg#3=[COUNT($1) FILTER $4])
+  *       +- FlinkLogicalCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0])
+  *          +- FlinkLogicalExpand(projects=[{a=[$0], b=[$1], c=[$2], $f3=[$3], $e=[0]}, {a=[$0],
+  *               b=[$1], c=[$2], $f3=[null], $e=[1]}])
+  *             +- FlinkLogicalCalc(select=[a, b, c, MOD(HASH_CODE(c), 256) AS $f3])
+  *                +- FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
   * }}}
   *
-  * '$e = 0' is equivalent to 'group by a, hash(c) % 1024'
+  * '$e = 0' is equivalent to 'group by a, hash(c) % 256'
   * '$e = 1' is equivalent to 'group by a'
   *
   * Expanded records:
   * +-----+-----+-----+------------------+-----+
-  * |  a  |  b  |  c  |  hash(c) % 1024  | $e  |
+  * |  a  |  b  |  c  |  hash(c) % 256| $e  |
   * +-----+-----+-----+------------------+-----+        ---+---
   * |  1  |  1  | null|       null       |  1  |           |
   * +-----+-----+-----+------------------+-----|  records expanded by record1
-  * |  1  |  1  |  c1 |  hash(c1) % 1024 |  0  |           |
+  * |  1  |  1  |  c1 |  hash(c1) % 256|  0  |           |
   * +-----+-----+-----+------------------+-----+        ---+---
   * |  1  |  2  | null|       null       |  1  |           |
   * +-----+-----+-----+------------------+-----+  records expanded by record2
-  * |  1  |  2  |  c1 |  hash(c1) % 1024 |  0  |           |
+  * |  1  |  2  |  c1 |  hash(c1) % 256|  0  |           |
   * +-----+-----+-----+------------------+-----+        ---+---
   * |  2  |  1  | null|       null       |  1  |           |
   * +-----+-----+-----+------------------+-----+  records expanded by record3
-  * |  2  |  1  |  c2 |  hash(c2) % 1024 |  0  |           |
+  * |  2  |  1  |  c2 |  hash(c2) % 256|  0  |           |
   * +-----+-----+-----+------------------+-----+        ---+---
   */
-class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: Boolean)
-  extends RelOptRule(
-    operand,
-    StreamExecRelFactories.STREAM_EXEC_REL_BUILDER,
-    "StreamExecSplitAggregateRule") {
+class SplitAggregateRule extends RelOptRule(
+    operand(classOf[FlinkLogicalAggregate], operand(classOf[FlinkRelNode], any)),
+    FlinkLogicalRelFactories.FLINK_LOGICAL_REL_BUILDER,
+    "SplitAggregateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val agg: StreamExecGroupAggregate = call.rel(0)
-    val realInput = if (inputIsExchange) call.rels(2) else call.rels(1)
+    val agg: FlinkLogicalAggregate = call.rel(0)
 
-    val needRetraction = StreamExecRetractionRules.isAccRetract(realInput)
-    val modifiedMono = FlinkRelMetadataQuery.reuseOrCreate(call.getMetadataQuery)
-      .getRelModifiedMonotonicity(agg)
-    val needRetractionArray = AggregateUtil.getNeedRetractions(
-      agg.getGroupings.length, needRetraction, modifiedMono, agg.aggCalls)
-
-    val aggInfoList = transformToStreamAggregateInfoList(
-      agg.aggCalls,
-      agg.getInput.getRowType,
-      needRetractionArray,
-      needInputCount = false,
-      isStateBackendDataViews = true,
-      needDistinctInfo = false)
-
-    call.rels(1).isInstanceOf[StreamExecExchange] == inputIsExchange &&
-      tableConfig.isMiniBatchEnabled &&
+    (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) &&
       tableConfig.isPartialAggEnabled &&
       agg.partialFinal == PartialFinalType.NORMAL &&
-      containsAggsWithDataView(aggInfoList.aggInfos) &&
-      doAllSupportSplit(aggInfoList.aggInfos)
+      containsDistinctAgg(agg.getAggCallList) &&
+      doAllAggSupportSplit(agg.getAggCallList)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val originalAggregate: StreamExecGroupAggregate = call.rel(0)
-    val realInput = if (inputIsExchange) call.rels(2) else call.rels(1)
-    val needRetraction = StreamExecRetractionRules.isAccRetract(realInput)
-    val modifiedMono = FlinkRelMetadataQuery.reuseOrCreate(call.getMetadataQuery)
-      .getRelModifiedMonotonicity(originalAggregate)
-    val needRetractionArray = AggregateUtil.getNeedRetractions(
-      originalAggregate.getGroupings.length, needRetraction, modifiedMono,
-      originalAggregate.aggCalls)
-    val aggInfos = transformToStreamAggregateInfoList(
-      originalAggregate.aggCalls,
-      originalAggregate.getInput.getRowType,
-      needRetractionArray,
-      needInputCount = false,
-      isStateBackendDataViews = true,
-      needDistinctInfo = false).aggInfos
-
+    val originalAggregate: FlinkLogicalAggregate = call.rel(0)
+    val aggCalls = originalAggregate.getAggCallList
+    val input: FlinkRelNode = call.rel(1)
     val cluster = originalAggregate.getCluster
     val relBuilder = call.builder().asInstanceOf[FlinkRelBuilder]
-    relBuilder.push(realInput)
+    relBuilder.push(input)
+    val aggGroupSet = originalAggregate.getGroupSet.toArray
 
     // STEP 1: add hash fields if necessary
-    val hashFieldIndexes: Array[Int] = aggInfos.flatMap { aggInfo =>
-      if (containsDataView(aggInfo)) {
-        aggInfo.argIndexes
+    val hashFieldIndexes: mutable.Buffer[Int] = aggCalls.flatMap { aggCall =>
+      if (needAddHashFields(aggCall)) {
+        getArgIndexes(aggCall)
       } else {
         Array.empty[Int]
       }
-    }.distinct.diff(originalAggregate.getGroupings).sorted
+    }.distinct.diff(aggGroupSet).sorted
 
     val hashFieldsMap: mutable.Map[Int, Int] = mutable.Map()
     val buckets = tableConfig.getPartialBucketNum
@@ -193,19 +159,19 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
 
     // STEP 2: construct partial aggregates
     val groupSetTreeSet = new util.TreeSet[ImmutableBitSet](ImmutableBitSet.ORDERING)
-    val aggInfoToGroupSetMap = new util.HashMap[AggregateInfo, ImmutableBitSet]()
-    aggInfos.foreach { aggInfo =>
-      val groupSet = if (containsDataView(aggInfo)) {
+    val aggInfoToGroupSetMap = new util.HashMap[AggregateCall, ImmutableBitSet]()
+    aggCalls.foreach { aggCall =>
+      val groupSet = if (needAddHashFields(aggCall)) {
         val groupSet = ImmutableBitSet.of(
-          aggInfo.argIndexes.map { argIndex =>
+          getArgIndexes(aggCall).map { argIndex =>
             hashFieldsMap.getOrElse(argIndex, argIndex).asInstanceOf[Integer]
-          }.toSeq).union(ImmutableBitSet.of(originalAggregate.getGroupings: _*))
+          }.toSeq).union(ImmutableBitSet.of(aggGroupSet: _*))
         groupSet
       } else {
-        ImmutableBitSet.of(originalAggregate.getGroupings: _*)
+        ImmutableBitSet.of(aggGroupSet: _*)
       }
       groupSetTreeSet.add(groupSet)
-      aggInfoToGroupSetMap.put(aggInfo, groupSet)
+      aggInfoToGroupSetMap.put(aggCall, groupSet)
     }
     val groupSets = ImmutableList.copyOf(asJavaIterable(groupSetTreeSet))
     val fullGroupSet = ImmutableBitSet.union(groupSets)
@@ -213,15 +179,15 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     // STEP 2.1: expand input fields
     val partialAggCalls = new util.ArrayList[AggregateCall]
     val partialAggCallToGroupSetMap = new util.HashMap[AggregateCall, ImmutableBitSet]()
-    aggInfos.foreach { aggInfo =>
-      val newAggCalls = getPartialAggFunction(aggInfo).map { aggFunction =>
+    aggCalls.foreach { aggCall =>
+      val newAggCalls = getPartialAggFunction(aggCall).map { aggFunction =>
         AggregateCall.create(
-          aggFunction, aggInfo.agg.isDistinct, aggInfo.agg.isApproximate, aggInfo.agg.getArgList,
-          aggInfo.agg.filterArg, fullGroupSet.cardinality, relBuilder.peek(), null, null)
+          aggFunction, aggCall.isDistinct, aggCall.isApproximate, aggCall.getArgList,
+          aggCall.filterArg, fullGroupSet.cardinality, relBuilder.peek(), null, null)
       }
       partialAggCalls.addAll(newAggCalls)
-      newAggCalls.foreach { aggCall =>
-        partialAggCallToGroupSetMap.put(aggCall, aggInfoToGroupSetMap.get(aggInfo))
+      newAggCalls.foreach { newAggCall =>
+        partialAggCallToGroupSetMap.put(newAggCall, aggInfoToGroupSetMap.get(aggCall))
       }
     }
     val needExpand = groupSets.size() > 1
@@ -242,7 +208,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
       val expandIdNode = nodes.remove(nodes.size - 1)
       val filterColumnsOffset: Int = nodes.size
       var x: Int = 0
-      partialAggCalls.zipWithIndex.foreach { case (aggCall, index) =>
+      partialAggCalls.foreach { aggCall =>
         val groupSet = partialAggCallToGroupSetMap.get(aggCall)
         val oldFilterArg = aggCall.filterArg
         val newArgList = aggCall.getArgList.map(a => duplicateFieldMap.getOrElse(a, a)).toList
@@ -279,7 +245,7 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     relBuilder.aggregate(
       relBuilder.groupKey(fullGroupSet, ImmutableList.of[ImmutableBitSet](fullGroupSet)),
       newPartialAggCalls)
-    relBuilder.peek().asInstanceOf[StreamExecGroupAggregate]
+    relBuilder.peek().asInstanceOf[FlinkLogicalAggregate]
       .setPartialFinal(PartialFinalType.PARTIAL)
 
     // STEP 3: construct final aggregates
@@ -287,14 +253,14 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
     var x: Int = 0
     val finalAggCalls = new util.ArrayList[AggregateCall]
     var needMergeFinalAggOutput: Boolean = false
-    aggInfos.foreach { aggInfo =>
-      val newAggCalls = getFinalAggFunction(aggInfo).map { aggFunction =>
+    aggCalls.foreach { aggCall =>
+      val newAggCalls = getFinalAggFunction(aggCall).map { aggFunction =>
         val newArgList = ImmutableIntList.of(finalAggInputOffset + x)
         x += 1
 
         AggregateCall.create(
-          aggFunction, false, aggInfo.agg.isApproximate, newArgList, -1,
-          originalAggregate.getGroupings.length, relBuilder.peek(), null, null)
+          aggFunction, false, aggCall.isApproximate, newArgList, -1,
+          originalAggregate.getGroupCount, relBuilder.peek(), null, null)
       }
 
       finalAggCalls.addAll(newAggCalls)
@@ -307,33 +273,34 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
         remap(fullGroupSet, originalAggregate.getGroupSet),
         remap(fullGroupSet, Seq(originalAggregate.getGroupSet))),
       finalAggCalls)
-    val finalAggregate = relBuilder.peek().asInstanceOf[StreamExecGroupAggregate]
+    val finalAggregate = relBuilder.peek().asInstanceOf[FlinkLogicalAggregate]
     finalAggregate.setPartialFinal(PartialFinalType.FINAL)
 
     // STEP 4: convert final aggregation output to the original aggregation output.
     // For example, aggregate function AVG is transformed to SUM0 and COUNT, so the output of
     // the final aggregation is (sum, count). We should converted it to (sum / count)
     // for the final output.
+    val aggGroupCount = finalAggregate.getGroupCount
     if (needMergeFinalAggOutput) {
       val nodes = new util.ArrayList[RexNode]
-      finalAggregate.getGroupings.indices.foreach { index =>
+      (0 until aggGroupCount).foreach { index =>
         nodes.add(RexInputRef.of(index, finalAggregate.getRowType))
       }
 
       var avgAggCount: Int = 0
-      aggInfos.zipWithIndex.foreach { case (aggInfo, index) =>
-        val newNode = if (aggInfo.agg.getAggregation.getKind == SqlKind.AVG) {
+      aggCalls.zipWithIndex.foreach { case (aggCall, index) =>
+        val newNode = if (aggCall.getAggregation.getKind == SqlKind.AVG) {
           val sumInputRef = RexInputRef.of(
-            finalAggregate.getGroupings.length + index + avgAggCount,
+            aggGroupCount + index + avgAggCount,
             finalAggregate.getRowType)
           val countInputRef = RexInputRef.of(
-            finalAggregate.getGroupings.length + index + avgAggCount + 1,
+            aggGroupCount + index + avgAggCount + 1,
             finalAggregate.getRowType)
           avgAggCount += 1
           relBuilder.call(DIVIDE, sumInputRef, countInputRef)
         } else {
           RexInputRef.of(
-            finalAggregate.getGroupings.length + index + avgAggCount,
+            aggGroupCount + index + avgAggCount,
             finalAggregate.getRowType)
         }
         nodes.add(newNode)
@@ -347,18 +314,8 @@ class StreamExecSplitAggregateRule(operand: RelOptRuleOperand, inputIsExchange: 
   }
 }
 
-object StreamExecSplitAggregateRule {
-  val INSTANCE_WITHOUT_EXCHANGE: RelOptRule = new StreamExecSplitAggregateRule(
-    operand(
-      classOf[StreamExecGroupAggregate],
-      operand(classOf[RelNode], any)), false)
-
-  val INSTANCE_WITH_EXCHANGE: RelOptRule = new StreamExecSplitAggregateRule(
-    operand(
-      classOf[StreamExecGroupAggregate],
-      operand(
-        classOf[StreamExecExchange],
-        operand(classOf[RelNode], any))), true)
+object SplitAggregateRule {
+  val INSTANCE: RelOptRule = new SplitAggregateRule
 
   val PARTIAL_FINAL_MAP: Map[SqlAggFunction, (Seq[SqlAggFunction], Seq[SqlAggFunction])] = Map(
     AVG -> (Seq(SUM0, COUNT), Seq(SUM0, SUM0)),
@@ -376,32 +333,39 @@ object StreamExecSplitAggregateRule {
     SINGLE_VALUE -> (Seq(SINGLE_VALUE), Seq(SINGLE_VALUE))
   )
 
-  private def containsAggsWithDataView(aggInfos: Array[AggregateInfo]): Boolean = {
-    aggInfos.exists(containsDataView)
+  private def containsDistinctAgg(aggCalls: util.List[AggregateCall]): Boolean = {
+    aggCalls.exists(aggCall => aggCall.isDistinct)
   }
 
-  private def containsDataView(aggInfo: AggregateInfo): Boolean = {
-    aggInfo.function match {
-      case _: MinWithRetractAggFunction[_] | _: MaxWithRetractAggFunction[_] |
-           _: FirstValueWithRetractAggFunction[_] | _: LastValueWithRetractAggFunction[_] |
-           _: CountDistinctAggFunction => true
+  private def needAddHashFields(aggCall: AggregateCall): Boolean = {
+    // When min/max/first_value/last_value is in retraction mode, records will aggregate into
+    // one single operator instance regardless of localAgg optimization, which leads to hotspot.
+    // So we split them into partial/final aggs either.
+    val needSplit = aggCall.getAggregation match {
+      case _: SqlMinMaxAggFunction |
+           _: SqlFirstLastValueAggFunction => true
       case _ => false
     }
+    needSplit || aggCall.isDistinct
   }
 
-  private def getPartialAggFunction(aggInfo: AggregateInfo): Seq[SqlAggFunction] = {
-    PARTIAL_FINAL_MAP.get(aggInfo.agg.getAggregation) match {
+  private def getArgIndexes(aggCall: AggregateCall): Array[Int] = {
+    aggCall.getArgList.map(_.intValue()).toArray
+  }
+
+  private def getPartialAggFunction(aggCall: AggregateCall): Seq[SqlAggFunction] = {
+    PARTIAL_FINAL_MAP.get(aggCall.getAggregation) match {
       case Some((partialAggFunctions, _)) => partialAggFunctions
       case None => throw new TableException(
-        "Aggregation " + aggInfo.agg.getAggregation + " is not supported to split!")
+        "Aggregation " + aggCall.getAggregation + " is not supported to split!")
     }
   }
 
-  private def getFinalAggFunction(aggInfo: AggregateInfo): Seq[SqlAggFunction] = {
-    PARTIAL_FINAL_MAP.get(aggInfo.agg.getAggregation) match {
+  private def getFinalAggFunction(aggCall : AggregateCall): Seq[SqlAggFunction] = {
+    PARTIAL_FINAL_MAP.get(aggCall.getAggregation) match {
       case Some((_, finalAggFunctions)) => finalAggFunctions
       case _ => throw new TableException(
-        "Aggregation " + aggInfo.agg.getAggregation + " is not supported to split!")
+        "Aggregation " + aggCall.getAggregation + " is not supported to split!")
     }
   }
 

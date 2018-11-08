@@ -61,7 +61,7 @@ class TwoStageOptimizedAggregateRule extends RelOptRule(
       needRetraction,
       isStateBackendDataViews = true)
 
-    tableConfig.isMiniBatchEnabled &&
+    (tableConfig.isMiniBatchEnabled || tableConfig.isMicroBatchEnabled) &&
       tableConfig.isLocalAggEnabled &&
       doAllSupportPartialMerge(aggInfoList.aggInfos) &&
       !satisfyRequiredDistribution(realInput, agg.getGroupings)

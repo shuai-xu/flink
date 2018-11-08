@@ -22,24 +22,21 @@ import java.util
 import org.apache.calcite.rel.`type`._
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.RexInputRef
-import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlMinMaxAggFunction, SqlStdOperatorTable}
-import org.apache.calcite.sql.SqlRankFunction
+import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
+import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.codegen.expr.{ConcatAggFunction => _}
 import org.apache.flink.table.dataview.DataViewUtils.useNullSerializerForStateViewFieldsFromAccType
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct._
-import org.apache.flink.table.runtime.functions.aggfunctions._
-import org.apache.flink.table.codegen.expr.{ConcatAggFunction => _, _}
 import org.apache.flink.table.dataview.{DataViewSpec, MapViewSpec}
 import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.expressions._
+import org.apache.flink.table.functions._
+import org.apache.flink.table.functions.sql.{SqlConcatAggFunction, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.types.DataTypes._
 import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, DecimalType}
@@ -393,26 +390,20 @@ object AggregateUtil extends Enumeration {
   }
 
   /**
-    * Return true if all aggregates can be splitted. False otherwise.
+    * Return true if all aggregates can be split. False otherwise.
     */
-  def doAllSupportSplit(aggInfos: Array[AggregateInfo]): Boolean = {
-    aggInfos.forall { aggInfo =>
-      aggInfo.function match {
-        case _: MinAggFunction | _: MinWithRetractAggFunction[_] |
-             _: MaxAggFunction | _: MaxWithRetractAggFunction[_] |
-             _: SumAggFunction | _: Sum0AggFunction | _: SumWithRetractAggFunction |
-             _: CountAggFunction | _: Count1AggFunction |
-             _: CountDistinctAggFunction | _: AvgAggFunction |
-             _: SingleValueAggFunction |
-             _: ConcatAggFunction | _: org.apache.flink.table.codegen.expr.ConcatAggFunction |
-             _: ConcatWsAggFunction => true
-        case _: FirstValueAggFunction[_] | _: FirstValueWithRetractAggFunction[_] |
-             _: LastValueAggFunction[_] | _: LastValueWithRetractAggFunction[_] =>
-          // only support aggregation without order
-          aggInfo.agg.getArgList.size() == 1
-        case _ => false
-      }
-    }
+  def doAllAggSupportSplit(aggCalls: util.List[AggregateCall]): Boolean = {
+    aggCalls.forall{aggCall => aggCall.getAggregation match {
+      case _: SqlCountAggFunction |
+           _: SqlAvgAggFunction |
+           _: SqlMinMaxAggFunction |
+           _: SqlSumAggFunction |
+           _: SqlSumEmptyIsZeroAggFunction |
+           _: SqlSingleValueAggFunction |
+           _: SqlConcatAggFunction => true
+      case _: SqlFirstLastValueAggFunction => aggCall.getArgList.size() == 1
+      case _ => false
+    }}
   }
 
   /**

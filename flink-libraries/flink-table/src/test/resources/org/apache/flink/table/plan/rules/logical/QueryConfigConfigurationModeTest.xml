@@ -19,11 +19,12 @@ limitations under the License.
 	<TestCase name="testEnableMicroBatch">
 		<Resource name="plan">
 			<![CDATA[
-StreamExecGroupAggregate(select=[COUNT(DISTINCT c) AS EXPR$0])
+StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[c])
-      StreamExecMicroBatchAssigner(interval=[1000ms])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
+      StreamExecCalc(select=[c])
+        StreamExecMicroBatchAssigner(interval=[1000ms])
+          StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>

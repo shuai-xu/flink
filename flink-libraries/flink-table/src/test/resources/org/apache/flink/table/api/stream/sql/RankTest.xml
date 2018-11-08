@@ -39,7 +39,7 @@ StreamExecRank(retract=[false], accMode=[Acc])
 	<TestCase name="testTopNWithPartialFinalAgg">
 		<Resource name="plan">
 			<![CDATA[
-StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[cd DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$f3 DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum])
   StreamExecExchange(distribution=[hash[b]])
     StreamExecGlobalGroupAggregate(groupBy=[a, b], select=[a, b, SUM_RETRACT((sum$0, count$1)) AS $f2, $SUM0_RETRACT(sum0$2) AS $f3])
       StreamExecExchange(distribution=[hash[a, b]])

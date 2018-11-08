@@ -66,7 +66,8 @@ class StreamExecGroupAggregateRule extends ConverterRule(classOf[FlinkLogicalAgg
       convInput,
       agg.getAggCallList,
       rel.getRowType,
-      agg.getGroupSet)
+      agg.getGroupSet,
+      agg.partialFinal)
   }
 }
 
