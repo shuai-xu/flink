@@ -270,8 +270,10 @@ public class SubKeyedMapStateTest {
 				Map<Integer, Float> mappings = namespaceMap.get(namespace);
 				Iterable<Map.Entry<Integer, Float>> stateIterable = state.entries(key, namespace);
 
+				assertNotNull(stateIterable);
+
 				if (mappings == null) {
-					assertNull(stateIterable);
+					assertFalse(stateIterable.iterator().hasNext());
 					continue;
 				}
 
@@ -294,8 +296,10 @@ public class SubKeyedMapStateTest {
 				Map<Integer, Float> mappings = namespaceMap.get(namespace);
 				Iterable<Integer> keyIterable = state.keys(key, namespace);
 
+				assertNotNull(keyIterable);
+
 				if (mappings == null) {
-					assertNull(keyIterable);
+					assertFalse(keyIterable.iterator().hasNext());
 					continue;
 				}
 
@@ -318,8 +322,10 @@ public class SubKeyedMapStateTest {
 				Map<Integer, Float> mappings = namespaceMap.get(namespace);
 				Iterable<Float> valueIterable = state.values(key, namespace);
 
+				assertNotNull(valueIterable);
+
 				if (mappings == null) {
-					assertNull(valueIterable);
+					assertFalse(valueIterable.iterator().hasNext());
 					continue;
 				}
 

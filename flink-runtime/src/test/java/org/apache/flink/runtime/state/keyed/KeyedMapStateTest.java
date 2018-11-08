@@ -217,12 +217,13 @@ public class KeyedMapStateTest {
 		for (int i = 0; i < 10; ++i) {
 			Map<Integer, Float> mappings = pairs.get(i);
 			Iterable<Map.Entry<Integer, Float>> entryIterable = state.entries(i);
-			if (mappings == null) {
-				assertNull(entryIterable);
-				continue;
-			}
 
 			assertNotNull(entryIterable);
+
+			if (mappings == null) {
+				assertFalse(entryIterable.iterator().hasNext());
+				continue;
+			}
 
 			for (Map.Entry<Integer, Float> entry : entryIterable) {
 				Integer key = entry.getKey();
@@ -237,12 +238,13 @@ public class KeyedMapStateTest {
 		for (int i = 0; i < 10; ++i) {
 			Map<Integer, Float> mappings = pairs.get(i);
 			Iterable<Integer> keyIterable = state.mapKeys(i);
-			if (mappings == null) {
-				assertNull(keyIterable);
-				continue;
-			}
 
 			assertNotNull(keyIterable);
+
+			if (mappings == null) {
+				assertFalse(keyIterable.iterator().hasNext());
+				continue;
+			}
 
 			for (Integer key : keyIterable) {
 				Float actualValue = state.get(i, key);
@@ -255,12 +257,13 @@ public class KeyedMapStateTest {
 		for (int i = 0; i < 10; ++i) {
 			Map<Integer, Float> mappings = pairs.get(i);
 			Iterable<Float> valueIterable = state.mapValues(i);
-			if (mappings == null) {
-				assertNull(valueIterable);
-				continue;
-			}
 
 			assertNotNull(valueIterable);
+
+			if (mappings == null) {
+				assertFalse(valueIterable.iterator().hasNext());
+				continue;
+			}
 
 			for (Float value : valueIterable) {
 				assertTrue(mappings.containsValue(value));

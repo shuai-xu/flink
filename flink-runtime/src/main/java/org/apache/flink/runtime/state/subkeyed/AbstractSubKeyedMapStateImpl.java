@@ -294,98 +294,80 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 
 	@Override
 	public Iterable<Map.Entry<MK, MV>> entries(K key, N namespace) {
-		final Iterator<Map.Entry<MK, MV>> iter = iterator(key, namespace);
+		return new Iterable<Map.Entry<MK, MV>>() {
+			@Override
+			public Iterator<Map.Entry<MK, MV>> iterator() {
+				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractSubKeyedMapStateImpl.this.iterator(key, namespace);
+				return new Iterator<Map.Entry<MK, MV>>() {
+					@Override
+					public boolean hasNext() {
+						return innerIter.hasNext();
+					}
 
-		if (!iter.hasNext()) {
-			return null;
-		} else {
-			return new Iterable<Map.Entry<MK, MV>>() {
-				@Override
-				public Iterator<Map.Entry<MK, MV>> iterator() {
-					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractSubKeyedMapStateImpl.this.iterator(key, namespace);
-					return new Iterator<Map.Entry<MK, MV>>() {
-						@Override
-						public boolean hasNext() {
-							return innerIter.hasNext();
-						}
+					@Override
+					public Map.Entry<MK, MV> next() {
+						return innerIter.next();
+					}
 
-						@Override
-						public Map.Entry<MK, MV> next() {
-							return innerIter.next();
-						}
-
-						@Override
-						public void remove() {
-							innerIter.remove();
-						}
-					};
-				}
-			};
-		}
+					@Override
+					public void remove() {
+						innerIter.remove();
+					}
+				};
+			}
+		};
 	}
 
 	@Override
 	public Iterable<MK> keys(K key, N namespace) {
-		final Iterator<Map.Entry<MK, MV>> iter = iterator(key, namespace);
+		return new Iterable<MK>() {
+			@Override
+			public Iterator<MK> iterator() {
+				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractSubKeyedMapStateImpl.this.iterator(key, namespace);
+				return new Iterator<MK>() {
+					@Override
+					public boolean hasNext() {
+						return innerIter.hasNext();
+					}
 
-		if (!iter.hasNext()) {
-			return null;
-		} else {
-			return new Iterable<MK>() {
-				@Override
-				public Iterator<MK> iterator() {
-					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractSubKeyedMapStateImpl.this.iterator(key, namespace);
-					return new Iterator<MK>() {
-						@Override
-						public boolean hasNext() {
-							return innerIter.hasNext();
-						}
+					@Override
+					public MK next() {
+						return innerIter.next().getKey();
+					}
 
-						@Override
-						public MK next() {
-							return innerIter.next().getKey();
-						}
-
-						@Override
-						public void remove() {
-							innerIter.remove();
-						}
-					};
-				}
-			};
-		}
+					@Override
+					public void remove() {
+						innerIter.remove();
+					}
+				};
+			}
+		};
 	}
 
 	@Override
 	public Iterable<MV> values(K key, N namespace) {
-		final Iterator<Map.Entry<MK, MV>> iter = iterator(key, namespace);
+		return new Iterable<MV>() {
+			@Override
+			public Iterator<MV> iterator() {
+				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractSubKeyedMapStateImpl.this.iterator(key, namespace);
+				return new Iterator<MV>() {
+					@Override
+					public boolean hasNext() {
+						return innerIter.hasNext();
+					}
 
-		if (!iter.hasNext()) {
-			return null;
-		} else {
-			return new Iterable<MV>() {
-				@Override
-				public Iterator<MV> iterator() {
-					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractSubKeyedMapStateImpl.this.iterator(key, namespace);
-					return new Iterator<MV>() {
-						@Override
-						public boolean hasNext() {
-							return innerIter.hasNext();
-						}
+					@Override
+					public MV next() {
+						return innerIter.next().getValue();
+					}
 
-						@Override
-						public MV next() {
-							return innerIter.next().getValue();
-						}
-
-						@Override
-						public void remove() {
-							innerIter.remove();
-						}
-					};
-				}
-			};
-		}
+					@Override
+					public void remove() {
+						innerIter.remove();
+					}
+				};
+			}
+		};
 	}
 
 	@Override

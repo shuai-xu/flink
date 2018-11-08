@@ -373,98 +373,80 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 
 	@Override
 	public Iterable<Map.Entry<MK, MV>> entries(K key) {
-		final Iterator<Map.Entry<MK, MV>> iter = iterator(key);
+		return new Iterable<Map.Entry<MK, MV>>() {
+			@Override
+			public Iterator<Map.Entry<MK, MV>> iterator() {
+				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+				return new Iterator<Map.Entry<MK, MV>>() {
+					@Override
+					public boolean hasNext() {
+						return innerIter.hasNext();
+					}
 
-		if (!iter.hasNext()) {
-			return null;
-		} else {
-			return new Iterable<Map.Entry<MK, MV>>() {
-				@Override
-				public Iterator<Map.Entry<MK, MV>> iterator() {
-					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
-					return new Iterator<Map.Entry<MK, MV>>() {
-						@Override
-						public boolean hasNext() {
-							return innerIter.hasNext();
-						}
+					@Override
+					public Map.Entry<MK, MV> next() {
+						return innerIter.next();
+					}
 
-						@Override
-						public Map.Entry<MK, MV> next() {
-							return innerIter.next();
-						}
-
-						@Override
-						public void remove() {
-							innerIter.remove();
-						}
-					};
-				}
-			};
-		}
+					@Override
+					public void remove() {
+						innerIter.remove();
+					}
+				};
+			}
+		};
 	}
 
 	@Override
 	public Iterable<MK> mapKeys(K key) {
-		final Iterator<Map.Entry<MK, MV>> iter = iterator(key);
+		return new Iterable<MK>() {
+			@Override
+			public Iterator<MK> iterator() {
+				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+				return new Iterator<MK>() {
+					@Override
+					public boolean hasNext() {
+						return innerIter.hasNext();
+					}
 
-		if (!iter.hasNext()) {
-			return null;
-		} else {
-			return new Iterable<MK>() {
-				@Override
-				public Iterator<MK> iterator() {
-					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
-					return new Iterator<MK>() {
-						@Override
-						public boolean hasNext() {
-							return innerIter.hasNext();
-						}
+					@Override
+					public MK next() {
+						return innerIter.next().getKey();
+					}
 
-						@Override
-						public MK next() {
-							return innerIter.next().getKey();
-						}
-
-						@Override
-						public void remove() {
-							innerIter.remove();
-						}
-					};
-				}
-			};
-		}
+					@Override
+					public void remove() {
+						innerIter.remove();
+					}
+				};
+			}
+		};
 	}
 
 	@Override
 	public Iterable<MV> mapValues(K key) {
-		final Iterator<Map.Entry<MK, MV>> iter = iterator(key);
+		return new Iterable<MV>() {
+			@Override
+			public Iterator<MV> iterator() {
+				final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
+				return new Iterator<MV>() {
+					@Override
+					public boolean hasNext() {
+						return innerIter.hasNext();
+					}
 
-		if (!iter.hasNext()) {
-			return null;
-		} else {
-			return new Iterable<MV>() {
-				@Override
-				public Iterator<MV> iterator() {
-					final Iterator<Map.Entry<MK, MV>> innerIter = AbstractKeyedMapStateImpl.this.iterator(key);
-					return new Iterator<MV>() {
-						@Override
-						public boolean hasNext() {
-							return innerIter.hasNext();
-						}
+					@Override
+					public MV next() {
+						return innerIter.next().getValue();
+					}
 
-						@Override
-						public MV next() {
-							return innerIter.next().getValue();
-						}
-
-						@Override
-						public void remove() {
-							innerIter.remove();
-						}
-					};
-				}
-			};
-		}
+					@Override
+					public void remove() {
+						innerIter.remove();
+					}
+				};
+			}
+		};
 	}
 
 	@Override
@@ -621,7 +603,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 		 * internal state.
 		 *
 		 * @param internalIterator The iterator over the corresponding pairs
-		 *                             in the internal state.
+		 *                         in the internal state.
 		 */
 		KeyedMapStateIterator(Iterator<Pair<Row, Row>> internalIterator) {
 			Preconditions.checkNotNull(internalIterator);
