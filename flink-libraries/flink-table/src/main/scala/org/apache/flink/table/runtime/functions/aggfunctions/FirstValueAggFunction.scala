@@ -142,9 +142,9 @@ class StringFirstValueAggFunction extends FirstValueAggFunction[BinaryString] {
     }
   }
 
-  override def accumulate(acc: GenericRow, value: Any, order: JLong): Unit = {
+  override def accumulate(acc: GenericRow, value: Any, order: Long): Unit = {
     // just ignore nulls values and orders
-    if (null != value && null != order) {
+    if (null != value) {
       super.accumulate(acc, value.asInstanceOf[BinaryString].copy(), order)
     }
   }
