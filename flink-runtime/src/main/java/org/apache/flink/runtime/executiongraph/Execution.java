@@ -527,6 +527,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 						slotProvider.cancelSlotRequest(
 							slotRequestId,
 							slotSharingGroupId,
+							locationConstraint,
 							new FlinkException("Execution " + this + " was released."));
 					}
 				});

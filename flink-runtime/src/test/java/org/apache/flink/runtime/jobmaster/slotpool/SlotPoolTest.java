@@ -504,7 +504,7 @@ public class SlotPoolTest extends TestLogger {
 			// wait for the second slot request
 			final AllocationID allocationId2 = allocationIds.take();
 
-			slotPoolGateway.releaseSlot(slotRequestId1, null, null);
+			slotPoolGateway.releaseSlot(slotRequestId1, null, null, null);
 
 			try {
 				// this should fail with a CancellationException

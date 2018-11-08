@@ -28,6 +28,7 @@ import org.apache.flink.runtime.instance.SimpleSlot;
 import org.apache.flink.runtime.instance.SimpleSlotContext;
 import org.apache.flink.runtime.instance.Slot;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.NoResourceAvailableException;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
@@ -111,7 +112,11 @@ public class SimpleSlotProvider implements SlotProvider, SlotOwner {
 	}
 
 	@Override
-	public CompletableFuture<Acknowledge> cancelSlotRequest(SlotRequestId slotRequestId, @Nullable SlotSharingGroupId slotSharingGroupId, Throwable cause) {
+	public CompletableFuture<Acknowledge> cancelSlotRequest(
+			SlotRequestId slotRequestId,
+			@Nullable SlotSharingGroupId slotSharingGroupId,
+			@Nullable CoLocationConstraint coLocationConstraint,
+			Throwable cause) {
 		synchronized (lock) {
 			final SlotContext slotContext = allocatedSlots.remove(slotRequestId);
 

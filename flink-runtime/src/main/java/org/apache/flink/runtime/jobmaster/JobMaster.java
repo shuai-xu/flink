@@ -1018,6 +1018,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 					slotPool.releaseSlot(
 							singleLogicalSlot.getSlotRequestId(),
 							singleLogicalSlot.getSlotSharingGroupId(),
+							singleLogicalSlot.getCoLocationConstraint(),
 							new Exception("Fail to recover the slot"));
 					rejected.add(i);
 					log.info("Fail to reconcile status for execution {} with state {} from {}",

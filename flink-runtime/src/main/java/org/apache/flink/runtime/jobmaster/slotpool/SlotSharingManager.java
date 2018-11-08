@@ -21,6 +21,7 @@ package org.apache.flink.runtime.jobmaster.slotpool;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.Locality;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotContext;
@@ -399,24 +400,44 @@ public class SlotSharingManager {
 
 		/**
 		 * Allocates a {@link SingleTaskSlot} and registers it under the given groupId at
-		 * this MultiTaskSlot.
+		 * this MultiTaskSlot. Only for testing now.
 		 *
 		 * @param slotRequestId of the new single task slot
 		 * @param groupId under which the new single task slot is registered
 		 * @param locality of the allocation
 		 * @return the newly allocated {@link SingleTaskSlot}
 		 */
+		@VisibleForTesting
 		SingleTaskSlot allocateSingleTaskSlot(
 				SlotRequestId slotRequestId,
 				AbstractID groupId,
 				Locality locality) {
+			return allocateSingleTaskSlot(slotRequestId, groupId, locality, null);
+		}
+
+		/**
+		 * Allocates a {@link SingleTaskSlot} and registers it under the given groupId at
+		 * this MultiTaskSlot.
+		 *
+		 * @param slotRequestId of the new single task slot
+		 * @param groupId under which the new single task slot is registered
+		 * @param locality of the allocation
+		 * @param coLocationConstraint the co location constraint of the slot
+		 * @return the newly allocated {@link SingleTaskSlot}
+		 */
+		SingleTaskSlot allocateSingleTaskSlot(
+				SlotRequestId slotRequestId,
+				AbstractID groupId,
+				Locality locality,
+				@Nullable CoLocationConstraint coLocationConstraint) {
 			Preconditions.checkState(!super.contains(groupId));
 
 			final SingleTaskSlot leaf = new SingleTaskSlot(
 				slotRequestId,
 				groupId,
 				this,
-				locality);
+				locality,
+				coLocationConstraint);
 
 			children.put(groupId, leaf);
 
@@ -492,7 +513,7 @@ public class SlotSharingManager {
 				}
 
 				// release the underlying allocated slot
-				allocatedSlotActions.releaseSlot(allocatedSlotRequestId, null, cause);
+				allocatedSlotActions.releaseSlot(allocatedSlotRequestId, null, null, cause);
 			}
 		}
 
@@ -549,7 +570,8 @@ public class SlotSharingManager {
 				SlotRequestId slotRequestId,
 				AbstractID groupId,
 				MultiTaskSlot parent,
-				Locality locality) {
+				Locality locality,
+				@Nullable CoLocationConstraint coLocationConstraint) {
 			super(slotRequestId, groupId);
 
 			this.parent = Preconditions.checkNotNull(parent);
@@ -562,6 +584,7 @@ public class SlotSharingManager {
 							slotRequestId,
 							slotContext,
 							slotSharingGroupId,
+							coLocationConstraint,
 							locality,
 							slotOwner));
 		}

@@ -26,6 +26,7 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
 import org.apache.flink.runtime.instance.SlotSharingGroupId;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationConstraint;
 import org.apache.flink.runtime.jobmanager.scheduler.DummyScheduledUnit;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmanager.scheduler.SchedulerTestUtils;
@@ -377,10 +378,12 @@ public class SlotPoolRpcTest extends TestLogger {
 		public CompletableFuture<Acknowledge> releaseSlot(
 			SlotRequestId slotRequestId,
 			@Nullable SlotSharingGroupId slotSharingGroupId,
+			@Nullable CoLocationConstraint coLocationConstraint,
 			@Nullable Throwable cause) {
 			final Consumer<SlotRequestId> currentReleaseSlotConsumer = releaseSlotConsumer;
 
-			final CompletableFuture<Acknowledge> acknowledgeCompletableFuture = super.releaseSlot(slotRequestId, slotSharingGroupId, cause);
+			final CompletableFuture<Acknowledge> acknowledgeCompletableFuture =
+					super.releaseSlot(slotRequestId, slotSharingGroupId, coLocationConstraint, cause);
 
 			if (currentReleaseSlotConsumer != null) {
 				currentReleaseSlotConsumer.accept(slotRequestId);
