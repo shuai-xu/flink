@@ -153,7 +153,12 @@ class UpdateRankFunction(
         rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), size, dirty = true))
         // update inner rank of records under the old sort key
         updateInnerRank(oldSortKey)
+      } else {
+        // row content may change, so we need to update row in map
+        rowKeyMap.put(rowKey, RankRow(inputRowSer.copy(inputRow), oldRow.innerRank, dirty = true))
       }
+      // row content may change, so a retract is needed
+      retract(out, oldRow.row, oldRow.innerRank)
       collect(out, inputRow)
     } else if (checkSortKeyInBufferRange(sortKey, sortedMap, sortKeyComparator)) {
       // it is an unique record but is in the topN

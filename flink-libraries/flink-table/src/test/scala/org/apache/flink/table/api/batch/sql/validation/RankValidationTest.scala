@@ -24,7 +24,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Test
 
-class RankValidationTesrt extends TableTestBatchExecBase {
+class RankValidationTest extends TableTestBatchExecBase {
   private val batchUtil = batchTestUtil()
   batchUtil.addTable[(Int, Long, String)]("sourceTable", 'a, 'b, 'c)
 

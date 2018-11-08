@@ -1594,4 +1594,46 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       "fruit,4,33,2")
     assertEquals(expected2.sorted, sink2.getRetractResults.sorted)
   }
+
+  @Test
+  def testUpdateRank(): Unit = {
+    val data = List(
+      (1, 1), (1, 2), (1, 3),
+      (2, 2), (2, 3), (2, 4),
+      (3, 3), (3, 4), (3, 5))
+
+    val ds = failingDataSource(data).toTable(tEnv, 'a, 'b)
+    tEnv.registerTable("T", ds)
+
+    // We use max here to ensure the usage of update rank
+    val sql = "SELECT a, max(b) FROM T GROUP BY a ORDER BY a LIMIT 2"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = List("1,3", "2,4")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testUpdateRankWithOffset(): Unit = {
+    val data = List(
+      (1, 1), (1, 2), (1, 3),
+      (2, 2), (2, 3), (2, 4),
+      (3, 3), (3, 4), (3, 5))
+
+    val ds = failingDataSource(data).toTable(tEnv, 'a, 'b)
+    tEnv.registerTable("T", ds)
+
+    // We use max here to ensure the usage of update rank
+    val sql = "SELECT a, max(b) FROM T GROUP BY a ORDER BY a LIMIT 2 OFFSET 1"
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = List("2,4", "3,5")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
 }
