@@ -306,9 +306,8 @@ public class RocksDBInternalState implements InternalState {
 			if (fieldBasedPartitioner.getField() < numPrefixKeys) {
 				int group = fieldBasedPartitioner.partition(prefixKeys, getNumGroups());
 				byte[] prefixByteStart = serializePrefixKeys(group, prefixKeys, null);
-				byte[] prefixBytesEnd = serializePrefixKeysEnd(group, prefixKeys);
 
-				return createRocksDBPairRangeIterator(prefixByteStart, prefixBytesEnd);
+				return createRocksDBPairPrefixIterator(prefixByteStart);
 			}
 		}
 
@@ -318,8 +317,7 @@ public class RocksDBInternalState implements InternalState {
 
 			for (int group : groups) {
 				byte[] prefixByteStart = serializePrefixKeys(group, prefixKeys, null);
-				byte[] prefixBytesEnd = serializePrefixKeysEnd(group, prefixKeys);
-				groupIterators.add(createRocksDBEntryRangeIterator(prefixByteStart, prefixBytesEnd));
+				groupIterators.add(createRocksDBEntryPrefixIterator(prefixByteStart));
 			}
 
 			return new RocksDBSortedPartitionIterator(groupIterators,
@@ -329,8 +327,7 @@ public class RocksDBInternalState implements InternalState {
 			Collection<Iterator<Pair<Row, Row>>> groupIterators = new ArrayList<>();
 			for (int group : groups) {
 				byte[] prefixByteStart = serializePrefixKeys(group, prefixKeys, null);
-				byte[] prefixBytesEnd = serializePrefixKeysEnd(group, prefixKeys);
-				groupIterators.add(createRocksDBPairRangeIterator(prefixByteStart, prefixBytesEnd));
+				groupIterators.add(createRocksDBPairPrefixIterator(prefixByteStart));
 			}
 			return new PrefixPartitionIterator(groupIterators);
 		}
@@ -566,7 +563,7 @@ public class RocksDBInternalState implements InternalState {
 				byte[] dbValue = iterator.value();
 
 				byte[] dbKeyEnd = serializePrefixKeysEnd(group, prefixKeys);
-				if (RocksDBInstance.compare(dbKey, dbKeyEnd) < 0) {
+				if (dbKey.length >= dbKeyEnd.length && RocksDBInstance.compare(dbKey, dbKeyEnd) < 0) {
 					result = (new RocksDBEntry(dbInstance, dbKey, dbValue)).getRowPair(descriptor, GROUP_BYTES_TO_SKIP + stateNameBytes.length);
 				}
 			}
@@ -596,7 +593,7 @@ public class RocksDBInternalState implements InternalState {
 				byte[] dbValue = iterator.value();
 
 				byte[] dbKeyStart = serializePrefixKeys(group, prefixKeys, null);
-				if (RocksDBInstance.compare(dbKeyStart, dbKey) < 0) {
+				if (dbKey.length >= dbKeyStart.length && RocksDBInstance.compare(dbKeyStart, dbKey) < 0) {
 					result = (new RocksDBEntry(dbInstance, dbKey, dbValue)).getRowPair(descriptor, GROUP_BYTES_TO_SKIP + stateNameBytes.length);
 				}
 			}
@@ -643,6 +640,27 @@ public class RocksDBInternalState implements InternalState {
 		final RocksDBInstance dbInstance = backend.getDbInstance();
 		return
 			new RocksDBStateRangeIterator<RocksDBEntry>(dbInstance, startKeyBytes, endKeyBytes) {
+				@Override
+				public RocksDBEntry next() {
+					return getNextEntry();
+				}
+			};
+	}
+
+	private Iterator<Pair<Row, Row>>  createRocksDBPairPrefixIterator(byte[] startKeyBytes) {
+		final RocksDBInstance dbInstance = backend.getDbInstance();
+		return new RocksDBStatePrefixIterator<Pair<Row, Row>>(dbInstance, startKeyBytes) {
+			@Override
+			public Pair<Row, Row> next() {
+				return getNextEntry().getRowPair(descriptor, GROUP_BYTES_TO_SKIP + stateNameBytes.length);
+			}
+		};
+	}
+
+	private Iterator<RocksDBEntry> createRocksDBEntryPrefixIterator(byte[] startKeyBytes) {
+		final RocksDBInstance dbInstance = backend.getDbInstance();
+		return
+			new RocksDBStatePrefixIterator<RocksDBEntry>(dbInstance, startKeyBytes) {
 				@Override
 				public RocksDBEntry next() {
 					return getNextEntry();
