@@ -29,7 +29,7 @@ Calc(select=[c, w0$o0 AS _c1])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0 ROWS BETWEEN CURRENT ROW AND CURRENT ROW], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c])
+         +- Calc(select=[a, c], outputBinaryRow=[true])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>

@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c])
   StreamExecExchange(distribution=[hash[a, b, c]])
-    StreamExecCalc(select=[a, b, c])
+    StreamExecCalc(select=[a, b, c], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -31,7 +31,7 @@ StreamExecGroupAggregate(groupBy=[a, b, c], select=[a, b, c])
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000.millis)], select=[COUNT(DISTINCT a) AS EXPR$0, SUM(a) AS EXPR$1])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[rowtime, a])
+    StreamExecCalc(select=[rowtime, a], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -41,7 +41,7 @@ StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w$, 'rowtime, 900000
       <![CDATA[
 StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(DISTINCT a) AS EXPR$1, SUM(a) AS EXPR$2, COUNT(DISTINCT b) AS EXPR$3])
   StreamExecExchange(distribution=[hash[c]])
-    StreamExecCalc(select=[c, a, b])
+    StreamExecCalc(select=[c, a, b], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -51,7 +51,7 @@ StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(DISTINCT a) AS EXPR$1, SUM(
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 900000.millis)], select=[COUNT(DISTINCT a) AS EXPR$0, SUM(DISTINCT a) AS EXPR$1, MAX(DISTINCT a) AS EXPR$2])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[rowtime, a])
+    StreamExecCalc(select=[rowtime, a], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -61,7 +61,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[a], window=[SessionGroupWindow('w$, 'rowtime, 900000.millis)], select=[a, COUNT(a) AS EXPR$1, SUM(DISTINCT c) AS EXPR$2])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecCalc(select=[a, rowtime, c])
+    StreamExecCalc(select=[a, rowtime, c], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

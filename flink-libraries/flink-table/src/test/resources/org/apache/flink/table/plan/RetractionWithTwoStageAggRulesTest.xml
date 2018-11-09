@@ -39,14 +39,13 @@ StreamExecCalc(retract=[false], accMode=[Acc])
     <Resource name="trait">
       <![CDATA[
 StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecGlobalGroupAggregate(retract=[false], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
-        StreamExecCalc(retract=[true], accMode=[AccRetract])
-          StreamExecGlobalGroupAggregate(retract=[true], accMode=[AccRetract])
-            StreamExecExchange(retract=[true], accMode=[Acc])
-              StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
-                StreamExecScan(retract=[true], accMode=[Acc])
+  StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+    StreamExecExchange(retract=[true], accMode=[AccRetract])
+      StreamExecCalc(retract=[true], accMode=[AccRetract])
+        StreamExecGlobalGroupAggregate(retract=[true], accMode=[AccRetract])
+          StreamExecExchange(retract=[true], accMode=[Acc])
+            StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
+              StreamExecScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

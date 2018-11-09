@@ -16,14 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testReduceCalcExpressionForStreamTableAPI">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[13 AS _c0, 'b' AS _c1, 'STRING' AS _c2, 'teststring' AS _c3, 1990-10-24 23:00:01.123 AS _c4, false AS _c5, true AS _c6, 2E0 AS _c7, 'trueX' AS _c8], where=[>(a, 8)])
-  StreamExecScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testNestedTablesReductionStream">
     <Resource name="plan">
       <![CDATA[
@@ -52,6 +44,14 @@ StreamExecCalc(select=[+(7, a) AS EXPR$0, +(b, 3) AS EXPR$1, 'b' AS EXPR$2, 'STR
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, b, c, CAST(1000) AS f, CAST(1500) AS f500], where=[AND(>(a, 1000), <(b, 1500))])
+  StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReduceCalcExpressionForStreamTableAPI">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[13 AS _c0, 'b' AS _c1, 'STRING' AS _c2, 'teststring' AS _c3, 1990-10-24 23:00:01.123 AS _c4, false AS _c5, true AS _c6, 2E0 AS _c7, 'trueX' AS _c8], where=[>(a, 8)])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

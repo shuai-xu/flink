@@ -212,7 +212,7 @@ class JobLauncherSqlTest {
       "StreamExecLastRow(" +
       "key=[a1, b1], select=[c, a1, b1])\n  " +
       "StreamExecExchange(distribution=[hash[a1, b1]])\n    " +
-      "StreamExecCalc(select=[c, a AS a1, b AS b1])\n      " +
+      "StreamExecCalc(select=[c, a AS a1, b AS b1], outputBinaryRow=[true])\n      " +
       "StreamExecWatermarkAssigner(" +
       "fields=[[a, b, c, d]], rowtimeField=[c], watermarkOffset=[100])\n        " +
       "StreamExecCalc(select=[a, b, TO_TIMESTAMP(a) AS c, d])\n         " +

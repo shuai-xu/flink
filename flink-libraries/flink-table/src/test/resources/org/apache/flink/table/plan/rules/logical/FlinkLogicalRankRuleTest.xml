@@ -52,15 +52,6 @@ FlinkLogicalCalc(select=[a, b, 2 AS rk])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testRankValueFilterWithLowerValue">
-    <Resource name="plan">
-      <![CDATA[
-FlinkLogicalCalc(select=[a, b, w0$o0])
-  FlinkLogicalRank(rankFunction=[RANK], partitionBy=[b], orderBy=[a ASC, c ASC], rankRange=[rankStart=3], select=[a, b, c, rk])
-    FlinkLogicalNativeTableScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testRankValueFilterWithRange">
     <Resource name="plan">
       <![CDATA[

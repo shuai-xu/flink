@@ -30,6 +30,7 @@ import org.apache.flink.table.calcite.RelTimeIndicatorConverter
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonCalc
+import org.apache.flink.table.plan.nodes.physical.BaseExecCalc
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
 /**
@@ -41,8 +42,9 @@ class StreamExecCalc(
     input: RelNode,
     relDataType: RelDataType,
     calcProgram: RexProgram,
-    val ruleDescription: String)
-  extends Calc(cluster, traitSet, input, calcProgram)
+    val ruleDescription: String,
+    outputBinaryRow: Boolean = false)
+  extends BaseExecCalc(cluster, traitSet, input, calcProgram, outputBinaryRow)
   with CommonCalc
   with StreamExecRel {
 
@@ -55,7 +57,19 @@ class StreamExecCalc(
       child,
       relDataType,
       program,
-      ruleDescription)
+      ruleDescription,
+      outputBinaryRow)
+  }
+
+  override def copy(traitSet: RelTraitSet, outputBinaryRow: Boolean): Calc = {
+    new StreamExecCalc(
+      cluster,
+      traitSet,
+      getInput,
+      relDataType,
+      calcProgram,
+      ruleDescription,
+      outputBinaryRow)
   }
 
   override def toString: String = calcToString(calcProgram, getExpressionString)
@@ -66,6 +80,7 @@ class StreamExecCalc(
       .itemIf("where",
         conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
+      .itemIf("outputBinaryRow", outputBinaryRow, outputBinaryRow)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
@@ -97,6 +112,7 @@ class StreamExecCalc(
       calcProgram,
       condition,
       retainHeader = true,
+      assignOutputBinaryRow = outputBinaryRow,
       ruleDescription = ruleDescription
     )
     new OneInputTransformation(

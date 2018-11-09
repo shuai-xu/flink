@@ -16,53 +16,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-	<TestCase name="testEnableMicroBatch">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
+  <TestCase name="testEnableByParameters">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGlobalGroupAggregate(select=[$SUM0_RETRACT(sum0$0) AS $f0])
   StreamExecExchange(distribution=[single])
-    StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-      StreamExecCalc(select=[c])
-        StreamExecMicroBatchAssigner(interval=[1000ms])
-          StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecLocalGroupAggregate(select=[$SUM0_RETRACT($f1_0) AS sum0$0, COUNT_RETRACT(*) AS count$1])
+      StreamExecGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(DISTINCT c) AS $f1_0])
+        StreamExecExchange(distribution=[hash[$f1]])
+          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1], outputBinaryRow=[true])
+            StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testEnableMiniBatch">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
+    </Resource>
+  </TestCase>
+  <TestCase name="testEnableMicroBatch">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGroupAggregate(select=[COUNT(DISTINCT c) AS EXPR$0])
   StreamExecExchange(distribution=[single])
-    StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-      StreamExecCalc(select=[c])
+    StreamExecCalc(select=[c], outputBinaryRow=[true])
+      StreamExecMicroBatchAssigner(interval=[1000ms])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testEnablePartialAgg">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
+    </Resource>
+  </TestCase>
+  <TestCase name="testEnableMiniBatch">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGroupAggregate(select=[COUNT(DISTINCT c) AS EXPR$0])
   StreamExecExchange(distribution=[single])
-    StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
-      StreamExecExchange(distribution=[hash[$f1]])
-        StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
+    StreamExecCalc(select=[c], outputBinaryRow=[true])
+      StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testEnablePartialAgg">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGlobalGroupAggregate(select=[$SUM0_RETRACT(sum0$0) AS $f0])
+  StreamExecExchange(distribution=[single])
+    StreamExecLocalGroupAggregate(select=[$SUM0_RETRACT($f1_0) AS sum0$0, COUNT_RETRACT(*) AS count$1])
+      StreamExecGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(DISTINCT c) AS $f1_0])
+        StreamExecExchange(distribution=[hash[$f1]])
+          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1], outputBinaryRow=[true])
             StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testEnableByParameters">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
-  StreamExecExchange(distribution=[single])
-    StreamExecIncrementalGroupAggregate(shuffleKey=[$f1], groupKey=[], select=[COUNT(distinct$0 count$0) AS count$0])
-      StreamExecExchange(distribution=[hash[$f1]])
-        StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
-          StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
-            StreamExecScan(table=[[_DataStreamTable_0]])
-]]>
-		</Resource>
-	</TestCase>
+    </Resource>
+  </TestCase>
 </Root>

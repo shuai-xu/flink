@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT_RETRACT(a) AS EXPR$1, SUM_RETRACT(c) AS EXPR$2, SUM_RETRACT(d) AS EXPR$3])
   StreamExecExchange(distribution=[hash[b]])
-    StreamExecCalc(select=[b, a, c, d])
+    StreamExecCalc(select=[b, a, c, d], outputBinaryRow=[true])
       StreamExecJoinTable(join=[b, a, c, d, id], source=[TestDimensionTable(id, name, age)], on=[[1-0]], joinType=[InnerJoin], where=[>(age, 10)], period=[PROCTIME()])
         StreamExecCalc(select=[b, a, c, d])
           StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, SUM(c) AS c, SUM(d) AS d])
@@ -35,16 +35,6 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT_RETRACT(a) AS EXPR$1, SUM
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
   StreamExecJoinTable(join=[a, b, c, proc, rt, b0, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[5-0]], joinType=[InnerJoin], period=[$cor0.proc])
-    StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
-      StreamExecScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testJoinOnDifferentKeyTypesForTableAPI">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
-  StreamExecJoinTable(join=[a, b, c, proc, rt, b0, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[5-0]], joinType=[InnerJoin], period=[$3])
     StreamExecCalc(select=[a, b, c, proc, rt, CAST(b) AS b0])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -69,6 +59,15 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testJoinTemporalTableWithDimensionTableCalcPushDown">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
+  StreamExecJoinTable(join=[a, b, c, proc, rt, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[AND(=(age, 10), >(CAST(name), 1000))], period=[$cor0.proc])
+    StreamExecScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testJoinTemporalTableWithFilterPushDown">
     <Resource name="plan">
       <![CDATA[
@@ -76,15 +75,6 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) A
   StreamExecJoinTable(join=[a, b, c, proc, rt, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[=(age, 10)], period=[$cor0.proc])
     StreamExecCalc(select=[a, b, c, proc, rt], where=[>(c, 1000)])
       StreamExecScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testJoinTemporalTableWithDimensionTableCalcPushDown">
-    <Resource name="plan">
-	<![CDATA[
-StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, CAST(10) AS age])
-  StreamExecJoinTable(join=[a, b, c, proc, rt, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[AND(=(age, 10), >(CAST(name), 1000))], period=[$cor0.proc])
-    StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -122,15 +112,6 @@ StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id])
   StreamExecJoinTable(join=[a, b, c, proc, rt, id], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
-    StreamExecScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testLeftJoinTemporalTableForTableAPI">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[a, b, c, PROCTIME(proc) AS proc, rt, id, name, age])
-  StreamExecJoinTable(join=[a, b, c, proc, rt, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[LeftOuterJoin], period=[$3])
     StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

@@ -36,7 +36,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
 :- Exchange(distribution=[hash[a]])
 :  +- TableSourceScan(table=[[l]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c])
+   +- Calc(select=[c], outputBinaryRow=[true])
       +- TableSourceScan(table=[[r]], fields=[c, d])
 ]]>
     </Resource>

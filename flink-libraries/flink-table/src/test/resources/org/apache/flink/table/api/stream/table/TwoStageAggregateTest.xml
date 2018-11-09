@@ -20,22 +20,20 @@ limitations under the License.
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[TMP_0])
-  StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(count$0) AS TMP_0])
+  StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS TMP_0])
     StreamExecExchange(distribution=[hash[b]])
-      StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS count$0])
-        StreamExecCalc(select=[a, b])
-          StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecCalc(select=[a, b], outputBinaryRow=[true])
+        StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testGroupAggregateWithAverage">
     <Resource name="plan">
       <![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, AVG((sum$0, count$1)) AS TMP_0])
+StreamExecGroupAggregate(groupBy=[b], select=[b, AVG(a0) AS TMP_0])
   StreamExecExchange(distribution=[hash[b]])
-    StreamExecLocalGroupAggregate(groupBy=[b], select=[b, AVG(a0) AS (sum$0, count$1)])
-      StreamExecCalc(select=[b, a, CAST(a) AS a0])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecCalc(select=[b, a, CAST(a) AS a0], outputBinaryRow=[true])
+      StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -43,11 +41,10 @@ StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, AVG((sum$0, count$1)) AS 
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[TMP_0, TMP_1])
-  StreamExecGlobalGroupAggregate(groupBy=[d], select=[d, MIN(min$0) AS TMP_0, AVG((sum$1, count$2)) AS TMP_1])
+  StreamExecGroupAggregate(groupBy=[d], select=[d, MIN(c) AS TMP_0, AVG(a) AS TMP_1])
     StreamExecExchange(distribution=[hash[d]])
-      StreamExecLocalGroupAggregate(groupBy=[d], select=[d, MIN(c) AS min$0, AVG(a) AS (sum$1, count$2)])
-        StreamExecCalc(select=[c, a, MOD(b, 3) AS d])
-          StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecCalc(select=[c, a, MOD(b, 3) AS d], outputBinaryRow=[true])
+        StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -55,11 +52,10 @@ StreamExecCalc(select=[TMP_0, TMP_1])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[4 AS four, TMP_0])
-  StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS TMP_0])
+  StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) AS TMP_0])
     StreamExecExchange(distribution=[hash[a]])
-      StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) AS sum$0])
-        StreamExecCalc(select=[4 AS four, b, a])
-          StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecCalc(select=[4 AS four, b, a], outputBinaryRow=[true])
+        StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -67,22 +63,20 @@ StreamExecCalc(select=[4 AS four, TMP_0])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[4 AS four, TMP_0])
-  StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, SUM(sum$0) AS TMP_0])
+  StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(a) AS TMP_0])
     StreamExecExchange(distribution=[hash[b]])
-      StreamExecLocalGroupAggregate(groupBy=[b], select=[b, SUM(a) AS sum$0])
-        StreamExecCalc(select=[4 AS four, a, b])
-          StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecCalc(select=[4 AS four, a, b], outputBinaryRow=[true])
+        StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testGroupAggregateWithFilter">
     <Resource name="plan">
       <![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, SUM(sum$0) AS TMP_0])
+StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(a) AS TMP_0])
   StreamExecExchange(distribution=[hash[b]])
-    StreamExecLocalGroupAggregate(groupBy=[b], select=[b, SUM(a) AS sum$0])
-      StreamExecCalc(select=[CAST(2) AS b, a], where=[=(b, 2)])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecCalc(select=[CAST(2) AS b, a], where=[=(b, 2)], outputBinaryRow=[true])
+      StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

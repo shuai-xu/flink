@@ -203,14 +203,6 @@ object FlinkBatchPrograms {
       .build())
 
     programs.addLast(
-      POST_PHYSICAL,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkBatchExecRuleSets.BATCH_EXEC_POST_PHYSICAL_RULES)
-        .build())
-
-    programs.addLast(
       RUNTIME_FILTER,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
           .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
@@ -225,6 +217,14 @@ object FlinkBatchPrograms {
               .build(), "runtime filter remove useless")
           .build()
     )
+
+    programs.addLast(
+      POST_PHYSICAL,
+      FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.BATCH_EXEC_POST_PHYSICAL_RULES)
+          .build())
 
     // reuse the same physical Flink sub-plan
     programs.addLast(REUSE_SUB_PLAN, new FlinkReuseSubPlanProgram)

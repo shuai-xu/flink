@@ -34,7 +34,7 @@ Calc(select=[a, c])
    :- Calc(select=[a, b, c], where=[>(CAST(c), 10)])
    :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[d], where=[=(c, CAST(e))])
+      +- Calc(select=[d], where=[=(c, CAST(e))], outputBinaryRow=[true])
          +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[c, d, e])
 ]]>
     </Resource>

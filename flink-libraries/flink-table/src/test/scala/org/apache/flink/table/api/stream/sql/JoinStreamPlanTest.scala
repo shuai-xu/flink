@@ -30,14 +30,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
   @Test
   def testInnerJoin(): Unit = {
     val query = "SELECT a1, b1 FROM A JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testInnerJoinWithMicroBatch(): Unit = {
     streamUtil.tableEnv.getConfig.enableMicroBatch.withMicroBatchTriggerTime(1000L)
     val query = "SELECT a1, b1 FROM A JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -45,7 +45,7 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) JOIN ($query2) ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -53,13 +53,13 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) JOIN ($query2) ON a2 = b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testLeftJoinNonEqui(): Unit = {
     val query = "SELECT a1, b1 FROM A LEFT JOIN B ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -67,14 +67,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN ($query2) ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testLeftJoinWithRightNotPkNonEqui(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN B ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -82,13 +82,13 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) LEFT JOIN ($query2) ON a2 = b2 AND a1 > b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testLeftJoin(): Unit = {
     val query = "SELECT a1, b1 FROM A LEFT JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -96,14 +96,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN ($query2) ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testLeftJoinWithRightNotPk(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT a1, b1 FROM ($query1) LEFT JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -111,13 +111,13 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) LEFT JOIN ($query2) ON a2 = b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testRightJoinNonEqui(): Unit = {
     val query = "SELECT a1, b1 FROM A RIGHT JOIN B ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -125,14 +125,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN ($query2) ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testRightJoinWithRightNotPkNonEqui(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN B ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -140,13 +140,13 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) RIGHT JOIN ($query2) ON a2 = b2 AND a1 > b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testRightJoin(): Unit = {
     val query = "SELECT a1, b1 FROM A RIGHT JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -154,14 +154,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN ($query2) ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testRightJoinWithRightNotPk(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT a1, b1 FROM ($query1) RIGHT JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -169,13 +169,13 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) RIGHT JOIN ($query2) ON a2 = b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testFullJoinNonEqui(): Unit = {
     val query = "SELECT a1, b1 FROM A FULL JOIN B ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -183,14 +183,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN ($query2) ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testFullJoinWithFullNotPkNonEqui(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN B ON a1 = b1 AND a2 > b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -198,13 +198,13 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) FULL JOIN ($query2) ON a2 = b2 AND a1 > b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testFullJoin(): Unit = {
     val query = "SELECT a1, b1 FROM A FULL JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -212,14 +212,14 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN ($query2) ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
   def testFullJoinWithFullNotPk(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT a1, b1 FROM ($query1) FULL JOIN B ON a1 = b1"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 
   @Test
@@ -227,6 +227,6 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) FULL JOIN ($query2) ON a2 = b2"
-    verifyPlanAndTrait(query)
+    streamUtil.verifyPlanAndTrait(query)
   }
 }

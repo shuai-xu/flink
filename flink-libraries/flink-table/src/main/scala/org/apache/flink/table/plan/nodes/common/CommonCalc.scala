@@ -31,7 +31,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
-import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BoxedWrapperRow}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
@@ -166,13 +166,14 @@ trait CommonCalc {
     calcProgram: RexProgram,
     condition: Option[RexNode],
     retainHeader: Boolean = false,
+    assignOutputBinaryRow: Boolean = false,
     ruleDescription: String):
   (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
     val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
     // filter out time attributes
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val possibleOutputType = FlinkTypeFactory.toInternalBaseRowType(
-      outRowType, classOf[BoxedWrapperRow])
+      outRowType, if (assignOutputBinaryRow) classOf[BinaryRow] else classOf[BoxedWrapperRow])
     val (processCode, codeSplit, filterCodeSplit, outputType) = generatorProcessCode(
       ctx,
       inputType,
@@ -266,6 +267,9 @@ trait CommonCalc {
       } else {
         projectionExpression.code
       }
+
+      // set header after projectionExpressionCode
+      // [[BinaryRowWriter]] will reset head in projectionExpressionCode
       val header = if (retainHeader) {
         s"${projectionExpression.resultTerm}.setHeader($inputTerm.getHeader());"
       } else {
@@ -273,8 +277,8 @@ trait CommonCalc {
       }
 
       s"""
-         |$header
          |$projectionExpressionCode
+         |$header
          |${produceOutputCode(projectionExpression.resultTerm)}
          |""".stripMargin
     }

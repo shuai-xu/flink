@@ -34,7 +34,7 @@ StreamExecCalc(select=[b, c, EXPR$2], where=[>(EXPR$2, 3)])
 StreamExecCalc(select=[b, EXPR$1, 0 AS EXPR$2, 0 AS EXPR$3])
   StreamExecGroupAggregate(groupBy=[b], select=[b, AVG(a) AS EXPR$1])
     StreamExecExchange(distribution=[hash[b]])
-      StreamExecCalc(select=[b, a])
+      StreamExecCalc(select=[b, a], outputBinaryRow=[true])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

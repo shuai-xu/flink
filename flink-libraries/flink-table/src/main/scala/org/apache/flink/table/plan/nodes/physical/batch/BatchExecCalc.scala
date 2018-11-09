@@ -33,6 +33,7 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonCalc
+import org.apache.flink.table.plan.nodes.physical.BaseExecCalc
 
 import scala.collection.JavaConversions._
 
@@ -45,8 +46,9 @@ class BatchExecCalc(
     input: RelNode,
     rowRelDataType: RelDataType,
     calcProgram: RexProgram,
-    val ruleDescription: String)
-  extends Calc(cluster, traitSet, input, calcProgram)
+    val ruleDescription: String,
+    outputBinaryRow: Boolean = false)
+  extends BaseExecCalc(cluster, traitSet, input, calcProgram, outputBinaryRow)
   with CommonCalc
   with RowBatchExecRel {
 
@@ -59,7 +61,19 @@ class BatchExecCalc(
       child,
       getRowType,
       program,
-      ruleDescription))
+      ruleDescription,
+      outputBinaryRow))
+  }
+
+  override def copy(traitSet: RelTraitSet, outputBinaryRow: Boolean): Calc = {
+    super.supplement(new BatchExecCalc(
+      cluster,
+      traitSet,
+      getInput,
+      rowRelDataType,
+      calcProgram,
+      ruleDescription,
+      outputBinaryRow))
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -72,6 +86,7 @@ class BatchExecCalc(
       .itemIf("where", conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
       .itemIf("reuse_id", getReuseId, isReused)
+      .itemIf("outputBinaryRow", outputBinaryRow, outputBinaryRow)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
@@ -159,6 +174,7 @@ class BatchExecCalc(
       config,
       calcProgram,
       condition,
+      assignOutputBinaryRow = outputBinaryRow,
       ruleDescription = ruleDescription
     )
 

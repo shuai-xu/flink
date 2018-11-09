@@ -21,7 +21,7 @@ limitations under the License.
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SessionGroupWindow('w, 'long, 7.millis)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, long])
+    StreamExecCalc(select=[int, long], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -31,7 +31,7 @@ StreamExecGroupWindowAggregate(window=[SessionGroupWindow('w, 'long, 7.millis)],
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, long])
+    StreamExecCalc(select=[int, long], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -41,7 +41,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'long, 8.millis, 1
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'rowtime, 8.millis, 10.millis)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, rowtime])
+    StreamExecCalc(select=[int, rowtime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -51,7 +51,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'rowtime, 8.millis
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'long, 5.millis)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, long])
+    StreamExecCalc(select=[int, long], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -61,7 +61,7 @@ StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'long, 5.millis)]
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'proctime, 2.rows, 1.rows)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, proctime])
+    StreamExecCalc(select=[int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -71,7 +71,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'proctime, 2.rows,
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 5.millis)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, rowtime])
+    StreamExecCalc(select=[int, rowtime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -81,7 +81,7 @@ StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 5.milli
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'proctime, 50.millis, 50.millis)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, proctime])
+    StreamExecCalc(select=[int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -91,7 +91,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w, 'proctime, 50.mill
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'proctime, 2.rows)], select=[COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[int, proctime])
+    StreamExecCalc(select=[int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -101,7 +101,7 @@ StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'proctime, 2.rows
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'proctime, 50.millis)], select=[string, COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, proctime])
+    StreamExecCalc(select=[string, int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -112,7 +112,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w,
 StreamExecCalc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS TMP_0, CAST(/(-($f3, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1)))) AS TMP_1, CAST(POWER(/(-($f4, /(*(CAST($f1), CAST($f1)), $f2)), $f2), 0.5)) AS TMP_2, CAST(POWER(/(-($f5, /(*(CAST($f1), CAST($f1)), $f2)), CASE(=($f2, 1), null, -($f2, 1))), 0.5)) AS TMP_3, TMP_4, TMP_5])
   StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], properties=[TMP_4, TMP_5], select=[SUM($f2) AS $f0, SUM(c) AS $f1, COUNT(c) AS $f2, SUM($f3) AS $f3, SUM($f4) AS $f4, SUM($f5) AS $f5, start('w) AS TMP_4, end('w) AS TMP_5])
     StreamExecExchange(distribution=[single])
-      StreamExecCalc(select=[c, rowtime, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
+      StreamExecCalc(select=[c, rowtime, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5], outputBinaryRow=[true])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -140,7 +140,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[SessionGroupWindow('w, 
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'proctime, 2.rows, 1.rows)], select=[string, COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, proctime])
+    StreamExecCalc(select=[string, int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -159,7 +159,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'rowtime, 8.millis, 10.millis)], select=[string, COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, rowtime])
+    StreamExecCalc(select=[string, int, rowtime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -196,7 +196,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w,
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'rowtime, 10.millis, 5.millis)], properties=[TMP_1, TMP_2], select=[string, COUNT(int) AS TMP_0, start('w) AS TMP_1, end('w) AS TMP_2])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, rowtime])
+    StreamExecCalc(select=[string, int, rowtime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -206,10 +206,10 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w2, 'proctime, 20.millis, 10.millis)], select=[COUNT(string) AS TMP_2])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[string, TMP_0 AS proctime])
+    StreamExecCalc(select=[string, TMP_0 AS proctime], outputBinaryRow=[true])
       StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w1, 'proctime, 50.millis)], properties=[TMP_0], select=[string, COUNT(int) AS TMP_1, proctime('w1) AS TMP_0])
         StreamExecExchange(distribution=[hash[string]])
-          StreamExecCalc(select=[string, int, proctime])
+          StreamExecCalc(select=[string, int, proctime], outputBinaryRow=[true])
             StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -219,7 +219,7 @@ StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w2, 'proctime, 20.mil
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'proctime, 50.millis, 50.millis)], select=[string, COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, proctime])
+    StreamExecCalc(select=[string, int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -229,7 +229,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'proctime, 2.rows)], select=[string, COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, proctime])
+    StreamExecCalc(select=[string, int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -239,7 +239,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w,
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'proctime, 50.millis)], select=[string, COUNT(int) AS TMP_0])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, proctime])
+    StreamExecCalc(select=[string, int, proctime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -250,7 +250,7 @@ StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w,
 StreamExecCalc(select=[TMP_0, TMP_1, b])
   StreamExecGroupWindowAggregate(groupBy=[b], window=[TumblingGroupWindow('w, 'rowtime, 5.millis)], select=[b, COUNT($f4) AS TMP_0, SUM(a) AS TMP_1])
     StreamExecExchange(distribution=[hash[b]])
-      StreamExecCalc(select=[c, a, b, rowtime, UPPER(c) AS $f4])
+      StreamExecCalc(select=[c, a, b, rowtime, UPPER(c) AS $f4], outputBinaryRow=[true])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -260,7 +260,7 @@ StreamExecCalc(select=[TMP_0, TMP_1, b])
       <![CDATA[
 StreamExecGroupWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 5.millis)], select=[COUNT($f3) AS TMP_0, SUM(a) AS TMP_1])
   StreamExecExchange(distribution=[single])
-    StreamExecCalc(select=[c, a, rowtime, UPPER(c) AS $f3])
+    StreamExecCalc(select=[c, a, rowtime, UPPER(c) AS $f3], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -290,7 +290,7 @@ StreamExecCalc(select=[TMP_0])
       <![CDATA[
 StreamExecGroupWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'rowtime, 5.millis)], properties=[TMP_1, TMP_2], select=[string, COUNT(int) AS TMP_0, start('w) AS TMP_1, end('w) AS TMP_2])
   StreamExecExchange(distribution=[hash[string]])
-    StreamExecCalc(select=[string, int, rowtime])
+    StreamExecCalc(select=[string, int, rowtime], outputBinaryRow=[true])
       StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

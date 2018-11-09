@@ -124,7 +124,7 @@ Calc(select=[EXPR$0])
 +- SortWindowAggregate(groupBy=[customerId], window=[SlidingGroupWindow('w$, 'ts, 3600000.millis, 3000.millis)], select=[customerId, MAX(colLarge) AS EXPR$0])
    +- Sort(orderBy=[customerId ASC, ts ASC])
       +- Exchange(distribution=[hash[customerId]])
-         +- Calc(select=[customerId, ts, colLarge])
+         +- Calc(select=[customerId, ts, colLarge], outputBinaryRow=[true])
             +- TableSourceScan(table=[[t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
@@ -147,7 +147,7 @@ Calc(select=[EXPR$0])
 +- SortWindowAggregate(groupBy=[customerId], window=[SlidingGroupWindow('w$, 'ts, 3600000.millis, 3000.millis)], select=[customerId, COUNT(colLarge) AS EXPR$0])
    +- Sort(orderBy=[customerId ASC, ts ASC])
       +- Exchange(distribution=[hash[customerId]])
-         +- Calc(select=[customerId, ts, colLarge])
+         +- Calc(select=[customerId, ts, colLarge], outputBinaryRow=[true])
             +- TableSourceScan(table=[[t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
@@ -169,7 +169,7 @@ LogicalProject(EXPR$0=[$2])
 Calc(select=[EXPR$0])
 +- HashWindowAggregate(groupBy=[customerId], window=[TumblingGroupWindow('w$, 'ts, 3000.millis)], select=[customerId, COUNT(colLarge) AS EXPR$0])
    +- Exchange(distribution=[hash[customerId]])
-      +- Calc(select=[customerId, ts, colLarge])
+      +- Calc(select=[customerId, ts, colLarge], outputBinaryRow=[true])
          +- TableSourceScan(table=[[t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
@@ -192,7 +192,7 @@ Calc(select=[EXPR$0])
 +- SortWindowAggregate(groupBy=[customerId], window=[TumblingGroupWindow('w$, 'ts, 3000.millis)], select=[customerId, MAX(colLarge) AS EXPR$0])
    +- Sort(orderBy=[customerId ASC, ts ASC])
       +- Exchange(distribution=[hash[customerId]])
-         +- Calc(select=[customerId, ts, colLarge])
+         +- Calc(select=[customerId, ts, colLarge], outputBinaryRow=[true])
             +- TableSourceScan(table=[[t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>
@@ -260,7 +260,7 @@ Calc(select=[EXPR$0])
 +- SortWindowAggregate(groupBy=[productId], window=[SlidingGroupWindow('w$, 'ts, 1000.millis, 111.millis)], select=[productId, MAX(colLarge) AS EXPR$0])
    +- Sort(orderBy=[productId ASC, ts ASC])
       +- Exchange(distribution=[hash[productId]])
-         +- Calc(select=[productId, ts, colLarge])
+         +- Calc(select=[productId, ts, colLarge], outputBinaryRow=[true])
             +- TableSourceScan(table=[[t1]], fields=[ts, customerId, productId, colLarge])
 ]]>
     </Resource>

@@ -690,7 +690,7 @@ FlinkLogicalSemiJoin(condition=[true], joinType=[inner], isAnti=[false])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testJoinConditionPushDownLeftSemi3[true]">
+  <TestCase name="testJoinConditionPushDownLeftSemi3[false]">
     <Resource name="sql">
       <![CDATA[SELECT * FROM leftT WHERE EXISTS (SELECT * FROM rightT WHERE a = c AND b > 2)]]>
     </Resource>
@@ -714,7 +714,7 @@ FlinkLogicalSemiJoin(condition=[=($0, $2)], joinType=[inner], isAnti=[false])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testJoinConditionPushDownLeftSemi3[false]">
+  <TestCase name="testJoinConditionPushDownLeftSemi3[true]">
     <Resource name="sql">
       <![CDATA[SELECT * FROM leftT WHERE EXISTS (SELECT * FROM rightT WHERE a = c AND b > 2)]]>
     </Resource>
