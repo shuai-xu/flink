@@ -16,31 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testCorrelateAfterConcatAggWithConstantParam">
-    <Resource name="sql">
-      <![CDATA[SELECT * FROM (SELECT concat_agg(c, '#') AS c FROM MyTable) as t, LATERAL TABLE(func1(c)) AS T(s)]]>
-    </Resource>
-    <Resource name="planBefore">
-      <![CDATA[
-LogicalProject(c=[$0], s=[$1])
-+- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
-   :- LogicalAggregate(group=[{}], c=[CONCAT_AGG($0, $1)])
-   :  +- LogicalProject(c=[$2], $f1=['#'])
-   :     +- LogicalTableScan(table=[[MyTable]])
-   +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
-+- SortAggregate(isMerge=[true], select=[Final_CONCAT_AGG(accDelimiter$0, concatAcc$1) AS c])
-   +- Exchange(distribution=[single])
-      +- LocalSortAggregate(select=[Partial_CONCAT_AGG(c, $f1) AS (accDelimiter$0, concatAcc$1)])
-         +- Calc(select=[c, '#' AS $f1])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testLeftInputNotAllProjectable2">
     <Resource name="sql">
       <![CDATA[SELECT name, len, c FROM MyTable, LATERAL TABLE(parser(a)) AS T(name, len) where objHash(a, len) <> 0]]>
@@ -285,7 +260,7 @@ LogicalProject(a2=[$0], b2=[$1], c2=[$2], c=[$3], s=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
+HashJoin(where=[=(c2, f0)], join=[a2, b2, c2, c, f0], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a2, b2, c2])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[LEFT])
@@ -389,4 +364,29 @@ Correlate(invocation=[func1('hello', 'world', $cor0.c)], correlate=[table(func1(
 ]]>
     </Resource>
   </TestCase>
+	<TestCase name="testCorrelateAfterConcatAggWithConstantParam">
+		<Resource name="sql">
+			<![CDATA[SELECT * FROM (SELECT concat_agg(c, '#') AS c FROM MyTable) as t, LATERAL TABLE(func1(c)) AS T(s)]]>
+		</Resource>
+		<Resource name="planBefore">
+			<![CDATA[
+LogicalProject(c=[$0], s=[$1])
++- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
+   :- LogicalAggregate(group=[{}], c=[CONCAT_AGG($0, $1)])
+   :  +- LogicalProject(c=[$2], $f1=['#'])
+   :     +- LogicalTableScan(table=[[MyTable]])
+   +- LogicalTableFunctionScan(invocation=[func1($cor0.c)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+]]>
+		</Resource>
+		<Resource name="planAfter">
+			<![CDATA[
+Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
++- SortAggregate(isMerge=[true], select=[Final_CONCAT_AGG(accDelimiter$0, concatAcc$1) AS c])
+   +- Exchange(distribution=[single])
+      +- LocalSortAggregate(select=[Partial_CONCAT_AGG(c, $f1) AS (accDelimiter$0, concatAcc$1)])
+         +- Calc(select=[c, '#' AS $f1])
+            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+]]>
+		</Resource>
+	</TestCase>
 </Root>

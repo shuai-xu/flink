@@ -38,7 +38,7 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
          :- Calc(select=[c])
          :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
-            +- Calc(select=[f], outputBinaryRow=[true])
+            +- Calc(select=[f])
                +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
@@ -109,7 +109,7 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
          :- Calc(select=[c])
          :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
-            +- Calc(select=[f], outputBinaryRow=[true])
+            +- Calc(select=[f])
                +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>

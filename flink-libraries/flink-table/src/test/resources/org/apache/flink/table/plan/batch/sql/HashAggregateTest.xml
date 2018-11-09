@@ -299,7 +299,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
       <![CDATA[
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- Calc(select=[a, b, c], where=[=(a, 1)], outputBinaryRow=[true])
+   +- Calc(select=[a, b, c], where=[=(a, 1)])
       +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -319,7 +319,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
       <![CDATA[
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
 +- Exchange(distribution=[single])
-   +- Calc(select=[a, b, c], where=[=(a, 1)], outputBinaryRow=[true])
+   +- Calc(select=[a, b, c], where=[=(a, 1)])
       +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -446,7 +446,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
       <![CDATA[
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2, SUM($f3) AS EXPR$3])
 +- Exchange(distribution=[single])
-   +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)], outputBinaryRow=[true])
+   +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -467,7 +467,7 @@ LogicalAggregate(group=[{}], EXPR$0=[AVG($0)], EXPR$1=[SUM($1)], EXPR$2=[COUNT($
       <![CDATA[
 HashAggregate(isMerge=[false], select=[AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2, SUM($f3) AS EXPR$3])
 +- Exchange(distribution=[single])
-   +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)], outputBinaryRow=[true])
+   +- Calc(select=[CAST(1) AS a, b, c, c._1 AS $f3], where=[=(a, 1)])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -789,7 +789,7 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
-      +- Calc(select=[a, b, c], where=[=(a, 1)], outputBinaryRow=[true])
+      +- Calc(select=[a, b, c], where=[=(a, 1)])
          +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -811,7 +811,7 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
-      +- Calc(select=[a, b, c], where=[=(a, 1)], outputBinaryRow=[true])
+      +- Calc(select=[a, b, c], where=[=(a, 1)])
          +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -833,7 +833,7 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$2], EXPR$2=[$3])
 Calc(select=[EXPR$0, EXPR$1, EXPR$2])
 +- HashAggregate(isMerge=[false], groupBy=[a], select=[a, AVG(a) AS EXPR$0, SUM(b) AS EXPR$1, COUNT(c) AS EXPR$2])
    +- Exchange(distribution=[hash[a]])
-      +- Calc(select=[a, b, c], where=[=(a, 1)], outputBinaryRow=[true])
+      +- Calc(select=[a, b, c], where=[=(a, 1)])
          +- TableSourceScan(table=[[MyTable, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
 ]]>
     </Resource>

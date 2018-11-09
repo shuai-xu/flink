@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testAggAfterUnionWithMicroBatch">
+	<TestCase name="testAggAfterUnionWithMicroBatch">
     <Resource name="plan">
       <![CDATA[
 StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COUNT(distinct$0 count$1) AS EXPR$2])
@@ -36,7 +36,7 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COU
       <![CDATA[
 StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS EXPR$1, COUNT(DISTINCT c) FILTER $f4 AS EXPR$2, MAX(b) AS EXPR$3])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4], outputBinaryRow=[true])
+    StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4])
       StreamExecScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
@@ -44,21 +44,23 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS EXPR$1, CO
   <TestCase name="testAggWithFilterClauseWithLocalGlobal">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS EXPR$1, COUNT(DISTINCT c) FILTER $f4 AS EXPR$2, COUNT(DISTINCT c) FILTER $f5 AS EXPR$3, MAX(b) AS EXPR$4])
+StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COUNT(distinct$0 count$1) AS EXPR$2, COUNT(distinct$0 count$2) AS EXPR$3, MAX(max$3) AS EXPR$4])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4, IS TRUE(=(b, 1)) AS $f5], outputBinaryRow=[true])
-      StreamExecScan(table=[[_DataStreamTable_1]])
+    StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS sum$0, COUNT(distinct$0 c) FILTER $f4 AS count$1, COUNT(distinct$0 c) FILTER $f5 AS count$2, MAX(b) AS max$3, DISTINCT(c) AS distinct$0])
+      StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4, IS TRUE(=(b, 1)) AS $f5])
+        StreamExecScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testAggWithMicroBatch">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(DISTINCT a) AS EXPR$1, MAX(b) AS EXPR$2, SUM(c) AS EXPR$3])
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 count$0) AS EXPR$1, MAX(max$1) AS EXPR$2, SUM(sum$2) AS EXPR$3])
   StreamExecExchange(distribution=[hash[b]])
-    StreamExecCalc(select=[b, a, c], outputBinaryRow=[true])
-      StreamExecMicroBatchAssigner(interval=[1000ms])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 a) AS count$0, MAX(b) AS max$1, SUM(c) AS sum$2, DISTINCT(a) AS distinct$0])
+      StreamExecCalc(select=[b, a, c])
+        StreamExecMicroBatchAssigner(interval=[1000ms])
+          StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -67,7 +69,7 @@ StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(DISTINCT a) AS EXPR$1, MA
       <![CDATA[
 StreamExecGroupAggregate(groupBy=[a], select=[a, SUM($f1) AS EXPR$1, SUM($f2) AS EXPR$2, SUM($f3) AS EXPR$3, SUM($f4) AS EXPR$4, SUM($f5) AS EXPR$5, SUM($f6) AS EXPR$6, SUM($f7) AS EXPR$7])
   StreamExecExchange(distribution=[hash[a]])
-    StreamExecCalc(select=[a, 1 AS $f1, 2 AS $f2, 3 AS $f3, 4 AS $f4, 5 AS $f5, 6 AS $f6, 7 AS $f7], outputBinaryRow=[true])
+    StreamExecCalc(select=[a, 1 AS $f1, 2 AS $f2, 3 AS $f3, 4 AS $f4, 5 AS $f5, 6 AS $f6, 7 AS $f7])
       StreamExecScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
@@ -78,7 +80,7 @@ StreamExecGroupAggregate(groupBy=[a], select=[a, SUM($f1) AS EXPR$1, SUM($f2) AS
 StreamExecCalc(select=[EXPR$0])
   StreamExecGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS EXPR$0])
     StreamExecExchange(distribution=[hash[b]])
-      StreamExecCalc(select=[b, a], outputBinaryRow=[true])
+      StreamExecCalc(select=[b, a])
         StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

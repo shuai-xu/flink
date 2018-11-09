@@ -181,7 +181,7 @@ SortMergeSemiJoin(where=[AND(=(a, c), <(b, d))], join=[a, b], joinType=[LeftAnti
 NestedLoopSemiJoin(where=[>(b, d)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[d], outputBinaryRow=[true])
+   +- Calc(select=[d])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -192,7 +192,7 @@ NestedLoopSemiJoin(where=[>(b, d)], join=[a, b], joinType=[LeftSemiJoin], build=
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 ]]>
     </Resource>
@@ -204,7 +204,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[left]
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 ]]>
     </Resource>
@@ -216,7 +216,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 ]]>
     </Resource>
@@ -227,7 +227,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
 NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 ]]>
     </Resource>
@@ -239,7 +239,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 ]]>
     </Resource>
@@ -250,7 +250,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 NestedLoopSemiJoin(where=[>(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 ]]>
     </Resource>
@@ -261,7 +261,7 @@ NestedLoopSemiJoin(where=[>(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=
 HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
@@ -276,7 +276,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[left]
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
@@ -291,7 +291,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- SortAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Sort(orderBy=[a ASC, b ASC])
             +- Exchange(distribution=[hash[a, b]])
@@ -307,7 +307,7 @@ HashSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right
 NestedLoopSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
@@ -322,7 +322,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[b]])
-   +- Calc(select=[b], outputBinaryRow=[true])
+   +- Calc(select=[b])
       +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
          +- Exchange(distribution=[hash[a, b]])
             +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
@@ -366,7 +366,7 @@ NestedLoopSemiJoin(where=[OR(=(a, c), IS NULL(=(a, c)))], join=[a, b], joinType=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], where=[<(c, 3)], outputBinaryRow=[true])
+   +- Calc(select=[c], where=[<(c, 3)])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -378,10 +378,10 @@ NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftAntiJoin], build=[rig
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[IS NOT NULL(m) AS $f0], outputBinaryRow=[true])
+   +- Calc(select=[IS NOT NULL(m) AS $f0])
       +- SortAggregate(isMerge=[false], select=[MIN(i) AS m])
          +- Exchange(distribution=[single])
-            +- Calc(select=[true AS i], where=[>(c, 10)], outputBinaryRow=[true])
+            +- Calc(select=[true AS i], where=[>(c, 10)])
                +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -393,7 +393,7 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c, d], where=[<(c, 3)], outputBinaryRow=[true])
+   +- Calc(select=[c, d], where=[<(c, 3)])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -403,10 +403,10 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
       <![CDATA[
 HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[b]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[d]])
-   +- Calc(select=[c, d], where=[<(c, 3)], outputBinaryRow=[true])
+   +- Calc(select=[c, d], where=[<(c, 3)])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -416,10 +416,10 @@ HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], j
       <![CDATA[
 HashSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[b]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[d]])
-   +- Calc(select=[c, d], where=[<(c, 3)], outputBinaryRow=[true])
+   +- Calc(select=[c, d], where=[<(c, 3)])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -431,7 +431,7 @@ NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a,
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c, d], where=[<(c, 3)], outputBinaryRow=[true])
+   +- Calc(select=[c, d], where=[<(c, 3)])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -441,10 +441,10 @@ NestedLoopSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a,
       <![CDATA[
 SortMergeSemiJoin(where=[AND(OR(=(a, c), IS NULL(=(a, c))), =(b, d))], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[b]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[d]])
-   +- Calc(select=[c, d], where=[<(c, 3)], outputBinaryRow=[true])
+   +- Calc(select=[c, d], where=[<(c, 3)])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -456,7 +456,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -466,10 +466,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -479,10 +479,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -494,7 +494,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -504,10 +504,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -519,7 +519,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -529,10 +529,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -542,10 +542,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -557,7 +557,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -567,10 +567,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -582,7 +582,7 @@ NestedLoopSemiJoin(where=[$f0], join=[a, b], joinType=[LeftSemiJoin], build=[rig
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[IS NOT NULL(m) AS $f0], outputBinaryRow=[true])
+   +- Calc(select=[IS NOT NULL(m) AS $f0])
       +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS m])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_MIN(i) AS min$0])
@@ -598,7 +598,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -608,10 +608,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -621,10 +621,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -636,7 +636,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -646,10 +646,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -660,7 +660,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
@@ -675,7 +675,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
@@ -690,7 +690,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[EXPR$0, b])
       +- SortAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Sort(orderBy=[b ASC])
             +- Exchange(distribution=[hash[b]])
@@ -706,7 +706,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
@@ -721,7 +721,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[EXPR$0, b])
       +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_SUM(sum$0) AS EXPR$0])
          +- Exchange(distribution=[hash[b]])
             +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0])
@@ -806,7 +806,7 @@ Calc(select=[c, d])
    :- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+      +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
@@ -820,10 +820,10 @@ Calc(select=[c, d])
 Calc(select=[c, d])
 +- HashSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[left])
    :- Exchange(distribution=[hash[$f2, d]])
-   :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2], outputBinaryRow=[true])
+   :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[EXPR$0, b]])
-      +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+      +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
@@ -837,10 +837,10 @@ Calc(select=[c, d])
 Calc(select=[c, d])
 +- HashSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin], build=[right])
    :- Exchange(distribution=[hash[$f2, d]])
-   :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2], outputBinaryRow=[true])
+   :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[EXPR$0, b]])
-      +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+      +- Calc(select=[EXPR$0, b])
          +- SortAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Sort(orderBy=[b ASC])
                +- Exchange(distribution=[hash[b]])
@@ -858,7 +858,7 @@ Calc(select=[c, d])
    :- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+      +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
@@ -872,10 +872,10 @@ Calc(select=[c, d])
 Calc(select=[c, d])
 +- SortMergeSemiJoin(where=[AND(=($f2, EXPR$0), =(b, d))], join=[c, d, $f2], joinType=[LeftSemiJoin])
    :- Exchange(distribution=[hash[$f2, d]])
-   :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2], outputBinaryRow=[true])
+   :  +- Calc(select=[c, d, CAST(/(CAST(c), 2)) AS $f2])
    :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[EXPR$0, b]])
-      +- Calc(select=[EXPR$0, b], outputBinaryRow=[true])
+      +- Calc(select=[EXPR$0, b])
          +- HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EXPR$0])
             +- Exchange(distribution=[hash[b]])
                +- LocalHashAggregate(groupBy=[b], select=[b, Partial_COUNT(*) AS count$0])
@@ -942,7 +942,7 @@ SortMergeSemiJoin(where=[AND(=(c, a), >(b, d))], join=[c, d], joinType=[LeftSemi
 HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c, d], outputBinaryRow=[true])
+   +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
          +- Sort(orderBy=[d ASC])
             +- Exchange(distribution=[hash[d]])
@@ -959,7 +959,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c, d], outputBinaryRow=[true])
+   +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
          +- Sort(orderBy=[d ASC])
             +- Exchange(distribution=[hash[d]])
@@ -976,7 +976,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c, d], outputBinaryRow=[true])
+   +- Calc(select=[c, d])
       +- HashAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
          +- Exchange(distribution=[hash[d]])
             +- LocalHashAggregate(groupBy=[d], select=[d, Partial_MAX(c) AS max$0])
@@ -990,7 +990,7 @@ HashSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin]
 NestedLoopSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c, d], outputBinaryRow=[true])
+   +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
          +- Sort(orderBy=[d ASC])
             +- Exchange(distribution=[hash[d]])
@@ -1007,7 +1007,7 @@ SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemi
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c, d], outputBinaryRow=[true])
+   +- Calc(select=[c, d])
       +- SortAggregate(isMerge=[true], groupBy=[d], select=[d, Final_MAX(max$0) AS c])
          +- Sort(orderBy=[d ASC])
             +- Exchange(distribution=[hash[d]])
@@ -1023,7 +1023,7 @@ SortMergeSemiJoin(where=[AND(=(a, c), >(b, d))], join=[a, b], joinType=[LeftSemi
 NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[w0$o0 AS c, d], outputBinaryRow=[true])
+   +- Calc(select=[w0$o0 AS c, d])
       +- OverAggregate(window#0=[MIN(c) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[c, d, w0$o0])
          +- Exchange(distribution=[single])
             +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
@@ -1036,7 +1036,7 @@ NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSe
 NestedLoopSemiJoin(where=[AND(=(a, c), <>(b, d))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[w0$o0 AS c, d], outputBinaryRow=[true])
+   +- Calc(select=[w0$o0 AS c, d])
       +- OverAggregate(window#0=[MIN(c) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[c, d, w0$o0])
          +- Exchange(distribution=[single])
             +- SortAggregate(isMerge=[true], groupBy=[c, d], select=[c, d])
@@ -1170,7 +1170,7 @@ HashSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin], build=[
 :- Exchange(distribution=[hash[c]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1226,7 +1226,7 @@ SortMergeSemiJoin(where=[=(c, EXPR$0)], join=[c, d], joinType=[LeftSemiJoin])
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1241,7 +1241,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1256,7 +1256,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1270,7 +1270,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1285,7 +1285,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1299,7 +1299,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
 HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1317,7 +1317,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1335,7 +1335,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1354,7 +1354,7 @@ HashSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemi
 NestedLoopSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1372,7 +1372,7 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
 :- Exchange(distribution=[hash[c, d]])
 :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 +- Exchange(distribution=[hash[EXPR$0, b]])
-   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b], outputBinaryRow=[true])
+   +- Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, b])
       +- OverAggregate(partitionBy=[b], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[a, b, w0$o0, w0$o1])
          +- Sort(orderBy=[b ASC, a ASC])
             +- Exchange(distribution=[hash[b]])
@@ -1391,7 +1391,7 @@ Calc(select=[a, b])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[c], outputBinaryRow=[true])
+      +- Calc(select=[c])
          +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1481,7 +1481,7 @@ Calc(select=[a, b])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[c], outputBinaryRow=[true])
+      +- Calc(select=[c])
          +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1495,7 +1495,7 @@ Calc(select=[a, b])
    :  +- Exchange(distribution=[hash[a]])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
-      +- Calc(select=[c], outputBinaryRow=[true])
+      +- Calc(select=[c])
          +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1509,7 +1509,7 @@ Calc(select=[a, b])
    :  +- Exchange(distribution=[hash[a]])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
-      +- Calc(select=[c], outputBinaryRow=[true])
+      +- Calc(select=[c])
          +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1522,7 +1522,7 @@ Calc(select=[a, b])
    :- Calc(select=[a, b, >(b, 2) AS $f2])
    :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[c], outputBinaryRow=[true])
+      +- Calc(select=[c])
          +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1536,7 +1536,7 @@ Calc(select=[a, b])
    :  +- Exchange(distribution=[hash[a]])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
-      +- Calc(select=[c], outputBinaryRow=[true])
+      +- Calc(select=[c])
          +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1548,7 +1548,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1558,10 +1558,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1571,10 +1571,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1586,7 +1586,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1596,10 +1596,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1624,7 +1624,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1634,10 +1634,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1647,10 +1647,10 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
       <![CDATA[
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1662,7 +1662,7 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
 :- Calc(select=[a, b], where=[>(b, 2)])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1672,10 +1672,10 @@ NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=
       <![CDATA[
 SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
-:  +- Calc(select=[a, b], where=[>(b, 2)], outputBinaryRow=[true])
+:  +- Calc(select=[a, b], where=[>(b, 2)])
 :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1692,7 +1692,7 @@ Calc(select=[a, b])
          :- Calc(select=[c])
          :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
          +- Exchange(distribution=[broadcast])
-            +- Calc(select=[c], where=[>(d, 1)], outputBinaryRow=[true])
+            +- Calc(select=[c], where=[>(d, 1)])
                +- BoundedDataStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1703,14 +1703,14 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- HashJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[hash[a]])
-   :  +- Calc(select=[a, b], where=[>(a, 0)], outputBinaryRow=[true])
+   :  +- Calc(select=[a, b], where=[>(a, 0)])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- HashSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin], build=[left])
       :- Exchange(distribution=[hash[c]])
-      :  +- Calc(select=[c], outputBinaryRow=[true])
+      :  +- Calc(select=[c])
       :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[c], where=[>(d, 1)], outputBinaryRow=[true])
+         +- Calc(select=[c], where=[>(d, 1)])
             +- BoundedDataStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1722,13 +1722,13 @@ Calc(select=[a, b])
 +- HashSemiJoin(where=[=(c, c0)], join=[a, b, c], joinType=[LeftSemiJoin], build=[left])
    :- HashJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin], build=[left])
    :  :- Exchange(distribution=[hash[a]])
-   :  :  +- Calc(select=[a, b], where=[>(a, 0)], outputBinaryRow=[true])
+   :  :  +- Calc(select=[a, b], where=[>(a, 0)])
    :  :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    :  +- Exchange(distribution=[hash[c]])
-   :     +- Calc(select=[c], outputBinaryRow=[true])
+   :     +- Calc(select=[c])
    :        +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
    +- Exchange(distribution=[hash[c]])
-      +- Calc(select=[c], where=[>(d, 1)], outputBinaryRow=[true])
+      +- Calc(select=[c], where=[>(d, 1)])
          +- BoundedDataStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1745,7 +1745,7 @@ Calc(select=[a, b])
          :- Calc(select=[c])
          :  +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
          +- Exchange(distribution=[broadcast])
-            +- Calc(select=[c], where=[>(d, 1)], outputBinaryRow=[true])
+            +- Calc(select=[c], where=[>(d, 1)])
                +- BoundedDataStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1756,14 +1756,14 @@ Calc(select=[a, b])
 Calc(select=[a, b])
 +- SortMergeJoin(where=[=(a, c)], join=[a, b, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
-   :  +- Calc(select=[a, b], where=[>(a, 0)], outputBinaryRow=[true])
+   :  +- Calc(select=[a, b], where=[>(a, 0)])
    :     +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
    +- SortMergeSemiJoin(where=[=(c, c0)], join=[c], joinType=[LeftSemiJoin])
       :- Exchange(distribution=[hash[c]])
-      :  +- Calc(select=[c], outputBinaryRow=[true])
+      :  +- Calc(select=[c])
       :     +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[c], where=[>(d, 1)], outputBinaryRow=[true])
+         +- Calc(select=[c], where=[>(d, 1)])
             +- BoundedDataStreamScan(table=[[rightUniqueKeyT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1837,7 +1837,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1849,7 +1849,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1861,7 +1861,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1872,7 +1872,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[left]
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1884,7 +1884,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1895,7 +1895,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftAntiJoin])
 HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1923,7 +1923,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1934,7 +1934,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right
 NestedLoopSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1946,7 +1946,7 @@ SortMergeSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>
@@ -1974,7 +1974,7 @@ HashSemiJoin(where=[=(a, c)], join=[a, b], joinType=[LeftSemiJoin], build=[left]
 :- Exchange(distribution=[hash[a]])
 :  +- BoundedDataStreamScan(table=[[leftT]], fields=[a, b])
 +- Exchange(distribution=[hash[c]])
-   +- Calc(select=[c], outputBinaryRow=[true])
+   +- Calc(select=[c])
       +- BoundedDataStreamScan(table=[[rightT]], fields=[c, d])
 ]]>
     </Resource>

@@ -16,11 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testDistinct">
-    <Resource name="sql">
-      <![CDATA[SELECT sum(Distinct a) over (partition by c order by a range between -1 FOLLOWING and 10 FOLLOWING) FROM Table3]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testMultiOverWindowRangeType">
     <Resource name="sql">
       <![CDATA[SELECT count(*) over (partition by c order by a range between -1 PRECEDING and 10 FOLLOWING),sum(a) over (partition by c order by a),rank() over (partition by c order by a, c),sum(a) over (partition by c order by a range between 1 PRECEDING and 10 FOLLOWING),count(*) over (partition by c order by c rows between 1 PRECEDING and 10 FOLLOWING) FROM Table3]]>
@@ -37,7 +32,7 @@ Calc(select=[w0$o0 AS EXPR$0, CASE(>(w1$o0, 0), CAST(w1$o1), null) AS EXPR$1, w2
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 RANG BETWEEN -1 PRECEDING AND 10 FOLLOWING], window#1=[COUNT(a) AS w1$o0, $SUM0(a) AS w1$o1 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], window#2=[COUNT(a) AS w3$o1, $SUM0(a) AS w2$o0 RANG BETWEEN 1 PRECEDING AND 10 FOLLOWING], window#3=[RANK(*) AS w3$o0 RANG BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], window#4=[COUNT(*) AS w4$o0 ROWS BETWEEN 1 PRECEDING AND 10 FOLLOWING], select=[a, c, w0$o0, w1$o0, w1$o1, w3$o1, w2$o0, w3$o0, w4$o0])
    +- Sort(orderBy=[c ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -58,7 +53,7 @@ Calc(select=[c, w0$o0 AS $1])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 ROWS BETWEEN 0 PRECEDING AND 0 FOLLOWING], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -79,7 +74,7 @@ Calc(select=[c, w0$o0 AS $1])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 ROWS BETWEEN 0 PRECEDING AND CURRENT ROW], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -100,7 +95,7 @@ Calc(select=[c, w0$o0 AS $1])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 ROWS BETWEEN CURRENT ROW AND 0 FOLLOWING], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -121,7 +116,7 @@ Calc(select=[w0$o0 AS $0])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 RANG BETWEEN -1 PRECEDING AND 10 FOLLOWING], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -162,7 +157,7 @@ Calc(select=[w0$o0 AS $0])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 RANG BETWEEN -1 PRECEDING AND 10 FOLLOWING], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -183,7 +178,7 @@ Calc(select=[w0$o0 AS $0])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(*) AS w0$o0 RANG BETWEEN -1 FOLLOWING AND 10 FOLLOWING], select=[a, c, w0$o0])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -222,7 +217,7 @@ LogicalProject(EXPR$0=[COUNT(1) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND UNBO
       <![CDATA[
 OverAggregate(window#0=[COUNT(1) AS w0$o0 RANG BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING], select=[w0$o0])
 +- Exchange(distribution=[single])
-   +- Calc(select=[], outputBinaryRow=[true])
+   +- Calc(select=[])
       +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -243,7 +238,7 @@ Calc(select=[CASE(>(w0$o0, 0), CAST(w0$o1), null) AS EXPR$0, w0$o2 AS EXPR$1])
 +- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0, $SUM0(a) AS w0$o1, COUNT(1) AS w0$o2 RANG BETWEEN -1 FOLLOWING AND 10 FOLLOWING], select=[a, c, w0$o0, w0$o1, w0$o2])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c], outputBinaryRow=[true])
+         +- Calc(select=[a, c])
             +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>

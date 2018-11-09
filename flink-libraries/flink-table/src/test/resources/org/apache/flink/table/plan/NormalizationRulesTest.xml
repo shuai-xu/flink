@@ -16,21 +16,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testOverWindowCurrentRowAndCurrentRow">
-    <Resource name="planBefore">
+  <TestCase name="testApplyNormalizationRuleForStreamSQL">
+    <Resource name="plan">
       <![CDATA[
-LogicalProject(c=[$2], _c1=[AS(COUNT($0) OVER (PARTITION BY $2 ORDER BY $0 NULLS FIRST ROWS BETWEEN CURRENT ROW AND CURRENT ROW), '_c1')])
-+- LogicalTableScan(table=[[_DataStreamTable_0]])
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[
-Calc(select=[c, w0$o0 AS _c1])
-+- OverAggregate(partitionBy=[c], orderBy=[a ASC], window#0=[COUNT(a) AS w0$o0 ROWS BETWEEN CURRENT ROW AND CURRENT ROW], select=[a, c, w0$o0])
-   +- Sort(orderBy=[c ASC, a ASC])
-      +- Exchange(distribution=[hash[c]])
-         +- Calc(select=[a, c])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+LogicalProject(EXPR$0=[$1])
+  LogicalAggregate(group=[{0}], EXPR$0=[COUNT($1)])
+    LogicalAggregate(group=[{0, 1}])
+      LogicalProject(b=[$1], a=[$0])
+        LogicalTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

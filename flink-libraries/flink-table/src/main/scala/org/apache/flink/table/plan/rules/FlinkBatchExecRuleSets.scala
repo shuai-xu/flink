@@ -26,7 +26,7 @@ import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.rules.physical.batch._
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter._
 import org.apache.flink.table.plan.rules.logical._
-import org.apache.flink.table.plan.rules.physical.{BinaryProjectionPushDown, FlinkExpandConversionRule}
+import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
 
 import scala.collection.JavaConverters._
 
@@ -357,8 +357,7 @@ object FlinkBatchExecRuleSets {
 
   val BATCH_EXEC_POST_PHYSICAL_RULES: RuleSet = RuleSets.ofList(
     // push project into correlate
-    BatchExecPushProjectIntoCorrelateRule.INSTANCE,
-    BinaryProjectionPushDown.INSTANCE
+    BatchExecPushProjectIntoCorrelateRule.INSTANCE
   )
 
   val RUNTIME_FILTER_RULES: RuleSet = RuleSets.ofList(

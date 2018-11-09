@@ -46,7 +46,7 @@ LogicalProject(d=[$3], e=[$4], f=[$5])
 Calc(select=[d, e, f])
 +- HashJoin(where=[=(c0, d)], join=[c0, d, e, f], joinType=[InnerJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
-   :  +- Calc(select=[CAST(c) AS c0], outputBinaryRow=[true])
+   :  +- Calc(select=[CAST(c) AS c0])
    :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>

@@ -101,7 +101,7 @@ Calc(select=[EXPR$0])
 +- SortAggregate(isMerge=[false], groupBy=[customerId], select=[customerId, MAX(colLarge) AS EXPR$0])
    +- Sort(orderBy=[customerId ASC])
       +- Exchange(distribution=[hash[customerId]])
-         +- Calc(select=[customerId, colLarge], outputBinaryRow=[true])
+         +- Calc(select=[customerId, colLarge])
             +- TableSourceScan(table=[[t1]], fields=[customerId, productId, colLarge])
 ]]>
     </Resource>

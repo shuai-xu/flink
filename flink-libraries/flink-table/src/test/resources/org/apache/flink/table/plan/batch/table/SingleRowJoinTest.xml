@@ -35,7 +35,7 @@ NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right
 :  +- Calc(select=[a1])
 :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 +- Exchange(distribution=[broadcast])
-   +- Calc(select=[+(TMP_0, TMP_1) AS asum], outputBinaryRow=[true])
+   +- Calc(select=[+(TMP_0, TMP_1) AS asum])
       +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS TMP_0, Final_SUM(sum$1) AS TMP_1])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_SUM(a1) AS sum$0, Partial_SUM(a2) AS sum$1])

@@ -36,7 +36,7 @@ Calc(select=[a_int, a_string])
 +- HashSemiJoin(where=[=(a_long, b_long)], join=[a_long, a_int, a_string], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
    :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a_long, a_int, a_string])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[b_long], outputBinaryRow=[true])
+      +- Calc(select=[b_long])
          +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[b_long, b_int, b_string])
 ]]>
     </Resource>
@@ -125,7 +125,7 @@ Calc(select=[a, c])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
-      +- Calc(select=[b], where=[OR(=(b, 6), =(b, 1))], outputBinaryRow=[true])
+      +- Calc(select=[b], where=[OR(=(b, 6), =(b, 1))])
          +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>

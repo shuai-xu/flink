@@ -24,13 +24,13 @@ class SemiAntiJoinStreamPlanTest extends StreamPlanTestBase {
   @Test
   def testSemiJoin(): Unit = {
     val query = "SELECT * FROM A WHERE a1 in (SELECT b1 from B)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
   def testSemiJoinNonEqui(): Unit = {
     val query = "SELECT * FROM A WHERE a1 in (SELECT b1 from B WHERE a2 > b2)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
@@ -38,14 +38,14 @@ class SemiAntiJoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT * FROM ($query1) WHERE a1 in (SELECT b1 from ($query2) WHERE a2 > b2)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
   def testSemiJoinWithRightNotPkNonEqui(): Unit = {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT * FROM ($query1) WHERE a1 in (SELECT b1 from B WHERE a2 > b2)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
@@ -53,19 +53,19 @@ class SemiAntiJoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT * FROM ($query1) WHERE a2 in (SELECT b2 from ($query2) WHERE a1 > b1)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
   def testAntiJoin(): Unit = {
     val query = "SELECT * FROM A WHERE NOT EXISTS (SELECT b1 from B WHERE a1 = b1)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
   def testAntiJoinNonEqui(): Unit = {
     val query = "SELECT * FROM A WHERE NOT EXISTS (SELECT b1 from B WHERE a1 = b1 AND a2 > b2)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
@@ -74,7 +74,7 @@ class SemiAntiJoinStreamPlanTest extends StreamPlanTestBase {
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT * FROM ($query1) WHERE NOT EXISTS (SELECT b1 from ($query2) WHERE a1 = " +
         s"b1 AND a2 > b2)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
@@ -82,7 +82,7 @@ class SemiAntiJoinStreamPlanTest extends StreamPlanTestBase {
     val query1 = "SELECT SUM(a2) AS a2, a1 FROM A group by a1"
     val query = s"SELECT * FROM ($query1) WHERE NOT EXISTS (SELECT b1 from B WHERE a1 = b1 AND a2" +
         s" > b2)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 
   @Test
@@ -91,6 +91,6 @@ class SemiAntiJoinStreamPlanTest extends StreamPlanTestBase {
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT * FROM ($query1) WHERE NOT EXISTS (SELECT b2 from ($query2) WHERE a2 = " +
         s"b2 AND a1 > b1)"
-    streamUtil.verifyPlanAndTrait(query)
+    verifyPlanAndTrait(query)
   }
 }

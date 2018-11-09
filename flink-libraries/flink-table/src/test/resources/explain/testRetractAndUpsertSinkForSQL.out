@@ -11,7 +11,7 @@ LogicalProject(num=[$0], cnt=[$1])
 [[IntermediateTable=_DataStreamTable_1]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
-    StreamExecCalc(select=[num, id], outputBinaryRow=[true])
+    StreamExecCalc(select=[num, id])
       StreamExecScan(table=[[T]])
 StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
