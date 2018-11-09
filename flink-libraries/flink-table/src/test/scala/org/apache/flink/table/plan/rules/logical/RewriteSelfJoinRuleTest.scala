@@ -44,6 +44,11 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .build(), "convert table references before rewriting sub-queries to semi-join")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.SEMI_JOIN_RULES)
           .build(), "rewrite sub-queries to semi-join")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
@@ -51,6 +56,11 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.TABLE_SUBQUERY_RULES)
           .build(), "sub-queries remove")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .build(), "convert table references after sub-queries removed")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
@@ -68,7 +78,6 @@ class RewriteSelfJoinRuleTest extends TableTestBatchExecBase with PropertyChecks
         .build()
     )
 
-    // segment top
     programs.addLast(
       JOIN_REORDER,
       FlinkHepRuleSetProgramBuilder.newBuilder

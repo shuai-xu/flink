@@ -25,7 +25,6 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalNativeTableScan}
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.{LOGICAL, TABLE_REF}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBatchExecBase
@@ -38,14 +37,14 @@ class FlinkCalcMergeRuleTest extends TableTestBatchExecBase {
   def setup(): Unit = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
     programs.addLast(
-      TABLE_REF,
+      "table_ref",
       FlinkHepRuleSetProgramBuilder.newBuilder
         .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
         .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
         .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
         .build())
     programs.addLast(
-      LOGICAL,
+      "logical",
       FlinkVolcanoProgramBuilder.newBuilder
         .add(RuleSets.ofList(
           FilterToCalcRule.INSTANCE,

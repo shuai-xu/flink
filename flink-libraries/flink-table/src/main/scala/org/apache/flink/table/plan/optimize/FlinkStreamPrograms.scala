@@ -20,15 +20,13 @@ package org.apache.flink.table.plan.optimize
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.rules.FlinkStreamExecRuleSets
+import org.apache.flink.table.plan.rules.{FlinkBatchExecRuleSets, FlinkStreamExecRuleSets}
 
 /**
   * Defines a sequence of programs to optimize for stream table plan.
   */
 object FlinkStreamPrograms {
-  val SEMI_JOIN = "semi_join"
   val QUERY_REWRITE = "query_rewrite"
-  val TABLE_REF = "table_ref"
   val DECORRELATE = "decorrelate"
   val TIME_INDICATOR = "time_indicator"
   val NORMALIZATION = "normalization"
@@ -51,38 +49,37 @@ object FlinkStreamPrograms {
   def buildPrograms(): FlinkChainedPrograms[StreamOptimizeContext] = {
     val programs = new FlinkChainedPrograms[StreamOptimizeContext]()
 
-    programs.addLast(
-      SEMI_JOIN,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.SEMI_JOIN_RULES)
-        .build()
-    )
-
     // convert queries before query decorrelation
     programs.addLast(
       QUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        // rewrite RelTable before rewriting sub-queries
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .build(), "convert table references before rewriting sub-queries to semi-join")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.SEMI_JOIN_RULES)
+          .build(), "rewrite sub-queries to semi-join")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkStreamExecRuleSets.TABLE_SUBQUERY_RULES)
           .build(), "sub-queries remove")
+        // convert RelOptTableImpl (which exists in SubQuery before) to FlinkRelOptTable
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .build(), "convert table references after sub-queries removed")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkStreamExecRuleSets.REWRITE_RELNODE_RULES)
           .build(), "relnode rewrite")
-        .build())
-
-    // convert table references
-    programs.addLast(
-      TABLE_REF,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkStreamExecRuleSets.TABLE_REF_RULES)
         .build())
 
     // decorrelate

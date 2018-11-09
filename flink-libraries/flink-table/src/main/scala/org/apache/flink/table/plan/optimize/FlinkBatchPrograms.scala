@@ -29,7 +29,6 @@ import org.apache.flink.table.plan.rules.logical.{JoinDependentFilterPushdownRul
   */
 object FlinkBatchPrograms {
   val QUERY_REWRITE = "query_rewrite"
-  val TABLE_REF = "table_ref"
   val DECORRELATE = "decorrelate"
   val NORMALIZATION = "normalization"
   val FPD = "filter_pushdown"
@@ -52,6 +51,12 @@ object FlinkBatchPrograms {
     programs.addLast(
       QUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
+        // rewrite RelTable before rewriting sub-queries
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .build(), "convert table references before rewriting sub-queries to semi-join")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
@@ -62,6 +67,12 @@ object FlinkBatchPrograms {
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.TABLE_SUBQUERY_RULES)
           .build(), "sub-queries remove")
+        // convert RelOptTableImpl (which exists in SubQuery before) to FlinkRelOptTable
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .build(), "convert table references after sub-queries removed")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
@@ -69,15 +80,6 @@ object FlinkBatchPrograms {
           .build(), "relnode rewrite")
         .build()
     )
-
-    // convert table references
-    programs.addLast(
-      TABLE_REF,
-      FlinkHepRuleSetProgramBuilder.newBuilder
-        .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-        .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-        .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
-        .build())
 
     // decorrelate
     programs.addLast(

@@ -37,7 +37,7 @@ class FlinkRewriteCoalesceRuleTest extends TableTestBatchExecBase {
   @Before
   def setup(): Unit = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
-    // add semiJoin rewrite
+    // convert queries before query decorrelation
     programs.addLast(
       QUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]

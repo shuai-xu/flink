@@ -38,7 +38,7 @@ class JoinConditionTypeCoerceRuleTest extends TableTestBatchExecBase {
   @Before
   def setup(): Unit = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
-    // add semiJoin rewrite
+    // convert queries before query decorrelation
     programs.addLast(
       QUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[BatchOptimizeContext]
@@ -81,10 +81,8 @@ class JoinConditionTypeCoerceRuleTest extends TableTestBatchExecBase {
     val calciteConfig = new CalciteConfigBuilder().replaceBatchPrograms(programs).build()
     util.tableEnv.getConfig.setCalciteConfig(calciteConfig)
 
-    util.addTable
-      [(Int, Long, Float, Double, java.math.BigDecimal)]("t1", 'a, 'b, 'c, 'd, 'e)
-    util.addTable
-      [(Int, Long, Float, Double, java.math.BigDecimal)]("t2", 'a, 'b, 'c, 'd, 'e)
+    util.addTable[(Int, Long, Float, Double, java.math.BigDecimal)]("t1", 'a, 'b, 'c, 'd, 'e)
+    util.addTable[(Int, Long, Float, Double, java.math.BigDecimal)]("t2", 'a, 'b, 'c, 'd, 'e)
   }
 
   @Test
