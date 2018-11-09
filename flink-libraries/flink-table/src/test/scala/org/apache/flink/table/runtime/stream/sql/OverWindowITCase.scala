@@ -934,7 +934,7 @@ class OverWindowITCase(mode: StateBackendMode) extends StreamingWithStateTestBas
   }
 
   @Test
-  def testProcTimeDistinctUnboundedPartitionedRangeOverWithNullValues(): Unit = {
+  def testRowTimeDistinctUnboundedPartitionedRangeOverWithNullValues(): Unit = {
     val data = List(
       (1L, 1, null),
       (2L, 1, null),
