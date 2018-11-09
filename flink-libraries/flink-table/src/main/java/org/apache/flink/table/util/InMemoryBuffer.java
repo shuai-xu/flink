@@ -21,13 +21,16 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.SimpleCollectingOutputView;
 import org.apache.flink.runtime.memory.ListMemorySegmentSource;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.typeutils.BinaryRowSerializer;
+import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -35,28 +38,33 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 /**
  * In memory buffer that stores records to memorySegments, returns a iterator that map from memory.
  */
-public class InMemoryBuffer {
+public class InMemoryBuffer implements Closeable {
 
 	private final int segmentSize;
 	private final ArrayList<MemorySegment> freeMemory;
-	private final BinaryRowSerializer serializer;
+	private final AbstractRowSerializer serializer;
 	private final ArrayList<MemorySegment> recordBufferSegments;
 	private final SimpleCollectingOutputView recordCollector;
 
 	// Can't use recordCollector.getCurrentOffset(), maybe the offset of recordCollector is
 	// disrupted by the attempt of record writing.
 	private long currentDataBufferOffset;
+	private int numBytesInLastBuffer;
 
 	private int recordCount;
 
-	public InMemoryBuffer(List<MemorySegment> memory, BinaryRowSerializer serializer) {
+	private LinkedList<BufferIterator> iterators;
+
+	public InMemoryBuffer(List<MemorySegment> memory, AbstractRowSerializer serializer) {
 		this.segmentSize = memory.get(0).size();
 		this.freeMemory = new ArrayList<>(memory);
-		this.serializer = (BinaryRowSerializer) serializer.duplicate();
+		// serializer has states, so we must duplicate
+		this.serializer = (AbstractRowSerializer) serializer.duplicate();
 		this.recordBufferSegments = new ArrayList<>(memory.size());
 		this.recordCollector = new SimpleCollectingOutputView(this.recordBufferSegments,
-				new ListMemorySegmentSource(this.freeMemory), this.segmentSize);
+			new ListMemorySegmentSource(this.freeMemory), this.segmentSize);
 		this.recordCount = 0;
+		this.iterators = new LinkedList<>();
 	}
 
 	public void reset() {
@@ -68,18 +76,28 @@ public class InMemoryBuffer {
 		this.recordBufferSegments.clear();
 
 		this.recordCollector.reset();
+
+		iterators.clear();
 	}
 
-	public void clear() {
+	@Override
+	public void close() {
 		this.freeMemory.clear();
 		this.recordBufferSegments.clear();
+		iterators.clear();
 	}
 
-	public boolean write(BinaryRow row) throws IOException {
+	public boolean write(BaseRow row) throws IOException {
 		try {
 			this.serializer.serializeToPages(row, this.recordCollector);
 			currentDataBufferOffset = this.recordCollector.getCurrentOffset();
+			numBytesInLastBuffer = this.recordCollector.getCurrentPositionInSegment();
 			recordCount++;
+
+			for (BufferIterator iterator : iterators) {
+				iterator.recordBuffer.updateLimitInLastSegment(numBytesInLastBuffer);
+			}
+
 			return true;
 		} catch (EOFException e) {
 			return false;
@@ -104,57 +122,51 @@ public class InMemoryBuffer {
 	}
 
 	public int getNumBytesInLastBuffer() {
-		int result = (int) (currentDataBufferOffset % segmentSize);
-		if (result == 0) {
-			result = segmentSize;
-		}
-		return result;
+		return numBytesInLastBuffer;
 	}
 
-	public final BufferIterator getIterator() {
-		return getIterator(0, 0);
+	public final BufferIterator newIterator() {
+		return newIterator(0, 0);
 	}
 
-	public final BufferIterator getIterator(int beginRow, long offset) {
+	public final BufferIterator newIterator(int beginRow, long offset) {
 		checkArgument(offset >= 0, "`offset` can't be negative!");
 
 		RandomAccessInputView recordBuffer = new RandomAccessInputView(
-				this.recordBufferSegments, this.segmentSize, getNumBytesInLastBuffer());
-		return new BufferIterator(beginRow, offset, recordBuffer);
-	}
+			this.recordBufferSegments, this.segmentSize, numBytesInLastBuffer);
 
-	public ArrayList<MemorySegment> getFreeMemory() {
-		return freeMemory;
+		BufferIterator iterator = new BufferIterator(beginRow, offset, recordBuffer);
+		iterators.add(iterator);
+		return iterator;
 	}
 
 	/**
 	 * Iterator of in memory buffer.
 	 */
-	public class BufferIterator implements MutableObjectIterator<BinaryRow> {
-		private int count;
+	public class BufferIterator implements MutableObjectIterator<BinaryRow>, Closeable {
 		private int beginRow;
-		private long offset;
+		private int nextRow;
 		private RandomAccessInputView recordBuffer;
 
 		private BufferIterator(int beginRow, long offset, RandomAccessInputView recordBuffer) {
 			this.beginRow = beginRow;
-			this.offset = offset;
 			this.recordBuffer = recordBuffer;
-			reset();
+			reset(offset);
 		}
 
-		public void reset() {
-			this.count = beginRow;
+		public void reset(long offset) {
+			this.nextRow = beginRow;
 			recordBuffer.setReadPosition(offset);
 		}
 
 		@Override
 		public BinaryRow next(BinaryRow reuse) throws IOException {
 			try {
-				if (++count > recordCount) {
+				if (nextRow >= recordCount) {
 					return null;
 				}
-				return serializer.mapFromPages(reuse, recordBuffer);
+				nextRow++;
+				return (BinaryRow) serializer.mapFromPages(reuse, recordBuffer);
 			} catch (EOFException e) {
 				return null;
 			}
@@ -163,6 +175,11 @@ public class InMemoryBuffer {
 		@Override
 		public BinaryRow next() throws IOException {
 			throw new RuntimeException("Not support!");
+		}
+
+		@Override
+		public void close() {
+			iterators.remove(this);
 		}
 	}
 }

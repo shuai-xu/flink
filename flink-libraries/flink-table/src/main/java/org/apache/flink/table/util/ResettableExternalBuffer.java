@@ -27,7 +27,9 @@ import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.HeaderlessChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
 
@@ -38,9 +40,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -59,10 +59,13 @@ public class ResettableExternalBuffer implements Closeable {
 	private final MemoryManager memoryManager;
 	private final IOManager ioManager;
 	private final List<MemorySegment> memory;
-	private final BinaryRowSerializer serializer;
+
+	private final BinaryRowSerializer binaryRowSerializer;
+
 	private final InMemoryBuffer inMemoryBuffer;
 
 	private final List<ChannelWithMeta> channelIDs;
+	private long spillSize;
 
 	// The size of each segment
 	private int segmentSize;
@@ -73,34 +76,46 @@ public class ResettableExternalBuffer implements Closeable {
 	private boolean isFixedLength;
 
 	private final List<Integer> numRowsUntilThisChannel;
-	private int numRows = 0;
+	private int numRows;
 
-	// If an iterator is using the free memory of inMemoryBuffer
-	private boolean freeMemoryInUse = false;
-	// List of created iterator, will close all iterators when buffer is closed
-	private final Set<BufferIterator> iterators;
+	// Number of iterators currently opened
+	private int iteratorCount;
+	// Times of reset() called. Used to check validity of iterators.
+	private int resetCount;
 
 	public ResettableExternalBuffer(
 		MemoryManager memoryManager,
 		IOManager ioManager,
 		List<MemorySegment> memory,
-		BinaryRowSerializer serializer) {
+		AbstractRowSerializer serializer) {
 		this.memoryManager = memoryManager;
 		this.ioManager = ioManager;
 		this.memory = memory;
-		this.serializer = serializer;
+
+		if (serializer instanceof BinaryRowSerializer) {
+			// serializer has states, so we must duplicate
+			this.binaryRowSerializer = (BinaryRowSerializer) serializer.duplicate();
+		} else {
+			this.binaryRowSerializer = new BinaryRowSerializer(serializer.getTypes());
+		}
+
 		this.inMemoryBuffer = new InMemoryBuffer(memory, serializer);
+
 		this.channelIDs = new ArrayList<>();
+		this.spillSize = 0;
 
 		this.segmentSize = memory.get(0).size();
 
 		this.numRowsUntilThisChannel = new ArrayList<>();
-		this.isFixedLength = serializer.isRowFixedLength();
-		if (this.isFixedLength) {
-			this.fixedLength = serializer.getSerializedRowFixedPartLength();
-		}
+		this.numRows = 0;
 
-		iterators = new HashSet<>();
+		this.iteratorCount = 0;
+		this.resetCount = 0;
+
+		this.isFixedLength = binaryRowSerializer.isRowFixedLength();
+		if (this.isFixedLength) {
+			this.fixedLength = binaryRowSerializer.getSerializedRowFixedPartLength();
+		}
 	}
 
 	public int size() {
@@ -111,17 +126,25 @@ public class ResettableExternalBuffer implements Closeable {
 		return memory.size() * segmentSize;
 	}
 
-	public void add(BinaryRow row) throws IOException {
+	private String getRowSize(BaseRow row) {
+		if (row instanceof BinaryRow) {
+			return String.valueOf(((BinaryRow) row).getSizeInBytes());
+		} else {
+			return "?";
+		}
+	}
+
+	public void add(BaseRow row) throws IOException {
 		if (!inMemoryBuffer.write(row)) {
 			// Check if record is too big.
 			if (inMemoryBuffer.getCurrentDataBufferOffset() == 0) {
 				throw new IOException("Record can't be added to a empty InMemoryBuffer! " +
-						"Record size: " + row.getSizeInBytes() + ", Buffer: " + memorySize());
+					"Record size: " + getRowSize(row) + ", Buffer: " + memorySize());
 			}
 			spill();
 			if (!inMemoryBuffer.write(row)) {
 				throw new IOException("Record can't be added to a empty InMemoryBuffer! " +
-						"Record size: " + row.getSizeInBytes() + ", Buffer: " + memorySize());
+					"Record size: " + getRowSize(row) + ", Buffer: " + memorySize());
 			}
 		}
 
@@ -146,37 +169,40 @@ public class ResettableExternalBuffer implements Closeable {
 			throw e;
 		}
 
+		spillSize += numRecordBuffers * segmentSize;
 		channelIDs.add(new ChannelWithMeta(
-				channel,
-				inMemoryBuffer.getNumRecordBuffers(),
-				inMemoryBuffer.getNumBytesInLastBuffer()));
+			channel,
+			inMemoryBuffer.getNumRecordBuffers(),
+			inMemoryBuffer.getNumBytesInLastBuffer()));
 		this.numRowsUntilThisChannel.add(numRows);
 
 		inMemoryBuffer.reset();
 	}
 
+	public long getUsedMemoryInBytes() {
+		return memorySize() + iteratorCount * READ_BUFFER * segmentSize;
+	}
+
+	public int getNumSpillFiles() {
+		return channelIDs.size();
+	}
+
+	public long getSpillInBytes() {
+		return spillSize;
+	}
+
 	public void reset() {
 		clearChannels();
 		inMemoryBuffer.reset();
-
-		for (BufferIterator iterator : iterators) {
-			iterator.closeImpl();
-		}
-		iterators.clear();
-
 		numRows = 0;
+		resetCount++;
 	}
 
 	@Override
 	public void close() {
 		clearChannels();
 		memoryManager.release(memory);
-		inMemoryBuffer.clear();
-
-		for (BufferIterator iterator : iterators) {
-			iterator.closeImpl();
-		}
-		iterators.clear();
+		inMemoryBuffer.close();
 	}
 
 	private void clearChannels() {
@@ -187,6 +213,7 @@ public class ResettableExternalBuffer implements Closeable {
 			}
 		}
 		channelIDs.clear();
+		spillSize = 0;
 
 		numRowsUntilThisChannel.clear();
 	}
@@ -200,10 +227,8 @@ public class ResettableExternalBuffer implements Closeable {
 	 */
 	public BufferIterator newIterator(int beginRow) {
 		checkArgument(beginRow >= 0, "`beginRow` can't be negative!");
-
-		BufferIterator iterator = new BufferIterator(beginRow);
-		iterators.add(iterator);
-		return iterator;
+		iteratorCount++;
+		return new BufferIterator(beginRow);
 	}
 
 	/**
@@ -212,99 +237,102 @@ public class ResettableExternalBuffer implements Closeable {
 	public class BufferIterator implements Closeable {
 
 		MutableObjectIterator<BinaryRow> currentIterator;
+
+		// memory for file reader to store read result
+		List<MemorySegment> freeMemory = null;
 		BlockChannelReader<MemorySegment> fileReader;
 		int currentChannelID = -1;
-		BinaryRow reuse = serializer.createInstance();
+
+		BinaryRow reuse = binaryRowSerializer.createInstance();
 		BinaryRow row;
 		int beginRow;
+		int nextRow;
+
 		// reuse in memory buffer iterator to reduce initialization cost.
 		InMemoryBuffer.BufferIterator reusableMemoryIterator;
 
-		List<MemorySegment> freeMemory = null;
-		boolean usingMemBufFreeMemory = false;
-
-		int nRows;
-		boolean closed = false;
+		// value of resetCount of buffer when this iterator is created.
+		// used to check validity.
+		int bufferVersion;
+		// if this iterator is closed
+		boolean closed;
 
 		private BufferIterator(int beginRow) {
 			this.beginRow = Math.min(beginRow, numRows);
-			nRows = numRows;
+			this.nextRow = this.beginRow;
 
-			if (needReadSpilled()) {
-				// Only initialize freeMemory when we need to read spilled records.
-				freeMemory = new ArrayList<>();
-				// Iterator will first try to use free memory segments from inMemoryBuffer.
-				if (!freeMemoryInUse) {
-					List<MemorySegment> mem = inMemoryBuffer.getFreeMemory();
-					if (mem.size() > 0) {
-						freeMemory.addAll(mem);
-						freeMemoryInUse = true;
-						usingMemBufFreeMemory = true;
-					}
-				}
-				// Iterator will use memory segments from heap
-				// if free memory from inMemoryBuffer is not enough.
-				for (int i = freeMemory.size(); i < READ_BUFFER; i++) {
-					freeMemory.add(MemorySegmentFactory.allocateUnpooledSegment(segmentSize));
-				}
+			this.bufferVersion = resetCount;
+			this.closed = false;
+
+			createFreeMemoryIfNeeded();
+		}
+
+		private void checkValidity() {
+			if (closed) {
+				throw new RuntimeException("This iterator is closed!");
+			} else if (bufferVersion != resetCount) {
+				throw new RuntimeException("This iterator is no longer valid!");
 			}
 		}
 
 		public void reset() throws IOException {
-			validateIterator();
+			checkValidity();
+			resetImpl();
+		}
 
+		private void resetImpl() throws IOException {
 			closeCurrentFileReader();
 
+			nextRow = beginRow;
 			currentChannelID = -1;
 			currentIterator = null;
+
+			row = null;
 			reuse.unbindMemorySegment();
 		}
 
 		@Override
 		public void close() {
-			if (!closed) {
-				// Separate this method out to prevent concurrent modification
-				// when buffer iterates through iterator set and close them.
-				closeImpl();
-				iterators.remove(this);
+			if (closed) {
+				return;
 			}
-		}
 
-		private void closeImpl() {
 			try {
-				reset();
+				resetImpl();
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
 
-			if (usingMemBufFreeMemory) {
-				freeMemoryInUse = false;
-			}
 			if (freeMemory != null) {
 				freeMemory.clear();
 			}
+			if (reusableMemoryIterator != null) {
+				reusableMemoryIterator.close();
+			}
 
 			closed = true;
+			iteratorCount--;
 		}
 
-		private void validateIterator() {
-			if (nRows != numRows) {
-				throw new RuntimeException(
-					"This buffer has been modified. This iterator is no longer valid.");
-			}
-			if (closed) {
-				throw new RuntimeException("This iterator is closed.");
-			}
+		public boolean hasNext() {
+			return nextRow < numRows;
+		}
+
+		public int getBeginRow() {
+			return beginRow;
 		}
 
 		public boolean advanceNext() {
-			validateIterator();
+			checkValidity();
 
 			try {
+				updateIteratorIfNeeded();
+
 				// get from curr iterator or new iterator.
 				while (true) {
 					if (currentIterator != null &&
-							(row = currentIterator.next(reuse)) != null) {
+						(row = currentIterator.next(reuse)) != null) {
+						this.nextRow++;
 						return true;
 					} else {
 						if (!nextIterator()) {
@@ -317,13 +345,13 @@ public class ResettableExternalBuffer implements Closeable {
 			}
 		}
 
-		private boolean nextIterator() throws IOException, RuntimeException {
+		private boolean nextIterator() throws IOException {
 			if (currentChannelID == -1) {
 				// First call to next iterator. Fetch iterator according to beginRow.
 				if (isFixedLength) {
-					firstFixedLengthIterator();
+					gotoFixedLengthRow(beginRow);
 				} else {
-					firstVariableLengthIterator();
+					gotoVariableLengthRow(beginRow);
 				}
 			} else if (currentChannelID == Integer.MAX_VALUE) {
 				// The last one is in memory, so the end.
@@ -338,8 +366,29 @@ public class ResettableExternalBuffer implements Closeable {
 			return true;
 		}
 
+		private boolean iteratorNeedsUpdate() {
+			int size = numRowsUntilThisChannel.size();
+			return size > 0
+				&& currentChannelID == Integer.MAX_VALUE
+				&& nextRow <= numRowsUntilThisChannel.get(size - 1);
+		}
+
+		private void updateIteratorIfNeeded() throws IOException {
+			createFreeMemoryIfNeeded();
+
+			if (iteratorNeedsUpdate()) {
+				reuse.unbindMemorySegment();
+				reusableMemoryIterator = null;
+
+				if (isFixedLength) {
+					gotoFixedLengthRow(nextRow);
+				} else {
+					gotoVariableLengthRow(nextRow);
+				}
+			}
+		}
+
 		public BinaryRow getRow() {
-			validateIterator();
 			return row;
 		}
 
@@ -350,7 +399,7 @@ public class ResettableExternalBuffer implements Closeable {
 			}
 		}
 
-		private void firstFixedLengthIterator() throws IOException {
+		private void gotoFixedLengthRow(int beginRow) throws IOException {
 			// Find which channel contains the row.
 			int beginChannel = upperBound(beginRow, numRowsUntilThisChannel);
 			// Find the row number in its own channel (0-indexed).
@@ -365,18 +414,18 @@ public class ResettableExternalBuffer implements Closeable {
 			long numRecordsInSegment = segmentSize / fixedLength;
 			long offset =
 				(beginRowInChannel / numRecordsInSegment) * segmentSize +
-				(beginRowInChannel % numRecordsInSegment) * fixedLength;
+					(beginRowInChannel % numRecordsInSegment) * fixedLength;
 
 			if (beginChannel < numRowsUntilThisChannel.size()) {
 				// Data on disk
-				newSpilledIterator(channelIDs.get(currentChannelID = beginChannel), offset);
+				newSpilledIterator(beginChannel, offset);
 			} else {
 				// Data in memory
 				newMemoryIterator(beginRowInChannel, offset);
 			}
 		}
 
-		private void firstVariableLengthIterator() throws IOException {
+		private void gotoVariableLengthRow(int beginRow) throws IOException {
 			// Find which channel contains the row.
 			int beginChannel = upperBound(beginRow, numRowsUntilThisChannel);
 			// Find the row number in its own channel (0-indexed).
@@ -389,28 +438,30 @@ public class ResettableExternalBuffer implements Closeable {
 
 			if (beginChannel < numRowsUntilThisChannel.size()) {
 				// Data on disk
-				newSpilledIterator(channelIDs.get(currentChannelID = beginChannel));
-				for (int i = 0; i < beginRowInChannel; i++) {
-					advanceNext();
-				}
+				newSpilledIterator(beginChannel);
 			} else {
 				// Data in memory
 				newMemoryIterator();
-				for (int i = 0; i < beginRowInChannel; i++) {
-					advanceNext();
-				}
+			}
+
+			nextRow -= beginRowInChannel;
+			for (int i = 0; i < beginRowInChannel; i++) {
+				advanceNext();
 			}
 		}
 
 		private void nextSpilledIterator() throws IOException {
-			newSpilledIterator(channelIDs.get(++currentChannelID));
+			newSpilledIterator(currentChannelID + 1);
 		}
 
-		private void newSpilledIterator(ChannelWithMeta channel) throws IOException {
-			newSpilledIterator(channel, 0);
+		private void newSpilledIterator(int channelID) throws IOException {
+			newSpilledIterator(channelID, 0);
 		}
 
-		private void newSpilledIterator(ChannelWithMeta channel, long offset) throws IOException {
+		private void newSpilledIterator(int channelID, long offset) throws IOException {
+			ChannelWithMeta channel = channelIDs.get(channelID);
+			currentChannelID = channelID;
+
 			// close current reader first.
 			closeCurrentFileReader();
 
@@ -425,11 +476,11 @@ public class ResettableExternalBuffer implements Closeable {
 				fileReader.seekToPosition(seekPosition);
 			}
 			ChannelReaderInputView inView = new HeaderlessChannelReaderInputView(
-					fileReader, freeMemory, channel.getBlockCount() - segmentNum,
-					channel.getNumBytesInLastBlock(), false, offset - seekPosition
+				fileReader, freeMemory, channel.getBlockCount() - segmentNum,
+				channel.getNumBytesInLastBlock(), false, offset - seekPosition
 			);
 			this.currentIterator = new PagedChannelReaderInputViewIterator<>(
-				inView, null, serializer.duplicate()
+				inView, null, binaryRowSerializer
 			);
 		}
 
@@ -443,9 +494,9 @@ public class ResettableExternalBuffer implements Closeable {
 			closeCurrentFileReader();
 
 			if (reusableMemoryIterator == null) {
-				reusableMemoryIterator = inMemoryBuffer.getIterator(beginRow, offset);
+				reusableMemoryIterator = inMemoryBuffer.newIterator(beginRow, offset);
 			} else {
-				reusableMemoryIterator.reset();
+				reusableMemoryIterator.reset(offset);
 			}
 			this.currentIterator = reusableMemoryIterator;
 		}
@@ -458,9 +509,20 @@ public class ResettableExternalBuffer implements Closeable {
 			}
 		}
 
-		private boolean needReadSpilled() {
-			int beginChannel = upperBound(beginRow, numRowsUntilThisChannel);
-			return beginChannel < numRowsUntilThisChannel.size();
+		public boolean rowInSpill(int rowNum) {
+			int size = numRowsUntilThisChannel.size();
+			return size > 0 && rowNum < numRowsUntilThisChannel.get(size - 1);
+		}
+
+		private void createFreeMemoryIfNeeded() {
+			if (freeMemory == null && rowInSpill(beginRow)) {
+				// Only initialize freeMemory when we need to read spilled records.
+				freeMemory = new ArrayList<>();
+				// Iterator will use memory segments from heap
+				for (int i = 0; i < READ_BUFFER; i++) {
+					freeMemory.add(MemorySegmentFactory.allocateUnpooledSegment(segmentSize));
+				}
+			}
 		}
 
 		// Find the index of the first element which is strictly greater than `goal` in `list`.

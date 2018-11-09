@@ -117,6 +117,10 @@ public abstract class AbstractPagedInputView implements DataInputView {
 		return this.limitInSegment;
 	}
 
+	public void updateCurrentSegmentLimit() {
+		this.limitInSegment = getLimitForSegment(this.currentSegment);
+	}
+
 	/**
 	 * The method by which concrete subclasses realize page crossing. This method is invoked when the current page
 	 * is exhausted and a new page is required to continue the reading. If no further page is available, this

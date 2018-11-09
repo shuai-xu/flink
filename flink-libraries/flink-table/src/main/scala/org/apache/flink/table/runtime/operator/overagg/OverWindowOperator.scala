@@ -45,9 +45,9 @@ class BufferDataOverWindowOperator(
 
   private var partitionComparator: RecordComparator = _
 
-  private var lastInput: BinaryRow = _
+  private var lastInput: BaseRow = _
 
-  private var baseRowSerializer: BaseRowSerializer[_] = _
+  private var serializer: AbstractRowSerializer[BaseRow] = _
 
   private var currentData: ResettableExternalBuffer = _
 
@@ -58,16 +58,11 @@ class BufferDataOverWindowOperator(
   override def open(): Unit = {
     super.open()
 
-    val types = getOperatorConfig.getTypeSerializerIn1(getUserCodeClassloader)
-        .asInstanceOf[AbstractRowSerializer[_]].getTypes
-
-    baseRowSerializer = new BaseRowSerializer(types: _*)
-
-    val serializer = new BinaryRowSerializer(types: _*)
-
     val memManager = getContainingTask.getEnvironment.getMemoryManager
     val ioManager = getContainingTask.getEnvironment.getIOManager
 
+    this.serializer = getOperatorConfig.getTypeSerializerIn1(getUserCodeClassloader)
+      .asInstanceOf[AbstractRowSerializer[BaseRow]]
     this.currentData = new ResettableExternalBuffer(memManager, ioManager, memManager
         .allocatePages(this, memorySize / memManager.getPageSize), serializer)
 
@@ -89,10 +84,7 @@ class BufferDataOverWindowOperator(
       processCurrentData()
       currentData.reset()
     }
-    lastInput = input match {
-      case row: BinaryRow => row.copy()
-      case _ => baseRowSerializer.baseRowToBinary(input).copy()
-    }
+    lastInput = serializer.copy(input)
     currentData.add(lastInput)
   }
 

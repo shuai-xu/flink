@@ -143,7 +143,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     // input row might not be binary row, need a serializer
     val isFirstRow = newName("isFirstRow")
     val isBinaryRow = newName("isBinaryRow")
-    val baseRowSerializer = newName("baseRowSerializer")
 
     val externalBufferMemorySize = resource.getReservedManagedMem * ExecResourceUtil.SIZE_IN_MB
 
@@ -152,20 +151,19 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     } else {
       ctx.addReusableMember(s"boolean $isFirstRow = true;")
       ctx.addReusableMember(s"boolean $isBinaryRow = false;")
-      ctx.addReusableMember(s"$BASE_ROW_SERIALIZER $baseRowSerializer = null;")
 
-      val binaryRowSerializer = newName("binaryRowSerializer")
+      val serializer = newName("serializer")
       def initSerializer(i: Int): Unit = {
         ctx.addReusableOpenStatement(
           s"""
-             |$BINARY_ROW_SERIALIZER $binaryRowSerializer = new $BINARY_ROW_SERIALIZER(
-             |(($ABSTRACT_ROW_SERIALIZER) getOperatorConfig()
-             |.getTypeSerializerIn$i(getUserCodeClassloader())).getTypes());
+             |$ABSTRACT_ROW_SERIALIZER $serializer =
+             |  ($ABSTRACT_ROW_SERIALIZER) getOperatorConfig()
+             |    .getTypeSerializerIn$i(getUserCodeClassloader());
              |""".stripMargin)
       }
       if (leftIsBuild) initSerializer(1) else initSerializer(2)
 
-      ctx.addReusableResettableExternalBuffer(buffer, externalBufferMemorySize, binaryRowSerializer)
+      ctx.addReusableResettableExternalBuffer(buffer, externalBufferMemorySize, serializer)
       ctx.addReusableCloseStatement(s"$buffer.close();")
 
       val iterTerm = classOf[ResettableExternalBuffer#BufferIterator].getCanonicalName
@@ -179,25 +177,7 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     val buildProcessCode = if (singleRowJoin) {
       s"this.$buildRow = ($BASE_ROW) $buildRowSer.copy($buildRow);"
     } else {
-      s"""
-         |if ($isFirstRow) {
-         |  $isFirstRow = false;
-         |  if ($buildRow instanceof $BINARY_ROW) {
-         |    $isBinaryRow = true;
-         |  } else {
-         |    $isBinaryRow = false;
-         |    $baseRowSerializer = new $BASE_ROW_SERIALIZER(
-         |    (($ABSTRACT_ROW_SERIALIZER) getOperatorConfig().getTypeSerializerIn${
-        if (leftIsBuild) 1 else 2}(getUserCodeClassloader())).getTypes());
-         |  }
-         |}
-         |
-         |if ($isBinaryRow) {
-         |  $buffer.add((($BINARY_ROW) $buildRow).copy());
-         |} else {
-         |  $buffer.add($baseRowSerializer.baseRowToBinary($buildRow));
-         |}
-       """.stripMargin
+      s"$buffer.add(($BASE_ROW) $buildRow);"
     }
 
     val (probeProcessCode, buildEndCode, probeEndCode) =

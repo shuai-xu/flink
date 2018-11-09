@@ -303,7 +303,11 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 	@Override
 	public T mapFromPages(T reuse,
 			AbstractPagedInputView source) throws IOException {
-		throw new UnsupportedOperationException("Not support!");
+		if (reuse instanceof BinaryRow) {
+			return (T) binarySerializer.mapFromPages((BinaryRow) reuse, source);
+		} else {
+			throw new UnsupportedOperationException("Not support!");
+		}
 	}
 
 	@Override

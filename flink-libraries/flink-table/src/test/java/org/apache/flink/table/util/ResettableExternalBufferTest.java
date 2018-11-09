@@ -508,6 +508,26 @@ public class ResettableExternalBufferTest {
 		buffer.close();
 	}
 
+	@Test
+	public void testUpdateIteratorFixedLengthLess() throws Exception {
+		testUpdateIteratorLess(multiColumnFixedLengthSerializer, FixedLengthRowData.class);
+	}
+
+	@Test
+	public void testUpdateIteratorFixedLengthSpill() throws Exception {
+		testUpdateIteratorSpill(multiColumnFixedLengthSerializer, FixedLengthRowData.class);
+	}
+
+	@Test
+	public void testUpdateIteratorVariableLengthLess() throws Exception {
+		testUpdateIteratorLess(multiColumnVariableLengthSerializer, VariableLengthRowData.class);
+	}
+
+	@Test
+	public void testUpdateIteratorVariableLengthSpill() throws Exception {
+		testUpdateIteratorSpill(multiColumnVariableLengthSerializer, VariableLengthRowData.class);
+	}
+
 	private <T extends RowData> void testMultiColumnRandomAccessLess(
 		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
 		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
@@ -622,6 +642,113 @@ public class ResettableExternalBufferTest {
 		assertFalse(iterator.advanceNext());
 		iterator = buffer.newIterator(random.nextInt(number));
 		assertTrue(iterator.advanceNext());
+
+		buffer.close();
+	}
+
+	private <T extends RowData> void testUpdateIteratorLess(
+		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
+
+		int number = 20;
+		int iters = 3;
+
+		List<RowData> expected = new ArrayList<>();
+		List<ResettableExternalBuffer.BufferIterator> iterators = new ArrayList<>();
+
+		for (int i = 0; i < iters; i++) {
+			iterators.add(buffer.newIterator());
+		}
+
+		for (int i = 0; i < number; i++) {
+			RowData data = clazz.newInstance();
+			data.insertIntoBuffer(buffer);
+			expected.add(data);
+
+			for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+				assertTrue(iterator.advanceNext());
+				BinaryRow row = iterator.getRow();
+				data.checkSame(row);
+
+				assertFalse(iterator.advanceNext());
+			}
+		}
+
+		for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+			iterator.reset();
+		}
+
+		for (int i = 0; i < number; i++) {
+			for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+				assertTrue(iterator.advanceNext());
+				BinaryRow row = iterator.getRow();
+				expected.get(i).checkSame(row);
+			}
+		}
+
+		for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+			iterator.close();
+		}
+
+		assertMultiColumnRandomAccess(expected, buffer);
+
+		buffer.close();
+	}
+
+	private <T extends RowData> void testUpdateIteratorSpill(
+		BinaryRowSerializer serializer, Class<T> clazz) throws Exception {
+		ResettableExternalBuffer buffer = newBuffer(DEFAULT_PAGE_SIZE * 2, serializer);
+
+		int number = 100;
+		int step = 20;
+		int iters = 3;
+
+		List<RowData> expected = new ArrayList<>();
+		List<RowData> smallExpected = new ArrayList<>();
+		List<ResettableExternalBuffer.BufferIterator> iterators = new ArrayList<>();
+
+		for (int i = 0; i < iters; i++) {
+			iterators.add(buffer.newIterator());
+		}
+
+		for (int i = 0; i < number; i++) {
+			smallExpected.clear();
+			for (int j = 0; j < step; j++) {
+				RowData data = clazz.newInstance();
+				data.insertIntoBuffer(buffer);
+				expected.add(data);
+				smallExpected.add(data);
+			}
+
+			for (int j = 0; j < step; j++) {
+				for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+					assertTrue(iterator.advanceNext());
+					BinaryRow row = iterator.getRow();
+					smallExpected.get(j).checkSame(row);
+				}
+			}
+			for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+				assertFalse(iterator.advanceNext());
+			}
+		}
+
+		for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+			iterator.reset();
+		}
+
+		for (int i = 0; i < number * step; i++) {
+			for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+				assertTrue(iterator.advanceNext());
+				BinaryRow row = iterator.getRow();
+				expected.get(i).checkSame(row);
+			}
+		}
+
+		for (ResettableExternalBuffer.BufferIterator iterator : iterators) {
+			iterator.close();
+		}
+
+		assertMultiColumnRandomAccess(expected, buffer);
 
 		buffer.close();
 	}
