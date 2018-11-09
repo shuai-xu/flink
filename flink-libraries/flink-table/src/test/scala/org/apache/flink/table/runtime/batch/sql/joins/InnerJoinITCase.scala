@@ -29,6 +29,7 @@ import JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMerg
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
@@ -78,6 +79,12 @@ class InnerJoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITC
     row(3, 1),
     row(3, 2)
   )
+
+  override def getConfiguration: Configuration = {
+    val conf = new Configuration()
+    conf.setString("akka.ask.timeout", "5 min")
+    conf
+  }
 
   @Before
   def before(): Unit = {
