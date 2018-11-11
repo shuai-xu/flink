@@ -53,14 +53,20 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.ParallelSourceFunction;
+import org.apache.flink.streaming.api.functions.source.ParallelSourceFunctionV2;
+import org.apache.flink.streaming.api.functions.source.SourceRecord;
 import org.apache.flink.streaming.api.operators.AbstractOneInputSubstituteStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamMap;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
+import org.apache.flink.streaming.runtime.tasks.SourceStreamTask;
+import org.apache.flink.streaming.runtime.tasks.SourceStreamTaskV2;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfig;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigCache;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigSnapshot;
+import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.types.Pair;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.TestLogger;
@@ -117,17 +123,9 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		DataStream<Integer> filter1 = sourceMap.filter((value) -> false).name("filter1").setParallelism(66);
 		DataStream<Integer> filter2 = sourceMap.filter((value) -> false).name("filter2").setParallelism(66);
 
-		filter1.connect(filter2).map(new CoMapFunction<Integer, Integer, Integer>() {
-			@Override
-			public Integer map1(Integer value) {
-				return value;
-			}
-
-			@Override
-			public Integer map2(Integer value) {
-				return value;
-			}
-		}).name("map2").setParallelism(66).print().name("print1").setParallelism(66);
+		filter1.connect(filter2)
+			.map(new NoOpCoMapFunction()).name("map2").setParallelism(66)
+			.print().name("print1").setParallelism(66);
 		filter2.print().name("print2").setParallelism(77);
 
 		StreamGraph streamGraph = env.getStreamGraph();
@@ -154,6 +152,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			assertEquals(ResultPartitionType.PIPELINED, sourceVertex.getProducedDataSets().get(0).getResultType());
 			assertEquals(0, sourceVertex.getInputs().size());
 			assertEquals(MultiInputOutputFormatVertex.class, sourceVertex.getClass());
+			assertEquals(SourceStreamTask.class, sourceVertex.getInvokableClass(cl));
 
 			MultiFormatStub formatStub = new MultiFormatStub(new TaskConfig(sourceVertex.getConfiguration()), cl);
 			Iterator<Pair<OperatorID, InputFormat>> inputFormatIterator = formatStub.getFormat(FormatType.INPUT);
@@ -184,6 +183,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			assertEquals(ResultPartitionType.PIPELINED, map1FilterVertex.getInputs().get(0).getSource().getResultType());
 			assertEquals(1, map1FilterVertex.getInputs().size());
 			assertEquals(MultiInputOutputFormatVertex.class, map1FilterVertex.getClass());
+			assertEquals(OneInputStreamTask.class, map1FilterVertex.getInvokableClass(cl));
 
 			MultiFormatStub formatStub = new MultiFormatStub(new TaskConfig(map1FilterVertex.getConfiguration()), cl);
 			assertFalse(formatStub.getFormat(FormatType.INPUT).hasNext());
@@ -230,6 +230,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 
 			assertEquals(2, map2PrintVertex.getInputs().size());
 			assertEquals(JobVertex.class, map2PrintVertex.getClass());
+			assertEquals(TwoInputStreamTask.class, map2PrintVertex.getInvokableClass(cl));
 
 			StreamTaskConfigSnapshot mapPrintTaskConfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(map2PrintVertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.EventTime, true, CheckpointingMode.AT_LEAST_ONCE, FsStateBackend.class,
@@ -262,6 +263,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 
 			assertEquals(1, print2Vertex.getInputs().size());
 			assertEquals(JobVertex.class, print2Vertex.getClass());
+			assertEquals(OneInputStreamTask.class, print2Vertex.getInvokableClass(cl));
 
 			StreamTaskConfigSnapshot printTaskConfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(print2Vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.EventTime, true, CheckpointingMode.AT_LEAST_ONCE, FsStateBackend.class,
@@ -278,6 +280,50 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				54321L,
 				printConfig, cl);
 		}
+	}
+
+	/**
+	 * Tests source chaining logic using the following topology.
+	 *
+	 * <pre>
+	 *     CHAIN(addSourceV2 -> Map1) -+
+	 *                                 | -> CHAIN(Map3 -> Print1)
+	 *     CHAIN(addSource -> Map2  ) -+
+	 * </pre>
+	 */
+	@Test
+	public void testSourceChaining() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(5);
+
+		ClassLoader cl = getClass().getClassLoader();
+
+		DataStream<Integer> map1 = env.addSourceV2(new NoOpSourceV2Function()).name("source1")
+			.map((MapFunction<Integer, Integer>) value -> value).name("map1");
+
+		DataStream<Integer> map2 = env.addSource(new NoOpSourceFunction()).name("source2")
+			.map((MapFunction<Integer, Integer>) value -> value).name("map2");
+
+		map1.connect(map2)
+			.map(new NoOpCoMapFunction()).name("map3")
+			.print().name("print1");
+
+		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(env.getStreamGraph());
+
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+		assertEquals(3, verticesSorted.size());
+
+		JobVertex sourceMapVertex = verticesSorted.get(0);
+		assertEquals("Source: source2 -> map2", sourceMapVertex.getName());
+		assertEquals(SourceStreamTask.class, sourceMapVertex.getInvokableClass(cl));
+
+		JobVertex sourceV2MapVertex = verticesSorted.get(1);
+		assertEquals("Source: source1 -> map1", sourceV2MapVertex.getName());
+		assertEquals(SourceStreamTaskV2.class, sourceV2MapVertex.getInvokableClass(cl));
+
+		JobVertex mapPrintVertex = verticesSorted.get(2);
+		assertEquals("map3 -> Sink: print1", mapPrintVertex.getName());
+		assertEquals(TwoInputStreamTask.class, mapPrintVertex.getInvokableClass(cl));
 	}
 
 	@Test
@@ -975,5 +1021,52 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		}
 
 		assertEquals(expectedBufferTimeout, nodeConfig.getBufferTimeout());
+	}
+
+	// --------------------------------------------------------------------------------
+
+	private static class NoOpSourceFunction implements ParallelSourceFunction<Integer> {
+
+		private static final long serialVersionUID = -6459224792698512633L;
+
+		@Override
+		public void run(SourceContext<Integer> ctx) throws Exception {
+		}
+
+		@Override
+		public void cancel() {
+		}
+	}
+
+	private static class NoOpSourceV2Function implements ParallelSourceFunctionV2<Integer> {
+
+		private static final long serialVersionUID = -6459224792698512633L;
+
+		@Override
+		public boolean isFinished() {
+			return true;
+		}
+
+		@Override
+		public SourceRecord<Integer> next() throws Exception {
+			return null;
+		}
+
+		@Override
+		public void cancel() {
+		}
+	}
+
+	private static class NoOpCoMapFunction implements CoMapFunction<Integer, Integer, Integer> {
+
+		@Override
+		public Integer map1(Integer value) {
+			return value;
+		}
+
+		@Override
+		public Integer map2(Integer value) {
+			return value;
+		}
 	}
 }

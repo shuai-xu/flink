@@ -32,11 +32,18 @@ import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.ParallelSourceFunction;
+import org.apache.flink.streaming.api.functions.source.ParallelSourceFunctionV2;
+import org.apache.flink.streaming.api.functions.source.SourceRecord;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.runtime.tasks.ArbitraryInputStreamTask;
+import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
+import org.apache.flink.streaming.runtime.tasks.SourceStreamTask;
+import org.apache.flink.streaming.runtime.tasks.SourceStreamTaskV2;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfig;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigCache;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskConfigSnapshot;
+import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.TestLogger;
 
@@ -80,8 +87,8 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		ClassLoader cl = getClass().getClassLoader();
 
-		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
-		DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
+		DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+		DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
 
 		DataStream<String> map1 = source1.connect(source2)
 			.map(new NoOpCoMapFunction()).name("map1");
@@ -99,6 +106,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		JobVertex vertex = jobGraph.getVertices().iterator().next();
 		assertEquals(0, vertex.getInputs().size());
+		assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 		StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 		verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -128,7 +136,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		ClassLoader cl = getClass().getClassLoader();
 
-		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+		DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 		DataStream<String> filter1 = source1.rescale().filter(new NoOpFilterFunction()).name("filter1");
 
 		DataStream<String> map1 = filter1.connect(source1)
@@ -145,10 +153,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
 
-		// CHAIN(Source1 -> Filter1) vertex
+		// CHAIN(Source1) vertex
 		{
 			JobVertex vertex = verticesSorted.get(0);
 			assertEquals(0, vertex.getInputs().size());
+			assertEquals(SourceStreamTaskV2.class, vertex.getInvokableClass(cl));
 
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -159,10 +168,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				taskonfig);
 		}
 
-		// CHAIN(Map1 -> Sink1) vertex
+		// CHAIN([Filter1 -> Map1, Map1 -> Sink1]) vertex
 		{
 			JobVertex vertex = verticesSorted.get(1);
 			assertEquals(2, vertex.getInputs().size());
+			assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -193,7 +203,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		ClassLoader cl = getClass().getClassLoader();
 
-		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+		DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 		DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
 		DataStream<String> filter2 = source1.map(new NoOpMapFunction()).name("map1").rescale()
@@ -213,10 +223,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
 
-		// CHAIN([Source1 -> (Filter1, Map1), Map1 -> Filter2]) vertex
+		// CHAIN(Source1 -> (Filter1, Map1)) vertex
 		{
 			JobVertex vertex = verticesSorted.get(0);
 			assertEquals(0, vertex.getInputs().size());
+			assertEquals(SourceStreamTaskV2.class, vertex.getInvokableClass(cl));
 
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -227,10 +238,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				taskonfig);
 		}
 
-		// CHAIN(Process1 -> Sink1) vertex
+		// CHAIN([Filter2 -> Process1, Process1 -> Sink1]) vertex
 		{
 			JobVertex vertex = verticesSorted.get(1);
 			assertEquals(2, vertex.getInputs().size());
+			assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -238,6 +250,214 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 				Collections.emptyList(),
 				Sets.newHashSet("filter2", "process1", "Sink: sink1"),
 				Sets.newHashSet("filter2", "process1"),
+				taskonfig);
+		}
+	}
+
+	/**
+	 * Tests the following topology.
+	 *
+	 * <p><pre>
+	 *     CHAIN(RunnableSource1 -> Map1) -+
+	 *                                     | -> CHAIN(Process1 -> Sink1)
+	 *     CHAIN(RunnableSource2 -> Map2) -+         (   |_    -> Sink2)
+	 * </pre>
+	 */
+	@Test
+	public void testRunnableSourceSimpleTopology() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+		env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+		env.setMultiHeadChainMode(true);
+
+		ClassLoader cl = getClass().getClassLoader();
+
+		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+		DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
+
+		DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
+		DataStream<String> map2 = source2.map(new NoOpMapFunction()).name("map2");
+
+		DataStream<String> process1 = map1.connect(map2)
+			.process(new NoOpCoProcessFuntion()).name("process1");
+
+		process1.addSink(new NoOpSinkFunction()).name("sink1");
+		process1.addSink(new NoOpSinkFunction()).name("sink2");
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+			pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+		}
+
+		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+		assertEquals(3, jobGraph.getNumberOfVertices());
+
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+		// CHAIN(Source1 -> Map1) vertex
+		{
+			JobVertex vertex = verticesSorted.get(0);
+			assertEquals(0, vertex.getInputs().size());
+			assertEquals(SourceStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Collections.emptyList(),
+				Lists.newArrayList(Tuple2.of("map1", "process1")),
+				Sets.newHashSet("Source: source1", "map1"),
+				Sets.newHashSet("Source: source1"),
+				taskonfig);
+		}
+
+		// CHAIN(Source2 -> Map2) vertex
+		{
+			JobVertex vertex = verticesSorted.get(1);
+			assertEquals(0, vertex.getInputs().size());
+			assertEquals(SourceStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Collections.emptyList(),
+				Lists.newArrayList(Tuple2.of("map2", "process1")),
+				Sets.newHashSet("Source: source2", "map2"),
+				Sets.newHashSet("Source: source2"),
+				taskonfig);
+		}
+
+		// CHAIN(Process1 -> (Sink1, Sink2)) vertex
+		{
+			JobVertex vertex = verticesSorted.get(2);
+			assertEquals(2, vertex.getInputs().size());
+			assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Lists.newArrayList(Tuple2.of("map1", "process1"), Tuple2.of("map2", "process1")),
+				Collections.emptyList(),
+				Sets.newHashSet("process1", "Sink: sink1", "Sink: sink2"),
+				Sets.newHashSet("process1"),
+				taskonfig);
+		}
+	}
+
+	/**
+	 * Tests the following topology.
+	 *
+	 * <p><pre>
+	 *     CHAIN(RunnableSource1 -> Filter1 -> Sink1)
+	 *          (           |           |_          ) -+
+	 *          (           |                       )  | -> CHAIN(Map1 -> Sink2)
+	 *          (           |_                      ) -+
+	 *          (           |_   -> Filter2         )
+	 *                                  |_ -+
+	 *     CHAIN(Source2 -+                 | -> Process1                       ) -+
+	 *          (         | -> Map2        -+       |_   -+                     )  |
+	 *          (Source3 -+     |                         | -> Process2 -> Sink3)  | -> CHAIN(Process3 -> Sink4)
+	 *          (               |                Source4 -+                     )  |
+	 *          (               |_                                              ) -+
+	 * </pre>
+	 */
+	@Test
+	public void testRunnableSourceComplexTopology() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
+		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+		env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+		env.setStateBackend((StateBackend) new FsStateBackend(this.getClass().getResource("/").toURI()));
+		env.setMultiHeadChainMode(true);
+
+		ClassLoader cl = getClass().getClassLoader();
+
+		DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+		DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
+		DataStream<String> filter2 = source1.filter(new NoOpFilterFunction()).name("filter2");
+
+		filter1.addSink(new NoOpSinkFunction()).name("sink1");
+
+		filter1.connect(source1).map(new NoOpCoMapFunction()).name("map1")
+			.addSink(new NoOpSinkFunction()).name("sink2");
+
+		DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
+		DataStream<String> source3 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source3");
+		DataStream<String> source4 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source4");
+
+		DataStream<String> map2 = source2.connect(source3).map(new NoOpCoMapFunction()).name("map2");
+
+		DataStream<String> process1 = filter2.connect(map2).process(new NoOpCoProcessFuntion()).name("process1");
+
+		process1.connect(source4).process(new NoOpCoProcessFuntion()).name("process2")
+			.addSink(new NoOpSinkFunction()).name("sink3");
+
+		process1.connect(map2).process(new NoOpCoProcessFuntion()).name("process3")
+			.addSink(new NoOpSinkFunction()).name("sink4");
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		for (Tuple2<Integer, StreamOperator<?>> pair : streamGraph.getOperators()) {
+			pair.f1.setChainingStrategy(ChainingStrategy.ALWAYS);
+		}
+
+		JobGraph jobGraph = StreamingJobGraphGenerator.createJobGraph(streamGraph);
+		assertEquals(4, jobGraph.getNumberOfVertices());
+
+		List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+
+		// CHAIN([Source1 -> (Filter1, Filter2), Filter1 -> Sink1]) vertex
+		{
+			JobVertex vertex = verticesSorted.get(0);
+			assertEquals(0, vertex.getInputs().size());
+			assertEquals(SourceStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Collections.emptyList(),
+				Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1"), Tuple2.of("filter2", "process1")),
+				Sets.newHashSet("Source: source1", "filter1", "filter2", "Sink: sink1"),
+				Sets.newHashSet("Source: source1"),
+				taskonfig);
+		}
+
+		// CHAIN(Map1 -> Sink2) vertex
+		{
+			JobVertex vertex = verticesSorted.get(1);
+			assertEquals(2, vertex.getInputs().size());
+			assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Lists.newArrayList(Tuple2.of("filter1", "map1"), Tuple2.of("Source: source1", "map1")),
+				Collections.emptyList(),
+				Sets.newHashSet("map1", "Sink: sink2"),
+				Sets.newHashSet("map1"),
+				taskonfig);
+		}
+
+		// CHAIN([(Source2, Source3) -> Map2, Map2 -> Process1, (Process1, Source4) -> Process2, Process2 -> Sink3]) vertex
+		{
+			JobVertex vertex = verticesSorted.get(2);
+			assertEquals(1, vertex.getInputs().size());
+			assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Lists.newArrayList(Tuple2.of("filter2", "process1")),
+				Lists.newArrayList(Tuple2.of("process1", "process3"), Tuple2.of("map2", "process3")),
+				Sets.newHashSet("Source: source2", "Source: source3", "Source: source4", "map2", "process1", "process2", "Sink: sink3"),
+				Sets.newHashSet("Source: source2", "Source: source3", "Source: source4", "process1"),
+				taskonfig);
+		}
+
+		// CHAIN(Process3 -> Sink4) vertex
+		{
+			JobVertex vertex = verticesSorted.get(3);
+			assertEquals(2, vertex.getInputs().size());
+			assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
+
+			StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
+			verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
+				Lists.newArrayList(Tuple2.of("process1", "process3"), Tuple2.of("map2", "process3")),
+				Collections.emptyList(),
+				Sets.newHashSet("process3", "Sink: sink4"),
+				Sets.newHashSet("process3"),
 				taskonfig);
 		}
 	}
@@ -279,7 +499,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
 			DataStream<String> map1 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
@@ -301,6 +521,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(SourceStreamTaskV2.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -315,6 +536,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(2, vertex.getInputs().size());
+				assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -331,10 +553,10 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 		 *
 		 * <p><pre>
 		 *     CHAIN(Source1 -> Filter1) -+
-		 *          (   |              )  | -> CHAIN(Map1 -> Sink1)
-		 *          (   |_             ) -+           |_ -+
-		 *          (   |              )                  | -> CHAIN(Map2 -> Sink2)
-		 *          (   |_             ) ->              -+
+		 *          (   |              )  | -> CHAIN(Map1 -> Sink1          )
+		 *          (   |_             ) -+         (  |_ -+                )
+		 *          (   |              )            (     | -> Map2 -> Sink2)
+		 *          (   |_             ) ->         (     -+                )
 		 * </pre>
 		 */
 		@Test
@@ -347,7 +569,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
 			DataStream<String> map1 = (breakingOffType == 1 || breakingOffType == 3 ? filter1.rescale() : filter1)
@@ -372,6 +594,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(SourceStreamTaskV2.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -387,6 +610,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(3, vertex.getInputs().size());
+				assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -419,8 +643,8 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
-			DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
 
 			DataStream<String> filter1 = source1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter1");
 
@@ -443,6 +667,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -457,6 +682,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(2, vertex.getInputs().size());
+				assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -487,7 +713,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
 			DataStream<String> filter2 = source1.map(new NoOpMapFunction()).name("map1")
@@ -512,6 +738,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(SourceStreamTaskV2.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -526,6 +753,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(2, vertex.getInputs().size());
+				assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -542,10 +770,10 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 		 *
 		 * <p><pre>
 		 *     CHAIN(Source1 -> Filter1       ) -+
-		 *          (   |                     )  | -> CHAIN(Process1 -> Sink1)
-		 *          (   |_  -> Map1 -> Filter2) -+             |_ -+
-		 *          (   |                     )                    | -> CHAIN(Process2 -> Sink2)
-		 *          (   |_                    ) ->                -+
+		 *          (   |                     )  | -> CHAIN(Process1 -> Sink1             )
+		 *          (   |_  -> Map1 -> Filter2) -+         (    |_ -+                     )
+		 *          (   |                     )            (        | -> Process2 -> Sink2)
+		 *          (   |_                    ) ->         (       -+                     )
 		 * </pre>
 		 */
 		@Test
@@ -558,7 +786,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 
 			DataStream<String> filter2 = source1.map(new NoOpMapFunction()).name("map1")
@@ -586,6 +814,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(SourceStreamTaskV2.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -597,10 +826,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 					taskonfig);
 			}
 
-			// CHAIN([Process1 -> (Sink1, Process2)], Process2 -> Sink2) vertex
+			// CHAIN([Process1 -> (Sink1, Process2), Process2 -> Sink2]) vertex
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(3, vertex.getInputs().size());
+				assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -634,11 +864,11 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 			DataStream<String> filter1 = source1.filter(new NoOpFilterFunction()).name("filter1");
 			DataStream<String> map1 = source1.map(new NoOpMapFunction()).name("map1");
 
-			DataStream<String> source2 = env.addSource(new NoOpSourceFunction()).name("source2");
+			DataStream<String> source2 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2");
 			DataStream<String> filter2 = map1.connect(source2).process(new NoOpCoProcessFuntion()).name("filter2");
 
 			DataStream<String> process1 = (breakingOffType == 1 || breakingOffType == 3 ? filter2.rescale() : filter2)
@@ -660,6 +890,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -674,6 +905,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(2, vertex.getInputs().size());
+				assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -709,12 +941,12 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 			ClassLoader cl = getClass().getClassLoader();
 
-			DataStream<String> source1 = env.addSource(new NoOpSourceFunction()).name("source1");
+			DataStream<String> source1 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source1");
 			DataStream<String> map0 = source1.map(new NoOpMapFunction()).name("map0");
 			DataStream<String> map1 = map0.map(new NoOpMapFunction()).name("map1");
 			DataStream<String> map2 = map0.map(new NoOpMapFunction()).name("map2");
 
-			DataStream<String> map3 = env.addSource(new NoOpSourceFunction()).name("source2")
+			DataStream<String> map3 = env.addSourceV2(new NoOpSourceFunctionV2()).name("source2")
 				.map(new NoOpMapFunction()).name("map3");
 			DataStream<String> filter1 = map2.connect(map3).process(new NoOpCoProcessFuntion()).name("filter1");
 			DataStream<String> map4 = map3.map(new NoOpMapFunction()).name("map4");
@@ -749,6 +981,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(0);
 				assertEquals(0, vertex.getInputs().size());
+				assertEquals(ArbitraryInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -764,6 +997,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(1);
 				assertEquals(2, vertex.getInputs().size());
+				assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -778,6 +1012,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(2);
 				assertEquals(2, vertex.getInputs().size());
+				assertEquals(TwoInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -792,6 +1027,7 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 			{
 				JobVertex vertex = verticesSorted.get(3);
 				assertEquals(1, vertex.getInputs().size());
+				assertEquals(OneInputStreamTask.class, vertex.getInvokableClass(cl));
 
 				StreamTaskConfigSnapshot taskonfig = StreamTaskConfigCache.deserializeFrom(new StreamTaskConfig(vertex.getConfiguration()), cl);
 				verifyVertex(TimeCharacteristic.IngestionTime, true, CheckpointingMode.EXACTLY_ONCE, FsStateBackend.class,
@@ -808,14 +1044,25 @@ public class StreamingJobGraphGeneratorMultiHeadChainTest extends TestLogger {
 
 	private static class NoOpSourceFunction implements ParallelSourceFunction<String> {
 
-		private static final long serialVersionUID = -5459224792698512636L;
-
 		@Override
 		public void run(SourceContext<String> ctx) throws Exception {
 		}
 
 		@Override
 		public void cancel() {
+		}
+	}
+
+	private static class NoOpSourceFunctionV2 implements ParallelSourceFunctionV2<String> {
+
+		@Override
+		public boolean isFinished() {
+			return false;
+		}
+
+		@Override
+		public SourceRecord<String> next() throws Exception {
+			return null;
 		}
 	}
 

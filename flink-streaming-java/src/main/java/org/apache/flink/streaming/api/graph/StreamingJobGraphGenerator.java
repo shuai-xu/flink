@@ -56,6 +56,7 @@ import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.operators.StreamSource;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
@@ -85,6 +86,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkState;
 
@@ -222,11 +224,24 @@ public class StreamingJobGraphGenerator {
 		final Map<Integer, ChainingStreamNode> splitMap;
 		final Collection<StreamNode> chainingHeadNodes;
 
+		/**
+		 *  Sorts source for the following purpose:
+		 *  1.Processes StreamSource prior to StreamSourceV2.
+		 *  2.Stabilizes the topology of job graph.
+		 */
+		List<Integer> sortedSourceIDs = streamGraph.getSourceIDs().stream()
+			.sorted(
+				Comparator.comparing((Integer id) -> {
+					StreamOperator<?> operator = streamGraph.getStreamNode(id).getOperator();
+					return operator == null || operator instanceof StreamSource ? 0 : 1;
+				}).thenComparingInt(id -> id))
+			.collect(Collectors.toList());
+
 		// layers nodes according to input dependence using depth-first traversal
 		int currentLayerNumber = 0;
 		SequenceGenerator depthFirstSequenceGenerator = new SequenceGenerator();
 		final Map<Integer, Integer> traversedEdgeNumMap = new HashMap<>(); // key: nodeId
-		for (Integer sourceNodeId : streamGraph.getSourceIDs()) {
+		for (Integer sourceNodeId : sortedSourceIDs) {
 			layerNodes(sourceNodeId, currentLayerNumber, null, depthFirstSequenceGenerator, traversedEdgeNumMap, layeredNodeMap, layersMap);
 		}
 
@@ -244,6 +259,12 @@ public class StreamingJobGraphGenerator {
 				maxPassingNodeNum += nodes.size();
 				for (ChainingStreamNode node : nodes) {
 					node.setBreadthFirstNumber(breadthFirstSequenceGenerator.get());
+
+					if (node.getLayer() == 0) {
+						StreamOperator<?> operator = streamGraph.getStreamNode(node.getNodeId()).getOperator();
+						node.setAllowMultiHeadChaining(
+							operator == null || operator instanceof StreamSource ? Boolean.FALSE : Boolean.TRUE);
+					}
 
 					splitChain(node.getNodeId(), layeredNodeMap, maxPassingNodeNum, chainingHeadNodes);
 				}
@@ -365,7 +386,7 @@ public class StreamingJobGraphGenerator {
 			ChainingStreamNode node = layeredNodeMap.get(edge.getTargetId());
 
 			node.setInitNodeCountOfPath(maxPassingNodeNum);
-			node.chainTo(upstreamNode, edge, streamGraph);
+			node.chainTo(upstreamNode, edge, streamGraph.isMultiHeadChainMode(), streamGraph.isChainEagerlyEnabled());
 		}
 	}
 
@@ -603,7 +624,7 @@ public class StreamingJobGraphGenerator {
 
 		// set properties of job vertex
 		jobVertex.setResources(storager.chainedMinResources, storager.chainedPreferredResources);
-		if (!streamGraph.isMultiHeadChainMode()) {
+		if (storager.chainedHeadNodeIdsInOrder.size() < 2) {
 			jobVertex.setInvokableClass(startStreamNode.getJobVertexClass());
 		} else {
 			jobVertex.setInvokableClass(ArbitraryInputStreamTask.class);
@@ -1060,6 +1081,8 @@ public class StreamingJobGraphGenerator {
 
 		private Set<Integer> chainableToSet;
 
+		private Boolean allowMultiHeadChaining;
+
 		ChainingStreamNode(Integer nodeId, int depthFirstNumber, int inEdgeCount) {
 			this.nodeId = nodeId;
 			this.depthFirstNumber = depthFirstNumber;
@@ -1091,12 +1114,14 @@ public class StreamingJobGraphGenerator {
 		}
 
 		boolean isChainHeadNode() {
-			checkState(isChainablePathMerged, "Chainning of the current node(nodeId: " + nodeId + ") has not completed yet.");
+			checkState(isChainablePathMerged, "Chainning of the current node(nodeId: %s) has not completed yet.", nodeId);
 
 			return inEdgeCount == 0 || inEdgeCount > (chainableToSet == null ? 0 : chainableToSet.size());
 		}
 
 		boolean isChainTo(Integer upstreamNodeId) {
+			checkState(isChainablePathMerged, "Chainning of the current node(nodeId: %s) has not completed yet.", nodeId);
+
 			return chainableToSet != null && chainableToSet.contains(upstreamNodeId);
 		}
 
@@ -1104,8 +1129,15 @@ public class StreamingJobGraphGenerator {
 			this.initNodeCountOfPath = initNodeCountOfPath;
 		}
 
+		void setAllowMultiHeadChaining(Boolean allowMultiHeadChaining) {
+			checkState(this.allowMultiHeadChaining == null || this.allowMultiHeadChaining == allowMultiHeadChaining,
+				"The flag allowMultiHeadChaining can not be changed (nodeId: %s).", nodeId);
+
+			this.allowMultiHeadChaining = allowMultiHeadChaining;
+		}
+
 		void mergeChainablePath() {
-			checkState(!isChainablePathMerged, "The passing paths of the current node(nodeId: " + nodeId + ") have merged.");
+			checkState(!isChainablePathMerged, "The passing paths of the current node(nodeId: %s) have merged.", nodeId);
 
 			if (chainablePathMap == null || chainablePathMap.size() == 0) {
 				mergedChainablePath = null;
@@ -1126,12 +1158,13 @@ public class StreamingJobGraphGenerator {
 			isChainablePathMerged = true;
 		}
 
-		void chainTo(ChainingStreamNode upstreamNode, StreamEdge edge, StreamGraph streamGraph) {
-			checkState(upstreamNode.isChainablePathMerged, "The passing paths of the upstream node(nodeId: " + upstreamNode.nodeId + ") have not been merged yet.");
+		void chainTo(ChainingStreamNode upstreamNode, StreamEdge edge, boolean isMultiHeadChainMode, boolean isEagerChainingEnabled) {
+			checkState(upstreamNode.isChainablePathMerged,
+				"The passing paths of the upstream node(nodeId: %s) have not been merged yet.", upstreamNode.nodeId);
 
 			boolean isChainable = true;
 
-			if (streamGraph.isMultiHeadChainMode()) {
+			if (upstreamNode.allowMultiHeadChaining && isMultiHeadChainMode) {
 				/**
 				 *  Checks paths overlapping for the following purpose:
 				 *  1. No cycle when connecting edges of the job graph.
@@ -1170,7 +1203,7 @@ public class StreamingJobGraphGenerator {
 						|| mergedNonChainablePath.intersects(upstreamNode.mergedChainablePath)) {
 						isChainable = false;
 					} else {
-						isChainable = isEdgeChainableOnMultiHeadMode(edge, streamGraph.isChainEagerlyEnabled());
+						isChainable = isEdgeChainableOnMultiHeadMode(edge, isEagerChainingEnabled);
 					}
 				}
 
@@ -1180,11 +1213,15 @@ public class StreamingJobGraphGenerator {
 					addNonChainablePath(upstreamNode);
 				}
 			} else {
-				isChainable = isEdgeChainable(edge, streamGraph.isChainEagerlyEnabled());
+				isChainable = isEdgeChainable(edge, isEagerChainingEnabled);
 			}
 
 			if (isChainable) {
 				addChainableToNode(upstreamNode.nodeId);
+
+				setAllowMultiHeadChaining(upstreamNode.allowMultiHeadChaining);
+			} else {
+				setAllowMultiHeadChaining(Boolean.TRUE);
 			}
 		}
 
