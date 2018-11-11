@@ -30,7 +30,8 @@ import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.TestHarnessUtil
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.SortUtil
+import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.harness.SortProcessOperatorHarnessTest._
 import org.apache.flink.table.runtime.operator.sort.{ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
@@ -62,7 +63,7 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
 
     val nullsIsLast = SortUtil.getNullDefaultOrders(booleanOrders)
 
-    val generatedSorter = SortUtil.createSorter(
+    val generatedSorter = SorterHelper.createSorter(
       rT.getFieldTypes.map(DataTypes.internal), indexes, booleanOrders, nullsIsLast)
 
     val sortOperator = new ProcTimeSortOperator(
@@ -156,7 +157,7 @@ class SortProcessOperatorHarnessTest(mode: StateBackendMode) extends HarnessTest
     val booleanOrders = Array(true, false)
     val nullsIsLast = SortUtil.getNullDefaultOrders(booleanOrders)
 
-    val generatedSorter = SortUtil.createSorter(
+    val generatedSorter = SorterHelper.createSorter(
       rT.getFieldTypes.map(DataTypes.internal), indexes, booleanOrders, nullsIsLast)
 
     val processOperator = new RowTimeSortOperator(

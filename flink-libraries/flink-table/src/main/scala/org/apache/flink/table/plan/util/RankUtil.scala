@@ -29,12 +29,12 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.codegen._
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.{BinaryRowKeySelector, NullBinaryRowKeySelector}
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -336,7 +336,7 @@ object RankUtil {
 
     val logicalKeyFields = fieldTypes.indices.toArray
 
-    val sorter = SortUtil.createSorter(
+    val sorter = SorterHelper.createSorter(
       sortKeyTypeInfo.getFieldTypes.map(DataTypes.internal),
       logicalKeyFields,
       sortDirections,

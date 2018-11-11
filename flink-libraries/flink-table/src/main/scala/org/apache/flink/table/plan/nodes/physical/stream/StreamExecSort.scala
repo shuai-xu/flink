@@ -26,8 +26,8 @@ import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.StreamSortOperator
@@ -60,7 +60,6 @@ class StreamExecSort(
     sortCollation: RelCollation,
     description: String)
   extends Sort(cluster, traitSet, inputNode, sortCollation)
-  with CommonSort
   with StreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
@@ -82,11 +81,11 @@ class StreamExecSort(
   }
 
   override def toString: String = {
-    sortToString(outputSchema.relDataType, sortCollation, offset, fetch)
+    SortUtil.sortToString(outputSchema.relDataType, sortCollation, offset, fetch)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    sortExplainTerms(
+    SortUtil.sortExplainTerms(
       pw.input("input", getInput()),
       outputSchema.relDataType,
       sortCollation,
@@ -123,7 +122,7 @@ class StreamExecSort(
     val sortOperator = {
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(
         sortCollation.getFieldCollations.asScala)
-      val generatedSorter = SortUtil.createSorter(
+      val generatedSorter = SorterHelper.createSorter(
         inputTypeInfo.getFieldTypes.map(DataTypes.internal),
         sortFields,
         sortDirections,

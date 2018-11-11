@@ -21,14 +21,15 @@ package org.apache.flink.table.plan.nodes.common
 import java.util.{ArrayList => JArrayList}
 
 import org.apache.calcite.rel.RelFieldCollation.{Direction, NullDirection}
-import org.apache.calcite.rel.{RelCollations, RelFieldCollation, RelNode}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Window.Group
 import org.apache.calcite.rel.core.{AggregateCall, Window}
+import org.apache.calcite.rel.{RelCollations, RelFieldCollation, RelNode}
 import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexWindowBound}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.table.plan.util.AggregateUtil._
-import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
+import org.apache.flink.table.plan.util.SortUtil
+import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

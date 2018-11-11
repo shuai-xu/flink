@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.sort;
 
-import org.apache.flink.table.runtime.aggregate.SortUtil;
+import org.apache.flink.table.plan.util.SortUtil;
 
 import org.junit.Test;
 

@@ -34,7 +34,7 @@ import org.apache.flink.table.codegen.GeneratedSorter;
 import org.apache.flink.table.codegen.ProjectionCodeGenerator;
 import org.apache.flink.table.codegen.SortCodeGenerator;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.runtime.aggregate.SortUtil;
+import org.apache.flink.table.plan.util.SortUtil;
 import org.apache.flink.table.types.BaseRowType;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
@@ -42,15 +42,15 @@ import org.apache.flink.table.typeutils.TypeUtils;
 
 import org.junit.Test;
 
-import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.STRING_TYPE_INFO;
-import static org.apache.flink.table.runtime.operator.join.batch.String2HashJoinOperatorTest.newRow;
-import static org.junit.Assert.assertEquals;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import scala.Tuple2;
+
+import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.STRING_TYPE_INFO;
+import static org.apache.flink.table.runtime.operator.join.batch.String2HashJoinOperatorTest.newRow;
+import static org.junit.Assert.assertEquals;
 
 /**
  * UT for SampleAndHistogramOperator.

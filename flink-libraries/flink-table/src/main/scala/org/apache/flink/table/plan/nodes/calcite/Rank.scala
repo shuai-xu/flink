@@ -26,8 +26,7 @@ import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.util.{ImmutableBitSet, NumberUtil}
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, VariableRankRange}
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, SortUtil, VariableRankRange}
 import org.apache.flink.table.util.{FlinkRelMdUtil, FlinkRelOptUtil}
 
 import scala.collection.JavaConversions._

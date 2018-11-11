@@ -28,7 +28,7 @@ import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedRecordComparator;
 import org.apache.flink.table.codegen.SortCodeGenerator;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.runtime.aggregate.SortUtil$;
+import org.apache.flink.table.plan.util.SortUtil$;
 import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
@@ -63,9 +63,12 @@ public class BaseRowComparator extends TypeComparator<BaseRow> {
 		this.comAndSers = TypeUtils.flattenComparatorAndSerializer(
 				keys.length, keys, orders, types);
 		this.genComparator = new SortCodeGenerator(
-				keys, Arrays.stream(types).map(DataTypes::internal).toArray(InternalType[]::new),
-				comAndSers._1, orders,
-				SortUtil$.MODULE$.getNullDefaultOrders(orders)).generateRecordComparator("BaseRowComparator");
+				keys,
+				Arrays.stream(types).map(DataTypes::internal).toArray(InternalType[]::new),
+				comAndSers._1,
+				orders,
+				SortUtil$.MODULE$.getNullDefaultOrders(orders)
+		).generateRecordComparator("BaseRowComparator");
 	}
 
 	public RecordComparator getComparator()

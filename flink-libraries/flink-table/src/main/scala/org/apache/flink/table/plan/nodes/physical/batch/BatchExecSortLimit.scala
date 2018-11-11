@@ -29,13 +29,12 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.nodes.common.CommonSort
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.sort.SortLimitOperator
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils._
 
 import _root_.scala.collection.JavaConverters._
-import org.apache.flink.table.types.DataTypes
 
 /**
   * This RelNode take the `limit` elements beginning with the first `offset` elements.
@@ -54,14 +53,13 @@ class BatchExecSortLimit(
     isGlobal: Boolean,
     ruleDescription: String)
   extends Sort(cluster, traitSet, inp, collations, sortOffset, limit)
-  with CommonSort
   with RowBatchExecRel {
 
   private val (keys, orders, nullsIsLast) = SortUtil.getKeysAndOrders(
     collations.getFieldCollations.asScala)
 
-  private val limitStart: Long =  getFetchLimitStart(offset)
-  private val limitEnd: Long = getFetchLimitEnd(limit, offset)
+  private val limitStart: Long =  SortUtil.getFetchLimitStart(offset)
+  private val limitEnd: Long = SortUtil.getFetchLimitEnd(limit, offset)
 
   override def copy(
       traitSet: RelTraitSet,
@@ -85,7 +83,7 @@ class BatchExecSortLimit(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-      .item("orderBy", sortFieldsToString(collations, getRowType))
+      .item("orderBy", SortUtil.sortFieldsToString(collations, getRowType))
       .item("offset", offsetToString)
       .item("limit", limitToString)
       .item("global", isGlobal)
@@ -181,7 +179,7 @@ class BatchExecSortLimit(
 
   private def getOperatorName = {
     s"${if (isGlobal) "Global" else "Local"}SortLimit(" +
-        s"orderBy: [${sortFieldsToString(collations, getRowType)}], " +
+        s"orderBy: [${SortUtil.sortFieldsToString(collations, getRowType)}], " +
         s"offset: $offsetToString, " +
         s"limit: $limitToString)"
   }

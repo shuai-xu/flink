@@ -19,15 +19,15 @@ package org.apache.flink.table.plan.rules.physical.stream
 
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
+import org.apache.calcite.rel.RelFieldCollation.Direction
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecTemporalSort, StreamExecSort}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalSort
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.calcite.rel.RelFieldCollation.Direction
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecSort, StreamExecTemporalSort}
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.SortUtil
 
 /**
  * Rule to convert a LogicalSort into a DataStreamSort.

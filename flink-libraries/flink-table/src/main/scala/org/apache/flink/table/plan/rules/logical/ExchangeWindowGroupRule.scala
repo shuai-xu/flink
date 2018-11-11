@@ -23,12 +23,11 @@ import java.util.Comparator
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Window.Group
 import org.apache.calcite.rel.logical.{LogicalProject, LogicalWindow}
+import org.apache.calcite.rel.{RelCollation, RelNode}
 import org.apache.calcite.rex.RexInputRef
-import org.apache.flink.table.runtime.aggregate.SortUtil
 
 import scala.collection.JavaConversions._
 
@@ -53,7 +52,7 @@ class ExchangeWindowGroupRule extends RelOptRule(
       override def compare(o1: Group, o2: Group): Int = {
         val keyComp = o1.keys.compareTo(o2.keys)
         if (keyComp == 0) {
-          SortUtil.compareTo(o1.orderKeys, o2.orderKeys)
+          compareRelCollation(o1.orderKeys, o2.orderKeys)
         } else {
           keyComp
         }
@@ -99,6 +98,30 @@ class ExchangeWindowGroupRule extends RelOptRule(
         window.getRowType)
       call.transformTo(project)
     }
+  }
+
+  private def compareRelCollation(o1: RelCollation, o2: RelCollation): Int = {
+    val comp= o1.compareTo(o2)
+    if (comp == 0) {
+      val collations1 = o1.getFieldCollations
+      val collations2 = o2.getFieldCollations
+      for (index <- 0 until collations1.length) {
+        val collation1 = collations1(index)
+        val collation2 = collations2(index)
+        val direction = collation1.direction.shortString.compareTo(
+          collation2.direction.shortString)
+        if (direction == 0) {
+          val nullDirec = collation1.nullDirection.nullComparison.compare(
+            collation2.nullDirection.nullComparison)
+          if (nullDirec != 0) {
+            return nullDirec
+          }
+        } else {
+          return direction
+        }
+      }
+    }
+    comp
   }
 }
 

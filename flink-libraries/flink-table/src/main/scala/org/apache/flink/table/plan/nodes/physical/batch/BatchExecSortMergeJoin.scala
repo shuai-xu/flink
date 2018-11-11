@@ -24,7 +24,7 @@ import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -33,7 +33,8 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkRelMetadataQuery}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
-import org.apache.flink.table.runtime.aggregate.{RelFieldCollations, SortUtil}
+import org.apache.flink.table.plan.util.SortUtil
+import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
@@ -226,7 +227,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
   private def newGeneratedSorter(originalKeys: Array[Int], t: BaseRowType): GeneratedSorter = {
     val originalOrders = originalKeys.map((_) => true)
-    val (keys, orders, nullsIsLast) = SortUtil.deduplicationSortKeys(
+    val (keys, orders, nullsIsLast) = SortUtil.deduplicateSortKeys(
       originalKeys,
       originalOrders,
       SortUtil.getNullDefaultOrders(originalOrders))

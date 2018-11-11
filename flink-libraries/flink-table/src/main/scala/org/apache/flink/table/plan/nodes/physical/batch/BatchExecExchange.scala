@@ -33,7 +33,7 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonExchange
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.range._
 import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}

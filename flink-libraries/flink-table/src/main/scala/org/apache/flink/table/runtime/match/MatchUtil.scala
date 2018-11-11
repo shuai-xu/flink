@@ -25,17 +25,18 @@ import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.cep.{EventComparator, PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
+import org.apache.flink.cep._
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, GenConditionFunction, GenSelectFunction, GeneratedSorter, MatchCodeGenerator}
-import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.aggregate.{CollectionBaseRowComparator, SortUtil}
+import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.runtime.aggregate.{CollectionBaseRowComparator, SorterHelper}
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.Logging
 
+import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 /**
@@ -228,7 +229,7 @@ object MatchUtil {
       orderKeys: RelCollation,
       inputSchema: BaseRowSchema): EventComparator[BaseRow] = {
     if (orderKeys.getFieldCollations.size() > 1) {
-      val sorter = SortUtil.createSorter(
+      val sorter = SorterHelper.createSorter(
         inputSchema.internalType(classOf[BaseRow]),
         orderKeys.getFieldCollations.asScala.tail) // strip off time collation
 
@@ -242,7 +243,7 @@ object MatchUtil {
       orderKeys: RelCollation,
       inputSchema: BaseRowSchema): EventComparator[BaseRow] = {
     if (orderKeys.getFieldCollations.size() > 1) {
-      val sorter = SortUtil.createSorter(
+      val sorter = SorterHelper.createSorter(
         inputSchema.internalType(classOf[BaseRow]),
         orderKeys.getFieldCollations.asScala.tail) // strip off time collation
 

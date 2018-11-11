@@ -25,16 +25,14 @@ import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.nodes.common.CommonSort
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.ExecResourceUtil
@@ -48,7 +46,6 @@ class BatchExecSort(
     collations: RelCollation,
     ruleDescription: String)
   extends Sort(cluster, traitSet, inp, collations)
-  with CommonSort
   with RowBatchExecRel {
 
   private val (keys, orders, nullsIsLast) = SortUtil.getKeysAndOrders(collations.getFieldCollations)
@@ -67,7 +64,7 @@ class BatchExecSort(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-      .item("orderBy", sortFieldsToString(collations, getRowType))
+      .item("orderBy", SortUtil.sortFieldsToString(collations, getRowType))
       .itemIf("reuse_id", getReuseId, isReused)
   }
 
@@ -116,7 +113,7 @@ class BatchExecSort(
 
     val transformation = new OneInputTransformation(
       input,
-      s"Sort(${sortFieldsToString(collations, getRowType)})",
+      s"Sort(${SortUtil.sortFieldsToString(collations, getRowType)})",
       operator.asInstanceOf[OneInputStreamOperator[BaseRow, BaseRow]],
       binaryType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       resultPartitionCount)

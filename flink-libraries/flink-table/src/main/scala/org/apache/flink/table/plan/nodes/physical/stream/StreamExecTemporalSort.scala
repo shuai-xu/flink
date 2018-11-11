@@ -29,8 +29,8 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.nodes.common.CommonSort
 import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.{OnlyRowTimeSortOperator, ProcTimeSortOperator, RowTimeSortOperator}
@@ -52,7 +52,6 @@ class StreamExecTemporalSort(
     sortCollation: RelCollation,
     description: String)
   extends Sort(cluster, traitSet, inputNode, sortCollation)
-  with CommonSort
   with StreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
@@ -74,11 +73,11 @@ class StreamExecTemporalSort(
   }
 
   override def toString: String = {
-    sortToString(outputSchema.relDataType, sortCollation, null, null)
+    SortUtil.sortToString(outputSchema.relDataType, sortCollation, null, null)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    sortExplainTerms(
+    SortUtil.sortExplainTerms(
       pw.input("input", getInput()),
       outputSchema.relDataType,
       sortCollation,
@@ -129,7 +128,7 @@ class StreamExecTemporalSort(
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(
         sortCollation.getFieldCollations.asScala.tail)
 
-      val generatedSorter = SortUtil.createSorter(
+      val generatedSorter = SorterHelper.createSorter(
         inputTypeInfo.getFieldTypes.map(DataTypes.internal),
         sortFields,
         sortDirections,
@@ -165,7 +164,7 @@ class StreamExecTemporalSort(
       // strip off time collation
       val (sortFields, sortDirections, nullsIsLast) = SortUtil.getKeysAndOrders(
         sortCollation.getFieldCollations.asScala.tail)
-      val generatedSorter = SortUtil.createSorter(
+      val generatedSorter = SorterHelper.createSorter(
         inputTypeInfo.getFieldTypes.map(DataTypes.internal),
         sortFields,
         sortDirections,

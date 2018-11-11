@@ -30,8 +30,7 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalOverWindow
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate
-import org.apache.flink.table.plan.util.AggregateUtil
-import org.apache.flink.table.runtime.aggregate.SortUtil
+import org.apache.flink.table.plan.util.{AggregateUtil, SortUtil}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

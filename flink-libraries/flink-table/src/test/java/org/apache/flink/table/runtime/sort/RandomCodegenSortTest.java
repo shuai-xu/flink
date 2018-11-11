@@ -32,7 +32,7 @@ import org.apache.flink.runtime.operators.sort.QuickSort;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.BinaryString;
-import org.apache.flink.table.runtime.aggregate.SortUtil;
+import org.apache.flink.table.plan.util.SortUtil;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.typeutils.TypeUtils;
