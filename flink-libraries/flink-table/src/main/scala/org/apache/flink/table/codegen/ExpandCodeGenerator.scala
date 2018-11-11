@@ -16,26 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.nodes.common
+package org.apache.flink.table.codegen
 
-import java.util
-
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexNode}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD}
-import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext, ExprCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
+import org.apache.calcite.rex.RexNode
+
+import java.util
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-trait CommonExpand {
+object ExpandCodeGenerator {
 
   def generateExpandOperator(
       ctx: CodeGeneratorContext,
@@ -102,25 +101,4 @@ trait CommonExpand {
       genOperatorExpression.code)
   }
 
-  protected def projectsToString(
-      projects: util.List[util.List[RexNode]],
-      inputRowType: RelDataType,
-      outputRowType: RelDataType): String = {
-    val inFieldNames = inputRowType.getFieldNames
-    val outFieldNames = outputRowType.getFieldNames
-    projects.map { project =>
-      project.zipWithIndex.map {
-        case (r: RexInputRef, i) =>
-          val inputFieldName = inFieldNames.get(r.getIndex)
-          val outputFieldName = outFieldNames.get(i)
-          if (inputFieldName != outputFieldName) {
-            s"$inputFieldName AS $outputFieldName"
-          } else {
-            outputFieldName
-          }
-        case (l: RexLiteral, i) => s"${l.getValue3} AS ${outFieldNames.get(i)}"
-        case (_, i) => outFieldNames.get(i)
-      }.mkString("{", ", ", "}")
-    }.mkString(", ")
-  }
 }

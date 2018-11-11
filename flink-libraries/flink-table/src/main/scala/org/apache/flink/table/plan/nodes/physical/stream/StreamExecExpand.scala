@@ -17,21 +17,22 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ExpandCodeGenerator}
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.plan.nodes.calcite.Expand
+import org.apache.flink.table.plan.util.ExpandUtil
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
-import org.apache.flink.table.plan.nodes.calcite.Expand
-import org.apache.flink.table.plan.nodes.common.CommonExpand
-import org.apache.flink.table.types.DataTypes
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -44,7 +45,6 @@ class StreamExecExpand(
     expandIdIndex: Int,
     ruleDescription: String)
   extends Expand(cluster, traitSet, input, outputRowType, projects, expandIdIndex)
-  with CommonExpand
   with StreamExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
@@ -63,7 +63,7 @@ class StreamExecExpand(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .item("projects", projectsToString(projects, input.getRowType, getRowType))
+      .item("projects", ExpandUtil.projectsToString(projects, input.getRowType, getRowType))
   }
 
   private def getOperatorName: String = {
@@ -78,7 +78,7 @@ class StreamExecExpand(
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
 
     val ctx = CodeGeneratorContext(config)
-    val substituteStreamOperator = generateExpandOperator(
+    val substituteStreamOperator = ExpandCodeGenerator.generateExpandOperator(
       ctx,
       inputType,
       outputType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
