@@ -123,7 +123,7 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 				final InputFetcher inputFetcher;
 
 				synchronized (inputFetcherReadingQueue) {
-					if (inputFetcherReadingQueue.isEmpty()) {
+					while (inputFetcherReadingQueue.isEmpty()) {
 						inputFetcherReadingQueue.wait();
 					}
 					inputFetcher = dequeueInputFetcher();
