@@ -19,9 +19,9 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.table.api.types.{BaseRowType, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.types.{BaseRowType, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, GenericRowTypeInfo}
 
 import scala.collection.JavaConverters._

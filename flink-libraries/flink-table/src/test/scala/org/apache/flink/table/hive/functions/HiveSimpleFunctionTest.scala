@@ -22,10 +22,10 @@ import java.sql.{Date, Time, Timestamp}
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.{ExpressionTestBase, SimplePojo}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.types.Row
 import org.junit.Test
 

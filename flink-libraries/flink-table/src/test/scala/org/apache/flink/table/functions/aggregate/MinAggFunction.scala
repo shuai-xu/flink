@@ -21,8 +21,8 @@ import java.lang.{Iterable => JIterable}
 import java.math.BigDecimal
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.types.{DataType, DataTypes, DecimalType}
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType}
 
 /** The initial accumulator for Min aggregate function */
 class MinAccumulator[T] extends JTuple2[T, Boolean]

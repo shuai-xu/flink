@@ -19,7 +19,7 @@
 package com.alibaba.blink.launcher.autoconfig.connector;
 
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
-import org.apache.flink.table.functions.FunctionContext;
+import org.apache.flink.table.api.functions.FunctionContext;
 import org.apache.flink.util.Collector;
 
 import java.io.Serializable;

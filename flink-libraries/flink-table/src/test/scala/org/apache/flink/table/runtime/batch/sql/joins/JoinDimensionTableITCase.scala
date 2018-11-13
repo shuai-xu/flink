@@ -34,12 +34,12 @@ import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.{AsyncConfig, BatchTableSource, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.util.Collector
 import org.junit.Assert._
 import org.junit.{Before, Ignore, Test}

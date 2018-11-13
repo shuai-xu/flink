@@ -22,10 +22,10 @@ import java.util.{Map => JavaMap}
 
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.scala.createTypeInformation
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat.{BinaryArray, BinaryArrayWriter, BinaryMap, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
-import org.apache.flink.table.types._
 import org.apache.flink.types.Row
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test

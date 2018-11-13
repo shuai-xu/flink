@@ -31,8 +31,8 @@ import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.util.StringUtils
 import org.apache.flink.table.api.TableConfig._
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.codegen.JavaSourceManipulator
-import org.apache.flink.table.functions.AggregateFunction
 
 /**
   * A config to define the runtime behavior of the Table API.
@@ -1096,9 +1096,9 @@ object TableConfig {
     * When true, the planner will try to find out duplicated nondeterministic-operator and
     * reuse them. This works only when `sql.exec.sub-plan.reuse.enabled` is true.
     * nondeterministic-operator contains
-    * 1. nondeterministic [[org.apache.flink.table.functions.ScalarFunction]] (UDF, e.g. now),
-    * 2. nondeterministic [[org.apache.flink.table.functions.AggregateFunction]](UDAF),
-    * 3. nondeterministic [[org.apache.flink.table.functions.TableFunction]] (UDTF)
+    * 1. nondeterministic [[ScalarFunction]] (UDF, e.g. now),
+    * 2. nondeterministic [[AggregateFunction]](UDAF),
+    * 3. nondeterministic [[TableFunction]] (UDTF)
     */
   val SQL_EXEC_NONDETERMINISTIC_OPERATOR_REUSE_ENABLED =
     "sql.exec.nondeterministic-operator.reuse.enabled"

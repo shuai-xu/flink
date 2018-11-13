@@ -28,6 +28,7 @@ import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleT
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedTwoInputStreamOperatorTestHarness, MockStreamConfig}
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.util.StreamExecUtil
@@ -35,7 +36,6 @@ import org.apache.flink.table.runtime.operator.join.stream.bundle.{AntiSemiBatch
 import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit.Test
 import org.junit.runner.RunWith

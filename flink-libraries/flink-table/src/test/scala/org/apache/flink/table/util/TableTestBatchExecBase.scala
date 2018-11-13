@@ -28,18 +28,18 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
-import org.apache.flink.streaming.api.scala.{DataStream => ScalaStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, DataStream => ScalaStream}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala.BatchTableEnvironment
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{Table, TableException, _}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.LogicalNodeBlock
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.types.DataTypes
 import org.junit.Assert._
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}

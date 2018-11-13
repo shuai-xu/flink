@@ -29,11 +29,11 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
 import org.apache.flink.table.sources._
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConverters._

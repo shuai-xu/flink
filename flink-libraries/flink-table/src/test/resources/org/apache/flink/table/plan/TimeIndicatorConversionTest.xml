@@ -101,7 +101,7 @@ StreamExecCalc(select=[FLOOR(CAST(rowtime), FLAG(DAY)) AS rowtime], where=[>(lon
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[rowtime, PROCTIME(proctime) AS proctime, s])
-  StreamExecCorrelate(invocation=[org$apache$flink$table$plan$TimeIndicatorConversionTest$TableFunc$2a5c4fdb77f562a289f5576111ce15bb(CAST($0):TIMESTAMP(3) NOT NULL, PROCTIME($3), '')], correlate=[table(TableFunc(CAST(rowtime),PROCTIME(proctime),''))], select=[rowtime,proctime,s], rowType=[RecordType(TIME ATTRIBUTE(ROWTIME) rowtime, TIME ATTRIBUTE(PROCTIME) proctime, VARCHAR(65536) s)], joinType=[INNER])
+  StreamExecCorrelate(invocation=[org$apache$flink$table$plan$TimeIndicatorConversionTest$TableFunc$5a5e70f7d2b8f4261340a416b5821081(CAST($0):TIMESTAMP(3) NOT NULL, PROCTIME($3), '')], correlate=[table(TableFunc(CAST(rowtime),PROCTIME(proctime),''))], select=[rowtime,proctime,s], rowType=[RecordType(TIME ATTRIBUTE(ROWTIME) rowtime, TIME ATTRIBUTE(PROCTIME) proctime, VARCHAR(65536) s)], joinType=[INNER])
     StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

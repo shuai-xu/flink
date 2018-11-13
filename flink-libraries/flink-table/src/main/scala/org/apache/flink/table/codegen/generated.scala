@@ -24,11 +24,11 @@ import org.apache.flink.api.common.io.InputFormat
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newName}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, SubKeyedAggsHandleFunction}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
-import org.apache.flink.table.types.InternalType
 
 /**
   * Describes a generated expression.

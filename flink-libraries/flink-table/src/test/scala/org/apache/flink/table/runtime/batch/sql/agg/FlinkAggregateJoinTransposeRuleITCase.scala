@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.batch.sql.agg
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.RuleSets
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.rules.logical.FlinkAggregateJoinTransposeRule
@@ -28,7 +29,6 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.types.DataTypes
 import org.junit.{Before, Test}
 
 import _root_.scala.collection.JavaConverters._

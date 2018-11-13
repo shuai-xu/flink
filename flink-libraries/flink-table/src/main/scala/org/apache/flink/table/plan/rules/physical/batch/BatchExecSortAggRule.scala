@@ -21,12 +21,12 @@ import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel._
 import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._

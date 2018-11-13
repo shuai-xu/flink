@@ -18,10 +18,10 @@
 package org.apache.flink.table.dataformat;
 
 import org.apache.flink.core.memory.MemorySegmentFactory;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DateType;
-import org.apache.flink.table.types.InternalType;
-import org.apache.flink.table.types.TimestampType;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DateType;
+import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.util.BitSetUtil;
 
 /**

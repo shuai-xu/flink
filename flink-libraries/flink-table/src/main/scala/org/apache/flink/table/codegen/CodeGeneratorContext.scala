@@ -23,13 +23,13 @@ import org.apache.commons.codec.binary.Base64
 import org.apache.flink.runtime.io.disk.iomanager.IOManager
 import org.apache.flink.runtime.memory.MemoryManager
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.functions.{FunctionContext, FunctionContextImpl, UserDefinedFunction}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-import org.apache.flink.table.functions.{FunctionContext, FunctionContextImpl, UserDefinedFunction}
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
-import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BinaryRowSerializer}
 import org.apache.flink.table.util.{ResettableExternalBuffer, RowIterator}
 import org.apache.flink.table.util.collections._

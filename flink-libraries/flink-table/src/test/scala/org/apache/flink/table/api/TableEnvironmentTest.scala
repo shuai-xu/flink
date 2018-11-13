@@ -24,11 +24,11 @@ import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.api.scala.typeutils.UnitTypeInfo
 import org.apache.flink.table.api.TableEnvironmentTest._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataTypes.{PROCTIME_INDICATOR => PROCTIME}
+import org.apache.flink.table.api.types.DataTypes.{ROWTIME_INDICATOR => ROWTIME}
+import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.types.DataTypes.{PROCTIME_INDICATOR => PROCTIME}
-import org.apache.flink.table.types.DataTypes.{ROWTIME_INDICATOR => ROWTIME}
-import org.apache.flink.table.types.DataTypes._
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.TableTestBase
 import org.apache.flink.types.Row

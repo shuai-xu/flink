@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.hive.functions;
 
+import org.apache.flink.table.api.functions.AggregateFunction;
+import org.apache.flink.table.api.functions.FunctionContext;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
-import org.apache.flink.table.functions.AggregateFunction;
-import org.apache.flink.table.functions.FunctionContext;
 
 import org.apache.hadoop.hive.ql.exec.UDAF;
 import org.apache.hadoop.hive.ql.metadata.HiveException;

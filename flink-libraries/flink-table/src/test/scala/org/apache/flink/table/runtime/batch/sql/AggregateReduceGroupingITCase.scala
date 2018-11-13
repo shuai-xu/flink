@@ -20,9 +20,9 @@ package org.apache.flink.table.runtime.batch.sql
 import java.sql.Date
 
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.junit.{Before, Test}
 

@@ -25,6 +25,8 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.table.api.Types;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.window.CountWindow;
 import org.apache.flink.table.api.window.TimeWindow;
 import org.apache.flink.table.api.window.Window;
@@ -41,8 +43,6 @@ import org.apache.flink.table.runtime.operator.window.triggers.EventTime;
 import org.apache.flink.table.runtime.operator.window.triggers.ProcessingTime;
 import org.apache.flink.table.runtime.sort.RecordEqualiser;
 import org.apache.flink.table.runtime.utils.BaseRowHarnessAssertor;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.BaseRowUtil;
 

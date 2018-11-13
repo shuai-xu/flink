@@ -26,6 +26,7 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
@@ -35,7 +36,6 @@ import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._

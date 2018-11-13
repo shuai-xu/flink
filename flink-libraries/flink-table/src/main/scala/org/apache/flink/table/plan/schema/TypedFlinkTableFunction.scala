@@ -19,9 +19,9 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.TableFunction
-import org.apache.flink.table.types.{DataType, DataTypes}
 
 /**
   * A Typed Function is a Table Function which the result type has already been determined.

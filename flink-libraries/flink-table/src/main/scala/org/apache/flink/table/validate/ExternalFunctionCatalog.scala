@@ -21,13 +21,13 @@ package org.apache.flink.table.validate
 import org.apache.calcite.sql._
 import org.apache.calcite.sql.util.ListSqlOperatorTable
 import org.apache.flink.api.java.typeutils.TypeExtractor
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.catalog.{CrudExternalCatalog, ExternalCatalog, ExternalCatalogFunction}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getResultTypeOfCTDFunction
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction, UserDefinedFunctionUtils}
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
-import org.apache.flink.table.types.DataTypes
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.mutable

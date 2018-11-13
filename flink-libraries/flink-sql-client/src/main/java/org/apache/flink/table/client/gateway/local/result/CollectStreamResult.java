@@ -22,14 +22,14 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.experimental.SocketStreamIterator;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.client.gateway.TypedResult;
 import org.apache.flink.table.client.gateway.local.CollectStreamTableSink;
 import org.apache.flink.table.client.gateway.local.ProgramDeployer;
 import org.apache.flink.table.sinks.TableSink;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.types.Row;
 
 import java.io.IOException;

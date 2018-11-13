@@ -19,8 +19,8 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
-import org.apache.flink.table.types.DataTypes
 
 class DataStreamTable[T](
     val dataStream: DataStream[T],

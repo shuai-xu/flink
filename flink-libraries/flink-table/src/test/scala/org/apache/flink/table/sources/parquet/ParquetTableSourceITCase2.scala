@@ -24,12 +24,12 @@ import java.sql.Timestamp
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.toLong
 import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.types.Row
 import org.junit.Test

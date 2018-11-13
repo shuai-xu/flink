@@ -21,7 +21,7 @@ package org.apache.flink.table.expressions.utils
 import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
-import org.apache.flink.table.functions.ScalarFunction
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
 

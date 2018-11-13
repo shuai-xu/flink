@@ -25,12 +25,12 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.{FileStatus, Path}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.java.BatchTableEnvironment
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
 import org.apache.flink.table.runtime.utils.{CommonTestData, TableProgramsCollectionTestBase}
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.util.ExecResourceUtil
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.hadoop.conf.Configuration

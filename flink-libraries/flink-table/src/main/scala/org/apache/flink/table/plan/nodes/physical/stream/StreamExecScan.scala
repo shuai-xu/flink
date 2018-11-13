@@ -26,10 +26,10 @@ import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Cast
 import org.apache.flink.table.plan.schema.DataStreamTable
-import org.apache.flink.table.types.DataTypes
 
 /**
   * Flink RelNode which matches along with DataStreamSource.

@@ -32,12 +32,13 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.functions.UserDefinedFunction
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAggregateCodeGen}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
@@ -46,7 +47,6 @@ import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
 import org.apache.flink.table.runtime.operator.overagg._
-import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil}
 

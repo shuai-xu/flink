@@ -23,8 +23,8 @@ import java.sql.{Date, Time, Timestamp}
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.util.CollectionDataSets.CustomType
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.expressions.Literal
-import org.apache.flink.table.types.DataTypes._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit._
 

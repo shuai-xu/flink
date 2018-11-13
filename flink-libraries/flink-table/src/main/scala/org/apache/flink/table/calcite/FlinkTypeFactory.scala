@@ -32,11 +32,11 @@ import org.apache.flink.api.common.typeinfo._
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.ValueTypeInfo._
 import org.apache.flink.api.java.typeutils.{MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, RowTypeInfo, PojoField => _}
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.api.{TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory.typeInfoToSqlTypeName
 import org.apache.flink.table.dataformat.{BaseRow, Decimal}
 import org.apache.flink.table.plan.schema._
-import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.types.Row
 

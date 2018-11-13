@@ -26,9 +26,9 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.memory.AbstractPagedInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 
 import java.io.IOException;
 import java.util.Arrays;

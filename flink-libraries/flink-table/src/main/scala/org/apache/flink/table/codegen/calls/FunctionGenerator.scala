@@ -24,10 +24,10 @@ import org.apache.calcite.avatica.util.{TimeUnit, TimeUnitRange}
 import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.BuiltInMethod
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions.{COSH, _}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, TableSqlFunction}
-import org.apache.flink.table.types._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

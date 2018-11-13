@@ -20,10 +20,8 @@ package org.apache.flink.table.sinks
 
 import java.lang.{Boolean => JBool}
 
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.Table
-import org.apache.flink.table.types.{DataType, DataTypes}
 
 /**
   * Defines an external [[TableSink]] to emit a streaming [[Table]] with insert, update, and delete

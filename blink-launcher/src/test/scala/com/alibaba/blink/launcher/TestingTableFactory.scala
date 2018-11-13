@@ -20,9 +20,9 @@ package com.alibaba.blink.launcher
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{RichTableSchema, TableFactory, TableProperties, TableSchema}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.sinks.{AppendStreamTableSink, TableSink, TableSinkBase}
 import org.apache.flink.table.sources.{DimensionTableSource, StreamTableSource, TableSource}
-import org.apache.flink.table.types.DataType
 import org.apache.flink.types.Row
 
 class TestingTableFactory extends TableFactory {

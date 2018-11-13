@@ -22,9 +22,9 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.java.typeutils.TupleTypeInfoBase;
 import org.apache.flink.api.java.typeutils.runtime.TupleSerializerBase;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.types.BaseRowType;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 

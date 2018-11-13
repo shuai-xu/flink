@@ -21,8 +21,8 @@ package org.apache.flink.table.expressions
 import java.util.TimeZone
 
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.utils.ScalarTypesTestBase
-import org.apache.flink.table.types.DataTypes
 import org.junit.Test
 
 class ScalarFunctionsTest extends ScalarTypesTestBase {

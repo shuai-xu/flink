@@ -32,7 +32,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.charset.Charset;
 
-import static org.apache.flink.table.types.DecimalType.MAX_PRECISION;
+import static org.apache.flink.table.api.types.DecimalType.MAX_PRECISION;
 
 /**
  * Utility class that handles ordered byte arrays. That is, these methods produce

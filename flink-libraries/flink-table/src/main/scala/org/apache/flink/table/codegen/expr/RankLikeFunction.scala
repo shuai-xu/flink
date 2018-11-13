@@ -21,9 +21,9 @@ package org.apache.flink.table.codegen.expr
 import java.sql.{Date, Time, Timestamp}
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.types._
 
 /**
   * built-in rank like function. examples:rank,dense_rank and so on

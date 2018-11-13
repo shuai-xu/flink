@@ -22,10 +22,10 @@ import java.util
 
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sources.orc.OrcVectorizedColumnRowTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized

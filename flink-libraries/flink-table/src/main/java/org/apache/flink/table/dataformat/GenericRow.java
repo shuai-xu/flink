@@ -17,7 +17,7 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.api.types.DataType;
 
 /**
  * A GenericRow can have arbitrary number of fields and contain a set of fields, which may all be

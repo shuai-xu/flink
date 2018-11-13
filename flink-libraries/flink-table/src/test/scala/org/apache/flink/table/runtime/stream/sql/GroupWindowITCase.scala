@@ -23,11 +23,11 @@ import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{ConcatDistinctAggFunction, WeightedAvg}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.TimeTestUtil.{EventTimeSourceFunction, TimestampAndWatermarkWithOffset}
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.Test

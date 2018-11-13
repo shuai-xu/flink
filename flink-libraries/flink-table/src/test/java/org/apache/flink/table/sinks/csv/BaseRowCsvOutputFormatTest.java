@@ -21,10 +21,10 @@ package org.apache.flink.table.sinks.csv;
 import org.apache.flink.api.common.io.FileOutputFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 
 import org.junit.Assert;
 import org.junit.Before;

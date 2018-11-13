@@ -32,6 +32,7 @@ import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.cep.pattern.conditions.IterativeCondition
 import org.apache.flink.cep.{PatternFlatSelectFunction, PatternFlatTimeoutFunction, PatternSelectFunction, PatternTimeoutFunction}
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, GenericType, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
@@ -41,7 +42,6 @@ import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
 import org.apache.flink.table.runtime.functions.AggsHandleFunction
-import org.apache.flink.table.types.{BaseRowType, DataTypes, GenericType, InternalType}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

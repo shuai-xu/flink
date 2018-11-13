@@ -20,10 +20,10 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.expressions.TrimMode.TrimMode
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.validate._
 
 import scala.collection.JavaConversions._

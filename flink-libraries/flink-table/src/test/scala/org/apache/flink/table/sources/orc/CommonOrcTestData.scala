@@ -22,10 +22,10 @@ import java.io.File
 import java.lang.{Double => JDouble, Integer => JInt}
 
 import org.apache.flink.core.fs.Path
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.dataformat.GenericRow.of
 import org.apache.flink.table.sinks.orc.RowOrcOutputFormat
-import org.apache.flink.table.types._
 import org.apache.orc.CompressionKind
 
 object CommonOrcTestData {

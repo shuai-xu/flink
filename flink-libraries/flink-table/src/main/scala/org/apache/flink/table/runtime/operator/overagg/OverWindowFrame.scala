@@ -20,10 +20,10 @@ package org.apache.flink.table.runtime.operator.overagg
 
 import java.util
 
+import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedAggsHandleFunction, GeneratedBoundComparator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.types.BaseRowType
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, TypeUtils}
 import org.apache.flink.table.util.ResettableExternalBuffer
 

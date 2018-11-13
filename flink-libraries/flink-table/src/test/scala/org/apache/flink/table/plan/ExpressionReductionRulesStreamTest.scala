@@ -19,9 +19,9 @@
 package org.apache.flink.table.plan
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.{FunctionContext, ScalarFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.{FunctionContext, ScalarFunction}
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.util.TableTestBase
 import org.junit.{Ignore, Test}
 

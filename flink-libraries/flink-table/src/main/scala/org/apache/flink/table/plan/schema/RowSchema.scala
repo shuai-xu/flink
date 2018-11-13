@@ -20,8 +20,8 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 
 import scala.collection.JavaConversions._
 

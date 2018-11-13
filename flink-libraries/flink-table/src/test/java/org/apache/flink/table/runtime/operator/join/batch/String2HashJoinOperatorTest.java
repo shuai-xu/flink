@@ -24,14 +24,14 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTaskTestHarness;
 import org.apache.flink.streaming.util.TestHarnessUtil;
+import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.codegen.Projection;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.JoinedRow;
 import org.apache.flink.table.runtime.operator.join.batch.RandomSortMergeInnerJoinTest.MyConditionFunction;
-import org.apache.flink.table.types.BaseRowType;
-import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.RowIterator;
 

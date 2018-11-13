@@ -23,15 +23,15 @@ import org.apache.calcite.plan.RelOptRuleCall
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Aggregate
 import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
-import org.apache.flink.table.api.AggPhaseEnforcer.AggPhaseEnforcer
 import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableException}
+import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => TableAggregateFunction}
+import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._
@@ -53,7 +53,7 @@ trait BatchExecAggRuleBase {
     var index = -1
     aggregates.zipWithIndex.foreach{ case (udf, aggIndex) =>
       aggBufferFieldNames(aggIndex) = udf match {
-          case _: TableAggregateFunction[_, _] =>
+          case _: AggregateFunction[_, _] =>
             Array(aggNames(aggIndex))
           case agf: DeclarativeAggregateFunction =>
             agf.aggBufferAttributes.map { attr =>
@@ -102,7 +102,7 @@ trait BatchExecAggRuleBase {
     var index = -1
     aggregates.zipWithIndex.foreach{ case (udf, aggIndex) =>
       aggBufferFieldNames(aggIndex) = udf match {
-        case _: TableAggregateFunction[_, _] =>
+        case _: AggregateFunction[_, _] =>
           Array(aggNames(aggIndex))
         case agf: DeclarativeAggregateFunction =>
           agf.aggBufferAttributes.map { attr =>

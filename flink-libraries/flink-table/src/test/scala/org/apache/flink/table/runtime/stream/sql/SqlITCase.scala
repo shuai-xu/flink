@@ -26,8 +26,6 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.utils.{Func15, SplitUDF}
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit._

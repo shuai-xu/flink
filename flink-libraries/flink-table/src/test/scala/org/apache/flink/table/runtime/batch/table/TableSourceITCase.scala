@@ -24,7 +24,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.util.{TestFilterableTableSource, TestPartitionableTableSource}
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Assert.assertTrue

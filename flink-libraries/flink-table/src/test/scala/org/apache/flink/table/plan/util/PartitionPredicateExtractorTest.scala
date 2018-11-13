@@ -19,9 +19,9 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.{Expression, ResolvedFieldReference, UnresolvedFieldReference}
 import org.apache.flink.table.plan.util.PartitionPredicateExtractor.extractPartitionPredicates
-import org.apache.flink.table.types.DataTypes
 import org.junit.Assert._
 import org.junit.Test
 

@@ -32,9 +32,9 @@ import org.apache.flink.streaming.runtime.tasks.StreamMockEnvironment;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.TwoInputStreamTaskTestHarness;
 import org.apache.flink.streaming.util.TestHarnessUtil;
+import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.types.BaseRowType;
-import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.typeutils.TypeUtils;
 

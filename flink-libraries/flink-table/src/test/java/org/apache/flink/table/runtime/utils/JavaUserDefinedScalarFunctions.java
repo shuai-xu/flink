@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.runtime.utils;
 
-import org.apache.flink.table.functions.ScalarFunction;
+import org.apache.flink.table.api.functions.ScalarFunction;
 
 import java.util.Arrays;
 

@@ -28,8 +28,8 @@ import org.apache.flink.streaming.connectors.elasticsearch.ActionRequestFailureH
 import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchSinkBase;
 import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchUpsertTableSinkBase;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.types.Row;
 
 import org.apache.http.HttpHost;

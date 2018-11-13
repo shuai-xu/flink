@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -40,7 +41,6 @@ import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{ExecResourceUtil, ResettableExternalBuffer}
 

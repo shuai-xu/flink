@@ -17,10 +17,11 @@
  */
 package org.apache.flink.table.runtime.collector
 
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.util.Collector
 
 /**
-  * The basic implementation of collector for [[org.apache.flink.table.functions.TableFunction]].
+  * The basic implementation of collector for [[TableFunction]].
   */
 abstract class TableFunctionCollector[T] extends Collector[T] {
 

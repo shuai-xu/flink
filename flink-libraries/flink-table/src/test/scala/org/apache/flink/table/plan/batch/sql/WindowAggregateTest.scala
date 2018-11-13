@@ -22,12 +22,12 @@ import java.sql.Timestamp
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sources.BatchTableSource
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}

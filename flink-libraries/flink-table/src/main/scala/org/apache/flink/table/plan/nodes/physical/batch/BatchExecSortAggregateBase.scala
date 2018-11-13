@@ -24,15 +24,15 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
-import org.apache.flink.table.functions.{UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 
 abstract class BatchExecSortAggregateBase(
     cluster: RelOptCluster,
@@ -93,7 +93,7 @@ abstract class BatchExecSortAggregateBase(
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
 
     // register udaggs
-    aggCallToAggFunction.map(_._2).filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+    aggCallToAggFunction.map(_._2).filter(a => a.isInstanceOf[AggregateFunction[_, _]])
         .map(a => ctx.addReusableFunction(a))
 
     val lastKeyTerm = "lastKey"

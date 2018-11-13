@@ -23,17 +23,17 @@ import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.sql.fun.SqlTrimFunction.Flag.{BOTH, LEADING, TRAILING}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, MapType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.calls.CallGenerator.{
   generateCallIfArgsNotNull, generateCallIfArgsNullable, generateReturnStringCallIfArgsNotNull}
 import org.apache.flink.table.codegen.calls.ScalarOperators.generateNot
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.dataformat.BinaryMap
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
 import org.apache.flink.table.runtime.functions.{BuildInScalarFunctions, ScalarFunctions}
-import org.apache.flink.table.types.{DataTypes, InternalType, MapType}
 
 /**
   * Code generator for call with string parameters or return value.

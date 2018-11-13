@@ -22,9 +22,9 @@ import java.util
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSourceSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Assert.assertEquals

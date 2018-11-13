@@ -28,15 +28,14 @@ import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.sql.validate.{SqlUserDefinedTableFunction, SqlUserDefinedTableMacro}
 import org.apache.calcite.util.NlsString
-import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BinaryString
-import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.schema.FlinkTableFunction
 import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.utils.TableSqlFunction._
-import org.apache.flink.table.types.DataType
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

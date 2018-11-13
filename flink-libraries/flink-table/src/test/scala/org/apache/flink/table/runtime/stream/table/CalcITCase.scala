@@ -20,11 +20,11 @@ package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, RichFunc1, RichFunc2}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
 import org.junit.Assert._

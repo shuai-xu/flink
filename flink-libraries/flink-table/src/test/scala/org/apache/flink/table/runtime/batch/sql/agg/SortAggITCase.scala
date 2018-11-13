@@ -24,14 +24,14 @@ import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.Types
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.batch.sql.MyPojo
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.functions.aggregate.{CountAccumulator, CountAggFunction, IntSumAggFunction}
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMergeAndReset
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Test
 

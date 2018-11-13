@@ -20,8 +20,8 @@ package org.apache.flink.table.plan.rules.logical
 import java.util.Random
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.runner.RunWith

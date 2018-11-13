@@ -24,15 +24,15 @@ import java.util
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.types.{DataType, DataTypes, IntType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, IntType}
+import org.apache.flink.table.api._
 import org.apache.flink.types.Row
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.{Proctime, ResolvedFieldReference}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.functions.TableFunction
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.mockito.Mockito

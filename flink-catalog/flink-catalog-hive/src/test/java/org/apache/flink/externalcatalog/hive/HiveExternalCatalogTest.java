@@ -19,18 +19,18 @@
 package org.apache.flink.externalcatalog.hive;
 
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DateType;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.IntType;
+import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.api.types.TimeType;
+import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.CrudExternalCatalog;
 import org.apache.flink.table.catalog.ExternalCatalogTable;
 import org.apache.flink.table.catalog.ExternalCatalogTablePartition;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DateType;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.IntType;
-import org.apache.flink.table.types.InternalType;
-import org.apache.flink.table.types.TimeType;
-import org.apache.flink.table.types.TimestampType;
 import org.apache.flink.util.FileUtils;
 
 import org.apache.calcite.avatica.util.DateTimeUtils;
@@ -69,8 +69,8 @@ import java.util.Map;
 
 import scala.Some;
 
-import static org.apache.flink.table.types.DataTypes.INT;
-import static org.apache.flink.table.types.DataTypes.STRING;
+import static org.apache.flink.table.api.types.DataTypes.INT;
+import static org.apache.flink.table.api.types.DataTypes.STRING;
 
 
 /**

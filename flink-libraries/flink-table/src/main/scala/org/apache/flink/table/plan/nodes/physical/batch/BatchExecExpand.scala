@@ -19,13 +19,13 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExpandCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.util.ExpandUtil
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}

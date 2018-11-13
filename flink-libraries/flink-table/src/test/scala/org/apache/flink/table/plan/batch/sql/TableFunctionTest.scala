@@ -20,9 +20,9 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.calcite.tools.ValidationException
 import org.apache.commons.lang3.StringUtils
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.TableFunction
-import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.util._
 import org.junit.{Before, Test}
 

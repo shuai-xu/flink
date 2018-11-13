@@ -35,8 +35,8 @@ import org.apache.calcite.sql.fun.{SqlCountAggFunction, SqlMinMaxAggFunction, Sq
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.sql.validate.SqlMonotonicity._
 import org.apache.calcite.util.{ImmutableIntList, Util}
+import org.apache.flink.table.api.functions.Monotonicity
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.Monotonicity
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity

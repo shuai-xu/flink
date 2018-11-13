@@ -35,6 +35,7 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -53,9 +54,8 @@ import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchTableSource, _}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil}
+import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil, RowConverters}
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.util.{AbstractID, Preconditions}
 
@@ -153,6 +153,11 @@ class BatchTableEnvironment(
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
   }
 
+  /**
+    * Generate a [[StreamGraph]] from this table environment, this will also clear the internal
+    * info of [[RunningUnitKeeper]], sink LogicalNodes and [[StreamTransformation]]s.
+    * @return A [[StreamGraph]] describing the whole job.
+    */
   def generateStreamGraph(): StreamGraph = {
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
     ruKeeper.setScheduleConfig(context)
@@ -219,7 +224,7 @@ class BatchTableEnvironment(
     streamEnv.getConfig.setGlobalJobParameters(parameters)
   }
 
-  override def writeToSink[T](
+  private[flink] override def writeToSink[T](
       table: Table,
       sink: TableSink[T],
       sinkName: String): Unit = {
@@ -247,7 +252,7 @@ class BatchTableEnvironment(
     }
   }
 
-  override def compile(): Seq[LogicalNodeBlock] = {
+  private[flink] override def compile(): Seq[LogicalNodeBlock] = {
     if (config.getSubsectionOptimization) {
       if (sinkNodes.isEmpty) {
         throw new TableException("No table sinks have been created yet. " +
@@ -485,7 +490,7 @@ class BatchTableEnvironment(
    * @tparam A The type of the resulting [[DataStream]].
    * @return The [[DataStream]] that corresponds to the translated [[Table]].
    */
-  def translate[A](
+  protected def translate[A](
       table: Table,
       resultType: DataType,
       sink: TableSink[_],
@@ -561,7 +566,8 @@ class BatchTableEnvironment(
     withChangeFlag: Boolean,
     resultType: DataType): StreamTransformation[OUT] = {
 
-    val (converterOperator, outputTypeInfo) = generateRowConverterOperator[IN, OUT](
+    val (converterOperator, outputTypeInfo) = RowConverters.generateRowConverterOperator[IN, OUT](
+      config,
       CodeGeneratorContext(config, supportReference = true),
       physicalTypeInfo,
       relType,
@@ -909,24 +915,6 @@ class BatchTableEnvironment(
   }
 
   def explain(table: Table): String = explain(table: Table, extended = false)
-
-  /**
-    * Explain ast tree nodes of table and the logical plan after optimization.
-    * @param table table to explain for
-    * @return string presentation of of explaining
-    */
-  @VisibleForTesting
-  def explainLogical(table: Table): String = {
-    val ast = table.getRelNode
-    val optimizedPlan = optimize(ast)
-    s"== Abstract Syntax Tree ==" +
-        System.lineSeparator +
-        s"${FlinkRelOptUtil.toString(ast)}" +
-        System.lineSeparator +
-        s"== Optimized Logical Plan ==" +
-        System.lineSeparator +
-        s"${FlinkRelOptUtil.toString(optimizedPlan)}"
-  }
 
   /**
    * Explain the whole plan only when subsection optimization is supported, and returns the AST

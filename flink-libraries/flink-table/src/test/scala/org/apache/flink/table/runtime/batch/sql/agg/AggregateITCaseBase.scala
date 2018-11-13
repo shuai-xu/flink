@@ -22,11 +22,11 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableException, Types}
+import org.apache.flink.table.api.types.DecimalType
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.{binaryRow, row}
 import org.apache.flink.table.runtime.batch.sql.TestData._
-import org.apache.flink.table.types.DecimalType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}

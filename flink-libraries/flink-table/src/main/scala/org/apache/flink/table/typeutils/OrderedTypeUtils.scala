@@ -22,14 +22,15 @@ import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.typeinfo.{TypeInformation, _}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO
-import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.Order
-import SortedMapViewTypeInfo.{ByteArrayComparator, ComparableComparator}
-import org.apache.flink.table.types.{DataTypes, _}
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.types.{DataTypes, _}
 import org.apache.flink.table.typeutils.ordered.OrderedBasicTypeInfo._
 import org.apache.flink.table.typeutils.ordered.{OrderedBigDecTypeInfo, OrderedDecTypeInfo}
 import org.apache.flink.table.typeutils.ordered.OrderedPrimitiveArrayTypeInfo._
 import org.apache.flink.table.typeutils.ordered.OrderedSqlTimeTypeInfo._
+
+import SortedMapViewTypeInfo.{ByteArrayComparator, ComparableComparator}
 
 object OrderedTypeUtils {
 

@@ -20,9 +20,9 @@ package org.apache.flink.table.functions.sql.internal
 
 import org.apache.calcite.sql.`type`.OperandTypes
 import org.apache.calcite.sql.{SqlFunction, SqlFunctionCategory, SqlKind, SqlSyntax}
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.AggSqlFunction
-import org.apache.flink.table.types.InternalType
 
 class SqlThrowExceptionFunction(
     tp: InternalType,

@@ -34,17 +34,17 @@ import org.apache.flink.api.common.functions.util.RuntimeUDFContext
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser, If, IsNull, Literal}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecScan}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.createToInternalConverter
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.{After, Before}

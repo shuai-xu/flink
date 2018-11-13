@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.codegen.calls
 
-import org.apache.flink.table.codegen.CodeGenUtils.{newName, primitiveTypeTermForType}
+import org.apache.flink.table.api.types.InternalType
+import org.apache.flink.table.codegen.CodeGenUtils.primitiveTypeTermForType
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.types.InternalType
 
 /**
   * Generates IF function call.

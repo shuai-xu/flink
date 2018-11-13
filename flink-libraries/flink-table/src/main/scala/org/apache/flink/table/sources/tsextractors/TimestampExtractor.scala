@@ -19,7 +19,7 @@
 package org.apache.flink.table.sources.tsextractors
 
 import org.apache.flink.table.sources.FieldComputer
-import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 
 /**
   * Provides the an expression to extract the timestamp for a rowtime attribute.

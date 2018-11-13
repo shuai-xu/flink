@@ -24,13 +24,13 @@ import org.apache.calcite.rex.RexInputRef
 import org.apache.calcite.sql.fun.SqlStdOperatorTable.{GREATER_THAN, GREATER_THAN_OR_EQUAL, MINUS}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newName}
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.codegen.CodeGeneratorContext.BASE_ROW
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
-import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeUtils
 
 import scala.collection.mutable

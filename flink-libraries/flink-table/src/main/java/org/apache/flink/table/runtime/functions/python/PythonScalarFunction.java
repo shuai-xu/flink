@@ -18,11 +18,11 @@
 
 package org.apache.flink.table.runtime.functions.python;
 
+import org.apache.flink.table.api.functions.FunctionContext;
+import org.apache.flink.table.api.functions.ScalarFunction;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.errorcode.TableErrors;
-import org.apache.flink.table.functions.FunctionContext;
-import org.apache.flink.table.functions.ScalarFunction;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.InternalType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

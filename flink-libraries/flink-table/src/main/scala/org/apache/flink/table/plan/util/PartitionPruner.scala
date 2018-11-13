@@ -27,13 +27,13 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.functions.util.ListCollector
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
 import org.apache.flink.table.sources.Partition
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions
 

@@ -27,11 +27,11 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, TableException}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
 import java.lang.{Boolean => JBoolean}
 import java.lang.{Integer => JInteger}

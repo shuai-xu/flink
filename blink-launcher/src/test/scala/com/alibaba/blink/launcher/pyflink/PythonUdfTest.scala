@@ -24,9 +24,10 @@ import java.nio.file.Files
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
@@ -36,7 +37,6 @@ import java.util.Properties
 import com.alibaba.blink.launcher.{JobLauncher, TestUtil}
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.table.runtime.functions.python.PythonScalarFunction
-import org.apache.flink.table.types.DataTypes
 
 class PythonUdfTest {
 

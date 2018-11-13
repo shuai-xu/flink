@@ -21,11 +21,11 @@ package org.apache.flink.table.runtime.batch.table
 import TestData._
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.{Rank, RowNumber}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTime, UTCTimestamp}
 import org.apache.flink.types.Row
 import org.junit.{Assert, Before, Test}
@@ -2523,7 +2523,7 @@ class OverWindowAggITCase extends QueryTest {
   private[OverWindowAggITCase] def checkResult(table: Table, expected: Seq[Row]): Unit = {
     val results = table.collect()
     checkSame(expected, results).foreach { results =>
-      val plan = tEnv.explainLogical(table)
+      val plan = explainLogical(table)
       Assert.fail(
         s"""
            |Results do not match:

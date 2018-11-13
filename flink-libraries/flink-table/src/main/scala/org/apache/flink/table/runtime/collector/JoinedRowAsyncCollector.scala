@@ -23,8 +23,8 @@ import java.util.Collections
 import java.util.concurrent.BlockingQueue
 
 import org.apache.flink.streaming.api.functions.async.ResultFuture
+import org.apache.flink.table.api.types.{BaseRowType, InternalType}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
-import org.apache.flink.table.types.{BaseRowType, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
 
 /**

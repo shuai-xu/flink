@@ -18,7 +18,7 @@
 package org.apache.flink.table.dataformat;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.table.types.GenericType;
+import org.apache.flink.table.api.types.GenericType;
 
 /**
  * Join two row to one row.

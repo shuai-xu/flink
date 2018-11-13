@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -37,7 +38,6 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil
 import org.apache.flink.table.util.ExecResourceUtil.InferMode

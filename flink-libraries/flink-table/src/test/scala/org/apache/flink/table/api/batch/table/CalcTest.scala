@@ -20,10 +20,10 @@ package org.apache.flink.table.api.batch.table
 
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.table.api.batch.table.CalcTest.{MyHashCode, TestCaseClass, WC, giveMeCaseClass}
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.expressions.Upper
-import org.apache.flink.table.functions.ScalarFunction
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Test
 

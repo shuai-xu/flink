@@ -25,7 +25,6 @@ import _root_.java.util.concurrent.atomic.AtomicInteger
 import org.apache.calcite.config.Lex
 import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.logical.LogicalTableModify
 import org.apache.calcite.schema
 import org.apache.calcite.schema.SchemaPlus
@@ -39,46 +38,35 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.flink.annotation.Internal
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.time.Time
-import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
-import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.{RowTypeInfo, _}
-import org.apache.flink.api.scala.createTuple2TypeInformation
-import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.typeutils._
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaStreamExecEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite._
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
-import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.connector.DefinedDistribution
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
-import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
-import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.types._
-import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{BaseRowUtil, PartitionUtils}
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.util.PartitionUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
-import org.apache.flink.types.Row
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
@@ -179,7 +167,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * see [[LogicalNodeBlockPlanBuilder]] for details.
     * @return A sequence of LogicalNodeBlock
     */
-  def compile(): Seq[LogicalNodeBlock] = ???
+  private[flink] def compile(): Seq[LogicalNodeBlock] = ???
 
   /**
     * Returns the operator table for this environment including a custom Calcite configuration.
@@ -246,7 +234,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param name            The name under which the externalCatalog will be registered
     * @param externalCatalog The externalCatalog to register
     */
-  def registerExternalCatalogInternal(
+  protected def registerExternalCatalogInternal(
       name: String, externalCatalog: ExternalCatalog, isStreaming: Boolean): Unit = {
     if (rootSchema.getSubSchema(name) != null) {
       throw new ExternalCatalogAlreadyExistException(name)
@@ -1219,12 +1207,8 @@ abstract class TableEnvironment(val config: TableConfig) {
       functionName, className, ignoreIfExists)
   }
 
-  protected def getRowType(name: String): RelDataType = {
-    rootSchema.getTable(name).getRowType(typeFactory)
-  }
-
   /** Returns a unique temporary attribute name. */
-  def createUniqueAttributeName(prefix: String): String = {
+  private[flink] def createUniqueAttributeName(prefix: String): String = {
     prefix + attrNameCntr.getAndIncrement()
   }
 
@@ -1265,228 +1249,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   /** Returns the Calcite [[FrameworkConfig]] of this TableEnvironment. */
   private[flink] def getFrameworkConfig: FrameworkConfig = {
     frameworkConfig
-  }
-
-  protected def checkRowConverterValid[OUT](
-      inputTypeInfo: BaseRowTypeInfo[_],
-      relType: RelDataType,
-      requestedTypeInfo: TypeInformation[OUT]) : Unit = {
-
-    // validate that at least the field types of physical and logical type match
-    // we do that here to make sure that plan translation was correct
-    val types = relType.getFieldList map {f => FlinkTypeFactory.toTypeInfo(f.getType)}
-    if (inputTypeInfo.getFieldTypes.toList != types) {
-      throw TableException(
-        s"The field types of physical and logical row types do not match. " +
-          s"Physical type is [$relType], Logical type is [$inputTypeInfo]. " +
-          s"This is a bug and should not happen. Please file an issue.")
-    }
-
-    val fieldTypes = inputTypeInfo.getFieldTypes
-    val fieldNames = inputTypeInfo.getFieldNames
-
-    // check for valid type info
-    if (!requestedTypeInfo.isInstanceOf[GenericTypeInfo[_]] &&
-      requestedTypeInfo.getArity != fieldTypes.length) {
-      throw new TableException(
-        s"Arity [${fieldTypes.length}] of result [$fieldTypes] does not match " +
-          s"the number[${requestedTypeInfo.getArity}] of requested type [$requestedTypeInfo].")
-    }
-
-    // check requested types
-
-    def validateFieldType(fieldType: TypeInformation[_]): Unit = fieldType match {
-      case _: TimeIndicatorTypeInfo =>
-        throw new TableException("The time indicator type is an internal type only.")
-      case _ => // ok
-    }
-
-    requestedTypeInfo match {
-      // POJO type requested
-      case pt: PojoTypeInfo[_] =>
-        fieldNames.zip(fieldTypes) foreach {
-          case (fName, fType) =>
-            val pojoIdx = pt.getFieldIndex(fName)
-            if (pojoIdx < 0) {
-              throw new TableException(s"POJO does not define field name: $fName")
-            }
-            val requestedTypeInfo = pt.getTypeAt(pojoIdx)
-            validateFieldType(requestedTypeInfo)
-            if (fType != requestedTypeInfo) {
-              throw new TableException(s"Result field '$fName' does not match requested type. " +
-                s"Requested: $requestedTypeInfo; Actual: $fType")
-            }
-        }
-
-      // Tuple/Case class/Row type requested
-      case tt: TupleTypeInfoBase[_] =>
-        fieldTypes.zipWithIndex foreach {
-          case (fieldTypeInfo: GenericTypeInfo[_], i) =>
-            val requestedTypeInfo = tt.getTypeAt(i)
-            if (!requestedTypeInfo.isInstanceOf[GenericTypeInfo[Object]]) {
-              throw new TableException(
-                s"Result field '${fieldNames(i)}' does not match requested type. " +
-                  s"Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
-            }
-          case (fieldTypeInfo, i) =>
-            val requestedTypeInfo = tt.getTypeAt(i)
-            validateFieldType(requestedTypeInfo)
-            if (fieldTypeInfo != requestedTypeInfo) {
-              val fieldNames = tt.getFieldNames
-              throw new TableException(s"Result field '${fieldNames(i)}' does not match requested" +
-                s" type. Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
-            }
-        }
-
-      //The result type is BaseRow which is the same to input type, so here don't convert.
-      case _: BaseRowTypeInfo[_] =>
-
-      // Atomic type requested
-      case at: AtomicType[_] =>
-        if (fieldTypes.size != 1) {
-          throw new TableException(s"Requested result type is an atomic type but " +
-            s"result[$fieldTypes] has more or less than a single field.")
-        }
-        val requestedTypeInfo = fieldTypes.head
-        validateFieldType(requestedTypeInfo)
-        if (requestedTypeInfo != at) {
-          throw new TableException(s"Result field does not match requested type. " +
-            s"Requested: $at; Actual: $requestedTypeInfo")
-        }
-
-      case _ =>
-        throw new TableException(s"Unsupported result type: $requestedTypeInfo")
-    }
-  }
-
-  /** Code gen a operator to convert internal type rows to external type. **/
-  protected def generateRowConverterOperator[IN, OUT](
-      ctx: CodeGeneratorContext,
-      inputTypeInfo: BaseRowTypeInfo[_],
-      relType: RelDataType,
-      operatorName: String,
-      rowtimeField: Option[Int],
-      withChangeFlag: Boolean,
-      dataType: DataType)
-    : (Option[OneInputSubstituteStreamOperator[IN, OUT]], TypeInformation[OUT])  = {
-
-    val resultType = DataTypes.toTypeInfo(dataType).asInstanceOf[TypeInformation[OUT]]
-
-    //row needs no conversion
-    if (resultType.isInstanceOf[BaseRowTypeInfo[_]]
-      || (resultType.isInstanceOf[GenericTypeInfo[_]]
-      && resultType.getTypeClass == classOf[BaseRow])) {
-      return (None, resultType)
-    }
-
-    val requestedTypeInfo = if (withChangeFlag) {
-      resultType match {
-        // Scala tuple
-        case t: CaseClassTypeInfo[_]
-          if t.getTypeClass == classOf[(_, _)] && t.getTypeAt(0) == Types.BOOLEAN =>
-          t.getTypeAt[Any](1)
-        // Java tuple
-        case t: TupleTypeInfo[_]
-          if t.getTypeClass == classOf[JTuple2[_, _]] && t.getTypeAt(0) == Types.BOOLEAN =>
-          t.getTypeAt[Any](1)
-        case _ => throw new TableException(
-          "Don't support " + resultType + " conversion for the retract sink")
-      }
-    } else {
-      resultType
-    }
-
-    /**
-      * The tpe may been inferred by invoking [[TypeExtractor.createTypeInfo]] based the class of
-      * the resulting type. For example, converts the given [[Table]] into an append [[DataStream]].
-      * If the class is Row, then the return type only is [[GenericTypeInfo[Row]]. So it should
-      * convert to the [[RowTypeInfo]] in order to better serialize performance.
-      *
-      */
-    val convertOutputType = requestedTypeInfo match {
-      case gt: GenericTypeInfo[Row] if gt.getTypeClass == classOf[Row] =>
-        new RowTypeInfo(
-          inputTypeInfo.asInstanceOf[BaseRowTypeInfo[_]].getFieldTypes,
-          inputTypeInfo.asInstanceOf[BaseRowTypeInfo[_]].getFieldNames)
-      case _ => requestedTypeInfo
-    }
-
-    checkRowConverterValid(inputTypeInfo, relType, convertOutputType)
-
-    //update out put type info
-    val outputTypeInfo = if (withChangeFlag) {
-      resultType match {
-        // Scala tuple
-        case t: CaseClassTypeInfo[_]
-          if t.getTypeClass == classOf[(_, _)] && t.getTypeAt(0) == Types.BOOLEAN =>
-          createTuple2TypeInformation(t.getTypeAt(0), convertOutputType)
-        // Java tuple
-        case t: TupleTypeInfo[_]
-          if t.getTypeClass == classOf[JTuple2[_, _]] && t.getTypeAt(0) == Types.BOOLEAN =>
-          new TupleTypeInfo(t.getTypeAt(0), convertOutputType)
-      }
-    } else {
-      convertOutputType
-    }
-
-    val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
-    var afterIndexModify = inputTerm
-    val fieldIndexProcessCode =
-      if (getCompositeTypes(convertOutputType) sameElements inputTypeInfo.getFieldTypes) {
-        ""
-      } else {
-        // field index change (pojo)
-        val mapping = convertOutputType match {
-          case ct: CompositeType[_] => ct.getFieldNames.map(inputTypeInfo.getFieldIndex)
-          case _ => Array(0)
-        }
-
-        val resultGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck).bindInput(
-              DataTypes.internal(inputTypeInfo),
-              inputTerm,
-              inputFieldMapping = Option(mapping))
-        val outputBaseRowType = new BaseRowTypeInfo(
-          classOf[GenericRow], getCompositeTypes(convertOutputType): _*)
-        val conversion = resultGenerator.generateConverterResultExpression(
-          DataTypes.internal(outputBaseRowType).asInstanceOf[BaseRowType])
-        afterIndexModify = CodeGenUtils.newName("afterIndexModify")
-        s"""
-           |${conversion.code}
-           |${classOf[BaseRow].getCanonicalName} $afterIndexModify = ${conversion.resultTerm};
-           |""".stripMargin
-      }
-
-    val retractProcessCode = if (!withChangeFlag) {
-      generatorCollect(genToExternal(ctx, DataTypes.of(outputTypeInfo), afterIndexModify))
-    } else {
-      val flagResultTerm =
-        s"${classOf[BaseRowUtil].getCanonicalName}.isAccumulateMsg($afterIndexModify)"
-      val resultTerm = CodeGenUtils.newName("result")
-      val genericRowField = classOf[GenericRow].getCanonicalName
-      s"""
-          |$genericRowField $resultTerm = new $genericRowField(2);
-          |$resultTerm.update(0, $flagResultTerm);
-          |$resultTerm.update(1, $afterIndexModify);
-          |${generatorCollect(genToExternal(ctx, DataTypes.of(outputTypeInfo), resultTerm))}
-          """.stripMargin
-    }
-
-    val endInputCode = ""
-    val generated = OperatorCodeGenerator.generateOneInputStreamOperator[BaseRow, OUT](
-      ctx,
-      operatorName,
-      s"""
-         |$fieldIndexProcessCode
-         |$retractProcessCode
-         |""".stripMargin,
-      endInputCode,
-      DataTypes.internal(inputTypeInfo),
-      config)
-    val substituteStreamOperator = new OneInputSubstituteStreamOperator[IN, OUT](
-      generated.name,
-      generated.code,
-      references = ctx.references)
-    (Some(substituteStreamOperator), outputTypeInfo.asInstanceOf[TypeInformation[OUT]])
   }
 
   def createPartitionTransformation(

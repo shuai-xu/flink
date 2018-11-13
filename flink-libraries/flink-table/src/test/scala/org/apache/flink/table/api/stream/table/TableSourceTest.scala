@@ -22,12 +22,12 @@ import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
-import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamTestData}
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util._
 import org.apache.flink.types.Row
 import org.junit.Test

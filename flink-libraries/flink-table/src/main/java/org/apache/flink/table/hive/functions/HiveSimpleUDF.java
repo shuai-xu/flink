@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.hive.functions;
 
-import org.apache.flink.table.functions.FunctionContext;
-import org.apache.flink.table.functions.ScalarFunction;
+import org.apache.flink.table.api.functions.FunctionContext;
+import org.apache.flink.table.api.functions.ScalarFunction;
 
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.UDF;

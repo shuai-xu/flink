@@ -28,6 +28,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableSchema, _}
 import org.apache.flink.table.functions.aggregate.{CountAggFunction, IntAvgAggFunction, IntSumAggFunction}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
@@ -35,7 +36,6 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.sources.BatchTableSource
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}

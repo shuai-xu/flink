@@ -19,9 +19,9 @@
 package org.apache.flink.table.examples
 
 import java.util.TimeZone
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.sinks.UpsertCsvTableSink
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.table.types.{DataType, DataTypes}
 
 class UpsertCsvSQLTableSink(
     path: String,

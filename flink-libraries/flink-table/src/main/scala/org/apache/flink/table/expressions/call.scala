@@ -30,13 +30,13 @@ import org.apache.calcite.sql.`type`.OrdinalReturnTypeInference
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala.{CURRENT_ROW, UNBOUNDED_ROW}
 import org.apache.flink.table.calcite.{FlinkPlannerImpl, FlinkTypeFactory}
-import org.apache.flink.table.functions._
 import org.apache.flink.table.functions.sql.internal.SqlThrowExceptionFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.logical.{LogicalExprVisitor, LogicalNode, LogicalTableFunctionCall}
-import org.apache.flink.table.types._
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.typeutils.TypeCheckUtils.isTimeInterval
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 

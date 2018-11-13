@@ -23,9 +23,9 @@ import org.apache.flink.table.api.dataview.ListView;
 import org.apache.flink.table.api.dataview.MapView;
 import org.apache.flink.table.api.dataview.Order;
 import org.apache.flink.table.api.dataview.SortedMapView;
-import org.apache.flink.table.functions.AggregateFunction;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.api.functions.AggregateFunction;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 
 import java.util.Iterator;
 

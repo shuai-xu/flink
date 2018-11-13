@@ -25,11 +25,11 @@ import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector

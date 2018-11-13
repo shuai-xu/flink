@@ -24,6 +24,7 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
@@ -33,7 +34,6 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, S
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToInternal
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
-import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._

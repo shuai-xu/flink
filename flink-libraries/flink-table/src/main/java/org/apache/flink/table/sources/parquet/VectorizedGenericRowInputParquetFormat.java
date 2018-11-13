@@ -20,10 +20,10 @@ package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.types.Row;

@@ -31,10 +31,10 @@ import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaExecEnv}
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
 import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableEnvironment}
-import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -71,6 +71,23 @@ class QueryTest {
 
   def getConfiguration: Configuration = {
     new Configuration()
+  }
+
+  /**
+    * Explain ast tree nodes of table and the logical plan after optimization.
+    * @param table table to explain for
+    * @return string presentation of of explaining
+    */
+  def explainLogical(table: Table): String = {
+    val ast = table.getRelNode
+    val optimizedPlan = tEnv.optimize(ast)
+    s"== Abstract Syntax Tree ==" +
+      System.lineSeparator +
+      s"${FlinkRelOptUtil.toString(ast)}" +
+      System.lineSeparator +
+      s"== Optimized Logical Plan ==" +
+      System.lineSeparator +
+      s"${FlinkRelOptUtil.toString(optimizedPlan)}"
   }
 
   protected def generatorTestEnv: StreamExecutionEnvironment = {
@@ -146,7 +163,7 @@ class QueryTest {
     val result = executeQuery(table)
 
     checkFunc(result).foreach { results =>
-      val plan = tEnv.explainLogical(table)
+      val plan = explainLogical(table)
       Assert.fail(
         s"""
            |Results do not match for query:

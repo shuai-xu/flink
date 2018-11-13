@@ -22,8 +22,8 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.formats.json.JsonRowSerializationSchema;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.types.Row;
 
 import java.util.Properties;

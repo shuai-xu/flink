@@ -20,7 +20,7 @@ package org.apache.flink.table.sources.tsextractors
 
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.types._
+import org.apache.flink.table.api.types._
 
 /**
   * Converts an existing [[Long]], [[java.sql.Timestamp]], or

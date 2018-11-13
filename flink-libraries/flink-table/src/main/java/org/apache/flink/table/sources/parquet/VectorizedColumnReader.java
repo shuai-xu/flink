@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.sources.parquet;
 
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.sources.vector.BooleanColumnVector;
 import org.apache.flink.table.sources.vector.ByteColumnVector;
@@ -29,9 +32,6 @@ import org.apache.flink.table.sources.vector.IntegerColumnVector;
 import org.apache.flink.table.sources.vector.LongColumnVector;
 import org.apache.flink.table.sources.vector.ShortColumnVector;
 import org.apache.flink.table.sources.vector.VectorizedColumnBatch;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.InternalType;
 
 import org.apache.parquet.bytes.BytesUtils;
 import org.apache.parquet.column.ColumnDescriptor;

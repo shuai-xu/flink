@@ -23,8 +23,8 @@ import java.util.Collections
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.schema.{FunctionParameter, TableFunction}
-import org.apache.flink.table.functions.{TableFunction => UserDefinedTableFunction}
-import org.apache.flink.table.types.DataType
+import org.apache.flink.table.api.functions
+import org.apache.flink.table.api.types.DataType
 
 /**
   * A [[FlinkTableFunction]] is an implementation of  [[org.apache.calcite.schema.TableFunction]].
@@ -34,7 +34,7 @@ import org.apache.flink.table.types.DataType
   * @param tableFunction The Table Function instance
   */
 abstract class FlinkTableFunction(
-    tableFunction: UserDefinedTableFunction[_])
+    tableFunction: functions.TableFunction[_])
   extends TableFunction {
 
   override def getElementType(arguments: util.List[AnyRef]): Type = classOf[Array[Object]]

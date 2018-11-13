@@ -22,8 +22,8 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 import org.junit.{Assert, Test}
 

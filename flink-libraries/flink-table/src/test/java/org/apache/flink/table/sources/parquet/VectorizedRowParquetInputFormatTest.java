@@ -19,11 +19,11 @@
 package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.core.fs.FileInputSplit;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.dataformat.GenericRow;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.InternalType;
 
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.After;

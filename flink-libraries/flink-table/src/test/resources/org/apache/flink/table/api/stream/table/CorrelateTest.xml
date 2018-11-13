@@ -19,7 +19,7 @@ limitations under the License.
   <TestCase name="testCrossJoin">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c472a1cc4fb0cfe22e9ceb3bc($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -27,7 +27,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c4
   <TestCase name="testCrossJoinWithOverloading">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c472a1cc4fb0cfe22e9ceb3bc($2, '$')], correlate=[table(TableFunc1(c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2, '$')], correlate=[table(TableFunc1(c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -35,7 +35,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c4
   <TestCase name="testCustomType">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc2$eb2158e269aaf807cdc65015959bc826(org$apache$flink$table$expressions$utils$Func13$997a383e8f12ea31aa116ceb5709db11($2))], correlate=[table(TableFunc2(Func13(c)))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc2$8e927a9c97db94bea93945e6e94ebcee(org$apache$flink$table$expressions$utils$Func13$fd661b4d9639b59ebba40f3c5720ba8f($2))], correlate=[table(TableFunc2(Func13(c)))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -43,7 +43,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc2$eb2158e26
   <TestCase name="testHierarchyType">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$HierarchyTableFunction$7fc9e8d346268ea3062f9a95701e9a9f($2)], correlate=[table(HierarchyTableFunction(c))], select=[a,b,c,name,adult,len], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$HierarchyTableFunction$5fa2658c061bd5b419a3c4c22ac8daf8($2)], correlate=[table(HierarchyTableFunction(c))], select=[a,b,c,name,adult,len], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -51,7 +51,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$HierarchyTableFuncti
   <TestCase name="testDynamicType">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$339b2b03026110706bf58851b48f5dbc($2, 1)], correlate=[table(UDTFWithDynamicType(c,1))], select=[c,name], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$14d0bac343cb2e35e038ef5dc4df9f9e($2, 1)], correlate=[table(UDTFWithDynamicType(c,1))], select=[c,name], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -59,7 +59,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$
   <TestCase name="testDynamicType1">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$339b2b03026110706bf58851b48f5dbc($2, 2)], correlate=[table(UDTFWithDynamicType(c,2))], select=[c,name,len0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$14d0bac343cb2e35e038ef5dc4df9f9e($2, 2)], correlate=[table(UDTFWithDynamicType(c,2))], select=[c,name,len0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -67,7 +67,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$
   <TestCase name="testDynamicType2">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$339b2b03026110706bf58851b48f5dbc($2, 3)], correlate=[table(UDTFWithDynamicType(c,3))], select=[c,name,len0,len1], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$14d0bac343cb2e35e038ef5dc4df9f9e($2, 3)], correlate=[table(UDTFWithDynamicType(c,3))], select=[c,name,len0,len1], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -75,8 +75,8 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$
   <TestCase name="testDynamicType3">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$339b2b03026110706bf58851b48f5dbc($0, 2)], correlate=[table(UDTFWithDynamicType(c,2))], select=[c,name,len0,len1,name1,len10], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1, VARCHAR(65536) name1, INTEGER len10)], joinType=[INNER])
-  StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$339b2b03026110706bf58851b48f5dbc($2, 3)], correlate=[table(UDTFWithDynamicType(c,3))], select=[c,name,len0,len1], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$14d0bac343cb2e35e038ef5dc4df9f9e($0, 2)], correlate=[table(UDTFWithDynamicType(c,2))], select=[c,name,len0,len1,name1,len10], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1, VARCHAR(65536) name1, INTEGER len10)], joinType=[INNER])
+  StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType$14d0bac343cb2e35e038ef5dc4df9f9e($2, 3)], correlate=[table(UDTFWithDynamicType(c,3))], select=[c,name,len0,len1], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len0, INTEGER len1)], joinType=[INNER])
     StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -90,7 +90,7 @@ StreamExecCalc(select=[col])
       StreamExecCalc(select=[a])
         StreamExecScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[single])
-      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$c0831e491a4c7a3f7a41abc5d52efc62('string')], correlate=[table(UDTFWithDynamicType1('string'))], select=[col], rowType=[RecordType(VARCHAR(65536) col)], joinType=[INNER])
+      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$435d422c56f8efd075ed84d920bb7d26('string')], correlate=[table(UDTFWithDynamicType1('string'))], select=[col], rowType=[RecordType(VARCHAR(65536) col)], joinType=[INNER])
         StreamExecValues(tuples=[[{  }]])
 ]]>
     </Resource>
@@ -104,7 +104,7 @@ StreamExecCalc(select=[col])
       StreamExecCalc(select=[a])
         StreamExecScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[single])
-      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$c0831e491a4c7a3f7a41abc5d52efc62('int')], correlate=[table(UDTFWithDynamicType1('int'))], select=[col], rowType=[RecordType(INTEGER col)], joinType=[INNER])
+      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$435d422c56f8efd075ed84d920bb7d26('int')], correlate=[table(UDTFWithDynamicType1('int'))], select=[col], rowType=[RecordType(INTEGER col)], joinType=[INNER])
         StreamExecValues(tuples=[[{  }]])
 ]]>
     </Resource>
@@ -118,7 +118,7 @@ StreamExecCalc(select=[col])
       StreamExecCalc(select=[a])
         StreamExecScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[single])
-      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$c0831e491a4c7a3f7a41abc5d52efc62('double')], correlate=[table(UDTFWithDynamicType1('double'))], select=[col], rowType=[RecordType(DOUBLE col)], joinType=[INNER])
+      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$435d422c56f8efd075ed84d920bb7d26('double')], correlate=[table(UDTFWithDynamicType1('double'))], select=[col], rowType=[RecordType(DOUBLE col)], joinType=[INNER])
         StreamExecValues(tuples=[[{  }]])
 ]]>
     </Resource>
@@ -132,7 +132,7 @@ StreamExecCalc(select=[col])
       StreamExecCalc(select=[a])
         StreamExecScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[single])
-      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$c0831e491a4c7a3f7a41abc5d52efc62('boolean')], correlate=[table(UDTFWithDynamicType1('boolean'))], select=[col], rowType=[RecordType(BOOLEAN col)], joinType=[INNER])
+      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$435d422c56f8efd075ed84d920bb7d26('boolean')], correlate=[table(UDTFWithDynamicType1('boolean'))], select=[col], rowType=[RecordType(BOOLEAN col)], joinType=[INNER])
         StreamExecValues(tuples=[[{  }]])
 ]]>
     </Resource>
@@ -146,7 +146,7 @@ StreamExecCalc(select=[col])
       StreamExecCalc(select=[a])
         StreamExecScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[single])
-      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$c0831e491a4c7a3f7a41abc5d52efc62('timestamp')], correlate=[table(UDTFWithDynamicType1('timestamp'))], select=[col], rowType=[RecordType(TIMESTAMP(3) col)], joinType=[INNER])
+      StreamExecCorrelate(invocation=[org$apache$flink$table$util$UDTFWithDynamicType1$435d422c56f8efd075ed84d920bb7d26('timestamp')], correlate=[table(UDTFWithDynamicType1('timestamp'))], select=[col], rowType=[RecordType(TIMESTAMP(3) col)], joinType=[INNER])
         StreamExecValues(tuples=[[{  }]])
 ]]>
     </Resource>
@@ -154,7 +154,7 @@ StreamExecCalc(select=[col])
   <TestCase name="testFilter">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc2$eb2158e269aaf807cdc65015959bc826($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc2$8e927a9c97db94bea93945e6e94ebcee($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -162,7 +162,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc2$eb2158e26
   <TestCase name="testLeftOuterJoinWithLiteralTrue">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c472a1cc4fb0cfe22e9ceb3bc($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -170,7 +170,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c4
   <TestCase name="testScalarFunction">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c472a1cc4fb0cfe22e9ceb3bc(SUBSTRING($2, 2, CHAR_LENGTH($2)))], correlate=[table(TableFunc1(SUBSTRING(c, 2, CHAR_LENGTH(c))))], select=[a,b,c,s], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95(SUBSTRING($2, 2, CHAR_LENGTH($2)))], correlate=[table(TableFunc1(SUBSTRING(c, 2, CHAR_LENGTH(c))))], select=[a,b,c,s], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -178,7 +178,7 @@ StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$2f8ae68c4
   <TestCase name="testPojoType">
     <Resource name="plan">
       <![CDATA[
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$PojoTableFunc$e9352767e35de99703157e0a59b5cf30($2)], correlate=[table(PojoTableFunc(c))], select=[a,b,c,age,name], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$PojoTableFunc$a6c1b6ad97ae8429b5a852367e06c192($2)], correlate=[table(PojoTableFunc(c))], select=[a,b,c,age,name], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
   StreamExecScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

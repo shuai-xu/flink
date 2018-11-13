@@ -19,15 +19,15 @@
 package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.Null
-import org.apache.flink.table.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, DataViewTestAgg, WeightedAvg}
 import org.apache.flink.table.runtime.utils.{JavaUserDefinedAggFunctions, StreamTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.Test

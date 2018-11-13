@@ -22,9 +22,9 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.formats.json.JsonRowDeserializationSchema;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.sources.StreamTableSource;
-import org.apache.flink.table.types.DataTypes;
 
 import java.util.Map;
 import java.util.Properties;

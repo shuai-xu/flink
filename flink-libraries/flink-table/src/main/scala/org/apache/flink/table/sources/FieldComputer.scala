@@ -19,8 +19,8 @@
 package org.apache.flink.table.sources
 
 import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.expressions.{Expression, ResolvedFieldReference}
-import org.apache.flink.table.types.InternalType
 
 /**
   * The [[FieldComputer]] interface returns an expression to compute the field of the table schema

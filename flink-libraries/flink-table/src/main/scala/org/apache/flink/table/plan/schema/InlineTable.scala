@@ -19,12 +19,10 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.calcite.schema.Statistic
-import org.apache.calcite.schema.impl.AbstractTable
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 
 abstract class InlineTable(
     val dataType: DataType,

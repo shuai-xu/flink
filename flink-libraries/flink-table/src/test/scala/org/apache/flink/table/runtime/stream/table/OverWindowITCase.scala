@@ -22,11 +22,11 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, CountDistinctWithRetractAndReset, SortedMapTestAgg, WeightedAvg}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedScalarFunctions.JavaFunc0
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeProcessOperator
 import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingAppendSink}
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 import org.junit.Assert._
 import org.junit.runner.RunWith

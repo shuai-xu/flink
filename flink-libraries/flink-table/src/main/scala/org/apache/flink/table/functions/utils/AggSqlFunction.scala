@@ -27,11 +27,11 @@ import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.sql.validate.SqlUserDefinedAggFunction
 import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.functions.utils.AggSqlFunction.{createOperandTypeChecker, createOperandTypeInference, createReturnTypeInference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 
 /**
   * Calcite wrapper for user-defined aggregate functions.

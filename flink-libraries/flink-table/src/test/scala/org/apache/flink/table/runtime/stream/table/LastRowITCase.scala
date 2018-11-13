@@ -31,12 +31,12 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 import org.junit.Test
 import org.junit.Assert.assertEquals

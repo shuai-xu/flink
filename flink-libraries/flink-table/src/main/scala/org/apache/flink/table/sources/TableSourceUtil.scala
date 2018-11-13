@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.sources
 
-import java.sql.Timestamp
-
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptCluster
 import org.apache.calcite.rel.RelNode
@@ -27,11 +25,10 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.logical.LogicalValues
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.table.api.{TableException, ValidationException}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions.{Cast, ResolvedFieldReference}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 
 import scala.collection.JavaConverters._
 

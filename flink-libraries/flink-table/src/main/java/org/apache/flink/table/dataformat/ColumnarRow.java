@@ -21,8 +21,8 @@ package org.apache.flink.table.dataformat;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
+import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.sources.vector.VectorizedColumnBatch;
-import org.apache.flink.table.types.GenericType;
 import org.apache.flink.table.util.StringUtf8Utils;
 
 /**

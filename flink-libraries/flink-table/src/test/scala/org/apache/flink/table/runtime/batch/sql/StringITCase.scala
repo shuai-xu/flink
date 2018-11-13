@@ -21,8 +21,8 @@ package org.apache.flink.table.runtime.batch.sql
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.RowsCollectTableSink

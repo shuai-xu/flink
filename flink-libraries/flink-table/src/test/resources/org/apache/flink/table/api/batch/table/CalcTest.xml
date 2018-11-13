@@ -19,7 +19,7 @@ limitations under the License.
   <TestCase name="testScalarFunctionAccess">
     <Resource name="planBefore">
       <![CDATA[
-LogicalProject(_c0=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$875d0b13d7b5e41e865cd43d2bf426d5().my, '_c0')], _c1=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$875d0b13d7b5e41e865cd43d2bf426d5().clazz, '_c1')], _c2=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$875d0b13d7b5e41e865cd43d2bf426d5().my, '_c2')], _c3=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$875d0b13d7b5e41e865cd43d2bf426d5().clazz, '_c3')])
+LogicalProject(_c0=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().my, '_c0')], _c1=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().clazz, '_c1')], _c2=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().my, '_c2')], _c3=[AS(org$apache$flink$table$api$batch$table$CalcTest$giveMeCaseClass$$e22d5c9fb387459a70c9b5d0711145bb().clazz, '_c3')])
 +- LogicalTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
@@ -179,7 +179,7 @@ Calc(select=[a])
 LogicalProject(TMP_0=[$1])
 +- LogicalAggregate(group=[{2}], TMP_0=[SUM($0)])
    +- LogicalProject(a=[$0], c=[$1], k=[$2])
-      +- LogicalProject(a=[$0], c=[$1], $f2=[org$apache$flink$table$api$batch$table$CalcTest$MyHashCode$$bd1e58376277087e6d6ffe3d52583b40($1)])
+      +- LogicalProject(a=[$0], c=[$1], $f2=[org$apache$flink$table$api$batch$table$CalcTest$MyHashCode$$0794cbbebd8b2d367166ee8a42a68adf($1)])
          +- LogicalProject(a=[$0], c=[$2])
             +- LogicalTableScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -234,7 +234,7 @@ Calc(select=[a, b])
   <TestCase name="testSelectFunction">
     <Resource name="planBefore">
       <![CDATA[
-LogicalProject(_c0=[AS(org$apache$flink$table$api$batch$table$CalcTest$MyHashCode$$bd1e58376277087e6d6ffe3d52583b40($2), '_c0')], b=[$1])
+LogicalProject(_c0=[AS(org$apache$flink$table$api$batch$table$CalcTest$MyHashCode$$0794cbbebd8b2d367166ee8a42a68adf($2), '_c0')], b=[$1])
 +- LogicalTableScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>

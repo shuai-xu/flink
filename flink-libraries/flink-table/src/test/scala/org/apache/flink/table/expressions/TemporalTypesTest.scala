@@ -25,8 +25,8 @@ import java.util.TimeZone
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.utils.ExpressionTestBase
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
 import org.junit.{After, Test}

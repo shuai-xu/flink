@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.aggfunctions
 
 import java.lang.reflect.Method
 
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.dataformat.{BinaryString, GenericRow}
 import org.apache.flink.table.runtime.functions.aggfunctions.ConcatAggFunction
 

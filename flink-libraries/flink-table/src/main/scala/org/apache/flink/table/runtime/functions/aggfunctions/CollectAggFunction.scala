@@ -22,8 +22,8 @@ import java.lang.{Iterable => JIterable}
 import java.util
 
 import org.apache.flink.table.api.dataview.MapView
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.types._
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.typeutils.MapViewTypeInfo
 
 import scala.collection.JavaConverters._

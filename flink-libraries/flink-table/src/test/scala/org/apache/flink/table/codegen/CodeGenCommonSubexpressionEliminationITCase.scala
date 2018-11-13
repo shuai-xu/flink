@@ -20,10 +20,10 @@ package org.apache.flink.table.codegen
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.api.scala.StreamTableEnvironment
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
 import org.junit.Assert.{assertEquals, assertTrue}

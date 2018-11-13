@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.operator.window;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.java.ClosureCleaner;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.codegen.GeneratedRecordEqualiser;
 import org.apache.flink.table.codegen.GeneratedSubKeyedAggsHandleFunction;
 import org.apache.flink.table.runtime.functions.SubKeyedAggsHandleFunction;
@@ -35,7 +36,6 @@ import org.apache.flink.table.runtime.operator.window.triggers.EventTime;
 import org.apache.flink.table.runtime.operator.window.triggers.ProcessingTime;
 import org.apache.flink.table.runtime.operator.window.triggers.Trigger;
 import org.apache.flink.table.runtime.sort.RecordEqualiser;
-import org.apache.flink.table.types.InternalType;
 
 import java.time.Duration;
 

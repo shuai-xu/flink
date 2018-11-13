@@ -25,11 +25,12 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, UnboundedRange, UnboundedRow}
 import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRangeInterval, toRowInterval}
 import org.apache.flink.table.api.Table
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
-import org.apache.flink.table.functions.{AggregateFunction, DistinctAggregateFunction}
 import org.apache.flink.table.expressions.{Atan2, Cosh, DistinctAgg, Hex, Literal, RegexpExtract, RegexpReplace, Repeat, Replace, TimestampDiff, _}
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
-import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.codegen.expr.DistinctAggregateFunction
 
 import scala.language.implicitConversions
 

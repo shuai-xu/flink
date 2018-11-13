@@ -25,14 +25,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
-import org.apache.flink.table.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.batch.sql.StringSplit
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedTableFunctions.JavaTableFunc0
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.table.util._
 import org.apache.flink.types.Row

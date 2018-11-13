@@ -28,8 +28,8 @@ import org.apache.flink.api.java.typeutils.{PojoField, _}
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.Types._
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.types._
 
 import scala.collection.mutable
 

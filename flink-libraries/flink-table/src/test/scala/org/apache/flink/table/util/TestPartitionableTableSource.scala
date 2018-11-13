@@ -30,10 +30,10 @@ import org.apache.flink.core.io.{GenericInputSplit, InputSplit, InputSplitAssign
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConverters._

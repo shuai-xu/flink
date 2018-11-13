@@ -21,6 +21,8 @@ import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.{ListView, MapView}
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.codegen._
@@ -28,10 +30,9 @@ import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.dataview.DataViewSpec
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.{AggregateFunction, DeclarativeAggregateFunction}
+import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.plan.util.AggregateInfoList
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext, SubKeyedAggsHandleFunction}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 
 /**
   * A code generator for generating [[AggsHandleFunction]].

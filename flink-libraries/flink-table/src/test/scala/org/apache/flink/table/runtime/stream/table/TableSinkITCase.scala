@@ -28,10 +28,10 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase}
 import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, UpsertStreamTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row

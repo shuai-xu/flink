@@ -20,10 +20,9 @@ package org.apache.flink.table.runtime.aggfunctions
 
 import java.lang.{Long => JLong}
 
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.dataformat.GenericRow
-import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct.LongCountDistinctAggFunction
-
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

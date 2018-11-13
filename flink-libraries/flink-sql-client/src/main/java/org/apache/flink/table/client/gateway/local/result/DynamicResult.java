@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.client.gateway.local.result;
 
+import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.client.gateway.local.ProgramDeployer;
 import org.apache.flink.table.sinks.TableSink;
-import org.apache.flink.table.types.DataType;
 
 /**
  * A result of a dynamic table program.

@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.codegen.calls
 
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.types.{DataTypes, InternalType}
 
 /**
   * Generates a function call which returns a constant.

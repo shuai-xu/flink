@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.plan
 
+import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.api.{OverWindow, TableEnvironment}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical.{LogicalNode, Project}
-import org.apache.flink.table.types.BaseRowType
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

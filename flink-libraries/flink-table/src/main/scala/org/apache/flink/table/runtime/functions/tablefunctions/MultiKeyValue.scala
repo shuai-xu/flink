@@ -18,9 +18,9 @@
 package org.apache.flink.table.runtime.functions.tablefunctions
 
 import org.apache.commons.lang3.StringUtils
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
-import org.apache.flink.table.functions.TableFunction
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 
 import scala.annotation.varargs
 import scala.collection.mutable

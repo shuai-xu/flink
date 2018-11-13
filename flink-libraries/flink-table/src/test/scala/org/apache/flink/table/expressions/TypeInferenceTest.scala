@@ -21,8 +21,8 @@ package org.apache.flink.table.expressions
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.types.{DataTypes, DecimalType}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
-import org.apache.flink.table.types.{DataTypes, DecimalType}
 import org.apache.flink.types.Row
 import org.junit.{Assert, Before, Test}
 

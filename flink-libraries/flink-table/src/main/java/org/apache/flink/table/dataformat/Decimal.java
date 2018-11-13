@@ -17,10 +17,10 @@
 
 package org.apache.flink.table.dataformat;
 
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.codegen.CodeGenException;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.InternalType;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

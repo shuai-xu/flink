@@ -28,14 +28,14 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction
 import org.apache.flink.streaming.api.operators.StreamSource
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableSchema}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.resource.batch.BatchExecResourceTest.MockTableSource
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.table.tpc.{STATS_MODE, Schema, TpcHSchemaProvider, TpchTableStatsProvider}
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.{ExecResourceUtil, TableTestBatchExecBase}
 import org.apache.flink.types.Row
 import org.junit.runner.RunWith

@@ -23,8 +23,8 @@ import java.util.{LinkedHashMap => JLinkedHashMap, LinkedHashSet => JLinkedHashS
 
 import com.google.common.collect.{ImmutableMap, ImmutableSet}
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.types.DataTypes
 import org.junit.Assert._
 import org.junit.{Before, Test}
 

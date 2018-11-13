@@ -24,6 +24,7 @@ import org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY
 import org.apache.calcite.avatica.util.{DateTimeUtils, TimeUnitRange}
 import org.apache.calcite.util.BuiltInMethod
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.calls.CallGenerator.{generateOperatorIfNotNull, generateReturnStringCallIfArgsNotNull, generateReturnStringCallWithStmtIfArgsNotNull, generateUnaryOperatorIfNotNull}
 import org.apache.flink.table.codegen._
@@ -31,7 +32,6 @@ import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.{BinaryArray, BinaryArrayWriter, BinaryMap, Decimal}
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters.genToExternal
-import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.StringUtils

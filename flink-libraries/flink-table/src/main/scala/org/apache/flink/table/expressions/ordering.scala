@@ -20,9 +20,9 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rel.RelFieldCollation.{Direction, NullDirection}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.validate._
 
 abstract class Ordering extends UnaryExpression {

@@ -18,7 +18,7 @@
 package org.apache.flink.table.sinks
 
 import org.apache.flink.table.api.Table
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 
 trait TableSinkBase[T] extends TableSink[T] {
 

@@ -22,7 +22,7 @@ import java.lang.reflect.Method
 import java.math.BigDecimal
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.functions.aggregate.DecimalAvgAccumulator
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.junit.Assert.assertEquals

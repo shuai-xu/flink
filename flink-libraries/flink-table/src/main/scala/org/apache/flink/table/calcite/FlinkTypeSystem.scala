@@ -21,8 +21,8 @@ package org.apache.flink.table.calcite
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelDataTypeSystemImpl}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, NumericTypeInfo, TypeInformation}
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.typeutils.TypeCheckUtils
 
 /**

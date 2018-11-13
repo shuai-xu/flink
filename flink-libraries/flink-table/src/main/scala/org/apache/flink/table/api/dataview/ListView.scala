@@ -22,7 +22,7 @@ import java.lang.{Iterable => JIterable}
 import java.util
 
 import org.apache.flink.api.common.typeinfo.TypeInfo
-import org.apache.flink.table.types.DataType
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.typeutils.ListViewTypeInfoFactory
 
 /**

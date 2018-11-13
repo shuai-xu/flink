@@ -18,7 +18,7 @@
 package org.apache.flink.table.api
 
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.types.{DataTypes, _}
+import org.apache.flink.table.api.types.{DataTypes, _}
 
 import _root_.scala.collection.mutable.ArrayBuffer
 

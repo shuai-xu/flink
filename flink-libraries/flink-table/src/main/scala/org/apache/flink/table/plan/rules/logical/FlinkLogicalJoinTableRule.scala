@@ -28,12 +28,12 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.mapping.IntPair
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.util.RexLiteralUtil
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
-import org.apache.flink.table.types.InternalType
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

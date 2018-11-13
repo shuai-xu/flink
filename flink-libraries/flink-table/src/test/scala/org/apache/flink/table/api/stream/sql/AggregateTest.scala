@@ -22,10 +22,10 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.{TableException, Types}
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedType}
 import org.apache.flink.table.expressions.AggFunctionCall
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.types.{DataType, DataTypes, TypeInfoWrappedType}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals

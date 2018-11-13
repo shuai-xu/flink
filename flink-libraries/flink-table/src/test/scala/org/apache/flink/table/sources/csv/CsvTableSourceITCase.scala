@@ -21,9 +21,9 @@ package org.apache.flink.table.sources.csv
 import java.io.File
 
 import org.apache.flink.core.fs.FileSystem.WriteMode
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row

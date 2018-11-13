@@ -27,16 +27,16 @@ import org.apache.calcite.rel.logical.LogicalTableFunctionScan
 import org.apache.calcite.rex.{RexInputRef, RexNode}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.java.operators.join.JoinType
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableEnvironment, UnresolvedException}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowCountLiteral
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.functions.utils.{TableSqlFunction, UserDefinedFunctionUtils}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.schema.TypedFlinkTableFunction
 import org.apache.flink.table.sinks.TableSink
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
 import scala.collection.JavaConverters._

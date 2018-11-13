@@ -20,8 +20,8 @@ package org.apache.flink.table.api.batch.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.batch.table.JoinTest.Merger
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Ignore, Test}
 

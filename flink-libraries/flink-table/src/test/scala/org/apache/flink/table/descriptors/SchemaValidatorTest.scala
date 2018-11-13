@@ -20,11 +20,11 @@ package org.apache.flink.table.descriptors
 
 import java.util.Optional
 
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableException, TableSchema, Types}
 import org.apache.flink.table.descriptors.RowtimeTest.CustomExtractor
 import org.apache.flink.table.sources.tsextractors.{ExistingField, StreamRecordTimestamp}
 import org.apache.flink.table.sources.wmstrategies.{BoundedOutOfOrderTimestamps, PreserveWatermarks}
-import org.apache.flink.table.types.DataTypes
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 

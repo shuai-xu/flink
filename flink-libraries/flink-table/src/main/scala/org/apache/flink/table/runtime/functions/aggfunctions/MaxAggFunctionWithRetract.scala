@@ -20,9 +20,9 @@ package org.apache.flink.table.runtime.functions.aggfunctions
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Iterable => JIterable, Long => JLong, Short => JShort}
 
 import org.apache.flink.table.api.dataview.{MapView, Order, SortedMapView}
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
-import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
 
 /**

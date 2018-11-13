@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.aggfunctions
 
 import java.lang.{Long => JLong}
 
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.functions.aggregate.{CountAccumulator, CountAggFunction}
 
 /**

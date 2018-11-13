@@ -24,6 +24,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
@@ -32,7 +33,6 @@ import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 

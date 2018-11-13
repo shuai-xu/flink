@@ -21,7 +21,7 @@ package org.apache.flink.table.tpc
 import java.util
 
 import com.google.common.collect.ImmutableSet
-import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 
 case class Column(
     name: String,

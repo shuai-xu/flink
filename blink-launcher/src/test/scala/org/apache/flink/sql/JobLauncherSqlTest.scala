@@ -25,9 +25,9 @@ import org.apache.calcite.plan.RelOptUtil
 import org.apache.flink.factories.FlinkTableFactory
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala.BatchTableEnvironment
+import org.apache.flink.table.api.types.{DataTypes, DecimalType}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
-import org.apache.flink.table.plan.schema.{StreamTableSourceTable, TableSourceSinkTable}
-import org.apache.flink.table.types.{DataTypes, DecimalType}
+import org.apache.flink.table.plan.schema.TableSourceSinkTable
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -19,8 +19,8 @@
 package org.apache.flink.table.sources.tsextractors
 
 import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 
 /**
   * Extracts the timestamp of a StreamRecord into a rowtime attribute.

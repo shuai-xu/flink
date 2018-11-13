@@ -31,6 +31,7 @@ import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoIn
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation,
   TwoInputTransformation, UnionTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
@@ -40,7 +41,6 @@ import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{StreamExecUtil, UpdatingPlanChecker}
 import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.runtime.operator.KeyedCoProcessOperatorWithWatermarkDelay
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector

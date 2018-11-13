@@ -27,11 +27,11 @@ import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeInfoWrappedType}
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType, TypeInfoWrappedType}
 import org.apache.flink.types.Row
 
 import scala.collection.mutable

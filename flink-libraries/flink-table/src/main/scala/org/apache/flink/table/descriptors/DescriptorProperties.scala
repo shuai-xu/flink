@@ -32,9 +32,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.MemorySize
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableException, TableSchema, ValidationException}
 import org.apache.flink.table.descriptors.DescriptorProperties.{NAME, TYPE, normalizeTableSchema, toJava}
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeStringUtils
 import org.apache.flink.util.{InstantiationUtil, Preconditions}
 import org.apache.flink.util.Preconditions.checkNotNull

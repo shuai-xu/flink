@@ -27,6 +27,7 @@ import org.apache.calcite.util.Pair
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -36,7 +37,6 @@ import org.apache.flink.table.plan.util.{AggregateInfoList, PartialFinalType, St
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.BundleOperator
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 

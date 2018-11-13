@@ -26,16 +26,16 @@ import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIV
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.{DATE, TIME, TIMESTAMP}
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes, TypeInfoWrappedType}
 import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils
-import org.apache.flink.table.types.{DataType, DataTypes, TypeInfoWrappedType}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row

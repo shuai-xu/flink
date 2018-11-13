@@ -22,19 +22,19 @@ import java.math.BigDecimal
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinctWithMergeAndReset, WeightedAvgWithMergeAndReset}
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
-import java.lang.{Integer => JInt, Double => JDouble, Float => JFloat}
+import java.lang.{Double => JDouble, Float => JFloat, Integer => JInt}
 
 import org.apache.flink.api.java.typeutils.{ObjectArrayTypeInfo, TupleTypeInfo}
-import org.apache.flink.table.api.Types
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.types.Row
 import org.junit._
 

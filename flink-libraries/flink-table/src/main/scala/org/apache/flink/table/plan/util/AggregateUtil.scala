@@ -27,6 +27,9 @@ import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.{TableException, Types}
+import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType}
+import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.expr.{ConcatAggFunction => _}
@@ -38,8 +41,6 @@ import org.apache.flink.table.functions._
 import org.apache.flink.table.functions.sql.{SqlConcatAggFunction, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.types.DataTypes._
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, DecimalType}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, MapViewTypeInfo, TypeUtils}
 
 import scala.collection.JavaConversions._

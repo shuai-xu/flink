@@ -21,10 +21,10 @@ package org.apache.flink.table.runtime.aggfunctions
 import java.math.BigDecimal
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.DecimalType
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
 import org.apache.flink.table.runtime.functions.aggfunctions._
-import org.apache.flink.table.types.DecimalType
 
 /**
   * Test case for built-in Min with retraction aggregate function

@@ -24,10 +24,10 @@ import org.apache.flink.api.java.Utils;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.TableSink;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.types.Row;
 
 /**

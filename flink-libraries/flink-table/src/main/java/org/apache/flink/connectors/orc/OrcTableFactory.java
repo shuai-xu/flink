@@ -25,13 +25,13 @@ import org.apache.flink.exceptions.UnsupportedTableException;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableFactory;
 import org.apache.flink.table.api.TableProperties;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.orc.OrcTableSink;
 import org.apache.flink.table.sources.DimensionTableSource;
 import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.sources.orc.OrcVectorizedColumnRowTableSource;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.StringUtils;
 
 import org.apache.orc.CompressionKind;

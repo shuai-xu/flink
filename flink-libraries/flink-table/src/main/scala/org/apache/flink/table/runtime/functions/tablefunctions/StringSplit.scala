@@ -18,8 +18,8 @@
 package org.apache.flink.table.runtime.functions.tablefunctions
 
 import org.apache.commons.lang3.StringUtils
-import org.apache.flink.table.functions.TableFunction
-import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 
 class StringSplit extends TableFunction[String]{
   def eval(str: String, splitChar: String): Unit = {

@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
@@ -36,7 +37,6 @@ import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRul
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.{BinaryRowKeySelector, NullBinaryRowKeySelector}
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.FlinkRexUtil
 

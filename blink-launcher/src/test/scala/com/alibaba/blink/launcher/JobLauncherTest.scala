@@ -26,8 +26,8 @@ import org.apache.flink.factories.FlinkTableFactory
 import org.apache.flink.sql.parser.ddl.SqlCreateTable
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
-import org.apache.flink.table.functions.ScalarFunction
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.api.types.DataTypes
 
 import scala.collection.JavaConverters._
 import org.junit.Test

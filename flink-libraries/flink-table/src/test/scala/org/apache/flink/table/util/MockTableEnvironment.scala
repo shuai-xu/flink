@@ -19,13 +19,13 @@
 package org.apache.flink.table.util
 
 import org.apache.flink.api.common.JobExecutionResult
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.types.DataType
 
 import scala.collection.mutable
 

@@ -21,9 +21,9 @@ package org.apache.flink.table.plan
 import java.sql.Timestamp
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.TimeIntervalUnit
-import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc
 import org.apache.flink.table.util.TableTestBase
 import org.junit.Test

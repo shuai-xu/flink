@@ -19,9 +19,9 @@ package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
-import org.apache.flink.table.types.InternalType;
 
 /**
  * Util for base row.

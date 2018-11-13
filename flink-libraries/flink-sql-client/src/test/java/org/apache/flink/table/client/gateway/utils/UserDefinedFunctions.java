@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.client.gateway.utils;
 
-import org.apache.flink.table.functions.AggregateFunction;
-import org.apache.flink.table.functions.ScalarFunction;
-import org.apache.flink.table.functions.TableFunction;
-import org.apache.flink.table.types.BaseRowType;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.api.functions.AggregateFunction;
+import org.apache.flink.table.api.functions.ScalarFunction;
+import org.apache.flink.table.api.functions.TableFunction;
+import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.types.Row;
 
 /**

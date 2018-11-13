@@ -23,11 +23,11 @@ import org.apache.flink.api.common.typeutils.base.DateComparator;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemoryUtils;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.Decimal;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.util.hash.Murmur32;
 
 import java.nio.ByteOrder;

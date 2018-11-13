@@ -22,12 +22,13 @@ import java.lang.{Iterable => JIterable}
 import java.util
 
 import org.apache.flink.api.common.typeinfo.TypeInfo
-import org.apache.flink.table.types.DataType
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.typeutils.MapViewTypeInfoFactory
 
 /**
   * A [[MapView]] provides Map functionality for accumulators used by user-defined aggregate
-  * functions [[org.apache.flink.table.functions.AggregateFunction]].
+  * functions [[AggregateFunction]].
   *
   * A [[MapView]] can be backed by a Java HashMap or a state backend, depending on the context in
   * which the aggregation function is used.

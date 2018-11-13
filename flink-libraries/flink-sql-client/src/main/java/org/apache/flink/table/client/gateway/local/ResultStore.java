@@ -23,6 +23,8 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.net.ConnectionUtils;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.config.Deployment;
 import org.apache.flink.table.client.config.Environment;
@@ -31,8 +33,6 @@ import org.apache.flink.table.client.gateway.local.result.ChangelogCollectStream
 import org.apache.flink.table.client.gateway.local.result.DynamicResult;
 import org.apache.flink.table.client.gateway.local.result.MaterializedCollectBatchResult;
 import org.apache.flink.table.client.gateway.local.result.MaterializedCollectStreamResult;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

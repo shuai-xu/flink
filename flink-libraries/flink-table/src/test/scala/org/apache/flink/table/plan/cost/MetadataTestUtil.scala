@@ -28,12 +28,12 @@ import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.tools.{FrameworkConfig, Frameworks}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.ExpressionReducer
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.TestTableSourceTable
 import org.apache.flink.table.validate.BuiltInFunctionCatalog
 

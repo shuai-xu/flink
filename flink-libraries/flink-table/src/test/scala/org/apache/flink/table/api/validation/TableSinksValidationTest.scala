@@ -21,8 +21,8 @@ package org.apache.flink.table.api.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.utils.TestingAppendSink
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.TableTestBase
 import org.apache.flink.types.Row

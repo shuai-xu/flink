@@ -18,11 +18,11 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
-import org.apache.flink.table.types._
 
 class EqualiserCodeGenerator(fieldTypes: Seq[InternalType]) {
 

@@ -23,13 +23,13 @@ import org.apache.calcite.sql.`type`.OperandTypes
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.util.{ChainedSqlOperatorTable, ListSqlOperatorTable, ReflectiveSqlOperatorTable}
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableSqlFunction}
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
-import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, StringSplit, MultiKeyValue}
+import org.apache.flink.table.runtime.functions.tablefunctions.{GenerateSeries, JsonTuple, MultiKeyValue, StringSplit}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.mutable

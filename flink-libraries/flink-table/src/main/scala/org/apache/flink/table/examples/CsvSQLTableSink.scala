@@ -20,9 +20,9 @@ package org.apache.flink.table.examples
 
 import java.util.TimeZone
 import org.apache.flink.core.fs.FileSystem.WriteMode
+import org.apache.flink.table.api.types.{BaseRowType, DataType, InternalType}
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.types.{BaseRowType, DataType, InternalType}
 
 class CsvSQLTableSink(
     path: String,

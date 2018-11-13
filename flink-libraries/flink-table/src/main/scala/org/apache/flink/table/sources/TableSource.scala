@@ -19,8 +19,8 @@
 package org.apache.flink.table.sources
 
 import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.TableConnectorUtil
 
 /** Defines an external table by providing schema information and used to produce a

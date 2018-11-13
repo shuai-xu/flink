@@ -19,12 +19,10 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.calcite.schema.Statistic
-import org.apache.calcite.schema.impl.AbstractTable
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
-import org.apache.flink.table.types.DataTypes
 
 /** Class which implements the logic to convert a [[TableSink]] to Calcite Table */
 class TableSinkTable[T](

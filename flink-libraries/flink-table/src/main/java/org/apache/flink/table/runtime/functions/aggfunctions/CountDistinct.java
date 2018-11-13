@@ -19,12 +19,12 @@
 package org.apache.flink.table.runtime.functions.aggfunctions;
 
 import org.apache.flink.table.api.dataview.MapView;
+import org.apache.flink.table.api.functions.AggregateFunction;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.GenericRow;
-import org.apache.flink.table.functions.AggregateFunction;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
 
 import java.util.Map;

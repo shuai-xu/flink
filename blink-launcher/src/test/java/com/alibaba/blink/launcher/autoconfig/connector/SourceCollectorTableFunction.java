@@ -21,10 +21,10 @@ package com.alibaba.blink.launcher.autoconfig.connector;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
-import org.apache.flink.table.functions.FunctionContext;
-import org.apache.flink.table.functions.TableFunction;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.api.functions.FunctionContext;
+import org.apache.flink.table.api.functions.TableFunction;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.util.Collector;
 
 /**

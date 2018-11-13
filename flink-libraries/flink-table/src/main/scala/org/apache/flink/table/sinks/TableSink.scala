@@ -19,7 +19,7 @@
 package org.apache.flink.table.sinks
 
 import org.apache.flink.table.api.Table
-import org.apache.flink.table.types.DataType
+import org.apache.flink.table.api.types.DataType
 
 /** A [[TableSink]] specifies how to emit a [[Table]] to an external
   * system or location.

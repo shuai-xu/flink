@@ -19,7 +19,7 @@ package org.apache.flink.table.calcite
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexLocalRef
-import org.apache.flink.table.types.InternalType
+import org.apache.flink.table.api.types.InternalType
 
 case class RexAggBufferVariable(
     variableName: String,

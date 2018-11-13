@@ -23,6 +23,7 @@ import java.lang.{Long => JLong}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.MapView
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
@@ -31,7 +32,6 @@ import org.apache.flink.table.codegen.GeneratedExpression._
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.DistinctInfo
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.typeutils.TypeUtils.createTypeInfoFromDataType
 import org.apache.flink.util.Preconditions

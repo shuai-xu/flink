@@ -40,7 +40,7 @@ import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchUpsertTa
 import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchUpsertTableSinkFactoryTestBase;
 import org.apache.flink.streaming.connectors.elasticsearch6.Elasticsearch6UpsertTableSink.DefaultRestClientFactory;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.types.Row;
 
 import org.apache.http.HttpHost;

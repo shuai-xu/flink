@@ -20,10 +20,10 @@ package org.apache.flink.table.examples.scala
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{Table, TableEnvironment}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.sources.csv.CsvTableSource
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnv}
 import org.apache.flink.table.sinks.csv.CsvTableSink
+import org.apache.flink.table.sources.csv.CsvTableSource
 
 /**
   * This program implements a modified version of the TPC-H query 3. The

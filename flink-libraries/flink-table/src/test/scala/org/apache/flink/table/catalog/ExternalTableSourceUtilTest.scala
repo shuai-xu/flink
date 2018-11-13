@@ -23,9 +23,9 @@ import java.util.{Collections => JCollections, Set => JSet}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.plan.schema.StreamTableSourceTable
 import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse

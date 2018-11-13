@@ -20,7 +20,7 @@ package org.apache.flink.table.sources;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.api.types.DataType;
 
 import org.apache.commons.lang3.StringUtils;
 

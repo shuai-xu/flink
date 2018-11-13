@@ -45,6 +45,8 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.table.api.types.BaseRowType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.window.Window;
 import org.apache.flink.table.codegen.GeneratedRecordEqualiser;
 import org.apache.flink.table.codegen.GeneratedSubKeyedAggsHandleFunction;
@@ -62,8 +64,6 @@ import org.apache.flink.table.runtime.operator.window.internal.MergingWindowProc
 import org.apache.flink.table.runtime.operator.window.internal.PanedWindowProcessFunction;
 import org.apache.flink.table.runtime.operator.window.triggers.Trigger;
 import org.apache.flink.table.runtime.sort.RecordEqualiser;
-import org.apache.flink.table.types.BaseRowType;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.typeutils.TypeUtils;
 import org.apache.flink.table.util.BaseRowUtil;
 

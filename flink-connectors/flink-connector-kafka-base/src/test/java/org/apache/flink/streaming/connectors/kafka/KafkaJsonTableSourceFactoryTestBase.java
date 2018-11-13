@@ -22,6 +22,8 @@ import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.formats.json.JsonRowSchemaConverter;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.FormatDescriptor;
 import org.apache.flink.table.descriptors.Json;
@@ -35,8 +37,6 @@ import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.sources.TableSourceUtil;
 import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
 
 import org.junit.Test;
 

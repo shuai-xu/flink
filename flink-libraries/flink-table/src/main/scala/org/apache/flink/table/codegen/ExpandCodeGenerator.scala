@@ -19,12 +19,12 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{ELEMENT, STREAM_RECORD}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
-import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.rex.RexNode

@@ -22,7 +22,7 @@ import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.types.{DataTypes, InternalType, TimestampType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType, TimestampType}
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isArray, isComparable, isNumeric}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate._

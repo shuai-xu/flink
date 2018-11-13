@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.typeutils
 
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType, TimestampType}
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TimestampType}
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 
 /**

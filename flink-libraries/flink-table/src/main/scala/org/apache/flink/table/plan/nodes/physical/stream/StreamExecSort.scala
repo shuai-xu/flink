@@ -25,13 +25,13 @@ import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.StreamSortOperator
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
 

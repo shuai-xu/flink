@@ -18,10 +18,10 @@
 
 package org.apache.flink.api.java.io.jdbc;
 
-import org.apache.flink.table.types.ArrayType;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.api.types.ArrayType;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.InternalType;
 
 import java.sql.Types;
 import java.util.Collections;

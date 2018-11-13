@@ -23,10 +23,10 @@ import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.async.AsyncFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.api.{SqlParserException, TableException, TableSchema, ValidationException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.Test

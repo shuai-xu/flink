@@ -30,11 +30,11 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedSortedMapState}
 import org.apache.flink.table.api.dataview.Order
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.codegen.{CodeGenUtils, Compiler, FieldAccess, GeneratedFieldExtractor}
 import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.types.DataType
 import org.apache.flink.table.runtime.sort.RecordComparator
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, OrderedTypeUtils}

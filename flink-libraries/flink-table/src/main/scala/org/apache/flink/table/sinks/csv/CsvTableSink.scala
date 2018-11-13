@@ -27,9 +27,9 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 
 /**
   * A simple [[TableSink]] to emit data as CSV files.

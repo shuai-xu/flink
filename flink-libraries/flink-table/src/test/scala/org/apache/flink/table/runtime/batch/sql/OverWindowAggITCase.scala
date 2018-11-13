@@ -21,10 +21,10 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{DOUBLE_TYPE_INFO, FLO
 import org.apache.flink.api.scala._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
-import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
 import org.junit.{Before, Test}

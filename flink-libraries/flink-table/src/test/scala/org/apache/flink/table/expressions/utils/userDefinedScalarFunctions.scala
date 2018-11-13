@@ -21,10 +21,8 @@ package org.apache.flink.table.expressions.utils
 import java.sql.{Date, Time, Timestamp}
 
 import org.apache.commons.lang3.StringUtils
-import org.apache.flink.table.types.{DataType, DataTypes}
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.Types
-import org.apache.flink.table.functions.{FunctionContext, ScalarFunction}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.functions.{FunctionContext, ScalarFunction}
 import org.apache.flink.types.Row
 import org.junit.Assert
 

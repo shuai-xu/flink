@@ -19,7 +19,7 @@
 package org.apache.flink.table.client.cli;
 
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.types.Row;
 
 import org.jline.utils.AttributedString;

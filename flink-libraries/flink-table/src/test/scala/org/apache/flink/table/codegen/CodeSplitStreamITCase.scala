@@ -28,6 +28,7 @@ import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironm
 import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableSchema, Types}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.expressions.utils.{Func18, RichFunc2}
 import org.apache.flink.table.functions.aggregate.CountAggFunction
@@ -35,7 +36,6 @@ import org.apache.flink.table.runtime.stream.sql.{TestAsyncDoubleKeyFetcher, Tes
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, WeightedAvg}
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamTestSink, TestingAppendSink, UserDefinedFunctionTestUtils}
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{PojoTableFunc, TableFunc0}
 import org.apache.flink.types.Row

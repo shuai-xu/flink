@@ -19,9 +19,9 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-import org.apache.flink.table.functions.{TableFunction => FlinkUDTF}
-import org.apache.flink.table.types.{DataType, DataTypes}
 
 /**
   * A Deferred Type is a Table Function which the result type hasn't been determined yet.
@@ -31,7 +31,7 @@ import org.apache.flink.table.types.{DataType, DataTypes}
   * @param implicitResultType Implicit result type.
   */
 class DeferredTypeFlinkTableFunction(
-    val tableFunction: FlinkUDTF[_],
+    val tableFunction: TableFunction[_],
     val implicitResultType: DataType)
   extends FlinkTableFunction(tableFunction) {
 

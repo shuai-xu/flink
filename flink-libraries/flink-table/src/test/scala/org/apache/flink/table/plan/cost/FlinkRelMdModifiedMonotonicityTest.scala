@@ -22,12 +22,12 @@ import org.apache.calcite.rel.core.JoinRelType
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.sql.validate.SqlMonotonicity._
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
+import org.apache.flink.table.api.functions.{AggregateFunction, Monotonicity, ScalarFunction}
 import org.apache.flink.table.api.stream.sql.MyAccumulator
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction}
-import org.apache.flink.table.functions.{AggregateFunction, Monotonicity, ScalarFunction}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit.Assert._
 import org.junit.Test

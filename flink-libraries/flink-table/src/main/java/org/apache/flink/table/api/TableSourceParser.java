@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.api;
 
-import org.apache.flink.table.functions.TableFunction;
+import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;

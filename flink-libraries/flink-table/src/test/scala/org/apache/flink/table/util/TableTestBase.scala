@@ -30,14 +30,14 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JStreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnvironment}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.types.InternalType
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}

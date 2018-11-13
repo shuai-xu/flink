@@ -21,6 +21,7 @@ package org.apache.flink.table.sinks.csv
 import java.util
 
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator._
 import org.apache.flink.table.descriptors.CsvValidator._
 import org.apache.flink.table.descriptors.DescriptorProperties._
@@ -29,7 +30,6 @@ import org.apache.flink.table.descriptors.FormatDescriptorValidator._
 import org.apache.flink.table.descriptors.SchemaValidator._
 import org.apache.flink.table.descriptors._
 import org.apache.flink.table.factories.TableFactory
-import org.apache.flink.table.types.DataType
 
 /**
   * Factory base for creating configured instances of [[CsvTableSink]].

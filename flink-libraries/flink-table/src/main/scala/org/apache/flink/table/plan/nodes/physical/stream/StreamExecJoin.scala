@@ -36,6 +36,7 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
@@ -48,7 +49,6 @@ import org.apache.flink.table.runtime.operator.join.stream.bundle._
 import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.operator.join.stream._
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._

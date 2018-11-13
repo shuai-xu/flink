@@ -27,6 +27,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
@@ -35,7 +36,6 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonExchange
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.range._
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BinaryHashPartitioner, FlinkRelOptUtil}
 

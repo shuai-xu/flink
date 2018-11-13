@@ -21,8 +21,8 @@ package org.apache.flink.table.expressions
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.UnresolvedException
+import org.apache.flink.table.api.types.{BaseRowType, InternalType}
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.types.{BaseRowType, InternalType}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 /**

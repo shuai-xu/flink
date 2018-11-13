@@ -22,9 +22,9 @@ import java.util.{HashMap => JHashMap}
 import java.lang.{Iterable => JIterable}
 
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BinaryString
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.types._
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
 
 /** The initial accumulator for Max2nd with retraction aggregate function */

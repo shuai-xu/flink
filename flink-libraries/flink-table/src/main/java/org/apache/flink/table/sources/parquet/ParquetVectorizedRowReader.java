@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.sources.parquet;
 
-import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.types.Row;
 
 import java.io.IOException;

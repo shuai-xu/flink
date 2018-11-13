@@ -31,18 +31,18 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.operators.StreamOperator
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
-import org.apache.flink.streaming.runtime.tasks.{OneInputStreamTask, OneInputStreamTaskTestHarness, StreamTask}
+import org.apache.flink.streaming.runtime.tasks.{OneInputStreamTask, OneInputStreamTaskTestHarness}
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.functions.UserDefinedFunction
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelOptClusterFactory, FlinkTypeFactory}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.expressions.{Alias, Expression}
-import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.logical.Aggregate
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.junit.Assert
 import org.junit.Assert.assertEquals

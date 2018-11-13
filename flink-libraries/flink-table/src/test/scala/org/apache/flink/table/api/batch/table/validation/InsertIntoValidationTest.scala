@@ -21,7 +21,7 @@ package org.apache.flink.table.api.batch.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.util.{MemoryTableSourceSinkUtil, TableTestBatchExecBase}
 import org.junit._
 

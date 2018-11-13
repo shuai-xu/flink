@@ -32,12 +32,12 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
 import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, _}
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.BaseRowUtil
 import org.apache.flink.types.Row

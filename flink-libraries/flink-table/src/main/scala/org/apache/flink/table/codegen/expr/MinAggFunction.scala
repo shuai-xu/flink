@@ -17,9 +17,9 @@
  */
 package org.apache.flink.table.codegen.expr
 
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.expressions.{If, _}
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 
 /**
   * Built-in min aggregate function.

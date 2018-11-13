@@ -23,13 +23,13 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.python.api.PythonOptions;
 import org.apache.flink.runtime.filecache.FileCache;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.functions.FunctionContext;
+import org.apache.flink.table.api.functions.UserDefinedFunction;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.errorcode.TableErrors;
-import org.apache.flink.table.functions.FunctionContext;
-import org.apache.flink.table.functions.UserDefinedFunction;
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 

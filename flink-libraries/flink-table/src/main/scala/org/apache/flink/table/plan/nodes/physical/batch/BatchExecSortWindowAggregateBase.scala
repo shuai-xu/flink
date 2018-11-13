@@ -25,16 +25,16 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.runtime.operator._
-import org.apache.flink.table.types.BaseRowType
+import org.apache.flink.table.api.types.BaseRowType
 
 abstract class BatchExecSortWindowAggregateBase(
     window: LogicalWindow,

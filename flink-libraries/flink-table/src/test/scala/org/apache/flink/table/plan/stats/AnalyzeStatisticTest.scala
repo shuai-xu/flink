@@ -22,11 +22,11 @@ import java.sql.{Date => SqlDate, Time => SqlTime, Timestamp => SqlTimestamp}
 
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.util.TimeConvertUtils
 import org.apache.flink.util.TimeConvertUtils.MILLIS_PER_DAY

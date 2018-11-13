@@ -18,7 +18,7 @@
 package org.apache.flink.table.api.validation
 
 import org.apache.flink.table.api.{TableException, TableSchema}
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.util.TableTestBase
 import org.junit.Test
 

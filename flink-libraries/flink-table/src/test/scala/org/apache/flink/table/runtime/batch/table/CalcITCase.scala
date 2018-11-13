@@ -22,15 +22,15 @@ import java.sql.Timestamp
 import java.util
 
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.api.types.DataTypes._
+import org.apache.flink.table.api.types.DecimalType
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.{BaseRow, Decimal}
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, SplitUDF}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase
-import org.apache.flink.table.types.DataTypes._
-import org.apache.flink.table.types.DecimalType
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils

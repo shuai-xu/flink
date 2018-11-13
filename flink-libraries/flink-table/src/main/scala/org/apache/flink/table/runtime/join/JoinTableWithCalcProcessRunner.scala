@@ -21,8 +21,8 @@ import java.util
 
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
 

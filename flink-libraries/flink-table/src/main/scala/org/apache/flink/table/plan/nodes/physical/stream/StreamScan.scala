@@ -22,11 +22,11 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
-import org.apache.flink.table.types.DataType
 
 trait StreamScan extends CommonScan[BaseRow] with StreamExecRel {
 

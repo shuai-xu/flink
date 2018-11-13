@@ -22,11 +22,11 @@ import org.apache.calcite.avatica.util.TimeUnit
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
+import org.apache.flink.table.api.types.{DataTypes, InternalType, TimestampType}
 import org.apache.flink.table.calcite.FlinkRelBuilder
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.types.{DataTypes, InternalType, TimestampType}
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.typeutils.TypeCheckUtils.isTimeInterval
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}

@@ -20,11 +20,11 @@ package org.apache.flink.table.runtime.aggregate
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext, ProcessFunction}
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{BaseRowUtil, BinaryRowUtil, Logging}
 import org.apache.flink.table.util.BaseRowUtil.isAccumulateMsg

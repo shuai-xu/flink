@@ -20,8 +20,8 @@ package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.plan.rules.logical.SubQueryTestBase
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -25,17 +25,16 @@ import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.plan.RelOptPlanner
 import org.apache.calcite.rex.{RexBuilder, RexNode}
 import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.api.common.accumulators.{DoubleCounter, Histogram, IntCounter, LongCounter}
 import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.metrics.MetricGroup
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.functions.{FunctionContext, FunctionContextImpl, UserDefinedFunction}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.FunctionCodeGenerator.generateFunction
-import org.apache.flink.table.functions.{FunctionContextImpl, FunctionContext, UserDefinedFunction}
-import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.dataformat.{Decimal, GenericRow}
 
 import scala.collection.JavaConverters._
 

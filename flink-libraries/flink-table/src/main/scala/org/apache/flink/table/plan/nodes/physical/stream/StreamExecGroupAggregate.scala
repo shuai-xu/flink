@@ -28,6 +28,7 @@ import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
@@ -41,7 +42,6 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging
 

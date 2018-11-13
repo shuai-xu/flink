@@ -29,6 +29,7 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil
 import org.apache.calcite.util.ImmutableIntList
 import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
@@ -36,7 +37,6 @@ import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.FlinkJoinRelType._
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.nodes.common.CommonJoin
-import org.apache.flink.table.types.BaseRowType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._

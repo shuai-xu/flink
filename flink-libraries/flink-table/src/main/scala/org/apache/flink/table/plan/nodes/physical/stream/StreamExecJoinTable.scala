@@ -27,11 +27,11 @@ import org.apache.calcite.rex.{RexNode, RexProgram}
 import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
-import org.apache.flink.table.types.InternalType
 
 /**
  * Flink RelNode which matches along with stream joins a dimension table

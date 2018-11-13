@@ -22,10 +22,10 @@ import java.lang.reflect.Method
 
 import org.apache.calcite.avatica.util.TimeUnitRange
 import org.apache.calcite.avatica.util.TimeUnitRange._
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.{getEnum, primitiveTypeTermForType, qualifyMethod}
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNotNull
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 
 /**
   * Generates floor/ceil function calls.

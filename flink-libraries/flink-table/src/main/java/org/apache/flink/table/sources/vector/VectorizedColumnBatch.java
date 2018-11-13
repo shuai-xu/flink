@@ -18,11 +18,11 @@
 
 package org.apache.flink.table.sources.vector;
 
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.Decimal;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.DecimalType;
-import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.TimeConvertUtils;
 
 import org.apache.parquet.io.api.Binary;

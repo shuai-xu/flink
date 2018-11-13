@@ -26,12 +26,12 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.async.AsyncFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Test}

@@ -22,9 +22,9 @@ import java.util
 
 import org.apache.flink.api.common.serialization.{DeserializationSchema, SerializationSchema}
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.descriptors.{DescriptorProperties, FormatDescriptorValidator, SchemaValidator}
 import org.apache.flink.table.factories.{DeserializationSchemaFactory, SerializationSchemaFactory, TableFormatFactoryServiceTest}
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 
 /**

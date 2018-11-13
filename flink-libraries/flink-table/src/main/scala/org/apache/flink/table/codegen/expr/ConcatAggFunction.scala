@@ -19,9 +19,9 @@
 package org.apache.flink.table.codegen.expr
 
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
-import org.apache.flink.table.types.{DataTypes, InternalType}
 
 class ConcatAggFunction(inputs: Int) extends DeclarativeAggregateFunction {
 

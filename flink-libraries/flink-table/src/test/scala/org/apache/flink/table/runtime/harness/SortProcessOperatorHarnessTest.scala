@@ -29,13 +29,13 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.TestHarnessUtil
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.harness.SortProcessOperatorHarnessTest._
 import org.apache.flink.table.runtime.operator.sort.{ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils._
 import org.junit.Test
 import org.junit.runner.RunWith

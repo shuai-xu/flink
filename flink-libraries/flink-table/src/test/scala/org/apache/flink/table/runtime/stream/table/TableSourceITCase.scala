@@ -29,13 +29,12 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, TableSchema, Types}
-import org.apache.flink.table.runtime.utils.{CommonTestData, TestingAppendSink}
 import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.util._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingTestBase, TestingAppendSink}
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.util.{TestFilterableTableSource, TestPartitionableTableSource, TestTableSourceWithTime}
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector

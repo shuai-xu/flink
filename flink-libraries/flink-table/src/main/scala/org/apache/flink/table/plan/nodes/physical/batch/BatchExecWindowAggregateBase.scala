@@ -25,9 +25,11 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.tools.RelBuilder
 import org.apache.commons.math3.util.ArithmeticUtils
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType, PrimitiveType}
+import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newName}
@@ -39,7 +41,7 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCo
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
-import org.apache.flink.table.functions.{DeclarativeAggregateFunction, UserDefinedFunction, AggregateFunction => UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
@@ -47,7 +49,6 @@ import org.apache.flink.table.plan.util.AggregateUtil.asLong
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.runtime.operator.window.grouping.{AbstractWindowsGrouping, HeapWindowsGrouping}
-import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType, PrimitiveType}
 import org.apache.flink.table.util.RowIterator
 
 abstract class BatchExecWindowAggregateBase(
@@ -93,7 +94,7 @@ abstract class BatchExecWindowAggregateBase(
     case (a: DeclarativeAggregateFunction, index) =>
       val idx = auxGrouping.length + index
       a.aggBufferAttributes.map(attr => s"agg${idx}_${attr.name}").toArray
-    case (_: UserDefinedAggregateFunction[_, _], index) =>
+    case (_: AggregateFunction[_, _], index) =>
       val idx = auxGrouping.length + index
       Array(s"agg$idx")
   }
@@ -102,7 +103,7 @@ abstract class BatchExecWindowAggregateBase(
     Array(FlinkTypeFactory.toInternalType(inputRelDataType.getFieldList.get(index).getType))
   } ++ aggregates.map {
     case a: DeclarativeAggregateFunction => a.aggBufferSchema.map(DataTypes.internal).toArray
-    case a: UserDefinedAggregateFunction[_, _] =>
+    case a: AggregateFunction[_, _] =>
       Array(getAccumulatorTypeOfAggregateFunction(a)).map(DataTypes.internal)
   }.toArray[Array[InternalType]]
 
@@ -113,10 +114,10 @@ abstract class BatchExecWindowAggregateBase(
     }, grouping.map(inputRelDataType.getFieldNames.get(_)))
 
   // get udagg instance names
-  lazy val udaggs: Map[UserDefinedAggregateFunction[_, _], String] = aggregates
-      .filter(a => a.isInstanceOf[UserDefinedAggregateFunction[_, _]])
+  lazy val udaggs: Map[AggregateFunction[_, _], String] = aggregates
+      .filter(a => a.isInstanceOf[AggregateFunction[_, _]])
       .map(a => a -> CodeGeneratorContext.udfFieldName(a)).toMap
-      .asInstanceOf[Map[UserDefinedAggregateFunction[_, _], String]]
+      .asInstanceOf[Map[AggregateFunction[_, _], String]]
 
   lazy val windowedGroupKeyType: BaseRowType = new BaseRowType(
     classOf[BinaryRow],

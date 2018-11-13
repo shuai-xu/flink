@@ -25,8 +25,8 @@ import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.ExpressionParser
-import org.apache.flink.table.types.DataTypes
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].

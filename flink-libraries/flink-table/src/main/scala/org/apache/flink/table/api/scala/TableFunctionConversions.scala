@@ -20,11 +20,11 @@ package org.apache.flink.table.api.scala
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.Table
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getResultTypeOfCTDFunction
 import org.apache.flink.table.plan.logical.LogicalTableFunctionCall
-import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.api.types.DataTypes
 
 /**
   * Holds methods to convert a [[TableFunction]] call in the Scala Table API into a [[Table]].

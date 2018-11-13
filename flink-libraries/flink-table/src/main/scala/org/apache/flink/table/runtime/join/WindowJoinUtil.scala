@@ -26,11 +26,11 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
-import org.apache.flink.table.types.BaseRowType
 import org.apache.flink.table.util.FlinkRexUtil
 
 import scala.collection.JavaConverters._

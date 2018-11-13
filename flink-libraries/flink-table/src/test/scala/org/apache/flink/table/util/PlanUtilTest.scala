@@ -26,6 +26,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator.Context
 import org.apache.flink.table.api.java.BatchTableEnvironment
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
@@ -34,7 +35,6 @@ import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
-import org.apache.flink.table.types.{DataType, DataTypes}
 import ExecResourceUtil.InferMode
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
@@ -134,7 +134,7 @@ class PlanUtilTest extends AbstractTestBase {
     */
   private def execute(inputOfSink: Table, sink: CollectTableSink[Row]): Unit = {
     val sinkTransformation = sink.emitBoundedStream(
-      tableEnv.translate[Row](inputOfSink, sink.getOutputType, sink),
+      tableEnv.toBoundedStream(inputOfSink, sink.getOutputType, sink),
       tableEnv.getConfig, env.getConfig).getTransformation
     setDumpFileToConfig()
     val streamGraph = StreamGraphGenerator.generate(

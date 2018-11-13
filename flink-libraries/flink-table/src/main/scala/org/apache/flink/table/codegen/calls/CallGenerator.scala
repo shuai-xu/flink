@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.codegen.calls
 
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.types.{DataTypes, InternalType}
 
 trait CallGenerator {
 

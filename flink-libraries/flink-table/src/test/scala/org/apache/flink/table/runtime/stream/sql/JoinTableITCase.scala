@@ -31,14 +31,14 @@ import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{ResultFuture, RichAsyncFunction}
 import org.apache.flink.streaming.api.scala.DataStream
+import org.apache.flink.table.api.functions.ScalarFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableSchema, Types}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, StreamingWithStateTestBase, TestingAppendSink, TestingRetractSink}
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
 import org.apache.flink.util.{Collector, ExceptionUtils}

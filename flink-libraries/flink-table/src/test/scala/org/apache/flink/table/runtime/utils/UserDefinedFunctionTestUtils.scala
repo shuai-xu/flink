@@ -26,7 +26,7 @@ import org.apache.flink.api.java.tuple.{Tuple1, Tuple2}
 import org.apache.flink.api.scala.ExecutionEnvironment
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
 
 object UserDefinedFunctionTestUtils {
 

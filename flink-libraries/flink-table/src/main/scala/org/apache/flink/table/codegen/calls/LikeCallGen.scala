@@ -21,11 +21,10 @@ package org.apache.flink.table.codegen.calls
 import java.util.regex.Pattern
 
 import org.apache.calcite.runtime.SqlFunctions
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.newName
-import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNotNull
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.util.{FlinkLike, StringLikeChainChecker}
 
 /**

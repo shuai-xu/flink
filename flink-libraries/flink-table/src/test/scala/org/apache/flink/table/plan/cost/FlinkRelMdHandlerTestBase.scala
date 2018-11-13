@@ -41,6 +41,7 @@ import org.apache.calcite.util.{DateString, ImmutableBitSet, TimeString, Timesta
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, SqlTimeTypeInfo}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.expr
@@ -57,7 +58,6 @@ import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRank, Stream
 import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
 import org.apache.flink.table.plan.schema.{BaseRowSchema, FlinkRelOptTable}
 import org.apache.flink.table.plan.util.{AggregateUtil, ConstantRankRange, VariableRankRange}
-import org.apache.flink.table.types.DataTypes
 import org.junit.{Before, BeforeClass}
 
 import scala.collection.JavaConversions._

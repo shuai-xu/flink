@@ -21,8 +21,8 @@ package org.apache.flink.table.runtime.stream.table
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
-import org.apache.flink.table.functions.ScalarFunction
 import org.apache.flink.table.runtime.utils.TestingAppendSink
 import org.apache.flink.types.Row
 import org.junit.Test

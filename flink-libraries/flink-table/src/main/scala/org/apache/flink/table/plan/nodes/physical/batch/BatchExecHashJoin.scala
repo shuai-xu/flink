@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen.operator.LongHashJoinGenerator
@@ -36,7 +37,6 @@ import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.{ExpressionFormat, FlinkConventions}
 import org.apache.flink.table.runtime.operator.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.operator.join.batch.{HashJoinOperator, HashJoinType}
-import org.apache.flink.table.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.ExecResourceUtil
 

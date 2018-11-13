@@ -25,9 +25,10 @@ import org.apache.calcite.rel.core.Aggregate.Group
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.commons.math3.util.ArithmeticUtils
+import org.apache.flink.table.api.functions.UserDefinedFunction
+import org.apache.flink.table.api.types.{DataTypes, IntType, InternalType, LongType}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.expressions.ExpressionUtils._
-import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.FlinkConventions
@@ -35,7 +36,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggr
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.plan.util.AggregateUtil._
-import org.apache.flink.table.types.{DataTypes, IntType, InternalType, LongType}
 import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._

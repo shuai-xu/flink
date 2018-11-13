@@ -21,10 +21,10 @@ package org.apache.flink.table.runtime.batch.sql.subquery
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.QueryTest
 import org.apache.flink.table.runtime.batch.sql.QueryTest.row
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters
-import org.apache.flink.table.types.DataTypes
 import org.junit._
 
 import scala.collection.Seq

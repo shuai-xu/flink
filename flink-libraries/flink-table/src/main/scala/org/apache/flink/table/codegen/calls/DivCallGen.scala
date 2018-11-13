@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.codegen.calls
 
+import org.apache.flink.table.api.types.{DecimalType, InternalType}
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNotNull
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext, GeneratedExpression}
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.types.{DecimalType, InternalType}
 import org.apache.flink.table.typeutils.TypeCheckUtils.isNumeric
 
 // DIV(T1, T2) - return integral part of the division; fractional truncated.

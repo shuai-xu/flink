@@ -18,10 +18,10 @@
 package org.apache.flink.table.codegen.expr
 
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 
 /**
   * built-in sum aggregate function

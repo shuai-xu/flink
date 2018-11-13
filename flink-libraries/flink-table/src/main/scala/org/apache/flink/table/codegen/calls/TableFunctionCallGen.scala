@@ -18,11 +18,11 @@
 
 package org.apache.flink.table.codegen.calls
 
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.GeneratedExpression.NEVER_NULL
 import org.apache.flink.table.codegen.calls.ScalarFunctionCallGen.prepareUDFArgs
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
-import org.apache.flink.table.functions.TableFunction
-import org.apache.flink.table.types.InternalType
 
 /**
   * Generates a call to user-defined [[TableFunction]].

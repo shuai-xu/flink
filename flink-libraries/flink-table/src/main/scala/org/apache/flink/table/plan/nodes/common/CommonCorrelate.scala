@@ -23,6 +23,7 @@ import org.apache.calcite.sql.SemiJoinType
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
@@ -36,7 +37,6 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
 import org.apache.flink.table.runtime.operator.{StreamRecordCollector,
   OneInputSubstituteStreamOperator}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import scala.collection.JavaConversions._

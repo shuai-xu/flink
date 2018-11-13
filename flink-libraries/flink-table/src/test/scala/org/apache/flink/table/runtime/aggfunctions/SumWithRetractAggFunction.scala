@@ -21,9 +21,9 @@ import java.lang.{Iterable => JIterable}
 import java.math.BigDecimal
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType}
 import org.apache.flink.table.dataformat.Decimal
-import org.apache.flink.table.types.{DataType, DataTypes, DecimalType}
 
 /** The initial accumulator for Sum with retract aggregate function */
 class SumWithRetractAccumulator[T] extends JTuple2[T, Long]

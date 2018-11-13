@@ -24,9 +24,9 @@ import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.CommonTestData.NonPojo
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Ignore, Test}

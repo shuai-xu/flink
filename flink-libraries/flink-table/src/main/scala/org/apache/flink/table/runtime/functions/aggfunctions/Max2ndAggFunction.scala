@@ -21,9 +21,9 @@ import java.lang.{Iterable => JIterable}
 import java.math.BigDecimal
 
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.dataformat.BinaryString
-import org.apache.flink.table.functions.AggregateFunction
-import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
 
 /** The initial accumulator for Max aggregate function */

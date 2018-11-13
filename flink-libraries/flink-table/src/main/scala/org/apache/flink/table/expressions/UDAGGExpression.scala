@@ -18,9 +18,9 @@
 package org.apache.flink.table.expressions
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getAccumulatorTypeOfAggregateFunction, getResultTypeOfAggregateFunction}
-import org.apache.flink.table.types.DataTypes
 
 /**
   * A class which creates a call to an aggregateFunction

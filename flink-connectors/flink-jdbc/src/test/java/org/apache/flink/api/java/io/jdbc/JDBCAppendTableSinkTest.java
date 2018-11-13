@@ -22,9 +22,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.StreamSink;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.types.Row;
 
 import org.junit.Test;

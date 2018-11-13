@@ -31,8 +31,8 @@ import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext
 import org.apache.flink.types.Row
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.util.StringUtils
 
 /**

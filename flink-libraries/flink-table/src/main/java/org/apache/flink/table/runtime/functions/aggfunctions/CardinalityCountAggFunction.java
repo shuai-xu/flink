@@ -19,7 +19,7 @@
 package org.apache.flink.table.runtime.functions.aggfunctions;
 
 import org.apache.flink.api.java.tuple.Tuple1;
-import org.apache.flink.table.functions.AggregateFunction;
+import org.apache.flink.table.api.functions.AggregateFunction;
 import org.apache.flink.table.runtime.functions.aggfunctions.cardinality.CardinalityCountAccumulator;
 import org.apache.flink.table.runtime.functions.aggfunctions.cardinality.HyperLogLog;
 

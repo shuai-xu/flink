@@ -21,6 +21,7 @@ import org.apache.flink.api.common.functions._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.boxedTypeTermForType
 import org.apache.flink.table.codegen.CodeGenUtils.getDefineParamsByFunctionClass
 import org.apache.flink.table.codegen.CodeGenUtils.getCallingParamsByFunctionClass
@@ -29,7 +30,6 @@ import org.apache.flink.table.codegen.CodeGenUtils.generateSplitFunctionCalls
 import org.apache.flink.table.codegen.CodeGeneratorContext.BASE_ROW
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.types.{DataTypes, InternalType}
 
 /**
   * A code generator for generating Flink [[org.apache.flink.api.common.functions.Function]]s.

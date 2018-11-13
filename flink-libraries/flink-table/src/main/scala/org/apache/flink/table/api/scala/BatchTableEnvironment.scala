@@ -26,11 +26,12 @@ import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.scala.getCallLocationName
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.functions.{AggregateFunction, TableFunction}
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BoxedWrapperRow
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
+import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.RangeInputFormat
-import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**
@@ -292,6 +293,23 @@ class BatchTableEnvironment(
 
     checkValidTableName(name)
     registerBoundedStreamInternal(name, boundedStream.javaStream, fields.toArray, fieldNullables)
+  }
+
+  /**
+    * Converts the given [[Table]] into a [[DataStream]] of a specified type.
+    *
+    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
+    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
+    * types: Fields are mapped by position, field types must match.
+    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
+    *
+    * @param table The [[Table]] to convert.
+    * @param resultType The class of the type of the resulting [[DataStream]].
+    * @tparam T The type of the resulting [[DataStream]].
+    * @return The converted [[DataStream]].
+    */
+  def toBoundedStream[T](table: Table, resultType: DataType, sink: TableSink[T]): DataStream[T] = {
+    new DataStream[T](translate(table, resultType, sink))
   }
 
   /**

@@ -21,10 +21,10 @@ package org.apache.flink.table.plan.schema
 import org.apache.flink.api.common.typeinfo.{TypeInformation, Types}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.TestTableSourceTable
 import org.junit.Test
 import org.junit.Assert._

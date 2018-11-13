@@ -19,8 +19,8 @@ package org.apache.flink.table.codegen
 
 import java.lang.{Integer => JInt, Long => JLong}
 
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
-import org.apache.flink.table.types.{BaseRowType, DataTypes, InternalType}
 import org.junit.Assert.{assertFalse, assertTrue}
 import org.junit.Test
 

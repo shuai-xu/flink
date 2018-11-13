@@ -27,10 +27,9 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.NlsString
-import org.apache.commons.lang3.StringEscapeUtils
+import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.types._
 import org.apache.flink.util.TimeConvertUtils
 
 object Literal {

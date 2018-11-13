@@ -20,7 +20,7 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.typeutils.TypeComparator
 import org.apache.flink.api.common.typeutils.base._
 import org.apache.flink.api.common.{ExecutionMode, InvalidProgramException}
-import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.codehaus.janino.SimpleCompiler
 import org.junit.Test
 

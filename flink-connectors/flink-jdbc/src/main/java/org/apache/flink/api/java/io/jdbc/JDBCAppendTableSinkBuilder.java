@@ -18,7 +18,7 @@
 
 package org.apache.flink.api.java.io.jdbc;
 
-import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.util.Preconditions;
 
 import static org.apache.flink.api.java.io.jdbc.JDBCOutputFormat.DEFAULT_BATCH_INTERVAL;

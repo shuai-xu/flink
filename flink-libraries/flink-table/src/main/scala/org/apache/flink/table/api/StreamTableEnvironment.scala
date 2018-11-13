@@ -34,6 +34,7 @@ import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.codegen.CodeGeneratorContext
@@ -54,9 +55,8 @@ import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilde
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
-import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, StateUtil}
+import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, RowConverters, StateUtil}
 import org.apache.flink.util.Preconditions
 
 import _root_.scala.collection.JavaConversions._
@@ -132,7 +132,7 @@ abstract class StreamTableEnvironment(
     execEnv.execute(jobName)
   }
 
-  override def compile(): Seq[LogicalNodeBlock] = {
+  private[flink] override def compile(): Seq[LogicalNodeBlock] = {
 
     mergeParameters()
 
@@ -951,7 +951,8 @@ abstract class StreamTableEnvironment(
     val optionRowTimeField = if (rowtimeFields.isEmpty) None else Some(rowtimeFields.head.getIndex)
     val ctx = CodeGeneratorContext(config, true)
         .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
-    val (converterOperator, outputType) = generateRowConverterOperator[BaseRow, A](
+    val (converterOperator, outputType) = RowConverters.generateRowConverterOperator[BaseRow, A](
+      config,
       ctx,
       convType.asInstanceOf[BaseRowTypeInfo[_]],
       logicalType,

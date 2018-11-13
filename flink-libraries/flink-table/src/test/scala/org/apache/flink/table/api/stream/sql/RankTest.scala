@@ -19,10 +19,10 @@ package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
+import org.apache.flink.table.api.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
 import org.apache.flink.table.functions.aggregate.LongSumAggFunction
-import org.apache.flink.table.functions.{Monotonicity, ScalarFunction}
 import org.apache.flink.table.runtime.utils.TestingRetractTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.Assert.assertEquals

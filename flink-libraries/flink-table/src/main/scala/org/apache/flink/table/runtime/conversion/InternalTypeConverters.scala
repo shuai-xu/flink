@@ -32,13 +32,13 @@ import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.api.scala.typeutils.{CaseClassSerializer, CaseClassTypeInfo}
 import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.types.{DataTypes, _}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BinaryArray.calculateElementSize
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
-import org.apache.flink.table.types.{DataTypes, _}
 import org.apache.flink.table.typeutils.TypeUtils._
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo, TypeUtils}
 import org.apache.flink.types.Row

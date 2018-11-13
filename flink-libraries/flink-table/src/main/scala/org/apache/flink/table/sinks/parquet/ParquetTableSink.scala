@@ -25,9 +25,9 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
-import org.apache.flink.table.types.{BaseRowType, DataType, DataTypes}
 import org.apache.hadoop.fs.FileUtil
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 

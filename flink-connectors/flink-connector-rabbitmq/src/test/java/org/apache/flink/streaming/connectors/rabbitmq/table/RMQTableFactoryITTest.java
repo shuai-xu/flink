@@ -24,9 +24,9 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableProperties;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
+import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.sinks.TableSink;
-import org.apache.flink.table.types.DataTypes;
-import org.apache.flink.table.types.InternalType;
 
 import org.junit.Ignore;
 import org.junit.Test;

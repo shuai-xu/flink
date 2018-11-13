@@ -27,7 +27,7 @@ import java.util
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.types.InternalType
+import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConversions._
