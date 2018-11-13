@@ -115,8 +115,8 @@ class JobLauncherSqlTest {
               .tableSourceTable.get.tableSource.getTableSchema
     assertEquals(
       tableSchema.getType("a").get,
-      DataTypes.createDecimalType(DecimalType.SYSTEM_DEFAULT.precision,
-        DecimalType.SYSTEM_DEFAULT.scale))
+      DataTypes.createDecimalType(DecimalType.USER_DEFAULT.precision,
+        DecimalType.USER_DEFAULT.scale))
     assertEquals(
       tableSchema.getType("b").get,
       DataTypes.createDecimalType(1, 1))
