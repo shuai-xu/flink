@@ -261,6 +261,13 @@ final class HeapInternalState implements InternalState {
 	}
 
 	@Override
+	public <K, MK, MV> void rawPutAll(K key, Map<MK, MV> maps) {
+		for (Map.Entry<MK, MV> entry : maps.entrySet()) {
+			put(Row.of(key, entry.getKey()), Row.of(entry.getValue()));
+		}
+	}
+
+	@Override
 	public void mergeAll(Map<Row, Row> pairs) {
 		if (pairs == null || pairs.isEmpty()) {
 			return;

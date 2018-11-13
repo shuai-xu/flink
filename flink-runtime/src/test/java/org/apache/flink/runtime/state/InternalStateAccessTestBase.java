@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.functions.ListMerger;
 import org.apache.flink.api.common.typeutils.BytewiseComparator;
+import org.apache.flink.api.common.typeutils.base.DoubleSerializer;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
@@ -255,6 +256,30 @@ public abstract class InternalStateAccessTestBase {
 		for (Row key : pairs.keySet()) {
 			Row value = state.get(key);
 			assertNull(value);
+		}
+	}
+
+	@Test
+	public void testRawPutAll() {
+		InternalStateDescriptor rawPutAllDescriptor =
+			new InternalStateDescriptorBuilder("test_raw_put_all")
+				.addKeyColumn("key", IntSerializer.INSTANCE)
+				.addKeyColumn("mapKey", LongSerializer.INSTANCE)
+				.addValueColumn("mapValue", DoubleSerializer.INSTANCE)
+				.getDescriptor();
+		InternalState rawPutAllState = backend.getInternalState(rawPutAllDescriptor);
+		Map<Long, Double> pairs = new HashMap<>(100);
+		Random random = new Random();
+		for (int i = 0; i < 100; ++i) {
+			pairs.put(random.nextLong(), random.nextDouble());
+		}
+
+		Integer key = 1;
+		rawPutAllState.rawPutAll(key, pairs);
+
+		for (Map.Entry<Long, Double> entry : pairs.entrySet()) {
+			Row value = rawPutAllState.get(Row.of(key, entry.getKey()));
+			assertEquals(entry.getValue(), value.getField(0));
 		}
 	}
 

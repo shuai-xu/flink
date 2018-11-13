@@ -254,15 +254,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
-		Map<Row, Row> internalPairs = new HashMap<>(mappings.size());
-		for (Map.Entry<? extends MK, ? extends MV> mapping : mappings.entrySet()) {
-			MK mapKey = mapping.getKey();
-
-			MV mapValue = mapping.getValue();
-			internalPairs.put(Row.of(key, mapKey), Row.of(mapValue));
-		}
-
-		internalState.putAll(internalPairs);
+		internalState.rawPutAll(key, mappings);
 	}
 
 	@Override

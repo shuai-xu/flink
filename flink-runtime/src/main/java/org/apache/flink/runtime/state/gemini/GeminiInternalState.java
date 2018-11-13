@@ -168,6 +168,13 @@ public class GeminiInternalState implements InternalState {
 	}
 
 	@Override
+	public <K, MK, MV> void rawPutAll(K key, Map<MK, MV> maps) {
+		for (Map.Entry<MK, MV> entry : maps.entrySet()) {
+			put(Row.of(key, entry.getKey()), Row.of(entry.getValue()));
+		}
+	}
+
+	@Override
 	public void removeAll(Collection<Row> keys) {
 		if (keys == null || keys.isEmpty()) {
 			return;

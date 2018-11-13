@@ -129,6 +129,11 @@ public interface InternalState {
 	void putAll(Map<Row, Row> pairs);
 
 	/**
+	 * Adds all the mappings in the given map into the state.
+	 */
+	<K, MK, MV> void rawPutAll(K key, Map<MK, MV> maps);
+
+	/**
 	 * Merge all the mappings in the given map into the state.
 	 * The addition of the mappings is atomic, exceptions will be thrown
 	 * if some of them fail to be merged.

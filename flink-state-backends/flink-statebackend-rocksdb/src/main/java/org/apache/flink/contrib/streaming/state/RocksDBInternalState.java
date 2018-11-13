@@ -34,10 +34,12 @@ import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.PrefixPartitionIterator;
+import org.apache.flink.runtime.state.StateAccessException;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
 
 import javax.annotation.Nullable;
@@ -243,6 +245,22 @@ public class RocksDBInternalState implements InternalState {
 		}
 
 		backend.getDbInstance().multiPut(keyValueBytesMap);
+	}
+
+	@Override
+	public <K, MK, MV> void rawPutAll(K key, Map<MK, MV> maps) {
+
+		try (RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(backend.getDbInstance().getDb(), backend.getDbInstance().getWriteOptions())) {
+			for (Map.Entry<MK, MV> entry : maps.entrySet()) {
+				Row internalKey = Row.of(key, entry.getKey());
+				int group = getGroupForKey(internalKey);
+				byte[] dbKey = serializeStateKey(group, internalKey);
+				byte[] dbValue = serializeStateValue(Row.of(entry.getValue()), descriptor);
+				writeBatchWrapper.put(backend.getDbInstance().getDefaultColumnFamily(), dbKey, dbValue);
+			}
+		} catch (RocksDBException e) {
+			throw new StateAccessException(e);
+		}
 	}
 
 	@Override
