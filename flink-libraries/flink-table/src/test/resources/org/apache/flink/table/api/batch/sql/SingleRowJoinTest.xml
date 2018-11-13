@@ -36,13 +36,13 @@ LogicalProject(a1=[$0], a2=[$1])
 Calc(select=[a1, a2])
 +- NestedLoopJoin(where=[<(a1, cnt)], join=[a1, a2, cnt], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_COUNT(a1) AS count$0])
                +- Calc(select=[a1])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>
@@ -69,8 +69,8 @@ Calc(select=[a1])
    :     +- Exchange(distribution=[single])
    :        +- LocalHashAggregate(select=[Partial_COUNT(*) AS count$0])
    :           +- Calc(select=[0 AS $f0])
-   :              +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :              +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>
@@ -97,8 +97,8 @@ Calc(select=[a1])
    :     +- Exchange(distribution=[single])
    :        +- LocalHashAggregate(select=[Partial_COUNT(*) AS count$0])
    :           +- Calc(select=[0 AS $f0])
-   :              +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :              +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>
@@ -120,13 +120,13 @@ LogicalProject(a2=[$1])
       <![CDATA[
 Calc(select=[a2])
 +- NestedLoopJoin(where=[>(a1, cnt)], join=[a1, a2, cnt], joinType=[LeftOuterJoin], build=[right], singleRowJoin=[true])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_COUNT(*) AS count$0])
                +- Calc(select=[0 AS $f0])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
 ]]>
     </Resource>
   </TestCase>
@@ -149,13 +149,13 @@ LogicalProject(a1=[$0], asum=[$2])
 NestedLoopJoin(where=[true], join=[a1, asum], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
 :  +- Calc(select=[a1])
-:     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+:     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[+($f0, $f1) AS asum])
       +- HashAggregate(isMerge=[true], select=[Final_SUM(sum$0) AS $f0, Final_SUM(sum$1) AS $f1])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_SUM(a1) AS sum$0, Partial_SUM(a2) AS sum$1])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+               +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>
@@ -177,13 +177,13 @@ LogicalProject(a2=[$1])
       <![CDATA[
 Calc(select=[a2])
 +- NestedLoopJoin(where=[=(a1, cnt)], join=[a1, a2, cnt], joinType=[LeftOuterJoin], build=[right], singleRowJoin=[true])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_COUNT(*) AS count$0])
                +- Calc(select=[0 AS $f0])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
 ]]>
     </Resource>
   </TestCase>
@@ -208,13 +208,13 @@ Calc(select=[a1, a2])
 +- NestedLoopJoin(where=[=(a10, cnt)], join=[a1, a2, a10, cnt], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
    :  +- Calc(select=[a1, a2, CAST(a1) AS a10])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS cnt])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_COUNT(a1) AS count$0])
                +- Calc(select=[a1])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>
@@ -235,12 +235,12 @@ LogicalProject(a1=[$0], a2=[$1], b1=[$2], b2=[$3])
     <Resource name="planAfter">
       <![CDATA[
 NestedLoopJoin(where=[AND(<(a1, b1), =(a2, b2))], join=[a1, a2, b1, b2], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
-:- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+:- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 +- Exchange(distribution=[broadcast])
    +- HashAggregate(isMerge=[true], select=[Final_MIN(min$0) AS b1, Final_MAX(max$1) AS b2])
       +- Exchange(distribution=[single])
          +- LocalHashAggregate(select=[Partial_MIN(b1) AS min$0, Partial_MAX(b2) AS max$1])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
+            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[b1, b2])
 ]]>
     </Resource>
   </TestCase>
@@ -268,7 +268,7 @@ Calc(select=[a2, EXPR$1])
    :- HashAggregate(isMerge=[true], groupBy=[a2], select=[a2, Final_SUM(sum$0) AS EXPR$1])
    :  +- Exchange(distribution=[hash[a2]])
    :     +- LocalHashAggregate(groupBy=[a2], select=[a2, Partial_SUM(a1) AS sum$0])
-   :        +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+   :        +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
    +- Exchange(distribution=[broadcast])
       +- SortAggregate(isMerge=[false], select=[SINGLE_VALUE(EXPR$0) AS $f0])
          +- Calc(select=[*($f0, 0.1) AS EXPR$0])
@@ -276,7 +276,7 @@ Calc(select=[a2, EXPR$1])
                +- Exchange(distribution=[single])
                   +- LocalSortAggregate(select=[Partial_SUM(a1) AS sum$0])
                      +- Calc(select=[a1])
-                        +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
+                        +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a1, a2])
 ]]>
     </Resource>
   </TestCase>

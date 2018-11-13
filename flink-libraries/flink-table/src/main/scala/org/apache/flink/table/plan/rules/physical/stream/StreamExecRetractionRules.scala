@@ -111,8 +111,8 @@ object StreamExecRetractionRules {
       val traitsWithAccMode =
         if (
           AccModeTrait.DEFAULT == traits.getTrait(AccModeTraitDef.INSTANCE) &&
-            rel.isInstanceOf[StreamExecScan] &&
-            rel.asInstanceOf[StreamExecScan].isAccRetract) {
+            rel.isInstanceOf[StreamExecDataStreamScan] &&
+            rel.asInstanceOf[StreamExecDataStreamScan].isAccRetract) {
           // if source is AccRetract
           traits.plus(new AccModeTrait(AccMode.AccRetract))
         } else {

@@ -26,7 +26,7 @@ LogicalProject(a$_1=[AS($0._1, 'a$_1')], a$_2=[AS($0._2, 'a$_2')], c=[$2], b$_1=
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a._1 AS a$_1, a._2 AS a$_2, c, b._1 AS b$_1, b._2 AS b$_2])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -40,7 +40,7 @@ LogicalProject(a$_1=[AS($0._1, 'a$_1')], a$_2=[AS($0._2, 'a$_2')], b=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a._1 AS a$_1, a._2 AS a$_2, b])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -54,7 +54,7 @@ LogicalProject(_c0=[AS(org$apache$flink$table$plan$batch$table$CalcTest$giveMeCa
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[giveMeCaseClass$().my AS _c0, giveMeCaseClass$().clazz AS _c1, giveMeCaseClass$().my AS _c2, giveMeCaseClass$().clazz AS _c3])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -67,7 +67,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -87,7 +87,7 @@ Calc(select=[TMP_0])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
          +- Calc(select=[a, c])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -107,7 +107,7 @@ Calc(select=[word, TMP_0 AS frequency], where=[=(TMP_0, 2)])
 +- HashAggregate(isMerge=[true], groupBy=[word], select=[word, Final_SUM(sum$0) AS TMP_0])
    +- Exchange(distribution=[hash[word]])
       +- LocalHashAggregate(groupBy=[word], select=[word, Partial_SUM(frequency) AS sum$0])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[word, frequency])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[word, frequency])
 ]]>
     </Resource>
   </TestCase>
@@ -129,7 +129,7 @@ Calc(select=[TMP_0])
    +- Exchange(distribution=[hash[$f2]])
       +- LocalHashAggregate(groupBy=[$f2], select=[$f2, Partial_SUM(a) AS sum$0])
          +- Calc(select=[a, c, MyHashCode$(c) AS $f2])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -151,7 +151,7 @@ Calc(select=[TMP_0])
    +- Exchange(distribution=[hash[$f2]])
       +- LocalHashAggregate(groupBy=[$f2], select=[$f2, Partial_SUM(a) AS sum$0])
          +- Calc(select=[a, c, UPPER(c) AS $f2])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -165,7 +165,7 @@ LogicalProject(a=[$0], b=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -179,7 +179,7 @@ LogicalProject(_c0=[AS(org$apache$flink$table$plan$batch$table$CalcTest$MyHashCo
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[MyHashCode$(c) AS _c0, b])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>

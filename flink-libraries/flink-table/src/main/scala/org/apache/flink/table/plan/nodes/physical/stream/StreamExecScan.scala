@@ -18,82 +18,34 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.TableScan
-import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.expressions.Cast
-import org.apache.flink.table.plan.schema.DataStreamTable
+import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
-/**
-  * Flink RelNode which matches along with DataStreamSource.
-  * It ensures that types without deterministic field order (e.g. POJOs) are not part of
-  * the plan translation.
-  */
-class StreamExecScan(
-    cluster: RelOptCluster,
-    traitSet: RelTraitSet,
-    table: RelOptTable,
-    relDataType: RelDataType)
-  extends TableScan(cluster, traitSet, table)
-  with StreamScan {
+trait StreamExecScan extends CommonScan[BaseRow] with StreamExecRel {
 
-  val dataStreamTable: DataStreamTable[Any] = getTable.unwrap(classOf[DataStreamTable[Any]])
+  def convertToInternalRow(
+      input: StreamTransformation[Any],
+      fieldIdx: Array[Int],
+      outRowType: RelDataType,
+      dataType: DataType,
+      config: TableConfig,
+      rowtimeExpr: Option[RexNode]
+  ): StreamTransformation[BaseRow] = {
+    val ctx = CodeGeneratorContext(config, true).setOperatorBaseClass(
+      classOf[AbstractProcessStreamOperator[BaseRow]])
 
-  override def deriveRowType(): RelDataType = relDataType
-
-  def isAccRetract: Boolean = getTable.unwrap(classOf[DataStreamTable[Any]]).isAccRetract
-
-  override def producesUpdates: Boolean =
-    getTable.unwrap(classOf[DataStreamTable[Any]]).producesUpdates
-
-  override def producesRetractions: Boolean = producesUpdates && isAccRetract
-
-  override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new StreamExecScan(
-      cluster,
-      traitSet,
-      getTable,
-      relDataType
-    )
-  }
-
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-
-    val config = tableEnv.getConfig
-    val inputDataStream: DataStream[Any] = dataStreamTable.dataStream
-
-    val fieldIdxs = dataStreamTable.fieldIndexes
-
-    // get expression to extract timestamp
-    val rowtimeExpr: Option[RexNode] =
-      if (fieldIdxs.contains(DataTypes.ROWTIME_STREAM_MARKER)) {
-        // extract timestamp from StreamRecord
-        Some(
-          Cast(
-            org.apache.flink.table.expressions.StreamRecordTimestamp(),
-            DataTypes.ROWTIME_INDICATOR)
-              .toRexNode(tableEnv.getRelBuilder))
-      } else {
-        None
-      }
-    convertToInternalRow(
-      inputDataStream.getTransformation,
-      fieldIdxs,
-      getRowType,
-      dataStreamTable.dataType,
-      config,
-      rowtimeExpr)
-  }
-
-  override def needInternalConversion: Boolean = {
-    hasTimeAttributeField(dataStreamTable.fieldIndexes) ||
-      needsConversion(dataStreamTable.dataType)
+    if (needInternalConversion) {
+      convertToInternalRow(
+        ctx, input, fieldIdx, dataType, outRowType, getTable.getQualifiedName, config, rowtimeExpr)
+    } else {
+      input.asInstanceOf[StreamTransformation[BaseRow]]
+    }
   }
 }

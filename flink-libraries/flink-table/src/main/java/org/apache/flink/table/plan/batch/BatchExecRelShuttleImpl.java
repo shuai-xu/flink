@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.batch;
 
 import org.apache.flink.table.api.TableException;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -61,7 +61,7 @@ import java.util.List;
 public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel<?>> {
 
 	@Override
-	public BatchExecRel<?> visit(BatchExecBoundedDataStreamScan boundedStreamScan) {
+	public BatchExecRel<?> visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		return visitInputs(boundedStreamScan);
 	}
 

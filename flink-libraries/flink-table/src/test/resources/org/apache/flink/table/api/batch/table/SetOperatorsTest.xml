@@ -30,9 +30,9 @@ LogicalUnion(all=[true])
       <![CDATA[
 Union(all=[true], union=[a])
 :- Calc(select=[a])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Calc(select=[CASE(>(c, 0), b, null) AS _c0])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -56,9 +56,9 @@ Calc(select=[TMP_0 AS a, b, TMP_1 AS c])
       +- LocalHashAggregate(groupBy=[b], select=[b, Partial_SUM(a) AS sum$0, Partial_COUNT(c) AS count$1])
          +- Union(all=[true], union=[a, b, c])
             :- Calc(select=[a, b, c], where=[>(a, 0)])
-            :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
             +- Calc(select=[a, b, c], where=[>(a, 0)])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -79,11 +79,11 @@ LogicalProject(a1=[AS($0, 'a1')])
       <![CDATA[
 HashSemiJoin(where=[=(c, a1)], join=[a, b, c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[a1], select=[a1])
       +- Calc(select=[a AS a1], where=[=(b, 'two')])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -98,7 +98,7 @@ LogicalProject(b2=[AS($0, 'b2')])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[IN(b, 1972-02-22 07:12:00.333) AS b2])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -117,8 +117,8 @@ LogicalProject(b=[$1], c=[$2])
       <![CDATA[
 Calc(select=[b, c])
 +- Union(all=[true], union=[a, b, c])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+   :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -136,9 +136,9 @@ LogicalUnion(all=[true])
       <![CDATA[
 Union(all=[true], union=[a])
 :- Calc(select=[a])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
 +- Calc(select=[b])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>

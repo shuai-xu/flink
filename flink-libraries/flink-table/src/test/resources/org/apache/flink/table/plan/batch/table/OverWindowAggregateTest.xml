@@ -30,7 +30,7 @@ Calc(select=[c, w0$o0 AS _c1])
    +- Sort(orderBy=[c ASC, a ASC])
       +- Exchange(distribution=[hash[c]])
          +- Calc(select=[a, c])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

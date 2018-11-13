@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.operators.StreamSource
 import org.apache.flink.streaming.api.transformations.SourceTransformation
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.Assert._
 import org.junit.Test
@@ -38,7 +38,7 @@ class ScanBatchExecTest extends TableTestBatchExecBase  {
 
   @Test
   def testSetDefaultResourceAndParallelism(): Unit = {
-    val exec = new BatchExecBoundedDataStreamScan(
+    val exec = new BatchExecBoundedStreamScan(
       Mockito.mock(classOf[RelOptCluster]),
       RelTraitSet.createEmpty(),
       Mockito.mock(classOf[RelOptTable]),

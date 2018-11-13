@@ -37,12 +37,12 @@ HashAggregate(isMerge=[true], groupBy=[a], select=[a])
    +- LocalHashAggregate(groupBy=[a], select=[a])
       +- Union(all=[true], union=[a])
          :- Calc(select=[a], where=[>(b, 2)])
-         :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
          +- Union(all=[true], union=[a])
             :- Calc(select=[a])
-            :  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+            :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
             +- Calc(select=[a])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -62,8 +62,8 @@ Calc(select=[a])
    +- Exchange(distribution=[hash[a, b, c]])
       +- LocalHashAggregate(groupBy=[a, b, c], select=[a, b, c])
          +- Union(all=[true], union=[a, b, c])
-            :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+            :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -104,9 +104,9 @@ LogicalProject(a=[$0], c=[$1])
       <![CDATA[
 Union(all=[true], union=[a, c])
 :- Calc(select=[a, c], where=[>(a, 2)])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Calc(select=[a, c], where=[>(a, 2)])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

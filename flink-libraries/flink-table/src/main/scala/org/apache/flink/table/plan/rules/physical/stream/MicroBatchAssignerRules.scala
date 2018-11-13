@@ -26,7 +26,7 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.{TableScan, Union}
 import org.apache.calcite.rel.{BiRel, RelNode, SingleRel}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecMicroBatchAssigner, StreamExecScan, StreamExecTableSourceScan}
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecMicroBatchAssigner, StreamExecDataStreamScan, StreamExecTableSourceScan}
 import org.apache.flink.table.plan.schema.IntermediateDataStreamTable
 
 import scala.collection.JavaConversions._
@@ -153,7 +153,7 @@ object MicroBatchAssignerRules {
   }
 
   private def isScan(node: RelNode): Boolean = node match {
-    case scan: StreamExecScan =>
+    case scan: StreamExecDataStreamScan =>
       // scan is not an intermediate datastream
       !scan.dataStreamTable.isInstanceOf[IntermediateDataStreamTable[_]]
     case _: StreamExecTableSourceScan => true

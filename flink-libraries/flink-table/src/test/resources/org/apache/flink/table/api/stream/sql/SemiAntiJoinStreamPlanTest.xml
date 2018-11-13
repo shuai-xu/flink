@@ -21,20 +21,20 @@ limitations under the License.
       <![CDATA[
 StreamExecJoin(retract=[false], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[AntiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[ONLY_EQUALITY_CONDITION_EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
   StreamExecExchange(distribution=[hash[a1]])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[b1]])
     StreamExecCalc(select=[b1])
-      StreamExecScan(table=[[_DataStreamTable_1]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -43,20 +43,20 @@ StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[AntiJoin], leftSt
       <![CDATA[
 StreamExecJoin(retract=[false], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[AND(=(a1, b1), >(a2, b2))], join=[a1, a2, a3], joinType=[AntiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[WITHOUT_PRIMARY_KEY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
   StreamExecExchange(distribution=[hash[a1]])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[b1]])
     StreamExecCalc(select=[b1, b2])
-      StreamExecScan(table=[[_DataStreamTable_1]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -69,13 +69,13 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[false], accMode=[Acc])
       StreamExecCalc(retract=[false], accMode=[Acc])
         StreamExecGroupAggregate(retract=[false], accMode=[Acc])
           StreamExecExchange(retract=[true], accMode=[Acc])
             StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecScan(retract=[true], accMode=[Acc])
+              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
@@ -86,13 +86,13 @@ StreamExecCalc(select=[a2, a1])
       StreamExecGroupAggregate(groupBy=[a1], select=[a1, SUM(a2) AS a2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[a1]])
           StreamExecCalc(select=[a1, a2])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[b1]])
       StreamExecCalc(select=[b2, b1])
         StreamExecGroupAggregate(groupBy=[b1], select=[b1, SUM(b2) AS b2], aggWithRetract=[[false]])
           StreamExecExchange(distribution=[hash[b1]])
             StreamExecCalc(select=[b1, b2])
-              StreamExecScan(table=[[_DataStreamTable_1]])
+              StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -105,10 +105,10 @@ StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
@@ -119,10 +119,10 @@ StreamExecCalc(select=[a2, a1])
       StreamExecGroupAggregate(groupBy=[a1], select=[a1, SUM(a2) AS a2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[a1]])
           StreamExecCalc(select=[a1, a2])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[b1]])
       StreamExecCalc(select=[b1, b2])
-        StreamExecScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -135,13 +135,13 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
       StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[AccRetract])
       StreamExecCalc(retract=[true], accMode=[AccRetract])
         StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
           StreamExecExchange(retract=[true], accMode=[Acc])
             StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecScan(retract=[true], accMode=[Acc])
+              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
@@ -152,13 +152,13 @@ StreamExecCalc(select=[a2, a1])
       StreamExecGroupAggregate(groupBy=[a1], select=[a1, SUM(a2) AS a2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[a1]])
           StreamExecCalc(select=[a1, a2])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[b2]])
       StreamExecCalc(select=[b2, b1])
         StreamExecGroupAggregate(groupBy=[b1], select=[b1, SUM(b2) AS b2], aggWithRetract=[[false]])
           StreamExecExchange(distribution=[hash[b1]])
             StreamExecCalc(select=[b1, b2])
-              StreamExecScan(table=[[_DataStreamTable_1]])
+              StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -171,10 +171,10 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
@@ -185,10 +185,10 @@ StreamExecCalc(select=[a2, a1])
       StreamExecGroupAggregate(groupBy=[a1], select=[a1, SUM(a2) AS a2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[a1]])
           StreamExecCalc(select=[a1, a2])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[b1]])
       StreamExecCalc(select=[b1, b2])
-        StreamExecScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -197,20 +197,20 @@ StreamExecCalc(select=[a2, a1])
       <![CDATA[
 StreamExecJoin(retract=[false], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[SemiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
   StreamExecExchange(distribution=[hash[a1]])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[b1]])
     StreamExecCalc(select=[b1])
-      StreamExecScan(table=[[_DataStreamTable_1]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -219,20 +219,20 @@ StreamExecJoin(where=[=(a1, b1)], join=[a1, a2, a3], joinType=[SemiJoin], leftSt
       <![CDATA[
 StreamExecJoin(retract=[false], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
       <![CDATA[
 StreamExecJoin(where=[AND(=(a1, b1), >(a2, b2))], join=[a1, a2, a3], joinType=[SemiJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
   StreamExecExchange(distribution=[hash[a1]])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[b1]])
     StreamExecCalc(select=[b1, b2])
-      StreamExecScan(table=[[_DataStreamTable_1]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -245,13 +245,13 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
       StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[AccRetract])
       StreamExecCalc(retract=[true], accMode=[AccRetract])
         StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
           StreamExecExchange(retract=[true], accMode=[Acc])
             StreamExecCalc(retract=[true], accMode=[Acc])
-              StreamExecScan(retract=[true], accMode=[Acc])
+              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
@@ -262,13 +262,13 @@ StreamExecCalc(select=[a2, a1])
       StreamExecGroupAggregate(groupBy=[a1], select=[a1, SUM(a2) AS a2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[a1]])
           StreamExecCalc(select=[a1, a2])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[b2]])
       StreamExecCalc(select=[b2, b1])
         StreamExecGroupAggregate(groupBy=[b1], select=[b1, SUM(b2) AS b2], aggWithRetract=[[false]])
           StreamExecExchange(distribution=[hash[b1]])
             StreamExecCalc(select=[b1, b2])
-              StreamExecScan(table=[[_DataStreamTable_1]])
+              StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -281,12 +281,12 @@ StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[false], accMode=[Acc])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
     <Resource name="plan">
@@ -297,12 +297,12 @@ StreamExecCalc(select=[a2, a1])
       StreamExecGroupAggregate(groupBy=[a1], select=[a1, SUM(a2) AS a2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[a1]])
           StreamExecCalc(select=[a1, a2])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[b1]])
       StreamExecGroupAggregate(groupBy=[b1], select=[b1, SUM(b2) AS b2], aggWithRetract=[[false]])
         StreamExecExchange(distribution=[hash[b1]])
           StreamExecCalc(select=[b1, b2])
-            StreamExecScan(table=[[_DataStreamTable_1]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>

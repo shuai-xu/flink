@@ -56,7 +56,7 @@ HashAggregate(isMerge=[true], groupBy=[b], select=[b, Final_COUNT(count$0) AS EX
                +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_SUM(sum$0) AS c, Final_SUM(sum$1) AS d])
                   +- Exchange(distribution=[hash[a, b]])
                      +- LocalHashAggregate(groupBy=[a, b], select=[a, b, Partial_SUM(c) AS sum$0, Partial_SUM(d) AS sum$1])
-                        +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, d])
+                        +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -77,7 +77,7 @@ LogicalProject(a=[$0], b=[$1], name=[$4])
 Calc(select=[a, b, name])
 +- JoinTable(join=[a, b, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin])
    +- Calc(select=[a, b])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -96,7 +96,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
     <Resource name="planAfter">
       <![CDATA[
 JoinTable(join=[a, b, c, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -123,7 +123,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
 Calc(select=[a, b, c, id, name, CAST(10) AS age])
 +- JoinTable(join=[a, b, c, id, name], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], where=[=(age, 10)], period=[PROCTIME()])
    +- Calc(select=[a, b, c], where=[>(c, 1000)])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -145,7 +145,7 @@ LogicalProject(a=[$0], b=[$1], id=[$2], name=[$3], age=[$4])
       <![CDATA[
 JoinTable(join=[a, b, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
 +- Calc(select=[a, b], where=[>(c, 1000)])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -164,7 +164,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3], name=[$4], age=[$5])
     <Resource name="planAfter">
       <![CDATA[
 JoinTable(join=[a, b, c, id, name, age], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[LeftOuterJoin], period=[PROCTIME()])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -188,7 +188,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], id=[$3])
     <Resource name="planAfter">
       <![CDATA[
 JoinTable(join=[a, b, c, id], source=[TestDimensionTable(id, name, age)], on=[[0-0]], joinType=[InnerJoin], period=[PROCTIME()])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -323,7 +323,7 @@ Calc(select=[EXPR$0, EXPR$1, EXPR$2])
                :           +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_SUM(sum$0) AS c, Final_SUM(sum$1) AS d])
                :              +- Exchange(distribution=[hash[a, b]])
                :                 +- LocalHashAggregate(groupBy=[a, b], select=[a, b, Partial_SUM(c) AS sum$0, Partial_SUM(d) AS sum$1])
-               :                    +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, d])
+               :                    +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, d])
                +- Exchange(distribution=[broadcast])
                   +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_COUNT(count$0) AS $f2, Final_SUM(sum$1) AS EXPR$2])
                      +- Exchange(distribution=[hash[a, b]])

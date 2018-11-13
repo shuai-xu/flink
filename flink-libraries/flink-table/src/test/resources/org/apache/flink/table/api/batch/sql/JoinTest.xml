@@ -33,9 +33,9 @@ LogicalProject(a=[$0], a1=[$3])
 NestedLoopJoin(where=[true], join=[a, a1], joinType=[InnerJoin], build=[left])
 :- Exchange(distribution=[broadcast])
 :  +- Calc(select=[a])
-:     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Calc(select=[a1])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a1, b1, c1])
+   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a1, b1, c1])
 ]]>
     </Resource>
   </TestCase>
@@ -60,10 +60,10 @@ Calc(select=[b, y])
 +- HashJoin(where=[AND(=(a, z), $f3, $f30)], join=[a, b, $f3, y, z, $f30], joinType=[FullOuterJoin], build=[left])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b, <(b, 2) AS $f3])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[hash[z]])
       +- Calc(select=[y, z, >(z, 5) AS $f3])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -85,9 +85,9 @@ Calc(select=[b, y])
 +- HashJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[FullOuterJoin], build=[left])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[hash[z]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -109,10 +109,10 @@ Calc(select=[b, y])
 +- HashJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[FullOuterJoin], build=[left])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, b])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[hash[z]])
       +- Calc(select=[y, z])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -134,10 +134,10 @@ Calc(select=[c, g])
 +- NestedLoopJoin(where=[<>(b, e)], join=[b, c, e, g], joinType=[FullOuterJoin], build=[left])
    :- Exchange(distribution=[single])
    :  +- Calc(select=[b, c])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[single])
       +- Calc(select=[e, g])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -158,10 +158,10 @@ LogicalProject(c=[$2], g=[$6])
       <![CDATA[
 NestedLoopJoin(where=[true], join=[c, g], joinType=[InnerJoin], build=[right])
 :- Calc(select=[c])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- Calc(select=[g], where=[=(d, f)])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -182,10 +182,10 @@ LogicalProject(b=[$1], y=[$4])
 Calc(select=[b, y])
 +- HashJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[y, z])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -207,10 +207,10 @@ LogicalProject(c=[$2], g=[$6])
 Calc(select=[c, g])
 +- HashJoin(where=[=(a, g0)], join=[a, c, g, g0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, c])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[g, CAST(g) AS g0])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -233,10 +233,10 @@ LogicalProject(b=[$1], y=[$4])
 Calc(select=[b, y])
 +- HashJoin(where=[AND(=(a, z), $f3)], join=[a, b, $f3, y, z], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b, <(b, 2) AS $f3])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[y, z])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -257,9 +257,9 @@ LogicalProject(b=[$1], y=[$4])
 Calc(select=[b, y])
 +- HashJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -280,10 +280,10 @@ LogicalProject(c=[$2], g=[$6])
 Calc(select=[c, g])
 +- NestedLoopJoin(where=[>(b, e)], join=[b, c, e, g], joinType=[LeftOuterJoin], build=[right])
    :- Calc(select=[b, c])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[e, g])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -307,9 +307,9 @@ Calc(select=[b, x])
 +- HashJoin(where=[AND(=(a, z), $f3)], join=[a, b, x, z, $f3], joinType=[RightOuterJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Calc(select=[x, z, <(x, 2) AS $f3])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -331,8 +331,8 @@ Calc(select=[b, y])
 +- HashJoin(where=[AND(=(a, z), <(b, x))], join=[a, b, x, y, z], joinType=[RightOuterJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -354,9 +354,9 @@ Calc(select=[b, y])
 +- HashJoin(where=[=(a, z)], join=[a, b, y, z], joinType=[RightOuterJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a, b])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Calc(select=[y, z])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[x, y, z])
 ]]>
     </Resource>
   </TestCase>
@@ -378,9 +378,9 @@ Calc(select=[c, g])
 +- NestedLoopJoin(where=[<(b, e)], join=[b, c, e, g], joinType=[RightOuterJoin], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[b, c])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Calc(select=[e, g])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>

@@ -32,7 +32,7 @@ Calc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS TMP_0, CAS
    +- Exchange(distribution=[single])
       +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], properties=[TMP_4, TMP_5], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
          +- Calc(select=[c, rowtime, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[rowtime, a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[rowtime, a, b, c])
 ]]>
     </Resource>
   </TestCase>

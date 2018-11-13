@@ -23,10 +23,10 @@ StreamExecCalc(select=[a, c])
   StreamExecJoin(where=[=(b, d)], join=[a, b, c], joinType=[SemiJoin])
     StreamExecExchange(distribution=[hash[b]])
       StreamExecCalc(select=[a, b, c], where=[>(CAST(c), 10)])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[d]])
       StreamExecCalc(select=[d], where=[=(c, CAST(e))])
-        StreamExecScan(table=[[_DataStreamTable_1]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -37,12 +37,12 @@ StreamExecCalc(select=[a, c])
   StreamExecJoin(where=[=(b, EXPR$0)], join=[a, b, c, EXPR$0], joinType=[InnerJoin])
     StreamExecExchange(distribution=[hash[b]])
       StreamExecCalc(select=[a, b, c], where=[>(CAST(c), 10)])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
     StreamExecExchange(distribution=[hash[EXPR$0]])
       StreamExecGroupAggregate(select=[MAX(d) AS EXPR$0])
         StreamExecExchange(distribution=[single])
           StreamExecCalc(select=[d], where=[=(c, CAST(e))])
-            StreamExecScan(table=[[_DataStreamTable_1]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>

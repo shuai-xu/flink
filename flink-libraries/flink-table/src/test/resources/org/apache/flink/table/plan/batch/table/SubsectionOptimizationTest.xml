@@ -31,7 +31,7 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c, Final_COUNT(count$0) AS cn
 +- Exchange(distribution=[hash[c]])
    +- LocalHashAggregate(groupBy=[c], select=[c, Partial_COUNT(a) AS count$0])
       +- Calc(select=[c, a])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -63,7 +63,7 @@ Calc(select=[sum_a, c])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_SUM(a) AS sum$0])
          +- Calc(select=[c, a])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[Sink]]
 Calc(select=[TMP_0 AS total_sum])
@@ -71,7 +71,7 @@ Calc(select=[TMP_0 AS total_sum])
    +- Exchange(distribution=[single])
       +- LocalHashAggregate(select=[Partial_SUM(sum_a) AS sum$0])
          +- Calc(select=[sum_a])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[sum_a, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[sum_a, c])
 
 [[Sink]]
 Calc(select=[TMP_1 AS total_min])
@@ -79,7 +79,7 @@ Calc(select=[TMP_1 AS total_min])
    +- Exchange(distribution=[single])
       +- LocalHashAggregate(select=[Partial_MIN(sum_a) AS min$0])
          +- Calc(select=[sum_a])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[sum_a, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[sum_a, c])
 ]]>
     </Resource>
   </TestCase>
@@ -109,11 +109,11 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_2]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[d, f])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 
 [[Sink]]
 Calc(select=[TMP_0 AS total_sum])
@@ -122,8 +122,8 @@ Calc(select=[TMP_0 AS total_sum])
       +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
-               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+               :- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
 
 [[Sink]]
 Calc(select=[TMP_1 AS total_min])
@@ -132,8 +132,8 @@ Calc(select=[TMP_1 AS total_min])
       +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
-               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+               :- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
 ]]>
     </Resource>
   </TestCase>
@@ -163,11 +163,11 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_2]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[d, f])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 
 [[Sink]]
 Calc(select=[TMP_0 AS total_sum])
@@ -176,8 +176,8 @@ Calc(select=[TMP_0 AS total_sum])
       +- LocalHashAggregate(select=[Partial_SUM(a) AS sum$0])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
-               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+               :- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
 
 [[Sink]]
 Calc(select=[TMP_1 AS total_min])
@@ -186,8 +186,8 @@ Calc(select=[TMP_1 AS total_min])
       +- LocalHashAggregate(select=[Partial_MIN(a) AS min$0])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
-               :- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
+               :- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[d, f])
 ]]>
     </Resource>
   </TestCase>
@@ -230,15 +230,15 @@ LogicalProject(a=[$0])
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_4]]
 Calc(select=[d, f])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 
 [[IntermediateTable=_DataStreamTable_5]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
 
 [[Sink]]
 Calc(select=[TMP_0 AS total_sum])
@@ -248,9 +248,9 @@ Calc(select=[TMP_0 AS total_sum])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Union(all=[true], union=[a, c])
-               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+               :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
 
 [[Sink]]
 Calc(select=[TMP_1 AS total_min])
@@ -260,15 +260,15 @@ Calc(select=[TMP_1 AS total_min])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Union(all=[true], union=[a, c])
-               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+               :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
 
 [[Sink]]
 Calc(select=[a])
 +- Union(all=[true], union=[a, c])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+   :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
 ]]>
     </Resource>
   </TestCase>
@@ -311,21 +311,21 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_4]]
 Calc(select=[d, f])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 
 [[Sink]]
 Calc(select=[a])
 +- Union(all=[true], union=[a, c])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+   :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
 
 [[IntermediateTable=_DataStreamTable_5]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
 
 [[Sink]]
 Calc(select=[TMP_0 AS total_sum])
@@ -335,9 +335,9 @@ Calc(select=[TMP_0 AS total_sum])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Union(all=[true], union=[a, c])
-               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+               :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
 
 [[Sink]]
 Calc(select=[TMP_1 AS total_min])
@@ -347,9 +347,9 @@ Calc(select=[TMP_1 AS total_min])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Union(all=[true], union=[a, c])
-               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+               :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
 ]]>
     </Resource>
   </TestCase>
@@ -385,15 +385,15 @@ LogicalProject(total_min=[AS($0, 'total_min')])
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_3]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_4]]
 Calc(select=[d, f])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 
 [[IntermediateTable=_DataStreamTable_5]]
 Calc(select=[a, c])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
 
 [[Sink]]
 Calc(select=[TMP_0 AS total_sum])
@@ -403,9 +403,9 @@ Calc(select=[TMP_0 AS total_sum])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Union(all=[true], union=[a, c])
-               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+               :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
 
 [[Sink]]
 Calc(select=[TMP_1 AS total_min])
@@ -415,9 +415,9 @@ Calc(select=[TMP_1 AS total_min])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Union(all=[true], union=[a, c])
-               :  :- BoundedDataStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
+               :  :- BoundedStreamScan(table=[[_DataStreamTable_3]], fields=[a, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_4]], fields=[d, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_5]], fields=[a, c])
 ]]>
     </Resource>
   </TestCase>
@@ -438,7 +438,7 @@ Calc(select=[c, TMP_0 AS cnt])
    +- Exchange(distribution=[hash[c]])
       +- LocalHashAggregate(groupBy=[c], select=[c, Partial_COUNT(b) AS count$0])
          +- Calc(select=[c, b])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -467,25 +467,25 @@ LogicalProject(a1=[$2], b=[$3], c1=[$1])
     <Resource name="planAfter">
       <![CDATA[
 [[IntermediateTable=_DataStreamTable_1]]
-BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 
 [[IntermediateTable=_DataStreamTable_2]]
 Calc(select=[a, b, c], where=[>=(a, 0)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
 
 [[Sink]]
 Calc(select=[a1, b, c1])
 +- HashJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[a AS a3, c AS c1], where=[<(b, 5)])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
    +- Calc(select=[a1, b])
       +- HashJoin(where=[=(a1, a2)], join=[a1, b, a2], joinType=[InnerJoin], isBroadcast=[true], build=[right])
          :- Calc(select=[a AS a1, b], where=[<=(a, 10)])
-         :  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[a AS a2], where=[>=(b, 5)])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
+               +- BoundedStreamScan(table=[[_DataStreamTable_2]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -512,9 +512,9 @@ Calc(select=[TMP_0 AS total_sum])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Calc(select=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
                +- Calc(select=[d, f])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>
@@ -541,9 +541,9 @@ Calc(select=[TMP_0 AS total_sum])
          +- Calc(select=[a])
             +- Union(all=[true], union=[a, c])
                :- Calc(select=[a, c])
-               :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+               :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
                +- Calc(select=[d, f])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>

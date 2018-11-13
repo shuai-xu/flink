@@ -27,7 +27,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b, c], where=[>(b, 12)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -47,8 +47,8 @@ Calc(select=[d, e, f])
 +- HashJoin(where=[=(c0, d)], join=[c0, d, e, f], joinType=[InnerJoin], isBroadcast=[true], build=[left])
    :- Exchange(distribution=[broadcast])
    :  +- Calc(select=[CAST(c) AS c0])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>

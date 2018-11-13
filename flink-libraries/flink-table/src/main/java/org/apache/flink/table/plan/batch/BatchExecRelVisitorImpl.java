@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.batch;
 
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -57,7 +57,7 @@ import org.apache.calcite.rel.RelNode;
 public class BatchExecRelVisitorImpl<R> implements BatchExecRelVisitor<R> {
 
 	@Override
-	public R visit(BatchExecBoundedDataStreamScan boundedStreamScan) {
+	public R visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		return visitInputs(boundedStreamScan);
 	}
 

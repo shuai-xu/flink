@@ -31,7 +31,7 @@ HashWindowAggregate(window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)],
 +- Exchange(distribution=[single])
    +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], select=[Partial_COUNT(int) AS count$0])
       +- Calc(select=[int, long])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -50,7 +50,7 @@ HashWindowAggregate(window=[TumblingGroupWindow('w, 'long, 5.millis)], select=[F
 +- Exchange(distribution=[single])
    +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w, 'long, 5.millis)], select=[Partial_COUNT(int) AS count$0])
       +- Calc(select=[int, long])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -70,7 +70,7 @@ Calc(select=[CAST(/(-($f0, /(*(CAST($f1), CAST($f1)), $f2)), $f2)) AS TMP_0, CAS
    +- Exchange(distribution=[single])
       +- LocalHashWindowAggregate(window=[TumblingGroupWindow('w, 'rowtime, 900000.millis)], properties=[TMP_4, TMP_5], select=[Partial_SUM($f2) AS sum$0, Partial_SUM(c) AS sum$1, Partial_COUNT(c) AS count$2, Partial_SUM($f3) AS sum$3, Partial_SUM($f4) AS sum$4, Partial_SUM($f5) AS sum$5])
          +- Calc(select=[c, rowtime, *(CAST(c), CAST(c)) AS $f2, *(CAST(c), CAST(c)) AS $f3, *(CAST(c), CAST(c)) AS $f4, *(CAST(c), CAST(c)) AS $f5])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[rowtime, a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[rowtime, a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -88,7 +88,7 @@ LogicalProject(string=[$0], TMP_0=[$1])
 HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
    +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], select=[string, Partial_COUNT(int) AS count$0])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -108,7 +108,7 @@ SortWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'long, 8.mi
    +- Exchange(distribution=[hash[string]])
       +- LocalSortWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'long, 8.millis, 10.millis)], select=[string, Partial_myWeightedAvg(long, int) AS TMP_0])
          +- Sort(orderBy=[string ASC, long ASC])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -126,7 +126,7 @@ LogicalProject(string=[$0], TMP_0=[$1])
 HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'long, 5.millis)], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
    +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'long, 5.millis)], select=[string, Partial_COUNT(int) AS count$0])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -146,7 +146,7 @@ SortWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'long, 5.m
    +- Exchange(distribution=[hash[string]])
       +- LocalSortWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'long, 5.millis)], select=[string, Partial_myWeightedAvg(long, int) AS TMP_0])
          +- Sort(orderBy=[string ASC, long ASC])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[long, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -164,7 +164,7 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
 HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
    +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -182,7 +182,7 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
 HashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
    +- LocalHashWindowAggregate(groupBy=[string], window=[SlidingGroupWindow('w, 'ts, 3600000.millis, 600000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -200,7 +200,7 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
 HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
    +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
   </TestCase>
@@ -218,7 +218,7 @@ LogicalProject(string=[$0], TMP_0=[$1], TMP_1=[$2], TMP_2=[$3], TMP_3=[$4])
 HashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Final_COUNT(count$0) AS TMP_0])
 +- Exchange(distribution=[hash[string]])
    +- LocalHashWindowAggregate(groupBy=[string], window=[TumblingGroupWindow('w, 'ts, 7200000.millis)], properties=[TMP_1, TMP_2, TMP_3], select=[string, Partial_COUNT(int) AS count$0])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[ts, int, string])
 ]]>
     </Resource>
   </TestCase>

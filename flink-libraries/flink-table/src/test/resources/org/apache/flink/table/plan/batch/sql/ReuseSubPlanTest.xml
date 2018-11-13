@@ -826,7 +826,7 @@ LogicalUnion(all=[true])
       <![CDATA[
 Union(all=[true], union=[a])
 :- Calc(select=[a], where=[>(a, 10)])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
 +- Calc(select=[a], where=[>(b, 10)])
    +- Reused(reference_id=[1])
 ]]>

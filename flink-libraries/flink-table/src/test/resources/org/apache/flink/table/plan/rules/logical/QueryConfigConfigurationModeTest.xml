@@ -24,7 +24,7 @@ StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
     StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
       StreamExecCalc(select=[c])
         StreamExecMicroBatchAssigner(interval=[1000ms])
-          StreamExecScan(table=[[_DataStreamTable_0]])
+          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -35,7 +35,7 @@ StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
   StreamExecExchange(distribution=[single])
     StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
       StreamExecCalc(select=[c])
-        StreamExecScan(table=[[_DataStreamTable_0]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -48,7 +48,7 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       StreamExecExchange(distribution=[hash[$f1]])
         StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
           StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>
@@ -61,7 +61,7 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       StreamExecExchange(distribution=[hash[$f1]])
         StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
           StreamExecCalc(select=[c, MOD(HASH_CODE(c), 256) AS $f1])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
 		</Resource>
 	</TestCase>

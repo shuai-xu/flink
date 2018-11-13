@@ -97,7 +97,7 @@ Calc(select=[a1, b1, a3, b3, EXPR$4])
             :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
             +- Exchange(distribution=[hash[a3]])
                +- Calc(select=[a3, b3])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -207,7 +207,7 @@ Calc(select=[a2, b2, a3, b3, *($f2, $f20) AS EXPR$4, CAST(/(CAST(CASE(=($f4, 0),
          +- Exchange(distribution=[hash[a3, b3]])
             +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(*) AS count$0, Partial_$SUM0(d3) AS sum0$1, Partial_COUNT(d3) AS count$2])
                +- Calc(select=[a3, b3, d3])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -272,7 +272,7 @@ Calc(select=[a1, b1, a2, b2, a3, b3, *($f4, $f2) AS $f8])
          +- Exchange(distribution=[hash[a3, b3]])
             +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(*) AS count$0])
                +- Calc(select=[a3, b3])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -386,7 +386,7 @@ Calc(select=[a1, b1, a3, b3, EXPR$4])
             :  +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
             +- Exchange(distribution=[broadcast])
                +- Calc(select=[a3, b3])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -436,7 +436,7 @@ HashAggregate(isMerge=[false], groupBy=[a3, b3], auxGrouping=[a1, b1], select=[a
 +- HashJoin(where=[=(a1, a3)], join=[a3, b3, a1, b1, c1], joinType=[LeftOuterJoin], build=[left])
    :- Exchange(distribution=[hash[a3]])
    :  +- Calc(select=[a3, b3])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
    +- Exchange(distribution=[hash[a1]])
       +- Calc(select=[a1, b1, c1])
          +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
@@ -594,7 +594,7 @@ Calc(select=[a1, b1, a3, b3, EXPR$4])
       :     +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
       +- Exchange(distribution=[hash[a3]])
          +- Calc(select=[a3, b3])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -646,7 +646,7 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3, a1], auxGrouping=[b1], select=[a3
       +- HashJoin(where=[=(a1, a3)], join=[a3, b3, a1, b1, c1], joinType=[RightOuterJoin], isBroadcast=[true], build=[left])
          :- Exchange(distribution=[broadcast])
          :  +- Calc(select=[a3, b3])
-         :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
          +- Calc(select=[a1, b1, c1])
             +- TableSourceScan(table=[[T1]], fields=[a1, b1, c1, d1])
 ]]>
@@ -1007,7 +1007,7 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(coun
 +- Exchange(distribution=[hash[a3, b3]])
    +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(c3) AS count$0])
       +- Calc(select=[a3, b3, c3])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -1126,7 +1126,7 @@ HashAggregate(isMerge=[false], groupBy=[a3, b3], auxGrouping=[c, s, a], select=[
 +- HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(count$0) AS c, Final_SUM(sum$1) AS s, Final_AVG(sum$2, count$3) AS a])
    +- Exchange(distribution=[hash[a3, b3]])
       +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(c3) AS count$0, Partial_SUM(d3) AS sum$1, Partial_AVG(d3) AS (sum$2, count$3)])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>
@@ -1210,7 +1210,7 @@ HashAggregate(isMerge=[true], groupBy=[a3, b3], select=[a3, b3, Final_COUNT(coun
 +- Exchange(distribution=[hash[a3, b3]])
    +- LocalHashAggregate(groupBy=[a3, b3], select=[a3, b3, Partial_COUNT(c3) AS count$0])
       +- Calc(select=[a3, b3, c3])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a3, b3, c3, d3])
 ]]>
     </Resource>
   </TestCase>

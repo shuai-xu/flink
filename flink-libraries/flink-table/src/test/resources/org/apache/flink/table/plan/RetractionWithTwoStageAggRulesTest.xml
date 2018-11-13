@@ -28,10 +28,10 @@ StreamExecCalc(retract=[false], accMode=[Acc])
             StreamExecGlobalGroupAggregate(retract=[true], accMode=[AccRetract])
               StreamExecExchange(retract=[true], accMode=[Acc])
                 StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
-                  StreamExecScan(retract=[true], accMode=[Acc])
+                  StreamExecDataStreamScan(retract=[true], accMode=[Acc])
         StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
           StreamExecCalc(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -46,7 +46,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
           StreamExecGlobalGroupAggregate(retract=[true], accMode=[AccRetract])
             StreamExecExchange(retract=[true], accMode=[Acc])
               StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
-                StreamExecScan(retract=[true], accMode=[Acc])
+                StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -57,7 +57,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
   StreamExecGlobalGroupAggregate(retract=[false], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
       StreamExecLocalGroupAggregate(retract=[true], accMode=[Acc])
-        StreamExecScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

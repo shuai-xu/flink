@@ -36,10 +36,10 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- HashSemiJoin(where=[OR(=(c, f), AND(IS NULL(c), IS NULL(f)))], join=[c], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
          :- Calc(select=[c])
-         :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>
@@ -83,7 +83,7 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
 +- Exchange(distribution=[hash[c]])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- Calc(select=[c])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -107,10 +107,10 @@ HashAggregate(isMerge=[true], groupBy=[c], select=[c])
    +- LocalHashAggregate(groupBy=[c], select=[c])
       +- HashSemiJoin(where=[OR(=(c, f), AND(IS NULL(c), IS NULL(f)))], join=[c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
          :- Calc(select=[c])
-         :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
          +- Exchange(distribution=[broadcast])
             +- Calc(select=[f])
-               +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
+               +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f])
 ]]>
     </Resource>
   </TestCase>

@@ -104,7 +104,7 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
 
   def getRelModifiedMonotonicity(rel: TableScan, mq: RelMetadataQuery): RelModifiedMonotonicity = {
     val monotonicity: RelModifiedMonotonicity = rel match {
-      case _: FlinkLogicalNativeTableScan | _: StreamExecScan =>
+      case _: FlinkLogicalNativeTableScan | _: StreamExecDataStreamScan =>
         val table = rel.getTable.unwrap(classOf[DataStreamTable[Any]])
         table.statistic.getRelModifiedMonotonicity
 

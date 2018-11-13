@@ -5,8 +5,8 @@ LogicalUnion(all=[true])
 
 == Optimized Logical Plan ==
 StreamExecUnion(all=[true], union=[count, word])
-  StreamExecScan(table=[[_DataStreamTable_0]])
-  StreamExecScan(table=[[_DataStreamTable_1]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 
 == Physical Execution Plan ==
  : Data Source

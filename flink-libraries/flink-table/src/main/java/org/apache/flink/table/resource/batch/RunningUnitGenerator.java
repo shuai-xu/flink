@@ -22,7 +22,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -105,7 +105,7 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 	}
 
 	@Override
-	public List<RelStageExchangeInfo> visit(BatchExecBoundedDataStreamScan boundedStreamScan) {
+	public List<RelStageExchangeInfo> visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		return visitSourceRel(boundedStreamScan);
 	}
 

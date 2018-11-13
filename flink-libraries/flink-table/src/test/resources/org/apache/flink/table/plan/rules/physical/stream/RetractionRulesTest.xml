@@ -24,9 +24,9 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[AccRetract])
       StreamExecJoin(retract=[true], accMode=[AccRetract])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -38,9 +38,9 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[AccRetract])
       StreamExecJoin(retract=[true], accMode=[AccRetract])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -52,9 +52,9 @@ StreamExecGroupAggregate(retract=[false], accMode=[Acc])
     StreamExecCalc(retract=[true], accMode=[AccRetract])
       StreamExecJoin(retract=[true], accMode=[AccRetract])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -68,9 +68,9 @@ StreamExecCalc(retract=[false], accMode=[Acc])
         StreamExecCalc(retract=[true], accMode=[AccRetract])
           StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
             StreamExecExchange(retract=[true], accMode=[Acc])
-              StreamExecScan(retract=[true], accMode=[Acc])
+              StreamExecDataStreamScan(retract=[true], accMode=[Acc])
         StreamExecCalc(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -80,9 +80,9 @@ StreamExecCalc(retract=[false], accMode=[Acc])
 StreamExecCalc(retract=[false], accMode=[AccRetract])
   StreamExecJoin(retract=[false], accMode=[AccRetract])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -92,7 +92,7 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
 StreamExecCalc(retract=[false], accMode=[Acc])
   StreamExecGroupAggregate(retract=[false], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -102,7 +102,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
 StreamExecCalc(retract=[false], accMode=[Acc])
   StreamExecGroupWindowAggregate(retract=[false], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -112,9 +112,9 @@ StreamExecCalc(retract=[false], accMode=[Acc])
 StreamExecCalc(retract=[false], accMode=[AccRetract])
   StreamExecJoin(retract=[false], accMode=[AccRetract])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -124,7 +124,7 @@ StreamExecCalc(retract=[false], accMode=[AccRetract])
 StreamExecCalc(select=[word, TMP_0 AS count])
   StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], select=[word, COUNT(number) AS TMP_0], emit=[early delay 10 millisecond, late no delay])
     StreamExecExchange(distribution=[hash[word]])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -132,7 +132,7 @@ StreamExecCalc(select=[word, TMP_0 AS count])
 StreamExecCalc(retract=[false], accMode=[Acc])
   StreamExecGroupWindowAggregate(retract=[false], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -144,12 +144,12 @@ StreamExecJoin(retract=[false], accMode=[AccRetract])
     StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[AccRetract])
     StreamExecCalc(retract=[true], accMode=[AccRetract])
       StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -161,12 +161,12 @@ StreamExecJoin(retract=[false], accMode=[Acc])
     StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[false], accMode=[Acc])
     StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecGroupAggregate(retract=[false], accMode=[Acc])
         StreamExecExchange(retract=[true], accMode=[Acc])
-          StreamExecScan(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -175,9 +175,9 @@ StreamExecJoin(retract=[false], accMode=[Acc])
       <![CDATA[
 StreamExecJoin(retract=[false], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecExchange(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -187,7 +187,7 @@ StreamExecJoin(retract=[false], accMode=[Acc])
 StreamExecCalc(retract=[false], accMode=[Acc])
   StreamExecOverAggregate(retract=[false], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -197,16 +197,16 @@ StreamExecCalc(retract=[false], accMode=[Acc])
 StreamExecCalc(retract=[false], accMode=[AccRetract])
   StreamExecJoin(retract=[false], accMode=[AccRetract])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
     StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecScan(retract=[true], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testSelect">
     <Resource name="trait">
       <![CDATA[
-StreamExecScan(retract=[false], accMode=[Acc])
+StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -219,7 +219,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[Acc])
         StreamExecGroupWindowAggregate(retract=[true], accMode=[Acc])
           StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -232,7 +232,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[AccRetract])
         StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
           StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
@@ -245,7 +245,7 @@ StreamExecCalc(select=[word, TMP_2 AS sum])
       StreamExecCalc(select=[word, TMP_0 AS count, TMP_1 AS w_rowtime])
         StreamExecGroupWindowAggregate(groupBy=[word], window=[TumblingGroupWindow('w, 'rowtime, 50.millis)], properties=[TMP_1], select=[word, COUNT(number) AS TMP_0, rowtime('w) AS TMP_1], emit=[early delay 10 millisecond, late no delay])
           StreamExecExchange(distribution=[hash[word]])
-            StreamExecScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
     <Resource name="trait">
@@ -256,7 +256,7 @@ StreamExecCalc(retract=[false], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[AccRetract])
         StreamExecGroupWindowAggregate(retract=[true], accMode=[AccRetract])
           StreamExecExchange(retract=[true], accMode=[Acc])
-            StreamExecScan(retract=[true], accMode=[Acc])
+            StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

@@ -22,7 +22,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -95,7 +95,7 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	}
 
 	@Override
-	public Void visit(BatchExecBoundedDataStreamScan boundedStreamScan) {
+	public Void visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		calculateNoManagedMem(boundedStreamScan);
 		return null;
 	}

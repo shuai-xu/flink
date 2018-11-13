@@ -32,10 +32,10 @@ LogicalProject(a=[$0], c=[$2])
 Calc(select=[a, c])
 +- HashSemiJoin(where=[=(b, d)], join=[a, b, c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
    :- Calc(select=[a, b, c], where=[>(CAST(c), 10)])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[d], where=[=(c, CAST(e))])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[c, d, e])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[c, d, e])
 ]]>
     </Resource>
   </TestCase>
@@ -55,13 +55,13 @@ LogicalProject(a=[$0], c=[$2])
 Calc(select=[a, c])
 +- NestedLoopJoin(where=[=(b, EXPR$0)], join=[a, b, c, EXPR$0], joinType=[InnerJoin], build=[right], singleRowJoin=[true])
    :- Calc(select=[a, b, c], where=[>(CAST(c), 10)])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], select=[Final_MAX(max$0) AS EXPR$0])
          +- Exchange(distribution=[single])
             +- LocalHashAggregate(select=[Partial_MAX(d) AS max$0])
                +- Calc(select=[d], where=[=(c, CAST(e))])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[c, d, e])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[c, d, e])
 ]]>
     </Resource>
   </TestCase>

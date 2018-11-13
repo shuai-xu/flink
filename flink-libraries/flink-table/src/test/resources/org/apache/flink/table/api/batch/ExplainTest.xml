@@ -20,7 +20,7 @@ limitations under the License.
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -28,7 +28,7 @@ Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
 ]]>
     </Resource>
   </TestCase>
@@ -37,9 +37,9 @@ Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
       <![CDATA[
 Calc(select=[a, c])
 +- HashJoin(where=[=(b, d)], join=[a, b, c, d], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
+   :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[c, d])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -48,9 +48,9 @@ Calc(select=[a, c])
       <![CDATA[
 Calc(select=[a, c])
 +- HashJoin(where=[=(b, d)], join=[a, b, c, d], joinType=[InnerJoin], isBroadcast=[true], build=[right])
-   :- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
+   :- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[c, d])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>
@@ -58,8 +58,8 @@ Calc(select=[a, c])
     <Resource name="planAfter">
       <![CDATA[
 Union(all=[true], union=[count, word])
-:- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[count, word])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[count, word])
+:- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[count, word])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[count, word])
 ]]>
     </Resource>
   </TestCase>
@@ -67,8 +67,8 @@ Union(all=[true], union=[count, word])
     <Resource name="planAfter">
       <![CDATA[
 Union(all=[true], union=[count, word])
-:- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[count, word])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[count, word])
+:- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[count, word])
++- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[count, word])
 ]]>
     </Resource>
   </TestCase>

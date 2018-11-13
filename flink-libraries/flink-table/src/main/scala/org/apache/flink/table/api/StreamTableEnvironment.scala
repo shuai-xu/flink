@@ -1190,7 +1190,7 @@ abstract class StreamTableEnvironment(
     // process current block
     def shipUpdateAsRetraction(rel: RelNode, updateAsRetraction: Boolean): Unit = {
       rel match {
-        case scan: StreamExecScan =>
+        case scan: StreamExecDataStreamScan =>
           val retractionTrait = scan.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)
           if (retractionTrait.sendsUpdatesAsRetractions || updateAsRetraction) {
             val tableName = scan.getTable.getQualifiedName.asScala.last

@@ -43,7 +43,7 @@ Calc(select=[a])
          +- Exchange(distribution=[hash[a]])
             +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
                +- Calc(select=[a, b])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -74,7 +74,7 @@ Calc(select=[a])
          +- Exchange(distribution=[hash[a]])
             +- LocalHashAggregate(groupBy=[a], select=[a, Partial_SUM(b) AS sum$0])
                +- Calc(select=[a, b])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -107,7 +107,7 @@ Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart
          +- Exchange(distribution=[hash[a]])
             +- Rank(rankFunction=[RANK], partitionBy=[a], orderBy=[b ASC], rankRange=[rankStart=1, rankEnd=5], global=[false], select=[a, b, c])
                +- Sort(orderBy=[a ASC, b ASC])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

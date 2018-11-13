@@ -36,7 +36,7 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS TMP_0])
          +- Exchange(distribution=[hash[a]])
             +- LocalHashAggregate(groupBy=[a], select=[a])
                +- Calc(select=[a])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -60,7 +60,7 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS TMP_0, Final_SUM(s
          +- Exchange(distribution=[hash[a]])
             +- LocalHashAggregate(groupBy=[a], select=[a])
                +- Calc(select=[a])
-                  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

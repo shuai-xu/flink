@@ -32,7 +32,7 @@ LogicalSort(sort0=[$0], dir0=[DESC-nulls-last])
 Calc(select=[a, c])
 +- Sort(orderBy=[a DESC])
    +- Exchange(distribution=[range[a DESC]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -52,7 +52,7 @@ LogicalSort(sort0=[$0], sort1=[$1], dir0=[DESC-nulls-last], dir1=[ASC-nulls-firs
 Calc(select=[a, b])
 +- Sort(orderBy=[a DESC, b ASC])
    +- Exchange(distribution=[range[a DESC, b ASC]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -73,7 +73,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[0], limit=[200], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[0], limit=[200], global=[false])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -93,7 +93,7 @@ LogicalSort(sort0=[$0], dir0=[DESC-nulls-last])
 Calc(select=[a, c])
 +- Sort(orderBy=[a DESC])
    +- Exchange(distribution=[single])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -115,7 +115,7 @@ Sort(orderBy=[a ASC, b ASC])
    +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_SUM(sum$0) AS EXPR$2])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalHashAggregate(groupBy=[a, b], select=[a, b, Partial_SUM(c) AS sum$0])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

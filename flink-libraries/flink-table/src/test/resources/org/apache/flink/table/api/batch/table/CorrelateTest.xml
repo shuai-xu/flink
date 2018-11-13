@@ -32,7 +32,7 @@ LogicalProject(c=[$0], d=[$1])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc0$dc6cc2ed0170230e48bad104d706a881($2)], correlate=[table(TableFunc0(c))], select=[c,d], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) d)], joinType=[INNER], condition=[>($1, 20)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -58,7 +58,7 @@ Correlate(invocation=[org$apache$flink$table$util$TableFunc0$dc6cc2ed0170230e48b
             +- LocalSortAggregate(groupBy=[$f1], select=[$f1, Partial_CONCAT_AGG($f2, a) AS (accDelimiter$0, concatAcc$1)])
                +- Sort(orderBy=[$f1 ASC])
                   +- Calc(select=[a, 5 AS $f1, '#' AS $f2])
-                     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a])
+                     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -74,7 +74,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -90,7 +90,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2, '$')], correlate=[table(TableFunc1(c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -108,7 +108,7 @@ LogicalFilter(condition=[>($1, '')])
       <![CDATA[
 Calc(select=[c, s], where=[>(s, '')])
 +- Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

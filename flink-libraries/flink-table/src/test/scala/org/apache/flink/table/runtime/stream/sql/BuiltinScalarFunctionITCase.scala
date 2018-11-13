@@ -1199,7 +1199,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
       """StreamExecCalc(select=[UNIX_TIMESTAMP() AS EXPR$0, date1])
         |+- StreamExecCalc(select=[date1], where=[>(UNIX_TIMESTAMP(), 0)])
         |   +- StreamExecCalc(select=[date1])
-        |      +- StreamExecScan(table=[[_DataStreamTable_0]])
+        |      +- StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
         |""".stripMargin,
       result)
   }

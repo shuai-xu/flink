@@ -10,22 +10,22 @@ LogicalProject(a=[$0], b=[$1])
 
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_2]]
-StreamExecScan(table=[[_DataStreamTable_0]])
-StreamExecScan(retract=[false], accMode=[Acc])
+StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[Sink]]
 StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
   StreamExecExchange(distribution=[hash[b]])
-    StreamExecScan(table=[[_DataStreamTable_2]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
 StreamExecRank(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[false], accMode=[Acc])
-    StreamExecScan(retract=[false], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[Sink]]
 StreamExecCalc(select=[a, b], where=[<(a, 6)])
-  StreamExecScan(table=[[_DataStreamTable_2]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
 StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecScan(retract=[false], accMode=[Acc])
+  StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

@@ -22,7 +22,7 @@ limitations under the License.
 StreamExecCalc(select=[PROCTIME(proctime) AS proctime, c])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -32,7 +32,7 @@ StreamExecCalc(select=[PROCTIME(proctime) AS proctime, c])
 StreamExecCalc(select=[PROCTIME(proctime) AS desc, c])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -42,7 +42,7 @@ StreamExecCalc(select=[PROCTIME(proctime) AS desc, c])
 StreamExecCalc(select=[c, PROCTIME(proctime) AS desc])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -52,7 +52,7 @@ StreamExecCalc(select=[c, PROCTIME(proctime) AS desc])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -62,7 +62,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[c, PROCTIME(proctime) AS proctime])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -72,7 +72,7 @@ StreamExecCalc(select=[c, PROCTIME(proctime) AS proctime])
 StreamExecCalc(select=[rowtime, c])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -82,7 +82,7 @@ StreamExecCalc(select=[rowtime, c])
 StreamExecCalc(select=[rowtime AS desc, c])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -92,7 +92,7 @@ StreamExecCalc(select=[rowtime AS desc, c])
 StreamExecCalc(select=[c, rowtime AS desc])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -102,7 +102,7 @@ StreamExecCalc(select=[c, rowtime AS desc])
 StreamExecCalc(select=[c, rowtime])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -111,7 +111,7 @@ StreamExecCalc(select=[c, rowtime])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecTemporalSort(orderBy=[proctime ASC, c ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -120,7 +120,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[proctime DESC, c ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -130,7 +130,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime DESC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -139,7 +139,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[c ASC, proctime ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -148,7 +148,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[c ASC, proctime DESC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -158,7 +158,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -168,7 +168,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -177,7 +177,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecTemporalSort(orderBy=[rowtime ASC, c ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -186,7 +186,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[rowtime DESC, c ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -196,7 +196,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -206,7 +206,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime DESC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -215,7 +215,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[c ASC, rowtime ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -224,7 +224,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[c ASC, rowtime DESC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -234,7 +234,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -244,7 +244,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -254,7 +254,7 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
   StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
     StreamExecExchange(distribution=[single])
-      StreamExecScan(table=[[_DataStreamTable_0]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -263,7 +263,7 @@ StreamExecCalc(select=[a])
       <![CDATA[
 StreamExecCalc(select=[a])
   StreamExecSort(orderBy=[c ASC])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

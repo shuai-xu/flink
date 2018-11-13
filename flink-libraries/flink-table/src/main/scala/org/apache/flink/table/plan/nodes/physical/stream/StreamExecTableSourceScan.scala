@@ -37,7 +37,7 @@ class StreamExecTableSourceScan(
     traitSet: RelTraitSet,
     relOptTable: FlinkRelOptTable)
   extends PhysicalTableSourceScan(cluster, traitSet, relOptTable)
-  with StreamScan {
+  with StreamExecScan {
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val rowCnt = mq.getRowCount(this)

@@ -23,7 +23,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalNativeTableScan
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan
 import org.apache.flink.table.plan.schema.DataStreamTable
 
 class BatchExecScanTableRule
@@ -48,7 +48,7 @@ class BatchExecScanTableRule
   def convert(rel: RelNode): RelNode = {
     val scan = rel.asInstanceOf[FlinkLogicalNativeTableScan]
     val newTrait = rel.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-    new BatchExecBoundedDataStreamScan(rel.getCluster, newTrait, scan.getTable, rel.getRowType)
+    new BatchExecBoundedStreamScan(rel.getCluster, newTrait, scan.getTable, rel.getRowType)
   }
 }
 

@@ -28,7 +28,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -44,7 +44,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -60,7 +60,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($2, '$')], correlate=[table(TableFunc1(c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -76,7 +76,7 @@ LogicalProject(c=[$2], name=[$3], len=[$4])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc2$8e927a9c97db94bea93945e6e94ebcee($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -93,7 +93,7 @@ LogicalProject(c=[$2], name=[$3], len=[$5], adult=[$4])
       <![CDATA[
 Calc(select=[c, name, len, adult])
 +- Correlate(invocation=[org$apache$flink$table$util$HierarchyTableFunction$5fa2658c061bd5b419a3c4c22ac8daf8($2)], correlate=[table(HierarchyTableFunction(c))], select=[c,name,adult,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -110,7 +110,7 @@ LogicalProject(c=[$2], name=[$4], age=[$3])
       <![CDATA[
 Calc(select=[c, name, age])
 +- Correlate(invocation=[org$apache$flink$table$util$PojoTableFunc$a6c1b6ad97ae8429b5a852367e06c192($2)], correlate=[table(PojoTableFunc(c))], select=[c,age,name], rowType=[RecordType(VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -127,7 +127,7 @@ LogicalFilter(condition=[>($2, 2)])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc2$8e927a9c97db94bea93945e6e94ebcee($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -143,7 +143,7 @@ LogicalProject(a=[$0], c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95(SUBSTRING($2, 2, CHAR_LENGTH($2)))], correlate=[table(TableFunc1(SUBSTRING(c, 2, CHAR_LENGTH(c))))], select=[a,c,s], rowType=[RecordType(INTEGER a, VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

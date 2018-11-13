@@ -41,7 +41,7 @@ import scala.collection.JavaConverters._
   * It ensures that types without deterministic field order (e.g. POJOs) are not part of
   * the plan translation.
   */
-class BatchExecBoundedDataStreamScan(
+class BatchExecBoundedStreamScan(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     table: RelOptTable,
@@ -67,7 +67,7 @@ class BatchExecBoundedDataStreamScan(
   }
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecBoundedDataStreamScan(cluster, traitSet, getTable, getRowType))
+    super.supplement(new BatchExecBoundedStreamScan(cluster, traitSet, getTable, getRowType))
   }
 
   /**

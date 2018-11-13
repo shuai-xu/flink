@@ -27,7 +27,7 @@ LogicalProject(b2=[AS($0, 'b2')])
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[IN(b, 1972-02-22 07:12:00.333) AS b2])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -45,11 +45,11 @@ LogicalTableScan(table=[[UnnamedTable$0]])
       <![CDATA[
 HashSemiJoin(where=[=(c, a1)], join=[a, b, c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
-:  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[a1], select=[a1])
       +- Calc(select=[a AS a1], where=[=(b, 'two')])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

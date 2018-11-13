@@ -29,7 +29,7 @@ LogicalProject(a=[$0], c=[$2])
 Calc(select=[a, c])
 +- Sort(orderBy=[a DESC])
    +- Exchange(distribution=[range[a DESC]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -46,7 +46,7 @@ LogicalProject(a=[$0], b=[$1])
 Calc(select=[a, b])
 +- Sort(orderBy=[a DESC, b ASC])
    +- Exchange(distribution=[range[a DESC, b ASC]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

@@ -35,10 +35,10 @@ LogicalProject(c=[$7], g=[$3])
 Calc(select=[c, g])
 +- SortMergeJoin(where=[AND(=(a, d), <(b, h))], join=[a, b, c, d, g, h], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
-   :  +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[hash[d]])
       +- Calc(select=[d, g, h], where=[<(d, 2)])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -60,10 +60,10 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[FullOuterJoin])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[b]])
       +- Calc(select=[b, c])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -86,10 +86,10 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[=(a, d)], join=[d, g, a, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[d]])
    :  +- Calc(select=[d, g])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[a]])
       +- Calc(select=[a, c])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -112,10 +112,10 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[=(a, d)], join=[a, c, d, g], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[a]])
    :  +- Calc(select=[a, c])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
    +- Exchange(distribution=[hash[d]])
       +- Calc(select=[d, g], where=[<(d, 2)])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+         +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
 ]]>
     </Resource>
   </TestCase>
@@ -138,9 +138,9 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[AND(=(b, e), =(a, d))], join=[d, e, g, a, b, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[e, d]])
    :  +- Calc(select=[d, e, g])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[b, a]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -162,9 +162,9 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[AND(=(a, d), =(b, e))], join=[d, e, g, a, b, c], joinType=[InnerJoin])
    :- Exchange(distribution=[hash[d, e]])
    :  +- Calc(select=[d, e, g])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[a, b]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -186,10 +186,10 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[RightOuterJoin])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[b]])
       +- Calc(select=[b, c])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -211,10 +211,10 @@ Calc(select=[c, g])
 +- SortMergeJoin(where=[=(b, e)], join=[e, g, b, c], joinType=[LeftOuterJoin])
    :- Exchange(distribution=[hash[e]])
    :  +- Calc(select=[e, g])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[d, e, f, g, h])
    +- Exchange(distribution=[hash[b]])
       +- Calc(select=[b, c])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

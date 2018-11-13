@@ -33,7 +33,7 @@ import scala.collection.JavaConversions._
   *
   * NOTES: This program can be only applied on [[RowBatchExecRel]] tree.
   *
-  * Reused node (may be a [[BatchExecReused]] or a [[BatchExecBoundedDataStreamScan]]) might
+  * Reused node (may be a [[BatchExecReused]] or a [[BatchExecBoundedStreamScan]]) might
   * lead to a deadlock when HashJoin or NestedLoopJoin have same reused input.
   * Sets Exchange node(if it does not exist, add one) as BATCH mode to break up the deadlock.
   *
@@ -145,11 +145,11 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
   /**
     * A reused node may be
     * 1. a [[BatchExecReused]], the transformation will be reused
-    * 2. or a [[BatchExecBoundedDataStreamScan]], the transformation of
+    * 2. or a [[BatchExecBoundedStreamScan]], the transformation of
     * [[org.apache.flink.streaming.api.datastream.DataStream]] is reused.
     */
   private def isReusedNode(batchExecRel: BatchExecRel[_]): Boolean = {
-    batchExecRel.isReused || batchExecRel.isInstanceOf[BatchExecBoundedDataStreamScan]
+    batchExecRel.isReused || batchExecRel.isInstanceOf[BatchExecBoundedStreamScan]
   }
 
   /**

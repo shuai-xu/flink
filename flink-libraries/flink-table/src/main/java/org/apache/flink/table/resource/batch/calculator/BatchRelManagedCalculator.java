@@ -21,7 +21,7 @@ package org.apache.flink.table.resource.batch.calculator;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedDataStreamScan;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
@@ -77,7 +77,7 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	}
 
 	@Override
-	public Void visit(BatchExecBoundedDataStreamScan boundedStreamScan) {
+	public Void visit(BatchExecBoundedStreamScan boundedStreamScan) {
 		calculateNoManagedMem(boundedStreamScan);
 		return null;
 	}

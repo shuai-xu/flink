@@ -35,9 +35,9 @@ Calc(select=[a, d])
 +- HashJoin(where=[=($f2, c)], join=[a, $f2, c, d], joinType=[InnerJoin], build=[left])
    :- Exchange(distribution=[hash[$f2]])
    :  +- Calc(select=[a, +(a, 1) AS $f2])
-   :     +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
+   :     +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b])
    +- Exchange(distribution=[hash[c]])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[c, d])
+      +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[c, d])
 ]]>
     </Resource>
   </TestCase>

@@ -33,7 +33,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[0], limit=[8], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[0], limit=[8], global=[false])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -54,7 +54,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[2], limit=[8], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[2], limit=[8], global=[false])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -75,7 +75,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[2], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[2], limit=[10], global=[false])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -96,7 +96,7 @@ Calc(select=[a, c])
 +- SortLimit(orderBy=[a DESC], offset=[0], limit=[10], global=[true])
    +- Exchange(distribution=[single])
       +- SortLimit(orderBy=[a DESC], offset=[0], limit=[10], global=[false])
-         +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+         +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>

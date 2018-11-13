@@ -18,63 +18,63 @@ LogicalProject(num=[$0], cnt=[$1])
 == Optimized Logical Plan ==
 [[IntermediateTable=_DataStreamTable_4]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%hello%')])
-  StreamExecScan(table=[[T]])
+  StreamExecDataStreamScan(table=[[T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
-  StreamExecScan(retract=[true], accMode=[Acc])
+  StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
-StreamExecScan(table=[[_DataStreamTable_4]])
-StreamExecScan(retract=[false], accMode=[Acc])
+StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_5]]
-StreamExecScan(table=[[_DataStreamTable_4]])
-StreamExecScan(retract=[true], accMode=[Acc])
+StreamExecDataStreamScan(table=[[_DataStreamTable_4]])
+StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_6]]
 StreamExecCalc(select=[id, num, text], where=[LIKE(text, '%world%')])
-  StreamExecScan(table=[[T]])
+  StreamExecDataStreamScan(table=[[T]])
 StreamExecCalc(retract=[true], accMode=[Acc])
-  StreamExecScan(retract=[true], accMode=[Acc])
+  StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecUnion(all=[true], union=[id, num, text])
   StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-    StreamExecScan(table=[[_DataStreamTable_5]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
   StreamExecCalc(select=[id, num, text], where=[>=(num, 5)])
-    StreamExecScan(table=[[_DataStreamTable_6]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
 StreamExecUnion(retract=[true], accMode=[Acc])
   StreamExecCalc(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
   StreamExecCalc(retract=[true], accMode=[Acc])
-    StreamExecScan(retract=[true], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[IntermediateTable=_DataStreamTable_7]]
 StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS cnt])
   StreamExecExchange(distribution=[hash[num]])
     StreamExecUnion(all=[true], union=[num, id])
       StreamExecCalc(select=[num, id])
-        StreamExecScan(table=[[_DataStreamTable_5]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_5]])
       StreamExecCalc(select=[num, id])
-        StreamExecScan(table=[[_DataStreamTable_6]])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_6]])
 StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
   StreamExecExchange(retract=[true], accMode=[Acc])
     StreamExecUnion(retract=[true], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
       StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecScan(retract=[true], accMode=[Acc])
+        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
 StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-  StreamExecScan(table=[[_DataStreamTable_7]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
 StreamExecCalc(retract=[true], accMode=[AccRetract])
-  StreamExecScan(retract=[true], accMode=[AccRetract])
+  StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
 StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-  StreamExecScan(table=[[_DataStreamTable_7]])
+  StreamExecDataStreamScan(table=[[_DataStreamTable_7]])
 StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecScan(retract=[false], accMode=[AccRetract])
+  StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source

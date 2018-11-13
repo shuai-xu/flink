@@ -554,7 +554,7 @@ object StreamExecRelFactories {
 
   /**
     * Implementation of [[TableScanFactory]] that returns a
-    * [[StreamExecTableSourceScan]] or [[StreamExecScan]].
+    * [[StreamExecTableSourceScan]] or [[StreamExecDataStreamScan]].
     */
   class TableScanFactoryImpl extends TableScanFactory {
     def createScan(cluster: RelOptCluster, relOptTable: RelOptTable): RelNode = {
@@ -593,10 +593,10 @@ object StreamExecRelFactories {
           // FIXME: FlinkRelMdDistribution requires the current RelNode to compute
           // the distribution trait, so we have to create StreamExecScan to
           // calculate the distribution trait
-          val scan = new StreamExecScan(
+          val scan = new StreamExecDataStreamScan(
             cluster, traitSet, relOptTable, dst.getRowType(cluster.getTypeFactory))
           val newTraitSet = FlinkRelMetadataQuery.traitSet(scan).simplify()
-          scan.copy(newTraitSet, scan.getInputs).asInstanceOf[StreamExecScan]
+          scan.copy(newTraitSet, scan.getInputs).asInstanceOf[StreamExecDataStreamScan]
       }
     }
   }

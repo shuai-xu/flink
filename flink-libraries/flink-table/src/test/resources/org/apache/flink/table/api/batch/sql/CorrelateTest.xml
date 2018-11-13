@@ -58,7 +58,7 @@ LogicalProject(name=[$3], len=[$4], c=[$2])
       <![CDATA[
 Calc(select=[_1 AS name, _2 AS len, c], where=[<>(objHash(a, _2), 0)])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[a,c,_1,_2], rowType=[RecordType(VARBINARY a, INTEGER c, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -79,7 +79,7 @@ LogicalProject(len=[$4], hash=[objHash($2, $4)])
       <![CDATA[
 Calc(select=[_2 AS len, objHash(c, _2) AS hash], where=[>(objHash(c, _2), 0)])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[c,_2], rowType=[RecordType(VARBINARY c, INTEGER _2)], joinType=[INNER])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -103,7 +103,7 @@ SortAggregate(isMerge=[true], select=[Final_COUNT(count$0) AS EXPR$0])
    +- LocalSortAggregate(select=[Partial_COUNT(*) AS count$0])
       +- Calc(select=[0 AS $f0])
          +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_2], rowType=[RecordType(INTEGER _2)], joinType=[INNER])
-            +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+            +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -122,7 +122,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -141,7 +141,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1($cor0.c, '$')], correlate=[table(func1($cor0.c,'$'))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -160,7 +160,7 @@ LogicalProject(c=[$2], name=[$3], len=[$4])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select=[c,f0,f1], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0, INTEGER f1)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -180,7 +180,7 @@ LogicalProject(c=[$2], name=[$3], len=[$4])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func2($cor0.c)], correlate=[table(func2($cor0.c))], select=[c,f0,f1], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0, INTEGER f1)], joinType=[INNER], condition=[>($1, 2)])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -199,7 +199,7 @@ LogicalProject(c=[$2], name=[$3], adult=[$4], len=[$5])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[hierarchy($cor0.c)], correlate=[table(hierarchy($cor0.c))], select=[c,f0,f1,f2], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0, BOOLEAN f1, INTEGER f2)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -218,7 +218,7 @@ LogicalProject(name=[$1], len=[$2])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_1,_2], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -239,7 +239,7 @@ LogicalProject(name=[$1], EXPR$1=[objHash($1)], len=[$2])
       <![CDATA[
 Calc(select=[_1 AS name, objHash(_1) AS EXPR$1, _2 AS len])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[_1,_2], rowType=[RecordType(VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER], condition=[>(objHash($0), 0)])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -259,7 +259,7 @@ LogicalProject(hash_a=[objHash($0)], name=[$1], len=[$2])
       <![CDATA[
 Calc(select=[objHash(a) AS hash_a, _1 AS name, _2 AS len])
 +- Correlate(invocation=[parser($cor0.a)], correlate=[table(parser($cor0.a))], select=[a,_1,_2], rowType=[RecordType(VARBINARY a, VARCHAR(65536) _1, INTEGER _2)], joinType=[INNER])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a])
 ]]>
     </Resource>
   </TestCase>
@@ -286,10 +286,10 @@ LogicalProject(a2=[$0], b2=[$1], c2=[$2], c=[$3], s=[$4])
     <Resource name="planAfter">
       <![CDATA[
 HashJoin(where=[=(c2, f0)], join=[a2, b2, c2, c, f0], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
-:- BoundedDataStreamScan(table=[[_DataStreamTable_1]], fields=[a2, b2, c2])
+:- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a2, b2, c2])
 +- Exchange(distribution=[broadcast])
    +- Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[LEFT])
-      +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+      +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -308,7 +308,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[LEFT])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -328,7 +328,7 @@ LogicalProject(c=[$2], name=[$4], age=[$3])
       <![CDATA[
 Calc(select=[c, name, age])
 +- Correlate(invocation=[pojo($cor0.c)], correlate=[table(pojo($cor0.c))], select=[c,age,name], rowType=[RecordType(VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
-   +- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
+   +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -347,7 +347,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1(SUBSTRING($cor0.c, 2))], correlate=[table(func1(SUBSTRING($cor0.c, 2)))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -366,7 +366,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func2('hello', 'world', $cor0.c)], correlate=[table(func2('hello','world',$cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
@@ -385,7 +385,7 @@ LogicalProject(c=[$2], s=[$3])
     <Resource name="planAfter">
       <![CDATA[
 Correlate(invocation=[func1('hello', 'world', $cor0.c)], correlate=[table(func1('hello','world',$cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[INNER])
-+- BoundedDataStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
++- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
   </TestCase>
