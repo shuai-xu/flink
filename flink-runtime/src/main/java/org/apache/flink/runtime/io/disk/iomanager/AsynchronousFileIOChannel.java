@@ -23,6 +23,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.util.NioBufferedFileOutputStream;
 import org.apache.flink.runtime.util.NioBufferedFileInputStream;
 import org.apache.flink.runtime.util.event.NotificationListener;
+import org.apache.flink.util.FileUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -353,7 +354,7 @@ final class SegmentWriteRequest implements WriteRequest {
 	public void write() throws IOException {
 		try {
 			if (bufferSize == -1) {
-				channel.fileChannel.write(segment.wrap(0, segment.size()));
+				FileUtils.writeCompletely(channel.fileChannel, segment.wrap(0, segment.size()));
 			} else {
 				channel.getBufferedOutputStream(bufferSize).write(segment, 0, segment.size());
 			}
@@ -393,8 +394,8 @@ final class BufferWriteRequest implements WriteRequest {
 		header.flip();
 
 		if (bufferSize == -1) {
-			channel.fileChannel.write(header);
-			channel.fileChannel.write(nioBufferReadable);
+			FileUtils.writeCompletely(channel.fileChannel, header);
+			FileUtils.writeCompletely(channel.fileChannel, nioBufferReadable);
 		} else {
 			NioBufferedFileOutputStream out = channel.getBufferedOutputStream(bufferSize);
 			out.write(header);

@@ -25,6 +25,7 @@ import java.nio.channels.FileChannel;
 
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentWritable;
+import org.apache.flink.util.FileUtils;
 import sun.misc.Cleaner;
 import sun.nio.ch.DirectBuffer;
 
@@ -68,7 +69,7 @@ public class NioBufferedFileOutputStream implements MemorySegmentWritable {
 			// now flush
 			if (writeBuffer.position() > 0) {
 				writeBuffer.flip();
-				fileChannel.write(writeBuffer);
+				FileUtils.writeCompletely(fileChannel, writeBuffer);
 				writeBuffer.clear();
 			}
 		} else {
