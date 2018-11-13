@@ -31,9 +31,9 @@ import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
@@ -75,7 +75,7 @@ class BatchExecHashWindowAggregate(
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecHashWindowAggregate(
+    new BatchExecHashWindowAggregate(
       window,
       inputTimestampIndex,
       inputTimestampType,
@@ -90,7 +90,7 @@ class BatchExecHashWindowAggregate(
       grouping,
       auxGrouping,
       enableAssignPane,
-      isMerge))
+      isMerge)
   }
 
   /**

@@ -36,8 +36,8 @@ import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
-import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAggregateCodeGen}
 import org.apache.flink.table.codegen._
+import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAggregateCodeGen}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
@@ -103,7 +103,7 @@ class BatchExecOverAggregate(
   }
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecOverAggregate(
+    new BatchExecOverAggregate(
       cluster,
       relBuilder,
       traitSet,
@@ -115,7 +115,7 @@ class BatchExecOverAggregate(
       orderKeyIdxs,
       orders,
       nullIsLasts,
-      logicWindow))
+      logicWindow)
   }
 
   private def inferProvidedTraitSet(): RelTraitSet = {
@@ -248,7 +248,6 @@ class BatchExecOverAggregate(
       writer.item("window#" + index, select + windowRange)
     }
     writer.item("select", getRowType.getFieldNames.mkString(", "))
-    writer.itemIf("reuse_id", getReuseId, isReused)
   }
 
   /**

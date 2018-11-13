@@ -46,13 +46,13 @@ class BatchExecUnion(
   override def deriveRowType(): RelDataType = rowRelDataType
 
   override def copy(traitSet: RelTraitSet, inputs: JList[RelNode], all: Boolean): SetOp = {
-    super.supplement(new BatchExecUnion(
+    new BatchExecUnion(
       cluster,
       traitSet,
       inputs,
       rowRelDataType,
       all
-    ))
+    )
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
@@ -85,7 +85,6 @@ class BatchExecUnion(
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("union", unionSelectionToString)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   private def unionSelectionToString: String = {

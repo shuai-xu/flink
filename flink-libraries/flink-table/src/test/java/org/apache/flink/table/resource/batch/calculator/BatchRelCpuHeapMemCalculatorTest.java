@@ -24,7 +24,6 @@ import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
@@ -70,16 +69,16 @@ public class BatchRelCpuHeapMemCalculatorTest extends MockRelTestBase {
 		 *                 \    /
 		 *                2, Union
 		 *                  /    \
-		 *            3, Calc     4, Reuse
-		 *               \          /
-		 *            5, Exchange  6, Exchange
+		 *            3, Calc     \
+		 *               \         \
+		 *            4, Exchange  5, Exchange
 		 *                \         /
-		 *                 7, HashJoin
+		 *                 6, HashJoin
 		 */
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_SOURCE_MEM(), 40);
 		tEnv.getConfig().getParameters().setInteger(TableConfig.SQL_EXEC_DEFAULT_MEM(), 20);
 		tEnv.getConfig().getParameters().setDouble(TableConfig.SQL_EXEC_DEFAULT_CPU(), 0.5);
-		createRelList(8);
+		createRelList(7);
 		BatchExecScan scan0 = mock(BatchExecScan.class);
 		updateRel(0, scan0);
 		BatchExecScan scan1 = mock(BatchExecScan.class);
@@ -87,29 +86,26 @@ public class BatchRelCpuHeapMemCalculatorTest extends MockRelTestBase {
 		when(scan1.getTableSourceResource(tEnv)).thenReturn(buildResourceSpec(0.7d, 50));
 		when(scan1.needInternalConversion()).thenReturn(true);
 		updateRel(2, mock(BatchExecUnion.class));
-		updateRel(4, mock(BatchExecReused.class));
 		BatchExecExchange execExchange5 = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
 		when(execExchange5.getDistribution().getType()).thenReturn(RelDistribution.Type.RANGE_DISTRIBUTED);
-		updateRel(5, execExchange5);
+		updateRel(4, execExchange5);
 		BatchExecExchange execExchange6 = mock(BatchExecExchange.class, RETURNS_DEEP_STUBS);
 		when(execExchange6.getDistribution().getType()).thenReturn(RelDistribution.Type.BROADCAST_DISTRIBUTED);
-		updateRel(6, execExchange6);
+		updateRel(5, execExchange6);
 		connect(2, 0, 1);
 		connect(3, 2);
-		connect(4, 2);
-		connect(5, 3);
-		connect(6, 4);
-		connect(7, 5, 6);
-		relCpuHeapMemCalculator.calculate(relList.get(7));
+		connect(4, 3);
+		connect(5, 2);
+		connect(6, 4, 5);
+		relCpuHeapMemCalculator.calculate(relList.get(6));
 		assertEquals(buildResource(0.5d, 40), relResMap.get(relList.get(0)));
 		assertEquals(buildResource(0.7d, 70), relResMap.get(relList.get(1)));
 		assertEquals(buildResource(0.5d, 20), relResMap.get(relList.get(3)));
-		assertEquals(buildResource(0.5d, 20), relResMap.get(relList.get(7)));
+		assertEquals(buildResource(0.5d, 20), relResMap.get(relList.get(6)));
 		assertEquals(4, relResMap.size());
-		verify(relList.get(5)).setResource(buildResource(0.5, 20));
+		verify(relList.get(4)).setResource(buildResource(0.5, 20));
 		verify(relList.get(2), never()).setResource(any());
-		verify(relList.get(4), never()).setResource(any());
-		verify(relList.get(6), never()).setResource(any());
+		verify(relList.get(5), never()).setResource(any());
 	}
 
 	private RelResource buildResource(double cpu, int heap) {

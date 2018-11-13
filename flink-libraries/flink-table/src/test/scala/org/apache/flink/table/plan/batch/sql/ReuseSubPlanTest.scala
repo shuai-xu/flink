@@ -27,11 +27,10 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
+import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
 import org.junit.{Before, Ignore, Test}
@@ -56,7 +55,6 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
     util.tableEnv.alterTableStats("x", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(100L)))
-    BatchExecRel.resetReuseIdCounter()
   }
 
   @Test
@@ -72,7 +70,7 @@ class ReuseSubPlanTest extends TableTestBatchExecBase {
     util.verifySqlNotExpected(sqlQuery, "Reused")
   }
 
-  @Test @Ignore // FIXME: BLINK-16477898
+  @Test
   def testReuseSubPlan_DifferentRowType(): Unit = {
     util.tableEnv.getConfig.setTableSourceReuse(false)
     // can not reuse because of different row-type

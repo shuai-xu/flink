@@ -62,9 +62,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
-  override def explainTerms(pw: RelWriter): RelWriter =
-    super.explainTerms(pw).itemIf("reuse_id", getReuseId, isReused)
-
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
     val requiredDistribution = requiredTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
     val (canDistributionPushDown, leftDistribution, rightDistribution) =
@@ -265,14 +262,14 @@ class BatchExecSortMergeJoin(
       right: RelNode,
       joinType: JoinRelType,
       semiJoinDone: Boolean): Join =
-    super.supplement(new BatchExecSortMergeJoin(
+    new BatchExecSortMergeJoin(
       cluster,
       traitSet,
       left,
       right,
       conditionExpr,
       joinType,
-      description))
+      description)
 }
 
 class BatchExecSortMergeSemiJoin(
@@ -296,7 +293,7 @@ class BatchExecSortMergeSemiJoin(
       joinType: JoinRelType,
       semiJoinDone: Boolean): SemiJoin = {
     val joinInfo = JoinInfo.of(left, right, condition)
-    super.supplement(new BatchExecSortMergeSemiJoin(
+    new BatchExecSortMergeSemiJoin(
       cluster,
       traitSet,
       left,
@@ -305,6 +302,6 @@ class BatchExecSortMergeSemiJoin(
       joinInfo.leftKeys,
       joinInfo.rightKeys,
       isAnti,
-      description))
+      description)
   }
 }

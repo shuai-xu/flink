@@ -82,7 +82,6 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
       .itemIf("isBroadcast", "true", isBroadcast)
       .item("build", if (leftIsBuild) "left" else "right")
       .itemIf("tryDistinctBuildRow", "true", tryDistinctBuildRow)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
@@ -263,7 +262,7 @@ class BatchExecHashJoin(
       right: RelNode,
       joinType: JoinRelType,
       semiJoinDone: Boolean): Join =
-    super.supplement(new BatchExecHashJoin(
+    new BatchExecHashJoin(
       cluster,
       traitSet,
       left,
@@ -273,7 +272,7 @@ class BatchExecHashJoin(
       joinType,
       isBroadcast,
       description,
-      haveInsertRf))
+      haveInsertRf)
 }
 
 class BatchExecHashSemiJoin(
@@ -303,7 +302,7 @@ class BatchExecHashSemiJoin(
       joinType: JoinRelType,
       semiJoinDone: Boolean): SemiJoin = {
     val joinInfo = JoinInfo.of(left, right, condition)
-    super.supplement(new BatchExecHashSemiJoin(
+    new BatchExecHashSemiJoin(
       cluster,
       traitSet,
       left,
@@ -316,7 +315,7 @@ class BatchExecHashSemiJoin(
       isBroadcast,
       tryDistinctBuildRow,
       description,
-      haveInsertRf))
+      haveInsertRf)
   }
 
 }

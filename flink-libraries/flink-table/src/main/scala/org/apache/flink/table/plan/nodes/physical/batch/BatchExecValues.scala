@@ -44,13 +44,13 @@ class BatchExecValues(
     with RowBatchExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecValues(
+    new BatchExecValues(
       cluster,
       traitSet,
       getRowType,
       getTuples,
       description
-    ))
+    )
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -62,7 +62,6 @@ class BatchExecValues(
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("values", valuesFieldsToString)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   /**

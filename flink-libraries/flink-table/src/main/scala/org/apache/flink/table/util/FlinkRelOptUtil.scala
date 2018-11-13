@@ -26,14 +26,14 @@ import java.util.Calendar
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.{Aggregate, AggregateCall}
-import org.apache.calcite.rex.{RexInputRef, RexVisitorImpl}
-import org.apache.calcite.rex.{RexCall, RexUtil, _}
-import org.apache.calcite.sql.`type`.SqlTypeName._
-import org.apache.calcite.sql.SqlKind._
+import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.calcite.sql.SqlKind._
+import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+import org.apache.flink.table.plan.util.{SameRelObjectShuttle, SubplanReuseContext}
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
 
 import scala.collection.JavaConversions._
@@ -52,14 +52,25 @@ object FlinkRelOptUtil {
     if (!treeStyle) {
       RelOptUtil.toString(rel, detailLevel)
     } else {
+      // FIXME refactor
+      val config = FlinkRelOptUtil.getTableConfig(rel)
+      val isPhysicalRel = rel.isInstanceOf[FlinkPhysicalRel]
+      // only print reuse info of physical plan
+      val (subplanReuseContext, newRel) = if (isPhysicalRel && config.getSubPlanReuse) {
+        val planWithoutSameRef = rel.accept(new SameRelObjectShuttle)
+        (Some(new SubplanReuseContext(planWithoutSameRef, config)), planWithoutSameRef)
+      } else {
+        (None, rel)
+      }
       val sw = new StringWriter
       val planWriter = new RelTreeWriterImpl(
         new PrintWriter(sw),
+        subplanReuseContext,
         detailLevel,
         printResource,
         printMemCost,
         withRelNodeId)
-      rel.explain(planWriter)
+      newRel.explain(planWriter)
       sw.toString
     }
   }
@@ -72,7 +83,7 @@ object FlinkRelOptUtil {
 
   def getFunctionCatalog(rel: RelNode): FunctionCatalog = {
     Option(rel.getCluster.getPlanner.getContext.unwrap(classOf[FunctionCatalog]))
-      .getOrElse(BuiltInFunctionCatalog.withBuiltIns)
+      .getOrElse(BuiltInFunctionCatalog.withBuiltIns())
   }
 
   /**

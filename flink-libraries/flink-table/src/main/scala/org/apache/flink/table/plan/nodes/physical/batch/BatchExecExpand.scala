@@ -17,6 +17,12 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import java.util
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.DataTypes
@@ -27,13 +33,6 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.util.ExpandUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
-
-import java.util
 
 import scala.collection.JavaConversions._
 
@@ -49,7 +48,7 @@ class BatchExecExpand(
   with RowBatchExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecExpand(
+    new BatchExecExpand(
       cluster,
       traitSet,
       inputs.get(0),
@@ -57,7 +56,7 @@ class BatchExecExpand(
       projects,
       expandIdIndex,
       ruleDescription
-    ))
+    )
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -65,7 +64,6 @@ class BatchExecExpand(
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("projects", ExpandUtil.projectsToString(projects, input.getRowType, getRowType))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   private def getOperatorName: String = {

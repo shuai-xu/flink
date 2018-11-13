@@ -18,14 +18,12 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import org.apache.calcite.plan.RelTraitSet
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
@@ -40,32 +38,7 @@ import scala.collection.JavaConversions._
 
 trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
 
-  /**
-    * Defines an unique reuse id for reused node and
-    * this value will be referenced by [[BatchExecReused]] when explains plan.
-    */
-  private var reuseId: Option[Int] = None
-
   private var reusedTransformation: Option[StreamTransformation[T]] = None
-
-  /**
-    * Generates a reuse id if it does not exist.
-    */
-  def genReuseId(): Unit = {
-    if (reuseId.isEmpty) {
-      reuseId = Some(BatchExecRel.reuseIdCounter.incrementAndGet())
-    }
-  }
-
-  /**
-    * Returns reuse id if it exists, otherwise -1.
-    */
-  def getReuseId: Int = reuseId.getOrElse(-1)
-
-  /**
-    * Returns true if this node is reused, else false.
-    */
-  def isReused: Boolean = reuseId.isDefined
 
   /**
     * Returns true if this node is a barrier node, else false.
@@ -85,17 +58,11 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
   def translateToPlan(tableEnv: BatchTableEnvironment): StreamTransformation[T] = {
-    if (!isReused) {
-      // the `reusedTransformation` of non-reused node is always None
-      require(reusedTransformation.isEmpty)
-    }
     reusedTransformation match {
-      case Some(transformation) if isReused => transformation
+      case Some(transformation) => transformation
       case _ =>
         val transformation = translateToPlanInternal(tableEnv)
-        if (isReused) {
-          reusedTransformation = Some(transformation)
-        }
+        reusedTransformation = Some(transformation)
         val config = FlinkRelOptUtil.getTableConfig(this)
         if (config.getOperatorMetricCollect) {
           val nameWithId = s"${transformation.getName}, __id__=[$getId]"
@@ -123,27 +90,15 @@ trait BatchExecRel[T] extends FlinkPhysicalRel with Logging {
     *         Returns null if required traits cannot be pushed down into inputs.
     */
   def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = null
-
-  /**
-    * Supplement reuseId of this batchExecRel to the copied RowBatchExecRel.
-    * @param copiedRelNode copied RowBatchExecRel
-    */
-  protected final def supplement[P <: BatchExecRel[T]](copiedRelNode: P): P = {
-    copiedRelNode.reuseId = reuseId
-    copiedRelNode
-  }
 }
 
 trait RowBatchExecRel extends BatchExecRel[BaseRow]
 
 
 object BatchExecRel {
-  private val reuseIdCounter = new AtomicInteger(0)
 
   //we aim for a 200% utilization of the bucket table.
   val HASH_COLLISION_WEIGHT = 2
-
-  private[flink] def resetReuseIdCounter(): Unit = reuseIdCounter.set(0)
 
   private[flink] def getBatchExecMemCost(relNode: BatchExecRel[_]): Double = {
     val mq = reuseOrCreate(relNode.getCluster.getMetadataQuery)

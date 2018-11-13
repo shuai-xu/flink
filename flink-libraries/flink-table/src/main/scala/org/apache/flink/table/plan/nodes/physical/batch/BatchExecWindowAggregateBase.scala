@@ -38,6 +38,7 @@ import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
+import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
@@ -46,7 +47,6 @@ import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, T
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.plan.util.AggregateUtil.asLong
-import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.runtime.operator.window.grouping.{AbstractWindowsGrouping, HeapWindowsGrouping}
 import org.apache.flink.table.util.RowIterator
@@ -169,7 +169,6 @@ abstract class BatchExecWindowAggregateBase(
           enableAssignPane,
           isMerge = isMerge,
           isGlobal = isFinal))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   def getOutputType: BaseRowType = {
@@ -729,7 +728,6 @@ abstract class BatchExecWindowAggregateBase(
       s"$inputTerm.getLong($index)"
     }
   }
-
 
   def convertToIntValue(inputTerm: String): String = {
     if (timestampIsDate) {

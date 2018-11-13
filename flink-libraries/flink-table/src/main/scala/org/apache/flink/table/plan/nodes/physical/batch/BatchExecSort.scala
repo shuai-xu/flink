@@ -65,7 +65,6 @@ class BatchExecSort(
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
       .item("orderBy", SortUtil.sortFieldsToString(collations, getRowType))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def estimateRowCount(mq: RelMetadataQuery): Double = mq.getRowCount(input)

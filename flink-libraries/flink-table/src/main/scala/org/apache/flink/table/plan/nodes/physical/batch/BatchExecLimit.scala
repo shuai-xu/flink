@@ -18,16 +18,16 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel._
 import org.apache.calcite.rel.core.Sort
 import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel._
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.plan.cost.BatchExecCost._
-import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.runtime.operator.sort.LimitOperator
 
 class BatchExecLimit(
@@ -62,23 +62,21 @@ class BatchExecLimit(
       newCollation: RelCollation,
       offset: RexNode,
       fetch: RexNode): Sort = {
-    super.supplement(new BatchExecLimit(
+    new BatchExecLimit(
       cluster,
       traitSet,
       newInput,
       offset,
       fetch,
       isGlobal,
-      description))
+      description)
   }
-
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
       .item("offset", offsetToString)
       .item("limit", limitToString)
       .item("global", isGlobal)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   private def offsetToString: String = {

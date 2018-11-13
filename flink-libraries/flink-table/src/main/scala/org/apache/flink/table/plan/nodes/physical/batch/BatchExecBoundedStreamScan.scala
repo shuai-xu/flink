@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import java.lang.{Boolean => JBoolean, Integer => JInteger}
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
@@ -26,13 +28,10 @@ import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment}
-import org.apache.flink.table.plan.schema.DataStreamTable
-import java.lang.{Boolean => JBoolean}
-import java.lang.{Integer => JInteger}
-
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.schema.DataStreamTable
 
 import scala.collection.JavaConverters._
 
@@ -54,7 +53,6 @@ class BatchExecBoundedStreamScan(
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("fields", getRowType.getFieldNames.asScala.mkString(", "))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -67,7 +65,7 @@ class BatchExecBoundedStreamScan(
   }
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecBoundedStreamScan(cluster, traitSet, getTable, getRowType))
+    new BatchExecBoundedStreamScan(cluster, traitSet, getTable, getRowType)
   }
 
   /**

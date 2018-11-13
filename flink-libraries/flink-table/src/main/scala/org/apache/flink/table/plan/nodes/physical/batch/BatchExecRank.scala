@@ -82,7 +82,7 @@ class BatchExecRank(
   }
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecRank(
+    new BatchExecRank(
       cluster,
       traitSet,
       inputs.head,
@@ -92,7 +92,7 @@ class BatchExecRank(
       rankRange,
       outputRankFunColumn,
       isGlobal
-    ))
+    )
   }
 
   override def isBarrierNode: Boolean = false
@@ -108,7 +108,6 @@ class BatchExecRank(
       .item("rankRange", rankRange.toString(inputFieldNames))
       .item("global", isGlobal)
       .item("select", getRowType.getFieldNames.mkString(", "))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {

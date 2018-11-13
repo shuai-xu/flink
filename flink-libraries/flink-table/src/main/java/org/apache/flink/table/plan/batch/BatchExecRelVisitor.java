@@ -36,7 +36,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinB
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -65,8 +64,6 @@ public interface BatchExecRelVisitor<R> {
 	R visit(BatchExecCorrelate correlate);
 
 	R visit(BatchExecExchange exchange);
-
-	R visit(BatchExecReused reused);
 
 	R visit(BatchExecExpand expand);
 

@@ -24,16 +24,16 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCollect
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.BinaryRow
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
@@ -134,12 +134,7 @@ abstract class BatchExecGroupAggregateBase(
         isMerge,
         isFinal)
     }),"
-    val reusedIdStr = if (isReused) {
-      s"reuse_id:($getReuseId)"
-    } else {
-      ""
-    }
-    s"$prefix($groupingStr$auxGroupingStr$projStr$reusedIdStr)"
+    s"$prefix($groupingStr$auxGroupingStr$projStr)"
   }
 
   // ===============================================================================================

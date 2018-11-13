@@ -118,11 +118,11 @@ class BatchExecExchange(
       traitSet: RelTraitSet,
       newInput: RelNode,
       newDistribution: RelDistribution): BatchExecExchange = {
-    val exchange = super.supplement(new BatchExecExchange(
+    val exchange = new BatchExecExchange(
       cluster,
       traitSet,
       newInput,
-      newDistribution))
+      newDistribution)
     exchange.requiredExchangeMode = requiredExchangeMode
     exchange
   }
@@ -145,7 +145,6 @@ class BatchExecExchange(
     super.explainTerms(pw)
       .itemIf("exchange_mode", requiredExchangeMode.orNull,
         requiredExchangeMode.contains(DataExchangeMode.BATCH))
-      .itemIf("reuse_id", getReuseId, isReused)
 
   def setRequiredDataExchangeMode(exchangeMode: DataExchangeMode): Unit = {
     require(exchangeMode != null)
@@ -184,12 +183,10 @@ class BatchExecExchange(
   def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val input = reusedInput match {
-      case Some(transformation) if isReused => transformation
+      case Some(transformation) => transformation
       case None =>
         val input = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
-        if (isReused) {
-          reusedInput = Some(input)
-        }
+        reusedInput = Some(input)
         input
     }
 
@@ -276,7 +273,7 @@ class BatchExecExchange(
     val preferResSpec = resource.getPreferResourceSpec
 
     val sampleAndHistogram = reusedSampleAndHistogram match {
-      case Some(transformation) if isReused => transformation
+      case Some(transformation) => transformation
       case None =>
         // 1. Fixed size sample in each partitions.
         val localSampleOutRowType = DataTypes.internal(
@@ -342,9 +339,7 @@ class BatchExecExchange(
           boundariesType,
           1)
         sampleAndHistogram.setResources(reservedResSpec, preferResSpec)
-        if (isReused) {
-          reusedSampleAndHistogram = Some(sampleAndHistogram)
-        }
+        reusedSampleAndHistogram = Some(sampleAndHistogram)
         sampleAndHistogram
     }
 

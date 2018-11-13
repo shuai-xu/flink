@@ -21,7 +21,6 @@ package org.apache.flink.table.resource.batch.calculator;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
@@ -57,7 +56,7 @@ public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<RowBatchExe
 		}
 		if (rowBatchExecRel instanceof BatchExecScan) {
 			calculateSource((BatchExecScan) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecUnion || rowBatchExecRel instanceof BatchExecReused) {
+		} else if (rowBatchExecRel instanceof BatchExecUnion) {
 			calculateInputs(rowBatchExecRel);
 		} else if (rowBatchExecRel instanceof BatchExecExchange) {
 			calculateExchange((BatchExecExchange) rowBatchExecRel);

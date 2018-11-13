@@ -39,6 +39,8 @@ import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{BatchExecCost, FlinkCostFactory}
@@ -47,9 +49,8 @@ import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
 import org.apache.flink.table.plan.optimize.BatchOptimizeContext
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
+import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, SameRelObjectShuttle, SubplanReuseContext, SubplanReuseShuttle}
 import org.apache.flink.table.plan.{LogicalNodeBlock, LogicalNodeBlockPlanBuilder}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
-import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
@@ -57,6 +58,7 @@ import org.apache.flink.table.sources.{BatchTableSource, _}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil, RowConverters}
 import org.apache.flink.table.util.PlanUtil._
+import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil}
 import org.apache.flink.util.{AbstractID, Preconditions}
 
 import _root_.scala.collection.JavaConversions._
@@ -620,8 +622,21 @@ class BatchTableEnvironment(
 
       override def getRelOptPlanner: RelOptPlanner = getPlanner
     })
-    dumpOptimizedPlanIfNeed(optimizedPlan)
-    optimizedPlan
+
+    // FIXME refactor
+    // Rewrite same rel object to different rel objects.
+    val diffObjPlan = optimizedPlan.accept(new SameRelObjectShuttle())
+    // reuse sub-plan if enabled
+    val reusedPlan = if (config.getSubPlanReuse) {
+      val context = new SubplanReuseContext(diffObjPlan, config)
+      diffObjPlan.accept(new SubplanReuseShuttle(context))
+    } else {
+      diffObjPlan
+    }
+    // breakup deadlock
+    val postOptimizedPlan = new DeadlockBreakupProcessor().process(reusedPlan)
+    dumpOptimizedPlanIfNeed(postOptimizedPlan)
+    postOptimizedPlan
   }
 
   /**

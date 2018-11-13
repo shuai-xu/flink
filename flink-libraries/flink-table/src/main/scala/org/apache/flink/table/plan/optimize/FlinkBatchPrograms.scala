@@ -40,9 +40,6 @@ object FlinkBatchPrograms {
   val PHYSICAL = "physical"
   val POST_PHYSICAL = "post"
   val RUNTIME_FILTER = "runtime_filter"
-  val REUSE_SUB_PLAN = "reuse_sub_plan"
-  val DEADLOCK_BREAKUP = "deadlock_breakup"
-  val SEPARATE_REUSED_SOURCE = "reused_source_separate"
 
   def buildPrograms(): FlinkChainedPrograms[BatchOptimizeContext] = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
@@ -225,15 +222,6 @@ object FlinkBatchPrograms {
               .build(), "runtime filter remove useless")
           .build()
     )
-
-    // reuse the same physical Flink sub-plan
-    programs.addLast(REUSE_SUB_PLAN, new FlinkReuseSubPlanProgram)
-
-    // breakup deadlock
-    programs.addLast(DEADLOCK_BREAKUP, new FlinkDeadlockBreakupProgram)
-
-    // copy the multiplex source relNode
-    programs.addLast(SEPARATE_REUSED_SOURCE, new FlinkSeparateReusedSourceRelProgram)
 
     programs
   }

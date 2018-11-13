@@ -36,7 +36,6 @@ class FlinkFilterJoinRuleTest(fieldsNullable: Boolean) extends TableTestBatchExe
   def setup(): Unit = {
     val calciteConfig = util.tableEnv.getConfig.getCalciteConfig
     calciteConfig.getBatchPrograms.remove(FlinkBatchPrograms.PHYSICAL)
-    calciteConfig.getBatchPrograms.remove(FlinkBatchPrograms.REUSE_SUB_PLAN)
 
     util.addTable[(Int, Long)]("leftT", 'a, 'b)
     util.addTable[(Int, Long)]("rightT", 'c, 'd)

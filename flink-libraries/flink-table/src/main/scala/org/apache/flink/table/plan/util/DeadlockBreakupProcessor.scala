@@ -16,25 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.optimize
+package org.apache.flink.table.plan.util
 
-import com.google.common.collect.Sets
-import org.apache.calcite.rel.RelNode
+import java.util
+
+import com.google.common.collect.{Maps, Sets}
+import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.flink.runtime.io.network.DataExchangeMode
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.batch.{BatchExecRelShuttleImpl, BatchExecRelVisitorImpl}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecBoundedStreamScan, _}
 
-import scala.collection.mutable
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 /**
-  * A FlinkOptimizeProgram that finds out all deadlocks in the plan, and resolves them.
+  * A DeadlockBreakupHandler that finds out all deadlocks in the plan, and resolves them.
   *
   * NOTES: This program can be only applied on [[RowBatchExecRel]] tree.
   *
-  * Reused node (may be a [[BatchExecReused]] or a [[BatchExecBoundedStreamScan]]) might
-  * lead to a deadlock when HashJoin or NestedLoopJoin have same reused input.
+  * Reused node (may be a [[RowBatchExecRel]] which has more than one outputs or
+  * a [[BatchExecBoundedStreamScan]] which transformation is used for different scan)
+  * might lead to a deadlock when HashJoin or NestedLoopJoin have same reused input.
   * Sets Exchange node(if it does not exist, add one) as BATCH mode to break up the deadlock.
   *
   * e.g. SQL: WITH r AS (SELECT a, b FROM x limit 10)
@@ -55,7 +59,7 @@ import scala.collection.JavaConversions._
   * }}}
   * the HashJoin's left input is probe side which could start to read data only after
   * build side has finished, so the Exchange node in HashJoin's left input requires BATCH mode
-  * to block the stream. After this program is applied, The simplified plan is:
+  * to block the stream. After this handler is applied, The simplified plan is:
   * {{{
   *                ScanTableSource
   *                    |
@@ -65,9 +69,7 @@ import scala.collection.JavaConversions._
   *                    |
   *                Limit(global=[true], reuse_id=[1]))
   *                /      \
-  *        Calc(b>10)     Reused
-  *               |        |
-  *               |       Calc(b<20)
+  *        Calc(b>10)     Calc(b<20)
   *               |        |
   * (broadcast)Exchange   Exchange(exchange_mode=[BATCH]) add BATCH Exchange to breakup deadlock
   *    (build side)\       /(probe side)
@@ -75,19 +77,69 @@ import scala.collection.JavaConversions._
   *                   |
   *               Calc(select=[a])
   * }}}
-  *
-  * @tparam OC OptimizeContext
   */
-class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizeProgram[OC] {
+class DeadlockBreakupProcessor {
 
-  def optimize(input: RelNode, context: OC): RelNode = {
+  def process(input: RelNode): RelNode = {
     input match {
-      case root: RowBatchExecRel => root.accept(new DeadlockBreakupShuttleImpl)
+      case root: RowBatchExecRel =>
+        val finder = new ReuseNodeFinder()
+        finder.go(root)
+        root.accept(new DeadlockBreakupShuttleImpl(finder))
       case _ => input
     }
   }
 
-  class DeadlockBreakupShuttleImpl extends BatchExecRelShuttleImpl {
+  /**
+    * Find reuse node.
+    * A reuse node has more than one output or is BatchExecBoundedStreamScan which DataStream
+    * object is held by different BatchExecBoundedStreamScans.
+    */
+  class ReuseNodeFinder extends RelVisitor {
+    // map a node object to its visited times. the visited times of a reused node is more than one
+    private val visitedTimes = Maps.newIdentityHashMap[RelNode, Integer]()
+    // different BatchExecBoundedStreamScans may have same DataStream object
+    // map DataStream object to BatchExecBoundedStreamScans
+    private val mapDataStreamToScan =
+    Maps.newIdentityHashMap[DataStream[_], util.List[BatchExecBoundedStreamScan]]()
+
+    /**
+      * Return true if the visited time of the given node is more than one,
+      * or the node is a [[BatchExecBoundedStreamScan]] and its [[DataStream]] object is hold
+      * by different [[BatchExecBoundedStreamScan]]s. else false.
+      */
+    def isReusedNode(node: RelNode): Boolean = {
+      if (visitedTimes.getOrDefault(node, 0) > 1) {
+        true
+      } else {
+        node match {
+          case scan: BatchExecBoundedStreamScan =>
+            val dataStream = scan.boundedStreamTable.dataStream
+            val scans = mapDataStreamToScan.get(dataStream)
+            scans != null && scans.size() > 1
+          case _ => false
+        }
+      }
+    }
+
+    override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
+      val times = visitedTimes.getOrDefault(node, 0)
+      visitedTimes.put(node, times + 1)
+      node match {
+        case scan: BatchExecBoundedStreamScan =>
+          val dataStream = scan.boundedStreamTable.dataStream
+          val scans = mapDataStreamToScan.getOrElseUpdate(
+            dataStream, new util.ArrayList[BatchExecBoundedStreamScan]())
+          scans.add(scan)
+        case _ => // do nothing
+      }
+      super.visit(node, ordinal, parent)
+    }
+  }
+
+  class DeadlockBreakupShuttleImpl(finder: ReuseNodeFinder) extends BatchExecRelShuttleImpl {
+
+    private val mapOldNodeToNewNode = Maps.newIdentityHashMap[BatchExecRel[_], BatchExecRel[_]]()
 
     private def rewriteJoin(
         join: BatchExecJoinBase,
@@ -100,19 +152,17 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
       }
 
       // 1. find all reused nodes in build side of join.
-      val reusedNodesInBuildSide = findReusedNodesInBuildSide(buildNode)
+      val reusedNodesInBuildSide = findReusedNodesInBuildSide(buildNode, finder)
       // 2. find all nodes from probe side of join
-      val inputPathsOfProbeSide = buildInputPathsOfProbeSide(probeNode, reusedNodesInBuildSide)
+      val inputPathsOfProbeSide = buildInputPathsOfProbeSide(
+        probeNode, reusedNodesInBuildSide, finder)
       // 3. check whether all input paths have a barrier node (e.g. agg, sort)
       if (inputPathsOfProbeSide.nonEmpty && !hasBarrierNodeInInputPaths(inputPathsOfProbeSide)) {
         // 4. sets Exchange node(if does not exist, add one) as BATCH mode to break up the deadlock
         probeNode match {
           case e: BatchExecExchange =>
-            e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
-          case r: BatchExecReused if r.getInput.isInstanceOf[BatchExecExchange] =>
             // TODO create a cloned BatchExecExchange for PIPELINE output
-            r.getInput.asInstanceOf[BatchExecExchange]
-              .setRequiredDataExchangeMode(DataExchangeMode.BATCH)
+            e.setRequiredDataExchangeMode(DataExchangeMode.BATCH)
           case _ =>
             val traitSet = probeNode.getTraitSet.replace(distribution)
             val e = new BatchExecExchange(
@@ -140,33 +190,35 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
       val newNlJoin = super.visit(nestedLoopJoin).asInstanceOf[BatchExecNestedLoopJoinBase]
       rewriteJoin(newNlJoin, newNlJoin.leftIsBuild, FlinkRelDistribution.ANY)
     }
-  }
 
-  /**
-    * A reused node may be
-    * 1. a [[BatchExecReused]], the transformation will be reused
-    * 2. or a [[BatchExecBoundedStreamScan]], the transformation of
-    * [[org.apache.flink.streaming.api.datastream.DataStream]] is reused.
-    */
-  private def isReusedNode(batchExecRel: BatchExecRel[_]): Boolean = {
-    batchExecRel.isReused || batchExecRel.isInstanceOf[BatchExecBoundedStreamScan]
+    override protected def visitInputs(batchExecRel: BatchExecRel[_]): BatchExecRel[_] = {
+      val newNode = mapOldNodeToNewNode.get(batchExecRel)
+      if (newNode != null) {
+        newNode
+      } else {
+        val node = super.visitInputs(batchExecRel)
+        mapOldNodeToNewNode.put(batchExecRel, node)
+        node
+      }
+    }
   }
 
   /**
     * Find all reused nodes in build side of join.
     */
   private def findReusedNodesInBuildSide(
-      buildNode: BatchExecRel[_]): mutable.Set[BatchExecRel[_]] = {
+      buildNode: BatchExecRel[_],
+      finder: ReuseNodeFinder): Set[BatchExecRel[_]] = {
     val nodesInBuildSide = Sets.newIdentityHashSet[BatchExecRel[_]]()
     buildNode.accept(new BatchExecRelVisitorImpl[Unit] {
       override protected def visitInputs(batchExecRel: BatchExecRel[_]): Unit = {
-        if (isReusedNode(batchExecRel)) {
+        if (finder.isReusedNode(batchExecRel)) {
           nodesInBuildSide.add(batchExecRel)
         }
         super.visitInputs(batchExecRel)
       }
     })
-    nodesInBuildSide
+    nodesInBuildSide.toSet
   }
 
   /**
@@ -198,7 +250,8 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
     */
   private def buildInputPathsOfProbeSide(
       probeNode: BatchExecRel[_],
-      reusedNodesInBuildSide: mutable.Set[BatchExecRel[_]]): List[Array[BatchExecRel[_]]] = {
+      reusedNodesInBuildSide: Set[BatchExecRel[_]],
+      finder: ReuseNodeFinder): List[Array[BatchExecRel[_]]] = {
     val result = new mutable.ListBuffer[Array[BatchExecRel[_]]]()
     val stack = new mutable.Stack[BatchExecRel[_]]()
 
@@ -209,8 +262,8 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
     probeNode.accept(new BatchExecRelVisitorImpl[Unit] {
       override protected def visitInputs(batchExecRel: BatchExecRel[_]): Unit = {
         stack.push(batchExecRel)
-        // NOTES: BatchExecReused is a dummy node, its `isReused` method always returns false.
-        if (isReusedNode(batchExecRel) && reusedNodesInBuildSide.contains(batchExecRel)) {
+        if (finder.isReusedNode(batchExecRel) &&
+          isReusedNodeInBuildSide(batchExecRel, reusedNodesInBuildSide)) {
           result.add(stack.toArray.reverse)
         } else {
           super.visitInputs(batchExecRel)
@@ -221,6 +274,29 @@ class FlinkDeadlockBreakupProgram[OC <: OptimizeContext] extends FlinkOptimizePr
 
     require(stack.isEmpty)
     result.toList
+  }
+
+  /**
+    * Returns true if the given rel is in `reusedNodesInBuildSide`, else false.
+    * NOTES: We treat different [[BatchExecBoundedStreamScan]]s with same [[DataStream]]
+    * object as the same.
+    */
+  private def isReusedNodeInBuildSide(
+      batchExecRel: BatchExecRel[_],
+      reusedNodesInBuildSide: Set[BatchExecRel[_]]): Boolean = {
+    if (reusedNodesInBuildSide.contains(batchExecRel)) {
+      true
+    } else {
+      batchExecRel match {
+        case scan: BatchExecBoundedStreamScan =>
+          reusedNodesInBuildSide.exists {
+            case reusedScan: BatchExecBoundedStreamScan =>
+              reusedScan.boundedStreamTable.dataStream eq scan.boundedStreamTable.dataStream
+            case _ => false
+          }
+        case _ => false
+      }
+    }
   }
 
   /**

@@ -66,8 +66,8 @@ class BatchExecSortLimit(
       newInput: RelNode,
       newCollation: RelCollation,
       offset: RexNode,
-      fetch: RexNode): Sort =
-    super.supplement(new BatchExecSortLimit(
+      fetch: RexNode): Sort = {
+    new BatchExecSortLimit(
       cluster,
       traitSet,
       newInput,
@@ -75,7 +75,8 @@ class BatchExecSortLimit(
       offset,
       fetch,
       isGlobal,
-      ruleDescription))
+      ruleDescription)
+  }
 
   override def isBarrierNode: Boolean = true
 
@@ -87,7 +88,6 @@ class BatchExecSortLimit(
       .item("offset", offsetToString)
       .item("limit", limitToString)
       .item("global", isGlobal)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def estimateRowCount(metadata: RelMetadataQuery): Double = {

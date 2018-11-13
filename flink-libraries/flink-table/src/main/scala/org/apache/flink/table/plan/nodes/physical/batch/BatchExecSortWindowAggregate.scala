@@ -29,9 +29,9 @@ import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.runtime.operator._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
@@ -73,7 +73,7 @@ class BatchExecSortWindowAggregate(
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecSortWindowAggregate(
+    new BatchExecSortWindowAggregate(
       window,
       inputTimestampIndex,
       inputTimestampType,
@@ -88,7 +88,7 @@ class BatchExecSortWindowAggregate(
       grouping,
       auxGrouping,
       enableAssignPane,
-      isMerge))
+      isMerge)
   }
 
   /**

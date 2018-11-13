@@ -29,8 +29,8 @@ import org.apache.calcite.util.mapping.{Mapping, MappingType, Mappings}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonCalc
 
@@ -53,13 +53,13 @@ class BatchExecCalc(
   override def deriveRowType(): RelDataType = rowRelDataType
 
   override def copy(traitSet: RelTraitSet, child: RelNode, program: RexProgram): Calc = {
-    super.supplement(new BatchExecCalc(
+    new BatchExecCalc(
       cluster,
       traitSet,
       child,
       getRowType,
       program,
-      ruleDescription))
+      ruleDescription)
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -71,7 +71,6 @@ class BatchExecCalc(
       .item("select", selectionToString(calcProgram, getExpressionString))
       .itemIf("where", conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {

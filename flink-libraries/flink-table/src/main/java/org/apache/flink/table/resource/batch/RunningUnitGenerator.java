@@ -41,7 +41,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinB
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -296,11 +295,6 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 			outputInfoMap.put(exchange, outputInfoList);
 		}
 		return outputInfoList;
-	}
-
-	@Override
-	public List<RelStageExchangeInfo> visit(BatchExecReused reused) {
-		return ((RowBatchExecRel) reused.getInput()).accept(this);
 	}
 
 	@Override

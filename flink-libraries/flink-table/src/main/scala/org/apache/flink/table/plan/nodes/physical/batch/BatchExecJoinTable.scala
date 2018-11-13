@@ -21,8 +21,8 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import java.util
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
-import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.{RexNode, RexProgram}
 import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.streaming.api.transformations.StreamTransformation
@@ -71,7 +71,7 @@ class BatchExecJoinTable(
   with RowBatchExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecJoinTable(
+    new BatchExecJoinTable(
       cluster,
       traitSet,
       inputSchema,
@@ -87,7 +87,7 @@ class BatchExecJoinTable(
       schema,
       joinInfo,
       joinType,
-      ruleDescription))
+      ruleDescription)
   }
 
   /**
@@ -115,7 +115,4 @@ class BatchExecJoinTable(
     transformation
   }
 
-  override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw).itemIf("reuse_id", getReuseId, isReused)
-  }
 }

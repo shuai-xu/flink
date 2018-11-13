@@ -62,16 +62,16 @@ class BatchExecCorrelate(
       child: RelNode,
       projectProgram: Option[RexProgram],
       outputType: RelDataType): RelNode = {
-     super.supplement(new BatchExecCorrelate(
-       cluster,
-       traitSet,
-       child,
-       projectProgram,
-       scan,
-       condition,
-       outputType,
-       joinType,
-       ruleDescription))
+    new BatchExecCorrelate(
+      cluster,
+      traitSet,
+      child,
+      projectProgram,
+      scan,
+      condition,
+      outputType,
+      joinType,
+      ruleDescription)
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -99,7 +99,6 @@ class BatchExecCorrelate(
       .item("rowType", relRowType)
       .item("joinType", joinType)
       .itemIf("condition", condition.orNull, condition.isDefined)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   /**

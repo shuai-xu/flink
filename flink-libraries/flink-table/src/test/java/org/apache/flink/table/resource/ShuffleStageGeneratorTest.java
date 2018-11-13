@@ -20,7 +20,6 @@ package org.apache.flink.table.resource;
 
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
@@ -50,39 +49,31 @@ public class ShuffleStageGeneratorTest extends MockRelTestBase {
 		 *    0, Source     1, Source
 		 *             \     /
 		 *             2, Union
-		 *               /  \
-		 *              /   3, Reuse
 		 *             /     \
-		 *        4, Calc   5, Calc
+		 *        3, Calc   4, Calc
 		 *           |        |
-		 *    6, Exchange    7, Exchange
+		 *    5, Exchange    6, Exchange
 		 *            \      /
-		 *              8, Join
+		 *              7, Join
 		 *               |
-		 *              9, Reuse
-		 *               |
-		 *              10, Calc
+		 *              8, Calc
 		 */
-		createRelList(11);
+		createRelList(9);
 		updateRel(2, mock(BatchExecUnion.class));
-		updateRel(3, mock(BatchExecReused.class));
+		updateRel(5, mock(BatchExecExchange.class));
 		updateRel(6, mock(BatchExecExchange.class));
-		updateRel(7, mock(BatchExecExchange.class));
-		updateRel(9, mock(BatchExecReused.class));
 		connect(2, 0, 1);
 		connect(3, 2);
 		connect(4, 2);
 		connect(5, 3);
 		connect(6, 4);
-		connect(7, 5);
-		connect(8, 6, 7);
-		connect(9, 8);
-		connect(10, 9);
+		connect(7, 5, 6);
+		connect(8, 7);
 
-		Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(10));
+		Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(relList.get(8));
 
-		assertSameShuffleStage(relShuffleStageMap, 8, 10);
-		assertSameShuffleStage(relShuffleStageMap, 0, 1, 4, 5);
+		assertSameShuffleStage(relShuffleStageMap, 7, 8);
+		assertSameShuffleStage(relShuffleStageMap, 0, 1, 3, 4);
 	}
 
 	@Test

@@ -24,11 +24,10 @@ import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.async.AsyncFunction
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api._
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.sources.{AsyncConfig, DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -232,7 +231,6 @@ class JoinTableTest extends TableTestBatchExecBase {
   @Test
   def testReusing(): Unit = {
     testUtil.tableEnv.getConfig.setSubPlanReuse(true)
-    BatchExecRel.resetReuseIdCounter()
     val sql1 =
       """
         |SELECT b, a, sum(c) c, sum(d) d

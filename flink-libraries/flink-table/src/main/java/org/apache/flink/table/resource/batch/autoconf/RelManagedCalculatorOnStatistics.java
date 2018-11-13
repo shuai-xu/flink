@@ -41,7 +41,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel$;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -127,12 +126,6 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	@Override
 	public Void visit(BatchExecExchange exchange) {
 		visitChildren(exchange);
-		return null;
-	}
-
-	@Override
-	public Void visit(BatchExecReused reused) {
-		visitChildren(reused);
 		return null;
 	}
 

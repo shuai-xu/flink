@@ -34,12 +34,12 @@ import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.{FIRST, SECOND, generatorCollect}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{ExecResourceUtil, ResettableExternalBuffer}
@@ -81,7 +81,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     super.explainTerms(pw)
       .item("build", if (leftIsBuild) "left" else "right")
       .itemIf("singleRowJoin", singleRowJoin, singleRowJoin)
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
@@ -291,7 +290,7 @@ class BatchExecNestedLoopJoin(
       right: RelNode,
       joinType: JoinRelType,
       semiJoinDone: Boolean): Join =
-    super.supplement(new BatchExecNestedLoopJoin(
+    new BatchExecNestedLoopJoin(
       cluster,
       traitSet,
       left,
@@ -300,7 +299,7 @@ class BatchExecNestedLoopJoin(
       conditionExpr,
       joinType,
       singleRowJoin,
-      description))
+      description)
 
   override def genProcessAndEndCode(
       ctx: CodeGeneratorContext,
@@ -449,7 +448,7 @@ class BatchExecNestedLoopSemiJoin(
       joinType: JoinRelType,
       semiJoinDone: Boolean): SemiJoin = {
     val joinInfo = JoinInfo.of(left, right, condition)
-    super.supplement(new BatchExecNestedLoopSemiJoin(
+    new BatchExecNestedLoopSemiJoin(
       cluster,
       traitSet,
       left,
@@ -459,7 +458,7 @@ class BatchExecNestedLoopSemiJoin(
       joinInfo.rightKeys,
       isAnti,
       singleRowJoin,
-      description))
+      description)
   }
 
   override def genProcessAndEndCode(

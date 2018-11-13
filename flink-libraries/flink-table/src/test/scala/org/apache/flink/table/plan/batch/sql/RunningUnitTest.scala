@@ -21,7 +21,6 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.{BatchExecTableTestUtil, TableTestBatchExecBase}
@@ -42,7 +41,6 @@ class RunningUnitTest extends TableTestBatchExecBase {
     util.tableEnv.alterTableStats("x", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(100L)))
     util.tableEnv.getConfig.setSubsectionOptimization(false)
-    BatchExecRel.resetReuseIdCounter()
   }
 
   @Test

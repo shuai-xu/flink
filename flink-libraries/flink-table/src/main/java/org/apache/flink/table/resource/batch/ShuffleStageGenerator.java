@@ -19,7 +19,6 @@
 package org.apache.flink.table.resource.batch;
 
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecReused;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 
@@ -128,7 +127,7 @@ public class ShuffleStageGenerator {
 	}
 
 	private static boolean isVirtualRel(RowBatchExecRel rel) {
-		return (rel instanceof BatchExecUnion || rel instanceof BatchExecReused);
+		return rel instanceof BatchExecUnion;
 	}
 
 	private Map<RowBatchExecRel, ShuffleStage> getRelShuffleStageMap() {

@@ -63,7 +63,7 @@ class BatchExecLocalSortAggregate(
     isFinal = false) {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecLocalSortAggregate(
+    new BatchExecLocalSortAggregate(
       cluster,
       relBuilder,
       traitSet,
@@ -72,7 +72,7 @@ class BatchExecLocalSortAggregate(
       getRowType,
       inputRelDataType,
       grouping,
-      auxGrouping))
+      auxGrouping)
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
@@ -90,7 +90,6 @@ class BatchExecLocalSortAggregate(
         aggCallToAggFunction.map(_._2),
         isMerge = false,
         isGlobal = false))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {

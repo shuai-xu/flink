@@ -18,8 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import java.lang.{Boolean => JBoolean, Integer => JInteger}
+
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec
@@ -28,15 +30,12 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, TableException}
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
 import org.apache.flink.table.typeutils.TypeUtils
-import java.lang.{Boolean => JBoolean}
-import java.lang.{Integer => JInteger}
-
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 /**
   * Flink RelNode to read data from an external source defined by a [[BatchTableSource]].
@@ -60,9 +59,6 @@ class BatchExecTableSourceScan(
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
-  override def explainTerms(pw: RelWriter): RelWriter =
-    super.explainTerms(pw).itemIf("reuse_id", getReuseId, isReused)
-
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new BatchExecTableSourceScan(cluster, traitSet, relOptTable)
   }
@@ -70,7 +66,7 @@ class BatchExecTableSourceScan(
   override def copy(
       traitSet: RelTraitSet,
       relOptTable: FlinkRelOptTable): PhysicalTableSourceScan = {
-    super.supplement(new BatchExecTableSourceScan(cluster, traitSet, relOptTable))
+    new BatchExecTableSourceScan(cluster, traitSet, relOptTable)
   }
 
   /**
@@ -111,7 +107,7 @@ class BatchExecTableSourceScan(
       getRowType, tableSource.getReturnType, config, rowtimeExpression)
   }
 
-  override def needInternalConversion = {
+  override def needInternalConversion: Boolean = {
     val fieldIndexes = TableSourceUtil.computeIndexMapping(
       tableSource,
       isStreamTable = false,

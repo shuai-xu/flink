@@ -65,10 +65,10 @@ WITH r AS (SELECT c, SUM(a) a, SUM(b) b FROM x GROUP BY c)
 RelRunningUnit{
 	relStage（batchExecRel=Scan(table:[x, source: [selectedFields=[a, b, c]]], fields:(a, b, c)), stageID=0
 	relStage（batchExecRel=LocalHashAggregate(groupBy:(c),select:(c, Partial_SUM(a) AS sum$0, Partial_SUM(b) AS sum$1),), stageID=0
-	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),), stageID=0
 }
 RelRunningUnit{
-	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),reuse_id:(1)), stageID=0;]
+	relStage（batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),), stageID=1, depend type: DATA_TRIGGER =[batchExecRel=GlobalHashAggregate(groupBy:(c),select:(c, Final_SUM(sum$0) AS a, Final_SUM(sum$1) AS b),), stageID=0;]
 	relStage（batchExecRel=Calc(where: (a > 1), select: (c, a, b)), stageID=0
 	relStage（batchExecRel=Calc(select: (c, a, b, CAST(a) AS a0)), stageID=0
 	relStage（batchExecRel=NestedLoopJoin(where: (a0 = b0), buildRight), stageID=0

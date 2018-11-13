@@ -63,7 +63,7 @@ class BatchExecHashAggregate(
     isFinal = true) {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecHashAggregate(
+    new BatchExecHashAggregate(
       cluster,
       relBuilder,
       traitSet,
@@ -73,7 +73,7 @@ class BatchExecHashAggregate(
       inputType,
       grouping,
       auxGrouping,
-      isMerge))
+      isMerge)
   }
 
   override def isBarrierNode: Boolean = true
@@ -133,7 +133,6 @@ class BatchExecHashAggregate(
         aggCallToAggFunction.map(_._2),
         isMerge,
         isGlobal = true))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   /**

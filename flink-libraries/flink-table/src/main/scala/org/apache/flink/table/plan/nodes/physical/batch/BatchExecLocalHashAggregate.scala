@@ -29,8 +29,8 @@ import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -75,13 +75,12 @@ class BatchExecLocalHashAggregate(
         aggCallToAggFunction.map(_._2),
         isMerge = false,
         isGlobal = false))
-      .itemIf("reuse_id", getReuseId, isReused)
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    super.supplement(new BatchExecLocalHashAggregate(
+    new BatchExecLocalHashAggregate(
       cluster,
       relBuilder,
       traitSet,
@@ -90,7 +89,7 @@ class BatchExecLocalHashAggregate(
       getRowType,
       inputType,
       grouping,
-      auxGrouping))
+      auxGrouping)
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
