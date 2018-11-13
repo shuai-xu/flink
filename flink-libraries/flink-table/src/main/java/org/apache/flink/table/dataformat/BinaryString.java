@@ -1675,7 +1675,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			segmentAndOffset.nextByte(size);
 		}
 		if (totalOffset == this.numBytes) {
-			throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
+			// all whitespaces
+			return null;
 		}
 
 		// ======= Significand part begin =======
@@ -1684,7 +1685,8 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			segmentAndOffset.nextByte(size);
 			totalOffset++;
 			if (totalOffset == this.numBytes) {
-				throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
+				// only contains prefix plus/minus
+				return null;
 			}
 		}
 
@@ -1704,7 +1706,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			} else if (b == '.') {
 				if (pointPos >= 0) {
 					// More than one decimal point
-					throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
+					return null;
 				}
 				pointPos = significandLen;
 			} else {
@@ -1728,7 +1730,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 				segmentAndOffset.nextByte(size);
 				totalOffset++;
 				if (totalOffset == this.numBytes) {
-					throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
+					return null;
 				}
 			}
 
@@ -1768,7 +1770,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 			segmentAndOffset.nextByte(size);
 			// White spaces are allowed at the end
 			if (b != ' ' && b != '\n' && b != '\t') {
-				throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
+				return null;
 			}
 		}
 
@@ -1805,7 +1807,7 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 		}
 
 		if (len < 0) {
-			throw new NumberFormatException("Cannot parse " + toString() + " to decimal");
+			return null;
 		} else {
 			// Trim white spaces
 			int start = 0, end = len;
@@ -1821,9 +1823,12 @@ public final class BinaryString implements Comparable<BinaryString>, Cloneable, 
 					break;
 				}
 			}
-
-			BigDecimal bd = new BigDecimal(chars, start, end - start);
-			return Decimal.fromBigDecimal(bd, precision, scale);
+			try {
+				BigDecimal bd = new BigDecimal(chars, start, end - start);
+				return Decimal.fromBigDecimal(bd, precision, scale);
+			} catch (NumberFormatException nfe) {
+				return null;
+			}
 		}
 	}
 

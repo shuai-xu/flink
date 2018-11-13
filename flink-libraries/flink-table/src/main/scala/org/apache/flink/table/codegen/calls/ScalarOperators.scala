@@ -26,7 +26,7 @@ import org.apache.calcite.util.BuiltInMethod
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGenUtils._
-import org.apache.flink.table.codegen.calls.CallGenerator.{generateOperatorIfNotNull, generateReturnStringCallIfArgsNotNull, generateReturnStringCallWithStmtIfArgsNotNull, generateUnaryOperatorIfNotNull}
+import org.apache.flink.table.codegen.calls.CallGenerator._
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.{BinaryArray, BinaryArrayWriter, BinaryMap, Decimal}

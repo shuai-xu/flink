@@ -480,6 +480,47 @@ class TypeCoercionITCase extends QueryTest {
   }
 
   @Test
+  def testInvalidVarcharToDecimal(): Unit = {
+    // test invalid varchar toBigDecimalSlow
+    checkResult(
+      """
+        |SELECT CAST('abc' as decimal(38, 18))
+      """.stripMargin, Seq(row(null)))
+    // test whitespaces to decimal
+    checkResult(
+      """
+        |SELECT CAST('   ' as decimal(10, 0))
+      """.stripMargin, Seq(row(null)))
+    // test all prefix plus/minus
+    checkResult(
+      """
+        |SELECT CAST('+++' as decimal(10, 0)), CAST('---' as decimal(10, 0))
+      """.stripMargin, Seq(row(null, null)))
+    // test more than one  decimal mark
+    checkResult(
+      """
+        |SELECT CAST('12..34' as decimal(10, 0))
+      """.stripMargin, Seq(row(null)))
+    // test invalid scientific notation
+    checkResult(
+      """
+        |SELECT CAST('e+006' as decimal(10, 0)), CAST('e-006' as decimal(10, 0)),
+        |  CAST('e---' as decimal(10, 0)), CAST('e+++' as decimal(10, 0))
+      """.stripMargin, Seq(row(0, 0, null, null)))
+    // test cast to max precision/scale decimal
+    checkResult(
+      """
+        |SELECT CAST('123\n' as decimal(38, 18)), CAST('123\t' as decimal(38, 18)),
+        |  CAST('123 ' as decimal(38, 18)), CAST('123a' as decimal(38, 18))
+      """.stripMargin, Seq(row(null, null, "123.000000000000000000", null)))
+    // test cast to decimal overflow
+    checkResult(
+      """
+        |SELECT CAST('123345678678878678578567868678' as decimal(10, 0))
+      """.stripMargin, Seq(row(null)))
+  }
+
+  @Test
   def testVarCharToDateNotEquals(): Unit = {
     checkResult(
       """
