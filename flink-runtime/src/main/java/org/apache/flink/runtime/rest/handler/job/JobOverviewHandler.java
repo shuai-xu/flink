@@ -26,6 +26,7 @@ import org.apache.flink.runtime.executiongraph.AccessExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.AccessExecutionVertex;
 import org.apache.flink.runtime.executiongraph.ErrorInfo;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
@@ -37,6 +38,7 @@ import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.job.JobOverview;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMetricsInfo;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
@@ -128,14 +130,16 @@ public class JobOverviewHandler extends AbstractExecutionGraphHandler<JobOvervie
 				TaskManagerLocation taskManagerLocation = task.getCurrentAssignedResourceLocation();
 				ResourceID tmId = taskManagerLocation.getResourceID();
 				if (null != subTaskMetric.metrics) {
-					if (null != subTaskMetric.metrics.get("buffers.inPoolUsage")) {
-						double inPoolUsage = Double.parseDouble(subTaskMetric.metrics.get("buffers.inPoolUsage"));
+					String bufferInPoolUsageStr = subTaskMetric.metrics.get(MetricNames.BUFFERS_IN_POOL_USAGE_NAME);
+					if (null != bufferInPoolUsageStr) {
+						double inPoolUsage = Double.parseDouble(bufferInPoolUsageStr);
 						if (inPoolUsage > 0.99) {
 							hasInQueueFullSubTask = true;
 						}
 					}
-					if (null != subTaskMetric.metrics.get("buffers.outPoolUsage")) {
-						double outPoolUsage = Double.parseDouble(subTaskMetric.metrics.get("buffers.outPoolUsage"));
+					String bufferOutPoolUsageStr = subTaskMetric.metrics.get(MetricNames.BUFFERS_OUT_POOL_USAGE_NAME);
+					if (null != bufferOutPoolUsageStr) {
+						double outPoolUsage = Double.parseDouble(bufferOutPoolUsageStr);
 						if (outPoolUsage > 0.99) {
 							hasOutQueueFullSubTask = true;
 						}
@@ -164,12 +168,20 @@ public class JobOverviewHandler extends AbstractExecutionGraphHandler<JobOvervie
 		for (Map.Entry<TaskManagerLocation, HashSet<JobOverview.JobVertex>> entry : taskManagerLocation2Vertices.entrySet()) {
 			TaskManagerLocation tmLocation = entry.getKey();
 			HashSet<JobOverview.JobVertex> vertices = entry.getValue();
-			final MetricStore.TaskManagerMetricStore tmMetrics = metricStore.getTaskManagerMetricStore(tmLocation.getResourceID().getResourceIdString());
-			JobOverview.JobTaskManager tm = new JobOverview.JobTaskManager(tmLocation.getResourceID(), vertices, tmMetrics.getMetrics());
+			final MetricStore.TaskManagerMetricStore tmMetrics =
+				metricStore.getTaskManagerMetricStore(tmLocation.getResourceID().getResourceIdString());
+
+			final TaskManagerMetricsInfo taskManagerMetricsInfo;
+
+			if (tmMetrics != null) {
+				taskManagerMetricsInfo = new TaskManagerMetricsInfo(tmMetrics);
+			} else {
+				taskManagerMetricsInfo = TaskManagerMetricsInfo.empty();
+			}
+			JobOverview.JobTaskManager tm = new JobOverview.JobTaskManager(tmLocation.getResourceID(), vertices, taskManagerMetricsInfo);
 			tms.add(tm);
 		}
 		return tms;
-
 	}
 
 }

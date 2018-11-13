@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.rest.messages.job.metrics;
 
+import org.apache.flink.runtime.rest.handler.util.MutableIOMetrics;
+
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -44,6 +46,14 @@ public final class IOMetricsInfo {
 
 	private static final String FIELD_NAME_RECORDS_WRITTEN_COMPLETE = "write-records-complete";
 
+	private static final String FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX = "buffers-in-pool-usage-max";
+
+	private static final String FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX_COMPLETE = "buffers-in-pool-usage-max-complete";
+
+	private static final String FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX = "buffers-out-pool-usage-max";
+
+	private static final String FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE = "buffers-out-pool-usage-max-complete";
+
 	@JsonProperty(FIELD_NAME_BYTES_READ)
 	private final long bytesRead;
 
@@ -68,6 +78,18 @@ public final class IOMetricsInfo {
 	@JsonProperty(FIELD_NAME_RECORDS_WRITTEN_COMPLETE)
 	private final boolean recordsWrittenComplete;
 
+	@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX)
+	private final float bufferInPoolUsageMax;
+
+	@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX_COMPLETE)
+	private final boolean bufferInPoolUsageMaxComplete;
+
+	@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX)
+	private final float bufferOutPoolUsageMax;
+
+	@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE)
+	private final boolean bufferOutPoolUsageMaxComplete;
+
 	@JsonCreator
 	public IOMetricsInfo(
 			@JsonProperty(FIELD_NAME_BYTES_READ) long bytesRead,
@@ -77,7 +99,11 @@ public final class IOMetricsInfo {
 			@JsonProperty(FIELD_NAME_RECORDS_READ) long recordsRead,
 			@JsonProperty(FIELD_NAME_RECORDS_READ_COMPLETE) boolean recordsReadComplete,
 			@JsonProperty(FIELD_NAME_RECORDS_WRITTEN) long recordsWritten,
-			@JsonProperty(FIELD_NAME_RECORDS_WRITTEN_COMPLETE) boolean recordsWrittenComplete) {
+			@JsonProperty(FIELD_NAME_RECORDS_WRITTEN_COMPLETE) boolean recordsWrittenComplete,
+			@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX) float bufferInPoolUsageMax,
+			@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX_COMPLETE) boolean bufferInPoolUsageMaxComplete,
+			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX) float bufferOutPoolUsageMax,
+			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE) boolean bufferOutPoolUsageMaxComplete) {
 		this.bytesRead = bytesRead;
 		this.bytesReadComplete = bytesReadComplete;
 		this.bytesWritten = bytesWritten;
@@ -86,6 +112,25 @@ public final class IOMetricsInfo {
 		this.recordsReadComplete = recordsReadComplete;
 		this.recordsWritten = recordsWritten;
 		this.recordsWrittenComplete = recordsWrittenComplete;
+		this.bufferInPoolUsageMax = bufferInPoolUsageMax;
+		this.bufferInPoolUsageMaxComplete = bufferInPoolUsageMaxComplete;
+		this.bufferOutPoolUsageMax = bufferOutPoolUsageMax;
+		this.bufferOutPoolUsageMaxComplete = bufferOutPoolUsageMaxComplete;
+	}
+
+	public IOMetricsInfo(MutableIOMetrics counts) {
+		this.bytesRead = counts.getNumBytesInLocal() + counts.getNumBytesInRemote();
+		this.bytesReadComplete = counts.isNumBytesInLocalComplete() && counts.isNumBytesInRemoteComplete();
+		this.bytesWritten = counts.getNumBytesOut();
+		this.bytesWrittenComplete = counts.isNumBytesOutComplete();
+		this.recordsRead = counts.getNumRecordsIn();
+		this.recordsReadComplete = counts.isNumRecordsInComplete();
+		this.recordsWritten = counts.getNumRecordsOut();
+		this.recordsWrittenComplete = counts.isNumRecordsOutComplete();
+		this.bufferInPoolUsageMax = counts.getBufferInPoolUsageMax();
+		this.bufferInPoolUsageMaxComplete = counts.isBufferInPoolUsageMaxComplete();
+		this.bufferOutPoolUsageMax = counts.getBufferOutPoolUsageMax();
+		this.bufferOutPoolUsageMaxComplete = counts.isBufferOutPoolUsageMaxComplete();
 	}
 
 	public long getBytesRead() {
@@ -120,6 +165,22 @@ public final class IOMetricsInfo {
 		return recordsWrittenComplete;
 	}
 
+	public float getBufferInPoolUsageMax() {
+		return bufferInPoolUsageMax;
+	}
+
+	public boolean isBufferInPoolUsageMaxComplete() {
+		return bufferInPoolUsageMaxComplete;
+	}
+
+	public float getBufferOutPoolUsageMax() {
+		return bufferOutPoolUsageMax;
+	}
+
+	public boolean isBufferOutPoolUsageMaxComplete() {
+		return bufferOutPoolUsageMaxComplete;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -136,11 +197,17 @@ public final class IOMetricsInfo {
 			recordsRead == that.recordsRead &&
 			recordsReadComplete == that.recordsReadComplete &&
 			recordsWritten == that.recordsWritten &&
-			recordsWrittenComplete == that.recordsWrittenComplete;
+			recordsWrittenComplete == that.recordsWrittenComplete &&
+			bufferInPoolUsageMax == that.bufferInPoolUsageMax &&
+			bufferInPoolUsageMaxComplete == that.bufferOutPoolUsageMaxComplete &&
+			bufferOutPoolUsageMax == that.bufferOutPoolUsageMax &&
+			bufferOutPoolUsageMaxComplete == that.bufferOutPoolUsageMaxComplete;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(bytesRead, bytesReadComplete, bytesWritten, bytesWrittenComplete, recordsRead, recordsReadComplete, recordsWritten, recordsWrittenComplete);
+		return Objects.hash(bytesRead, bytesReadComplete, bytesWritten, bytesWrittenComplete, recordsRead,
+			recordsReadComplete, recordsWritten, recordsWrittenComplete, bufferInPoolUsageMax,
+			bufferInPoolUsageMaxComplete, bufferOutPoolUsageMax, bufferOutPoolUsageMaxComplete);
 	}
 }

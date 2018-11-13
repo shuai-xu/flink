@@ -31,7 +31,7 @@ public final class JobOverviewHeaders implements MessageHeaders<EmptyRequestBody
 
 	private static final JobOverviewHeaders INSTANCE = new JobOverviewHeaders();
 
-	public static final String URL = String.format("/job/:%s/overview", JobIDPathParameter.KEY);
+	public static final String URL = String.format("/jobs/:%s/overview", JobIDPathParameter.KEY);
 
 	// make this class a singleton
 	private JobOverviewHeaders() {}
@@ -62,8 +62,8 @@ public final class JobOverviewHeaders implements MessageHeaders<EmptyRequestBody
 	}
 
 	@Override
-	public EmptyMessageParameters getUnresolvedMessageParameters() {
-		return EmptyMessageParameters.getInstance();
+	public JobMessageParameters getUnresolvedMessageParameters() {
+		return new JobMessageParameters();
 	}
 
 	public static JobOverviewHeaders getInstance() {

@@ -205,15 +205,7 @@ public class JobDetailsHandler extends AbstractExecutionGraphHandler<JobDetailsI
 				ejv.getJobVertexId().toString());
 		}
 
-		final IOMetricsInfo jobVertexMetrics = new IOMetricsInfo(
-			counts.getNumBytesInLocal() + counts.getNumBytesInRemote(),
-			counts.isNumBytesInLocalComplete() && counts.isNumBytesInRemoteComplete(),
-			counts.getNumBytesOut(),
-			counts.isNumBytesOutComplete(),
-			counts.getNumRecordsIn(),
-			counts.isNumRecordsInComplete(),
-			counts.getNumRecordsOut(),
-			counts.isNumRecordsOutComplete());
+		final IOMetricsInfo jobVertexMetrics = new IOMetricsInfo(counts);
 
 		return new JobDetailsInfo.JobVertexDetailsInfo(
 			ejv.getJobVertexId(),

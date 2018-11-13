@@ -25,6 +25,7 @@ import org.apache.flink.runtime.rest.messages.json.JobVertexIDDeserializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDSerializer;
 import org.apache.flink.runtime.rest.messages.json.ResourceIDDeserializer;
 import org.apache.flink.runtime.rest.messages.json.ResourceIDSerializer;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMetricsInfo;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
@@ -224,17 +225,17 @@ public class JobOverview implements ResponseBody {
 		private final Collection<JobVertex> vertices;
 
 		@JsonProperty(FIELD_NAME_TASKMANAGER_METRICS)
-		private final Map<String, String> metrics;
+		private final TaskManagerMetricsInfo taskManagerMetrics;
 
 		@JsonCreator
 		public JobTaskManager(
 			@JsonDeserialize(using = ResourceIDDeserializer.class)
 			@JsonProperty(FIELD_NAME_TASKMANAGER_ID) ResourceID id,
 			@JsonProperty(FIELD_NAME_TASKMANAGER_VERTICES) Collection<JobVertex> vertices,
-			@JsonProperty(FIELD_NAME_TASKMANAGER_METRICS) Map<String, String> metrics) {
+			@JsonProperty(FIELD_NAME_TASKMANAGER_METRICS) TaskManagerMetricsInfo taskManagerMetrics) {
 			this.id = Preconditions.checkNotNull(id);
 			this.vertices = vertices;
-			this.metrics = metrics;
+			this.taskManagerMetrics = taskManagerMetrics;
 		}
 
 		@JsonIgnore
@@ -245,6 +246,11 @@ public class JobOverview implements ResponseBody {
 		@JsonIgnore
 		public Collection<JobVertex> getVertices() {
 			return vertices;
+		}
+
+		@JsonIgnore
+		public TaskManagerMetricsInfo getTaskManagerMetrics() {
+			return taskManagerMetrics;
 		}
 
 		@Override

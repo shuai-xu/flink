@@ -45,4 +45,14 @@ public class MetricNames {
 	public static final String IO_CURRENT_INPUT_1_WATERMARK = "currentInput1Watermark";
 	public static final String IO_CURRENT_INPUT_2_WATERMARK = "currentInput2Watermark";
 	public static final String IO_CURRENT_OUTPUT_WATERMARK = "currentOutputWatermark";
+
+	public static final String BUFFERS = "buffers";
+	public static final String BUFFERS_INPUT_QUEUE_LENGTH = "inputQueueLength";
+	public static final String BUFFERS_INPUT_QUEUE_LENGTH_NAME = BUFFERS + "." + BUFFERS_INPUT_QUEUE_LENGTH;
+	public static final String BUFFERS_OUT_QUEUE_LENGTH = "outputQueueLength";
+	public static final String BUFFERS_OUT_QUEUE_LENGTH_NAME = BUFFERS + "." + BUFFERS_OUT_QUEUE_LENGTH;
+	public static final String BUFFERS_IN_POOL_USAGE = "inPoolUsage";
+	public static final String BUFFERS_IN_POOL_USAGE_NAME = BUFFERS + "." + BUFFERS_IN_POOL_USAGE;
+	public static final String BUFFERS_OUT_POOL_USAGE = "outPoolUsage";
+	public static final String BUFFERS_OUT_POOL_USAGE_NAME = BUFFERS + "." + BUFFERS_OUT_POOL_USAGE;
 }

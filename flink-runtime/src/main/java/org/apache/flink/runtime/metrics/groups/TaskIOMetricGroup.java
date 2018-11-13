@@ -119,11 +119,11 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 	 * Initialize Buffer Metrics for a task.
 	 */
 	public void initializeBufferMetrics(Task task) {
-		final MetricGroup buffers = addGroup("buffers");
-		buffers.gauge("inputQueueLength", new InputBuffersGauge(task));
-		buffers.gauge("outputQueueLength", new OutputBuffersGauge(task));
-		buffers.gauge("inPoolUsage", new InputBufferPoolUsageGauge(task));
-		buffers.gauge("outPoolUsage", new OutputBufferPoolUsageGauge(task));
+		final MetricGroup buffers = addGroup(MetricNames.BUFFERS);
+		buffers.gauge(MetricNames.BUFFERS_INPUT_QUEUE_LENGTH, new InputBuffersGauge(task));
+		buffers.gauge(MetricNames.BUFFERS_OUT_QUEUE_LENGTH, new OutputBuffersGauge(task));
+		buffers.gauge(MetricNames.BUFFERS_IN_POOL_USAGE, new InputBufferPoolUsageGauge(task));
+		buffers.gauge(MetricNames.BUFFERS_OUT_POOL_USAGE, new OutputBufferPoolUsageGauge(task));
 	}
 
 	/**

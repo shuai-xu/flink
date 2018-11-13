@@ -157,6 +157,10 @@ public class SubtaskCurrentAttemptDetailsHandlerTest extends TestLogger {
 			recordsIn,
 			true,
 			recordsOut,
+			true,
+			0.0f,
+			true,
+			0.0f,
 			true
 		);
 

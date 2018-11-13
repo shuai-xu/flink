@@ -182,15 +182,7 @@ public class SubtaskExecutionAttemptDetailsInfo implements ResponseBody {
 		final long endTime = status.isTerminal() ? execution.getStateTimestamp(status) : -1;
 		final long duration = startTime > 0 ? ((endTime > 0 ? endTime : now) - startTime) : -1;
 
-		final IOMetricsInfo ioMetricsInfo = new IOMetricsInfo(
-			ioMetrics.getNumBytesInLocal() + ioMetrics.getNumBytesInRemote(),
-			ioMetrics.isNumBytesInLocalComplete() && ioMetrics.isNumBytesInRemoteComplete(),
-			ioMetrics.getNumBytesOut(),
-			ioMetrics.isNumBytesOutComplete(),
-			ioMetrics.getNumRecordsIn(),
-			ioMetrics.isNumRecordsInComplete(),
-			ioMetrics.getNumRecordsOut(),
-			ioMetrics.isNumRecordsOutComplete());
+		final IOMetricsInfo ioMetricsInfo = new IOMetricsInfo(ioMetrics);
 
 		long[] stateTimestamps = execution.getStateTimestamps();
 		Map<ExecutionState, Long> stateTransitionTime = new HashMap<>();

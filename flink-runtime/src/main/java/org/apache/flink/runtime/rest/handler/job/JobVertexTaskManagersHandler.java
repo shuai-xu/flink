@@ -174,15 +174,7 @@ public class JobVertexTaskManagersHandler extends AbstractExecutionGraphHandler<
 				tasksPerState,
 				taskVertices.size());
 
-			final IOMetricsInfo jobVertexMetrics = new IOMetricsInfo(
-				counts.getNumBytesInLocal() + counts.getNumBytesInRemote(),
-				counts.isNumBytesInLocalComplete() && counts.isNumBytesInRemoteComplete(),
-				counts.getNumBytesOut(),
-				counts.isNumBytesOutComplete(),
-				counts.getNumRecordsIn(),
-				counts.isNumRecordsInComplete(),
-				counts.getNumRecordsOut(),
-				counts.isNumRecordsOutComplete());
+			final IOMetricsInfo jobVertexMetrics = new IOMetricsInfo(counts);
 
 			Map<ExecutionState, Integer> statusCounts = new HashMap<>(ExecutionState.values().length);
 			for (ExecutionState state : ExecutionState.values()) {

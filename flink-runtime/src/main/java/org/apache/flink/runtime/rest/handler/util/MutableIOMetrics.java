@@ -49,6 +49,10 @@ public class MutableIOMetrics extends IOMetrics {
 	private boolean numBytesOutComplete = true;
 	private boolean numRecordsInComplete = true;
 	private boolean numRecordsOutComplete = true;
+	private float bufferInPoolUsageMax = 0.0f;
+	private float bufferOutPoolUsageMax = 0.0f;
+	private boolean bufferInPoolUsageMaxComplete = true;
+	private boolean bufferOutPoolUsageMaxComplete = true;
 
 	public MutableIOMetrics() {
 		super(0, 0, 0, 0, 0, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
@@ -72,6 +76,22 @@ public class MutableIOMetrics extends IOMetrics {
 
 	public boolean isNumRecordsOutComplete() {
 		return numRecordsOutComplete;
+	}
+
+	public boolean isBufferInPoolUsageMaxComplete() {
+		return bufferInPoolUsageMaxComplete;
+	}
+
+	public boolean isBufferOutPoolUsageMaxComplete() {
+		return bufferOutPoolUsageMaxComplete;
+	}
+
+	public float getBufferInPoolUsageMax() {
+		return bufferInPoolUsageMax;
+	}
+
+	public float getBufferOutPoolUsageMax() {
+		return bufferOutPoolUsageMax;
 	}
 
 	/**
@@ -140,6 +160,18 @@ public class MutableIOMetrics extends IOMetrics {
 					else {
 						this.numRecordsOut += Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_OUT));
 					}
+					if (metrics.getMetric(MetricNames.BUFFERS_IN_POOL_USAGE_NAME) == null) {
+						this.bufferInPoolUsageMaxComplete = false;
+					} else {
+						float bufferInQueue = Float.valueOf(metrics.getMetric(MetricNames.BUFFERS_IN_POOL_USAGE_NAME));
+						this.bufferInPoolUsageMax = Math.max(bufferInQueue, this.bufferInPoolUsageMax);
+					}
+					if (metrics.getMetric(MetricNames.BUFFERS_OUT_POOL_USAGE_NAME) == null) {
+						this.bufferOutPoolUsageMaxComplete = false;
+					} else {
+						float bufferOutQueue = Float.valueOf(metrics.getMetric(MetricNames.BUFFERS_OUT_POOL_USAGE_NAME));
+						this.bufferOutPoolUsageMax = Math.max(bufferOutQueue, this.bufferOutPoolUsageMax);
+					}
 				}
 				else {
 					this.numBytesInLocalComplete = false;
@@ -147,6 +179,8 @@ public class MutableIOMetrics extends IOMetrics {
 					this.numBytesOutComplete = false;
 					this.numRecordsInComplete = false;
 					this.numRecordsOutComplete = false;
+					this.bufferInPoolUsageMaxComplete = false;
+					this.bufferOutPoolUsageMaxComplete = false;
 				}
 			}
 		}
@@ -188,6 +222,10 @@ public class MutableIOMetrics extends IOMetrics {
 		gen.writeBooleanField("read-records-complete", this.numRecordsInComplete);
 		gen.writeNumberField("write-records", this.numRecordsOut);
 		gen.writeBooleanField("write-records-complete", this.numRecordsOutComplete);
+		gen.writeNumberField("buffers-in-pool-usage-max", this.bufferInPoolUsageMax);
+		gen.writeBooleanField("buffers-in-pool-usage_max-complete", this.bufferInPoolUsageMaxComplete);
+		gen.writeNumberField("buffers-out-pool-usage-max", this.bufferOutPoolUsageMax);
+		gen.writeBooleanField("buffers-out-pool-usage-max-complete", this.bufferOutPoolUsageMaxComplete);
 
 		gen.writeEndObject();
 	}

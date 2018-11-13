@@ -46,7 +46,7 @@ export class NodeComponent {
   }
 
   get inQ() {
-    return this.node.detail && this.node.detail.metrics[ 'buffers.inPoolUsage_max' ];
+    return this.node.detail && this.node.detail.metrics[ 'buffers-in-pool-usage-max' ];
   }
 
   get showInQ() {
@@ -54,7 +54,7 @@ export class NodeComponent {
   }
 
   get outQ() {
-    return this.node.detail && this.node.detail.metrics[ 'buffers.outPoolUsage_max' ];
+    return this.node.detail && this.node.detail.metrics[ 'buffers-out-pool-usage-max' ];
   }
 
   get showOutQ() {
