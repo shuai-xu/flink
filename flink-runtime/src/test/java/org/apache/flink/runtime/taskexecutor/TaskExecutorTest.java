@@ -82,6 +82,7 @@ import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.utils.TestingResourceManagerGateway;
+import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
@@ -140,6 +141,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -519,7 +521,7 @@ public class TaskExecutorTest extends TestLogger {
 			.setTaskStateManager(localStateStoresManager)
 			.build();
 
-		final TaskExecutor taskManager = spy(new TaskExecutor(
+		final FakeTaskExecutor taskManager = new FakeTaskExecutor(
 			rpc,
 			taskManagerConfiguration,
 			haServices,
@@ -528,7 +530,7 @@ public class TaskExecutorTest extends TestLogger {
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
 			java.util.concurrent.Executors.newSingleThreadExecutor(),
-			testingFatalErrorHandler));
+			testingFatalErrorHandler);
 
 		final AllocationID allocationId = new AllocationID();
 		final SlotID slotId = new SlotID(taskManagerLocation.getResourceID(), 0);
@@ -580,8 +582,8 @@ public class TaskExecutorTest extends TestLogger {
 
 			assertTrue(taskSlotTable.existsActiveSlot(jobId, allocationId));
 
-			verify(taskManager, timeout(timeout.toMilliseconds()).times(1))
-				.reportTasksExecutionStatus(eq(jobId));
+			final JobID reportedJobId = taskManager.statusReported.get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+			assertEquals(jobId, reportedJobId);
 		} finally {
 			RpcUtils.terminateRpcEndpoint(taskManager, timeout);
 		}
@@ -661,7 +663,7 @@ public class TaskExecutorTest extends TestLogger {
 			.setTaskStateManager(localStateStoresManager)
 			.build();
 
-		final TaskExecutor taskManager = spy(new TaskExecutor(
+		final FakeTaskExecutor taskManager = new FakeTaskExecutor(
 			rpc,
 			taskManagerConfiguration,
 			haServices,
@@ -670,7 +672,7 @@ public class TaskExecutorTest extends TestLogger {
 			UnregisteredMetricGroups.createUnregisteredTaskManagerMetricGroup(),
 			dummyBlobCacheService,
 			java.util.concurrent.Executors.newSingleThreadExecutor(),
-			testingFatalErrorHandler));
+			testingFatalErrorHandler);
 
 		final AllocationID allocationId = new AllocationID();
 		final SlotID slotId = new SlotID(taskManagerLocation.getResourceID(), 0);
@@ -726,8 +728,8 @@ public class TaskExecutorTest extends TestLogger {
 			jobLeaderService.addJob(jobId, newJobMasterAddress);
 			jobManagerLeaderRetriever.notifyListener(newJobMasterAddress, newJmLeaderId);
 
-			verify(taskManager, timeout(timeout.toMilliseconds()).times(1))
-				.reportTasksExecutionStatus(eq(jobId));
+			final JobID reportedJobId = taskManager.statusReported.get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+			assertEquals(jobId, reportedJobId);
 		} finally {
 			RpcUtils.terminateRpcEndpoint(taskManager, timeout);
 		}
@@ -2322,6 +2324,36 @@ public class TaskExecutorTest extends TestLogger {
 			try (final FileInputStream fileInputStream = new FileInputStream(getFile(key))) {
 				return org.apache.commons.io.IOUtils.toByteArray(fileInputStream);
 			}
+		}
+	}
+
+	/**
+	 * Mock TaskExecutor to verify reportTasksExecutionStatus.
+	 */
+	private class FakeTaskExecutor extends TaskExecutor {
+
+		CompletableFuture<JobID> statusReported = new CompletableFuture<>();
+
+		public FakeTaskExecutor(
+			RpcService rpcService,
+			TaskManagerConfiguration taskManagerConfiguration,
+			HighAvailabilityServices haServices,
+			TaskManagerServices taskExecutorServices,
+			HeartbeatServices heartbeatServices,
+			TaskManagerMetricGroup taskManagerMetricGroup,
+			BlobCacheService blobCacheService,
+			ExecutorService executorService,
+			FatalErrorHandler fatalErrorHandler) {
+
+			super(rpcService, taskManagerConfiguration, haServices, taskExecutorServices,
+				heartbeatServices,
+				taskManagerMetricGroup, blobCacheService, executorService, fatalErrorHandler);
+		}
+
+		@Override
+		void reportTasksExecutionStatus(final JobID jobId) {
+			assertFalse(statusReported.isDone());
+			statusReported.complete(jobId);
 		}
 	}
 }
