@@ -231,7 +231,8 @@ public class JMXReporter implements MetricReporter {
 	}
 
 	static String generateJmxDomain(String metricName, MetricGroup group) {
-		return JMX_DOMAIN_PREFIX + ((FrontMetricGroup<AbstractMetricGroup<?>>) group).getLogicalScope(CHARACTER_FILTER, '.') + '.' + metricName;
+		return JMX_DOMAIN_PREFIX + ((FrontMetricGroup<AbstractMetricGroup<?>>) group).getLogicalScope(CHARACTER_FILTER, '.') + '.' +
+			CHARACTER_FILTER.filterCharacters(metricName);
 	}
 
 	/**

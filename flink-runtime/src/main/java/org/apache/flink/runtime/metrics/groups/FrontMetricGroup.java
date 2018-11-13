@@ -54,4 +54,8 @@ public class FrontMetricGroup<P extends AbstractMetricGroup<?>> extends ProxyMet
 	public String getLogicalScope(CharacterFilter filter, char delimiter) {
 		return parentMetricGroup.getLogicalScope(filter, delimiter);
 	}
+
+	public AbstractMetricGroup getReference() {
+		return parentMetricGroup;
+	}
 }

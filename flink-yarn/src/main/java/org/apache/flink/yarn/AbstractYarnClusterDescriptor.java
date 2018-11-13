@@ -32,6 +32,7 @@ import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.HighAvailabilityOptions;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.SecurityOptions;
@@ -104,6 +105,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.apache.flink.configuration.ConfigConstants.ENV_FLINK_LIB_DIR;
 import static org.apache.flink.yarn.cli.FlinkYarnSessionCli.CONFIG_FILE_LOG4J_NAME;
@@ -507,6 +509,21 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		Map<String, String> dynProperties = getDynamicProperties(dynamicPropertiesEncoded);
 		for (Map.Entry<String, String> dynProperty : dynProperties.entrySet()) {
 			flinkConfiguration.setString(dynProperty.getKey(), dynProperty.getValue());
+		}
+
+		// ------------------ Add the yarn queue and the application name to MetricReporter configuration --------------------
+
+		final String definedReporters = flinkConfiguration.getString(MetricOptions.REPORTERS_LIST);
+		if (definedReporters != null) {
+			final Pattern splitPattern = Pattern.compile("\\s*,\\s*"); // regex pattern to split the defined reporters
+			String[] namedReporters = splitPattern.split(definedReporters);
+
+			for (String namedReporter : namedReporters) {
+				final String namedReporterPrefix = ConfigConstants.METRICS_REPORTER_PREFIX + namedReporter;
+
+				flinkConfiguration.setString(namedReporterPrefix + "._YARN_QUEUE", yarnQueue != null ? yarnQueue : "default");
+				flinkConfiguration.setString(namedReporterPrefix + "._FLINK_CLUSTER_NAME", customName != null ? customName : applicationName);
+			}
 		}
 
 		// ------------------ Check if the YARN ClusterClient has the requested resources --------------
