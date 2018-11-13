@@ -26,6 +26,8 @@ import org.apache.flink.api.java.typeutils.runtime.RowSerializer;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import javax.annotation.Nullable;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,6 +61,19 @@ public final class InternalStateDescriptor implements Serializable {
 	 * The descriptors of the value columns in the state.
 	 */
 	private final List<InternalColumnDescriptor<?>> valueColumnDescriptors;
+
+	/** The serializer for the keys in the state. */
+	private RowSerializer keySerializer;
+
+	/** The serializer for the values in the state. */
+	private RowSerializer valueSerializer;
+
+	/** The merger for the values in the state, maybe null. */
+	@Nullable
+	private RowMerger valueMerger;
+
+	/** whether merge is null. */
+	private boolean isValueMergerNull = false;
 
 	/**
 	 * Constructor with given name, scope, the partition method and the
@@ -186,15 +201,17 @@ public final class InternalStateDescriptor implements Serializable {
 	 * @return The serializer for the keys in the state.
 	 */
 	public RowSerializer getKeySerializer() {
-		TypeSerializer<?>[] keyColumnSerializers =
-			new TypeSerializer<?>[getNumKeyColumns()];
+		if (keySerializer == null) {
+			TypeSerializer<?>[] keyColumnSerializers =
+				new TypeSerializer<?>[keyColumnDescriptors.size()];
 
-		for (int index = 0; index < getNumKeyColumns(); ++index) {
-			keyColumnSerializers[index] =
+			for (int index = 0; index < keyColumnDescriptors.size(); ++index) {
+				keyColumnSerializers[index] =
 					getKeyColumnDescriptor(index).getSerializer();
+			}
+			keySerializer = new RowSerializer(keyColumnSerializers);
 		}
-
-		return new RowSerializer(keyColumnSerializers);
+		return keySerializer;
 	}
 
 	/**
@@ -203,15 +220,17 @@ public final class InternalStateDescriptor implements Serializable {
 	 * @return The serializer for the values in the state.
 	 */
 	public RowSerializer getValueSerializer() {
-		TypeSerializer<?>[] valueColumnSerializers =
-			new TypeSerializer<?>[getNumValueColumns()];
+		if (valueSerializer == null) {
+			TypeSerializer<?>[] valueColumnSerializers =
+				new TypeSerializer<?>[valueColumnDescriptors.size()];
 
-		for (int index = 0; index < getNumValueColumns(); ++index) {
-			valueColumnSerializers[index] =
+			for (int index = 0; index < valueColumnDescriptors.size(); ++index) {
+				valueColumnSerializers[index] =
 					getValueColumnDescriptor(index).getSerializer();
+			}
+			this.valueSerializer = new RowSerializer(valueColumnSerializers);
 		}
-
-		return new RowSerializer(valueColumnSerializers);
+		return valueSerializer;
 	}
 
 	/**
@@ -219,20 +238,31 @@ public final class InternalStateDescriptor implements Serializable {
 	 *
 	 * @return The merger for the values in the state.
 	 */
+	@Nullable
 	public Merger<Row> getValueMerger() {
-		Merger<?>[] valueColumnMergers =
-			new Merger<?>[getNumValueColumns()];
+		if (isValueMergerNull) {
+			return null;
+		} else if (valueMerger == null) {
+			Merger<?>[] valueColumnMergers =
+				new Merger<?>[valueColumnDescriptors.size()];
 
-		for (int index = 0; index < getNumValueColumns(); ++index) {
-			Merger<?> merger = getValueColumnDescriptor(index).getMerger();
-			if (merger == null) {
-				return null;
+			for (int index = 0; index < valueColumnDescriptors.size(); ++index) {
+				Merger<?> merger = getValueColumnDescriptor(index).getMerger();
+				if (merger == null) {
+					isValueMergerNull = true;
+					break;
+				} else {
+					valueColumnMergers[index] = merger;
+				}
+			}
+
+			if (isValueMergerNull) {
+				this.valueMerger = null;
 			} else {
-				valueColumnMergers[index] = merger;
+				this.valueMerger = new RowMerger(valueColumnMergers);
 			}
 		}
-
-		return new RowMerger(valueColumnMergers);
+		return valueMerger;
 	}
 
 	@Override
