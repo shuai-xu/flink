@@ -564,6 +564,7 @@ public abstract class YarnTestBase extends TestLogger {
 			map.put(ConfigConstants.ENV_FLINK_CONF_DIR, configDir);
 
 			File yarnConfFile = writeYarnSiteConfigXML(conf);
+			map.put("HADOOP_CONF_DIR", yarnConfFile.getParentFile().getAbsolutePath());
 			map.put("YARN_CONF_DIR", yarnConfFile.getParentFile().getAbsolutePath());
 			map.put("IN_TESTS", "yes we are in tests"); // see YarnClusterDescriptor() for more infos
 			TestBaseUtils.setEnv(map);
