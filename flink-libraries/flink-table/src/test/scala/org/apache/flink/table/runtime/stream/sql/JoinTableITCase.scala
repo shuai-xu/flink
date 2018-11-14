@@ -685,10 +685,11 @@ class AsyncJoinDimensionTableITCase(backend: StateBackendMode)
 
     val dim = new TestDimensionTableSource(true)
     tEnv.registerTableSource("csvdim", dim)
+    tEnv.registerFunction("errorFunc", TestExceptionThrown)
 
     val sql = "SELECT T.id, T.len, D.name, D.age FROM T LEFT JOIN csvdim " +
       "for system_time as of PROCTIME() AS D ON T.id = D.id " +
-      "where cast(D.name as decimal(10,4)) > cast(1000 as decimal(10,4))"  // should exception here
+      "where errorFunc(D.name) > cast(1000 as decimal(10,4))"  // should exception here
 
     val sink = new TestingAppendSink
     tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
@@ -723,6 +724,12 @@ object TestWrapperUdf extends ScalarFunction {
 object TestMod extends ScalarFunction {
   def eval(src: Int, mod: Int): Int = {
     src % mod
+  }
+}
+
+object TestExceptionThrown extends ScalarFunction {
+  def eval(src: String): Int = {
+    throw new NumberFormatException("Cannot parse this input.")
   }
 }
 
