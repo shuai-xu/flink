@@ -40,7 +40,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * Readers for the data file produced by hash or merge file writer.
  */
 public class BufferSortedDataFileReader<T> {
-	private final SynchronousBufferFileReader synchronousBufferFileReader;
+	private final SynchronousBufferFileReader synchronousStreamFileReader;
 	private final RecordDeserializer<IOReadableWritable> recordDeserializer;
 	private final DeserializationDelegate<T> deserializationDelegate;
 	private final int segmentSize;
@@ -48,26 +48,26 @@ public class BufferSortedDataFileReader<T> {
 	/** The offset to start reading */
 	private final long startOffset;
 
-	/** The number of buffers to read */
-	private final long maxNumberOfBuffers;
+	/** The length in bytes to read */
+	private final long length;
 
-	private int numBuffersRead;
+	private long remainingBytesToRead;
 	private boolean eof;
 
 	public BufferSortedDataFileReader(String path, String tmpDir, IOManager ioManager, int segmentSize,
-									  TypeSerializer<T> serializer, long startOffset, long maxNumberOfBuffers) throws IOException {
-		this.synchronousBufferFileReader = new SynchronousBufferFileReader(
-			ioManager.createChannel(new File(path)),
-			false);
+									  TypeSerializer<T> serializer, long startOffset, long length) throws IOException {
+		this.synchronousStreamFileReader = new SynchronousBufferFileReader(
+			ioManager.createChannel(new File(path)), false, false);
 		this.segmentSize = segmentSize;
 
 		this.recordDeserializer = new SpillingAdaptiveSpanningRecordDeserializer<>(new String[]{tmpDir});
 		this.deserializationDelegate = new ReusingDeserializationDelegate<>(serializer);
 
 		this.startOffset = startOffset;
-		this.maxNumberOfBuffers = maxNumberOfBuffers;
+		this.length = length;
+		this.remainingBytesToRead = length;
 
-		synchronousBufferFileReader.seekToPosition(startOffset);
+		synchronousStreamFileReader.seekToPosition(startOffset);
 	}
 
 	public T next() throws IOException {
@@ -88,19 +88,20 @@ public class BufferSortedDataFileReader<T> {
 					currentBuffer.recycleBuffer();
 				}
 
-				if (numBuffersRead >= maxNumberOfBuffers) {
+				if (remainingBytesToRead <= 0) {
 					eof = true;
 					return null;
 				}
 
-				checkState(!synchronousBufferFileReader.hasReachedEndOfFile(),
+				checkState(!synchronousStreamFileReader.hasReachedEndOfFile(),
 					"The file are fully read before allowed maximum buffers are read");
 
 				Buffer buffer = new NetworkBuffer(MemorySegmentFactory.allocateUnpooledSegment(segmentSize),
 					FreeingBufferRecycler.INSTANCE);
-				synchronousBufferFileReader.readInto(buffer);
+				long nextReadLength = Math.min(remainingBytesToRead, buffer.getMaxCapacity());
+				synchronousStreamFileReader.readInto(buffer, nextReadLength);
 				recordDeserializer.setNextBuffer(buffer);
-				numBuffersRead++;
+				remainingBytesToRead -= nextReadLength;
 			}
 		}
 	}

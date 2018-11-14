@@ -60,8 +60,8 @@ public class PartitionedBufferSortedDataFile<T> implements PartitionedSortedData
 			currentPartition = record.f0;
 		}
 
-		partitionIndexGenerator.updatePartitionIndexBeforeWriting(record.f0, backendFile.getBytesWritten(),
-			backendFile.getBuffersWritten(), numRecordWritten);
+		partitionIndexGenerator.updatePartitionIndexBeforeWriting(
+			record.f0, backendFile.getBytesWritten(), numRecordWritten);
 
 		backendFile.writeRecord(record.f1);
 		numRecordWritten++;
@@ -76,8 +76,8 @@ public class PartitionedBufferSortedDataFile<T> implements PartitionedSortedData
 			currentPartition = partitionIndex;
 		}
 
-		partitionIndexGenerator.updatePartitionIndexBeforeWriting(partitionIndex, backendFile.getBytesWritten(),
-			backendFile.getBuffersWritten(), numRecordWritten);
+		partitionIndexGenerator.updatePartitionIndexBeforeWriting(
+			partitionIndex, backendFile.getBytesWritten(), numRecordWritten);
 
 		backendFile.copyRecord(serializedRecord);
 
@@ -92,7 +92,7 @@ public class PartitionedBufferSortedDataFile<T> implements PartitionedSortedData
 	@Override
 	public void finishWriting() throws IOException {
 		backendFile.finishWriting();
-		partitionIndexGenerator.finishWriting(backendFile.getBytesWritten(), backendFile.getBuffersWritten(), numRecordWritten);
+		partitionIndexGenerator.finishWriting(backendFile.getBytesWritten(), numRecordWritten);
 	}
 
 	@Override

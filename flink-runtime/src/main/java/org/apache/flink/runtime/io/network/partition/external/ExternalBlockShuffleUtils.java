@@ -122,7 +122,7 @@ public class ExternalBlockShuffleUtils {
 		for (PartitionIndex index : indices) {
 			out.writeInt(index.getPartition());
 			out.writeLong(index.getStartOffset());
-			out.writeLong(index.getNumBuffers());
+			out.writeLong(index.getLength());
 		}
 	}
 

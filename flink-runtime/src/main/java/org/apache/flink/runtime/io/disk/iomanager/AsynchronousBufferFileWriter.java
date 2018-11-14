@@ -28,11 +28,18 @@ public class AsynchronousBufferFileWriter extends AsynchronousFileIOChannel<Buff
 
 	private static final RecyclingCallback CALLBACK = new RecyclingCallback();
 	private final int bufferSize;
+	private final boolean withHeader;
 
 	protected AsynchronousBufferFileWriter(ID channelID, RequestQueue<WriteRequest> requestQueue,
-			int bufferSize) throws IOException {
+			int bufferSize, boolean withHeader) throws IOException {
 		super(channelID, requestQueue, CALLBACK, true);
 		this.bufferSize = bufferSize;
+		this.withHeader = withHeader;
+	}
+
+	protected AsynchronousBufferFileWriter(ID channelID, RequestQueue<WriteRequest> requestQueue,
+										   int bufferSize) throws IOException {
+		this(channelID, requestQueue, bufferSize, true);
 	}
 
 	/**
@@ -48,7 +55,11 @@ public class AsynchronousBufferFileWriter extends AsynchronousFileIOChannel<Buff
 	public void writeBlock(Buffer buffer) throws IOException {
 		try {
 			// if successfully added, the buffer will be recycled after the write operation
-			addRequest(new BufferWriteRequest(this, buffer, bufferSize));
+			if (withHeader) {
+				addRequest(new BufferWriteRequest(this, buffer, bufferSize));
+			} else {
+				addRequest(new StreamWriteRequest(this, buffer, bufferSize));
+			}
 		} catch (Throwable e) {
 			// if not added, we need to recycle here
 			buffer.recycleBuffer();

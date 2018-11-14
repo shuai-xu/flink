@@ -28,6 +28,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
+import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,10 +36,11 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
 
-public class AsynchronousBufferFileReaderDelegateTest {
+public class AsynchronousPartitionedStreamFileReaderDelegateTest {
 	private static final int MEMORY_SEGMENT_SIZE = 1024;
 
 	private IOManager ioManager;
@@ -51,14 +53,25 @@ public class AsynchronousBufferFileReaderDelegateTest {
 	@Test
 	public void testRead() throws IOException, InterruptedException {
 		FileIOChannel.ID channel = ioManager.createChannel();
-		BufferFileWriter writer = ioManager.createBufferFileWriter(channel);
+		BufferFileWriter writer = ioManager.createStreamFileWriter(channel);
 
-		final int totalBuffers = 10;
+		List<PartitionIndex> partitionIndices = new ArrayList<>(5);
+		partitionIndices.add(new PartitionIndex(0, 0, MEMORY_SEGMENT_SIZE * 2 + 10));
+		partitionIndices.add(new PartitionIndex(1, MEMORY_SEGMENT_SIZE * 2 + 10, MEMORY_SEGMENT_SIZE * 3 + 11));
+		partitionIndices.add(new PartitionIndex(2, MEMORY_SEGMENT_SIZE * 5 + 21, 0));
+		partitionIndices.add(new PartitionIndex(3, MEMORY_SEGMENT_SIZE * 5 + 21, MEMORY_SEGMENT_SIZE * 2));
+		partitionIndices.add(new PartitionIndex(4, MEMORY_SEGMENT_SIZE * 7 + 21, MEMORY_SEGMENT_SIZE + 33));
+		partitionIndices.add(new PartitionIndex(5, MEMORY_SEGMENT_SIZE * 8 + 54, 0));
+		partitionIndices.add(new PartitionIndex(6, MEMORY_SEGMENT_SIZE * 8 + 54, 0));
 
-		Random random = new Random();
-		int next = 0;
+		final int expectedTotalBuffers = 11;
+		final Map<Integer, Long> unfulfilledBuffers = new HashMap<Integer, Long>() {{
+			put(2, 10L);
+			put(6, 11L);
+			put(10, 33L);
+		}};
 
-		for (int i = 0; i < totalBuffers; ++i) {
+		for (int i = 0; i < expectedTotalBuffers; ++i) {
 			Buffer buffer = new NetworkBuffer(MemorySegmentFactory.allocateUnpooledSegment(MEMORY_SEGMENT_SIZE), new BufferRecycler() {
 				@Override
 				public void recycle(MemorySegment memorySegment) {
@@ -66,11 +79,12 @@ public class AsynchronousBufferFileReaderDelegateTest {
 				}
 			});
 
-			int count = random.nextInt(MEMORY_SEGMENT_SIZE / 4);
-			for (int j = 0; j < count; ++j) {
-				buffer.getMemorySegment().putInt(j * 4, next++);
+			byte val = (byte) i;
+			long bufferSize = unfulfilledBuffers.get(i) != null ? unfulfilledBuffers.get(i) : MEMORY_SEGMENT_SIZE;
+			for (int j = 0; j < bufferSize; ++j) {
+				buffer.getMemorySegment().put(j, val);
 			}
-			buffer.setSize(count * 4);
+			buffer.setSize((int) bufferSize);
 
 			writer.writeBlock(buffer);
 		}
@@ -82,20 +96,20 @@ public class AsynchronousBufferFileReaderDelegateTest {
 			memory.add(MemorySegmentFactory.allocateUnpooledSegment(MEMORY_SEGMENT_SIZE));
 		}
 
-		AsynchronousBufferFileReaderDelegate reader = new AsynchronousBufferFileReaderDelegate(ioManager, channel, memory, totalBuffers);
+		AsynchronousPartitionedStreamFileReaderDelegate reader = new AsynchronousPartitionedStreamFileReaderDelegate(
+			ioManager, channel, memory, partitionIndices);
 
-		int nextExpected = 0;
-		for (int i = 0; i < totalBuffers; ++i) {
+		for (int i = 0; i < expectedTotalBuffers; ++i) {
 			Buffer buffer = reader.getNextBufferBlocking();
-			int count = buffer.getSize() / 4;
-			for (int j = 0; j < count; ++j) {
-				int read = buffer.getMemorySegment().getInt(j * 4);
-				Assert.assertEquals(nextExpected++, read);
+			byte expectedVal = (byte) i;
+			long expectedBufferSize = unfulfilledBuffers.get(i) != null ? unfulfilledBuffers.get(i) : MEMORY_SEGMENT_SIZE;
+			Assert.assertEquals(expectedBufferSize, buffer.getSize());
+			for (int j = 0; j < expectedBufferSize; ++j) {
+				byte val = buffer.getMemorySegment().get(j);
+				Assert.assertEquals(expectedVal, val);
 			}
 			buffer.recycleBuffer();
 		}
-
-		Assert.assertEquals(nextExpected, next);
 	}
 
 	@After

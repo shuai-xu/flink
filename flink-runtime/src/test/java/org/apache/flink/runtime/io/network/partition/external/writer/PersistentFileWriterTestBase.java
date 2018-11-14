@@ -170,7 +170,7 @@ public abstract class PersistentFileWriterTestBase {
 		}
 
 		for (int i = 0; i < numberPartitions; ++i) {
-			assertEquals(expectedResult.get(i), actualResult.get(i));
+			assertEquals("Partition " + i + "'s result check fail", expectedResult.get(i), actualResult.get(i));
 		}
 
 		shuffleWriter.clear();

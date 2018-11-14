@@ -119,6 +119,14 @@ public final class NioBufferedFileInputStream extends InputStream {
 		return avail > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) avail;
 	}
 
+	public long position() throws IOException {
+		return fileChannel.position() - byteBuffer.remaining();
+	}
+
+	public long size() throws IOException {
+		return fileChannel.size();
+	}
+
 	@Override
 	public synchronized long skip(long n) throws IOException {
 		if (n <= 0L) {

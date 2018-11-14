@@ -64,7 +64,7 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 	private final FixedLengthBufferPool bufferPool;
 	private final BufferFileWriter[] fileWriters;
 	private final BufferBuilder[] currentBufferBuilders;
-	private final int[] buffersWritten;
+	private final int[] bytesWritten;
 
 	public PartitionHashFileWriter(
 		int numPartitions,
@@ -95,12 +95,12 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 		this.bufferPool = new FixedLengthBufferPool(memory, false);
 		this.fileWriters = new BufferFileWriter[numPartitions];
 		this.currentBufferBuilders = new BufferBuilder[numPartitions];
-		this.buffersWritten = new int[numPartitions];
+		this.bytesWritten = new int[numPartitions];
 
 		for (int i = 0; i < numPartitions; i++) {
 			String path = ExternalBlockShuffleUtils.generateDataPath(partitionDataRootPath, i);
-			fileWriters[i] = ioManager.createBufferFileWriter(ioManager.createChannel(new File(path)));
-			buffersWritten[i] = 0;
+			fileWriters[i] = ioManager.createStreamFileWriter(ioManager.createChannel(new File(path)));
+			bytesWritten[i] = 0;
 		}
 	}
 
@@ -128,7 +128,7 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 		List<PartitionIndex> partitionIndex = new ArrayList<>();
 
 		for (int i = 0; i < numPartitions; ++i) {
-			partitionIndex.add(new PartitionIndex(i, 0, buffersWritten[i]));
+			partitionIndex.add(new PartitionIndex(i, 0, bytesWritten[i]));
 		}
 
 		return Collections.singletonList(partitionIndex);
@@ -182,8 +182,8 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 			BufferConsumer consumer = currentBufferBuilders[partition].createBufferConsumer();
 			Buffer buffer = consumer.build();
 
+			bytesWritten[partition] += buffer.getSize();
 			fileWriters[partition].writeBlock(buffer);
-			buffersWritten[partition] += 1;
 
 			consumer.close();
 			currentBufferBuilders[partition] = null;

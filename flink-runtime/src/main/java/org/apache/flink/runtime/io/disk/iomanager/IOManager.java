@@ -259,6 +259,10 @@ public abstract class IOManager {
 
 	public abstract BufferFileSegmentReader createBufferFileSegmentReader(FileIOChannel.ID channelID, RequestDoneCallback<FileSegment> callback) throws IOException;
 
+	public abstract BufferFileWriter createStreamFileWriter(FileIOChannel.ID channelID) throws IOException;
+
+	public abstract BufferFileReader createStreamFileReader(FileIOChannel.ID channelID, RequestDoneCallback<Buffer> callback) throws IOException;
+
 	/**
 	 * Creates a block channel reader that reads all blocks from the given channel directly in one bulk.
 	 * The reader draws segments to read the blocks into from a supplied list, which must contain as many

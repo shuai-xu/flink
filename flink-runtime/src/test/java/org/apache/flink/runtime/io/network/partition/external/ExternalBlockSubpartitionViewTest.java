@@ -39,6 +39,7 @@ import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartition;
+import org.apache.flink.shaded.netty4.io.netty.buffer.ByteBuf;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -79,13 +80,17 @@ public class ExternalBlockSubpartitionViewTest {
 
 	private static final int NUM_BUFFERS = 20;
 
-	private static final int[] TOTAL_BUFFERS_EACH_SUBPARTITION = new int[]{10, 20, 30, 40};
+	private static final int[] TOTAL_BYTES_EACH_SUBPARTITION = new int[]{1300, 2600, 3900, 5200};
 
 	private static final int MERGED_FILE_TOTAL_FILES = 5;
 
 	private IOManager ioManager;
 
 	private FixedLengthBufferPool bufferPool;
+
+	private int subpartitionIndex;
+
+	private int bytesRead;
 
 	@Rule
 	public TemporaryFolder tempFolder = new TemporaryFolder();
@@ -122,6 +127,7 @@ public class ExternalBlockSubpartitionViewTest {
 	@Test
 	public void testInitializedOnFirstRead() throws Exception {
 		final int subpartitionIndex = 2;
+		setupCheckForSubpartition(subpartitionIndex);
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
 		ExecutorService executor = null;
@@ -140,11 +146,11 @@ public class ExternalBlockSubpartitionViewTest {
 			viewReader.setView(view);
 
 			view.notifyCreditAdded(2);
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 0);
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 1);
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking());
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking());
 
 			verify(meta).initialize();
-			assertEquals(TOTAL_BUFFERS_EACH_SUBPARTITION[subpartitionIndex], view.getTotalBuffers());
+			assertEquals(TOTAL_BYTES_EACH_SUBPARTITION[subpartitionIndex], view.getTotalLength());
 			assertNotNull(view.getMetaIterator());
 		} finally {
 			if (executor != null) {
@@ -156,6 +162,7 @@ public class ExternalBlockSubpartitionViewTest {
 	@Test(timeout = 60000)
 	public void testManagingCredit() throws Exception {
 		final int subpartitionIndex = 2;
+		setupCheckForSubpartition(subpartitionIndex);
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
 
@@ -179,21 +186,19 @@ public class ExternalBlockSubpartitionViewTest {
 			// Check the executor is submitting on the first batch of credits.
 			verify(executor).submit(eq(view));
 
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 0);
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 1);
-			assertEquals(0, view.getCurrentCredit());
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking());
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking());
 
-			// Wait till the view actually exit from the ThreadPool.
 			while (view.isRunning()) {
 				Thread.sleep(500);
 			}
 
-			// Check the view get re-submitted on new credits.
+			assertEquals(0, view.getCurrentCredit());
 			view.notifyCreditAdded(2);
 			verify(executor, times(2)).submit(eq(view));
 
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 2);
-			checkBufferAndRecycle(viewReader.getNextBufferBlocking(), 3);
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking());
+			checkBufferAndRecycle(viewReader.getNextBufferBlocking());
 		} finally {
 			if (executor != null) {
 				executor.shutdownNow();
@@ -204,6 +209,7 @@ public class ExternalBlockSubpartitionViewTest {
 	@Test(timeout = 60000)
 	public void testGetNextBuffer() throws Exception {
 		final int subpartitionIndex = 2;
+		setupCheckForSubpartition(subpartitionIndex);
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
 
@@ -225,25 +231,27 @@ public class ExternalBlockSubpartitionViewTest {
 			Random random = new Random();
 			int nextBufferIndex = 0;
 
-			int remainBuffer = TOTAL_BUFFERS_EACH_SUBPARTITION[subpartitionIndex];
-			while (remainBuffer > 1) {
-				int nextCredit = random.nextInt(remainBuffer - 1) + 1;
+			int remainingBytesToRead = TOTAL_BYTES_EACH_SUBPARTITION[subpartitionIndex];
+			while (remainingBytesToRead > SEGMENT_SIZE) {
+				int nextCredit = Math.max(random.nextInt((int) Math.ceil((double) remainingBytesToRead / SEGMENT_SIZE)) - 1, 1);
 				view.notifyCreditAdded(nextCredit);
 
 				for (int i = 0; i < nextCredit; ++i) {
-					checkBufferAndRecycle(viewReader.getNextBufferBlocking(), nextBufferIndex++);
+					Buffer buffer = viewReader.getNextBufferBlocking();
+					remainingBytesToRead -= buffer.getSize();
+					checkBufferAndRecycle(buffer);
 
 					if (i == nextCredit - 1) {
 						assertFalse(view.isAvailable());
 					}
 				}
-
-				remainBuffer -= nextCredit;
 			}
 
-			view.notifyCreditAdded(remainBuffer);
-			for (int i = 0; i < remainBuffer; ++i) {
-				checkBufferAndRecycle(viewReader.getNextBufferBlocking(), nextBufferIndex++);
+			while (remainingBytesToRead > 0) {
+				view.notifyCreditAdded(1);
+				Buffer buffer = viewReader.getNextBufferBlocking();
+				remainingBytesToRead -= buffer.getSize();
+				checkBufferAndRecycle(buffer);
 			}
 
 			Buffer eof = viewReader.getNextBufferBlocking();
@@ -260,6 +268,7 @@ public class ExternalBlockSubpartitionViewTest {
 	@Test
 	public void testReadFail() throws Exception {
 		final int subpartitionIndex = 2;
+		setupCheckForSubpartition(subpartitionIndex);
 
 		ExternalBlockResultPartitionMeta meta = spy(createFilesAndMeta());
 
@@ -278,7 +287,7 @@ public class ExternalBlockSubpartitionViewTest {
 				availabilityListener));
 
 			// Remove the data files directly
-			int numFilesToRemove = (fileType == PersistentFileType.HASH_PARTITION_FILE ? TOTAL_BUFFERS_EACH_SUBPARTITION.length : MERGED_FILE_TOTAL_FILES);
+			int numFilesToRemove = (fileType == PersistentFileType.HASH_PARTITION_FILE ? TOTAL_BYTES_EACH_SUBPARTITION.length : MERGED_FILE_TOTAL_FILES);
 			for (int i = 0; i < numFilesToRemove; ++i) {
 				boolean success =
 					new File(ExternalBlockShuffleUtils.generateDataPath(meta.getResultPartitionDir(), i)).delete();
@@ -304,40 +313,48 @@ public class ExternalBlockSubpartitionViewTest {
 
 	private ExternalBlockResultPartitionMeta createFilesAndMeta() throws Exception {
 		if (fileType == PersistentFileType.HASH_PARTITION_FILE) {
-			return createHashFilesAndMeta(TOTAL_BUFFERS_EACH_SUBPARTITION);
+			return createHashFilesAndMeta(TOTAL_BYTES_EACH_SUBPARTITION);
 		} else {
-			int[] buffersPerFile = new int[TOTAL_BUFFERS_EACH_SUBPARTITION.length];
-			for (int i = 0; i < TOTAL_BUFFERS_EACH_SUBPARTITION.length; ++i) {
-				buffersPerFile[i] = TOTAL_BUFFERS_EACH_SUBPARTITION[i] / MERGED_FILE_TOTAL_FILES;
+			int[] bytesPerFile = new int[TOTAL_BYTES_EACH_SUBPARTITION.length];
+			for (int i = 0; i < TOTAL_BYTES_EACH_SUBPARTITION.length; ++i) {
+				assert (TOTAL_BYTES_EACH_SUBPARTITION[i] % MERGED_FILE_TOTAL_FILES) == 0;
+				bytesPerFile[i] = TOTAL_BYTES_EACH_SUBPARTITION[i] / MERGED_FILE_TOTAL_FILES;
 			}
 
-			return createMergeFilesAndMeta(buffersPerFile, MERGED_FILE_TOTAL_FILES);
+			return createMergeFilesAndMeta(bytesPerFile, MERGED_FILE_TOTAL_FILES);
 		}
 	}
 
-	private ExternalBlockResultPartitionMeta createMergeFilesAndMeta(int[] buffersPerFileOfEachSubpartition, int numFiles) throws Exception {
+	private ExternalBlockResultPartitionMeta createMergeFilesAndMeta(int[] bytesPerFileOfEachSubpartition, int numFiles) throws Exception {
 		String root = tempFolder.newFolder().getAbsolutePath() + "/";
 		FileSystem fs = FileSystem.getLocalFileSystem();
 
 		List<List<PartitionIndex>> partitionIndicesList = new ArrayList<>();
 
 		for (int fileIndex = 0; fileIndex < numFiles; ++fileIndex) {
-			int bytesWritten = 0;
+			long bytesWritten = 0;
 			List<PartitionIndex> partitionIndices = new ArrayList<>();
 
-			BufferFileWriter writer = ioManager.createBufferFileWriter(
+			BufferFileWriter writer = ioManager.createStreamFileWriter(
 				new FileIOChannel.ID(ExternalBlockShuffleUtils.generateDataPath(root, fileIndex)));
 
-			for (int i = 0; i < buffersPerFileOfEachSubpartition.length; ++i) {
-				partitionIndices.add(new PartitionIndex(i, bytesWritten, buffersPerFileOfEachSubpartition[i]));
+			for (int i = 0; i < bytesPerFileOfEachSubpartition.length; ++i) {
+				partitionIndices.add(new PartitionIndex(i, bytesWritten, bytesPerFileOfEachSubpartition[i]));
 
-				for (int j = 0; j < buffersPerFileOfEachSubpartition[i]; ++j) {
+				long remainingBytesToWrite = bytesPerFileOfEachSubpartition[i];
+				while (remainingBytesToWrite > 0) {
+					long nextLengthToWrite = Math.min(remainingBytesToWrite, SEGMENT_SIZE);
 					MemorySegment segment = MemorySegmentFactory.allocateUnpooledSegment(SEGMENT_SIZE);
 					NetworkBuffer buffer = new NetworkBuffer(segment, FreeingBufferRecycler.INSTANCE);
-					buffer.asByteBuf().writeInt(fileIndex * buffersPerFileOfEachSubpartition[i] + j);
-					writer.writeBlock(buffer);
+					for (int j = 0; j < nextLengthToWrite; j++) {
+						buffer.asByteBuf().writeByte(fileIndex * bytesPerFileOfEachSubpartition[i] + i + j
+							+ bytesPerFileOfEachSubpartition[i] - (int) remainingBytesToWrite);
+					}
 
-					bytesWritten = bytesWritten + BufferFileWriter.BUFFER_HEAD_LENGTH + buffer.getSize();
+					bytesWritten = bytesWritten + nextLengthToWrite;
+					remainingBytesToWrite -= nextLengthToWrite;
+
+					writer.writeBlock(buffer);
 				}
 			}
 
@@ -364,24 +381,32 @@ public class ExternalBlockSubpartitionViewTest {
 			finishedView.writeInt(externalFileType.length());
 			finishedView.write(externalFileType.getBytes());
 			finishedView.writeInt(numFiles);
-			finishedView.writeInt(buffersPerFileOfEachSubpartition.length);
+			finishedView.writeInt(bytesPerFileOfEachSubpartition.length);
 		}
 
 		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs, root, root);
 	}
 
-	private ExternalBlockResultPartitionMeta createHashFilesAndMeta(int[] buffersEachSubpartition) throws Exception {
+	private ExternalBlockResultPartitionMeta createHashFilesAndMeta(int[] bytesEachSubpartition) throws Exception {
 		String root = tempFolder.newFolder().getAbsolutePath() + "/";
 		FileSystem fs = FileSystem.getLocalFileSystem();
 
-		for (int i = 0; i < buffersEachSubpartition.length; ++i) {
-			BufferFileWriter writer = ioManager.createBufferFileWriter(
+		for (int i = 0; i < bytesEachSubpartition.length; ++i) {
+			BufferFileWriter writer = ioManager.createStreamFileWriter(
 				new FileIOChannel.ID(ExternalBlockShuffleUtils.generateDataPath(root, i)));
-
-			for (int j = 0; j < buffersEachSubpartition[i]; ++j) {
+			long remainingBytesToWrite = bytesEachSubpartition[i];
+			int bufferIndex = 0;
+			while (remainingBytesToWrite > 0) {
+				long nextLengthToWrite = Math.min(remainingBytesToWrite, SEGMENT_SIZE);
 				MemorySegment segment = MemorySegmentFactory.allocateUnpooledSegment(SEGMENT_SIZE);
 				NetworkBuffer buffer = new NetworkBuffer(segment, FreeingBufferRecycler.INSTANCE);
-				buffer.asByteBuf().writeInt(j);
+				for (int j = 0; j < nextLengthToWrite; j++) {
+					buffer.asByteBuf().writeByte(bufferIndex * SEGMENT_SIZE + i + j);
+				}
+
+				bufferIndex++;
+				remainingBytesToWrite -= nextLengthToWrite;
+
 				writer.writeBlock(buffer);
 			}
 
@@ -390,8 +415,8 @@ public class ExternalBlockSubpartitionViewTest {
 
 		// write index and finish files
 		List<PartitionIndex> partitionIndexList = new ArrayList<>();
-		for (int i = 0; i < buffersEachSubpartition.length; ++i) {
-			partitionIndexList.add(new PartitionIndex(i, 0, buffersEachSubpartition[i]));
+		for (int i = 0; i < bytesEachSubpartition.length; ++i) {
+			partitionIndexList.add(new PartitionIndex(i, 0, bytesEachSubpartition[i]));
 		}
 		String indexPath = ExternalBlockShuffleUtils.generateIndexPath(root, 0);
 		try (FSDataOutputStream indexOut = fs.create(new Path(indexPath), FileSystem.WriteMode.OVERWRITE)) {
@@ -409,15 +434,27 @@ public class ExternalBlockSubpartitionViewTest {
 			finishedView.writeInt(externalFileType.length());
 			finishedView.write(externalFileType.getBytes());
 			finishedView.writeInt(1);
-			finishedView.writeInt(buffersEachSubpartition.length);
+			finishedView.writeInt(bytesEachSubpartition.length);
 		}
 
 		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs, root, root);
 	}
 
-	private void checkBufferAndRecycle(Buffer buffer, int expectedIndex) {
+	private void setupCheckForSubpartition(int subpartitionIndex) {
+		this.subpartitionIndex = subpartitionIndex;
+		this.bytesRead = 0;
+	}
+
+	private void checkBufferAndRecycle(Buffer buffer) {
 		assertTrue(buffer.isBuffer());
-		assertEquals(expectedIndex, buffer.asByteBuf().readInt());
+		assertTrue(buffer.getSize() > 0);
+		ByteBuf byteBuf = buffer.asByteBuf();
+		for (int i = 0; i < buffer.getSize(); i++) {
+			byte actualValue = byteBuf.readByte();
+			assertEquals("bytesRead: " + bytesRead + ", offset: " + i,
+				(byte) ((bytesRead + i + subpartitionIndex) & 0x0ff), actualValue);
+		}
+		bytesRead += buffer.getSize();
 		buffer.recycleBuffer();
 	}
 

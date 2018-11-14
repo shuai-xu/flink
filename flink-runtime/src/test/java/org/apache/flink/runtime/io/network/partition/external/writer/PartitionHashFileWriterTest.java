@@ -59,7 +59,7 @@ public class PartitionHashFileWriterTest extends PersistentFileWriterTestBase {
 			PAGE_SIZE,
 			serializer,
 			partitionIndex.getStartOffset(),
-			partitionIndex.getNumBuffers());
+			partitionIndex.getLength());
 
 		return new MutableObjectIterator<Integer>() {
 			@Override

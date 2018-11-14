@@ -333,7 +333,7 @@ class ExternalBlockResultPartitionMeta {
 					dataFile = dataFiles[spillIdx];
 				}
 				subpartitionMeta.add(new ExternalSubpartitionMeta(
-					dataFile, partitionIndex.getStartOffset(), partitionIndex.getNumBuffers()));
+					dataFile, partitionIndex.getStartOffset(), partitionIndex.getLength()));
 			}
 			subpartitionMetas[subpartitionIndex] = subpartitionMeta;
 		}
@@ -358,18 +358,18 @@ class ExternalBlockResultPartitionMeta {
 
 		private final long offset;
 
-		private final long bufferNum;
+		private final long length;
 
 		ExternalSubpartitionMeta(
-			Path dataFile, long offset, long bufferNum) {
+			Path dataFile, long offset, long length) {
 
 			assert dataFile != null;
 			assert offset >= 0;
-			assert bufferNum >= 0;
+			assert length >= 0;
 
 			this.dataFile = dataFile;
 			this.offset = offset;
-			this.bufferNum = bufferNum;
+			this.length = length;
 		}
 
 		Path getDataFile() {
@@ -380,14 +380,14 @@ class ExternalBlockResultPartitionMeta {
 			return offset;
 		}
 
-		long getBufferNum() {
-			return bufferNum;
+		long getLength() {
+			return length;
 		}
 
 		@Override
 		public String toString() {
 			return "{ dataFilePath = " + dataFile + ", offset = " + offset
-				+ ", buffNum = " + bufferNum + " }";
+				+ ", buffNum = " + length + " }";
 		}
 	}
 }

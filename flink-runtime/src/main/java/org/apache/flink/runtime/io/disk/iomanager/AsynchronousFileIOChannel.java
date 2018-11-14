@@ -31,6 +31,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -456,6 +457,102 @@ final class BufferReadRequest implements ReadRequest {
 	}
 }
 
+/**
+ * Write requests that write a buffer to file in the form of stream.
+ * Comparing to {@link BufferWriteRequest}, {@link StreamWriteRequest} gets rid of
+ * the header field for each buffer, thus limits its usage to spill only non-event buffer.
+ */
+final class StreamWriteRequest implements WriteRequest {
+
+	private final AsynchronousFileIOChannel<Buffer, WriteRequest> channel;
+
+	private final Buffer buffer;
+	private final int bufferSize;
+
+	protected StreamWriteRequest(
+		AsynchronousFileIOChannel<Buffer, WriteRequest> targetChannel,
+		Buffer buffer, int bufferSize) {
+
+		this.channel = checkNotNull(targetChannel);
+		this.buffer = checkNotNull(buffer);
+		this.bufferSize = bufferSize;
+	}
+
+	@Override
+	public void write() throws IOException {
+		checkArgument(buffer.isBuffer(), "Cannot write event buffer in StreamWriteRequest.");
+		if (bufferSize == -1) {
+			FileUtils.writeCompletely(channel.fileChannel, buffer.getNioBufferReadable());
+		} else {
+			NioBufferedFileOutputStream out = channel.getBufferedOutputStream(bufferSize);
+			out.write(buffer.getNioBufferReadable());
+		}
+	}
+
+	@Override
+	public void requestDone(IOException error) {
+		channel.handleProcessedBuffer(buffer, error);
+	}
+}
+
+/**
+ * Read request that read a sequence of data to a buffer, specified by the offset in the file
+ * and the length of the data.
+ */
+final class StreamReadRequest implements ReadRequest {
+
+	private final AsynchronousFileIOChannel<Buffer, ReadRequest> channel;
+
+	private final Buffer buffer;
+
+	private final AtomicBoolean hasReachedEndOfFile;
+
+	private final long startPosition;
+
+	private final long bytesToRead;
+
+	private final int bufferSize;
+
+	protected StreamReadRequest(
+		AsynchronousFileIOChannel<Buffer, ReadRequest> targetChannel,
+		Buffer buffer,
+		AtomicBoolean hasReachedEndOfFile,
+		long startPosition,
+		long bytesToRead,
+		int bufferSize) {
+
+		this.channel = targetChannel;
+		this.buffer = buffer;
+		this.hasReachedEndOfFile = hasReachedEndOfFile;
+		this.startPosition = startPosition;
+		this.bytesToRead = bytesToRead;
+		this.bufferSize = bufferSize;
+	}
+
+	@Override
+	public void read() throws IOException {
+		if (!hasReachedEndOfFile.get()) {
+			if (bufferSize == -1) {
+				hasReachedEndOfFile.set(StreamFileChannelReader.readBufferFromFileChannel(
+					channel.fileChannel, buffer, startPosition, bytesToRead, channel.id.getPathFile()));
+			} else {
+				NioBufferedFileInputStream in = channel.getBufferedInputStream(bufferSize);
+				if (in.available() > 0) {
+					hasReachedEndOfFile.set(StreamFileChannelReader.readBufferFromFileBufferedChannel(
+						in, buffer, startPosition, bytesToRead, channel.id.getPathFile()));
+				} else {
+					hasReachedEndOfFile.set(true);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void requestDone(IOException error) {
+		channel.handleProcessedBuffer(buffer, error);
+	}
+}
+
 final class FileSegmentReadRequest implements ReadRequest {
 
 	private final AsynchronousFileIOChannel<FileSegment, ReadRequest> channel;
@@ -511,6 +608,10 @@ final class SeekRequest implements ReadRequest, WriteRequest {
 	private final AsynchronousFileIOChannel<?, ?> channel;
 	private final long position;
 	private final int bufferSize;
+
+	protected SeekRequest(AsynchronousFileIOChannel<?, ?> channel, long position) {
+		this(channel, position, -1);
+	}
 
 	protected SeekRequest(AsynchronousFileIOChannel<?, ?> channel, long position, int bufferSize) {
 		this.channel = channel;

@@ -26,6 +26,7 @@ import org.apache.flink.runtime.io.disk.iomanager.RequestDoneCallback;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
+import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -41,20 +42,22 @@ import java.util.concurrent.LinkedBlockingQueue;
  * <p>It first sends requests as long as there are available buffers. Then after a
  * buffer is returned, it will then send a new request with the recycled buffers.
  */
-public class AsynchronousBufferFileReaderDelegate implements RequestDoneCallback<Buffer>, BufferRecycler {
+public class AsynchronousPartitionedStreamFileReaderDelegate implements RequestDoneCallback<Buffer>, BufferRecycler {
 	private final BufferFileReader reader;
 	private final Queue<MemorySegment> freeSegments;
 	private final LinkedBlockingQueue<Buffer> retBuffers = new LinkedBlockingQueue<>();
+	private final List<PartitionIndex> partitionIndices;
 
-	private final int totalBuffers;
+	private int nextPartitionIdx;
+	private int nextOffset;
 
-	private int numBuffersRead;
+	public AsynchronousPartitionedStreamFileReaderDelegate(IOManager ioManager, FileIOChannel.ID channel,
+														   List<MemorySegment> segments,
+														   List<PartitionIndex> partitionIndices)throws IOException {
 
-	public AsynchronousBufferFileReaderDelegate(IOManager ioManager, FileIOChannel.ID channel, List<MemorySegment> segments, int totalBuffers) throws IOException {
-		this.reader = ioManager.createBufferFileReader(channel, this);
+		this.reader = ioManager.createStreamFileReader(channel, this);
 		this.freeSegments = new ArrayDeque<>(segments);
-
-		this.totalBuffers = totalBuffers;
+		this.partitionIndices = partitionIndices;
 
 		MemorySegment segment;
 		while ((segment = freeSegments.poll()) != null) {
@@ -71,10 +74,21 @@ public class AsynchronousBufferFileReaderDelegate implements RequestDoneCallback
 	}
 
 	private void sendRequestIfFeasible(MemorySegment memorySegment) throws IOException {
-		Buffer buffer = new NetworkBuffer(memorySegment, this);
-		if (numBuffersRead < totalBuffers) {
-			reader.readInto(buffer);
-			++numBuffersRead;
+		long nextReadLength = 0;
+		while (nextPartitionIdx < partitionIndices.size()) {
+			PartitionIndex partitionIndex = partitionIndices.get(nextPartitionIdx);
+			long partitionEndOffset = partitionIndex.getStartOffset() + partitionIndex.getLength();
+			assert partitionEndOffset >= nextOffset;
+			if (partitionEndOffset > nextOffset) {
+				nextReadLength = Math.min(partitionEndOffset - nextOffset, memorySegment.size());
+				break;
+			}
+			nextPartitionIdx++;
+		}
+		if (nextReadLength > 0) {
+			Buffer buffer = new NetworkBuffer(memorySegment, this);
+			reader.readInto(buffer, nextReadLength);
+			nextOffset += nextReadLength;
 		}
 	}
 

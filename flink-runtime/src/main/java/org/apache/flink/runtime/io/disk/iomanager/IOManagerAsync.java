@@ -258,6 +258,20 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 		return new AsynchronousBufferFileSegmentReader(channelID, readers[channelID.getThreadNum()].requestQueue, callback);
 	}
 
+	@Override
+	public BufferFileWriter createStreamFileWriter(FileIOChannel.ID channelID) throws IOException {
+		checkState(!isShutdown.get(), "I/O-Manger is shut down.");
+
+		return new AsynchronousBufferFileWriter(channelID, writers[channelID.getThreadNum()].requestQueue, bufferedWriteSize, false);
+	}
+
+	@Override
+	public BufferFileReader createStreamFileReader(FileIOChannel.ID channelID, RequestDoneCallback<Buffer> callback) throws IOException {
+		checkState(!isShutdown.get(), "I/O-Manger is shut down.");
+
+		return new AsynchronousBufferFileReader(channelID, readers[channelID.getThreadNum()].requestQueue, callback, bufferedReadSize, false);
+	}
+
 	/**
 	 * Creates a block channel reader that reads all blocks from the given channel directly in one bulk.
 	 * The reader draws segments to read the blocks into from a supplied list, which must contain as many

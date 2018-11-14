@@ -38,10 +38,9 @@ public class ConcatPartitionedBufferSortedDataFile<T> implements PartitionedSort
 	private final int fileId;
 
 	private final IOManager ioManager;
-	private final BufferFileWriter bufferFileWriter;
+	private final BufferFileWriter streamFileWriter;
 
 	private final PartitionIndexGenerator partitionIndexGenerator;
-	private long buffersWritten;
 	private long bytesWritten;
 
 	private boolean isWritingFinished;
@@ -51,13 +50,13 @@ public class ConcatPartitionedBufferSortedDataFile<T> implements PartitionedSort
 		this.fileId = fileId;
 		this.ioManager = ioManager;
 
-		this.bufferFileWriter = ioManager.createBufferFileWriter(channel);
+		this.streamFileWriter = ioManager.createStreamFileWriter(channel);
 		this.partitionIndexGenerator = new PartitionIndexGenerator(numberOfSubpartitions);
 	}
 
 	@Override
 	public FileIOChannel getWriteChannel() {
-		return bufferFileWriter;
+		return streamFileWriter;
 	}
 
 	@Override
@@ -83,19 +82,18 @@ public class ConcatPartitionedBufferSortedDataFile<T> implements PartitionedSort
 	public void writeBuffer(int partition, Buffer buffer) throws IOException {
 		checkState(!isWritingFinished, "");
 
-		partitionIndexGenerator.updatePartitionIndexBeforeWriting(partition, bytesWritten, buffersWritten, 0);
+		partitionIndexGenerator.updatePartitionIndexBeforeWriting(partition, bytesWritten, 0);
 
-		bufferFileWriter.writeBlock(buffer);
+		streamFileWriter.writeBlock(buffer);
 
-		buffersWritten++;
-		bytesWritten = bytesWritten + BufferFileWriter.BUFFER_HEAD_LENGTH + buffer.getSize();
+		bytesWritten = bytesWritten + buffer.getSize();
 	}
 
 	@Override
 	public void finishWriting() throws IOException {
 		if (!isWritingFinished) {
-			bufferFileWriter.close();
-			partitionIndexGenerator.finishWriting(bytesWritten, buffersWritten, 0);
+			streamFileWriter.close();
+			partitionIndexGenerator.finishWriting(bytesWritten, 0);
 
 			isWritingFinished = true;
 		}

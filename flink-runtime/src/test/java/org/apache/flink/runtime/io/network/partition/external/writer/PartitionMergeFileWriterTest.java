@@ -89,7 +89,7 @@ public class PartitionMergeFileWriterTest extends PersistentFileWriterTestBase {
 						PAGE_SIZE,
 						serializer,
 						partitionIndex.getStartOffset(),
-						partitionIndex.getNumBuffers());
+						partitionIndex.getLength());
 				}
 
 				Integer result = currentReader.next();

@@ -69,8 +69,8 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	 */
 	private final long waitCreditTimeoutInMills;
 
-	/** The number of total buffers for this subpartition. */
-	private long totalBuffers;
+	/** The number of total length in bytes for this subpartition. */
+	private long totalLength;
 
 	/** The lock to guard the state of this view */
 	private final Object lock = new Object();
@@ -86,8 +86,8 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	@GuardedBy("lock")
 	private volatile Throwable cause;
 
-	/** The number of buffers that have already been read. */
-	private long totalReadBuffers = 0;
+	/** The length in bytes of the data that has already been read. */
+	private long totalReadLength = 0;
 
 	/** Iterator of subpartition metas. */
 	private Iterator<ExternalBlockResultPartitionMeta.ExternalSubpartitionMeta> metaIterator;
@@ -95,8 +95,8 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	/** The current input stream of distributed or local file systems. */
 	private SynchronousBufferFileReader currFsIn = null;
 
-	/** Remaining buffers to read for the current spill file. */
-	private long currRemainBuffers = 0;
+	/** Remaining length in bytes to read for the current spill file. */
+	private long currRemainLength = 0;
 
 	/** The listener used to be notified how many buffers are available for transferring. */
 	private final BufferAvailabilityListener listener;
@@ -148,7 +148,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 				initializeMeta();
 			}
 
-			if (totalBuffers == 0) {
+			if (totalLength == 0) {
 				enqueueBuffer(EventSerializer.toBuffer(EndOfPartitionEvent.INSTANCE));
 				return;
 			}
@@ -215,7 +215,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 		metaIterator = subpartitionMetas.iterator();
 
 		for (ExternalBlockResultPartitionMeta.ExternalSubpartitionMeta meta : subpartitionMetas) {
-			totalBuffers += meta.getBufferNum();
+			totalLength += meta.getLength();
 		}
 	}
 
@@ -224,7 +224,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	}
 
 	private boolean hasMoreDataToReadUnsafe() {
-		return !isReleased && totalReadBuffers < totalBuffers;
+		return !isReleased && totalReadLength < totalLength;
 	}
 
 	/**
@@ -242,8 +242,12 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 		Buffer buffer = bufferPool.requestBufferBlocking();
 		checkState(buffer != null, "Failed to request a buffer.");
 
+		checkState(currRemainLength > 0, "Should have data to read from the current file.");
+
 		try {
-			currFsIn.readInto(buffer);
+			long lengthToRead = Math.min(currRemainLength, buffer.getMaxCapacity());
+			currFsIn.readInto(buffer, lengthToRead);
+			currRemainLength -= lengthToRead;
 		} catch (Throwable t) {
 			if (!buffer.isRecycled()) {
 				buffer.recycleBuffer();
@@ -251,7 +255,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 			throw t;
 		}
 
-		if (--currRemainBuffers == 0) {
+		if (currRemainLength == 0) {
 			closeCurrentFileReader();
 		}
 
@@ -275,11 +279,10 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 		ExternalBlockResultPartitionMeta.ExternalSubpartitionMeta nextMeta;
 		while (metaIterator.hasNext()) {
 			nextMeta = metaIterator.next();
-			currRemainBuffers = nextMeta.getBufferNum();
-
-			if (currRemainBuffers > 0) {
+			currRemainLength = nextMeta.getLength();
+			if (currRemainLength > 0) {
 				FileIOChannel.ID fileChannelID = new FileIOChannel.ID(nextMeta.getDataFile().getPath());
-				nextFsIn = new SynchronousBufferFileReader(fileChannelID, false);
+				nextFsIn = new SynchronousBufferFileReader(fileChannelID, false, false);
 				nextFsIn.seekToPosition(nextMeta.getOffset());
 
 				break;
@@ -300,10 +303,11 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 
 			if (buffer.isBuffer()) {
 				--currentCredit;
+				totalReadLength += buffer.getSize();
 			}
 
 			// If EOF is enqueued directly, the condition will fail and there will be no second EOF enqueued.
-			if (++totalReadBuffers == totalBuffers) {
+			if (totalReadLength == totalLength && totalLength != 0) {
 				buffers.add(EventSerializer.toBuffer(EndOfPartitionEvent.INSTANCE));
 			}
 		}
@@ -437,8 +441,8 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	}
 
 	@VisibleForTesting
-	long getTotalBuffers() {
-		return totalBuffers;
+	long getTotalLength() {
+		return totalLength;
 	}
 
 	@VisibleForTesting

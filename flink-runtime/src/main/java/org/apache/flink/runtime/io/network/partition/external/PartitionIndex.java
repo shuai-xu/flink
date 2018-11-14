@@ -28,20 +28,20 @@ public class PartitionIndex {
 	/** The offset in the file. */
 	private final long startOffset;
 
-	/** The number of buffers. */
-	private final long numBuffers;
+	/** The length of data. */
+	private final long length;
 
 	/** The number of records of this part. */
 	private final transient long numRecords;
 
-	public PartitionIndex(int partition, long startOffset, long numBuffers) {
-		this(partition, startOffset, numBuffers, 0);
+	public PartitionIndex(int partition, long startOffset, long length) {
+		this(partition, startOffset, length, 0);
 	}
 
-	public PartitionIndex(int partition, long startOffset, long numBuffers, long numRecords) {
+	public PartitionIndex(int partition, long startOffset, long length, long numRecords) {
 		this.partition = partition;
 		this.startOffset = startOffset;
-		this.numBuffers = numBuffers;
+		this.length = length;
 		this.numRecords = numRecords;
 	}
 
@@ -53,8 +53,8 @@ public class PartitionIndex {
 		return startOffset;
 	}
 
-	public long getNumBuffers() {
-		return numBuffers;
+	public long getLength() {
+		return length;
 	}
 
 	public long getNumRecords() {
@@ -74,7 +74,7 @@ public class PartitionIndex {
 
 		return partition == that.partition
 			&& startOffset == that.startOffset
-			&& numBuffers == that.numBuffers
+			&& length == that.length
 			&& numRecords == that.numRecords;
 	}
 
@@ -82,7 +82,7 @@ public class PartitionIndex {
 	public int hashCode() {
 		int result = partition;
 		result = 31 * result + (int) (startOffset ^ (startOffset >>> 32));
-		result = 31 * result + (int) (numBuffers ^ (numBuffers >>> 32));
+		result = 31 * result + (int) (length ^ (length >>> 32));
 		result = 31 * result + (int) (numRecords ^ (numRecords >>> 32));
 		return result;
 	}
@@ -92,7 +92,7 @@ public class PartitionIndex {
 		StringBuilder stringBuilder = new StringBuilder();
 		stringBuilder.append("PartitionIndex :{ partition=").append(partition)
 			.append(", startOffset=").append(startOffset)
-			.append(", numBuffers=").append(numBuffers)
+			.append(", length=").append(length)
 			.append(", numRecords=").append(numRecords)
 			.append("}");
 		return stringBuilder.toString();

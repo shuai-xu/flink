@@ -56,9 +56,8 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 	private final CopySerializationDelegate<T> copySerializationDelegate;
 
 	private final FixedLengthBufferPool bufferPool;
-	private final BufferFileWriter bufferFileWriter;
+	private final BufferFileWriter streamFileWriter;
 	private BufferBuilder currentBufferBuilders;
-	private int buffersWritten;
 	private int bytesWritten;
 
 	private boolean isWritingFinished;
@@ -76,12 +75,12 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 		this.copySerializationDelegate = new CopySerializationDelegate<>(serializer);
 
 		this.bufferPool = new FixedLengthBufferPool(writeMemory, false);
-		this.bufferFileWriter = ioManager.createBufferFileWriter(channelID);
+		this.streamFileWriter = ioManager.createStreamFileWriter(channelID);
 	}
 
 	@Override
 	public FileIOChannel getWriteChannel() {
-		return bufferFileWriter;
+		return streamFileWriter;
 	}
 
 	@Override
@@ -116,7 +115,7 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 		tryFinishCurrentBufferBuilder();
 
-		bufferFileWriter.close();
+		streamFileWriter.close();
 		isWritingFinished = true;
 	}
 
@@ -147,10 +146,6 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 	public long getBytesWritten() {
 		return bytesWritten;
-	}
-
-	public long getBuffersWritten() {
-		return buffersWritten;
 	}
 
 	public int getFileId() {
@@ -198,9 +193,8 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 			BufferConsumer bufferConsumer = currentBufferBuilders.createBufferConsumer();
 			Buffer buffer = bufferConsumer.build();
 
-			bufferFileWriter.writeBlock(buffer);
-			buffersWritten += 1;
-			bytesWritten = bytesWritten + BufferFileWriter.BUFFER_HEAD_LENGTH + bufferSize;
+			streamFileWriter.writeBlock(buffer);
+			bytesWritten = bytesWritten + bufferSize;
 
 			bufferConsumer.close();
 			currentBufferBuilders = null;

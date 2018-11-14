@@ -30,7 +30,6 @@ public class PartitionIndexGenerator {
 	private final int numberOfPartitions;
 	private final List<PartitionIndex> partitionIndices;
 
-	private long lastBuffersWritten = 0;
 	private long lastRecordsWritten = 0;
 
 	private int currentPartition = 0;
@@ -41,18 +40,19 @@ public class PartitionIndexGenerator {
 		this.partitionIndices = new ArrayList<>(numberOfPartitions);
 	}
 
-	public void updatePartitionIndexBeforeWriting(int partition, long numBytesWrittenBeforeWriting, long numBuffersWrittenBeforeWriting,
-												  long numRecordsWrittenBeforeWriting) {
+	public void updatePartitionIndexBeforeWriting(
+		int partition, long numBytesWrittenBeforeWriting, long numRecordsWrittenBeforeWriting) {
+
 		if (partition != currentPartition) {
 			PartitionIndex partitionIndex = new PartitionIndex(currentPartition, currentPartitionStartOffset,
-				numBuffersWrittenBeforeWriting - lastBuffersWritten, numRecordsWrittenBeforeWriting - lastRecordsWritten);
+				numBytesWrittenBeforeWriting - currentPartitionStartOffset,
+				numRecordsWrittenBeforeWriting - lastRecordsWritten);
 			partitionIndices.add(partitionIndex);
 
 			for (int i = currentPartition + 1; i < partition; ++i) {
 				partitionIndices.add(new PartitionIndex(i, numBytesWrittenBeforeWriting, 0, 0));
 			}
 
-			lastBuffersWritten = numBuffersWrittenBeforeWriting;
 			lastRecordsWritten = numRecordsWrittenBeforeWriting;
 
 			currentPartition = partition;
@@ -60,9 +60,9 @@ public class PartitionIndexGenerator {
 		}
 	}
 
-	public void finishWriting(long numBytesWrittenBefore, long numBuffersWrittenBefore, long numRecordsWrittenBefore) {
+	public void finishWriting(long numBytesWrittenBefore, long numRecordsWrittenBefore) {
 		PartitionIndex partitionIndex = new PartitionIndex(currentPartition, currentPartitionStartOffset,
-			numBuffersWrittenBefore - lastBuffersWritten, numRecordsWrittenBefore - lastRecordsWritten);
+			numBytesWrittenBefore - currentPartitionStartOffset, numRecordsWrittenBefore - lastRecordsWritten);
 		partitionIndices.add(partitionIndex);
 
 		for (int i = currentPartition + 1; i < numberOfPartitions; ++i) {
