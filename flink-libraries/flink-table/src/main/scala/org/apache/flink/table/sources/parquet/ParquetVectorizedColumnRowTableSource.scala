@@ -74,7 +74,7 @@ class ParquetVectorizedColumnRowTableSource(
       case e: Exception => throw new RuntimeException(e)
     }
     inputFormat.setNestedFileEnumeration(enumerateNestedFiles)
-    streamEnv.createInput(inputFormat, getPhysicalType,
+    streamEnv.createInputV2(inputFormat, getPhysicalType,
       s"ParquetVectorizedColumnRowTableSource: ${filePath.getName}")
   }
 
@@ -114,7 +114,7 @@ class ParquetVectorizedColumnRowTableSource(
       case e: Exception => throw new RuntimeException(e)
     }
     inputFormat.setNestedFileEnumeration(enumerateNestedFiles)
-    execEnv.createInput(inputFormat, getPhysicalType, sourceName).setParallelism(numTimes)
+    execEnv.createInputV2(inputFormat, getPhysicalType, sourceName).setParallelism(numTimes)
   }
 
   override def getTableSchema: TableSchema = {

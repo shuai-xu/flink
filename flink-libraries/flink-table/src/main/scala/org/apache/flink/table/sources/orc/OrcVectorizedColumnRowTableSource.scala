@@ -96,7 +96,7 @@ class OrcVectorizedColumnRowTableSource(
     }
     inputFormat.setNestedFileEnumeration(enumerateNestedFiles)
     inputFormat.setSchemaFields(schemaFieldNames)
-    streamEnv.createInput(inputFormat, getPhysicalType,
+    streamEnv.createInputV2(inputFormat, getPhysicalType,
       s"OrcVectorizedColumnRowTableSource: ${filePath.getName}")
   }
 
@@ -109,7 +109,7 @@ class OrcVectorizedColumnRowTableSource(
       case e: Exception => throw new RuntimeException(e)
     }
     inputFormat.setNestedFileEnumeration(enumerateNestedFiles)
-    execEnv.createInput(inputFormat, getPhysicalType)
+    execEnv.createInputV2(inputFormat, getPhysicalType)
   }
 
   override def getReturnType: DataType = DataTypes.internal(getPhysicalType)

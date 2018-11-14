@@ -104,7 +104,7 @@ class CsvTableSource(
     * Do not use it in Table API programs.
     */
   override def getDataStream(streamExecEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
-    streamExecEnv.createInput(createCsvInput, returnTypeInfo)
+    streamExecEnv.createInputV2(createCsvInput, returnTypeInfo)
   }
 
   /**
@@ -115,7 +115,7 @@ class CsvTableSource(
     */
   override def getBoundedStream(streamExecEnv: StreamExecutionEnvironment):
     DataStream[BaseRow] = {
-    streamExecEnv.createInput(createCsvInput, returnTypeInfo, s"csv source: $path")
+    streamExecEnv.createInputV2(createCsvInput, returnTypeInfo, s"csv source: $path")
   }
 
   /** Returns a copy of [[TableSource]] with ability to project fields */
