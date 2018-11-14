@@ -25,6 +25,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.accumulators.AccumulatorHelper;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.runtime.JobException;
@@ -40,6 +41,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointStatsSnapshot;
 import org.apache.flink.runtime.checkpoint.CheckpointStatsTracker;
 import org.apache.flink.runtime.checkpoint.CompletedCheckpointStore;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
+import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.concurrent.FutureUtils.ConjunctFuture;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
@@ -58,9 +60,10 @@ import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
-import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
-import org.apache.flink.runtime.jobmanager.scheduler.NoResourceAvailableException;
+import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmaster.GraphManager;
+import org.apache.flink.runtime.jobmaster.LogicalSlot;
+import org.apache.flink.runtime.jobmaster.SlotRequestId;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.state.SharedStateRegistry;
@@ -101,7 +104,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -890,70 +892,96 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		// cause the slots to get lost
 		final boolean queued = allowQueuedScheduling;
 
-		// collecting all the slots may resize and fail in that operation without slots getting lost
-		final ArrayList<CompletableFuture<Execution>> allAllocationFutures = new ArrayList<>(vertices.size());
+		List<SlotRequestId> slotRequestIds = new ArrayList<>(vertices.size());
+		List<ScheduledUnit> scheduledUnits = new ArrayList<>(vertices.size());
+		List<SlotProfile> slotProfiles = new ArrayList<>(vertices.size());
+		List<Execution> scheduledExecutions = new ArrayList<>(vertices.size());
 
-		LocationPreferenceConstraint locationPreferenceConstraint = allowLazyDeployment ?
-			LocationPreferenceConstraint.ANY : LocationPreferenceConstraint.ALL;
-
-		// allocate the slots (obtain all their futures)
 		for (ExecutionVertex ev : vertices) {
 			final Execution exec = ev.getCurrentExecutionAttempt();
 			// these calls are not blocking, they only return futures
-			final CompletableFuture<Execution> allocationFuture = exec.allocateAndAssignSlotForExecution(
-				slotProvider,
-				queued,
-				locationPreferenceConstraint,
-				allocationTimeout);
-			allAllocationFutures.add(allocationFuture);
+			Tuple2<ScheduledUnit, SlotProfile> scheduleUnitAndSlotProfile = exec.enterScheduledAndPrepareSchedulingResources();
+			slotRequestIds.add(new SlotRequestId());
+			scheduledUnits.add(scheduleUnitAndSlotProfile.f0);
+			slotProfiles.add(scheduleUnitAndSlotProfile.f1);
+			scheduledExecutions.add(exec);
 		}
 
-		// this future is complete once all slot futures are complete.
-		// the future fails once one slot future fails.
-		final ConjunctFuture<Collection<Execution>> allAllocationsFuture = FutureUtils.combineAll(allAllocationFutures);
-
-		final CompletableFuture<Void> currentSchedulingFuture = allAllocationsFuture
-			.thenAccept(
-				(Collection<Execution> executionsToDeploy) -> {
-					for (Execution execution : executionsToDeploy) {
-						try {
-							execution.deploy();
-						} catch (Throwable t) {
-							throw new CompletionException(
-								new FlinkException(
-									String.format("Could not deploy execution %s.", execution),
-									t));
+		List<CompletableFuture<LogicalSlot>> allocationFutures =
+				slotProvider.allocateSlots(slotRequestIds, scheduledUnits, queued, slotProfiles, allocationTimeout);
+		List<CompletableFuture<Void>> assignFutures = new ArrayList<>(slotRequestIds.size());
+		for (int i = 0; i < allocationFutures.size(); i++) {
+			final int index = i;
+			allocationFutures.get(i).whenComplete(
+					(ignore, throwable) -> {
+						if (throwable != null) {
+							slotProvider.cancelSlotRequest(
+									slotRequestIds.get(index),
+									scheduledUnits.get(index).getSlotSharingGroupId(),
+									scheduledUnits.get(index).getCoLocationConstraint(),
+									throwable);
 						}
 					}
-				})
-			// Generate a more specific failure message for the eager scheduling
-			.exceptionally(
-				(Throwable throwable) -> {
-					final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
-					final Throwable resultThrowable;
+			);
+			assignFutures.add(allocationFutures.get(i).thenAccept(
+					(LogicalSlot logicalSlot) -> {
+						if (!scheduledExecutions.get(index).tryAssignResource(logicalSlot)) {
+							// release the slot
+							Exception e = new FlinkException("Could not assign logical slot to execution " + scheduledExecutions.get(index) + '.');
+							logicalSlot.releaseSlot(e);
+							throw new CompletionException(e);
+						}
+					})
+			);
+		}
+		// this future is complete once all slot futures are complete.
+		// the future fails once one slot future fails.
+		final ConjunctFuture<Collection<Void>> allAssignFutures = FutureUtils.combineAll(assignFutures);
 
-					if (strippedThrowable instanceof TimeoutException) {
-						int numTotal = allAllocationsFuture.getNumFuturesTotal();
-						int numComplete = allAllocationsFuture.getNumFuturesCompleted();
-						String message = "Could not allocate all requires slots within timeout of " +
-							allocationTimeout + ". Slots required: " + numTotal + ", slots allocated: " + numComplete;
+		CompletableFuture<Void> currentSchedulingFuture = allAssignFutures
+				.exceptionally(
+						throwable -> {
+							LOG.info("Batch request {} slots, but only {} are fulfilled.",
+									allAssignFutures.getNumFuturesTotal(), allAssignFutures.getNumFuturesCompleted());
 
-						resultThrowable = new NoResourceAvailableException(message);
-					} else {
-						resultThrowable = strippedThrowable;
-					}
-
-					throw new CompletionException(resultThrowable);
-				});
+							for (int i = 0; i < allocationFutures.size(); i++) {
+								if (!allocationFutures.get(i).completeExceptionally(throwable)) {
+									scheduledExecutions.get(i).markFailed(ExceptionUtils.stripCompletionException(throwable));
+								}
+							}
+							throw new CompletionException(throwable);
+						}
+				)
+				.handle(
+						(Collection<Void> ignored, Throwable throwable) -> {
+							if (throwable != null) {
+								throw new CompletionException(throwable);
+							} else {
+								boolean hasFailure = false;
+								for (int i = 0; i <  scheduledExecutions.size(); i++) {
+									try {
+										scheduledExecutions.get(i).deploy();
+									} catch (Exception e) {
+										hasFailure = true;
+										LOG.info("Fail to deploy execution {}", scheduledExecutions.get(i), e);
+									}
+								}
+								if (hasFailure) {
+									throw new CompletionException(
+											new FlinkException("Fail to deploy some executions."));
+								}
+							}
+							return null;
+						});
 
 		currentSchedulingFuture.whenComplete(
-			(Void ignored, Throwable throwable) -> {
-				final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
-				if (strippedThrowable instanceof CancellationException) {
-					// cancel the individual allocation futures
-					allAllocationsFuture.cancel(false);
-				}
-			});
+				(Void ignored, Throwable throwable) -> {
+					final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
+					if (strippedThrowable instanceof CancellationException) {
+						// cancel the individual allocation futures
+						allAssignFutures.cancel(false);
+					}
+				});
 
 		return currentSchedulingFuture;
 	}

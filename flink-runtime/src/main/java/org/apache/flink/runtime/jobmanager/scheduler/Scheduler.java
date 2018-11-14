@@ -142,7 +142,6 @@ public class Scheduler implements InstanceListener, SlotAvailabilityListener, Sl
 	//  Scheduling
 	// ------------------------------------------------------------------------
 
-
 	@Override
 	public CompletableFuture<LogicalSlot> allocateSlot(
 			SlotRequestId slotRequestId,
@@ -169,6 +168,20 @@ public class Scheduler implements InstanceListener, SlotAvailabilityListener, Sl
 		} catch (NoResourceAvailableException e) {
 			return FutureUtils.completedExceptionally(e);
 		}
+	}
+
+	@Override
+	public List<CompletableFuture<LogicalSlot>> allocateSlots(
+			List<SlotRequestId> slotRequestIds,
+			List<ScheduledUnit> tasks,
+			boolean allowQueued,
+			List<SlotProfile> slotProfiles,
+			Time timeout) {
+		List<CompletableFuture<LogicalSlot>> allocationFutures = new ArrayList<>(slotRequestIds.size());
+		for (int i = 0; i < slotRequestIds.size(); i++) {
+			allocationFutures.add(allocateSlot(slotRequestIds.get(i), tasks.get(i), allowQueued, slotProfiles.get(i), timeout));
+		}
+		return allocationFutures;
 	}
 
 	@Override

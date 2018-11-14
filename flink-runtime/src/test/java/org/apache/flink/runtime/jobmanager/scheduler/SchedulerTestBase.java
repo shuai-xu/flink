@@ -59,6 +59,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -169,6 +170,20 @@ public class SchedulerTestBase extends TestLogger {
 			SlotProfile slotProfile,
 			Time allocationTimeout) {
 			return scheduler.allocateSlot(task, allowQueued, slotProfile, allocationTimeout);
+		}
+
+		@Override
+		public List<CompletableFuture<LogicalSlot>> allocateSlots(
+				List<SlotRequestId> slotRequestIds,
+				List<ScheduledUnit> tasks,
+				boolean allowQueued,
+				List<SlotProfile> slotProfiles,
+				Time timeout) {
+			List<CompletableFuture<LogicalSlot>> allocationFutures = new ArrayList<>(slotRequestIds.size());
+			for (int i = 0; i < slotRequestIds.size(); i++) {
+				allocationFutures.add(allocateSlot(slotRequestIds.get(i), tasks.get(i), allowQueued, slotProfiles.get(i), timeout));
+			}
+			return allocationFutures;
 		}
 
 		@Override
@@ -391,6 +406,20 @@ public class SchedulerTestBase extends TestLogger {
 
 					return logicalSlot;
 				});
+		}
+
+		@Override
+		public List<CompletableFuture<LogicalSlot>> allocateSlots(
+				List<SlotRequestId> slotRequestIds,
+				List<ScheduledUnit> tasks,
+				boolean allowQueued,
+				List<SlotProfile> slotProfiles,
+				Time timeout) {
+			List<CompletableFuture<LogicalSlot>> allocationFutures = new ArrayList<>(slotRequestIds.size());
+			for (int i = 0; i < slotRequestIds.size(); i++) {
+				allocationFutures.add(allocateSlot(slotRequestIds.get(i), tasks.get(i), allowQueued, slotProfiles.get(i), timeout));
+			}
+			return allocationFutures;
 		}
 
 		@Override

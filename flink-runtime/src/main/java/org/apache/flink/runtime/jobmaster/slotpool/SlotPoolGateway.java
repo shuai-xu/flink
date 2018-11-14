@@ -36,6 +36,7 @@ import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -154,6 +155,30 @@ public interface SlotPoolGateway extends AllocatedSlotActions, RpcGateway {
 			SlotRequestId slotRequestId,
 			ScheduledUnit scheduledUnit,
 			SlotProfile slotProfile,
+			boolean allowQueuedScheduling,
+			@RpcTimeout Time timeout);
+
+	/**
+	 * Requests to allocate slots for the given {@link ScheduledUnit}. The requests
+	 * are uniquely identified by the provided {@link SlotRequestId} which can also
+	 * be used to release the slots via {@link #releaseSlot(SlotRequestId, SlotSharingGroupId, Throwable)}.
+	 * The allocated slots will fulfill the requested {@link ResourceProfile} and it
+	 * is tried to place them on one of the location preferences.
+	 *
+	 * <p>If the returned future must not be completed right away (a.k.a. the slot request
+	 * can be queued), allowQueuedScheduling must be set to true.
+	 *
+	 * @param slotRequestIds identifying the requested slots
+	 * @param scheduledUnits for which to allocate slots
+	 * @param slotProfiles profiles that specify the requirements for the requested slots
+	 * @param allowQueuedScheduling true if the slot request can be queued (e.g. the returned future must not be completed)
+	 * @param timeout for the operation
+	 * @return Future which is completed with the allocated {@link LogicalSlot}
+	 */
+	List<CompletableFuture<LogicalSlot>> allocateSlots(
+			List<SlotRequestId> slotRequestIds,
+			List<ScheduledUnit> scheduledUnits,
+			List<SlotProfile> slotProfiles,
 			boolean allowQueuedScheduling,
 			@RpcTimeout Time timeout);
 }

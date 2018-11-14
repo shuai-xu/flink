@@ -53,6 +53,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
+import org.apache.flink.runtime.executiongraph.restart.FixedDelayRestartStrategy;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategyFactory;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
@@ -132,6 +133,9 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link JobMaster}.
@@ -1020,6 +1024,132 @@ public class JobMasterTest extends TestLogger {
 			for (int i = 0; i < slotAllocationIds.size(); i++) {
 				cancelAllocationFutures.get(i).get(2, TimeUnit.SECONDS);
 			}
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
+	public void testExecutionWillUseSameLocationAfterFailover() throws Exception {
+		final String resourceManagerAddress = "rm";
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceID rmResourceId = new ResourceID(resourceManagerAddress);
+
+		final TestingResourceManagerGateway resourceManagerGateway = spy(new TestingResourceManagerGateway(
+				resourceManagerId,
+				rmResourceId,
+				fastHeartbeatInterval,
+				resourceManagerAddress,
+				"localhost"));
+
+		rpcService.registerGateway(resourceManagerAddress, resourceManagerGateway);
+
+		final String taskExecutorAddress1 = "tm1";
+		final TestingTaskExecutorGateway taskExecutorGateway1 = new TestingTaskExecutorGatewayBuilder().createTestingTaskExecutorGateway();
+		rpcService.registerGateway(taskExecutorAddress1, taskExecutorGateway1);
+		final String taskExecutorAddress2 = "tm2";
+		final TestingTaskExecutorGateway taskExecutorGateway2 = new TestingTaskExecutorGatewayBuilder().createTestingTaskExecutorGateway();
+		rpcService.registerGateway(taskExecutorAddress2, taskExecutorGateway2);
+		final String taskExecutorAddress3 = "tm3";
+		final TestingTaskExecutorGateway taskExecutorGateway3 = new TestingTaskExecutorGatewayBuilder().createTestingTaskExecutorGateway();
+		rpcService.registerGateway(taskExecutorAddress3, taskExecutorGateway3);
+		final String taskExecutorAddress4 = "tm4";
+		final TestingTaskExecutorGateway taskExecutorGateway4 = new TestingTaskExecutorGatewayBuilder().createTestingTaskExecutorGateway();
+		rpcService.registerGateway(taskExecutorAddress4, taskExecutorGateway4);
+
+		JobVertex source = new JobVertex("vertex");
+		source.setParallelism(3);
+		source.setInvokableClass(AbstractInvokable.class);
+
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
+		final JobMaster jobMaster = createJobMaster(
+				configuration,
+				jobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().setRestartStrategyFactory(
+						new FixedDelayRestartStrategy.FixedDelayRestartStrategyFactory(1, 0)).build(),
+				new TestingHeartbeatServices(10000, 60000, rpcService.getScheduledExecutor()));
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			TaskManagerLocation taskManagerLocation1 = mock(TaskManagerLocation.class);
+			when(taskManagerLocation1.getFQDNHostname()).thenReturn("tm1");
+			when(taskManagerLocation1.getResourceID()).thenReturn(ResourceID.generate());
+			jobMasterGateway.registerTaskManager(taskExecutorAddress1, taskManagerLocation1, testingTimeout).get();
+			TaskManagerLocation taskManagerLocation2 = mock(TaskManagerLocation.class);
+			when(taskManagerLocation2.getFQDNHostname()).thenReturn("tm2");
+			when(taskManagerLocation2.getResourceID()).thenReturn(ResourceID.generate());
+			jobMasterGateway.registerTaskManager(taskExecutorAddress2, taskManagerLocation2, testingTimeout).get();
+			TaskManagerLocation taskManagerLocation3 = mock(TaskManagerLocation.class);
+			when(taskManagerLocation3.getFQDNHostname()).thenReturn("tm3");
+			when(taskManagerLocation3.getResourceID()).thenReturn(ResourceID.generate());
+			jobMasterGateway.registerTaskManager(taskExecutorAddress3, taskManagerLocation3, testingTimeout).get();
+			TaskManagerLocation taskManagerLocation4 = mock(TaskManagerLocation.class);
+			when(taskManagerLocation4.getFQDNHostname()).thenReturn("tm4");
+			when(taskManagerLocation4.getResourceID()).thenReturn(ResourceID.generate());
+			jobMasterGateway.registerTaskManager(taskExecutorAddress4, taskManagerLocation4, testingTimeout).get();
+
+			SlotOffer slotOffer1 = new SlotOffer(new AllocationID(), 0, new ResourceProfile(1, 100));
+			jobMasterGateway.offerSlots(taskManagerLocation1.getResourceID(), Collections.singleton(slotOffer1), testingTimeout).get();
+
+			SlotOffer slotOffer2 = new SlotOffer(new AllocationID(), 0, new ResourceProfile(1, 100));
+			jobMasterGateway.offerSlots(taskManagerLocation2.getResourceID(), Collections.singleton(slotOffer2), testingTimeout).get();
+
+			SlotOffer slotOffer3 = new SlotOffer(new AllocationID(), 0, new ResourceProfile(1, 100));
+			jobMasterGateway.offerSlots(taskManagerLocation3.getResourceID(), Collections.singleton(slotOffer3), testingTimeout).get();
+
+			SlotOffer slotOffer4 = new SlotOffer(new AllocationID(), 0, new ResourceProfile(1, 100));
+			jobMasterGateway.offerSlots(taskManagerLocation4.getResourceID(), Collections.singleton(slotOffer4), testingTimeout).get();
+
+			ExecutionGraph eg = jobMaster.getExecutionGraph();
+
+			Iterator<ExecutionVertex> evIterator = eg.getAllExecutionVertices().iterator();
+			ExecutionVertex ev1 = evIterator.next();
+			ExecutionVertex ev2 = evIterator.next();
+			ExecutionVertex ev3 = evIterator.next();
+
+			// ensure all executions are scheduled.
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev1, ExecutionState.DEPLOYING, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev2, ExecutionState.DEPLOYING, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev3, ExecutionState.DEPLOYING, 2000L);
+
+			TaskManagerLocation locationForEv1 = ev1.getCurrentAssignedResourceLocation();
+			TaskManagerLocation locationForEv2 = ev2.getCurrentAssignedResourceLocation();
+			TaskManagerLocation locationForEv3 = ev3.getCurrentAssignedResourceLocation();
+
+			jobMaster.disconnectTaskManager(locationForEv1.getResourceID(), new Exception("Test Exception"));
+
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev2, ExecutionState.CANCELING, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev3, ExecutionState.CANCELING, 2000L);
+
+			jobMaster.updateTaskExecutionState(new TaskExecutionState(
+					jobGraph.getJobID(),
+					ev2.getCurrentExecutionAttempt().getAttemptId(),
+					ExecutionState.CANCELED,
+					new Exception("Job master cancel")));
+
+			jobMaster.updateTaskExecutionState(new TaskExecutionState(
+					jobGraph.getJobID(),
+					ev3.getCurrentExecutionAttempt().getAttemptId(),
+					ExecutionState.CANCELED,
+					new Exception("Job master cancel")));
+
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev1, ExecutionState.DEPLOYING, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev2, ExecutionState.DEPLOYING, 2000L);
+			ExecutionGraphTestUtils.waitUntilExecutionVertexState(ev3, ExecutionState.DEPLOYING, 2000L);
+
+			assertEquals(locationForEv2, ev2.getCurrentAssignedResourceLocation());
+			assertEquals(locationForEv3, ev3.getCurrentAssignedResourceLocation());
+
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
 		}

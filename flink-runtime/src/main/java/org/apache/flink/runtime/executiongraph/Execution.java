@@ -23,6 +23,7 @@ import org.apache.flink.api.common.Archiveable;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -454,6 +455,52 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 			return deploymentFuture;
 		} catch (IllegalExecutionStateException e) {
 			return FutureUtils.completedExceptionally(e);
+		}
+	}
+
+	/**
+	 * Enter SCHEDULED and return schedule unit and slot profile for scheduling this execution. This is for batch allocating slots.
+	 *
+	 * @throws IllegalExecutionStateException if this method has been called while not being in the CREATED state
+	 */
+	public Tuple2<ScheduledUnit, SlotProfile> enterScheduledAndPrepareSchedulingResources() throws IllegalStateException {
+
+		final SlotSharingGroup sharingGroup = vertex.getJobVertex().getSlotSharingGroup();
+		final CoLocationConstraint locationConstraint = vertex.getLocationConstraint();
+
+		// sanity check
+		if (locationConstraint != null && sharingGroup == null) {
+			throw new IllegalStateException(
+					"Trying to schedule with co-location constraint but without slot sharing allowed.");
+		}
+
+		// this method only works if the execution is in the state 'CREATED'
+		if (transitionState(CREATED, SCHEDULED)) {
+
+			final SlotSharingGroupId slotSharingGroupId = sharingGroup != null ? sharingGroup.getSlotSharingGroupId() : null;
+
+			ScheduledUnit toSchedule = locationConstraint == null ?
+					new ScheduledUnit(this, slotSharingGroupId) :
+					new ScheduledUnit(this, slotSharingGroupId, locationConstraint);
+
+			// try to extract previous allocation ids, if applicable, so that we can reschedule to the same slot
+			ExecutionVertex executionVertex = getVertex();
+			AllocationID lastAllocation = executionVertex.getLatestPriorAllocation();
+
+			Collection<AllocationID> previousAllocationIDs =
+					lastAllocation != null ? Collections.singletonList(lastAllocation) : Collections.emptyList();
+
+			// calculate the preferred locations only based on state.
+			Collection<CompletableFuture<TaskManagerLocation>> locationFuture = getVertex().getPreferredLocationsBasedOnState();
+			final Collection<TaskManagerLocation> preferredLocations =
+					locationFuture == null ? Collections.EMPTY_LIST : FutureUtils.combineAll(locationFuture).join();
+			return new Tuple2(toSchedule, new SlotProfile(
+					generateResourceProfileForTask(toSchedule),
+					preferredLocations,
+					previousAllocationIDs));
+		} else {
+			// call race, already deployed, or already done
+			throw new IllegalExecutionStateException(this, CREATED, state);
 		}
 	}
 
@@ -1356,7 +1403,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 	/**
 	 * Releases the assigned resource and completes the release future
-	 * once the assigned resource has been successfully released
+	 * once the assigned resource has been successfully released.
 	 *
 	 * @param cause for the resource release, null if none
 	 */

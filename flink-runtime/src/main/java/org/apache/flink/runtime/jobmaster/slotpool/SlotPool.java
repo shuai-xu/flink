@@ -536,6 +536,89 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		}
 	}
 
+	// ------------------------------------------------------------------------
+	//  Slot Allocation
+	// ------------------------------------------------------------------------
+
+	@Override
+	public List<CompletableFuture<LogicalSlot>> allocateSlots(
+			List<SlotRequestId> slotRequestIds,
+			List<ScheduledUnit> tasks,
+			List<SlotProfile> slotProfiles,
+			boolean allowQueuedScheduling,
+			Time allocationTimeout) {
+
+		List<CompletableFuture<LogicalSlot>> returnFutures = new ArrayList<>(slotRequestIds.size());
+
+		List<SlotRequestId> batchSlotRequestIds = new ArrayList<>();
+		List<SlotProfile> batchSlotProfiles = new ArrayList<>();
+		List<Integer> indexInOriginList = new ArrayList<>();
+
+		for (int i = 0; i < slotRequestIds.size(); i++) {
+			final CoLocationConstraint coLocationConstraint = tasks.get(i).getCoLocationConstraint();
+			final SlotSharingGroupId slotSharingGroupId = (enableSharedSlot || coLocationConstraint != null) ?
+					tasks.get(i).getSlotSharingGroupId() : null;
+
+			if (log.isDebugEnabled()) {
+				log.debug("Allocating slot with request {} for task execution {}, CoLocationConstraint: {}, "
+								+ "EnableSharedSlot: {}, SlotSharingGroup: {}, SlotProfile: {}",
+						slotRequestIds.get(i),
+						tasks.get(i).getTaskToExecute(),
+						coLocationConstraint,
+						enableSharedSlot,
+						tasks.get(i).getSlotSharingGroupId(),
+						slotProfiles.get(i));
+			}
+
+			if (slotSharingGroupId != null) {
+				// for sharing group, just call allocateSlot one by one.
+				returnFutures.add(i, allocateSlot(slotRequestIds.get(i),
+						tasks.get(i),
+						slotProfiles.get(i),
+						allowQueuedScheduling,
+						allocationTimeout));
+			} else {
+				returnFutures.add(null);
+				batchSlotRequestIds.add(slotRequestIds.get(i));
+				batchSlotProfiles.add(slotProfiles.get(i));
+				indexInOriginList.add(i);
+			}
+		}
+
+		// batch request allocated slots for non sharing group
+		List<CompletableFuture<SlotAndLocality>> slotAndLocalityFuture = requestAllocatedSlots(
+				batchSlotRequestIds,
+				batchSlotProfiles,
+				allowQueuedScheduling,
+				allocationTimeout);
+
+		for (int i = 0; i < slotAndLocalityFuture.size(); i++) {
+			final int index = i;
+			returnFutures.set(indexInOriginList.get(i), slotAndLocalityFuture.get(i).thenApply(
+					(SlotAndLocality slotAndLocality) -> {
+						final AllocatedSlot allocatedSlot = slotAndLocality.getSlot();
+
+						final SingleLogicalSlot singleTaskSlot = new SingleLogicalSlot(
+								batchSlotRequestIds.get(index),
+								allocatedSlot,
+								null,
+								null,
+								slotAndLocality.getLocality(),
+								providerAndOwner);
+
+						if (allocatedSlot.tryAssignPayload(singleTaskSlot)) {
+							return singleTaskSlot;
+						} else {
+							final FlinkException flinkException = new FlinkException("Could not assign payload to allocated slot " + allocatedSlot.getAllocationId() + '.');
+							releaseSlot(batchSlotRequestIds.get(index), null, null, flinkException);
+							throw new CompletionException(flinkException);
+						}
+					})
+			);
+		}
+		return returnFutures;
+	}
+
 	/**
 	 * Allocates a co-located {@link SlotSharingManager.MultiTaskSlot} for the given {@link CoLocationConstraint}.
 	 *
@@ -768,17 +851,57 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		} else if (allowQueuedScheduling) {
 			// we have to request a new allocated slot
 			CompletableFuture<AllocatedSlot> allocatedSlotFuture = requestNewAllocatedSlot(
-				slotRequestId,
-				slotProfile.getResourceProfile(),
-				allocationTimeout);
+					slotRequestId,
+					slotProfile.getResourceProfile(),
+					allocationTimeout);
 
 			allocatedSlotLocalityFuture = allocatedSlotFuture.thenApply((AllocatedSlot allocatedSlot) -> new SlotAndLocality(allocatedSlot, Locality.UNKNOWN));
 		} else {
 			allocatedSlotLocalityFuture = FutureUtils.completedExceptionally(new NoResourceAvailableException("Could not allocate a simple slot for " +
-				slotRequestId + '.'));
+					slotRequestId + '.'));
 		}
 
 		return allocatedSlotLocalityFuture;
+	}
+
+	/**
+	 * Allocates allocated slots first by polling from the available slots and then requesting new
+	 * slots from the ResourceManager if no fitting slot could be found.
+	 *
+	 * @param slotProfiles slot profiles that specifies the requirements for the slots
+	 * @param allowQueuedScheduling true if the slot allocation can be completed in the future
+	 * @param allocationTimeout timeout before the slot allocation times out
+	 * @return Future containing the allocated simple slot
+	 */
+	private List<CompletableFuture<SlotAndLocality>> requestAllocatedSlots(
+			List<SlotRequestId> slotRequestIds,
+			List<SlotProfile> slotProfiles,
+			boolean allowQueuedScheduling,
+			Time allocationTimeout) {
+
+		final List<CompletableFuture<SlotAndLocality>> allocatedSlotLocalityFutures = new ArrayList<>(slotProfiles.size());
+
+		// (1) do we have a slot available already?
+		List<SlotAndLocality> slotsFromPool = pollAndAllocateSlots(slotRequestIds, slotProfiles);
+
+		for (int i = 0; i < slotRequestIds.size(); i++) {
+			if (slotsFromPool.get(i) != null) {
+				allocatedSlotLocalityFutures.add(i, CompletableFuture.completedFuture(slotsFromPool.get(i)));
+			} else if (allowQueuedScheduling) {
+				// we have to request a new allocated slot
+				CompletableFuture<AllocatedSlot> allocatedSlotFuture = requestNewAllocatedSlot(
+						slotRequestIds.get(i),
+						slotProfiles.get(i).getResourceProfile(),
+						allocationTimeout);
+
+				allocatedSlotLocalityFutures.add(i, allocatedSlotFuture.thenApply((AllocatedSlot allocatedSlot) -> new SlotAndLocality(allocatedSlot, Locality.UNKNOWN)));
+			} else {
+				allocatedSlotLocalityFutures.add(i, FutureUtils.completedExceptionally(new NoResourceAvailableException("Could not allocate a simple slot for " +
+						slotRequestIds.get(i) + '.')));
+			}
+		}
+
+		return allocatedSlotLocalityFutures;
 	}
 
 	/**
@@ -964,6 +1087,17 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		}
 
 		return slotFromPool;
+	}
+
+	private List<SlotAndLocality> pollAndAllocateSlots(List<SlotRequestId> slotRequestIds, List<SlotProfile> slotProfiles) {
+		List<SlotAndLocality> slotsFromPool = availableSlots.poll(slotProfiles);
+
+		for (int i = 0; i < slotRequestIds.size(); i++) {
+			if (slotsFromPool.get(i) != null) {
+				allocatedSlots.add(slotRequestIds.get(i), slotsFromPool.get(i).getSlot());
+			}
+		}
+		return slotsFromPool;
 	}
 
 	/**
@@ -1623,6 +1757,40 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		}
 
 		/**
+		 * Batch poll slots which match the required resource profiles. The polling first tries to satisfy the
+		 * location preferences, by TaskManager and by host.
+		 *
+		 * If location preferences can not be satisfied and there are slots available, it will try to allocate
+		 * slots by resource preferences.
+		 *
+		 * @param slotProfiles slot profiles that specifies the requirements for the slots
+		 *
+		 * @return Slots which matches the resource profiles, null if we can't find a match
+		 */
+		List<SlotAndLocality> poll(List<SlotProfile> slotProfiles) {
+			List<SlotAndLocality> matchingSlotAndLocalities = new ArrayList<>(slotProfiles.size());
+
+			// first fulfill the request by previous location.
+			for (int i = 0; i < slotProfiles.size(); i++) {
+				matchingSlotAndLocalities.add(i,
+						poll(PreviousAllocationSchedulingStrategy.getInstance(), slotProfiles.get(i)));
+			}
+
+			// fulfill the request if still has available slots.
+			for (int i = 0; i < slotProfiles.size(); i++) {
+				if (availableSlots.isEmpty()) {
+					break;
+				}
+
+				if (matchingSlotAndLocalities.get(i) == null) {
+					matchingSlotAndLocalities.set(i,
+							poll(LocationPreferenceSchedulingStrategy.getInstance(), slotProfiles.get(i)));
+				}
+			}
+			return matchingSlotAndLocalities;
+		}
+
+		/**
 		 * Remove all available slots come from specified TaskManager.
 		 *
 		 * @param taskManager The id of the TaskManager
@@ -1760,6 +1928,37 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			});
 
 			return slotFuture;
+		}
+
+		@Override
+		public List<CompletableFuture<LogicalSlot>> allocateSlots(
+				List<SlotRequestId> slotRequestIds,
+				List<ScheduledUnit> tasks,
+				boolean allowQueued,
+				List<SlotProfile> slotProfiles,
+				Time timeout) {
+
+			List<CompletableFuture<LogicalSlot>> slotFutures = gateway.allocateSlots(
+					slotRequestIds,
+					tasks,
+					slotProfiles,
+					allowQueued,
+					timeout);
+
+			for (int i = 0; i < slotRequestIds.size(); i++) {
+				final int index = i;
+				slotFutures.get(i).whenComplete(
+						(LogicalSlot slot, Throwable failure) -> {
+							if (failure != null) {
+								gateway.releaseSlot(
+										slotRequestIds.get(index),
+										tasks.get(index).getSlotSharingGroupId(),
+										tasks.get(index).getCoLocationConstraint(),
+										failure);
+							}
+						});
+			}
+			return slotFutures;
 		}
 
 		@Override

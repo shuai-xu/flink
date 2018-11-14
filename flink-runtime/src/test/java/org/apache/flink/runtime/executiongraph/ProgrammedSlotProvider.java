@@ -31,9 +31,11 @@ import org.apache.flink.runtime.messages.Acknowledge;
 
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -134,6 +136,20 @@ class ProgrammedSlotProvider implements SlotProvider {
 		}
 
 		throw new IllegalArgumentException("No registered slot future for task " + vertexId + " (" + subtask + ')');
+	}
+
+	@Override
+	public List<CompletableFuture<LogicalSlot>> allocateSlots(
+			List<SlotRequestId> slotRequestIds,
+			List<ScheduledUnit> tasks,
+			boolean allowQueued,
+			List<SlotProfile> slotProfiles,
+			Time timeout) {
+		List<CompletableFuture<LogicalSlot>> allocationFutures = new ArrayList<>(slotRequestIds.size());
+		for (int i = 0; i < slotRequestIds.size(); i++) {
+			allocationFutures.add(allocateSlot(slotRequestIds.get(i), tasks.get(i), allowQueued, slotProfiles.get(i), timeout));
+		}
+		return allocationFutures;
 	}
 
 	@Override

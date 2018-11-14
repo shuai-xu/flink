@@ -46,7 +46,9 @@ import javax.annotation.Nullable;
 
 import java.net.InetAddress;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -109,6 +111,20 @@ public class SimpleSlotProvider implements SlotProvider, SlotOwner {
 				return FutureUtils.completedExceptionally(new NoResourceAvailableException());
 			}
 		}
+	}
+
+	@Override
+	public List<CompletableFuture<LogicalSlot>> allocateSlots(
+			List<SlotRequestId> slotRequestIds,
+			List<ScheduledUnit> tasks,
+			boolean allowQueued,
+			List<SlotProfile> slotProfiles,
+			Time timeout) {
+		List<CompletableFuture<LogicalSlot>> allocationFutures = new ArrayList<>(slotRequestIds.size());
+		for (int i = 0; i < slotRequestIds.size(); i++) {
+			allocationFutures.add(allocateSlot(slotRequestIds.get(i), tasks.get(i), allowQueued, slotProfiles.get(i), timeout));
+		}
+		return allocationFutures;
 	}
 
 	@Override
