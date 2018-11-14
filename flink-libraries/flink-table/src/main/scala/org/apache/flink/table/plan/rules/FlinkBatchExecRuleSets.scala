@@ -273,6 +273,8 @@ object FlinkBatchExecRuleSets {
             new CoerceInputsRule(classOf[LogicalMinus], false),
             MergeMultiEqualsToInRule.INSTANCE,
             MergeMultiNotEqualsToNotInRule.INSTANCE,
+            // optimize limit 0
+            FlinkLimitRemoveRule.INSTANCE,
 
             // rules to convert catalog table to normal table.
             CatalogTableRules.BATCH_TABLE_SCAN_RULE,
