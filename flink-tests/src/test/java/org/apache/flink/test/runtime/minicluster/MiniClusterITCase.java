@@ -22,6 +22,7 @@ import org.apache.flink.client.cli.CliFrontend;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.minicluster.MiniCluster;
@@ -49,11 +50,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Integration tests for {@link org.apache.flink.runtime.resourcemanager.StandaloneResourceManager}.
+ * MiniCluster use the same ResourceManager as StandaloneSessionCluster.
+ * So this is also an integration tests for {@link org.apache.flink.runtime.resourcemanager.StandaloneResourceManager}.
  */
-public class StandaloneClusterITCase extends TestLogger {
+public class MiniClusterITCase extends TestLogger {
 
-	private static final Logger LOG = LoggerFactory.getLogger(StandaloneClusterITCase.class);
+	private static final Logger LOG = LoggerFactory.getLogger(MiniClusterITCase.class);
 
 	private MiniCluster miniCluster;
 	private Configuration configuration;
@@ -64,7 +66,7 @@ public class StandaloneClusterITCase extends TestLogger {
 	public static TemporaryFolder tmp = new TemporaryFolder();
 
 	@Before
-	public void startStandaloneCluster() throws Exception {
+	public void startMiniCluster() throws Exception {
 		tmp.create();
 		setConf();
 		final int numTaskManagers = 1;
@@ -75,6 +77,7 @@ public class StandaloneClusterITCase extends TestLogger {
 				.build();
 		miniCluster = new MiniCluster(miniClusterConfiguration);
 		miniCluster.start();
+		configuration.setInteger(RestOptions.PORT, miniCluster.getRestAddress().getPort());
 	}
 
 	@Test
@@ -139,7 +142,7 @@ public class StandaloneClusterITCase extends TestLogger {
 	}
 
 	@After
-	public void stopStandaloneCluster() {
+	public void stopMiniCluster() {
 		if (miniCluster != null && miniCluster.isRunning()) {
 			miniCluster.closeAsync();
 		}
@@ -192,6 +195,7 @@ public class StandaloneClusterITCase extends TestLogger {
 		configuration.setString(CoreOptions.MODE,
 				Objects.equals(NEW_CODEBASE, System.getProperty(CODEBASE_KEY)) ? CoreOptions.NEW_MODE : CoreOptions.LEGACY_MODE);
 		configuration.setString(JobManagerOptions.ADDRESS, "localhost");
+		configuration.setInteger(RestOptions.PORT, 0);
 
 		BootstrapTools.writeConfiguration(
 				configuration,

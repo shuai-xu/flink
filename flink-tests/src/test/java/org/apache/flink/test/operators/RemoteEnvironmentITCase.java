@@ -28,8 +28,8 @@ import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
-import org.apache.flink.configuration.WebOptions;
 import org.apache.flink.core.io.GenericInputSplit;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.MiniClusterConfiguration;
@@ -79,7 +79,7 @@ public class RemoteEnvironmentITCase extends TestLogger {
 		configuration = new Configuration();
 
 		if (CoreOptions.NEW_MODE.equals(configuration.getString(CoreOptions.MODE))) {
-			configuration.setInteger(WebOptions.PORT, 0);
+			configuration.setInteger(RestOptions.PORT, 0);
 			final MiniCluster miniCluster = new MiniCluster(
 				new MiniClusterConfiguration.Builder()
 					.setConfiguration(configuration)
@@ -92,7 +92,7 @@ public class RemoteEnvironmentITCase extends TestLogger {
 			hostname = uri.getHost();
 			port = uri.getPort();
 
-			configuration.setInteger(WebOptions.PORT, port);
+			configuration.setInteger(RestOptions.PORT, port);
 
 			resource = miniCluster;
 		} else {

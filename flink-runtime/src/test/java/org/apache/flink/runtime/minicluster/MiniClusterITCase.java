@@ -22,7 +22,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.WebOptions;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
@@ -44,7 +44,7 @@ public class MiniClusterITCase extends TestLogger {
 	@BeforeClass
 	public static void setup() {
 		configuration = new Configuration();
-		configuration.setInteger(WebOptions.PORT, 0);
+		configuration.setInteger(RestOptions.PORT, 0);
 	}
 
 	// ------------------------------------------------------------------------

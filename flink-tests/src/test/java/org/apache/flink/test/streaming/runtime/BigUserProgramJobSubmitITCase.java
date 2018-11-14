@@ -59,7 +59,10 @@ public class BigUserProgramJobSubmitITCase extends TestLogger {
 
 	static {
 		try {
+			final Configuration config = new Configuration();
+			config.setInteger(RestOptions.PORT, 0);
 			MiniClusterConfiguration clusterConfiguration = new MiniClusterConfiguration.Builder()
+				.setConfiguration(config)
 				.setNumTaskManagers(1)
 				.setNumSlotsPerTaskManager(1)
 				.build();
@@ -68,12 +71,11 @@ public class BigUserProgramJobSubmitITCase extends TestLogger {
 
 			URI restAddress = CLUSTER.getRestAddress();
 
-			final Configuration clientConfig = new Configuration();
-			clientConfig.setString(JobManagerOptions.ADDRESS, restAddress.getHost());
-			clientConfig.setInteger(RestOptions.PORT, restAddress.getPort());
+			config.setString(JobManagerOptions.ADDRESS, restAddress.getHost());
+			config.setInteger(RestOptions.PORT, restAddress.getPort());
 
 			CLIENT = new RestClusterClient<>(
-				clientConfig,
+				config,
 				StandaloneClusterId.getInstance());
 
 		} catch (Exception e) {

@@ -24,6 +24,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.client.program.MiniClusterClient;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.network.yarn.YarnShuffleService;
 import org.apache.flink.runtime.execution.Environment;
@@ -259,6 +260,9 @@ public class YarnShuffleServiceITCase extends TestLogger {
 		// Add local shuffle dirs
 		configuration.setString(TaskManagerOptions.TASK_MANAGER_OUTPUT_LOCAL_OUTPUT_DIRS,
 			TEMP_FOLDER.getRoot().getAbsolutePath() + "/" + YarnLocalResultPartitionResolver.generateRelativeLocalAppDir(USER, APP_ID));
+
+		// Use random port to avoid port conflict
+		configuration.setInteger(RestOptions.PORT, 0);
 
 		return configuration;
 	}

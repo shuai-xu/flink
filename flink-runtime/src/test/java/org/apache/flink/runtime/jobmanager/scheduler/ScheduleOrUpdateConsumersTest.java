@@ -21,6 +21,7 @@ package org.apache.flink.runtime.jobmanager.scheduler;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
@@ -56,6 +57,7 @@ public class ScheduleOrUpdateConsumersTest extends TestLogger {
 	public static void setUp() throws Exception {
 		final Configuration config = new Configuration();
 		config.setString(AkkaOptions.ASK_TIMEOUT, TestingUtils.DEFAULT_AKKA_ASK_TIMEOUT());
+		config.setInteger(RestOptions.PORT, 0);
 
 		final MiniClusterConfiguration miniClusterConfiguration = new MiniClusterConfiguration.Builder()
 			.setConfiguration(config)
@@ -66,6 +68,7 @@ public class ScheduleOrUpdateConsumersTest extends TestLogger {
 		flink = new MiniCluster(miniClusterConfiguration);
 
 		flink.start();
+		config.setInteger(RestOptions.PORT, flink.getRestAddress().getPort());
 	}
 
 	@AfterClass

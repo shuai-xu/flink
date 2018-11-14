@@ -325,8 +325,8 @@ object ScalaShellITCase {
       System.getProperty(MiniClusterResource.CODEBASE_KEY))
     if (isNew) {
       configuration.setString(CoreOptions.MODE, CoreOptions.NEW_MODE)
-      // set to different than default so not to interfere with ScalaShellLocalStartupITCase
-      configuration.setInteger(RestOptions.PORT, 8082)
+      // Use random port to avoid conflict
+      configuration.setInteger(RestOptions.PORT, 0)
       val miniConfig = new MiniClusterConfiguration.Builder()
         .setConfiguration(configuration)
         .setNumSlotsPerTaskManager(parallelism)
@@ -335,6 +335,7 @@ object ScalaShellITCase {
       val miniCluster = new MiniCluster(miniConfig)
       miniCluster.start()
       port = miniCluster.getRestAddress.getPort
+      configuration.setInteger(RestOptions.PORT, port)
       hostname = miniCluster.getRestAddress.getHost
 
       cluster = Some(Left(miniCluster))

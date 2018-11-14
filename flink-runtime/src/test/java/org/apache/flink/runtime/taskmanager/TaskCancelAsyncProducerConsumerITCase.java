@@ -22,6 +22,7 @@ import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.execution.Environment;
@@ -77,6 +78,7 @@ public class TaskCancelAsyncProducerConsumerITCase extends TestLogger {
 		Configuration config = new Configuration();
 		config.setInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE, 4096);
 		config.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, 9);
+		config.setInteger(RestOptions.PORT, 0);
 
 		MiniClusterConfiguration miniClusterConfiguration = new MiniClusterConfiguration.Builder()
 			.setConfiguration(config)
@@ -86,6 +88,7 @@ public class TaskCancelAsyncProducerConsumerITCase extends TestLogger {
 
 		try (MiniCluster flink = new MiniCluster(miniClusterConfiguration)) {
 			flink.start();
+			config.setInteger(RestOptions.PORT, flink.getRestAddress().getPort());
 
 			// Job with async producer and consumer
 			JobVertex producer = new JobVertex("AsyncProducer");

@@ -25,6 +25,7 @@ import org.apache.flink.client.program.PackagedProgram;
 import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.client.JobCancellationException;
@@ -117,6 +118,8 @@ public class ClassLoaderITCase extends TestLogger {
 		// required as we otherwise run out of memory
 		config.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, 80);
 
+		config.setInteger(RestOptions.PORT, 0);
+
 		testCluster = new MiniCluster(
 			new MiniClusterConfiguration.Builder()
 				.setNumTaskManagers(2)
@@ -125,6 +128,8 @@ public class ClassLoaderITCase extends TestLogger {
 			.build()
 		);
 		testCluster.start();
+
+		config.setInteger(RestOptions.PORT, testCluster.getRestAddress().getPort());
 	}
 
 	@AfterClass

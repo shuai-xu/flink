@@ -20,6 +20,7 @@ package org.apache.flink.runtime.io.network.partition;
 
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
@@ -56,6 +57,7 @@ public class PartialConsumePipelinedResultTest extends TestLogger {
 		final Configuration config = new Configuration();
 		config.setString(AkkaOptions.ASK_TIMEOUT, TestingUtils.DEFAULT_AKKA_ASK_TIMEOUT());
 		config.setInteger(TaskManagerOptions.NETWORK_NUM_BUFFERS, NUMBER_OF_NETWORK_BUFFERS);
+		config.setInteger(RestOptions.PORT, 0);
 
 		final MiniClusterConfiguration miniClusterConfiguration = new MiniClusterConfiguration.Builder()
 			.setConfiguration(config)
@@ -66,6 +68,8 @@ public class PartialConsumePipelinedResultTest extends TestLogger {
 		flink = new MiniCluster(miniClusterConfiguration);
 
 		flink.start();
+
+		config.setInteger(RestOptions.PORT, flink.getRestAddress().getPort());
 	}
 
 	@AfterClass
