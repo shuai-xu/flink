@@ -132,6 +132,7 @@ public class StreamGraphGenerator {
 		this.streamGraph.setMultiHeadChainMode(context.isMultiHeadChainMode());
 		this.streamGraph.setChainEagerlyEnabled(context.isChainEagerlyEnabled());
 		this.streamGraph.setStateBackend(context.getStateBackend());
+		this.streamGraph.getCustomConfiguration().addAll(context.getConfiguration());
 		this.alreadyTransformed = new HashMap<>();
 	}
 
@@ -750,7 +751,7 @@ public class StreamGraphGenerator {
 				context.setChainingEnabled(true);
 				context.setCacheFiles(env.getCachedFiles());
 				context.setBufferTimeout(-1L);
-				context.setMultiHeadChainMode(env.isMultiHeadChainMode());
+				context.setMultiHeadChainMode(true);
 
 				// For finite stream job, by default schedule tasks in lazily from sources mode
 				context.setScheduleMode(ScheduleMode.LAZY_FROM_SOURCES);
@@ -765,9 +766,7 @@ public class StreamGraphGenerator {
 				}
 
 				return context;
-			} catch (IOException e) {
-				throw new FlinkRuntimeException("This exception could not happen.", e);
-			} catch (ClassNotFoundException e) {
+			} catch (IOException | ClassNotFoundException e) {
 				throw new FlinkRuntimeException("This exception could not happen.", e);
 			}
 		}

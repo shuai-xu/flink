@@ -952,7 +952,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 							throw new CompletionException(throwable);
 						}
 				)
-				.handle(
+				.handleAsync(
 						(Collection<Void> ignored, Throwable throwable) -> {
 							if (throwable != null) {
 								throw new CompletionException(throwable);
@@ -972,7 +972,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 								}
 							}
 							return null;
-						});
+						}, futureExecutor);
 
 		currentSchedulingFuture.whenComplete(
 				(Void ignored, Throwable throwable) -> {

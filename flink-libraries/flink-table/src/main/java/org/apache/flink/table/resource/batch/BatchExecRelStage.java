@@ -119,7 +119,7 @@ public class BatchExecRelStage implements Serializable {
 
 	public List<BatchExecRelStage> getAllDependStageList() {
 		List<BatchExecRelStage> allStageList = new ArrayList<>();
-		dependStagesMap.values().stream().map(allStageList::addAll);
+		dependStagesMap.values().forEach(allStageList::addAll);
 		return allStageList;
 	}
 
