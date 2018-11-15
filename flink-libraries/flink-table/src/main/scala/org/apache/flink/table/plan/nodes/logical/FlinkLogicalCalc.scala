@@ -22,15 +22,17 @@ import java.util
 import java.util.function.Supplier
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Calc
 import org.apache.calcite.rel.logical.LogicalCalc
 import org.apache.calcite.rel.metadata.{RelMdCollation, RelMetadataQuery}
-import org.apache.calcite.rex.RexProgram
+import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode, RelWriter}
+import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexProgram}
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.common.CommonCalc
+import org.apache.flink.table.plan.util.CalcUtil
+
+import scala.collection.JavaConversions._
 
 class FlinkLogicalCalc(
     cluster: RelOptCluster,
@@ -38,23 +40,22 @@ class FlinkLogicalCalc(
     input: RelNode,
     calcProgram: RexProgram)
   extends Calc(cluster, traitSet, input, calcProgram)
-  with FlinkLogicalRel
-  with CommonCalc {
+  with FlinkLogicalRel {
 
   override def copy(traitSet: RelTraitSet, child: RelNode, program: RexProgram): Calc = {
     new FlinkLogicalCalc(cluster, traitSet, child, program)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
-    computeSelfCost(calcProgram, planner, mq, this)
+    FlinkLogicalCalc.computeCost(calcProgram, planner, mq, this)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-        .item("select", selectionToString(calcProgram, getExpressionString))
+        .item("select", CalcUtil.selectionToString(calcProgram, getExpressionString))
         .itemIf(
           "where",
-          conditionToString(calcProgram, getExpressionString),
+          CalcUtil.conditionToString(calcProgram, getExpressionString),
           calcProgram.getCondition != null)
   }
 }
@@ -74,6 +75,7 @@ private class FlinkLogicalCalcConverter
 }
 
 object FlinkLogicalCalc {
+
   val CONVERTER: ConverterRule = new FlinkLogicalCalcConverter()
 
   def create(
@@ -92,5 +94,24 @@ object FlinkLogicalCalc {
     val newTraitSet = FlinkRelMetadataQuery.traitSet(calc)
       .replace(FlinkConventions.LOGICAL).simplify()
     calc.copy(newTraitSet, calc.getInputs).asInstanceOf[FlinkLogicalCalc]
+  }
+
+  def computeCost(
+      calcProgram: RexProgram,
+      planner: RelOptPlanner,
+      mq: RelMetadataQuery,
+      calc: Calc): RelOptCost = {
+    // compute number of expressions that do not access a field or literal, i.e. computations,
+    // conditions, etc. We only want to account for computations, not for simple projections.
+    // CASTs in RexProgram are reduced as far as possible by ReduceExpressionsRule
+    // in normalization stage. So we should ignore CASTs here in optimization stage.
+    val compCnt = calcProgram.getProjectList.map(calcProgram.expandLocalRef).toList.count {
+      case _: RexInputRef => false
+      case _: RexLiteral => false
+      case c: RexCall if c.getOperator.getName.equals("CAST") => false
+      case _ => true
+    }
+    val newRowCnt = mq.getRowCount(calc)
+    planner.getCostFactory.makeCost(newRowCnt, newRowCnt * compCnt, 0)
   }
 }

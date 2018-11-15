@@ -28,11 +28,12 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.mapping.{Mapping, MappingType, Mappings}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef, TraitSetHelper}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
-import org.apache.flink.table.plan.nodes.common.CommonCalc
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
+import org.apache.flink.table.plan.util.CalcUtil
 
 import scala.collection.JavaConversions._
 
@@ -47,7 +48,6 @@ class BatchExecCalc(
     calcProgram: RexProgram,
     val ruleDescription: String)
   extends Calc(cluster, traitSet, input, calcProgram)
-  with CommonCalc
   with RowBatchExecRel {
 
   override def deriveRowType(): RelDataType = rowRelDataType
@@ -64,17 +64,17 @@ class BatchExecCalc(
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
-  override def toString: String = calcToString(calcProgram, getExpressionString)
+  override def toString: String = CalcUtil.calcToString(calcProgram, getExpressionString)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-      .item("select", selectionToString(calcProgram, getExpressionString))
-      .itemIf("where", conditionToString(calcProgram, getExpressionString),
+      .item("select", CalcUtil.selectionToString(calcProgram, getExpressionString))
+      .itemIf("where", CalcUtil.conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
-    computeSelfCost(calcProgram, planner, metadata, this)
+    FlinkLogicalCalc.computeCost(calcProgram, planner, metadata, this)
   }
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
@@ -149,7 +149,7 @@ class BatchExecCalc(
       None
     }
     val ctx = CodeGeneratorContext(config, supportReference = true)
-    val (substituteStreamOperator, outputType) = generateCalcOperator(
+    val (substituteStreamOperator, outputType) = CalcCodeGenerator.generateCalcOperator(
       ctx,
       cluster,
       input.getRowType,
@@ -163,7 +163,7 @@ class BatchExecCalc(
 
     val transformation = new OneInputTransformation(
       inputTransform,
-      calcToString(calcProgram, getExpressionString),
+      CalcUtil.calcToString(calcProgram, getExpressionString),
       substituteStreamOperator,
       outputType,
       resultPartitionCount)

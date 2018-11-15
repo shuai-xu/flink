@@ -15,13 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.flink.table.codegen
 
-package org.apache.flink.table.plan.nodes.common
-
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner}
+import org.apache.calcite.plan.RelOptCluster
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Calc
-import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Function
@@ -30,11 +27,8 @@ import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
-import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
-import org.apache.flink.table.plan.nodes.ExpressionFormat
-import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -42,7 +36,56 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-trait CommonCalc {
+object CalcCodeGenerator {
+
+  private[flink] def generateCalcOperator(
+    ctx: CodeGeneratorContext,
+    cluster: RelOptCluster,
+    inputDataType: RelDataType,
+    inputTransform: StreamTransformation[BaseRow],
+    outRowType: RelDataType,
+    config: TableConfig,
+    calcProgram: RexProgram,
+    condition: Option[RexNode],
+    retainHeader: Boolean = false,
+    ruleDescription: String
+  ): (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
+    val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
+    // filter out time attributes
+    val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
+    val possibleOutputType = FlinkTypeFactory.toInternalBaseRowType(
+      outRowType, classOf[BoxedWrapperRow])
+    val (processCode, codeSplit, filterCodeSplit, outputType) = generateProcessCode(
+      ctx,
+      inputType,
+      possibleOutputType,
+      possibleOutputType.getFieldNames,
+      config,
+      calcProgram,
+      condition,
+      retainHeader = retainHeader)
+
+    val genOperatorExpression =
+      OperatorCodeGenerator.generateOneInputStreamOperator[BaseRow, BaseRow](
+        ctx,
+        ruleDescription,
+        processCode,
+        "",
+        inputType,
+        config,
+        inputTerm = inputTerm,
+        splitFunc = codeSplit,
+        filterSplitFunc = filterCodeSplit,
+        lazyInputUnboxingCode = true)
+
+    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
+      genOperatorExpression.name,
+      genOperatorExpression.code,
+      references = ctx.references)
+
+    (substituteStreamOperator,
+      DataTypes.toTypeInfo(outputType).asInstanceOf[BaseRowTypeInfo[BaseRow]])
+  }
 
   private[flink] def generateFunction[T <: Function](
       inputType: BaseRowType,
@@ -55,7 +98,7 @@ trait CommonCalc {
     val ctx = CodeGeneratorContext(config)
     val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
     val collectorTerm = CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM
-    val (processCode, codeSplit, filterCodeSplit, _) = generatorProcessCode(
+    val (processCode, codeSplit, filterCodeSplit, _) = generateProcessCode(
       ctx,
       inputType,
       returnType,
@@ -81,143 +124,21 @@ trait CommonCalc {
     )
   }
 
-  private[flink] def conditionToString(
-    calcProgram: RexProgram,
-    expression: (RexNode, List[String], Option[List[RexNode]]) => String,
-    expressionFormat: ExpressionFormat = ExpressionFormat.Prefix): String = {
-
-    val cond = calcProgram.getCondition
-    val inFields = calcProgram.getInputRowType.getFieldNames.asScala.toList
-    val localExprs = calcProgram.getExprList.asScala.toList
-
-    if (cond != null) {
-      expression(cond, inFields, Some(localExprs))
-    } else {
-      ""
-    }
-  }
-
-  private[flink] def selectionToString(
-    calcProgram: RexProgram,
-    expression: (RexNode, List[String], Option[List[RexNode]], ExpressionFormat) => String,
-    expressionFormat: ExpressionFormat = ExpressionFormat.Prefix): String = {
-
-    val proj = calcProgram.getProjectList.asScala.toList
-    val inFields = calcProgram.getInputRowType.getFieldNames.asScala.toList
-    val localExprs = calcProgram.getExprList.asScala.toList
-    val outFields = calcProgram.getOutputRowType.getFieldNames.asScala.toList
-
-    proj
-      .map(expression(_, inFields, Some(localExprs), expressionFormat))
-      .zip(outFields).map { case (e, o) =>
-        if (e != o) {
-          e + " AS " + o
-        } else {
-          e
-        }
-    }.mkString(", ")
-  }
-
-  private[flink] def computeSelfCost(
+  private[flink] def generateProcessCode(
+      ctx: CodeGeneratorContext,
+      inputType: BaseRowType,
+      outRowType: BaseRowType,
+      resultFieldNames: Seq[String],
+      config: TableConfig,
       calcProgram: RexProgram,
-      planner: RelOptPlanner,
-      mq: RelMetadataQuery,
-      calc: Calc): RelOptCost = {
-    // compute number of expressions that do not access a field or literal, i.e. computations,
-    // conditions, etc. We only want to account for computations, not for simple projections.
-    // CASTs in RexProgram are reduced as far as possible by ReduceExpressionsRule
-    // in normalization stage. So we should ignore CASTs here in optimization stage.
-    val compCnt = calcProgram.getProjectList.map(calcProgram.expandLocalRef).toList.count {
-      case _: RexInputRef => false
-      case _: RexLiteral => false
-      case c: RexCall if c.getOperator.getName.equals("CAST") => false
-      case _ => true
-    }
+      condition: Option[RexNode],
+      inputTerm: String = CodeGeneratorContext.DEFAULT_INPUT1_TERM,
+      collectorTerm: String = CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM,
+      retainHeader: Boolean = false,
+      outputDirectly: Boolean = false
+  ): (String, GeneratedSplittableExpression, GeneratedSplittableExpression, BaseRowType) = {
 
-    val newRowCnt = mq.getRowCount(calc)
-    planner.getCostFactory.makeCost(newRowCnt, newRowCnt * compCnt, 0)
-  }
-
-  private[flink] def calcToString(
-    calcProgram: RexProgram,
-    f: (RexNode, List[String], Option[List[RexNode]], ExpressionFormat) => String): String = {
-    val inFields = calcProgram.getInputRowType.getFieldNames.toList
-    val localExprs = calcProgram.getExprList.toList
-    val selectionStr = selectionToString(calcProgram, f, ExpressionFormat.Infix)
-    val cond = calcProgram.getCondition
-    val name = s"${
-      if (cond != null) {
-        s"where: ${
-          f(cond, inFields, Some(localExprs), ExpressionFormat.Infix)}, "
-      } else {
-        ""
-      }
-    }select: ($selectionStr)"
-    s"Calc($name)"
-  }
-
-  def generateCalcOperator(
-    ctx: CodeGeneratorContext,
-    cluster: RelOptCluster,
-    inputDataType: RelDataType,
-    inputTransform: StreamTransformation[BaseRow],
-    outRowType: RelDataType,
-    config: TableConfig,
-    calcProgram: RexProgram,
-    condition: Option[RexNode],
-    retainHeader: Boolean = false,
-    ruleDescription: String):
-  (OneInputSubstituteStreamOperator[BaseRow, BaseRow], BaseRowTypeInfo[BaseRow]) = {
-    val inputType = DataTypes.internal(inputTransform.getOutputType).asInstanceOf[BaseRowType]
-    // filter out time attributes
-    val inputTerm = CodeGeneratorContext.DEFAULT_INPUT1_TERM
-    val possibleOutputType = FlinkTypeFactory.toInternalBaseRowType(
-      outRowType, classOf[BoxedWrapperRow])
-    val (processCode, codeSplit, filterCodeSplit, outputType) = generatorProcessCode(
-      ctx,
-      inputType,
-      possibleOutputType,
-      possibleOutputType.getFieldNames,
-      config,
-      calcProgram,
-      condition,
-      retainHeader = retainHeader)
-
-    val genOperatorExpression = OperatorCodeGenerator
-      .generateOneInputStreamOperator[BaseRow, BaseRow](
-      ctx,
-      ruleDescription,
-      processCode,
-      "",
-      inputType,
-      config,
-      inputTerm = inputTerm,
-      splitFunc = codeSplit,
-      filterSplitFunc = filterCodeSplit,
-      lazyInputUnboxingCode = true)
-    val substituteStreamOperator = new OneInputSubstituteStreamOperator[BaseRow, BaseRow](
-      genOperatorExpression.name,
-      genOperatorExpression.code,
-      references = ctx.references)
-    (substituteStreamOperator,
-        DataTypes.toTypeInfo(outputType).asInstanceOf[BaseRowTypeInfo[BaseRow]])
-  }
-
-  private[flink] def generatorProcessCode(
-    ctx: CodeGeneratorContext,
-    inputType: BaseRowType,
-    outRowType: BaseRowType,
-    resultFieldNames: Seq[String],
-    config: TableConfig,
-    calcProgram: RexProgram,
-    condition: Option[RexNode],
-    inputTerm: String = CodeGeneratorContext.DEFAULT_INPUT1_TERM,
-    collectorTerm: String = CodeGeneratorContext.DEFAULT_OPERATOR_COLLECTOR_TERM,
-    retainHeader: Boolean = false,
-    outputDirectly: Boolean = false)
-    : (String, GeneratedSplittableExpression, GeneratedSplittableExpression, BaseRowType) = {
     val projection = calcProgram.getProjectList.map(calcProgram.expandLocalRef)
-
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
       .bindInput(inputType, inputTerm = inputTerm)
 
@@ -225,20 +146,17 @@ trait CommonCalc {
       projection.zipWithIndex.forall { case (rexNode, index) =>
         rexNode.isInstanceOf[RexInputRef] && rexNode.asInstanceOf[RexInputRef].getIndex == index
       }
-
     val outputType = if (onlyFilter) inputType else outRowType
-
     var splitFunc: GeneratedSplittableExpression =
       GeneratedSplittableExpression.UNSPLIT_EXPRESSION
-
     var filterSplitFunc: GeneratedSplittableExpression =
       GeneratedSplittableExpression.UNSPLIT_EXPRESSION
 
     def produceOutputCode(resultTerm: String) = if (outputDirectly) {
-        s"$collectorTerm.collect($resultTerm);"
-      } else {
-        s"${OperatorCodeGenerator.generatorCollect(resultTerm)}"
-      }
+      s"$collectorTerm.collect($resultTerm);"
+    } else {
+      s"${OperatorCodeGenerator.generatorCollect(resultTerm)}"
+    }
 
     def produceProjectionCode = {
       val projectionExprs = projection.map(exprGenerator.generateExpression)
@@ -295,8 +213,8 @@ trait CommonCalc {
                |boolean $nullTerm = false;
                |boolean $conditionResultTerm =
                (${filterSplitFunc.callings.map{
-                  c => c.substring(0, c.length - 1)
-                }.mkString(" || ")});
+              c => c.substring(0, c.length - 1)
+            }.mkString(" || ")});
              """.stripMargin
           GeneratedExpression(conditionResultTerm, nullTerm, callCode, DataTypes.BOOLEAN)
         case call: RexCall if call.getKind == SqlKind.AND
@@ -315,7 +233,7 @@ trait CommonCalc {
             var index = 0
             var subCalls = filterSplitFunc.callings.map(c => c.substring(0, c.length - 1))
             val resBuffer = new ListBuffer[Seq[String]]()
-            while (!subCalls.isEmpty) {
+            while (subCalls.nonEmpty) {
               val len = andPostions(index)
               val subRes = subCalls.take(len)
               subCalls = subCalls.drop(len)
@@ -340,9 +258,9 @@ trait CommonCalc {
 
     val processCode = if (condition.isEmpty && onlyFilter) {
       throw TableException("This calc has no useful projection and no filter. " +
-          "It should be removed by CalcRemoveRule.")
+        "It should be removed by CalcRemoveRule.")
     } else if (condition.isEmpty) { // only projection
-      val projectionCode = produceProjectionCode
+    val projectionCode = produceProjectionCode
       s"""
          |${ctx.reuseInputUnboxingCode()}
          |$projectionCode
@@ -359,7 +277,7 @@ trait CommonCalc {
            |}
            |""".stripMargin
       } else { // both filter and projection
-        val filterInputCode = ctx.reuseInputUnboxingCode()
+      val filterInputCode = ctx.reuseInputUnboxingCode()
         val filterInputSet = Set(ctx.reusableInputUnboxingExprs.keySet.toSeq: _*)
 
         // if any filter conditions, projection code will enter an new scope

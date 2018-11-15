@@ -22,9 +22,9 @@ import java.util.Collections
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
 import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.validate.SqlValidatorUtil
 import org.apache.calcite.util.Litmus
@@ -34,8 +34,8 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.plan.cost.FlinkRelMdSize
-import org.apache.flink.table.plan.nodes.common.CommonCalc
 import org.apache.flink.table.plan.schema.{BaseRowSchema, TimeIndicatorRelDataType}
+import org.apache.flink.table.plan.util.CalcUtil
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
 
 import scala.collection.JavaConverters._
@@ -54,8 +54,7 @@ class FlinkLogicalJoinTable(
     val constantLookupKeys: util.Map[Int, Tuple2[InternalType, Object]],
     val checkedIndex: Option[IndexKey])
   extends SingleRel(cluster, traitSet, input)
-  with FlinkLogicalRel
-  with CommonCalc {
+  with FlinkLogicalRel {
 
   // TODO remove this exception when support scannable dim table
   if (checkedIndex.isEmpty) {
@@ -232,10 +231,10 @@ class FlinkLogicalJoinTable(
     pw.item("joinType", joinType.lowerName)
     if (calcProgram.isDefined) {
       pw
-        .item("dimProject", selectionToString(calcProgram.get, getExpressionString))
+        .item("dimProject", CalcUtil.selectionToString(calcProgram.get, getExpressionString))
         .itemIf(
           "dimFilter",
-          conditionToString(calcProgram.get, getExpressionString),
+          CalcUtil.conditionToString(calcProgram.get, getExpressionString),
           calcProgram.get.getCondition != null)
     }
 

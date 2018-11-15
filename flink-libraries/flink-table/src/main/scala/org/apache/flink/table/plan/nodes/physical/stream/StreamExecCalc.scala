@@ -27,9 +27,10 @@ import org.apache.calcite.rex.RexProgram
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
-import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.common.CommonCalc
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
+import org.apache.flink.table.plan.util.CalcUtil
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
 /**
@@ -43,7 +44,6 @@ class StreamExecCalc(
     calcProgram: RexProgram,
     val ruleDescription: String)
   extends Calc(cluster, traitSet, input, calcProgram)
-  with CommonCalc
   with StreamExecRel {
 
   override def deriveRowType(): RelDataType = relDataType
@@ -58,18 +58,18 @@ class StreamExecCalc(
       ruleDescription)
   }
 
-  override def toString: String = calcToString(calcProgram, getExpressionString)
+  override def toString: String = CalcUtil.calcToString(calcProgram, getExpressionString)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
-      .item("select", selectionToString(calcProgram, getExpressionString))
+      .item("select", CalcUtil.selectionToString(calcProgram, getExpressionString))
       .itemIf("where",
-        conditionToString(calcProgram, getExpressionString),
+        CalcUtil.conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
-    computeSelfCost(calcProgram, planner, metadata, this)
+    FlinkLogicalCalc.computeCost(calcProgram, planner, metadata, this)
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -87,7 +87,7 @@ class StreamExecCalc(
     }
     val ctx = CodeGeneratorContext(config, true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
-    val (substituteStreamOperator, outputType) = generateCalcOperator(
+    val (substituteStreamOperator, outputType) = CalcCodeGenerator.generateCalcOperator(
       ctx,
       cluster,
       input.getRowType,
@@ -101,7 +101,7 @@ class StreamExecCalc(
     )
     new OneInputTransformation(
       inputTransform,
-      calcToString(calcProgram, getExpressionString),
+      CalcUtil.calcToString(calcProgram, getExpressionString),
       substituteStreamOperator,
       outputType,
       inputTransform.getParallelism)

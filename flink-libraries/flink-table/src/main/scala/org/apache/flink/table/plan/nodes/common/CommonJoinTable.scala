@@ -38,9 +38,10 @@ import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen._
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.plan.util.CalcUtil
 import org.apache.flink.table.runtime.collector.TableFunctionCollector
 import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
@@ -70,7 +71,6 @@ abstract class CommonJoinTable(
     val joinType: JoinRelType,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, input)
-  with CommonCalc
   with FlinkRelNode {
 
   override def deriveRowType(): RelDataType = schema.relDataType
@@ -436,7 +436,7 @@ abstract class CommonJoinTable(
     } else {
       None
     }
-    generateFunction(
+    CalcCodeGenerator.generateFunction(
       tableSourceSchema.internalType(classOf[BaseRow]),
       "TableCalcMapFunction",
       FlinkTypeFactory.toInternalBaseRowType(program.getOutputRowType, classOf[GenericRow]),
@@ -507,7 +507,7 @@ abstract class CommonJoinTable(
     expression: (RexNode, List[String], Option[List[RexNode]]) => String): RelWriter = {
 
     val condition: String = if (calcProgram.isDefined) {
-      conditionToString(calcProgram.get, getExpressionString)
+      CalcUtil.conditionToString(calcProgram.get, getExpressionString)
     } else {
       ""
     }
