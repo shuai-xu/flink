@@ -30,6 +30,8 @@ import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.table.plan.optimize.FlinkRuleSetProgram;
+import org.apache.flink.table.plan.optimize.FlinkStreamPrograms;
 import org.apache.flink.table.runtime.functions.python.PythonUDFUtil;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.StringUtils;
@@ -46,6 +48,9 @@ import com.alibaba.blink.launcher.util.PropertiesUtil;
 import com.alibaba.blink.launcher.util.SqlJobAdapter;
 import com.alibaba.blink.launcher.util.StreamExecEnvUtil;
 import com.alibaba.blink.launcher.util.StringUtil;
+import com.alibaba.blink.table.plan.rules.datastream.StreamExecJoinHTableSourceRule;
+import com.alibaba.blink.table.plan.rules.datastream.StreamExecJoinHTableToMultiJoinRule;
+import org.apache.calcite.tools.RuleSets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -341,6 +346,7 @@ public class JobLauncher {
 		addUserConfig(conf, jobConf);
 		StreamExecEnvUtil.setStreamEnvConfigs(env, jobConf);
 		StreamExecEnvUtil.setConfig(env, jobConf);
+		injectStreamRules(tEnv);
 
 		long start = System.currentTimeMillis();
 		if ("sql".equals(type)) {
@@ -359,6 +365,15 @@ public class JobLauncher {
 		StreamGraph streamGraph = env.getStreamGraph();
 		String jobInfo = execute(env, streamGraph, jobName, jobConf, action, jsonFilePath);
 		return jobInfo;
+	}
+
+	private static void injectStreamRules(StreamTableEnvironment tEnv) {
+		FlinkRuleSetProgram program = tEnv.getConfig().getCalciteConfig()
+				.getStreamPrograms().getFlinkRuleSetProgram(FlinkStreamPrograms.PHYSICAL()).get();
+		program.add(RuleSets.ofList(
+				StreamExecJoinHTableSourceRule.INSTANCE(),
+				StreamExecJoinHTableToMultiJoinRule.INSTANCE()
+		));
 	}
 
 	private static String execute(StreamExecutionEnvironment env, StreamGraph streamGraph,

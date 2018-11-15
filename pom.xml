@@ -90,6 +90,7 @@ under the License.
 		<module>flink-catalog</module>
 		<module>flink-dist</module>
 		<module>blink-launcher</module>
+		<module>blink-table</module>
 		<module>blink-metrics-kmonitor</module>
 	</modules>
 
