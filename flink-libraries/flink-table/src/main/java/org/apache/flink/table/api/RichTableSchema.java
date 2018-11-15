@@ -27,6 +27,7 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.sources.IndexKey;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -38,7 +39,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 /**
  * A RichTableSchema represents a Table's structure.
  */
-public class RichTableSchema {
+public class RichTableSchema implements Serializable {
 
 	private final String[] columnNames;
 	private final InternalType[] columnTypes;

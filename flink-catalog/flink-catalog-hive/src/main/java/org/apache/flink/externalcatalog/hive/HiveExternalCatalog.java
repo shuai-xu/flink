@@ -57,6 +57,7 @@ import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -311,9 +312,9 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 		LOG.info("createTable, tableName={}, ignoreIfExists={}",
 				tableName, ignoreIfExists);
 
-		Table hiveTable = MetaConverter.convertToHiveTable(
-				table, database, tableName);
 		try {
+			Table hiveTable = MetaConverter.convertToHiveTable(
+					table, database, tableName);
 			getMSC().createTable(hiveTable);
 		} catch (AlreadyExistsException e) {
 			if (ignoreIfExists) {
@@ -321,7 +322,7 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 			} else {
 				throw new TableAlreadyExistException(database, tableName, e);
 			}
-		} catch (TException e) {
+		} catch (TException | IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -550,7 +551,7 @@ public class HiveExternalCatalog implements CrudExternalCatalog {
 			return MetaConverter.convertToExternalCatalogTable(table, getMSC());
 		} catch (NoSuchObjectException e) {
 			throw new TableNotExistException(database, tableName, e);
-		} catch (TException e) {
+		} catch (TException | IOException | ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
 	}

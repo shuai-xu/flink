@@ -19,6 +19,7 @@
 package org.apache.flink.externalcatalog.hive;
 
 import org.apache.flink.table.api.Column;
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.BooleanType;
 import org.apache.flink.table.api.types.ByteType;
@@ -72,12 +73,19 @@ import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -93,13 +101,14 @@ public class MetaConverter {
 
 	private static final String FLINK_TABLE_TYPE = "flink.table.type";
 	private static final String SEQUENCE_FILE_CLASS = "org.apache.hadoop.mapred.SequenceFileInputFormat";
+	private static final String FLINK_RICH_TABLE_SCHEMA = "flink.rich.table.schema";
 
 	private MetaConverter() { }
 
 	static Table convertToHiveTable(
 			ExternalCatalogTable table,
 			String databaseName,
-			String tableName) {
+			String tableName) throws IOException {
 
 		// See CreateTableDesc.java in hive
 		Table hTable = getEmptyTable(databaseName, tableName);
@@ -126,12 +135,36 @@ public class MetaConverter {
 			hTable.setPartitionKeys(parts);
 		}
 
+		RichTableSchema richTableSchema = table.richTableSchema();
+		String richTableSchemaStr = serializeToString(richTableSchema);
+		hTable.putToParameters(FLINK_RICH_TABLE_SCHEMA, richTableSchemaStr);
+
 		return hTable;
+	}
+
+	private static String serializeToString(Serializable serializable) throws IOException {
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(baos);
+		oos.writeObject(serializable);
+		oos.close();
+		return Base64.getEncoder().encodeToString(
+			baos.toByteArray());
+	}
+
+	private static Object deserializeFromString(String s) throws IOException, ClassNotFoundException {
+
+		byte[] data = Base64.getDecoder().decode(s);
+		ByteArrayInputStream bais = new ByteArrayInputStream(data);
+		ObjectInputStream ois = new ObjectInputStream(bais);
+		Object object = ois.readObject();
+		ois.close();
+		return object;
 	}
 
 	static ExternalCatalogTable convertToExternalCatalogTable(
 			Table table,
-			IMetaStoreClient msc) throws TException {
+			IMetaStoreClient msc) throws TException, IOException, ClassNotFoundException {
 
 		String tableType = table.getParameters().get(FLINK_TABLE_TYPE);
 		if (StringUtils.isNullOrWhitespaceOnly(tableType)) {
@@ -139,6 +172,13 @@ public class MetaConverter {
 		}
 		List<FieldSchema> fields = table.getSd().getCols();
 		TableSchema tableSchema = getTableSchema(fields);
+
+		// Rich Table Schema
+		String richTableSchemaStr = table.getParameters().get(FLINK_RICH_TABLE_SCHEMA);
+		RichTableSchema richTableSchema = null;
+		if (!StringUtils.isNullOrWhitespaceOnly(richTableSchemaStr)) {
+			richTableSchema = (RichTableSchema) deserializeFromString(richTableSchemaStr);
+		}
 
 		// Table Level Statistics
 		long rowCount = 0;
@@ -174,7 +214,7 @@ public class MetaConverter {
 				tableType,
 				tableSchema,
 				table.getParameters(),
-				null,
+				richTableSchema,
 				tableStats,
 				table.getDbName() + "." + table.getTableName(),
 				getPartitionColumnNames(table.getPartitionKeys()),

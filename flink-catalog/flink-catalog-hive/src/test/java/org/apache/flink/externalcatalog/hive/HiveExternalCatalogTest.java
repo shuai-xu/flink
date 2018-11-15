@@ -18,6 +18,7 @@
 
 package org.apache.flink.externalcatalog.hive;
 
+import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DateType;
@@ -92,7 +93,7 @@ public class HiveExternalCatalogTest {
 	}
 
 	@Test
-	public void testCreateTable() throws TException {
+	public void testCreateTable() throws TException, IOException, ClassNotFoundException {
 
 		// It will create metastore_db directory under the default directory
 		String[] names = new String[1];
@@ -104,11 +105,14 @@ public class HiveExternalCatalogTest {
 		Table hiveTable = MetaConverter.getEmptyTable(database, "src");
 		ExternalCatalogTable table = MetaConverter.convertToExternalCatalogTable(
 				hiveTable, null);
+
+		RichTableSchema richTableSchema = new RichTableSchema(names, types);
+
 		table = new ExternalCatalogTable(
 				table.tableType(),
 				tableSchema,
 				table.properties(),
-				null,
+				richTableSchema,
 				table.stats(),
 				table.comment(),
 				table.partitionColumnNames(),
@@ -128,10 +132,17 @@ public class HiveExternalCatalogTest {
 		Assert.assertEquals(t.tableType(), "hive");
 		Assert.assertTrue((new File("/tmp/hive/src")).exists());
 		Assert.assertEquals(1, t.schema().getColumns().length);
+		Assert.assertEquals("a", t.schema().getColumnNames()[0]);
+		Assert.assertEquals(IntType.INSTANCE, t.schema().getColumns()[0].internalType());
+		Assert.assertNotNull(t.richTableSchema());
+		Assert.assertEquals(1, t.richTableSchema().getColumnNames().length);
+		Assert.assertEquals("a", t.richTableSchema().getColumnNames()[0]);
+		Assert.assertEquals(1, t.richTableSchema().getColumnTypes().length);
+		Assert.assertEquals(IntType.INSTANCE, t.richTableSchema().getColumnTypes()[0]);
 	}
 
 	@Test
-	public void testGetStatistics() throws TException {
+	public void testGetStatistics() throws TException, IOException, ClassNotFoundException {
 
 		// It will create metastore_db directory under the default directory
 		String[] names = new String[8];
