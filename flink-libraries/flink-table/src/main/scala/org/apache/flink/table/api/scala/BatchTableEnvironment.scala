@@ -27,7 +27,7 @@ import org.apache.flink.api.scala.getCallLocationName
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.dataformat.BoxedWrapperRow
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.sinks.TableSink
@@ -530,18 +530,6 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register.
-    * @tparam T The type of the output row, it can be a scala class.
-    */
-  def registerScalaTableFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
-  }
-
-  /**
     * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
     * Registered functions can be referenced in Table API and SQL queries.
     *
@@ -552,11 +540,7 @@ class BatchTableEnvironment(
     */
   def registerFunction[T: TypeInformation, ACC: TypeInformation](
     name: String, f: AggregateFunction[T, ACC]): Unit = {
-    registerAggregateFunction[T, ACC](
-      name,
-      f,
-      DataTypes.of(implicitly[TypeInformation[T]]),
-      DataTypes.of(implicitly[TypeInformation[ACC]]))
+    registerAggregateFunctionInternal[T, ACC](name, f)
   }
 
   /**
@@ -568,6 +552,6 @@ class BatchTableEnvironment(
     * @tparam T The type of the output row.
     */
   def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
+    registerTableFunctionInternal[T](name, tf)
   }
 }

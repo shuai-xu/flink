@@ -56,7 +56,7 @@ import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
-import org.apache.flink.table.util.{PlanUtil, RelTraitUtil, RowConverters, StateUtil}
+import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
 
 import _root_.scala.collection.JavaConversions._
@@ -431,7 +431,7 @@ abstract class StreamTableEnvironment(
     * @param sink The [[TableSink]] to write the [[Table]] to.
     * @tparam T The expected type of the [[DataStream]] which represents the [[Table]].
     */
-  override private[flink] def writeToSink[T](
+  override private[table] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
       sinkName: String): Unit = {
@@ -916,7 +916,7 @@ abstract class StreamTableEnvironment(
     val translateStream = translateToBaseRow(logicalPlan)
 
     val parTransformation = if (sink != null) {
-      createPartitionTransformation(sink, translateStream)
+      PartitionUtils.createPartitionTransformation(sink, translateStream)
     } else {
       translateStream
     }

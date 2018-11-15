@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.api.functions;
 
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.util.Collector;
 
@@ -101,19 +100,5 @@ public abstract class TableFunction<T> extends CustomTypeDefinedFunction {
 	 */
 	public final void setCollector(Collector<T> collector) {
 		this.collector = collector;
-	}
-
-	/**
-	 * Returns the result type of the evaluation method with a given signature.
-	 *
-	 * <p>This method needs to be overridden in case Flink's type extraction facilities are not
-	 * sufficient to extract the [[TypeInformation]] based on the return type of the evaluation
-	 * method. Flink's type extraction facilities can handle basic types or
-	 * simple POJOs but might be wrong for more complex, custom, or composite types.
-	 *
-	 * @return [[TypeInformation]] of result type or null if Flink should determine the type
-	 */
-	public TypeInformation<T> getResultType() {
-		return null;
 	}
 }

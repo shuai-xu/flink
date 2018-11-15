@@ -271,7 +271,7 @@ class StreamTableEnvironment(
     * @param tf The TableFunction to register
     */
   def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
+    registerTableFunctionInternal[T](name, tf)
   }
 
   /**
@@ -287,10 +287,6 @@ class StreamTableEnvironment(
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
-    registerAggregateFunction[T, ACC](
-      name,
-      f,
-      DataTypes.of(implicitly[TypeInformation[T]]),
-      DataTypes.of(implicitly[TypeInformation[ACC]]))
+    registerAggregateFunctionInternal[T, ACC](name, f)
   }
 }

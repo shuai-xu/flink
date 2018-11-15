@@ -7,11 +7,11 @@ LogicalCorrelate(correlation=[$cor4], joinType=[inner], requiredColumns=[{}])
           LogicalTableScan(table=[[t1]])
           LogicalTableScan(table=[[t2]])
       LogicalTableScan(table=[[t3]])
-  LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($5)], rowType=[RecordType(VARCHAR(65536) f1)], elementType=[class [Ljava.lang.Object;])
+  LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$1fa5efd95b4ed8403438ecea56e662a2($5)], rowType=[RecordType(VARCHAR(65536) f1)], elementType=[class [Ljava.lang.Object;])
 
 == Optimized Logical Plan ==
 [[Sink]]
-StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$a21e8dfcd8c7a080ac415a4a86de8b95($5)], correlate=[table(TableFunc1(f))], select=[a,b,c,d,e,f,i,j,k,l,m,f1], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, INTEGER d, BIGINT e, VARCHAR(65536) f, INTEGER i, BIGINT j, INTEGER k, VARCHAR(65536) l, BIGINT m, VARCHAR(65536) f1)], joinType=[INNER])
+StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc1$1fa5efd95b4ed8403438ecea56e662a2($5)], correlate=[table(TableFunc1(f))], select=[a,b,c,d,e,f,i,j,k,l,m,f1], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, INTEGER d, BIGINT e, VARCHAR(65536) f, INTEGER i, BIGINT j, INTEGER k, VARCHAR(65536) l, BIGINT m, VARCHAR(65536) f1)], joinType=[INNER])
   StreamExecJoin(where=[=(a, i)], join=[a, b, c, d, e, f, i, j, k, l, m], joinType=[InnerJoin])
     StreamExecExchange(distribution=[hash[a]])
       StreamExecJoin(where=[=(b, e)], join=[a, b, c, d, e, f], joinType=[InnerJoin])

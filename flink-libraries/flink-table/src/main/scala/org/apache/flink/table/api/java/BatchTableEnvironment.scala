@@ -443,16 +443,4 @@ class BatchTableEnvironment(
       typeInfo, getCallLocationName())
     fromBoundedStream(boundedStream, "id")
   }
-
-  /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register.
-    * @tparam T The type of the output row, it can be a scala class.
-    */
-  def registerScalaTableFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunction(name, tf, DataTypes.of(implicitly[TypeInformation[T]]))
-  }
 }

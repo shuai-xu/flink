@@ -18,7 +18,10 @@
 package org.apache.flink.table.util
 
 import org.apache.flink.streaming.api.transformations.{PartitionTransformation, StreamTransformation}
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 object PartitionUtils {
@@ -33,6 +36,27 @@ object PartitionUtils {
     val transformation = new PartitionTransformation(input, partitioner)
     transformation.setOutputType(baseRowTypeInfo)
     transformation
+  }
+
+  def createPartitionTransformation(
+    sink: TableSink[_],
+    input: StreamTransformation[BaseRow]): StreamTransformation[BaseRow] = {
+    sink match {
+      case par: DefinedDistribution =>
+        val pk = par.getPartitionField()
+        if (pk != null) {
+          val pkIndex = sink.getFieldNames.indexOf(pk)
+          if (pkIndex < 0) {
+            throw new TableException("partitionBy field must be in the schema")
+          } else {
+            PartitionUtils.keyPartition(
+              input, input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]], Array(pkIndex))
+          }
+        } else {
+          input
+        }
+      case _ => input
+    }
   }
 
 }

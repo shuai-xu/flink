@@ -37,7 +37,7 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
     tableSources.get(name).orNull
   }
 
-  override private[flink] def writeToSink[T](
+  override private[table] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
       sinkName: String): Unit = ???

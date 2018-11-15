@@ -42,7 +42,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaStreamExecEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
-import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv}
@@ -50,8 +49,6 @@ import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite._
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.connector.DefinedDistribution
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Alias, Expression, TimeAttribute, UnresolvedFieldReference}
@@ -64,8 +61,7 @@ import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.PartitionUtils
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 
 import _root_.scala.annotation.varargs
@@ -293,13 +289,15 @@ abstract class TableEnvironment(val config: TableConfig) {
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
-    val resultType = DataTypes.of(TypeExtractor
-        .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 0))
+    implicit val typeInfo: TypeInformation[T] = TypeExtractor
+      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 0)
+      .asInstanceOf[TypeInformation[T]]
 
-    val accType = DataTypes.of(TypeExtractor
-        .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 1))
+    implicit val accTypeInfo: TypeInformation[ACC] = TypeExtractor
+      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 1)
+      .asInstanceOf[TypeInformation[ACC]]
 
-    registerAggregateFunction(name, f, resultType, accType)
+    registerAggregateFunctionInternal[T, ACC](name, f)
   }
 
   /**
@@ -311,20 +309,28 @@ abstract class TableEnvironment(val config: TableConfig) {
    * @tparam T The type of the output row.
    */
   def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
-    val implicitResultType = UserDefinedFunctionUtils.getImplicitResultType(tf)
-    registerTableFunction(name, tf, implicitResultType)
+    implicit val typeInfo: TypeInformation[T] =
+      UserDefinedFunctionUtils.getImplicitResultTypeInfo(tf)
+    registerTableFunctionInternal(name, tf)
   }
 
   /**
     * Registers a [[TableFunction]] under a unique name. Replaces already existing
     * user-defined functions under this name.
     */
-  def registerTableFunction[T](
-      name: String, function: TableFunction[T], implicitResultType: DataType): Unit = {
+  private[flink] def registerTableFunctionInternal[T: TypeInformation](
+      name: String, function: TableFunction[T]): Unit = {
     // check if class not Scala object
     checkNotSingleton(function.getClass)
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
+    val implicitResultType =
+      // we may use arguments types to infer later on.
+      if (UserDefinedFunctionUtils.getResultTypeIgnoreException(function) != null) {
+      function.getResultType(null, null)
+    } else {
+      DataTypes.of(implicitly[TypeInformation[T]])
+    }
 
     // register in Table API
     functionCatalog.registerFunction(name, function.getClass)
@@ -339,15 +345,15 @@ abstract class TableEnvironment(val config: TableConfig) {
     * Registers an [[AggregateFunction]] under a unique name. Replaces already existing
     * user-defined functions under this name.
     */
-  def registerAggregateFunction[T, ACC](
+  private[flink] def registerAggregateFunctionInternal[T: TypeInformation, ACC: TypeInformation](
       name: String,
-      function: AggregateFunction[T, ACC],
-      implicitResultType: DataType,
-      implicitAccType: DataType): Unit = {
+      function: AggregateFunction[T, ACC]): Unit = {
     // check if class not Scala object
     checkNotSingleton(function.getClass)
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
+    val implicitResultType: DataType = DataTypes.of(implicitly[TypeInformation[T]])
+    val implicitAccType: DataType = DataTypes.of(implicitly[TypeInformation[ACC]])
 
     val resultType = getResultTypeOfAggregateFunction(function, implicitResultType)
     val accType = getAccumulatorTypeOfAggregateFunction(function, implicitAccType)
@@ -959,7 +965,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param sink The [[TableSink]] to write the [[Table]] to.
     * @tparam T The data type that the [[TableSink]] expects.
     */
-  private[flink] def writeToSink[T](
+  private[table] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
       sinkName: String = null): Unit
@@ -1249,27 +1255,6 @@ abstract class TableEnvironment(val config: TableConfig) {
   /** Returns the Calcite [[FrameworkConfig]] of this TableEnvironment. */
   private[flink] def getFrameworkConfig: FrameworkConfig = {
     frameworkConfig
-  }
-
-  def createPartitionTransformation(
-      sink: TableSink[_],
-      input: StreamTransformation[BaseRow]): StreamTransformation[BaseRow] = {
-    sink match {
-      case par: DefinedDistribution =>
-        val pk = par.getPartitionField()
-        if (pk != null) {
-          val pkIndex = sink.getFieldNames.indexOf(pk)
-          if (pkIndex < 0) {
-            throw new TableException("partitionBy field must be in the schema")
-          } else {
-            PartitionUtils.keyPartition(
-              input, input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]], Array(pkIndex))
-          }
-        } else {
-          input
-        }
-      case _ => input
-    }
   }
 
    /**

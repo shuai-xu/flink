@@ -82,7 +82,7 @@ class TableFunctionITCase extends QueryTest {
 
   @Test
   def testWithFilter(): Unit = {
-    tEnv.registerScalaTableFunction("func", new TableFunc0)
+    tEnv.registerFunction("func", new TableFunc0)
     checkResult(
       "select c, name, age from inputT, LATERAL TABLE(func(c)) as T(name, age) WHERE T.age > 20",
       Seq(
@@ -131,7 +131,7 @@ class TableFunctionITCase extends QueryTest {
 
   @Test
   def testUserDefinedTableFunctionWithScalarFunctionInCondition(): Unit = {
-    tEnv.registerScalaTableFunction("func", new TableFunc0)
+    tEnv.registerFunction("func", new TableFunc0)
     tEnv.registerFunction("func18", Func18)
     tEnv.registerFunction("func1", Func1)
     checkResult(
@@ -196,9 +196,9 @@ class TableFunctionITCase extends QueryTest {
 
   @Test
   def testTableFunctionConstructorWithParams(): Unit = {
-    tEnv.registerScalaTableFunction("func30", new TableFunc3(null))
-    tEnv.registerScalaTableFunction("func31", new TableFunc3("OneConf_"))
-    tEnv.registerScalaTableFunction("func32", new TableFunc3("TwoConf_"))
+    tEnv.registerFunction("func30", new TableFunc3(null))
+    tEnv.registerFunction("func31", new TableFunc3("OneConf_"))
+    tEnv.registerFunction("func32", new TableFunc3("TwoConf_"))
     checkResult(
       "select c, d, f, h, e, g, i from inputT, " +
         "LATERAL TABLE(func30(c)) as T0(d, e), " +
@@ -297,15 +297,15 @@ class TableFunctionITCase extends QueryTest {
 
   @Test
   def testJavaGenericTableFunc(): Unit = {
-    tEnv.registerFunction("func0", new GenericTableFunc[DataTypes.INT.type](DataTypes.INT))
-    tEnv.registerFunction("func1", new GenericTableFunc[DataTypes.STRING.type](DataTypes.STRING))
+    tEnv.registerFunction("func0", new GenericTableFunc[Int](DataTypes.INT))
+    tEnv.registerFunction("func1", new GenericTableFunc[String](DataTypes.STRING))
     testGenericTableFunc()
   }
 
   @Test
   def testScalaGenericTableFunc(): Unit = {
-    tEnv.registerScalaTableFunction("func0", new GenericTableFunc(DataTypes.INT))
-    tEnv.registerScalaTableFunction("func1", new GenericTableFunc(DataTypes.STRING))
+    tEnv.registerFunction("func0", new GenericTableFunc[Int](DataTypes.INT))
+    tEnv.registerFunction("func1", new GenericTableFunc[String](DataTypes.STRING))
     testGenericTableFunc()
   }
 

@@ -30,6 +30,7 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.{SqlFunction, SqlOperatorBinding}
 import org.apache.commons.codec.binary.Base64
 import org.apache.flink.api.common.functions.InvalidTypesException
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.table.api.functions._
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
@@ -891,6 +892,38 @@ object UserDefinedFunctionUtils {
         new GenericType(classOf[AnyRef])
     }
     implicitResultType
+  }
+
+  /**
+    * Get implicit type from table function through reflection, We will consider getResultType first
+    * then this, see [[getResultTypeIgnoreException]] for details.
+    * @return Inferred implicit [[TypeInformation]], if [[InvalidTypesException]] throws, return
+    *         GenericTypeInfo(classOf[AnyRef]) as fallback
+    */
+  def getImplicitResultTypeInfo[T](tf: TableFunction[T]): TypeInformation[T] = {
+    val implicitResultType = try {
+      TypeExtractor
+        .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
+    } catch {
+      case _: InvalidTypesException =>
+        new GenericTypeInfo(classOf[AnyRef])
+    }
+    implicitResultType.asInstanceOf[TypeInformation[T]]
+  }
+
+  /**
+    * Get result type from [[TableFunction]] while sans any exception.
+    * @return null if any exception throws
+    */
+  def getResultTypeIgnoreException[T](tf: TableFunction[T],
+    arguments: Array[AnyRef] = null,
+    argTypes: Array[Class[_]] = null): DataType = {
+    try {
+      tf.getResultType(arguments, argTypes)
+    } catch {
+      case _: Exception =>
+        null
+    }
   }
 
   private def hexString2String(str: String): String = {

@@ -56,9 +56,8 @@ import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchTableSource, _}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
-import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil, RowConverters}
+import org.apache.flink.table.util._
 import org.apache.flink.table.util.PlanUtil._
-import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil, PlanUtil}
 import org.apache.flink.util.{AbstractID, Preconditions}
 
 import _root_.scala.collection.JavaConversions._
@@ -231,7 +230,7 @@ class BatchTableEnvironment(
     streamEnv.getConfig.setGlobalJobParameters(parameters)
   }
 
-  private[flink] override def writeToSink[T](
+  override private[table] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
       sinkName: String): Unit = {
@@ -535,7 +534,7 @@ class BatchTableEnvironment(
         val plan = node.translateToPlan(this)
 
         val parTransformation = if (sink != null) {
-          createPartitionTransformation(sink, plan)
+          PartitionUtils.createPartitionTransformation(sink, plan)
         } else {
           plan
         }
