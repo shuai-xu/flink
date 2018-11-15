@@ -161,9 +161,14 @@ class BatchTableEnvironment(
     * @return A [[StreamGraph]] describing the whole job.
     */
   def generateStreamGraph(): StreamGraph = {
+    mergeParameters()
     val context = StreamGraphGenerator.Context.buildBatchProperties(streamEnv)
     ruKeeper.setScheduleConfig(context)
     val streamGraph = StreamGraphGenerator.generate(context, transformations)
+
+    setQueryPlan()
+
+    setupOperatorMetricCollect()
     ruKeeper.clear()
     sinkNodes.clear()
     transformations.clear()
