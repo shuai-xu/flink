@@ -433,14 +433,13 @@ class RexNodeExtractorTest extends RexNodeTestBase {
         relBuilder,
         functionCatalog)
 
-    val expected: Array[Expression] = Array(
-      ExpressionParser.parseExpression("amount <= id")
-    )
-    assertExpressionArrayEquals(expected, convertedExpressions)
-    assertEquals(2, unconvertedRexNodes.length)
-    assertEquals(">(CAST($2):BIGINT NOT NULL, 100)", unconvertedRexNodes(0).toString)
-    assertEquals("OR(>(CAST($2):BIGINT NOT NULL, 100), <=($2, $1))",
-      unconvertedRexNodes(1).toString)
+
+    assertEquals(3, convertedExpressions.length)
+    assertEquals("'amount.cast(LongType) > 100", convertedExpressions(0).toString)
+    assertEquals("'amount <= 'id", convertedExpressions(1).toString)
+    assertEquals("'amount.cast(LongType) > 100 || 'amount <= 'id",
+                 convertedExpressions(2).toString)
+    assertEquals(0, unconvertedRexNodes.length)
   }
 
   @Test

@@ -19,6 +19,7 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.util.TestPartitionableTableSource
 import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Test
 
@@ -35,6 +36,18 @@ class TableSourceITCase extends QueryTest {
     val results = tEnv.sqlQuery("SELECT COUNT(*) FROM csvTable").collect()
 
     val expected = "8"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+
+  @Test
+  def testPartitionableTableSourceWithStringPartitionEqualsToInt(): Unit = {
+
+    tEnv.registerTableSource("partitionable_table", new TestPartitionableTableSource)
+    val results = tEnv.sqlQuery(
+      "select * from partitionable_table where is_ok and part = 2").collect()
+
+    val expected = Seq("3,John,2,part=2,true", "4,nosharp,2,part=2,true").mkString("\n")
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 }

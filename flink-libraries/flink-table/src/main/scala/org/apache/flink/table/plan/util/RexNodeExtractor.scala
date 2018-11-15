@@ -204,6 +204,8 @@ class RexNodeToExpressionConverter(
           Option(operands.reduceLeft(Or))
         case SqlStdOperatorTable.AND =>
           Option(operands.reduceLeft(And))
+        case SqlStdOperatorTable.CAST =>
+          Option(Cast(operands.head, FlinkTypeFactory.toInternalType(call.getType)))
         case function: SqlFunction =>
           lookupFunction(replace(function.getName), operands)
         case postfix: SqlPostfixOperator =>
