@@ -35,7 +35,9 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.StringWriter;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
@@ -197,13 +199,20 @@ public class FileUploadHandlerTest extends TestLogger {
 
 	@Test
 	public void testUploadCleanupOnUnknownAttribute() throws IOException {
-		OkHttpClient client = new OkHttpClient();
-
+		OkHttpClient client = new OkHttpClient.Builder()
+			.connectTimeout(5000, TimeUnit.MILLISECONDS)
+			.writeTimeout(5000, TimeUnit.MILLISECONDS)
+			.readTimeout(5000, TimeUnit.MILLISECONDS)
+			.build();
 		Request request = buildMixedRequestWithUnknownAttribute(MULTIPART_UPLOAD_RESOURCE.getMixedHandler().getMessageHeaders().getTargetRestEndpointURL());
-		try (Response response = client.newCall(request).execute()) {
-			assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.code());
+		try {
+			try (Response response = client.newCall(request).execute()) {
+				assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.code());
+				MULTIPART_UPLOAD_RESOURCE.assertUploadDirectoryIsEmpty();
+			}
+		} catch (InterruptedIOException e) {
+			e.printStackTrace();
 		}
-		MULTIPART_UPLOAD_RESOURCE.assertUploadDirectoryIsEmpty();
 	}
 
 	/**
