@@ -28,17 +28,15 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoInputStreamOperator}
-import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation,
-  TwoInputTransformation, UnionTransformation}
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation, TwoInputTransformation, UnionTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.common.CommonJoin
 import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.{StreamExecUtil, UpdatingPlanChecker}
+import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil, UpdatingPlanChecker}
 import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.runtime.operator.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -68,7 +66,6 @@ class StreamExecWindowJoin(
     remainCondition: Option[RexNode],
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with CommonJoin
   with StreamExecRel
   with Logging {
 
@@ -95,7 +92,7 @@ class StreamExecWindowJoin(
   }
 
   override def toString: String = {
-    joinToString(
+    JoinUtil.joinToString(
       outputRowSchema.relDataType,
       joinCondition,
       FlinkJoinRelType.toFlinkJoinRelType(joinType),
@@ -107,7 +104,7 @@ class StreamExecWindowJoin(
       s"leftUpperBound=$leftUpperBound, leftTimeIndex=$leftTimeIndex, " +
       s"rightTimeIndex=$rightTimeIndex"
     val writer = super.explainTerms(pw)
-    joinExplainTerms(
+    JoinUtil.joinExplainTerms(
       writer,
       outputRowSchema.relDataType,
       joinCondition,

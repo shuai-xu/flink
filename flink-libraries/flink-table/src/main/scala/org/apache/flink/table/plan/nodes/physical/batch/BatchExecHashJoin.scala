@@ -35,6 +35,7 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.{ExpressionFormat, FlinkConventions}
+import org.apache.flink.table.plan.util.JoinUtil
 import org.apache.flink.table.runtime.operator.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.operator.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
@@ -50,7 +51,7 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
   var haveInsertRf: Boolean
 
   private val (leftKeys, rightKeys) =
-    checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
+    JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
   val (buildKeys, probeKeys) = if (leftIsBuild) (leftKeys, rightKeys) else (rightKeys, leftKeys)
 
   // Inputs could be changed. See [[BiRel.replaceInput]].

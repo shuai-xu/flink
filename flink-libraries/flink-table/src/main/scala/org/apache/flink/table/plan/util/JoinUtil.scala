@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.plan.nodes.common
+
+package org.apache.flink.table.plan.util
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
-import org.apache.calcite.util.Util
 import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.errorcode.TableErrors
@@ -30,7 +30,7 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-trait CommonJoin {
+object JoinUtil {
 
   private[flink] def joinSelectionToString(inputType: RelDataType): String = {
     inputType.getFieldNames.asScala.toList.mkString(", ")
@@ -40,7 +40,6 @@ trait CommonJoin {
       inputType: RelDataType,
       joinCondition: RexNode,
       expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
-
     val inFields = inputType.getFieldNames.asScala.toList
     expression(joinCondition, inFields, None)
   }
@@ -61,20 +60,18 @@ trait CommonJoin {
       joinCondition: RexNode,
       joinType: FlinkJoinRelType,
       expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
-
     s"${joinTypeToString(joinType)}" +
       s"(where: (${joinConditionToString(inputType, joinCondition, expression)}), " +
       s"join: (${joinSelectionToString(inputType)}))"
   }
 
   private[flink] def joinExplainTerms(
-    pw: RelWriter,
-    inputType: RelDataType,
-    joinCondition: RexNode,
-    joinType: FlinkJoinRelType,
-    joinRowType: RelDataType,
-    expression: (RexNode, List[String], Option[List[RexNode]]) => String): RelWriter = {
-
+      pw: RelWriter,
+      inputType: RelDataType,
+      joinCondition: RexNode,
+      joinType: FlinkJoinRelType,
+      joinRowType: RelDataType,
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String): RelWriter = {
     pw.item("where", joinConditionToString(inputType, joinCondition, expression))
       .item("join", joinSelectionToString(joinRowType))
       .item("joinType", joinTypeToString(joinType))
@@ -83,7 +80,10 @@ trait CommonJoin {
   /**
     * Check and get left and right keys.
     */
-  private[flink] def checkAndGetKeys(keyPairs: List[IntPair], left: RelNode, right: RelNode,
+  private[flink] def checkAndGetKeys(
+      keyPairs: List[IntPair],
+      left: RelNode,
+      right: RelNode,
       allowEmpty: Boolean = false): (ArrayBuffer[Int], ArrayBuffer[Int]) = {
     // get the equality keys
     val leftKeys = ArrayBuffer.empty[Int]
@@ -118,10 +118,5 @@ trait CommonJoin {
       })
       (leftKeys, rightKeys)
     }
-  }
-
-  private[flink] def getRelNodeSize(relNode: RelNode): Double = {
-    val mq = relNode.getCluster.getMetadataQuery
-    Util.first(mq.getAverageRowSize(relNode), 100d) * mq.getRowCount(relNode)
   }
 }

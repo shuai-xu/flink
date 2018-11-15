@@ -17,12 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.core._
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -34,13 +28,20 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkRelMetadataQuery}
 import org.apache.flink.table.plan.nodes.ExpressionFormat
-import org.apache.flink.table.plan.util.SortUtil
+import org.apache.flink.table.plan.util.{JoinUtil, SortUtil}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.core._
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.util.ImmutableIntList
 
 import scala.collection.JavaConversions._
 
@@ -54,7 +55,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     "SortMergeJoin"
   }
 
-  lazy val (leftAllKey, rightAllKey) = checkAndGetKeys(keyPairs, getLeft, getRight)
+  lazy val (leftAllKey, rightAllKey) = JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight)
 
   override def toString: String = joinOperatorName
 
@@ -195,7 +196,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       totalReservedSortMemory - sortReservedMemorySize1,
       totalMaxSortMemory - preferManagedMemorySize1,
       perRequestSize, externalBufferMemorySize,
-      flinkJoinType, getRelNodeSize(getLeft) < getRelNodeSize(getRight), condFunc,
+      flinkJoinType, estimateOutputSize(getLeft) < estimateOutputSize(getRight), condFunc,
       ProjectionCodeGenerator.generateProjection(
         CodeGeneratorContext(config), "SMJProjection", leftType, keyType, leftAllKey.toArray),
       ProjectionCodeGenerator.generateProjection(
@@ -242,6 +243,12 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
       gen.generateRecordComparator("SMJComparator"),
       sers, comps)
   }
+
+  private def estimateOutputSize(relNode: RelNode): Double = {
+    val mq = relNode.getCluster.getMetadataQuery
+    mq.getAverageRowSize(relNode) * mq.getRowCount(relNode)
+  }
+
 }
 
 class BatchExecSortMergeJoin(

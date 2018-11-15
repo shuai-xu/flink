@@ -18,7 +18,26 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import org.apache.flink.annotation.VisibleForTesting
+import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
+import org.apache.flink.api.java.functions.KeySelector
+import org.apache.flink.api.java.typeutils.ResultTypeQueryable
+import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
+import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
+import org.apache.flink.table.codegen._
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
+import org.apache.flink.table.plan.util.{JoinUtil, StreamExecUtil}
+import org.apache.flink.table.runtime.operator.join.stream._
+import org.apache.flink.table.runtime.operator.join.stream.bundle._
+import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
+import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan._
 import org.apache.calcite.plan.hep.HepRelVertex
@@ -29,27 +48,8 @@ import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.Pair
 import org.apache.calcite.util.mapping.IntPair
-import org.apache.flink.annotation.VisibleForTesting
-import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
-import org.apache.flink.api.java.functions.KeySelector
-import org.apache.flink.api.java.typeutils.ResultTypeQueryable
-import org.apache.flink.streaming.api.bundle.{CoBundleTrigger, CombinedCoBundleTrigger, CountCoBundleTrigger, TimeCoBundleTrigger}
-import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
-import org.apache.flink.table.codegen._
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
-import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.common.CommonJoin
-import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
-import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.runtime.operator.join.stream.bundle._
-import org.apache.flink.table.runtime.operator.join.stream.state.JoinStateHandler
-import org.apache.flink.table.runtime.operator.join.stream.state.`match`.JoinMatchStateHandler
-import org.apache.flink.table.runtime.operator.join.stream._
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -69,7 +69,6 @@ class StreamExecJoin(
     joinHint: JoinHint,
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with CommonJoin
   with StreamExecRel {
 
   override def deriveRowType(): RelDataType = rowRelDataType
@@ -200,15 +199,14 @@ class StreamExecJoin(
     val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
 
     // get the equality keys
-    val (leftKeys, rightKeys) = checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
+    val (leftKeys, rightKeys) =
+      JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
 
     val leftTransform = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val rightTransform = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val leftType = leftTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val rightType = rightTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
-
-    val joinOpName = joinToString(joinRowType, joinCondition, joinType, getExpressionString)
 
     val leftSelect = StreamExecUtil.getKeySelector(leftKeys.toArray, leftType)
     val rightSelect = StreamExecUtil.getKeySelector(rightKeys.toArray, rightType)
@@ -418,7 +416,7 @@ class StreamExecJoin(
     val ret = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftTransform,
       rightTransform,
-      joinOpName,
+      JoinUtil.joinToString(joinRowType, joinCondition, joinType, getExpressionString),
       operator,
       returnType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
       tableEnv.execEnv.getParallelism)
@@ -506,7 +504,8 @@ class StreamExecJoin(
   private[flink] def getJoinAllStateType: (JoinStateHandler.Type, JoinMatchStateHandler.Type,
       JoinStateHandler.Type, JoinMatchStateHandler.Type) = {
     // get the equality keys
-    val (leftKeys, rightKeys) = checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
+    val (leftKeys, rightKeys) =
+      JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
     val (_, lStateType) = inferPrimaryKeyAndJoinStateType(getLeft, leftKeys.toArray)
     val (_, rStateType) = inferPrimaryKeyAndJoinStateType(getRight, rightKeys.toArray)
 

@@ -17,17 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
-import java.util.Collections
-
-import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
-import org.apache.calcite.rel.{RelCollations, RelNode, RelWriter}
-import org.apache.calcite.rel.RelDistribution.Type._
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
-import org.apache.calcite.rel.core.{Join, JoinInfo, SemiJoin}
-import org.apache.calcite.sql.validate.SqlValidatorUtil
-import org.apache.calcite.util.ImmutableIntList
-import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.BaseRowType
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -36,13 +25,25 @@ import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.FlinkJoinRelType._
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.nodes.common.CommonJoin
+import org.apache.flink.table.plan.util.JoinUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
+import org.apache.calcite.rel.RelDistribution.Type._
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
+import org.apache.calcite.rel.core.{Join, JoinInfo, SemiJoin}
+import org.apache.calcite.rel.{RelCollations, RelNode, RelWriter}
+import org.apache.calcite.sql.validate.SqlValidatorUtil
+import org.apache.calcite.util.ImmutableIntList
+import org.apache.calcite.util.mapping.IntPair
+
+import java.util
+import java.util.Collections
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-trait BatchExecJoinBase extends Join with CommonJoin with RowBatchExecRel {
+trait BatchExecJoinBase extends Join with RowBatchExecRel {
 
   lazy val (joinInfo, filterNulls) = {
     val filterNulls = new util.ArrayList[java.lang.Boolean]
@@ -232,7 +233,7 @@ trait BatchExecJoinBase extends Join with CommonJoin with RowBatchExecRel {
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("left", getLeft).input("right", getRight)
-    joinExplainTerms(
+    JoinUtil.joinExplainTerms(
       pw,
       inputDataType,
       getCondition,
