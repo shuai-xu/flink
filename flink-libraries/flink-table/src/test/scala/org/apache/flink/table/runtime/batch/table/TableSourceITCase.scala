@@ -94,7 +94,35 @@ class TableSourceITCase extends QueryTest {
       .where('part === "2" || 'part === "1" && 'id > 2)
       .collect()
 
-    val expected = Seq("3,John,2,part=1#part=2", "4,nosharp,2,part=1#part=2").mkString("\n")
+    val expected = Seq(
+      "3,John,2,part=1#part=2,true",
+      "4,nosharp,2,part=1#part=2,true").mkString("\n")
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+  @Test
+  def testPartitionableTableSourceWithPartitionFieldsAndBoolTypeColumn(): Unit = {
+
+    tEnv.registerTableSource("partitionable_table", new TestPartitionableTableSource)
+
+    val results = tEnv.scan("partitionable_table")
+      .where('is_ok && 'part === "2")
+      .collect()
+
+    val expected = Seq("3,John,2,part=2,true", "4,nosharp,2,part=2,true").mkString("\n")
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+  @Test
+  def testPartitionableTableSourceWithPartitionFieldsAndBoolTypeColumn1(): Unit = {
+
+    tEnv.registerTableSource("partitionable_table", new TestPartitionableTableSource)
+
+    val results = tEnv.scan("partitionable_table")
+                  .where('is_ok === true && 'part === "2")
+                  .collect()
+
+    val expected = Seq("3,John,2,part=2,true", "4,nosharp,2,part=2,true").mkString("\n")
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 
@@ -107,7 +135,7 @@ class TableSourceITCase extends QueryTest {
       .where('name === "Lucy")
       .collect()
 
-    val expected = Seq("6,Lucy,3,null").mkString("\n")
+    val expected = Seq("6,Lucy,3,null,true").mkString("\n")
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
 

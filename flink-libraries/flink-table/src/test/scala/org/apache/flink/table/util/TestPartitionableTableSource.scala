@@ -51,11 +51,12 @@ class TestPartitionableTableSource(
     BasicTypeInfo.INT_TYPE_INFO,
     BasicTypeInfo.STRING_TYPE_INFO,
     BasicTypeInfo.STRING_TYPE_INFO,
-    BasicTypeInfo.STRING_TYPE_INFO)
+    BasicTypeInfo.STRING_TYPE_INFO,
+    BasicTypeInfo.BOOLEAN_TYPE_INFO)
   // 'part' is partition field
   // 'remaining_parts' contains remaining partitions concatenated by '#' after partition pruning,
   // and if partition pruning is not applied, the value of 'remaining_parts' is null.
-  private val fieldNames = Array("id", "name", "part", "remaining_parts")
+  private val fieldNames = Array("id", "name", "part", "remaining_parts", "is_ok")
   private val returnType = new RowTypeInfo(fieldTypes, fieldNames)
 
   private val allPartitions = Seq("part=1", "part=2", "part=3")
@@ -66,7 +67,7 @@ class TestPartitionableTableSource(
   )
 
   private def createRow(id: Int, name: String, part: String): Row = {
-    Row.of(id.asInstanceOf[Object], name, part, null)
+    Row.of(id.asInstanceOf[Object], name, part, null, true.asInstanceOf[Object])
   }
 
   private def getPartitionData: Array[Seq[Row]] = {

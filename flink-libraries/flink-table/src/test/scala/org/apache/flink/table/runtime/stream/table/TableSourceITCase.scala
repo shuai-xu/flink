@@ -271,7 +271,45 @@ class TableSourceITCase extends StreamingTestBase {
 
     env.execute()
 
-    val expected = mutable.MutableList("3,John,2,part=1#part=2", "4,nosharp,2,part=1#part=2")
+    val expected = mutable.MutableList(
+      "3,John,2,part=1#part=2,true",
+      "4,nosharp,2,part=1#part=2,true")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testPartitionableTableSourceWithPartitionFieldsAndBoolTypeColumn(): Unit = {
+
+    tEnv.registerTableSource("partitionable_table", new TestPartitionableTableSource)
+
+    val sink = new TestingAppendSink
+    tEnv.scan("partitionable_table")
+      .where('is_ok && 'part === "2")
+      .addSink(sink)
+
+    env.execute()
+
+    val expected = mutable.MutableList(
+      "3,John,2,part=2,true",
+      "4,nosharp,2,part=2,true")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testPartitionableTableSourceWithPartitionFieldsAndBoolTypeColumn1(): Unit = {
+
+    tEnv.registerTableSource("partitionable_table", new TestPartitionableTableSource)
+
+    val sink = new TestingAppendSink
+    tEnv.scan("partitionable_table")
+      .where('is_ok === true && 'part === "2")
+      .addSink(sink)
+
+    env.execute()
+
+    val expected = mutable.MutableList(
+      "3,John,2,part=2,true",
+      "4,nosharp,2,part=2,true")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
@@ -286,7 +324,7 @@ class TableSourceITCase extends StreamingTestBase {
 
     env.execute()
 
-    val expected = mutable.MutableList("6,Lucy,3,null")
+    val expected = mutable.MutableList("6,Lucy,3,null,true")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 

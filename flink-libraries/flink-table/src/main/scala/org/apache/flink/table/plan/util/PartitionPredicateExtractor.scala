@@ -37,13 +37,9 @@ object PartitionPredicateExtractor {
   }
 
   private def postOrderVisit(e: Expression, partitionFieldNames: Array[String]): Boolean = {
-    e.children.forall {
-      case r@ResolvedFieldReference(name, _) =>
-        // skip non partition field
-        postOrderVisit(r, partitionFieldNames) && partitionFieldNames.contains(name)
-      case o@_ => postOrderVisit(o, partitionFieldNames)
+    e match {
+      case r@ResolvedFieldReference(name, _) => partitionFieldNames.contains(name)
+      case _ => e.children.forall(postOrderVisit(_, partitionFieldNames))
     }
   }
 }
-
-
