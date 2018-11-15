@@ -153,6 +153,9 @@ public class StreamingJobGraphGenerator {
 
 	private JobGraph createJobGraph() {
 
+		// add custom configuration to the job graph
+		jobGraph.addCustomConfiguration(streamGraph.getCustomConfiguration());
+
 		// Generate deterministic hashes for the nodes in order to identify them across
 		// submission iff they didn't change.
 		Map<Integer, byte[]> hashes = defaultStreamGraphHasher.traverseStreamGraphAndGenerateHashes(streamGraph);
@@ -729,6 +732,11 @@ public class StreamingJobGraphGenerator {
 				|| vertexClass.equals(StreamIterationTail.class)) {
 			config.setIterationId(streamGraph.getBrokerID(nodeId));
 			config.setIterationWaitTime(streamGraph.getLoopTimeout(nodeId));
+		}
+
+		Configuration customConfiguration = vertex.getCustomConfiguration();
+		if (customConfiguration.keySet().size() > 0) {
+			config.setCustomConfiguration(customConfiguration);
 		}
 	}
 

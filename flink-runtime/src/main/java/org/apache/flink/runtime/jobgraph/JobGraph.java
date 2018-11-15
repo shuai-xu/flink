@@ -214,6 +214,17 @@ public class JobGraph implements Serializable {
 	}
 
 	/**
+	 * Adds custom configuration for this job.
+	 *
+	 * @param configuration The custom configuration for this job.
+	 */
+	public void addCustomConfiguration(Configuration configuration) {
+		if (configuration != null) {
+			this.jobConfiguration.addAll(configuration);
+		}
+	}
+
+	/**
 	 * Returns the configuration object for scheduling.
 	 * Parameters in this config will not be visible to tasks.
 	 *

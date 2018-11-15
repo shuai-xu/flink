@@ -24,6 +24,7 @@ import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.MissingTypeInfo;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
@@ -159,6 +160,11 @@ public abstract class StreamTransformation<T> {
 	protected long bufferTimeout = -1;
 
 	private String slotSharingGroup;
+
+	/**
+	 * Custom configuration for this transformation.
+	 */
+	private final Configuration customConfiguration = new Configuration();
 
 	/**
 	 * Creates a new {@code StreamTransformation} with the given name, output type and parallelism.
@@ -458,6 +464,15 @@ public abstract class StreamTransformation<T> {
 	 */
 	public long getBufferTimeout() {
 		return bufferTimeout;
+	}
+
+	/**
+	 * Returns the custom configuration for this transformation.
+	 *
+	 * @return The custom configuration for this transformation.
+	 */
+	public Configuration getCustomConfiguration() {
+		return this.customConfiguration;
 	}
 
 	/**

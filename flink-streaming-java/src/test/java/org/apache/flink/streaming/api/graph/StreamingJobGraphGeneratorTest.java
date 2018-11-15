@@ -29,6 +29,7 @@ import org.apache.flink.api.common.io.SerializedOutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.FormatUtil.FormatType;
@@ -118,7 +119,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		ClassLoader cl = getClass().getClassLoader();
 
 		DataStream<Integer> sourceMap = env.fromElements(1, 2, 3).name("source1")
-			.map((value) -> value).name("map1").setParallelism(66);
+			.map((value) -> value).name("map1").setParallelism(66).setConfigItem("test_key1", "test_value1");
 
 		DataStream<Integer> filter1 = sourceMap.filter((value) -> false).name("filter1").setParallelism(66);
 		DataStream<Integer> filter2 = sourceMap.filter((value) -> false).name("filter2").setParallelism(66);
@@ -169,6 +170,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				sourceTaskConfig);
 
 			StreamConfig sourceConfig = sourceTaskConfig.getChainedHeadNodeConfigs().get(0);
+			assertEquals(0, sourceConfig.getCustomConfiguration(cl).keySet().size());
 			verifyChainedNode("Source: source1", true, true, 0,
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("Source: source1", "map1")),
@@ -201,6 +203,9 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				mapFilterTaskConfig);
 
 			StreamConfig mapConfig = mapFilterTaskConfig.getChainedHeadNodeConfigs().get(0);
+			Configuration operatorConfig = mapConfig.getCustomConfiguration(cl);
+			assertEquals(1, operatorConfig.keySet().size());
+			assertEquals("test_value1", operatorConfig.getString("test_key1", null));
 			verifyChainedNode("map1", true, false, 1,
 				Lists.newArrayList(Tuple2.of("map1", "filter1"), Tuple2.of("map1", "filter2")),
 				Collections.emptyList(),
@@ -210,6 +215,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			List<StreamEdge> mapChainedOutEdges = mapConfig.getChainedOutputs(cl);
 
 			StreamConfig filter1Config = mapFilterTaskConfig.getChainedNodeConfigs().get(mapChainedOutEdges.get(0).getTargetId());
+			assertEquals(0, filter1Config.getCustomConfiguration(cl).keySet().size());
 			verifyChainedNode("filter1", false, true, 0,
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("filter1", "map2")),
@@ -217,6 +223,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				filter1Config, cl);
 
 			StreamConfig filter2Config = mapFilterTaskConfig.getChainedNodeConfigs().get(mapChainedOutEdges.get(1).getTargetId());
+			assertEquals(0, filter2Config.getCustomConfiguration(cl).keySet().size());
 			verifyChainedNode("filter2", false, true, 0,
 				Collections.emptyList(),
 				Lists.newArrayList(Tuple2.of("filter2", "map2"), Tuple2.of("filter2", "Sink: print2")),
@@ -241,6 +248,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				mapPrintTaskConfig);
 
 			StreamConfig mapConfig = mapPrintTaskConfig.getChainedHeadNodeConfigs().get(0);
+			assertEquals(0, mapConfig.getCustomConfiguration(cl).keySet().size());
 			verifyChainedNode("map2", true, false, 2,
 				Lists.newArrayList(Tuple2.of("map2", "Sink: print1")),
 				Collections.emptyList(),
@@ -250,6 +258,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			List<StreamEdge> mapChainedOutEdges = mapConfig.getChainedOutputs(cl);
 
 			StreamConfig printConfig = mapPrintTaskConfig.getChainedNodeConfigs().get(mapChainedOutEdges.get(0).getTargetId());
+			assertEquals(0, printConfig.getCustomConfiguration(cl).keySet().size());
 			verifyChainedNode("Sink: print1", false, true, 0,
 				Collections.emptyList(),
 				Collections.emptyList(),
@@ -274,6 +283,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 				printTaskConfig);
 
 			StreamConfig printConfig = printTaskConfig.getChainedHeadNodeConfigs().get(0);
+			assertEquals(0, printConfig.getCustomConfiguration(cl).keySet().size());
 			verifyChainedNode("Sink: print2", true, true, 1,
 				Collections.emptyList(),
 				Collections.emptyList(),

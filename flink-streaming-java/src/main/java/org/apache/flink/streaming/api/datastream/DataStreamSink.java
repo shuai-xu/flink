@@ -21,6 +21,8 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.StreamSink;
 import org.apache.flink.streaming.api.transformations.SinkTransformation;
@@ -47,6 +49,16 @@ public class DataStreamSink<T> {
 	@Internal
 	public SinkTransformation<T> getTransformation() {
 		return transformation;
+	}
+
+	/**
+	 * Returns the ID of the {@link DataStreamSink} in the current {@link StreamExecutionEnvironment}.
+	 *
+	 * @return ID of the DataStreamSink
+	 */
+	@Internal
+	public int getId() {
+		return transformation.getId();
 	}
 
 	/**
@@ -184,6 +196,34 @@ public class DataStreamSink<T> {
 	@PublicEvolving
 	public DataStreamSink<T> slotSharingGroup(String slotSharingGroup) {
 		transformation.setSlotSharingGroup(slotSharingGroup);
+		return this;
+	}
+
+
+	// ------------------------------------------------------------------------
+	//  Configuration
+	// ------------------------------------------------------------------------
+
+	/**
+	 * Sets the value of the given option for the operator.
+	 *
+	 * @param key The option to be updated.
+	 * @param value The value of the option to be updated.
+	 */
+	@PublicEvolving
+	public DataStreamSink<T> setConfigItem(ConfigOption<String> key, String value) {
+		transformation.getCustomConfiguration().setString(key, value);
+		return this;
+	}
+
+	/**
+	 * Sets the value of the given option for the operator.
+	 *
+	 * @param key The name of the option to be updated.
+	 * @param value The value of the option to be updated.
+	 */
+	public DataStreamSink<T> setConfigItem(String key, String value) {
+		transformation.getCustomConfiguration().setString(key, value);
 		return this;
 	}
 }

@@ -136,6 +136,9 @@ public abstract class StreamExecutionEnvironment {
 	/** Settings that control the checkpointing behavior. */
 	private final CheckpointConfig checkpointCfg = new CheckpointConfig();
 
+	/** The custom configuration for this environment. */
+	private final Configuration customConfiguration = new Configuration();
+
 	protected final List<StreamTransformation<?>> transformations = new ArrayList<>();
 
 	private long bufferTimeout = DEFAULT_NETWORK_BUFFER_TIMEOUT;
@@ -692,6 +695,13 @@ public abstract class StreamExecutionEnvironment {
 	@PublicEvolving
 	public TimeCharacteristic getStreamTimeCharacteristic() {
 		return timeCharacteristic;
+	}
+
+	/**
+	 * Returns the custom configuration for the environment.
+	 */
+	public Configuration getCustomConfiguration() {
+		return this.customConfiguration;
 	}
 
 	// --------------------------------------------------------------------------------------------

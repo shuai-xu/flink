@@ -85,6 +85,8 @@ public class StreamConfig implements Serializable {
 
 	private static final String TIME_CHARACTERISTIC = "timechar";
 
+	private static final String CUSTOM_CONFIGURATION = "customConfiguration";
+
 	// ------------------------------------------------------------------------
 	//  Default Values
 	// ------------------------------------------------------------------------
@@ -322,6 +324,23 @@ public class StreamConfig implements Serializable {
 			return chainedOutputs == null ? new ArrayList<StreamEdge>() : chainedOutputs;
 		} catch (Exception e) {
 			throw new StreamTaskException("Could not instantiate chained outputs.", e);
+		}
+	}
+
+	public void setCustomConfiguration(Configuration configuration) {
+		try {
+			InstantiationUtil.writeObjectToConfig(configuration, this.config, CUSTOM_CONFIGURATION);
+		} catch (IOException e) {
+			throw new StreamTaskException("Cannot serialize custom configuration.", e);
+		}
+	}
+
+	public Configuration getCustomConfiguration(ClassLoader cl) {
+		try {
+			Configuration customConfiguration = InstantiationUtil.readObjectFromConfig(this.config, CUSTOM_CONFIGURATION, cl);
+			return customConfiguration == null ? new Configuration() : customConfiguration;
+		} catch (Exception e) {
+			throw new StreamTaskException("Could not instantiate custom configuration.", e);
 		}
 	}
 

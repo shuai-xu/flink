@@ -134,6 +134,8 @@ public class StreamGraphGenerator {
 		this.streamGraph.setStateBackend(context.getStateBackend());
 		this.streamGraph.getCustomConfiguration().addAll(context.getConfiguration());
 		this.alreadyTransformed = new HashMap<>();
+
+		this.streamGraph.addCustomConfiguration(context.getCustomConfiguration());
 	}
 
 	/**
@@ -234,6 +236,10 @@ public class StreamGraphGenerator {
 
 		if (transform.getMinResources() != null && transform.getPreferredResources() != null) {
 			streamGraph.setResources(transform.getId(), transform.getMinResources(), transform.getPreferredResources());
+		}
+
+		if (transform.getCustomConfiguration().keySet().size() > 0) {
+			streamGraph.addCustomConfiguration(transform.getId(), transform.getCustomConfiguration());
 		}
 
 		return transformedIds;
@@ -695,6 +701,7 @@ public class StreamGraphGenerator {
 	public static class Context {
 		private ExecutionConfig executionConfig;
 		private CheckpointConfig checkpointConfig;
+		private Configuration customConfiguration;
 		private TimeCharacteristic timeCharacteristic;
 		private StateBackend stateBackend;
 		private boolean chainingEnabled;
@@ -714,6 +721,7 @@ public class StreamGraphGenerator {
 
 			context.setExecutionConfig(env.getConfig());
 			context.setCheckpointConfig(env.getCheckpointConfig());
+			context.setCustomConfiguration(env.getCustomConfiguration());
 			context.setTimeCharacteristic(env.getStreamTimeCharacteristic());
 			context.setStateBackend(env.getStateBackend());
 			context.setChainingEnabled(env.isChainingEnabled());
@@ -747,6 +755,7 @@ public class StreamGraphGenerator {
 				executionConfig.setLatencyTrackingInterval(-1L);
 				CheckpointConfig checkpointConfig = new CheckpointConfig();
 				context.setCheckpointConfig(checkpointConfig);
+				context.setCustomConfiguration(env.getCustomConfiguration());
 				context.setTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 				context.setChainingEnabled(true);
 				context.setCacheFiles(env.getCachedFiles());
@@ -779,6 +788,10 @@ public class StreamGraphGenerator {
 			this.checkpointConfig = checkpointConfig;
 		}
 
+		public void setCustomConfiguration(Configuration customConfiguration) {
+			this.customConfiguration = customConfiguration;
+		}
+
 		public void setTimeCharacteristic(TimeCharacteristic timeCharacteristic) {
 			this.timeCharacteristic = timeCharacteristic;
 		}
@@ -797,6 +810,10 @@ public class StreamGraphGenerator {
 
 		public CheckpointConfig getCheckpointConfig() {
 			return checkpointConfig;
+		}
+
+		public Configuration getCustomConfiguration() {
+			return customConfiguration;
 		}
 
 		public TimeCharacteristic getTimeCharacteristic() {

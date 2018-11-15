@@ -22,11 +22,14 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
@@ -56,6 +59,9 @@ import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -509,6 +515,69 @@ public class StreamGraphGeneratorTest {
 
 		graph = env.getStreamGraph();
 		assertTrue(graph.getStreamNode(map.getId()).getInEdges().get(0).getPartitioner() instanceof RescalePartitioner);
+	}
+
+	/**
+	 * Tests that the custom configuration is properly set.
+	 */
+	@Test
+	public void testCustomConfiguration() {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+		final String jobConfigKey = "job:test-key";
+		final String jobConfigValue = "job:test-value";
+
+		final String operatorConfigKey1 = "op:test-key1";
+		final String operatorConfigValue1 = "op:test-value1";
+		final ConfigOption operatorConfigKey2 = ConfigOptions.key("op:test-key2").noDefaultValue();
+		final String operatorConfigValue2 = "op:test-value2";
+
+		env.getCustomConfiguration().setString(jobConfigKey, jobConfigValue);
+
+		DataStream<Integer> source = env.fromElements(1, 2, 3)
+			.setConfigItem(operatorConfigKey1, operatorConfigValue1);
+
+		DataStream<Integer> keyedResult = source.keyBy(new KeySelector<Integer, Integer>() {
+			private static final long serialVersionUID = 9205556348021992189L;
+
+			@Override
+			public Integer getKey(Integer value) {
+				return value;
+			}
+		}).map(new NoOpIntMap()).name("map1");
+
+		DataStreamSink<Integer> sink = keyedResult.addSink(new DiscardingSink<>())
+			.setConfigItem(operatorConfigKey2, operatorConfigValue2);
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		Map<String, StreamNode> streamNodeMap = new HashMap<>();
+		for (StreamNode node : streamGraph.getStreamNodes()) {
+			streamNodeMap.put(node.getOperatorName(), node);
+		}
+
+		Configuration customConfiguration = streamGraph.getCustomConfiguration();
+		assertTrue(customConfiguration.containsKey(jobConfigKey));
+		assertEquals(jobConfigValue, customConfiguration.getString(jobConfigKey, null));
+
+		{
+			StreamNode sourceNode = streamGraph.getStreamNode(source.getId());
+			Configuration sourceConfiguration = sourceNode.getCustomConfiguration();
+			assertTrue(sourceConfiguration.containsKey(operatorConfigKey1));
+			assertEquals(operatorConfigValue1, sourceConfiguration.getString(operatorConfigKey1, null));
+		}
+
+		{
+			StreamNode map1Node = streamNodeMap.get("map1");
+			Configuration map1Configuration = map1Node.getCustomConfiguration();
+			assertEquals(0, map1Configuration.keySet().size());
+		}
+
+		{
+			StreamNode sinkNode = streamGraph.getStreamNode(sink.getId());
+			Configuration sinkConfiguration = sinkNode.getCustomConfiguration();
+			assertTrue(sinkConfiguration.contains(operatorConfigKey2));
+			assertEquals(operatorConfigValue2, sinkConfiguration.getString(operatorConfigKey2, null));
+		}
 	}
 
 	private static class OutputTypeConfigurableOperationWithTwoInputs

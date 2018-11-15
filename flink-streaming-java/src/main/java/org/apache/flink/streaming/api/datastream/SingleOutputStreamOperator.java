@@ -24,6 +24,7 @@ import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.TypeInfoParser;
+import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
@@ -473,5 +474,32 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 
 		SideOutputTransformation<X> sideOutputTransformation = new SideOutputTransformation<>(this.getTransformation(), sideOutputTag);
 		return new DataStream<>(this.getExecutionEnvironment(), sideOutputTransformation);
+	}
+
+	// ------------------------------------------------------------------------
+	//  Configuration
+	// ------------------------------------------------------------------------
+
+	/**
+	 * Sets the value of the given option for the operator.
+	 *
+	 * @param key The option to be updated.
+	 * @param value The value of the option to be updated.
+	 */
+	@PublicEvolving
+	public SingleOutputStreamOperator<T> setConfigItem(ConfigOption<String> key, String value) {
+		transformation.getCustomConfiguration().setString(key, value);
+		return this;
+	}
+
+	/**
+	 * Sets the value of the given option for the operator.
+	 *
+	 * @param key The name of the option to be updated.
+	 * @param value The value of the option to be updated.
+	 */
+	public SingleOutputStreamOperator<T> setConfigItem(String key, String value) {
+		transformation.getCustomConfiguration().setString(key, value);
+		return this;
 	}
 }

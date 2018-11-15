@@ -416,6 +416,11 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
   @PublicEvolving
   def getStreamTimeCharacteristic = javaEnv.getStreamTimeCharacteristic()
 
+  /**
+    * Returns the custom configuration for the environment.
+    */
+  def getCustomConfiguration: Configuration = javaEnv.getCustomConfiguration()
+
   // --------------------------------------------------------------------------------------------
   // Data stream creations
   // --------------------------------------------------------------------------------------------

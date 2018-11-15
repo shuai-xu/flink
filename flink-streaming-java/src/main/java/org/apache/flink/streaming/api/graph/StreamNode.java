@@ -23,6 +23,7 @@ import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.operators.StreamOperator;
@@ -71,6 +72,8 @@ public class StreamNode implements Serializable {
 
 	private String transformationUID;
 	private String userHash;
+
+	private final Configuration customConfiguration = new Configuration();
 
 	public StreamNode(Integer id,
 		String slotSharingGroup,
@@ -301,6 +304,16 @@ public class StreamNode implements Serializable {
 
 	public void setUserHash(String userHash) {
 		this.userHash = userHash;
+	}
+
+	public Configuration getCustomConfiguration() {
+		return this.customConfiguration;
+	}
+
+	public void addCustomConfiguration(Configuration configuration) {
+		if (configuration != null) {
+			this.customConfiguration.addAll(configuration);
+		}
 	}
 
 	@Override

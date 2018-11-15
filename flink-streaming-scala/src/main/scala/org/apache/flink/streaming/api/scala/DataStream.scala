@@ -30,6 +30,7 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.tuple.{Tuple => JavaTuple}
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.api.scala.operators.ScalaCsvOutputFormat
+import org.apache.flink.configuration.ConfigOption
 import org.apache.flink.core.fs.{FileSystem, Path}
 import org.apache.flink.streaming.api.collector.selector.OutputSelector
 import org.apache.flink.streaming.api.datastream.{AllWindowedStream => JavaAllWindowedStream, DataStream => JavaStream, KeyedStream => JavaKeyedStream, _}
@@ -179,6 +180,38 @@ class DataStream[T](stream: JavaStream[T]) {
   def setResources(resources: ResourceSpec) : DataStream[T] = {
     this.setResources(resources, resources)
   }
+
+  /**
+    * Sets the value of the given option for the operator.
+    *
+    * @param key   The option to be updated.
+    * @param value The value of the option to be updated.
+    */
+  def setConfigItem(key: ConfigOption[String], value: String): DataStream[T] =
+    stream match {
+      case stream : SingleOutputStreamOperator[T] => asScalaStream(
+        stream.setConfigItem(key, value))
+      case _ =>
+        throw new UnsupportedOperationException("Operator does not support " +
+          "custom configurations.")
+        this
+    }
+
+  /**
+    * Sets the value of the given option for the operator.
+    *
+    * @param key   The name of the option to be updated.
+    * @param value The value of the option to be updated.
+    */
+  def setConfigItem(key: String, value: String): DataStream[T] =
+    stream match {
+      case stream : SingleOutputStreamOperator[T] => asScalaStream(
+        stream.setConfigItem(key, value))
+      case _ =>
+        throw new UnsupportedOperationException("Operator does not support " +
+          "custom configurations.")
+        this
+    }
 
   /**
    * Gets the name of the current data stream. This name is

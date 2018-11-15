@@ -111,7 +111,7 @@ public class StreamGraph extends StreamingPlan {
 	private TimeCharacteristic timeCharacteristic;
 	private List<Tuple2<String, DistributedCache.DistributedCacheEntry>> cachedFiles;
 
-	/** This configuration is for custom parameters. */
+	/** The custom configuration for this job. */
 	private final Configuration customConfiguration = new Configuration();
 
 	private final transient int defaultParallelism;
@@ -210,6 +210,12 @@ public class StreamGraph extends StreamingPlan {
 
 	public Configuration getCustomConfiguration() {
 		return this.customConfiguration;
+	}
+
+	public void addCustomConfiguration(Configuration configuration) {
+		if (configuration != null) {
+			this.customConfiguration.addAll(configuration);
+		}
 	}
 
 	// Checkpointing
@@ -636,6 +642,13 @@ public class StreamGraph extends StreamingPlan {
 		if (node != null) {
 			node.setUserHash(nodeHash);
 
+		}
+	}
+
+	void addCustomConfiguration(Integer nodeId, Configuration configuration) {
+		StreamNode node = streamNodes.get(nodeId);
+		if (node != null) {
+			node.addCustomConfiguration(configuration);
 		}
 	}
 
