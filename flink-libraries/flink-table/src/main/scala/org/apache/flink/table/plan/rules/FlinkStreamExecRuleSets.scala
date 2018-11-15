@@ -93,8 +93,6 @@ object FlinkStreamExecRuleSets {
     FilterProjectTransposeRule.INSTANCE,
     // push a filter past a setop
     FilterSetOpTransposeRule.INSTANCE,
-    // push a filter past a setop, this should appear with FilterSetOpTransposeRule together
-    ProjectSetOpTransposeRule.INSTANCE,
     FilterMergeRule.INSTANCE)
 
   val FILTER_PREPARE_RULES: RuleSet =  RuleSets.ofList((
@@ -138,9 +136,7 @@ object FlinkStreamExecRuleSets {
     //removes constant keys from an Agg
     AggregateProjectPullUpConstantsRule.INSTANCE,
     // push project through a Union
-    ProjectSetOpTransposeRule.INSTANCE,
-    // push filter through a union, this should appear with ProjectSetOpTransposeRule together
-    FilterSetOpTransposeRule.INSTANCE
+    ProjectSetOpTransposeRule.INSTANCE
   )
 
   val PROJECT_TABLESCAN_PUSHDOWN_RULES: RuleSet = RuleSets.ofList(
