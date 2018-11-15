@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.plan.nodes.common
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SemiJoinType
+package org.apache.flink.table.codegen
+
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
@@ -28,24 +26,24 @@ import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generateOneInputStreamOperator
-import org.apache.flink.table.codegen._
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getEvalMethodSignature
 import org.apache.flink.table.functions.utils.{TableSqlFunction, UserDefinedFunctionUtils}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.schema.FlinkTableFunction
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.plan.util.CorrelateUtil
 import org.apache.flink.table.runtime.conversion.InternalTypeConverters._
-import org.apache.flink.table.runtime.operator.{StreamRecordCollector,
-  OneInputSubstituteStreamOperator}
+import org.apache.flink.table.runtime.operator.{OneInputSubstituteStreamOperator, StreamRecordCollector}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SemiJoinType
 
-/**
-  * Join a user-defined table function
-  */
-trait CommonCorrelate {
+import scala.collection.JavaConversions._
+
+
+object CorrelateCodeGenerator {
 
   private[flink] def generateCorrelateTransformation(
       tableEnv: TableEnvironment,
@@ -129,7 +127,7 @@ trait CommonCorrelate {
 
     new OneInputTransformation(
       inputTransformation,
-      correlateOpName(
+      CorrelateUtil.correlateOpName(
         inputRelType,
         rexCall,
         sqlFunction,
@@ -428,30 +426,4 @@ trait CommonCorrelate {
       converter = genToInternal(ctx, udtfExternalType))
   }
 
-  private[flink] def selectToString(rowType: RelDataType): String = {
-    rowType.getFieldNames.asScala.mkString(",")
-  }
-
-  private[flink] def correlateOpName(
-      inputType: RelDataType,
-      rexCall: RexCall,
-      sqlFunction: TableSqlFunction,
-      rowType: RelDataType,
-      expression: (RexNode, List[String], Option[List[RexNode]]) => String)
-    : String = {
-
-    s"correlate: ${correlateToString(inputType, rexCall, sqlFunction, expression)}," +
-      s" select: ${selectToString(rowType)}"
-  }
-
-  private[flink] def correlateToString(
-      inputType: RelDataType,
-      rexCall: RexCall,
-      sqlFunction: TableSqlFunction,
-      expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
-    val inFields = inputType.getFieldNames.asScala.toList
-    val udtfName = sqlFunction.toString
-    val operands = rexCall.getOperands.asScala.map(expression(_, inFields, None)).mkString(",")
-    s"table($udtfName($operands))"
-  }
 }

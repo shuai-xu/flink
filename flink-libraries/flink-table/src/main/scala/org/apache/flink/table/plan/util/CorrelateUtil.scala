@@ -17,12 +17,15 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl}
-import org.apache.calcite.rex.{RexBuilder, RexNode, RexProgram, RexProgramBuilder}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.util.FlinkRexUtil
 
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl}
+import org.apache.calcite.rex.{RexBuilder, RexCall, RexNode, RexProgram, RexProgramBuilder}
+
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -132,5 +135,28 @@ object CorrelateUtil {
       null
     }
     (shiftProjects, shiftCondition)
+  }
+
+  def selectToString(rowType: RelDataType): String = rowType.getFieldNames.asScala.mkString(",")
+
+  def correlateOpName(
+      inputType: RelDataType,
+      rexCall: RexCall,
+      sqlFunction: TableSqlFunction,
+      rowType: RelDataType,
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
+    s"correlate: ${correlateToString(inputType, rexCall, sqlFunction, expression)}," +
+        s" select: ${selectToString(rowType)}"
+  }
+
+  def correlateToString(
+      inputType: RelDataType,
+      rexCall: RexCall,
+      sqlFunction: TableSqlFunction,
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
+    val inFields = inputType.getFieldNames.asScala.toList
+    val udtfName = sqlFunction.toString
+    val operands = rexCall.getOperands.asScala.map(expression(_, inFields, None)).mkString(",")
+    s"table($udtfName($operands))"
   }
 }

@@ -17,19 +17,20 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.codegen.{CodeGeneratorContext, CorrelateCodeGenerator}
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
+import org.apache.flink.table.plan.util.CorrelateUtil
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexNode, RexProgram}
 import org.apache.calcite.sql.SemiJoinType
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.functions.utils.TableSqlFunction
-import org.apache.flink.table.plan.nodes.common.CommonCorrelate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 /**
   * Flink RelNode which matches along with join a user defined table function.
@@ -45,7 +46,6 @@ class BatchExecCorrelate(
     joinType: SemiJoinType,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, inputNode)
-  with CommonCorrelate
   with RowBatchExecRel {
 
   override def deriveRowType(): RelDataType = relRowType
@@ -80,12 +80,12 @@ class BatchExecCorrelate(
     val rexCall = scan.getCall.asInstanceOf[RexCall]
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
     s"${
-      correlateToString(
+      CorrelateUtil.correlateToString(
         input.getRowType,
         rexCall,
         sqlFunction,
         getExpressionString)
-    } select(${selectToString(relRowType)})"
+    } select(${CorrelateUtil.selectToString(relRowType)})"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
@@ -93,9 +93,9 @@ class BatchExecCorrelate(
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
     super.explainTerms(pw)
       .item("invocation", scan.getCall)
-      .item("correlate",
-        correlateToString(inputNode.getRowType, rexCall, sqlFunction, getExpressionString))
-      .item("select", selectToString(relRowType))
+      .item("correlate", CorrelateUtil.correlateToString(
+        inputNode.getRowType, rexCall, sqlFunction, getExpressionString))
+      .item("select", CorrelateUtil.selectToString(relRowType))
       .item("rowType", relRowType)
       .item("joinType", joinType)
       .itemIf("condition", condition.orNull, condition.isDefined)
@@ -110,7 +110,7 @@ class BatchExecCorrelate(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
     val inputTransformation = getInput.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
-    val transformation = generateCorrelateTransformation(
+    val transformation = CorrelateCodeGenerator.generateCorrelateTransformation(
       tableEnv,
       operatorCtx,
       inputTransformation,

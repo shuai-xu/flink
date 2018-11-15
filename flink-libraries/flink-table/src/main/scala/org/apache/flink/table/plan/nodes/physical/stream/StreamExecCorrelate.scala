@@ -17,19 +17,20 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
+import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.codegen.{CodeGeneratorContext, CorrelateCodeGenerator}
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
+import org.apache.flink.table.plan.util.CorrelateUtil
+import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.{RexCall, RexNode, RexProgram}
 import org.apache.calcite.sql.SemiJoinType
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.functions.utils.TableSqlFunction
-import org.apache.flink.table.plan.nodes.common.CommonCorrelate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
-import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
 /**
   * Flink RelNode which matches along with join a user defined table function.
@@ -45,7 +46,6 @@ class StreamExecCorrelate(
     joinType: SemiJoinType,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, child)
-  with CommonCorrelate
   with StreamExecRel {
 
   override def deriveRowType(): RelDataType = relDataType
@@ -78,12 +78,12 @@ class StreamExecCorrelate(
     val rexCall = scan.getCall.asInstanceOf[RexCall]
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
     s"${
-      correlateToString(
+      CorrelateUtil.correlateToString(
         child.getRowType,
         rexCall,
         sqlFunction,
         getExpressionString)
-    } select(${selectToString(relDataType)})"
+    } select(${CorrelateUtil.selectToString(relDataType)})"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
@@ -91,9 +91,9 @@ class StreamExecCorrelate(
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
     super.explainTerms(pw)
       .item("invocation", scan.getCall)
-      .item("correlate",
-        correlateToString(child.getRowType, rexCall, sqlFunction, getExpressionString))
-      .item("select", selectToString(relDataType))
+      .item("correlate", CorrelateUtil.correlateToString(
+        child.getRowType, rexCall, sqlFunction, getExpressionString))
+      .item("select", CorrelateUtil.selectToString(relDataType))
       .item("rowType", relDataType)
       .item("joinType", joinType)
       .itemIf("condition", condition.orNull, condition.isDefined)
@@ -104,7 +104,7 @@ class StreamExecCorrelate(
     val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
       .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
-    generateCorrelateTransformation(
+    CorrelateCodeGenerator.generateCorrelateTransformation(
       tableEnv,
       operatorCtx,
       inputTransformation,
