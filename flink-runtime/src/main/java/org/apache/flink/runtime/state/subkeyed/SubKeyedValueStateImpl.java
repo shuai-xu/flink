@@ -59,6 +59,9 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 	 */
 	private final InternalState internalState;
 
+	/** partitioner used to get key group.**/
+	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
 	/**
 	 * Constructor with the internal state to store the values.
 	 *
@@ -90,7 +93,7 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			.addValueColumn("value",
 				subKeyedStateDescriptor.getValueSerializer(),
 				subKeyedStateDescriptor.getValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, HashPartitioner.INSTANCE))
+			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
 			.getDescriptor();
 	}
 
@@ -102,6 +105,7 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			return false;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row row = internalState.get(Row.of(key, namespace));
 		return (row != null);
 	}
@@ -118,6 +122,7 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			return defaultValue;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row row = internalState.get(Row.of(key, namespace));
 		return row == null ? defaultValue : (V) row.getField(VALUE_FIELD_INDEX);
 	}
@@ -150,6 +155,7 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.remove(Row.of(key, namespace));
 	}
 
@@ -173,6 +179,7 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 		Preconditions.checkNotNull(key);
 		Preconditions.checkNotNull(namespace);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(Row.of(key, namespace), Row.of(value));
 	}
 
@@ -215,5 +222,9 @@ public final class SubKeyedValueStateImpl<K, N, V> implements SubKeyedValueState
 				SubKeyedValueStateImpl.this.remove(key, namespace);
 			}
 		};
+	}
+
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }

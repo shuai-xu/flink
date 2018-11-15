@@ -56,6 +56,9 @@ final class HeapInternalState implements InternalState {
 	 */
 	private final InternalStateDescriptor descriptor;
 
+	/** group of next operation, update by {@code setGroup} **/
+	private int currentGroup;
+
 	/**
 	 * Constructor with the given backend and the descriptor.
 	 *
@@ -96,9 +99,7 @@ final class HeapInternalState implements InternalState {
 
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 
-		int group = getGroupForKey(key);
-
-		Map currentMap = backend.getRootMap(descriptor, group, false);
+		Map currentMap = backend.getRootMap(descriptor, currentGroup, false);
 		if (currentMap == null) {
 			return null;
 		}
@@ -124,9 +125,7 @@ final class HeapInternalState implements InternalState {
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 		Preconditions.checkArgument(value.getArity() == descriptor.getNumValueColumns());
 
-		int group = getGroupForKey(key);
-
-		Map currentMap = backend.getRootMap(descriptor, group, true);
+		Map currentMap = backend.getRootMap(descriptor, currentGroup, true);
 		Preconditions.checkState(currentMap != null);
 
 		for (int index = 0; index < key.getArity() - 1; ++index) {
@@ -160,9 +159,7 @@ final class HeapInternalState implements InternalState {
 		Preconditions.checkArgument(value.getArity() == descriptor.getNumValueColumns());
 		Preconditions.checkNotNull(descriptor.getValueMerger());
 
-		int group = getGroupForKey(key);
-
-		Map currentMap = backend.getRootMap(descriptor, group, true);
+		Map currentMap = backend.getRootMap(descriptor, currentGroup, true);
 		Preconditions.checkState(currentMap != null);
 
 		for (int index = 0; index < key.getArity() - 1; ++index) {
@@ -200,9 +197,7 @@ final class HeapInternalState implements InternalState {
 
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 
-		int group = getGroupForKey(key);
-
-		Map currentMap = backend.getRootMap(descriptor, group, false);
+		Map currentMap = backend.getRootMap(descriptor, currentGroup, false);
 		if (currentMap == null) {
 			return;
 		}
@@ -240,6 +235,7 @@ final class HeapInternalState implements InternalState {
 		Map<Row, Row> results = new HashMap<>();
 
 		for (Row key : keys) {
+			currentGroup = getGroupForKey(key);
 			Row value = get(key);
 			if (value != null) {
 				results.put(key, value);
@@ -256,6 +252,7 @@ final class HeapInternalState implements InternalState {
 		}
 
 		for (Map.Entry<Row, Row> pair : pairs.entrySet()) {
+			currentGroup = getGroupForKey(pair.getKey());
 			put(pair.getKey(), pair.getValue());
 		}
 	}
@@ -263,7 +260,9 @@ final class HeapInternalState implements InternalState {
 	@Override
 	public <K, MK, MV> void rawPutAll(K key, Map<MK, MV> maps) {
 		for (Map.Entry<MK, MV> entry : maps.entrySet()) {
-			put(Row.of(key, entry.getKey()), Row.of(entry.getValue()));
+			Row internalKey = Row.of(key, entry.getKey());
+			currentGroup = getGroupForKey(internalKey);
+			put(internalKey, Row.of(entry.getValue()));
 		}
 	}
 
@@ -274,6 +273,7 @@ final class HeapInternalState implements InternalState {
 		}
 
 		for (Map.Entry<Row, Row> pair : pairs.entrySet()) {
+			currentGroup = getGroupForKey(pair.getKey());
 			merge(pair.getKey(), pair.getValue());
 		}
 	}
@@ -285,6 +285,7 @@ final class HeapInternalState implements InternalState {
 		}
 
 		for (Row key : keys) {
+			currentGroup = getGroupForKey(key);
 			remove(key);
 		}
 	}
@@ -467,6 +468,11 @@ final class HeapInternalState implements InternalState {
 				(Comparator<Object>) getDescriptor().getKeyColumnDescriptor(numPrefixKeys).getComparator(),
 				numPrefixKeys);
 		}
+	}
+
+	@Override
+	public void setCurrentGroup(int group) {
+		currentGroup = group;
 	}
 
 	// Private helper methods ------------------------------------------------------------------------------------------

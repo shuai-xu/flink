@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.state.subkeyed;
 
 import org.apache.flink.api.common.functions.Comparator;
-import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.runtime.state.FieldBasedPartitioner;
 import org.apache.flink.runtime.state.InternalColumnDescriptor;
 import org.apache.flink.runtime.state.InternalState;
@@ -94,7 +93,7 @@ public final class SubKeyedSortedMapStateImpl<K, N, MK, MV>
 			.addValueColumn("mapValue",
 				subKeyedStateDescriptor.getMapValueSerializer(),
 				subKeyedStateDescriptor.getMapValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, HashPartitioner.INSTANCE))
+			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
 			.getDescriptor();
 	}
 

@@ -324,6 +324,10 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 		return instanceRocksDBPath;
 	}
 
+	public InternalStateDescriptor getInternalStateDescriptor() {
+		return descriptor;
+	}
+
 	Path getLocalRestorePath(GroupRange groupRange) {
 		Preconditions.checkNotNull(instanceBasePath);
 		String dirName = String.format("%s-%d-%d",

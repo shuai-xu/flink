@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.subkeyed;
 
+import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
@@ -65,6 +66,9 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 	 */
 	final InternalState internalState;
 
+	/** partitioner used to get key group.**/
+	protected static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
 	//--------------------------------------------------------------------------
 
 	/**
@@ -93,6 +97,7 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 		}
 
 		Row internalKey = Row.of(key, namespace, mapKey);
+		internalState.setCurrentGroup(getKeyGroup(key));
 		return internalState.get(internalKey) != null;
 	}
 
@@ -118,6 +123,7 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 			return defaultMapValue;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row internalValue = internalState.get(Row.of(key, namespace, mapKey));
 		return internalValue == null ? defaultMapValue :
 			(MV) internalValue.getField(MAPVALUE_FIELD_INDEX);
@@ -208,6 +214,7 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 		Preconditions.checkNotNull(key);
 		Preconditions.checkNotNull(namespace);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(Row.of(key, namespace, mapKey), Row.of(mapValue));
 	}
 
@@ -251,6 +258,7 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.remove(Row.of(key, namespace, mapKey));
 	}
 
@@ -530,6 +538,10 @@ abstract class AbstractSubKeyedMapStateImpl<K, N, MK, MV, M extends Map<MK, MV>>
 		public void remove() {
 			internalIterator.remove();
 		}
+	}
+
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }
 

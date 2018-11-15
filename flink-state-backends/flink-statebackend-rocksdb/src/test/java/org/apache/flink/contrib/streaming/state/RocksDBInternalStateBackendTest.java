@@ -19,6 +19,7 @@
 package org.apache.flink.contrib.streaming.state;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.base.FloatSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -120,6 +121,10 @@ public class RocksDBInternalStateBackendTest {
 
 	private List<AutoCloseable> autoCloseables;
 
+	private final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
+	private final int maxParallism = 10;
+
 	private InternalStateDescriptor stateDescriptor1 =
 		new InternalStateDescriptorBuilder("state1")
 			.addKeyColumn("key", IntSerializer.INSTANCE)
@@ -177,8 +182,8 @@ public class RocksDBInternalStateBackendTest {
 			tempFolder.newFolder(),
 			dbOptions,
 			columnOptions,
-			10,
-			getGroupsForSubtask(10, 1, 0),
+			maxParallism,
+			getGroupsForSubtask(maxParallism, 1, 0),
 			true,
 			mock(LocalRecoveryConfig.class),
 			null);
@@ -196,8 +201,12 @@ public class RocksDBInternalStateBackendTest {
 		resourceGuardField.set(backend, rocksDBResourceGuard);
 
 		for (int i = 0; i < 100; i++) {
-			state1.put(Row.of(i), Row.of(ThreadLocalRandom.current().nextFloat()));
-			state2.put(Row.of(i, ThreadLocalRandom.current().nextInt()), Row.of(ThreadLocalRandom.current().nextFloat()));
+			Row internalKey1 = Row.of(i);
+			Row internalKey2 = Row.of(i, ThreadLocalRandom.current().nextInt());
+			state1.setCurrentGroup(partitioner.partition(internalKey1, maxParallism));
+			state1.put(internalKey1, Row.of(ThreadLocalRandom.current().nextFloat()));
+			state2.setCurrentGroup(partitioner.partition(internalKey2, maxParallism));
+			state2.put(internalKey2, Row.of(ThreadLocalRandom.current().nextFloat()));
 		}
 
 		autoCloseables = new ArrayList<>();

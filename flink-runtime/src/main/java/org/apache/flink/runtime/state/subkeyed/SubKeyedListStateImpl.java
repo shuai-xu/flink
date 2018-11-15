@@ -66,6 +66,9 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 	 */
 	private final InternalState internalState;
 
+	/** partitioner used to get key group.**/
+	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
 	//--------------------------------------------------------------------------
 
 	/**
@@ -102,7 +105,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			.addValueColumn("elements",
 				subKeyedStateDescriptor.getValueSerializer(),
 				subKeyedStateDescriptor.getValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, HashPartitioner.INSTANCE))
+			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
 			.getDescriptor();
 	}
 
@@ -129,6 +132,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			return defaultList;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row rowValue = this.internalState.get(Row.of(key, namespace));
 		List<E> list = defaultList;
 		if (rowValue != null) {
@@ -176,6 +180,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 
 		Row internalKey = Row.of(key, namespace);
 		Row internalValue = Row.of(new ArrayList<>(Arrays.asList(element)));
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.merge(internalKey, internalValue);
 	}
 
@@ -197,6 +202,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 		}
 		Row internalValue = Row.of(listValue);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.merge(internalKey, internalValue);
 	}
 
@@ -208,6 +214,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 
 		Row internalKey = Row.of(key, namespace);
 		Row internalValue = Row.of(new ArrayList<>(Arrays.asList(element)));
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(internalKey, internalValue);
 	}
 
@@ -229,6 +236,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 		}
 		Row internalValue = Row.of(listValue);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(internalKey, internalValue);
 	}
 
@@ -238,6 +246,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.remove(Row.of(key, namespace));
 	}
 
@@ -260,6 +269,8 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 				break;
 			}
 		}
+
+		internalState.setCurrentGroup(getKeyGroup(key));
 		if (listValue.isEmpty()) {
 			internalState.remove(Row.of(key, namespace));
 		} else {
@@ -286,6 +297,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 			}
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		if (listValue.isEmpty()) {
 			internalState.remove(Row.of(key, namespace));
 		} else {
@@ -359,6 +371,7 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 		if (iterator.hasNext()) {
 			element = iterator.next();
 			iterator.remove();
+			internalState.setCurrentGroup(getKeyGroup(key));
 			internalState.put(Row.of(key, namespace), Row.of(listValue));
 		}
 
@@ -376,6 +389,10 @@ public final class SubKeyedListStateImpl<K, N, E> implements SubKeyedListState<K
 		}
 
 		return element;
+	}
+
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }
 

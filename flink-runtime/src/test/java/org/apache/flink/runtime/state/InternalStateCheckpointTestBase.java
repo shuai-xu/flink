@@ -80,7 +80,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	protected CheckpointStreamFactory checkpointStreamFactory;
 
-	protected int maxParallelism;
+	protected static int maxParallelism;
 
 	protected int initParallelism;
 
@@ -90,6 +90,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 
 	protected LocalRecoveryConfig localRecoveryConfig;
 
+	private static final FieldBasedPartitioner partitioner = new FieldBasedPartitioner(0, HashPartitioner.INSTANCE);
 	/**
 	 * Creates a new state stateBackend for testing.
 	 *
@@ -159,6 +160,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			new InternalStateDescriptorBuilder("globalState1")
 				.addKeyColumn("key", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		stateBackend.getInternalState(globalStateDescriptor);
 
@@ -195,6 +197,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			new InternalStateDescriptorBuilder("globalState1")
 				.addKeyColumn("key", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
 		populateStateData(stateMaps, globalState1);
@@ -204,6 +207,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				.addKeyColumn("key1", IntSerializer.INSTANCE)
 				.addKeyColumn("key2", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
 		populateStateData(stateMaps, globalState2);
@@ -212,6 +216,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			new InternalStateDescriptorBuilder("emptyState")
 				.addKeyColumn("key", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState emptyState = stateBackend.getInternalState(emptyStateDescriptor);
 
@@ -226,10 +231,12 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			if (index % 3 == 0) {
 				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
 				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+				globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
 				globalState1.put(key1, value1);
 
 				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
 				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+				globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
 				globalState2.put(key2, value2);
 			}
 			index++;
@@ -272,11 +279,13 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			if (index % 4 == 0) {
 				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
 				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+				globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
 				globalState1.put(key1, value1);
 				recordStatePair(stateMaps, globalState1, key1, value1);
 
 				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
 				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+				globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
 				globalState2.put(key2, value2);
 				recordStatePair(stateMaps, globalState2, key2, value2);
 			}
@@ -339,6 +348,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			new InternalStateDescriptorBuilder("globalState1")
 				.addKeyColumn("key", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState globalState1 = stateBackend.getInternalState(globalStateDescriptor1);
 		populateGroupStateData(globalGroupMaps, globalState1);
@@ -348,6 +358,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				.addKeyColumn("key1", IntSerializer.INSTANCE)
 				.addKeyColumn("key2", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState globalState2 = stateBackend.getInternalState(globalStateDescriptor2);
 		populateGroupStateData(globalGroupMaps, globalState2);
@@ -356,6 +367,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			new InternalStateDescriptorBuilder("emptyState")
 				.addKeyColumn("key", IntSerializer.INSTANCE)
 				.addValueColumn("value", FloatSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState emptyState = stateBackend.getInternalState(emptyStateDescriptor);
 
@@ -370,10 +382,12 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			if (index % 3 == 0) {
 				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
 				Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+				globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
 				globalState1.put(key1, value1);
 
 				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
 				Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+				globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
 				globalState2.put(key2, value2);
 			}
 			index++;
@@ -412,6 +426,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
 				if (isGroupContainsKey(firstGroups1, key1)) {
 					Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+					globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
 					globalState1.put(key1, value1);
 					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
 				}
@@ -419,6 +434,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
 				if (isGroupContainsKey(firstGroups1, key2)) {
 					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
 					globalState2.put(key2, value2);
 					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
 				}
@@ -464,6 +480,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
 				if (isGroupContainsKey(secondGroups1, key1)) {
 					Row value1 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
 					globalState1.put(key1, value1);
 					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
 				}
@@ -471,6 +488,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
 				if (isGroupContainsKey(secondGroups1, key2)) {
 					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
 					globalState2.put(key2, value2);
 
 					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
@@ -518,6 +536,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				Row key1 = generateKey(i, globalStateDescriptor1.getNumKeyColumns());
 				if (isGroupContainsKey(thirdGroups1, key1)) {
 					Row value1 = generateValue(random, globalStateDescriptor1.getNumValueColumns());
+					globalState1.setCurrentGroup(getCurrentGroup(key1, maxParallelism));
 					globalState1.put(key1, value1);
 					recordGroupPair(globalGroupMaps, globalState1, key1, value1);
 				}
@@ -525,6 +544,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				Row key2 = generateKey(i, globalStateDescriptor2.getNumKeyColumns());
 				if (isGroupContainsKey(thirdGroups1, key2)) {
 					Row value2 = generateValue(random, globalStateDescriptor2.getNumValueColumns());
+					globalState2.setCurrentGroup(getCurrentGroup(key2, maxParallelism));
 					globalState2.put(key2, value2);
 					recordGroupPair(globalGroupMaps, globalState2, key2, value2);
 				}
@@ -603,10 +623,13 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			new InternalStateDescriptorBuilder("keySerializerState")
 				.addKeyColumn("key", new TestDuplicateIntSerializer())
 				.addValueColumn("value", IntSerializer.INSTANCE)
+				.setPartitioner(partitioner)
 				.getDescriptor();
 		InternalState keySerializerState = stateBackend.getInternalState(keySerializerDescriptor);
 
-		keySerializerState.put(Row.of(1), Row.of(2));
+		Row internalKey = Row.of(1);
+		keySerializerState.setCurrentGroup(getCurrentGroup(internalKey, maxParallelism));
+		keySerializerState.put(internalKey, Row.of(2));
 
 		try {
 			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
@@ -632,7 +655,8 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 				.getDescriptor();
 		InternalState valueSerializerState = stateBackend.getInternalState(valueSerializerDescriptor);
 
-		valueSerializerState.put(Row.of(1), Row.of(2));
+		valueSerializerState.setCurrentGroup(getCurrentGroup(internalKey, maxParallelism));
+		valueSerializerState.put(internalKey, Row.of(2));
 
 		try {
 			runSnapshot(stateBackend, 0, 0, checkpointStreamFactory, checkpointOptions, sharedStateRegistry);
@@ -650,7 +674,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 	}
 
 	private boolean isGroupContainsKey(GroupSet groups, Row key) {
-		return groups.contains(HashPartitioner.INSTANCE.partition(key, maxParallelism));
+		return groups.contains(partitioner.partition(key, maxParallelism));
 	}
 
 	private static Row generateKey(int number, int numKeyColumns) {
@@ -696,6 +720,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			Row key = generateKey(i, numKeyColumns);
 			Row value = generateValue(random, numValueColumns);
 
+			state.setCurrentGroup(getCurrentGroup(key, maxParallelism));
 			state.put(key, value);
 			recordGroupPair(groupMaps, state, key, value);
 		}
@@ -712,6 +737,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 			Row key = generateKey(i, numKeyColumns);
 			Row value = generateValue(random, numValueColumns);
 
+			state.setCurrentGroup(getCurrentGroup(key, maxParallelism));
 			state.put(key, value);
 			recordStatePair(stateMaps, state, key, value);
 		}
@@ -817,5 +843,9 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		SnapshotResult<StatePartitionSnapshot> snapshotResult =
 			FutureUtil.runIfNotDoneAndGet(snapshotRunnableFuture);
 		return snapshotResult == null ? null : snapshotResult.getJobManagerOwnedSnapshot();
+	}
+
+	private static  int getCurrentGroup(Row key, int numGroups) {
+		return partitioner.partition(key, numGroups);
 	}
 }

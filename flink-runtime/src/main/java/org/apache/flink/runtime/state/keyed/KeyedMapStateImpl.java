@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.state.keyed;
 
-import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.queryablestate.client.state.serialization.KvStateSerializer;
 import org.apache.flink.runtime.state.FieldBasedPartitioner;
@@ -77,7 +76,7 @@ public final class KeyedMapStateImpl<K, MK, MV>
 			.addValueColumn("mapValue",
 				keyedStateDescriptor.getMapValueSerializer(),
 				keyedStateDescriptor.getMapValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, HashPartitioner.INSTANCE))
+			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
 			.getDescriptor();
 	}
 

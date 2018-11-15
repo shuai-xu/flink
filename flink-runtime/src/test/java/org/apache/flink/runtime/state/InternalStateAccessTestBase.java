@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.api.common.functions.ListMerger;
 import org.apache.flink.api.common.typeutils.BytewiseComparator;
 import org.apache.flink.api.common.typeutils.base.DoubleSerializer;
@@ -55,6 +56,8 @@ import static org.junit.Assert.fail;
 public abstract class InternalStateAccessTestBase {
 
 	protected InternalStateBackend backend;
+	HashPartitioner partitioner = HashPartitioner.INSTANCE;
+	private final int maxParallelism = 10;
 
 	/**
 	 * Creates a new state backend for testing.
@@ -69,8 +72,8 @@ public abstract class InternalStateAccessTestBase {
 
 	@Before
 	public void openStateBackend() throws Exception {
-		GroupSet groups = getGroupsForSubtask(10, 1, 0);
-		backend = createStateBackend(10, groups, ClassLoader.getSystemClassLoader(), TestLocalRecoveryConfig.disabled());
+		GroupSet groups = getGroupsForSubtask(maxParallelism, 1, 0);
+		backend = createStateBackend(maxParallelism, groups, ClassLoader.getSystemClassLoader(), TestLocalRecoveryConfig.disabled());
 		backend.restore(null);
 	}
 
@@ -120,11 +123,13 @@ public abstract class InternalStateAccessTestBase {
 		// Adds the pairs into the state and validates that the values can be
 		// correctly retrieved.
 		for (Map.Entry<Row, Row> pair : pairs.entrySet()) {
+			state.setCurrentGroup(getCurrentGroup(pair.getKey()));
 			state.put(pair.getKey(), pair.getValue());
 		}
 
 		for (Map.Entry<Row, Row> pair : pairs.entrySet()) {
 			Row expectedValue = pair.getValue();
+			state.setCurrentGroup(getCurrentGroup(pair.getKey()));
 			Row value = state.get(pair.getKey());
 			assertEquals(expectedValue, value);
 		}
@@ -164,10 +169,12 @@ public abstract class InternalStateAccessTestBase {
 
 		pairs.keySet().removeAll(removedKeys);
 		for (Row removedKey : removedKeys) {
+			state.setCurrentGroup(getCurrentGroup(removedKey));
 			state.remove(removedKey);
 		}
 
 		for (Map.Entry<Row, Row> pair : pairs.entrySet()) {
+			state.setCurrentGroup(getCurrentGroup(pair.getKey()));
 			Row value = state.get(pair.getKey());
 			if (removedKeys.contains(pair.getKey())) {
 				assertNull(value);
@@ -195,6 +202,7 @@ public abstract class InternalStateAccessTestBase {
 		state.putAll(addedPairs);
 
 		for (Map.Entry<Row, Row> pair : pairs.entrySet()) {
+			state.setCurrentGroup(getCurrentGroup(pair.getKey()));
 			Row value = state.get(pair.getKey());
 			assertEquals(pair.getValue(), value);
 		}
@@ -245,6 +253,7 @@ public abstract class InternalStateAccessTestBase {
 		state.removeAll(removedKeys);
 
 		for (Row removedKey : removedKeys) {
+			state.setCurrentGroup(getCurrentGroup(removedKey));
 			Row value = state.get(removedKey);
 			assertNull(value);
 		}
@@ -254,6 +263,7 @@ public abstract class InternalStateAccessTestBase {
 		state.removeAll(pairs.keySet());
 
 		for (Row key : pairs.keySet()) {
+			state.setCurrentGroup(getCurrentGroup(key));
 			Row value = state.get(key);
 			assertNull(value);
 		}
@@ -278,7 +288,9 @@ public abstract class InternalStateAccessTestBase {
 		rawPutAllState.rawPutAll(key, pairs);
 
 		for (Map.Entry<Long, Double> entry : pairs.entrySet()) {
-			Row value = rawPutAllState.get(Row.of(key, entry.getKey()));
+			Row internalState = Row.of(key, entry.getKey());
+			rawPutAllState.setCurrentGroup(getCurrentGroup(internalState));
+			Row value = rawPutAllState.get(internalState);
 			assertEquals(entry.getValue(), value.getField(0));
 		}
 	}
@@ -353,11 +365,15 @@ public abstract class InternalStateAccessTestBase {
 		for (int i = 0; i < 100; i++) {
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
-			state.put(Row.of(i, String.valueOf(i)), Row.of(value));
+			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
+			state.put(internalKey, Row.of(value));
 		}
 
 		for (int i = 0; i < 100; i++) {
-			Row internalValue = state.get(Row.of(i, String.valueOf(i)));
+			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
+			Row internalValue = state.get(internalKey);
 			assertNotNull(internalValue);
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -367,11 +383,15 @@ public abstract class InternalStateAccessTestBase {
 		for (int i = 0; i < 100; i++) {
 			List<Integer> value = new ArrayList<>();
 			value.add(i + 1);
-			state.merge(Row.of(i, String.valueOf(i)), Row.of(value));
+			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
+			state.merge(internalKey, Row.of(value));
 		}
 
 		for (int i = 0; i < 100; i++) {
-			Row actualValue = state.get(Row.of(i, String.valueOf(i)));
+			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
+			Row actualValue = state.get(internalKey);
 			assertNotNull(actualValue);
 			ArrayList<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -383,6 +403,7 @@ public abstract class InternalStateAccessTestBase {
 		// associate the given value with the key.
 		for (int i = 100; i < 200; i++) {
 			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
 			assertNull(state.get(internalKey));
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -390,7 +411,9 @@ public abstract class InternalStateAccessTestBase {
 		}
 
 		for (int i = 100; i < 200; i++) {
-			Row internalValue = state.get(Row.of(i, String.valueOf(i)));
+			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
+			Row internalValue = state.get(internalKey);
 			assertNotNull(internalValue);
 			List<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -407,7 +430,9 @@ public abstract class InternalStateAccessTestBase {
 		state.mergeAll(pairsToMerge);
 
 		for (int i = 100; i < 200; i++) {
-			Row actualValue = state.get(Row.of(i, String.valueOf(i)));
+			Row internalKey = Row.of(i, String.valueOf(i));
+			state.setCurrentGroup(getCurrentGroup(internalKey));
+			Row actualValue = state.get(internalKey);
 			assertNotNull(actualValue);
 			ArrayList<Integer> value = new ArrayList<>();
 			value.add(i);
@@ -576,5 +601,9 @@ public abstract class InternalStateAccessTestBase {
 		}
 
 		return k1Map;
+	}
+
+	private <K> int getCurrentGroup(K key) {
+		return partitioner.partition(key, maxParallelism);
 	}
 }

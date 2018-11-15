@@ -107,6 +107,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 	protected InternalState createInternalState(
 		InternalStateDescriptor stateDescriptor
 	) {
+		this.descriptor = stateDescriptor;
 		return new HeapInternalState(this, stateDescriptor);
 	}
 
@@ -390,6 +391,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 				TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
 				Row value = valueSerializer.deserialize(inputView);
 
+				state.setCurrentGroup(getGroupForKey(key));
 				state.put(key, value);
 			}
 		}
@@ -402,5 +404,11 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 		}
 
 		return new PrefixHeapIterator(rootMap, descriptor.getNumKeyColumns(), null);
+	}
+
+	private int getGroupForKey(Row key) {
+		int groupsToPartition = getNumGroups();
+
+		return descriptor.getPartitioner().partition(key, groupsToPartition);
 	}
 }

@@ -95,6 +95,9 @@ public class RocksDBInternalState implements InternalState {
 	/** Since max parallelism for Flink is not larger than 32768, only three bytes is enough. */
 	static final int GROUP_BYTES_TO_SKIP = 3;
 
+	/** group of next operation, update by {@code setGroup}. **/
+	private int currentGroup;
+
 	RocksDBInternalState(RocksDBInternalStateBackend backend, InternalStateDescriptor descriptor) {
 		this.backend = Preconditions.checkNotNull(backend);
 		this.descriptor = Preconditions.checkNotNull(descriptor);
@@ -132,8 +135,7 @@ public class RocksDBInternalState implements InternalState {
 
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 
-		int group = getGroupForKey(key);
-		byte[] dbKey = serializeStateKey(group, key);
+		byte[] dbKey = serializeStateKey(currentGroup, key);
 		byte[] dbValue = backend.getDbInstance().get(dbKey);
 		if (dbValue == null) {
 			return null;
@@ -151,8 +153,7 @@ public class RocksDBInternalState implements InternalState {
 	public void put(Row key, Row value) {
 		checkKeyAndValue(key, value);
 
-		int group = getGroupForKey(key);
-		byte[] dbKey = serializeStateKey(group, key);
+		byte[] dbKey = serializeStateKey(currentGroup, key);
 		byte[] dbValue = serializeStateValue(value, descriptor);
 
 		backend.getDbInstance().put(dbKey, dbValue);
@@ -163,8 +164,7 @@ public class RocksDBInternalState implements InternalState {
 		checkKeyAndValue(key, value);
 		Preconditions.checkNotNull(descriptor.getValueMerger());
 
-		int group = getGroupForKey(key);
-		byte[] dbKey = serializeStateKey(group, key);
+		byte[] dbKey = serializeStateKey(currentGroup, key);
 
 		byte[] mergedBytes = serializeStateValue(value, descriptor);
 		backend.getDbInstance().merge(dbKey, mergedBytes);
@@ -178,8 +178,7 @@ public class RocksDBInternalState implements InternalState {
 
 		Preconditions.checkArgument(key.getArity() == descriptor.getNumKeyColumns());
 
-		int group = getGroupForKey(key);
-		byte[] dbKey = serializeStateKey(group, key);
+		byte[] dbKey = serializeStateKey(currentGroup, key);
 
 		backend.getDbInstance().delete(dbKey);
 	}
@@ -270,6 +269,7 @@ public class RocksDBInternalState implements InternalState {
 		}
 
 		for (Map.Entry<Row, Row> entry : pairs.entrySet()) {
+			currentGroup = getGroupForKey(entry.getKey());
 			merge(entry.getKey(), entry.getValue());
 		}
 	}
@@ -281,6 +281,7 @@ public class RocksDBInternalState implements InternalState {
 		}
 
 		for (Row key : keys) {
+			currentGroup = getGroupForKey(key);
 			remove(key);
 		}
 	}
@@ -512,6 +513,11 @@ public class RocksDBInternalState implements InternalState {
 		return new RocksDBSortedPartitionIterator(groupIterators,
 			defaultComparator,
 			numPrefixKeys);
+	}
+
+	@Override
+	public void setCurrentGroup(int group) {
+		currentGroup = group;
 	}
 
 	// ------------------------------------------------------------------------
@@ -769,18 +775,29 @@ public class RocksDBInternalState implements InternalState {
 		int len = row.getArity();
 
 		DataOutputViewStreamWrapper outputView = new DataOutputViewStreamWrapper(outputStream);
-		for (int i = 0; i < len; i++) {
-			Object filed = row.getField(i);
+		if (len == 1) {
 			if (flag == KEY) {
 				outputStream.write(KEY_PREFIX_BYTE);
 			}
-			if (filed != null) {
-				outputView.writeBoolean(false);
-				TypeSerializer<Object> serializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[i];
-				serializer.serialize(filed, outputView);
-			} else {
-				outputView.writeBoolean(true);
+			serializeRowField(row, rowSerializer, outputView, 0);
+		} else {
+			for (int i = 0; i < len; i++) {
+				if (flag == KEY) {
+					outputStream.write(KEY_PREFIX_BYTE);
+				}
+				serializeRowField(row, rowSerializer, outputView, i);
 			}
+		}
+	}
+
+	static void serializeRowField(Row row, RowSerializer rowSerializer, DataOutputViewStreamWrapper outputView, int fieldIndex) throws IOException {
+		Object filed = row.getField(fieldIndex);
+		if (filed != null) {
+			outputView.writeBoolean(false);
+			TypeSerializer<Object> serializer = (TypeSerializer<Object>) rowSerializer.getFieldSerializers()[fieldIndex];
+			serializer.serialize(filed, outputView);
+		} else {
+			outputView.writeBoolean(true);
 		}
 	}
 

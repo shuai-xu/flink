@@ -141,8 +141,16 @@ public class RocksDBFullRestoreOperation {
 				TypeSerializer<Row> valueSerializer = stateDescriptor.getValueSerializer();
 				Row value = valueSerializer.deserialize(inputView);
 
+				state.setCurrentGroup(getGroupForKey(state.getDescriptor(), key));
 				state.put(key, value);
 			}
 		}
+	}
+
+	private int getGroupForKey(InternalStateDescriptor descriptor, Row key) {
+		int groupsToPartition = stateBackend.getNumGroups();
+
+		return descriptor.getPartitioner()
+			.partition(key, groupsToPartition);
 	}
 }

@@ -254,6 +254,11 @@ public class GeminiInternalState implements InternalState {
 		return isCopyValue() ? new CopyValueIterator(iterator) : iterator;
 	}
 
+	@Override
+	public void setCurrentGroup(int group) {
+
+	}
+
 	private void checkKeyAndValue(Row key, Row value) {
 		Preconditions.checkNotNull(key);
 		Preconditions.checkNotNull(value);

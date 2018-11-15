@@ -238,4 +238,12 @@ public interface InternalState {
 	 *         in the given range.
 	 */
 	<K> Iterator<Pair<Row, Row>> subIterator(Row prefixKeys, K startKey, K endKey);
+
+	/**
+	 * Set the key group used for next operation.
+	 * **IMPORTANT** : should be called before every single operation
+	 * such as put/get/remove of all state
+	 * @param group The group will used for next operation.
+	 */
+	void setCurrentGroup(int group);
 }

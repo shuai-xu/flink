@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state.keyed;
 
+import org.apache.flink.api.common.functions.HashPartitioner;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.types.Pair;
 import org.apache.flink.types.Row;
@@ -59,6 +60,9 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 	 */
 	final InternalState internalState;
 
+	/** partitioner used to generate key group. **/
+	protected static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
 	//--------------------------------------------------------------------------
 
 	/**
@@ -97,6 +101,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 		}
 
 		Row internalKey = Row.of(key, mapKey);
+		internalState.setCurrentGroup(getKeyGroup(key));
 		return internalState.get(internalKey) != null;
 	}
 
@@ -137,6 +142,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return defaultMapValue;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row internalValue = internalState.get(Row.of(key, mapKey));
 		return internalValue == null ? defaultMapValue :
 			(MV) internalValue.getField(MAPVALUE_FIELD_INDEX);
@@ -243,6 +249,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 	public void add(K key, MK mapKey, MV mapValue) {
 		Preconditions.checkNotNull(key);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(Row.of(key, mapKey), Row.of(mapValue));
 	}
 
@@ -254,6 +261,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.rawPutAll(key, mappings);
 	}
 
@@ -303,6 +311,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.remove(Row.of(key, mapKey));
 	}
 
@@ -329,6 +338,7 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 			internalKeys.add(Row.of(key, mapKey));
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.removeAll(internalKeys);
 	}
 
@@ -617,5 +627,9 @@ abstract class AbstractKeyedMapStateImpl<K, MK, MV, M extends Map<MK, MV>>
 		public void remove() {
 			internalIterator.remove();
 		}
+	}
+
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }

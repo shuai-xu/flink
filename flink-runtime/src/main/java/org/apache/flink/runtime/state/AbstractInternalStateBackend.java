@@ -92,6 +92,8 @@ public abstract class AbstractInternalStateBackend implements InternalStateBacke
 	 */
 	protected TaskKvStateRegistry kvStateRegistry;
 
+	protected InternalStateDescriptor descriptor;
+
 	/**
 	 * Subclasses should implement this method to release unused resources.
 	 */

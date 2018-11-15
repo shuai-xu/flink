@@ -57,6 +57,9 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 	 */
 	private final InternalState internalState;
 
+	/** partitioner used to generate key group. */
+	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
 	/**
 	 * Constructor with the internal state to store the values.
 	 *
@@ -86,7 +89,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			.addValueColumn("value",
 				keyedStateDescriptor.getValueSerializer(),
 				keyedStateDescriptor.getValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, HashPartitioner.INSTANCE))
+			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
 			.getDescriptor();
 	}
 
@@ -98,6 +101,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			return false;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row row = internalState.get(Row.of(key));
 		return (row != null);
 	}
@@ -114,6 +118,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			return defaultValue;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row row = internalState.get(Row.of(key));
 		return row == null ? defaultValue : (V) row.getField(VALUE_FIELD_INDEX);
 	}
@@ -150,6 +155,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.remove(Row.of(key));
 	}
 
@@ -173,6 +179,7 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 	public void put(K key, V value) {
 		Preconditions.checkNotNull(key);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(Row.of(key), Row.of(value));
 	}
 
@@ -261,5 +268,9 @@ public final class KeyedValueStateImpl<K, V> implements KeyedValueState<K, V> {
 		InternalColumnDescriptor<V> valueDescriptor =
 			(InternalColumnDescriptor<V>) descriptor.getValueColumnDescriptor(VALUE_FIELD_INDEX);
 		return KvStateSerializer.serializeValue(value, valueDescriptor.getSerializer());
+	}
+
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }

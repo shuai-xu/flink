@@ -68,6 +68,9 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 	 */
 	private static KeyedListStateDescriptor stateDescriptor;
 
+	/** partitioner used to generate key group.**/
+	private static final HashPartitioner partitioner = HashPartitioner.INSTANCE;
+
 	//--------------------------------------------------------------------------
 
 	/**
@@ -100,7 +103,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			.addValueColumn("elements",
 				keyedStateDescriptor.getValueSerializer(),
 				keyedStateDescriptor.getValueMerger())
-			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, HashPartitioner.INSTANCE))
+			.setPartitioner(new FieldBasedPartitioner(KEY_FIELD_INDEX, partitioner))
 			.getDescriptor();
 	}
 
@@ -125,6 +128,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return defaultValue;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		Row rowValue = this.internalState.get(Row.of(key));
 		List<E> list = defaultValue;
 		if (rowValue != null) {
@@ -162,6 +166,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 
 		Row internalKey = Row.of(key);
 		Row internalValue = Row.of(new ArrayList<>(Arrays.asList(element)));
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.merge(internalKey, internalValue);
 	}
 
@@ -182,6 +187,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		}
 		Row internalValue = Row.of(internalList);
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.merge(internalKey, internalValue);
 	}
 
@@ -223,6 +229,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 
 		Row internalKey = Row.of(key);
 		Row internalValue = Row.of(new ArrayList<>(Arrays.asList(element)));
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(internalKey, internalValue);
 	}
 
@@ -237,6 +244,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			internalList.add(element);
 		}
 		Row internalValue = Row.of(internalList);
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.put(internalKey, internalValue);
 	}
 
@@ -276,6 +284,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 			return;
 		}
 
+		internalState.setCurrentGroup(getKeyGroup(key));
 		internalState.remove(Row.of(key));
 	}
 
@@ -286,6 +295,7 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		}
 
 		List<E> list = getOrDefault(key, Collections.emptyList());
+		internalState.setCurrentGroup(getKeyGroup(key));
 		boolean success = list.remove(elementToRemove);
 		if (list.isEmpty()) {
 			internalState.remove(Row.of(key));
@@ -457,6 +467,10 @@ public final class KeyedListStateImpl<K, E> implements KeyedListState<K, E> {
 		view.flush();
 
 		return baos.toByteArray();
+	}
+
+	private <K> int getKeyGroup(K key) {
+		return partitioner.partition(key, internalState.getNumGroups());
 	}
 }
 
