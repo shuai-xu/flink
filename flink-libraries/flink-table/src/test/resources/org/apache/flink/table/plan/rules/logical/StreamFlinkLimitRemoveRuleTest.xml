@@ -16,53 +16,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-	<TestCase name="testSimpleLimitZero">
-		<Resource name="plan">
-			<![CDATA[
+  <TestCase name="testLimitZeroWithIn">
+    <Resource name="plan">
+      <![CDATA[
 StreamExecValues(tuples=[[]])
 ]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testLimitZeroWithOrderBy">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecValues(tuples=[[]])
-]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testLimitZeroWithSelect">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecValues(tuples=[[]])
-]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testLimitZeroWithIn">
-		<Resource name="plan">
-			<![CDATA[
-StreamExecValues(tuples=[[]])
-]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testLimitZeroWithExists">
-		<Resource name="plan">
-			<![CDATA[
+    </Resource>
+  </TestCase>
+  <TestCase name="testLimitZeroWithExists">
+    <Resource name="plan">
+      <![CDATA[
 StreamExecJoin(where=[$f0], join=[a, b, c], joinType=[SemiJoin])
   StreamExecExchange(distribution=[single])
-    StreamExecScan(table=[[_DataStreamTable_0]])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
   StreamExecExchange(distribution=[single])
     StreamExecCalc(select=[IS NOT NULL(m) AS $f0])
       StreamExecGroupAggregate(select=[MIN(i) AS m])
         StreamExecExchange(distribution=[single])
           StreamExecValues(tuples=[[]])
 ]]>
-		</Resource>
-	</TestCase>
-	<TestCase name="testLimitZeroWithJoin">
-		<Resource name="plan">
-			<![CDATA[
+    </Resource>
+  </TestCase>
+  <TestCase name="testLimitZeroWithJoin">
+    <Resource name="plan">
+      <![CDATA[
 StreamExecValues(tuples=[[]])
 ]]>
-		</Resource>
-	</TestCase>
+    </Resource>
+  </TestCase>
+  <TestCase name="testLimitZeroWithOrderBy">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSimpleLimitZero">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testLimitZeroWithSelect">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
 </Root>
