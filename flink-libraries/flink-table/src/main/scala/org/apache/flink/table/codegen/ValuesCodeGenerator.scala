@@ -16,44 +16,35 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.nodes.common
+package org.apache.flink.table.codegen
 
-import com.google.common.collect.ImmutableList
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Values
-import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, InputFormatCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.io.ValuesInputFormat
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
+import com.google.common.collect.ImmutableList
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexLiteral
+
 import scala.collection.JavaConversions._
 
-abstract class CommonValue(
-    cluster: RelOptCluster,
-    traitSet: RelTraitSet,
-    rowRelDataType: RelDataType,
-    tuples: ImmutableList[ImmutableList[RexLiteral]],
-  description: String)
-  extends Values(cluster, rowRelDataType, tuples, traitSet) {
+object ValuesCodeGenerator {
 
-  override def deriveRowType(): RelDataType = rowRelDataType
-
-  protected def generatorInputFormat(
-    tableEnv: TableEnvironment): ValuesInputFormat = {
+  def generatorInputFormat(
+      tableEnv: TableEnvironment,
+      rowType: RelDataType,
+      tuples: ImmutableList[ImmutableList[RexLiteral]],
+      description: String): ValuesInputFormat = {
     val config = tableEnv.getConfig
-
-    val outputType = FlinkTypeFactory.toInternalBaseRowType(getRowType, classOf[GenericRow])
+    val outputType = FlinkTypeFactory.toInternalBaseRowType(rowType, classOf[GenericRow])
 
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
-
     // generate code for every record
-    val generatedRecords = getTuples.map { r =>
+    val generatedRecords = tuples.map { r =>
       exprGenerator.generateResultExpression(r.map(exprGenerator.generateExpression), outputType)
     }
 
@@ -70,4 +61,5 @@ abstract class CommonValue(
       DataTypes.toTypeInfo(outputType).asInstanceOf[BaseRowTypeInfo[BaseRow]]
     )
   }
+
 }

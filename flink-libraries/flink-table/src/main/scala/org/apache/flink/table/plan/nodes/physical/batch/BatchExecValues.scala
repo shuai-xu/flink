@@ -18,16 +18,18 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.codegen.ValuesCodeGenerator
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Values
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexLiteral
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
-import org.apache.flink.table.plan.nodes.common.CommonValue
 
 import scala.collection.JavaConversions._
 
@@ -35,13 +37,13 @@ import scala.collection.JavaConversions._
   * StreamTransformation RelNode for a LogicalValues.
   */
 class BatchExecValues(
-  cluster: RelOptCluster,
-  traitSet: RelTraitSet,
-  rowRelDataType: RelDataType,
-  tuples: ImmutableList[ImmutableList[RexLiteral]],
-  description: String)
-  extends CommonValue(cluster, traitSet, rowRelDataType, tuples, description)
-    with RowBatchExecRel {
+    cluster: RelOptCluster,
+    traitSet: RelTraitSet,
+    rowRelDataType: RelDataType,
+    tuples: ImmutableList[ImmutableList[RexLiteral]],
+    description: String)
+  extends Values(cluster, rowRelDataType, tuples, traitSet)
+  with RowBatchExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new BatchExecValues(
@@ -54,6 +56,8 @@ class BatchExecValues(
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def deriveRowType(): RelDataType = rowRelDataType
 
   override def toString: String = {
     s"Values(values: (${getRowType.getFieldNames.toList.mkString(", ")}))"
@@ -70,8 +74,12 @@ class BatchExecValues(
     * @param tableEnv The [[BatchTableEnvironment]] of the translated Table.
     */
   override def translateToPlanInternal(
-    tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
-    val inputFormat = generatorInputFormat(tableEnv)
+      tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    val inputFormat = ValuesCodeGenerator.generatorInputFormat(
+      tableEnv,
+      getRowType,
+      tuples,
+      description)
     val transformation = tableEnv.streamEnv
       .createInput(inputFormat, inputFormat.getProducedType, description)
       .getTransformation

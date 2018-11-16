@@ -18,15 +18,18 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
+import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
+import org.apache.flink.table.codegen.ValuesCodeGenerator
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.schema.BaseRowSchema
+
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Values
 import org.apache.calcite.rex.RexLiteral
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.common.CommonValue
-import org.apache.flink.table.plan.schema.BaseRowSchema
 
 
 /**
@@ -38,8 +41,10 @@ class StreamExecValues(
     outputSchema: BaseRowSchema,
     tuples: ImmutableList[ImmutableList[RexLiteral]],
     description: String)
-  extends CommonValue(cluster, traitSet, outputSchema.relDataType, tuples, description)
+  extends Values(cluster, outputSchema.relDataType, tuples, traitSet)
   with StreamExecRel {
+
+  override def deriveRowType(): RelDataType = outputSchema.relDataType
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new StreamExecValues(
@@ -53,7 +58,11 @@ class StreamExecValues(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     if (tableEnv.getConfig.isValuesSourceInputEnabled) {
-      val inputFormat = generatorInputFormat(tableEnv)
+      val inputFormat = ValuesCodeGenerator.generatorInputFormat(
+        tableEnv,
+        getRowType,
+        tuples,
+        description)
       tableEnv.execEnv.createInput(inputFormat, inputFormat.getProducedType).getTransformation
     } else {
       // enable this feature when runtime support do checkpoint when source finished
