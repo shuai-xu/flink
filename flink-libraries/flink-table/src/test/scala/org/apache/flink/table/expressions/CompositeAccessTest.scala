@@ -25,6 +25,7 @@ import org.junit.{Ignore, Test}
 class CompositeAccessTest extends CompositeTypeTestBase {
 
   @Test
+  @Ignore("open this case after BLINK-17868111 is resolved") // FIXME
   def testGetField(): Unit = {
 
     // single field by string key
