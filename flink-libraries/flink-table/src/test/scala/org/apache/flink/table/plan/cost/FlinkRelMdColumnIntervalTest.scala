@@ -33,7 +33,6 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.stats.{RightSemiInfiniteValueInterval, ValueInterval}
-import org.apache.flink.table.util.ColumnIntervalUtil
 import org.apache.flink.table.util.ColumnIntervalUtil.toBigDecimalInterval
 import org.junit.Assert._
 import org.junit.Test
