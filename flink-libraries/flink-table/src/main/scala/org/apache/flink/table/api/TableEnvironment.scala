@@ -196,6 +196,7 @@ abstract class TableEnvironment(val config: TableConfig) {
         SqlParser
           .configBuilder()
           .setLex(Lex.JAVA)
+          .setIdentifierMaxLength(256)
           .build()
 
       case Some(sqlParserConfig) =>

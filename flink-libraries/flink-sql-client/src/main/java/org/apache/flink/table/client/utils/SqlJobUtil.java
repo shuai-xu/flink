@@ -155,7 +155,7 @@ public class SqlJobUtil {
 		.setQuotedCasing(Casing.UNCHANGED)
 		.setUnquotedCasing(Casing.UNCHANGED)
 		.setConformance(SqlConformanceEnum.DEFAULT)
-		.setIdentifierMaxLength(128)
+		.setIdentifierMaxLength(256)
 		.setLex(Lex.JAVA)
 		.build();
 

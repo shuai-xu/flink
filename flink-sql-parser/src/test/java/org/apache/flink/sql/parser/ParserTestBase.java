@@ -98,7 +98,7 @@ public abstract class ParserTestBase {
 			.setUnquotedCasing(Casing.UNCHANGED)
 			.setQuotedCasing(Casing.UNCHANGED)
 			.setConformance(SqlConformanceEnum.DEFAULT)
-			.setIdentifierMaxLength(128)
+			.setIdentifierMaxLength(256)
 			.setLex(Lex.JAVA)
 			.build();
 	}

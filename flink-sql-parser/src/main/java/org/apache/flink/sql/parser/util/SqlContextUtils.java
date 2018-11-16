@@ -54,7 +54,7 @@ public class SqlContextUtils {
 		.setQuoting(Quoting.BACK_TICK)
 		.setQuotedCasing(Casing.UNCHANGED)
 		.setUnquotedCasing(Casing.UNCHANGED)
-		.setIdentifierMaxLength(128)
+		.setIdentifierMaxLength(256)
 		.setLex(Lex.JAVA)
 		.build();
 
