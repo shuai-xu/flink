@@ -243,6 +243,9 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 		else if (tag == TAG_WATERMARK) {
 			return new Watermark(source.readLong());
 		}
+		else if (tag == TAG_STREAM_STATUS) {
+			return new StreamStatus(source.readInt());
+		}
 		else if (tag == TAG_LATENCY_MARKER) {
 			return new LatencyMarker(source.readLong(), new OperatorID(source.readLong(), source.readLong()), source.readInt());
 		}
