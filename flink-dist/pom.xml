@@ -728,6 +728,12 @@ under the License.
 		<!-- end blink connectors-->
 
 		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>blink-metrics-kmonitor</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>asm</groupId>
 			<artifactId>asm</artifactId>
 			<version>3.3.1</version>

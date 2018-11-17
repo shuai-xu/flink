@@ -591,5 +591,13 @@
 			<destName>blink-table-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
+
+		<!-- KmonitorReporter tool -->
+		<file>
+			<source>../blink-metrics-kmonitor/target/blink-metrics-kmonitor-${project.version}.jar</source>
+			<outputDirectory>lib/</outputDirectory>
+			<destName>blink-metrics-kmonitor-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
 	</files>
 </assembly>
