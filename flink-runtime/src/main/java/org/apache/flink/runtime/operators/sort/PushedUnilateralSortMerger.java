@@ -45,15 +45,14 @@ public class PushedUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	private boolean addingDone = false;
 
 	public PushedUnilateralSortMerger(SortedDataFileFactory<E> sortedDataFileFactory, SortedDataFileMerger<E> merger,
-									  MemoryManager memoryManager, List<MemorySegment> memory,
-									  IOManager ioManager,
+									  MemoryManager memoryManager, List<MemorySegment> memory, IOManager ioManager,
 									  AbstractInvokable parentTask, TypeSerializerFactory<E> serializerFactory, TypeComparator<E> comparator,
 									  int numSortBuffers, int maxNumFileHandles, boolean inMemoryResultEnabled,
 									  float startSpillingFraction, boolean noSpillingMemory, boolean handleLargeRecords,
-									  boolean objectReuseEnabled) throws IOException {
+									  boolean objectReuseEnabled, boolean enableAsyncMerging) throws IOException {
 		super(sortedDataFileFactory, merger, memoryManager, memory, ioManager, /* pushed, no input */null, parentTask, serializerFactory,
 			comparator, numSortBuffers, maxNumFileHandles, inMemoryResultEnabled, startSpillingFraction, noSpillingMemory, handleLargeRecords,
-			objectReuseEnabled);
+			objectReuseEnabled, enableAsyncMerging);
 	}
 
 	@Override

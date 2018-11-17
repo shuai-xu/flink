@@ -45,8 +45,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -61,6 +65,7 @@ import static org.mockito.Mockito.spy;
 /**
  * Test the reading and writing of the files produced by external result partition.
  */
+@RunWith(Parameterized.class)
 public class ExternalResultPartitionReadWriteTest {
 
 	/*************************** Global configurations ***********************/
@@ -94,6 +99,24 @@ public class ExternalResultPartitionReadWriteTest {
 
 	private TypeSerializer<Integer> serializer;
 
+	/** Parameterized variable of whether enable async merging or not. */
+	private final boolean enableAsyncMerging;
+
+	/** Parameterized variable of whether merge to one file or not. */
+	private final boolean mergeToOneFile;
+
+	@Parameterized.Parameters
+	public static Collection<Object[]> data() {
+		return Arrays.asList(new Object[][]{
+			{false, false}, {false, true}, {true, false}, {true, true}
+		});
+	}
+
+	public ExternalResultPartitionReadWriteTest(boolean enableAsyncMerging, boolean mergeToOneFile) {
+		this.enableAsyncMerging = enableAsyncMerging;
+		this.mergeToOneFile = mergeToOneFile;
+	}
+
 	@Before
 	public void before() {
 		outputLocalDir = EnvironmentInformation.getTemporaryFileDirectory() + "/" + UUID.randomUUID().toString() + "/";
@@ -111,6 +134,7 @@ public class ExternalResultPartitionReadWriteTest {
 		}
 
 		if (this.memoryManager != null) {
+			this.memoryManager.releaseAll(parentTask);
 			Assert.assertTrue("Memory leak: not all segments have been returned to the memory manager.",
 				this.memoryManager.verifyEmpty());
 
@@ -167,7 +191,7 @@ public class ExternalResultPartitionReadWriteTest {
 
 		// 1. prepare internal variables according to specific case configuration
 		final int segmentSize = memoryManager.getPageSize();
-		final int nrSegments = (externalFileType == PersistentFileType.MERGED_PARTITION_FILE && !withMerge) ? 3 : 16;
+		final int nrSegments = (externalFileType == PersistentFileType.MERGED_PARTITION_FILE && !withMerge) ? 300 : 1600;
 
 		// Each record consumes 8 bytes, 4 for length and 4 for the record itself
 		int numRecordsEachPartition = segmentSize * nrSegments / (4 + 4);
@@ -188,16 +212,16 @@ public class ExternalResultPartitionReadWriteTest {
 	private Configuration prepareTestConfiguration(PersistentFileType externalFileType) {
 		Configuration taskManagerConfig = new Configuration();
 
+		taskManagerConfig.setBoolean(TaskManagerOptions.TASK_MANAGER_OUTPUT_ENABLE_ASYNC_MERGE, enableAsyncMerging);
+		taskManagerConfig.setBoolean(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_TO_ONE_FILE, mergeToOneFile);
 		if (PersistentFileType.HASH_PARTITION_FILE == externalFileType) {
 			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB, 1);
 			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS, 16);
 			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_FACTOR, 16);
-			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES, 16);
 		} else if (PersistentFileType.MERGED_PARTITION_FILE == externalFileType) {
 			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB, 1);
 			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS, 2);
 			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_FACTOR, 2);
-			taskManagerConfig.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES, 2);
 		} else {
 			throw new IllegalArgumentException("Invalid configuration for ExternalFileType");
 		}

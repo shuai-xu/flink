@@ -56,10 +56,15 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalResultPartition.class);
 
-	private final Configuration taskManagerConfiguration;
 	private final MemoryManager memoryManager;
 	private final IOManager ioManager;
 	private final String partitionRootPath;
+	private final int hashMaxSubpartitions;
+	private final int mergeFactor;
+	private final boolean enableAsyncMerging;
+	private final boolean mergeToOneFile;
+	private final double shuffleMemory;
+	private final int numPages;
 
 	private PersistentFileWriter<T> fileWriter;
 
@@ -78,14 +83,34 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 		super(owningTaskName, jobId, partitionId, partitionType, numberOfSubpartitions, numTargetKeyGroups);
 
-		this.taskManagerConfiguration = checkNotNull(taskManagerConfiguration);
+		checkNotNull(taskManagerConfiguration);
+
 		this.memoryManager = checkNotNull(memoryManager);
 		this.ioManager = checkNotNull(ioManager);
 
 		this.partitionRootPath = ExternalBlockShuffleUtils.generatePartitionRootPath(
 			getSpillRootPath(taskManagerConfiguration, jobId.toString(), partitionId.toString()),
-			partitionId.getProducerId().toString(),
-			partitionId.getPartitionId().toString());
+			partitionId.getProducerId().toString(), partitionId.getPartitionId().toString());
+		this.hashMaxSubpartitions = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS);
+		this.mergeFactor = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_FACTOR);
+		this.enableAsyncMerging = taskManagerConfiguration.getBoolean(
+			TaskManagerOptions.TASK_MANAGER_OUTPUT_ENABLE_ASYNC_MERGE);
+		this.mergeToOneFile = taskManagerConfiguration.getBoolean(
+			TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_TO_ONE_FILE);
+		this.shuffleMemory = taskManagerConfiguration.getInteger(
+			TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB);
+		this.numPages = (int) (shuffleMemory * 1024 * 1024 / memoryManager.getPageSize());
+
+		checkArgument(hashMaxSubpartitions > 0,
+			"The max allowed number of subpartitions should be larger than 0, but actually is: " + hashMaxSubpartitions);
+		checkArgument(mergeFactor > 0,
+			"The merge factor should be larger than 0, but actually is: " + mergeFactor);
+		checkArgument(shuffleMemory > 0,
+			"The shuffle memory should be larger than 0, but actually is: " + shuffleMemory);
+		checkArgument(numPages > 0,
+			"The number of pages should be larger than 0, but actually is: " + numPages);
 	}
 
 	private void initialize() {
@@ -114,17 +139,7 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 				}
 			} while (!fs.exists(tmpPartitionRootPath));
 
-			double shuffleMemory = taskManagerConfiguration.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB);
-			int numPages = (int) (shuffleMemory * 1024 * 1024 / memoryManager.getPageSize());
 			List<MemorySegment> memory = memoryManager.allocatePages(parentTask, numPages);
-
-			final int hashMaxSubpartitions = taskManagerConfiguration.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS);
-			final int mergeFactor = taskManagerConfiguration.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_FACTOR);
-			final int mergeMaxDataFiles = taskManagerConfiguration.getInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES);
-
-			checkArgument(hashMaxSubpartitions > 0, "The max allowed number of subpartitions should be larger than 0, but actually is: " + hashMaxSubpartitions);
-			checkArgument(mergeFactor > 0, "The merge factor should be larger than 0, but actually is: " + mergeFactor);
-			checkArgument(mergeMaxDataFiles > 0, "The max data file should be larger than 0, but actually is: " + mergeMaxDataFiles);
 
 			// If the memory amount is less that the number of subpartitions, it should enter partition merge process.
 			if (numberOfSubpartitions <= hashMaxSubpartitions && numberOfSubpartitions <= memory.size()) {
@@ -139,8 +154,9 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 				fileWriter = new PartitionMergeFileWriter<T>(
 					numberOfSubpartitions,
 					partitionRootPath,
-					mergeMaxDataFiles,
 					mergeFactor,
+					enableAsyncMerging,
+					mergeToOneFile,
 					memoryManager,
 					memory,
 					ioManager,
@@ -150,10 +166,8 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 			initialized = true;
 
-			LOG.info("External Result Partition (partitionId = {}) use {}, root = {}, numberOfSubpartitions = {}, " +
-					"maxSubpartitionsForSingleFile = {}, maxDataFiles = {}, mergeFactor = {} memory.size() = {}",
-				partitionId, fileWriter.getClass().getName(), partitionRootPath, numberOfSubpartitions,
-				hashMaxSubpartitions, mergeMaxDataFiles, mergeFactor, memory.size());
+			LOG.info(toString() + " initialized successfully.");
+
 		} catch (Throwable t) {
 			deletePartitionDirOnFailure();
 			throw new RuntimeException(t);
@@ -161,7 +175,10 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	}
 
 	@Override
-	public void emitRecord(T record, int[] targetChannels, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException {
+	public void emitRecord(T record,
+						   int[] targetChannels,
+						   boolean isBroadcast,
+						   boolean flushAlways) throws IOException, InterruptedException {
 		if (!initialized) {
 			initialize();
 		}
@@ -300,5 +317,21 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 
 		int hashCode = ExternalBlockShuffleUtils.hashPartitionToDisk(jobIdStr, partitionIdStr);
 		return dirs[hashCode % dirs.length];
+	}
+
+	@Override
+	public String toString() {
+		return 	"External Result Partition: {" +
+				"partitionId = " + partitionId +
+				", fileWriter = " + fileWriter.getClass().getName() +
+				", rootPath = " + partitionRootPath +
+				", numberOfSubpartitions = " + numberOfSubpartitions +
+				", hashMaxSubpartitions = " + hashMaxSubpartitions +
+				", mergeFactor = " + mergeFactor +
+				", shuffleMemory = " + shuffleMemory +
+				", numPages = " + numPages +
+				", enableAsyncMerging = " + enableAsyncMerging +
+				", mergeToOneFile = " + mergeToOneFile +
+				"}";
 	}
 }

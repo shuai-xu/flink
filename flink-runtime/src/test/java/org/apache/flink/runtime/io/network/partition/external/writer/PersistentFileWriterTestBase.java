@@ -20,16 +20,15 @@ package org.apache.flink.runtime.io.network.partition.external.writer;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
-import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
-import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
-import org.apache.flink.runtime.memory.MemoryAllocationException;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.util.MutableObjectIterator;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,16 +36,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import static junit.framework.TestCase.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.powermock.api.mockito.PowerMockito.mock;
 
 /**
  * Test base for persistent file writer.
@@ -55,6 +52,7 @@ public abstract class PersistentFileWriterTestBase {
 	public static final int PAGE_SIZE = 4096;
 	public static final int NUM_PAGES = 100;
 	public static final int MEMORY_SIZE = PAGE_SIZE * NUM_PAGES;
+	public static final AbstractInvokable parentTask = mock(AbstractInvokable.class);
 
 	@Rule
 	public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -78,6 +76,7 @@ public abstract class PersistentFileWriterTestBase {
 		}
 
 		if (this.memoryManager != null) {
+			this.memoryManager.releaseAll(parentTask);
 			Assert.assertTrue("Memory leak: not all segments have been returned to the memory manager.",
 				this.memoryManager.verifyEmpty());
 

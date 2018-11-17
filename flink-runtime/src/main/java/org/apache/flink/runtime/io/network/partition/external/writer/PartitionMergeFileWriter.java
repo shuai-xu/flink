@@ -33,12 +33,13 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
 import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
-import org.apache.flink.runtime.operators.sort.PushedUnilateralSortMerger;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.runtime.operators.sort.PushedUnilateralSortMerger;
 import org.apache.flink.runtime.operators.sort.SortedDataFile;
 import org.apache.flink.runtime.operators.sort.SortedDataFileMerger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +48,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
-import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * Shuffle writing using the outer sort-merger.
@@ -55,23 +55,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 	private static final Logger LOG = LoggerFactory.getLogger(PartitionMergeFileWriter.class);
 
-	private final int numPartitions;
 	private final String partitionDataRootPath;
 
-	/**
-	 * Max data files allowed unmerged finally.
-	 */
-	private final int maxDataFiles;
-
-	/**
-	 * How many files to merge in each merge phase
-	 */
-	private final int maxNumFileHandlesPerMerge;
-
 	private final TypeSerializer<T> typeSerializer;
-
-	private final MemoryManager memoryManager;
-	private final IOManager ioManager;
 
 	private final List<MemorySegment> allMemory;
 
@@ -82,8 +68,9 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 	public PartitionMergeFileWriter(
 		int numPartitions,
 		String partitionDataRootPath,
-		int maxDataFiles,
-		int maxNumFileHandlesPerMerge,
+		int mergeFactor,
+		boolean enableAsyncMerging,
+		boolean mergeToOneFile,
 		MemoryManager memoryManager,
 		List<MemorySegment> memory,
 		IOManager ioManager,
@@ -91,17 +78,11 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 		AbstractInvokable parentTask) throws IOException, MemoryAllocationException {
 		checkArgument(numPartitions > 0,
 			"The number of subpartitions should be larger than 0, but actually is: " + numPartitions);
-		this.numPartitions = numPartitions;
+		checkArgument(mergeFactor >= 2, "Illegal merge factor: " + mergeFactor);
 
 		this.partitionDataRootPath = partitionDataRootPath;
 
-		this.maxDataFiles = maxDataFiles;
-		this.maxNumFileHandlesPerMerge = maxDataFiles;
-
 		this.typeSerializer = serializer;
-
-		this.memoryManager = checkNotNull(memoryManager);
-		this.ioManager = checkNotNull(ioManager);
 
 		this.allMemory = memory;
 
@@ -118,13 +99,19 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 
 		BufferSortedDataFileFactory<T> sortedDataFileFactory = new BufferSortedDataFileFactory<>(
 			partitionDataRootPath, typeSerializer, ioManager);
-		PartitionedBufferSortedDataFileFactory<T> partitionedBufferSortedDataFileFactory = new PartitionedBufferSortedDataFileFactory<T>(sortedDataFileFactory, numPartitions);
-		SortedDataFileMerger<Tuple2<Integer, T>> merger = new ConcatPartitionedFileMerger<T>(numPartitions, partitionDataRootPath, maxDataFiles, maxNumFileHandlesPerMerge, ioManager);
-		sortMerger = new PushedUnilateralSortMerger<>(
-			partitionedBufferSortedDataFileFactory, merger,
+
+		PartitionedBufferSortedDataFileFactory<T> partitionedBufferSortedDataFileFactory =
+			new PartitionedBufferSortedDataFileFactory<T>(sortedDataFileFactory, numPartitions);
+
+		SortedDataFileMerger<Tuple2<Integer, T>> merger = new ConcatPartitionedFileMerger<T>(
+			numPartitions, partitionDataRootPath, mergeFactor, enableAsyncMerging, mergeToOneFile, ioManager);
+
+		sortMerger = new PushedUnilateralSortMerger<>(partitionedBufferSortedDataFileFactory, merger,
 			memoryManager, allMemory, ioManager, parentTask, serializerFactory, tuple2Comparator,
-			0, maxNumFileHandlesPerMerge, false, 0,
-			false, true, true);
+			0, mergeFactor, false, 0,
+			false, true, true, enableAsyncMerging);
+
+		LOG.info("External result partition writer initialized.");
 	}
 
 	@Override
@@ -150,6 +137,8 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 				new Path(file.getChannelID().getPath()),
 				new Path(ExternalBlockShuffleUtils.generateDataPath(partitionDataRootPath, nextFileId++)));
 		}
+
+		LOG.info("Finish external result partition writing.");
 	}
 
 	@Override
@@ -170,8 +159,7 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 
 	@Override
 	public void clear() throws IOException {
-		sortMerger.close();
-		memoryManager.release(allMemory);
+		// nothing to do
 	}
 
 	@Override

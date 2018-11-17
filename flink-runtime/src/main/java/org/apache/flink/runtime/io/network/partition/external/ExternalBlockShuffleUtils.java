@@ -20,15 +20,14 @@ package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.DatatypeConverter;
-import org.apache.flink.core.memory.DataOutputView;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,6 +45,8 @@ public class ExternalBlockShuffleUtils {
 	private static final String SPILL_FILE = "spill";
 
 	private static final String INDEX_FILE = "index";
+
+	private static final String MERGE_FILE = "merge";
 
 	/** FINISHED_FILE is used to identify whether a result partition is finished and ready to be fetched. */
 	private static final String FINISHED_FILE = "finished";
@@ -93,6 +94,10 @@ public class ExternalBlockShuffleUtils {
 
 	public static String generateSpillPath(String partitionPrefix, int fileIndex) {
 		return partitionPrefix + fileIndex + "." + SPILL_FILE;
+	}
+
+	public static String generateMergePath(String partitionPrefix, int fileIndex) {
+		return partitionPrefix + fileIndex + "." + MERGE_FILE;
 	}
 
 	/**

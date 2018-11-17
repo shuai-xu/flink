@@ -121,32 +121,57 @@ public class YarnShuffleServiceITCase extends TestLogger {
 	/** Parameterized variable of the length of maximum concurrent requests. */
 	private final int maxConcurrentRequests;
 
+	/** Parameterized variable of whether enable async merging or not. */
+	private final boolean enableAsyncMerging;
+
+	/** Parameterized variable of whether merge to one file or not. */
+	private final boolean mergeToOneFile;
+
 	@Parameterized.Parameters
 	public static Collection<Object[]> data() {
 		return Arrays.asList(new Object[][]{
 			/** Normal cases */
-			{PersistentFileType.HASH_PARTITION_FILE, 1024, 128, 4},
-			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 4},
+			{PersistentFileType.HASH_PARTITION_FILE, 1024, 128, 4, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 4, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 4, false, true},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 4, true, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 4, true, true},
 
 			/** Empty shuffle data */
-			{PersistentFileType.HASH_PARTITION_FILE, 0, 128, 4},
-			{PersistentFileType.MERGED_PARTITION_FILE, 0, 128, 4},
+			{PersistentFileType.HASH_PARTITION_FILE, 0, 128, 4, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 0, 128, 4, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 0, 128, 4, false, true},
+			{PersistentFileType.MERGED_PARTITION_FILE, 0, 128, 4, true, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 0, 128, 4, true, true},
 
 			/** Limited concurrent requests */
-			{PersistentFileType.HASH_PARTITION_FILE, 1024, 128, 2},
-			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 2},
+			{PersistentFileType.HASH_PARTITION_FILE, 1024, 128, 2, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 2, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 2, false, true},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 2, true, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 128, 2, true, true},
 
 			/** Different record size */
-			{PersistentFileType.HASH_PARTITION_FILE, 1024, 4, 2},
-			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 4, 2},
+			{PersistentFileType.HASH_PARTITION_FILE, 1024, 4, 2, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 4, 2, false, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 4, 2, false, true},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 4, 2, true, false},
+			{PersistentFileType.MERGED_PARTITION_FILE, 1024, 4, 2, true, true},
 		});
 	}
 
-	public YarnShuffleServiceITCase(PersistentFileType fileType, int numRecords, int recordLength, int maxConcurrentRequests) {
+	public YarnShuffleServiceITCase(PersistentFileType fileType,
+									int numRecords,
+									int recordLength,
+									int maxConcurrentRequests,
+									boolean enableAsyncMerging,
+									boolean mergeToOneFile) {
 		this.fileType = fileType;
 		this.numRecords = numRecords;
 		this.recordLength = recordLength;
 		this.maxConcurrentRequests = maxConcurrentRequests;
+		this.enableAsyncMerging = enableAsyncMerging;
+		this.mergeToOneFile = mergeToOneFile;
 	}
 
 	@BeforeClass
@@ -234,16 +259,16 @@ public class YarnShuffleServiceITCase extends TestLogger {
 	public Configuration prepareConfiguration(PersistentFileType externalFileType) {
 		Configuration configuration = new Configuration();
 
+		configuration.setBoolean(TaskManagerOptions.TASK_MANAGER_OUTPUT_ENABLE_ASYNC_MERGE, enableAsyncMerging);
+		configuration.setBoolean(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_TO_ONE_FILE, mergeToOneFile);
 		if (PersistentFileType.HASH_PARTITION_FILE == externalFileType) {
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB, 1);
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS, 16);
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_FACTOR, 16);
-			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES, 16);
 		} else if (PersistentFileType.MERGED_PARTITION_FILE == externalFileType) {
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MEMORY_MB, 1);
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_HASH_MAX_SUBPARTITIONS, 2);
 			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_FACTOR, 2);
-			configuration.setInteger(TaskManagerOptions.TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES, 2);
 		} else {
 			throw new IllegalArgumentException("Invalid configuration for ExternalFileType");
 		}

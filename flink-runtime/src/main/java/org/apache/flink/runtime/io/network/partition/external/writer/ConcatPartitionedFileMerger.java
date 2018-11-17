@@ -26,26 +26,31 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
 import org.apache.flink.runtime.operators.sort.ChannelDeleteRegistry;
+import org.apache.flink.runtime.operators.sort.DefaultFileMergePolicy;
 import org.apache.flink.runtime.operators.sort.PartialOrderPriorityQueue;
 import org.apache.flink.runtime.operators.sort.SortedDataFile;
+import org.apache.flink.runtime.operators.sort.DataFileInfo;
 import org.apache.flink.runtime.operators.sort.SortedDataFileMerger;
-import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
-import org.apache.flink.shaded.guava18.com.google.common.collect.Maps;
-import org.apache.flink.types.BooleanValue;
+import org.apache.flink.runtime.operators.sort.MergePolicy;
 import org.apache.flink.util.MutableObjectIterator;
+import org.apache.flink.util.Preconditions;
+
+import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * A merging policy who simply concats the part of the same partition together.
+ * A merger who simply concats the part of the same partition together.
  */
 public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tuple2<Integer, T>> {
 	private static final Logger LOG = LoggerFactory.getLogger(ConcatPartitionedFileMerger.class);
@@ -53,77 +58,35 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 	private final int numberOfSubpartitions;
 	private final String partitionDataRootPath;
 
-	private final int maxDataFiles;
-	private final int maxNumFileHandlesPerMerge;
-
 	private final IOManager ioManager;
 
-	ConcatPartitionedFileMerger(int numberOfSubpartitions, String partitionDataRootPath, int maxDataFiles, int maxNumFileHandlesPerMerge, IOManager ioManager) {
+	private final MergePolicy<SortedDataFile<Tuple2<Integer, T>>> mergePolicy;
+
+	/** The merge file index starts from the max value to avoid using the same file id with spilled ones. */
+	private int mergeFileIndex = Integer.MAX_VALUE;
+
+	ConcatPartitionedFileMerger(int numberOfSubpartitions,
+								String partitionDataRootPath,
+								int mergeFactor,
+								boolean enableAsyncMerging,
+								boolean mergeToOneFile,
+								IOManager ioManager) {
+		Preconditions.checkArgument(numberOfSubpartitions > 0, "Illegal subpartition number: " + numberOfSubpartitions);
+		Preconditions.checkArgument(mergeFactor > 0, "Illegal merge factor: " + mergeFactor);
+
 		this.numberOfSubpartitions = numberOfSubpartitions;
-		this.partitionDataRootPath = partitionDataRootPath;
+		this.partitionDataRootPath = Preconditions.checkNotNull(partitionDataRootPath);
 
-		this.maxDataFiles = maxDataFiles;
-		this.maxNumFileHandlesPerMerge = maxNumFileHandlesPerMerge;
+		this.ioManager = Preconditions.checkNotNull(ioManager);
 
-		this.ioManager = ioManager;
+		this.mergePolicy = new DefaultFileMergePolicy<>(mergeFactor, enableAsyncMerging, mergeToOneFile);
 	}
 
 	@Override
-	public List<SortedDataFile<Tuple2<Integer, T>>> merge(List<SortedDataFile<Tuple2<Integer, T>>> channels, List<MemorySegment> writeMemory,
-														  List<MemorySegment> mergeReadMemory, ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry, BooleanValue aliveFlag) throws IOException {
-		LinkedList<PartitionedFileAndFileId<T>> candidates = new LinkedList<>();
-
-		int nextSpillFileId = 0;
-
-		for (int i = 0; i < channels.size(); ++i) {
-			if (!(channels.get(i) instanceof PartitionedBufferSortedDataFile)) {
-				throw new IllegalArgumentException("Only PartitionedBufferSortedDataFile supported");
-			}
-
-			PartitionedBufferSortedDataFile<T> partitionedSortedDataFile = (PartitionedBufferSortedDataFile<T>) channels.get(i);
-			candidates.add(new PartitionedFileAndFileId<>(partitionedSortedDataFile, partitionedSortedDataFile.getFileId()));
-			nextSpillFileId = Math.max(partitionedSortedDataFile.getFileId() + 1, nextSpillFileId);
-		}
-
-		// Parse indices and merge
-		while (aliveFlag.getValue() && candidates.size() > maxDataFiles) {
-			List<PartitionedFileAndFileId<T>> toBeMerge = new ArrayList<>();
-			int maxMergeCount = Math.min(candidates.size() - maxDataFiles + 1, maxNumFileHandlesPerMerge);
-
-			for (int i = 0; i < maxMergeCount; ++i) {
-				PartitionedFileAndFileId<T> fileAndFileId = candidates.pollFirst();
-				toBeMerge.add(fileAndFileId);
-
-				if (candidates.size() > 0 && fileAndFileId.getFileId() > candidates.getFirst().getFileId()) {
-					break;
-				}
-			}
-
-			if (toBeMerge.size() == 1) {
-				candidates.add(toBeMerge.get(0));
-				continue;
-			}
-
-			LOG.info("Start merging {} files to one file, remaining files = {}", toBeMerge.size(), candidates.size());
-
-			try {
-				PartitionedFileAndFileId<T> mergedFile = mergeToOutput(toBeMerge, nextSpillFileId++, writeMemory, mergeReadMemory, channelDeleteRegistry);
-				candidates.add(mergedFile);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		List<SortedDataFile<Tuple2<Integer, T>>> result = new ArrayList<>();
-		for (PartitionedFileAndFileId<T> fileAndFileId : candidates) {
-			result.add(fileAndFileId.getFile());
-		}
-
-		return result;
-	}
-
-	@Override
-	public MutableObjectIterator<Tuple2<Integer, T>> getMergingIterator(List<SortedDataFile<Tuple2<Integer, T>>> sortedDataFiles, List<MemorySegment> mergeReadMemory, MutableObjectIterator<Tuple2<Integer, T>> largeRecords, ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry) throws IOException {
+	public MutableObjectIterator<Tuple2<Integer, T>> getMergingIterator(List<SortedDataFile<Tuple2<Integer, T>>> sortedDataFiles,
+																		List<MemorySegment> mergeReadMemory,
+																		MutableObjectIterator<Tuple2<Integer, T>> largeRecords,
+																		ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry) throws IOException {
 		//TODO: will be implemented later.
 		return new MutableObjectIterator<Tuple2<Integer, T>>() {
 			@Override
@@ -138,11 +101,73 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 		};
 	}
 
-	private PartitionedFileAndFileId mergeToOutput(List<PartitionedFileAndFileId<T>> toBeMerged, int fileId,
-													List<MemorySegment> writeMemory, List<MemorySegment> mergeReadMemory,
-													ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry) throws IOException, InterruptedException {
+	@Override
+	public void notifyNewSortedDataFile(SortedDataFile<Tuple2<Integer, T>> sortedDataFile,
+										List<MemorySegment> writeMemory,
+										List<MemorySegment> mergeReadMemory,
+										ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry,
+										AtomicBoolean aliveFlag) throws IOException {
+		if (!(sortedDataFile instanceof PartitionedBufferSortedDataFile)) {
+			throw new IllegalArgumentException("Only PartitionedBufferSortedDataFile is supported: " + sortedDataFile.getClass().getName());
+		}
+
+		DataFileInfo<SortedDataFile<Tuple2<Integer, T>>> dataFileInfo = new DataFileInfo<>(
+			sortedDataFile.getBytesWritten(), 0, numberOfSubpartitions, sortedDataFile);
+		mergePolicy.addNewCandidate(dataFileInfo);
+
+		mergeIfPossible(mergeReadMemory, channelDeleteRegistry, aliveFlag);
+	}
+
+	@Override
+	public List<SortedDataFile<Tuple2<Integer, T>>> finishMerging(List<MemorySegment> writeMemory,
+																  List<MemorySegment> mergeReadMemory,
+																  ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry,
+																  AtomicBoolean aliveFlag) throws IOException {
+		mergePolicy.startFinalMerge();
+		mergeIfPossible(mergeReadMemory, channelDeleteRegistry, aliveFlag);
+
+		return mergePolicy.getFinalMergeResult();
+	}
+
+	private void mergeIfPossible(List<MemorySegment> mergeReadMemory,
+								 ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry,
+								 AtomicBoolean aliveFlag) throws IOException {
+		// select merge candidates
+		List<DataFileInfo<SortedDataFile<Tuple2<Integer, T>>>> mergeCandidates = mergePolicy.selectMergeCandidates(mergeReadMemory.size());
+		while (mergeCandidates != null && aliveFlag.get()) {
+			int maxMergeRound = 0;
+			LinkedList<PartitionedSortedDataFile<T>> toBeMerged = new LinkedList<>();
+
+			for (DataFileInfo<SortedDataFile<Tuple2<Integer, T>>> mergeCandidate: mergeCandidates) {
+				maxMergeRound = Math.max(maxMergeRound, mergeCandidate.getMergeRound());
+				PartitionedSortedDataFile<T> partitionedSortedDataFile = (PartitionedSortedDataFile<T>) mergeCandidate.getDataFile();
+				toBeMerged.add(partitionedSortedDataFile);
+			}
+
+			LOG.info("Start merging {} files to one file.", toBeMerged.size());
+
+			try {
+				// merge the candidates to one file
+				SortedDataFile<Tuple2<Integer, T>> mergedFile = mergeToOutput(
+					toBeMerged, mergeReadMemory, channelDeleteRegistry, mergeFileIndex--);
+				DataFileInfo<SortedDataFile<Tuple2<Integer, T>>> mergedFileInfo = new DataFileInfo<>(
+					mergedFile.getBytesWritten(), maxMergeRound + 1, numberOfSubpartitions, mergedFile);
+				// notify new file
+				mergePolicy.addNewCandidate(mergedFileInfo);
+			} catch (InterruptedException e) {
+				throw new RuntimeException("Merge was interrupted.", e);
+			}
+			// select new candidates
+			mergeCandidates = mergePolicy.selectMergeCandidates(mergeReadMemory.size());
+		}
+	}
+
+	private ConcatPartitionedBufferSortedDataFile<T>  mergeToOutput(List<PartitionedSortedDataFile<T>> toBeMerged,
+																	List<MemorySegment> mergeReadMemory,
+																	ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry,
+																	int fileId) throws IOException, InterruptedException {
 		// Create merged file writer.
-		final FileIOChannel.ID channel = ioManager.createChannel(new File(ExternalBlockShuffleUtils.generateSpillPath(partitionDataRootPath, fileId)));
+		final FileIOChannel.ID channel = ioManager.createChannel(new File(ExternalBlockShuffleUtils.generateMergePath(partitionDataRootPath, fileId)));
 		ConcatPartitionedBufferSortedDataFile<T> writer = new ConcatPartitionedBufferSortedDataFile<T>(
 			numberOfSubpartitions, channel, fileId, ioManager);
 		channelDeleteRegistry.registerChannelToBeDelete(channel);
@@ -151,28 +176,25 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 		// Create file readers.
 		final List<List<MemorySegment>> segments = Lists.partition(mergeReadMemory, mergeReadMemory.size() / toBeMerged.size());
 
-		final Map<Integer, AsynchronousPartitionedStreamFileReaderDelegate> fileIndexToReaders = Maps.newHashMapWithExpectedSize(toBeMerged.size());
 		final PartialOrderPriorityQueue<PartitionIndexStream> heap = new PartialOrderPriorityQueue<>(
-			new PartitionIndexStreamComparator(),
-			toBeMerged.size());
+			new PartitionIndexStreamComparator(), toBeMerged.size());
 
-		List<FileIOChannel> channelAccessed = new ArrayList<>();
+		Set<AsynchronousPartitionedStreamFileReaderDelegate> allReaders = new HashSet<>();
 		for (int i = 0; i < toBeMerged.size(); ++i) {
 			AsynchronousPartitionedStreamFileReaderDelegate readerDelegate =
 				new AsynchronousPartitionedStreamFileReaderDelegate(
-					ioManager, toBeMerged.get(i).getFile().getChannelID(), segments.get(i),
-					toBeMerged.get(i).getFile().getPartitionIndexList());
-			fileIndexToReaders.put(
-				toBeMerged.get(i).getFileId(),
-				readerDelegate);
-			heap.add(new PartitionIndexStream(toBeMerged.get(i).getFile().getPartitionIndexList(), toBeMerged.get(i).getFileId()));
-			channelAccessed.add(readerDelegate.getReader());
+					ioManager, toBeMerged.get(i).getChannelID(), segments.get(i),
+					toBeMerged.get(i).getPartitionIndexList());
+			heap.add(new PartitionIndexStream(readerDelegate, toBeMerged.get(i).getPartitionIndexList()));
+			// will be used when closing read files
+			allReaders.add(readerDelegate);
+			// register the opened channel to be closed when error happens
+			channelDeleteRegistry.registerOpenChannel(readerDelegate.getReader());
 		}
 
 		while (heap.size() > 0) {
 			final PartitionIndexStream headStream = heap.peek();
 			final PartitionIndex partitionIndex = headStream.getCurrentPartitionIndex();
-			final int fileIndex = headStream.getFileIndex();
 
 			if (!headStream.advance()) {
 				heap.poll();
@@ -183,63 +205,44 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 			// now read the specific counts of buffers
 			int readLength = 0;
 			while (readLength < partitionIndex.getLength()) {
-				Buffer buffer = fileIndexToReaders.get(fileIndex).getNextBufferBlocking();
+				Buffer buffer = headStream.getReader().getNextBufferBlocking();
 				readLength += buffer.getSize();
 				writer.writeBuffer(partitionIndex.getPartition(), buffer);
 			}
 			assert readLength == partitionIndex.getLength();
 		}
 
-		// Close the file reader for already merged files
-		for (Map.Entry<Integer, AsynchronousPartitionedStreamFileReaderDelegate> entry : fileIndexToReaders.entrySet()) {
-			entry.getValue().close();
-		}
-
 		writer.finishWriting();
 		channelDeleteRegistry.unregisterOpenChannel(writer.getWriteChannel());
 
-		clearMerged(channelAccessed, channelDeleteRegistry);
-
-		// The fileId of a merged file is not equal to the id in spill file name. FileId is used to prevent merging
-		// the same data multiple times in the same round.
-		return new PartitionedFileAndFileId<>(writer, toBeMerged.get(0).getFileId());
+		clearMerged(channelDeleteRegistry, allReaders);
+		return writer;
 	}
 
-	private void clearMerged(List<FileIOChannel> needClear, ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry) throws IOException {
-		for (FileIOChannel channel : needClear) {
-			channel.closeAndDelete();
-			channelDeleteRegistry.unregisterOpenChannel(channel);
+	private void clearMerged(ChannelDeleteRegistry<Tuple2<Integer, T>> channelDeleteRegistry,
+							 Set<AsynchronousPartitionedStreamFileReaderDelegate> allReaders) throws IOException {
+
+		// close the reader and delete the underlying file for already merged channels
+		for (AsynchronousPartitionedStreamFileReaderDelegate reader : allReaders) {
+			// close the file reader
+			reader.close();
+			channelDeleteRegistry.unregisterOpenChannel(reader.getReader());
+			// delete the file
+			reader.getReader().deleteChannel();
+			channelDeleteRegistry.unregisterChannelToBeDelete(reader.getReader().getChannelID());
 		}
-		needClear.clear();
-	}
-
-
-	private static final class PartitionedFileAndFileId<T> {
-		private final PartitionedSortedDataFile<T> file;
-		private final int fileId;
-
-		public PartitionedFileAndFileId(PartitionedSortedDataFile<T> file, int fileId) {
-			this.file = file;
-			this.fileId = fileId;
-		}
-
-		public PartitionedSortedDataFile<T> getFile() {
-			return file;
-		}
-
-		public int getFileId() {
-			return fileId;
-		}
+		allReaders.clear();
 	}
 
 	private static final class PartitionIndexStream {
+		private final AsynchronousPartitionedStreamFileReaderDelegate reader;
 		private final List<PartitionIndex> partitionIndices;
-		private final int fileIndex;
 		private int offset;
 
-		public PartitionIndexStream(List<PartitionIndex> partitionIndices, int fileIndex) {
+		public PartitionIndexStream(AsynchronousPartitionedStreamFileReaderDelegate reader,
+									List<PartitionIndex> partitionIndices) {
+			this.reader = reader;
 			this.partitionIndices = partitionIndices;
-			this.fileIndex = fileIndex;
 			this.offset = 0;
 		}
 
@@ -247,8 +250,8 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 			return partitionIndices.get(offset);
 		}
 
-		public int getFileIndex() {
-			return fileIndex;
+		public AsynchronousPartitionedStreamFileReaderDelegate getReader() {
+			return reader;
 		}
 
 		public boolean advance() {
@@ -264,7 +267,6 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 		public String toString() {
 			return "PartitionIndexStream{" +
 				"partitionIndices=" + partitionIndices.size() +
-				", fileIndex=" + fileIndex +
 				", offset=" + offset +
 				'}';
 		}
@@ -277,12 +279,6 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 			int secondPartition = second.getCurrentPartitionIndex().getPartition();
 			if (firstPartition != secondPartition) {
 				return firstPartition < secondPartition ? -1 : 1;
-			}
-
-			int firstFileIndex = first.getFileIndex();
-			int secondFileIndex = second.getFileIndex();
-			if (firstFileIndex != secondFileIndex) {
-				return firstFileIndex < secondFileIndex ? -1 : 1;
 			}
 
 			long firstStart = first.getCurrentPartitionIndex().getStartOffset();

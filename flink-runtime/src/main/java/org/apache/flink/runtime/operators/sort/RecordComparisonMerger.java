@@ -24,8 +24,8 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.ChannelBackendMutableObjectIterator;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
-import org.apache.flink.types.BooleanValue;
 import org.apache.flink.util.MutableObjectIterator;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +33,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A merging policy who merge files by running outer sort-merge.
  */
 public class RecordComparisonMerger<T> implements SortedDataFileMerger<T> {
 	private static final Logger LOG = LoggerFactory.getLogger(RecordComparisonMerger.class);
+
+	private List<SortedDataFile<T>> sortedDataFiles;
 
 	protected final SortedDataFileFactory<T> sortedDataFileFactory;
 
@@ -51,41 +54,57 @@ public class RecordComparisonMerger<T> implements SortedDataFileMerger<T> {
 	protected final boolean objectReuseEnabled;
 
 	public RecordComparisonMerger(SortedDataFileFactory<T> sortedDataFileFactory,
-			IOManager ioManager,
-			TypeSerializer<T> typeSerializer,
-			TypeComparator<T> typeComparator,
-			int maxFileHandlesPerMerge,
-			boolean objectReuseEnabled) {
+								  IOManager ioManager,
+								  TypeSerializer<T> typeSerializer,
+								  TypeComparator<T> typeComparator,
+								  int maxFileHandlesPerMerge,
+								  boolean objectReuseEnabled) {
 		this.sortedDataFileFactory = sortedDataFileFactory;
 		this.ioManager = ioManager;
 		this.typeSerializer = typeSerializer;
 		this.typeComparator = typeComparator;
 		this.maxFileHandlesPerMerge = maxFileHandlesPerMerge;
 		this.objectReuseEnabled = objectReuseEnabled;
+		this.sortedDataFiles = new ArrayList<>();
 	}
 
-	@Override
-	public List<SortedDataFile<T>> merge(List<SortedDataFile<T>> files,
-											List<MemorySegment> writeMemory,
-											List<MemorySegment> mergeReadMemory,
-											ChannelDeleteRegistry<T> channelDeleteRegistry,
-											BooleanValue aliveFlag) throws IOException {
-		int effectiveMaxFileHandlesPerMerge = Math.min(maxFileHandlesPerMerge, mergeReadMemory.size());
+	private void merge(List<MemorySegment> writeMemory,
+							   List<MemorySegment> mergeReadMemory,
+							   ChannelDeleteRegistry<T> channelDeleteRegistry,
+							   AtomicBoolean aliveFlag) throws IOException {
+		int maxFanIn = Math.min(maxFileHandlesPerMerge, mergeReadMemory.size());
 
-		while (aliveFlag.getValue() && files.size() > effectiveMaxFileHandlesPerMerge) {
-			files = mergeTillExpectedFileNumber(files, mergeReadMemory, writeMemory, effectiveMaxFileHandlesPerMerge, channelDeleteRegistry);
+		while (aliveFlag.get() && sortedDataFiles.size() > maxFanIn) {
+			sortedDataFiles = mergeChannelList(
+				sortedDataFiles, mergeReadMemory, writeMemory, channelDeleteRegistry, maxFanIn);
 		}
-
-		return files;
 	}
 
 	@Override
 	public MutableObjectIterator<T> getMergingIterator(List<SortedDataFile<T>> channels,
-														List<MemorySegment> mergeReadMemory,
-														MutableObjectIterator<T> largeRecords,
-														ChannelDeleteRegistry<T> channelDeleteRegistry) throws IOException {
+													   List<MemorySegment> mergeReadMemory,
+													   MutableObjectIterator<T> largeRecords,
+													   ChannelDeleteRegistry<T> channelDeleteRegistry) throws IOException {
 		List<List<MemorySegment>> segmentedReadMemory = distributeReadMemory(mergeReadMemory, channels.size());
 		return getMergingIteratorWithSegmentedMemory(channels, segmentedReadMemory, null, largeRecords, channelDeleteRegistry);
+	}
+
+	@Override
+	public void notifyNewSortedDataFile(SortedDataFile<T> sortedDataFile,
+										   List<MemorySegment> writeMemory,
+										   List<MemorySegment> mergeReadMemory,
+										   ChannelDeleteRegistry<T> channelDeleteRegistry,
+										   AtomicBoolean aliveFlag) throws IOException {
+		sortedDataFiles.add(sortedDataFile);
+	}
+
+	@Override
+	public List<SortedDataFile<T>> finishMerging(List<MemorySegment> writeMemory,
+												 List<MemorySegment> mergeReadMemory,
+												 ChannelDeleteRegistry<T> channelDeleteRegistry,
+												 AtomicBoolean aliveFlag) throws IOException {
+		merge(writeMemory, mergeReadMemory, channelDeleteRegistry, aliveFlag);
+		return sortedDataFiles;
 	}
 
 	/**
@@ -140,16 +159,16 @@ public class RecordComparisonMerger<T> implements SortedDataFileMerger<T> {
 	 * Merges the given sorted runs to a smaller number of sorted runs.
 	 *
 	 * @param files The IDs of the sorted runs that need to be merged.
-	 * @param allReadBuffers
+	 * @param allReadBuffers The buffers to be used by the readers.
 	 * @param writeBuffers The buffers to be used by the writers.
 	 * @return A list of the IDs of the merged channels.
 	 * @throws IOException Thrown, if the readers or writers encountered an I/O problem.
 	 */
-	protected final List<SortedDataFile<T>> mergeTillExpectedFileNumber(List<SortedDataFile<T>> files,
-																		List<MemorySegment> allReadBuffers,
-																		List<MemorySegment> writeBuffers,
-																		int maxFanIn,
-																		ChannelDeleteRegistry<T> channelDeleteRegistry) throws IOException {
+	protected final List<SortedDataFile<T>> mergeChannelList(List<SortedDataFile<T>> files,
+															 List<MemorySegment> allReadBuffers,
+															 List<MemorySegment> writeBuffers,
+															 ChannelDeleteRegistry<T> channelDeleteRegistry,
+															 int maxFanIn) throws IOException {
 		// A channel list with length maxFanIn<sup>i</sup> can be merged to maxFanIn files in i-1 rounds where every merge
 		// is a full merge with maxFanIn input channels. A partial round includes merges with fewer than maxFanIn
 		// inputs. It is most efficient to perform the partial round first.

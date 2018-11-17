@@ -20,13 +20,10 @@ package org.apache.flink.runtime.io.network.partition.external.writer;
 
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
-import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.powermock.api.mockito.PowerMockito.mock;
 
 /**
  * Tests the merge file writer.
@@ -34,13 +31,13 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 public class PartitionMergeFileWriterTest extends PersistentFileWriterTestBase {
 	@Override
 	protected PersistentFileWriter<Integer> createFileWriter(int numberPartitions, String partitionRootPath) throws Exception {
-		AbstractInvokable parentTask = mock(AbstractInvokable.class);
 
 		return new PartitionMergeFileWriter<>(
 			numberPartitions,
 			partitionRootPath,
 			2,
-			4,
+			false,
+			false,
 			memoryManager,
 			memoryManager.allocatePages(parentTask, NUM_PAGES),
 			ioManager,

@@ -28,11 +28,11 @@ import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.testutils.DummyInvokable;
 import org.apache.flink.runtime.operators.testutils.TestData;
 import org.apache.flink.util.MutableObjectIterator;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,7 +104,7 @@ public class PushedUnilateralSortMergerITCase {
 			memoryManager, memoryManager.allocatePages(parentTask, memoryManager.computeNumberOfPages(0.8)),
 			ioManager, parentTask, serializerFactory2, comparator2,
 			0, 64, false, 0.7f,
-			false, false, true);
+			false, false, true, false);
 
 		final Tuple2<Integer, Integer> rec = new Tuple2<>();
 
@@ -141,7 +141,7 @@ public class PushedUnilateralSortMergerITCase {
 			memoryManager, memoryManager.allocatePages(parentTask, memoryManager.computeNumberOfPages(0.8)),
 			ioManager, parentTask, serializerFactory2, comparator2,
 			0, 64, true, 0.7f,
-			false, false, true);
+			false, false, true, false);
 
 		final Tuple2<Integer, Integer> rec = new Tuple2<>();
 

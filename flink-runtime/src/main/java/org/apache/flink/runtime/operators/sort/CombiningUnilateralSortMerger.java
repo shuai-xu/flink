@@ -42,9 +42,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 
 /**
- * The CombiningUnilateralSortMerger is part of a merge-sort implementation. 
+ * The CombiningUnilateralSortMerger is part of a merge-sort implementation.
  * Conceptually, a merge sort with combining works as follows:
  * (1) Divide the unsorted list into n sublists of about 1/n the size. (2) Sort each sublist recursively by re-applying
  * merge sort. (3) Combine all tuples with the same key within a sublist (4) Merge the two sublists back into one sorted
@@ -55,7 +56,7 @@ import java.util.Queue;
  * user-provided memory limits.
  */
 public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
-	
+
 	// ------------------------------------------------------------------------
 	// Constants & Fields
 	// ------------------------------------------------------------------------
@@ -66,9 +67,9 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	private static final Logger LOG = LoggerFactory.getLogger(CombiningUnilateralSortMerger.class);
 
 	private final GroupCombineFunction<E, E> combineStub;	// the user code stub that does the combining
-	
+
 	private Configuration udfConfig;
-	
+
 
 	// ------------------------------------------------------------------------
 	// Constructor
@@ -78,7 +79,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	 *Creates a new sorter that reads the data from a given reader and provides an iterator returning that
 	 * data in a sorted manner. The memory is divided among sort buffers, write buffers and read buffers
 	 * automatically.
-	 * 
+	 *
 	 * @param combineStub The stub used to combine values with the same key.
 	 * @param memoryManager The memory manager from which to allocate the memory.
 	 * @param ioManager The I/O manager, which is used to write temporary files to disk.
@@ -112,7 +113,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	 * Creates a new sorter that reads the data from a given reader and provides an iterator returning that
 	 * data in a sorted manner. The memory is divided among sort buffers, write buffers and read buffers
 	 * automatically.
-	 * 
+	 *
 	 * @param combineStub The stub used to combine values with the same key.
 	 * @param memoryManager The memory manager from which to allocate the memory.
 	 * @param ioManager The I/O manager, which is used to write temporary files to disk.
@@ -146,7 +147,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 
 		this.combineStub = combineStub;
 	}
-	
+
 	public void setUdfConfiguration(Configuration config) {
 		this.udfConfig = config;
 	}
@@ -156,15 +157,15 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	// ------------------------------------------------------------------------
 
 	@Override
-	protected ThreadBase<E> getSpillingThread(SortedDataFileFactory<E> sortedDataFileFactory, SortedDataFileMerger<E> merger,
-		ExceptionHandler<IOException> exceptionHandler, CircularQueues<E> queues,
-		AbstractInvokable parentTask, MemoryManager memoryManager, IOManager ioManager, 
-		TypeSerializerFactory<E> serializerFactory, TypeComparator<E> comparator,
-		List<MemorySegment> sortReadMemory, List<MemorySegment> writeMemory, int maxFileHandles)
-	{
-		return new CombiningSpillingThread(sortedDataFileFactory, merger, exceptionHandler, queues, parentTask,
-				memoryManager, ioManager, serializerFactory.getSerializer(),
-				comparator, sortReadMemory, writeMemory, maxFileHandles, objectReuseEnabled);
+	protected ThreadBase<E> getSpillingThread(SortedDataFileFactory<E> sortedDataFileFactory,
+											  BlockingQueue<SortedDataFileElement<E>> spilledFiles, SortedDataFileMerger<E> merger,
+											  ExceptionHandler<IOException> exceptionHandler, CircularQueues<E> queues,
+											  AbstractInvokable parentTask, MemoryManager memoryManager, IOManager ioManager,
+											  TypeSerializerFactory<E> serializerFactory, TypeComparator<E> comparator,
+											  List<MemorySegment> sortReadMemory, List<MemorySegment> writeMemory, int maxFileHandles) {
+		return new CombiningSpillingThread(sortedDataFileFactory, spilledFiles, merger,
+			exceptionHandler, queues, parentTask, memoryManager, ioManager, serializerFactory.getSerializer(),
+			comparator, sortReadMemory, writeMemory, maxFileHandles, objectReuseEnabled);
 	}
 
 	// ------------------------------------------------------------------------
@@ -172,21 +173,21 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	// ------------------------------------------------------------------------
 
 	protected class CombiningSpillingThread extends SpillingThread {
-		
+
 		private final TypeComparator<E> comparator2;
 
 		private final boolean objectReuseEnabled;
 
-		public CombiningSpillingThread(SortedDataFileFactory<E> sortedDataFileFactory, SortedDataFileMerger<E> merger,
-				ExceptionHandler<IOException> exceptionHandler, CircularQueues<E> queues,
-				AbstractInvokable parentTask, MemoryManager memManager, IOManager ioManager, 
-				TypeSerializer<E> serializer, TypeComparator<E> comparator, 
-				List<MemorySegment> sortReadMemory, List<MemorySegment> writeMemory, int maxNumFileHandles,
-				boolean objectReuseEnabled)
-		{
-			super(sortedDataFileFactory, merger, exceptionHandler, queues, parentTask, memManager, ioManager, serializer, comparator,
-				sortReadMemory, writeMemory, maxNumFileHandles);
-			
+		public CombiningSpillingThread(SortedDataFileFactory<E> sortedDataFileFactory,
+									   BlockingQueue<SortedDataFileElement<E>> spilledFiles, SortedDataFileMerger<E> merger,
+									   ExceptionHandler<IOException> exceptionHandler, CircularQueues<E> queues,
+									   AbstractInvokable parentTask, MemoryManager memManager, IOManager ioManager,
+									   TypeSerializer<E> serializer, TypeComparator<E> comparator,
+									   List<MemorySegment> sortReadMemory, List<MemorySegment> writeMemory,
+									   int maxNumFileHandles, boolean objectReuseEnabled) {
+			super(sortedDataFileFactory, spilledFiles, merger, exceptionHandler, queues, parentTask,
+				memManager, ioManager, serializer, comparator, sortReadMemory, writeMemory, maxNumFileHandles);
+
 			this.comparator2 = comparator.duplicate();
 			this.objectReuseEnabled = objectReuseEnabled;
 		}
@@ -196,11 +197,10 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 		 */
 		public void go() throws IOException {
 			// ------------------- In-Memory Cache ------------------------
-			
+
 			final Queue<CircularElement<E>> cache = new ArrayDeque<CircularElement<E>>();
 			CircularElement<E> element;
-			boolean cacheOnly = false;
-			
+
 			// fill cache
 			while (isRunning()) {
 				// take next element from queue
@@ -220,50 +220,52 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 					break;
 				}
 				else if (element == endMarker()) {
-					cacheOnly = true;
+					cacheOnly.set(true);
 					break;
 				}
 				cache.add(element);
 			}
-			
+
 			// check whether the thread was canceled
 			if (!isRunning()) {
 				return;
 			}
-			
+
 			// ------------------- In-Memory Merge ------------------------
-			if (cacheOnly) {
+			if (cacheOnly.get()) {
 				/* operates on in-memory segments only */
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Initiating in memory merge.");
 				}
-				
+
 				List<MutableObjectIterator<E>> iterators = new ArrayList<MutableObjectIterator<E>>(cache.size());
-								
+
 				// iterate buffers and collect a set of iterators
 				for (CircularElement<E> cached : cache) {
 					iterators.add(cached.buffer.getIterator());
 				}
-				
+
 				// release the remaining sort-buffers
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Releasing unused sort-buffer memory.");
 				}
 				disposeSortBuffers(true);
-				
+
 				// set lazy iterator
 				MutableObjectIterator<E> resIter = iterators.isEmpty() ? EmptyMutableObjectIterator.<E>get() :
-						iterators.size() == 1 ? iterators.get(0) : 
+						iterators.size() == 1 ? iterators.get(0) :
 						new MergeIterator<E>(iterators, this.comparator);
-				
+
 				setResult(new ArrayList<>(), resIter);
+				// notify the merging thread
+				spilledFiles.add(mergingMarker());
 				return;
 			}
-			
+
 			// ------------------- Spilling Phase ------------------------
-			
+
 			final GroupCombineFunction<E, E> combineStub = CombiningUnilateralSortMerger.this.combineStub;
-			
+
 			// now that we are actually spilling, take the combiner, and open it
 			try {
 				Configuration conf = CombiningUnilateralSortMerger.this.udfConfig;
@@ -272,8 +274,6 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 			catch (Throwable t) {
 				throw new IOException("The user-defined combiner failed in its 'open()' method.", t);
 			}
-
-			List<SortedDataFile<E>> sortedDataFiles = new ArrayList<>();
 
 			// loop as long as the thread is marked alive and we do not see the final element
 			while (isRunning())	{
@@ -289,7 +289,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 						return;
 					}
 				}
-				
+
 				// check if we are still running
 				if (!isRunning()) {
 					return;
@@ -298,7 +298,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				if (element == endMarker()) {
 					break;
 				}
-				
+
 				// open next channel
 				SortedDataFile<E> output = sortedDataFileFactory.createFile(writeMemory);
 				channelDeleteRegistry.registerChannelToBeDelete(output.getChannelID());
@@ -328,7 +328,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 						while (i < stop && 0 == buffer.compare(i, i + 1)) {
 							i++;
 						}
-	
+
 						if (i == seqStart) {
 							// no duplicate key, no need to combine. simply copy
 							buffer.writeToOutput(output, seqStart, 1);
@@ -358,7 +358,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				output.finishWriting();
 				channelDeleteRegistry.unregisterOpenChannel(output.getWriteChannel());
 
-				sortedDataFiles.add(output);
+				spilledFiles.add(new SortedDataFileElement<>(output));
 
 				// pass empty sort-buffer to reading thread
 				element.buffer.reset();
@@ -370,15 +370,15 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				LOG.debug("Spilling done.");
 				LOG.debug("Releasing sort-buffer memory.");
 			}
-			
+
 			// clear the sort buffers, but do not return the memory to the manager, as we use it for merging
 			disposeSortBuffers(false);
-			
-			
+
+
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("Closing combiner user code.");
 			}
-			
+
 			// close the user code
 			try {
 				FunctionUtils.closeFunction(combineStub);
@@ -386,44 +386,27 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 			catch (Throwable t) {
 				throw new IOException("The user-defined combiner failed in its 'close()' method.", t);
 			}
-			
+
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("User code closed.");
 			}
 
-			// ------------------- Merging Phase ------------------------
-
-			// merge channels until sufficient file handles are available
-			sortedDataFiles = merger.merge(sortedDataFiles, writeMemory, mergeReadMemory, channelDeleteRegistry, getRunningFlag());
-			
-			// from here on, we won't write again
-			this.memManager.release(this.writeMemory);
-			this.writeMemory.clear();
-			
-			// check if we have spilled some data at all
-			if (sortedDataFiles.isEmpty()) {
-				setResult(sortedDataFiles, EmptyMutableObjectIterator.<E>get());
+			// spilling finishes, offer the sort and spill memory to merging phase
+			synchronized (mergeMemoryLock) {
+				readMemoryForMerging.addAll(mergeReadMemory);
+				writeMemoryForMerging.addAll(writeMemory);
+				writeMemory.clear();
+				mergeReadMemory.clear();
 			}
-			else {
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("Beginning final merge.");
-				}
 
-				MutableObjectIterator<E> finalMergedIterator =
-					merger.getMergingIterator(sortedDataFiles, mergeReadMemory, null, channelDeleteRegistry);
-
-				// set the target for the user iterator
-				// if the final merge combines, create a combining iterator around the merge iterator,
-				// otherwise not
-				setResult(sortedDataFiles, finalMergedIterator);
-			}
+			// notify the merging thread
+			largeRecords = null;
+			spilledFiles.add(mergingMarker());
 
 			// done
-			if (LOG.isDebugEnabled()) {
-				LOG.debug("Spilling and merging thread done.");
-			}
+			LOG.info("Spilling thread done.");
 		}
-	} // end spilling/merging thread
+	} // end spilling thread
 
 	// ------------------------------------------------------------------------
 
@@ -432,9 +415,9 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	 * interval.
 	 */
 	private static final class CombineValueIterator<E> implements Iterator<E>, Iterable<E> {
-		
+
 		private final InMemorySorter<E> buffer; // the buffer from which values are returned
-		
+
 		private E recordReuse;
 
 		private final boolean objectReuseEnabled;
@@ -442,12 +425,12 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 		private int last; // the position of the last value to be returned
 
 		private int position; // the position of the next value to be returned
-		
+
 		private boolean iteratorAvailable;
 
 		/**
 		 * Creates an iterator over the values in a <tt>BufferSortable</tt>.
-		 * 
+		 *
 		 * @param buffer
 		 *        The buffer to get the values from.
 		 */
@@ -459,7 +442,7 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 
 		/**
 		 * Sets the interval for the values that are to be returned by this iterator.
-		 * 
+		 *
 		 * @param first
 		 *        The position of the first value to be returned.
 		 * @param last

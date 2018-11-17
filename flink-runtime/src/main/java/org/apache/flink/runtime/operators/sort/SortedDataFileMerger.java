@@ -19,31 +19,16 @@
 package org.apache.flink.runtime.operators.sort;
 
 import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.types.BooleanValue;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Mering policy for a list of sorted data files.
  */
 public interface SortedDataFileMerger<T> {
-
-	/**
-	 * Merges a list of sorted data files.
-	 *
-	 * @param files the files to merge
-	 * @param writeMemory the memory used to write files during merging
-	 * @param mergeReadMemory the memory used to read files during merging
-	 * @param channelDeleteRegistry the registry to manage files to be close and delete
-	 * @param aliveFlag flags indicating whether the merge should continue
-	 */
-	List<SortedDataFile<T>> merge(List<SortedDataFile<T>> files,
-									List<MemorySegment> writeMemory,
-									List<MemorySegment> mergeReadMemory,
-									ChannelDeleteRegistry<T> channelDeleteRegistry,
-									BooleanValue aliveFlag) throws IOException;
 
 	/**
 	 * Gets the merging iterator to read data in-order for a list of sorted data files and an optional large records
@@ -53,10 +38,40 @@ public interface SortedDataFileMerger<T> {
 	 * @param mergeReadMemory the memory used to read files during merging
 	 * @param largeRecords the iterator of large records
 	 * @param channelDeleteRegistry the registry to manage files to be close and delete
+	 * @throws IOException if file read or write fails
 	 */
 	MutableObjectIterator<T> getMergingIterator(List<SortedDataFile<T>> files,
 												List<MemorySegment> mergeReadMemory,
 												MutableObjectIterator<T> largeRecords,
 												ChannelDeleteRegistry<T> channelDeleteRegistry) throws IOException;
 
+	/**
+	 * Notifies that a new sorted data file can get merged, the merge policy will decide
+	 * whether merging should be triggered.
+	 *
+	 * @param writeMemory the memory used to write files during merging
+	 * @param mergeReadMemory the memory used to read files during merging
+	 * @param channelDeleteRegistry the registry to manage files to be close and delete
+	 * @param aliveFlag flags indicating whether the merge should continue
+	 * @throws IOException if file read or write fails
+	 */
+	void notifyNewSortedDataFile(SortedDataFile<T> sortedDataFile,
+									List<MemorySegment> writeMemory,
+									List<MemorySegment> mergeReadMemory,
+									ChannelDeleteRegistry<T> channelDeleteRegistry,
+									AtomicBoolean aliveFlag) throws IOException;
+
+	/**
+	 *
+	 * @param writeMemory the memory used to write files during merging
+	 * @param mergeReadMemory the memory used to read files during merging
+	 * @param channelDeleteRegistry the registry to manage files to be close and delete
+	 * @param aliveFlag flags indicating whether the merge should continue
+	 * @return the final merged file list
+	 * @throws IOException if file read or write fails
+	 */
+	List<SortedDataFile<T>> finishMerging(List<MemorySegment> writeMemory,
+										  List<MemorySegment> mergeReadMemory,
+										  ChannelDeleteRegistry<T> channelDeleteRegistry,
+										  AtomicBoolean aliveFlag) throws IOException;
 }

@@ -357,18 +357,28 @@ public class TaskManagerOptions {
 			.defaultValue(200);
 
 	/**
-	 * The maximum of file handles that can be merged at one time.
+	 * The maximum of file handles that can be merged at one time. And if
+	 * taskmanager.output.merge.enable-async-merge is set to false, the number of
+	 * final merged files is less than this merge factor.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MERGE_FACTOR =
 		key("taskmanager.output.merge.factor")
 			.defaultValue(64);
 
 	/**
-	 * The maximum number of data files that the result of merging writing can have.
+	 * Whether enable async merging or not, this option only takes effect when merge
+	 * writer is used.
 	 */
-	public static final ConfigOption<Integer> TASK_MANAGER_OUTPUT_MERGE_MAX_DATA_FILES =
-		key("taskmanager.output.merge.max-data-files")
-			.defaultValue(10);
+	public static final ConfigOption<Boolean> TASK_MANAGER_OUTPUT_ENABLE_ASYNC_MERGE =
+		key("taskmanager.output.merge.enable-async-merge")
+			.defaultValue(false);
+
+	/**
+	 * Whether merge to one file or not.
+	 */
+	public static final ConfigOption<Boolean> TASK_MANAGER_OUTPUT_MERGE_TO_ONE_FILE =
+		key("taskmanager.output.merge.merge-to-one-file")
+			.defaultValue(false);
 
 	/**
 	 * The list of dirs to be used for the external result partitions on this task manager.
