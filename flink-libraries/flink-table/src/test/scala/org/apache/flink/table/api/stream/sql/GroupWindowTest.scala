@@ -66,6 +66,31 @@ class GroupWindowTest extends TableTestBase {
   }
 
   @Test
+  def testMultiHopWindowsJoin(): Unit = {
+    val sql =
+      """
+        |SELECT * FROM
+        | (SELECT
+        |   HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' HOUR) as hs1,
+        |   HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' HOUR) as he1,
+        |   count(*) as c1,
+        |   sum(c) as s1
+        | FROM MyTable
+        | GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' HOUR)) t1
+        |JOIN
+        | (SELECT
+        |   HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' DAY) as hs2,
+        |   HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' DAY) as he2,
+        |   count(*) as c2,
+        |   sum(c) as s2
+        | FROM MyTable
+        | GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' DAY)) t2 ON t1.he1 = t2.he2
+        |WHERE t1.s1 IS NOT NULL
+      """.stripMargin
+    streamUtil.verifyPlan(sql)
+  }
+
+  @Test
   def testHoppingFunction(): Unit = {
     val sql =
       "SELECT COUNT(*), weightedAvg(c, a) AS wAvg, " +

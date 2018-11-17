@@ -91,6 +91,25 @@ StreamExecUnion(all=[true], union=[EXPR$0, EXPR$1, EXPR$2, EXPR$3])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMultiHopWindowsJoin">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecJoin(where=[=(he1, he2)], join=[hs1, he1, c1, s1, hs2, he2, c2, s2], joinType=[InnerJoin])
+  StreamExecExchange(distribution=[hash[he1]])
+    StreamExecCalc(select=[w$start AS hs1, w$end AS he1, c1, s1], where=[IS NOT NULL(s1)])
+      StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[COUNT(*) AS c1, SUM(c) AS s1, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+        StreamExecExchange(distribution=[single])
+          StreamExecCalc(select=[rowtime, c])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+  StreamExecExchange(distribution=[hash[he2]])
+    StreamExecCalc(select=[w$start AS hs2, w$end AS he2, c2, s2])
+      StreamExecGroupWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[COUNT(*) AS c2, SUM(c) AS s2, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+        StreamExecExchange(distribution=[single])
+          StreamExecCalc(select=[rowtime, c])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testMultiWindowSqlWithAggregation">
     <Resource name="plan">
       <![CDATA[

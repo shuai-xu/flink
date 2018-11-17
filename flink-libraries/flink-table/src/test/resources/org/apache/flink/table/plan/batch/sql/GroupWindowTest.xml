@@ -63,6 +63,63 @@ Calc(select=[EXPR$0, CAST(w$start) AS EXPR$1], where=[AND(>($f1, 0), =(EXTRACT(F
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMultiHopWindowsJoin">
+    <Resource name="sql">
+      <![CDATA[
+SELECT * FROM
+ (SELECT
+   HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' HOUR) as hs1,
+   HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' HOUR) as he1,
+   count(*) as c1,
+   sum(c) as s1
+ FROM MyTable
+ GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' HOUR)) t1
+JOIN
+ (SELECT
+   HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' DAY) as hs2,
+   HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' DAY) as he2,
+   count(*) as c2,
+   sum(c) as s2
+ FROM MyTable
+ GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' DAY)) t2 ON t1.he1 = t2.he2
+WHERE t1.s1 IS NOT NULL
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(hs1=[$0], he1=[$1], c1=[$2], s1=[$3], hs2=[$4], he2=[$5], c2=[$6], s2=[$7])
++- LogicalFilter(condition=[IS NOT NULL($3)])
+   +- LogicalJoin(condition=[=($1, $5)], joinType=[inner])
+      :- LogicalProject(hs1=[HOP_START($0)], he1=[HOP_END($0)], c1=[$1], s1=[$2])
+      :  +- LogicalAggregate(group=[{0}], c1=[COUNT()], s1=[SUM($1)])
+      :     +- LogicalProject($f0=[HOP($3, 60000, 3600000)], c=[$2])
+      :        +- LogicalTableScan(table=[[MyTable]])
+      +- LogicalProject(hs2=[HOP_START($0)], he2=[HOP_END($0)], c2=[$1], s2=[$2])
+         +- LogicalAggregate(group=[{0}], c2=[COUNT()], s2=[SUM($1)])
+            +- LogicalProject($f0=[HOP($3, 60000, 86400000)], c=[$2])
+               +- LogicalTableScan(table=[[MyTable]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+NestedLoopJoin(where=[=(he1, he2)], join=[hs1, he1, c1, s1, hs2, he2, c2, s2], joinType=[InnerJoin], build=[left], singleRowJoin=[true])
+:- Exchange(distribution=[broadcast])
+:  +- Calc(select=[CAST(w$start) AS hs1, CAST(w$end) AS he1, c1, s1], where=[IS NOT NULL(s1)])
+:     +- HashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Final_COUNT(count$0) AS c1, Final_SUM(sum$1) AS s1])
+:        +- Exchange(distribution=[single])
+:           +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 3600000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_COUNT(*) AS count$0, Partial_SUM(c) AS sum$1])
+:              +- Calc(select=[rowtime, c])
+:                 +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, rowtime])
++- Exchange(distribution=[any], exchange_mode=[BATCH])
+   +- Calc(select=[CAST(w$start) AS hs2, CAST(w$end) AS he2, c2, s2])
+      +- HashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Final_COUNT(count$0) AS c2, Final_SUM(sum$1) AS s2])
+         +- Exchange(distribution=[single])
+            +- LocalHashWindowAggregate(window=[SlidingGroupWindow('w$, 'rowtime, 86400000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime], select=[Partial_COUNT(*) AS count$0, Partial_SUM(c) AS sum$1])
+               +- Calc(select=[rowtime, c])
+                  +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c, rowtime])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testNonPartitionedHopWindow">
     <Resource name="sql">
       <![CDATA[SELECT SUM(a) AS sumA, COUNT(b) AS cntB FROM T GROUP BY HOP(ts, INTERVAL '15' MINUTE, INTERVAL '90' MINUTE)]]>

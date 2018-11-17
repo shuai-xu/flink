@@ -154,8 +154,27 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     val left = join.getLeft.accept(this)
     val right = join.getRight.accept(this)
 
-    LogicalJoin.create(left, right, join.getCondition, join.getVariablesSet, join.getJoinType)
+    val newCondition = join.getCondition.accept(new RexShuttle {
+      private val leftFieldCount = left.getRowType.getFieldCount
+      private val leftFields = left.getRowType.getFieldList.toList
+      private val leftRightFields =
+        (left.getRowType.getFieldList ++ right.getRowType.getFieldList).toList
 
+      override def visitInputRef(inputRef: RexInputRef): RexNode = {
+        if (isTimeIndicatorType(inputRef.getType)) {
+          val fields = if (inputRef.getIndex < leftFieldCount) {
+            leftFields
+          } else {
+            leftRightFields
+          }
+          RexInputRef.of(inputRef.getIndex, fields)
+        } else {
+          super.visitInputRef(inputRef)
+        }
+      }
+    })
+
+    LogicalJoin.create(left, right, newCondition, join.getVariablesSet, join.getJoinType)
   }
 
   override def visit(correlate: LogicalCorrelate): RelNode = {
