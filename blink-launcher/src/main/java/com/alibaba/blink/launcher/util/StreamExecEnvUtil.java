@@ -32,8 +32,11 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.TernaryBoolean;
 
 import com.alibaba.blink.launcher.ConfConstants;
+import com.alibaba.blink.state.niagara.NiagaraConfiguration;
+import com.alibaba.blink.state.niagara.NiagaraStateBackend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -246,13 +249,6 @@ public class StreamExecEnvUtil {
 				stateBackendType = ConfConstants.ROCKSDB;
 			}
 		}
-		if (stateBackendType != null && stateBackendType.equalsIgnoreCase(ConfConstants.NIAGARA) &&
-				userParams.getProperty(ConfConstants.REPLACE_NIAGARA, "true").equalsIgnoreCase("true")) {
-			userParams.setProperty(ConfConstants.STATE_BACKEND_TYPE, ConfConstants.ROCKSDB);
-			userParams.setProperty(ConfConstants.STATE_BACKEND_ROCKSDB_TTL_MS,
-					userParams.getProperty(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS));
-			stateBackendType = ConfConstants.ROCKSDB;
-		}
 
 		if (!StringUtil.isEmpty(stateBackendType)) {
 			LOG.info(ConfConstants.STATE_BACKEND_TYPE + " : " + stateBackendType);
@@ -282,8 +278,53 @@ public class StreamExecEnvUtil {
 		StreamExecutionEnvironment streamEnv,
 		Properties userParams)
 		throws Exception {
-		throw new CliArgsException("Niagara state backend not supported");
 
+		String strTTL = userParams.getProperty(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS);
+		long ttl = NumUtil.parseLong(strTTL);
+		if (ttl < 0) {
+			throw new CliArgsException(ConfConstants.STATE_BACKEND_NIAGARA_TTL_MS +
+					":" + strTTL + ", the value must be long!");
+		} else {
+			NiagaraConfiguration configuration = new NiagaraConfiguration();
+			// set ttl
+			configuration.setTtl(ttl + "ms"); // append time unit
+			log(NiagaraConfiguration.TTL.key(), ttl + "ms");
+
+			// set block cache size
+			int blockCacheSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_BLOCK_CACHE_SIZE_MB;
+			String strBlockCache = userParams.getProperty(ConfConstants.STATE_BACKEND_BLOCK_CACHE_SIZE_MB);
+			if (strBlockCache != null) {
+				blockCacheSizeMb = NumUtil.parseInt(strBlockCache);
+				if (blockCacheSizeMb < 0) {
+					blockCacheSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_BLOCK_CACHE_SIZE_MB;
+				}
+			}
+			configuration.setBlockCacheSize(blockCacheSizeMb + "mb");
+			log(NiagaraConfiguration.BLOCK_CACHE_SIZE.key(), blockCacheSizeMb + "mb");
+
+			// set mem table size
+			int memTableSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_MEM_TABLE_SIZE_MB;
+			String strMemTable = userParams.getProperty(ConfConstants.STATE_BACKEND_MEM_TABLE_SIZE_MB);
+			if (strMemTable != null) {
+				memTableSizeMb = NumUtil.parseInt(strMemTable);
+				if (memTableSizeMb < 0) {
+					memTableSizeMb = ConfConstants.DEFAULT_STATE_BACKEND_MEM_TABLE_SIZE_MB;
+				}
+			}
+			configuration.setMemtableSize(memTableSizeMb + "mb");
+			log(NiagaraConfiguration.MEMTABLE_SIZE.key(), memTableSizeMb + "mb");
+
+			String checkPointPath = userParams.getProperty(ConfConstants.CHECKPOINT_PATH);
+			NiagaraStateBackend backend = null;
+			if (checkPointPath == null) {
+				backend = new NiagaraStateBackend(
+						new MemoryStateBackend(), TernaryBoolean.TRUE, configuration);
+			} else {
+				backend = new NiagaraStateBackend(
+						checkPointPath, true, configuration);
+			}
+			streamEnv.setStateBackend(backend);
+		}
 	}
 
 	/**

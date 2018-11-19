@@ -29,9 +29,6 @@ public class ConfConstants {
 	public static final String ROCKSDB = "rocksdb";
 	public static final String NIAGARA = "niagara";
 
-	// replace niagara with rocksdb
-	public static final String REPLACE_NIAGARA = "state.backend.replace.niagara";
-
 	// checkpoint uri
 	public static final String CHECKPOINT_PATH = "blink.checkpoint.path";
 

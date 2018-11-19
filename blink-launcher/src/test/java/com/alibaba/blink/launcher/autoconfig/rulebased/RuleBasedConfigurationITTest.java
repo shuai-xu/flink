@@ -59,6 +59,7 @@ public class RuleBasedConfigurationITTest {
 		INVALID_OLD_PLAN,	// Invalid old plan
 		NEW,			// When a new job starts with autoconf, and doesn't have old plan
 		NEW_ROCKSDB,    // A new job with backend of rocksdb
+		NEW_NIAGARA,    // A new job with backend of rocksdb
 		MINIBATCH_NEW, // A new job with autoconf, enable minibatch
 		MINIBATCH_REUSE, // Reuse minibatch conf in old plan
 		NATIVEMEMORY,	// Emphasis on native memory
@@ -84,8 +85,7 @@ public class RuleBasedConfigurationITTest {
 
 	@Test
 	public void testSqlInfo_NIAGARA() throws Exception {
-		// currently niagara is replaced by rocksdb by default
-		testRunStream(JOB_CONFIG_WITH_NIAGARA_FILE, SQL, JOB1_SQL_FILE, INFO, null, getExpectedPlanPath(TestCase.NEW_ROCKSDB));
+		testRunStream(JOB_CONFIG_WITH_NIAGARA_FILE, SQL, JOB1_SQL_FILE, INFO, null, getExpectedPlanPath(TestCase.NEW_NIAGARA));
 	}
 
 	@Test
