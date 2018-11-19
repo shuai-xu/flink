@@ -80,12 +80,6 @@ public abstract class InternalStateIteratorTestBase {
 
 	@Test
 	public void testInvalidIteratorArguments() throws IOException {
-		AbstractInternalStateBackend backend = createStateBackend(
-			10,
-			getGroupsForSubtask(10, 2, 0),
-			ClassLoader.getSystemClassLoader(),
-			TestLocalRecoveryConfig.disabled());
-
 		InternalStateDescriptor descriptor =
 			new InternalStateDescriptorBuilder("test")
 				.addKeyColumn("key1", IntSerializer.INSTANCE)

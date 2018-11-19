@@ -39,6 +39,8 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import org.apache.flink.test.util.MiniClusterResource;
 import org.apache.flink.util.TestLogger;
 
+import com.alibaba.blink.state.niagara.NiagaraStateBackend;
+import org.junit.AssumptionViolatedException;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,6 +76,9 @@ public class KeyedStateCheckpointingITCase extends TestLogger {
 	protected static final int NUM_TASK_MANAGERS = 2;
 	protected static final int NUM_TASK_SLOTS = 2;
 	protected static final int PARALLELISM = NUM_TASK_MANAGERS * NUM_TASK_SLOTS;
+
+	protected static final boolean IS_LINUX_ALIOS = System.getProperty("os.name").startsWith("Linux") &&
+		System.getProperty("os.version").contains("alios7");
 
 	// ------------------------------------------------------------------------
 
@@ -133,6 +138,30 @@ public class KeyedStateCheckpointingITCase extends TestLogger {
 		incRocksDbBackend.setDbStoragePath(tmpFolder.newFolder().getAbsolutePath());
 
 		testProgramWithBackend(incRocksDbBackend);
+	}
+
+	@Test
+	public void testWithNiagaraBackendFull() throws Exception {
+		if (IS_LINUX_ALIOS) {
+			NiagaraStateBackend fullNiagaraBackend = new NiagaraStateBackend(new MemoryStateBackend(MAX_MEM_STATE_SIZE), false);
+			fullNiagaraBackend.setDbStoragePath(tmpFolder.newFolder().getAbsolutePath());
+
+			testProgramWithBackend(fullNiagaraBackend);
+		} else {
+			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
+		}
+	}
+
+	@Test
+	public void testWithNiagaraBackendIncremental() throws Exception {
+		if (IS_LINUX_ALIOS) {
+			NiagaraStateBackend incNiagaraBackend = new NiagaraStateBackend(new MemoryStateBackend(MAX_MEM_STATE_SIZE), true);
+			incNiagaraBackend.setDbStoragePath(tmpFolder.newFolder().getAbsolutePath());
+
+			testProgramWithBackend(incNiagaraBackend);
+		} else {
+			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
+		}
 	}
 
 	// ------------------------------------------------------------------------

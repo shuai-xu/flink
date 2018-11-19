@@ -49,6 +49,7 @@ import org.apache.flink.test.util.SuccessException;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.TestLogger;
 
+import com.alibaba.blink.state.niagara.NiagaraStateBackend;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
@@ -65,6 +66,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.flink.test.checkpointing.AbstractEventTimeWindowCheckpointingITCase.StateBackendEnum.NIAGARA_INCREMENTAL_ZK;
 import static org.apache.flink.test.checkpointing.AbstractEventTimeWindowCheckpointingITCase.StateBackendEnum.ROCKSDB_INCREMENTAL_ZK;
 import static org.apache.flink.test.util.TestUtils.tryExecute;
 import static org.junit.Assert.assertEquals;
@@ -100,6 +102,7 @@ public abstract class AbstractEventTimeWindowCheckpointingITCase extends TestLog
 
 	enum StateBackendEnum {
 		MEM, FILE, ROCKSDB_FULLY_ASYNC, ROCKSDB_INCREMENTAL, ROCKSDB_INCREMENTAL_ZK, MEM_ASYNC, FILE_ASYNC
+		, NIAGARA_FULLY_ASYNC, NIAGARA_INCREMENTAL, NIAGARA_INCREMENTAL_ZK
 	}
 
 	protected abstract StateBackendEnum getStateBackend();
@@ -129,7 +132,7 @@ public abstract class AbstractEventTimeWindowCheckpointingITCase extends TestLog
 
 		// Testing HA Scenario / ZKCompletedCheckpointStore with incremental checkpoints
 		StateBackendEnum stateBackendEnum = getStateBackend();
-		if (ROCKSDB_INCREMENTAL_ZK.equals(stateBackendEnum)) {
+		if (ROCKSDB_INCREMENTAL_ZK.equals(stateBackendEnum) || NIAGARA_INCREMENTAL_ZK.equals(stateBackendEnum)) {
 			zkServer = new TestingServer();
 			zkServer.start();
 		}
@@ -174,6 +177,23 @@ public abstract class AbstractEventTimeWindowCheckpointingITCase extends TestLog
 						true);
 				rdb.setDbStoragePath(rocksDb);
 				this.stateBackend = rdb;
+				break;
+			}
+			case NIAGARA_FULLY_ASYNC: {
+				String niagaraDb = tempFolder.newFolder().getAbsolutePath();
+				String backups = tempFolder.newFolder().getAbsolutePath();
+				NiagaraStateBackend ndb = new NiagaraStateBackend(new FsStateBackend("file://" + backups));
+				ndb.setDbStoragePath(niagaraDb);
+				this.stateBackend = ndb;
+				break;
+			}
+			case NIAGARA_INCREMENTAL:
+			case NIAGARA_INCREMENTAL_ZK: {
+				String niagaraDb = tempFolder.newFolder().getAbsolutePath();
+				String backups = tempFolder.newFolder().getAbsolutePath();
+				NiagaraStateBackend ndb = new NiagaraStateBackend("file://" + backups, true);
+				ndb.setDbStoragePath(niagaraDb);
+				this.stateBackend = ndb;
 				break;
 			}
 			default:

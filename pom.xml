@@ -92,6 +92,7 @@ under the License.
 		<module>blink-launcher</module>
 		<module>blink-table</module>
 		<module>blink-metrics-kmonitor</module>
+		<module>blink-statebackend-niagara</module>
 	</modules>
 
 	<properties>

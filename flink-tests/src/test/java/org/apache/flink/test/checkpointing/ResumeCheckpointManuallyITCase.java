@@ -39,7 +39,9 @@ import org.apache.flink.test.state.ManualWindowSpeedITCase;
 import org.apache.flink.test.util.MiniClusterResource;
 import org.apache.flink.util.TestLogger;
 
+import com.alibaba.blink.state.niagara.NiagaraStateBackend;
 import org.apache.curator.test.TestingServer;
+import org.junit.AssumptionViolatedException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -69,6 +71,9 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 	private static final int PARALLELISM = 2;
 	private static final int NUM_TASK_MANAGERS = 2;
 	private static final int SLOTS_PER_TASK_MANAGER = 2;
+
+	private static final boolean IS_LINUX_ALIOS = System.getProperty("os.name").startsWith("Linux") &&
+		System.getProperty("os.version").contains("alios7");
 
 	@ClassRule
 	public static TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -198,6 +203,86 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 	}
 
 	@Test
+	public void testExternalizedIncrementalNiagaraCheckpointsZookeeper() throws Exception {
+		if (IS_LINUX_ALIOS) {
+			TestingServer zkServer = new TestingServer();
+			zkServer.start();
+			try {
+				final File checkpointDir = temporaryFolder.newFolder();
+				testExternalizedCheckpoints(
+					checkpointDir,
+					zkServer.getConnectString(),
+					createNiagaraStateBackend(checkpointDir, true),
+					false);
+			} finally {
+				zkServer.stop();
+			}
+		} else {
+			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
+		}
+	}
+
+	@Test
+	public void testExternalizedFullNiagaraCheckpointsZookeeper() throws Exception {
+		if (IS_LINUX_ALIOS) {
+			TestingServer zkServer = new TestingServer();
+			zkServer.start();
+			try {
+				final File checkpointDir = temporaryFolder.newFolder();
+				testExternalizedCheckpoints(
+					checkpointDir,
+					zkServer.getConnectString(),
+					createNiagaraStateBackend(checkpointDir, false),
+					false);
+			} finally {
+				zkServer.stop();
+			}
+		} else {
+			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
+		}
+	}
+
+	@Test
+	public void testExternalizedIncrementalNiagaraCheckpointsWithLocalRecoveryZookeeper() throws Exception {
+		if (IS_LINUX_ALIOS) {
+			TestingServer zkServer = new TestingServer();
+			zkServer.start();
+			try {
+				final File checkpointDir = temporaryFolder.newFolder();
+				testExternalizedCheckpoints(
+					checkpointDir,
+					zkServer.getConnectString(),
+					createNiagaraStateBackend(checkpointDir, true),
+					true);
+			} finally {
+				zkServer.stop();
+			}
+		} else {
+			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
+		}
+	}
+
+	@Test
+	public void testExternalizedFullNiagaraCheckpointsWithLocalRecoveryZookeeper() throws Exception {
+		if (IS_LINUX_ALIOS) {
+			TestingServer zkServer = new TestingServer();
+			zkServer.start();
+			try {
+				final File checkpointDir = temporaryFolder.newFolder();
+				testExternalizedCheckpoints(
+					checkpointDir,
+					zkServer.getConnectString(),
+					createNiagaraStateBackend(checkpointDir, false),
+					true);
+			} finally {
+				zkServer.stop();
+			}
+		} else {
+			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
+		}
+	}
+
+	@Test
 	public void testExternalizedFSCheckpointsZookeeper() throws Exception {
 		TestingServer zkServer = new TestingServer();
 		zkServer.start();
@@ -238,6 +323,13 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		boolean incrementalCheckpointing) throws IOException {
 
 		return new RocksDBStateBackend(checkpointDir.toURI().toString(), incrementalCheckpointing);
+	}
+
+	private NiagaraStateBackend createNiagaraStateBackend(
+		File checkpointDir,
+		boolean incrementalCheckpointing) throws IOException {
+
+		return new NiagaraStateBackend(checkpointDir.toURI().toString(), incrementalCheckpointing);
 	}
 
 	private void testExternalizedCheckpoints(
