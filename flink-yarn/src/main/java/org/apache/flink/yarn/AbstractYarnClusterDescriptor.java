@@ -40,6 +40,7 @@ import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.runtime.clusterframework.ContaineredTaskManagerParameters;
+import org.apache.flink.runtime.clusterframework.standalone.TaskManagerResourceCalculator;
 import org.apache.flink.runtime.entrypoint.ClusterEntrypoint;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmanager.HighAvailabilityMode;
@@ -154,6 +155,8 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 
 	private String zookeeperNamespace;
 
+	private final boolean isNewMode;
+
 	/** Optional Jar file to include in the system class loader of all application nodes
 	 * (for per-job submission). */
 	private final Set<File> userJarFiles = new HashSet<>();
@@ -185,6 +188,8 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		userJarInclusion = getUserJarInclusionMode(flinkConfiguration);
 
 		this.configurationDirectory = Preconditions.checkNotNull(configurationDirectory);
+
+		this.isNewMode = CoreOptions.NEW_MODE.equalsIgnoreCase(flinkConfiguration.getString(CoreOptions.MODE));
 	}
 
 	public YarnClient getYarnClient() {
@@ -453,12 +458,18 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 	 */
 	private void validateClusterSpecification(ClusterSpecification clusterSpecification) throws FlinkException {
 		try {
-			final long taskManagerMemorySize = clusterSpecification.getTaskManagerMemoryMB();
-			// We do the validation by calling the calculation methods here
-			// Internally these methods will check whether the cluster can be started with the provided
-			// ClusterSpecification and the configured memory requirements
-			final long cutoff = ContaineredTaskManagerParameters.calculateCutoffMB(flinkConfiguration, taskManagerMemorySize);
-			TaskManagerServices.calculateHeapSizeMB(taskManagerMemorySize - cutoff, flinkConfiguration);
+			long totalJavaMemorySizeMB;
+			if (isNewMode) {
+				totalJavaMemorySizeMB = TaskManagerResourceCalculator.getTotalJavaMemorySizeMB(flinkConfiguration);
+			} else {
+				final long taskManagerMemorySize = clusterSpecification.getTaskManagerMemoryMB();
+				// We do the validation by calling the calculation methods here
+				// Internally these methods will check whether the cluster can be started with the provided
+				// ClusterSpecification and the configured memory requirements
+				final long cutoff = ContaineredTaskManagerParameters.calculateCutoffMB(flinkConfiguration, taskManagerMemorySize);
+				totalJavaMemorySizeMB = taskManagerMemorySize - cutoff;
+			}
+			TaskManagerServices.calculateHeapSizeMB(totalJavaMemorySizeMB, flinkConfiguration);
 		} catch (IllegalArgumentException iae) {
 			throw new FlinkException("Cannot fulfill the minimum memory requirements with the provided " +
 				"cluster specification. Please increase the memory of the cluster.", iae);
@@ -480,6 +491,12 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 			String yarnClusterEntrypoint,
 			@Nullable JobGraph jobGraph,
 			boolean detached) throws Exception {
+
+		// ------------------ Add dynamic properties to local flinkConfiguraton ------
+		Map<String, String> dynProperties = getDynamicProperties(dynamicPropertiesEncoded);
+		for (Map.Entry<String, String> dynProperty : dynProperties.entrySet()) {
+			flinkConfiguration.setString(dynProperty.getKey(), dynProperty.getValue());
+		}
 
 		// ------------------ Check if configuration is valid --------------------
 		validateClusterSpecification(clusterSpecification);
@@ -504,12 +521,6 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		// ------------------ Check if the specified queue exists --------------------
 
 		checkYarnQueues(yarnClient);
-
-		// ------------------ Add dynamic properties to local flinkConfiguraton ------
-		Map<String, String> dynProperties = getDynamicProperties(dynamicPropertiesEncoded);
-		for (Map.Entry<String, String> dynProperty : dynProperties.entrySet()) {
-			flinkConfiguration.setString(dynProperty.getKey(), dynProperty.getValue());
-		}
 
 		// ------------------ Add the yarn queue and the application name to MetricReporter configuration --------------------
 

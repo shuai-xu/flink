@@ -61,6 +61,12 @@ public class TaskManagerResourceCalculator {
         taskManagerResource.getTotalDirectMemory());
   }
 
+  public static int getTotalJavaMemorySizeMB(Configuration configuration) {
+    TaskManagerResource taskManagerResource =
+        TaskManagerResource.fromConfiguration(configuration, initContainerResourceConfig(configuration), 1);
+    return taskManagerResource.getTotalHeapMemory() + taskManagerResource.getTotalDirectMemory();
+  }
+
   /**
    * Calculates the amount of memory used for network buffers to be allocated for TaskManager.
    * @return memory to use for network buffers (in bytes)

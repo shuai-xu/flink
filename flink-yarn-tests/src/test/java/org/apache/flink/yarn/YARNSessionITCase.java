@@ -93,8 +93,8 @@ public class YARNSessionITCase extends YarnTestBase {
 				"-tm", "1024",
 				"-s", "3", // set the slots 3 to check if the vCores are set properly!
 				"-nm", "customName",
-				"-D" + TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
-				"-D" + TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=128"},
+				"-D", TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
+				"-D", TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=128"},
 			"Flink JobManager is now running",
 			RunTypes.YARN_SESSION);
 
@@ -158,19 +158,118 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		for (int nmId = 0; nmId < NUM_NODEMANAGERS; nmId++) {
-			NodeManager nm = yarnCluster.getNodeManager(nmId);
-			ConcurrentMap<ContainerId, Container> containers = nm.getNMContext().getContainers();
-			if (containers == null || containers.isEmpty()) {
-				continue;
-			}
-			for (Container container : containers.values()) {
-				if (container.getLaunchContext().getCommands().get(0).
-						contains(YarnTaskExecutorRunner.class.getSimpleName())) {
-					assertEquals(Resource.newInstance(2624, 1), container.getResource());
-				}
-			}
+		checkAllocatedContainers(2624, 1);
+
+		// Submit a job and the session has enough resource to execute
+		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
+		// get temporary file for reading input data for wordcount example
+		File tmpInFile = tmp.newFile();
+		FileUtils.writeStringToFile(tmpInFile, WordCountData.TEXT);
+
+		Runner jobRunner = startWithArgs(new String[]{"run",
+						exampleJarLocation.getAbsolutePath(),
+						"--input", tmpInFile.getAbsoluteFile().toString()},
+				"Job Runtime: ", RunTypes.CLI_FRONTEND);
+
+		jobRunner.join();
+
+		// send "stop" command to command line interface
+		runner.sendStop();
+		// wait for the thread to stop
+		try {
+			runner.join();
+		} catch (InterruptedException e) {
+			LOG.warn("Interrupted while stopping runner", e);
 		}
+		LOG.warn("stopped");
+
+		// ----------- Send output to logger
+		System.setOut(ORIGINAL_STDOUT);
+		System.setErr(ORIGINAL_STDERR);
+		oC = outContent.toString();
+		String eC = errContent.toString();
+		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
+		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
+
+		LOG.info("Finished " + testName.getMethodName());
+	}
+
+	@Test(timeout = 100000)
+	public void testOffHeapManagedMemory() throws Exception {
+		LOG.info("Starting " + testName.getMethodName());
+		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(), "-t", flinkLibFolder.getAbsolutePath(),
+						"-n", "1",
+						"-jm", "768",
+						"-tm", "1024",
+						"-s", "3", // set the slots 3 to check if the vCores are set properly!
+						"-nm", "customName",
+						"-D", TaskManagerOptions.TASK_MANAGER_CORE.key() + "=2",
+						"-D", TaskManagerOptions.MANAGED_MEMORY_SIZE.key() + "=1024",
+						"-D", TaskManagerOptions.MEMORY_OFF_HEAP.key() + "=true"},
+				"Flink JobManager is now running",
+				RunTypes.YARN_SESSION);
+
+		// All containers should be launched before job submission
+		while (getRunningContainers() < 2) {
+			LOG.info("Waiting for all containers to be launched");
+			Thread.sleep(500);
+		}
+
+		// ------------------------ Test if JobManager web interface is accessible -------
+
+		final YarnClient yc = YarnClient.createYarnClient();
+		yc.init(YARN_CONFIGURATION);
+		yc.start();
+
+		List<ApplicationReport> apps = yc.getApplications(EnumSet.of(YarnApplicationState.RUNNING));
+		Assert.assertEquals(1, apps.size()); // Only one running
+		ApplicationReport app = apps.get(0);
+		Assert.assertEquals("customName", app.getName());
+		String url = app.getTrackingUrl();
+		if (!url.endsWith("/")) {
+			url += "/";
+		}
+		if (!url.startsWith("http://")) {
+			url = "http://" + url;
+		}
+		LOG.info("Got application URL from YARN {}", url);
+
+		int slotNumber = getSlotNumber(url + "taskmanagers/", 3);
+		Assert.assertEquals("unexpected slot number: " + slotNumber, 3, slotNumber);
+
+		// get the configuration from webinterface & check if the dynamic properties from YARN show up there.
+		String jsonConfig = TestBaseUtils.getFromHTTP(url + "jobmanager/config");
+		Map<String, String> parsedConfig = WebMonitorUtils.fromKeyValueJsonArray(jsonConfig);
+
+		// Check the hostname/port
+		String oC = outContent.toString();
+		Pattern p = Pattern.compile("Flink JobManager is now running on ([a-zA-Z0-9.-]+):([0-9]+)");
+		Matcher matches = p.matcher(oC);
+		String hostname = null;
+		String port = null;
+		while (matches.find()) {
+			hostname = matches.group(1).toLowerCase();
+			port = matches.group(2);
+		}
+		LOG.info("Extracted hostname:port: {} {}", hostname, port);
+
+		Assert.assertEquals("unable to find hostname in " + jsonConfig, hostname,
+				parsedConfig.get(JobManagerOptions.ADDRESS.key()));
+
+		// test logfile access
+		String logs = TestBaseUtils.getFromHTTP(url + "jobmanager/log");
+		Assert.assertTrue(logs.contains("Starting rest endpoint"));
+		Assert.assertTrue(logs.contains("Starting the SlotManager"));
+		Assert.assertTrue(logs.contains("Starting TaskManagers"));
+
+		yc.stop();
+
+		// assert container number
+		Assert.assertTrue("Container number should be greater than 2, while actual is " + getRunningContainers(),
+				getRunningContainers() >= 2);
+
+		// Check container resource
+		checkAllocatedContainers(3648, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -280,19 +379,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		for (int nmId = 0; nmId < NUM_NODEMANAGERS; nmId++) {
-			NodeManager nm = yarnCluster.getNodeManager(nmId);
-			ConcurrentMap<ContainerId, Container> containers = nm.getNMContext().getContainers();
-			if (containers == null || containers.isEmpty()) {
-				continue;
-			}
-			for (Container container : containers.values()) {
-				if (container.getLaunchContext().getCommands().get(0).
-					contains(YarnTaskExecutorRunner.class.getSimpleName())) {
-					assertEquals(Resource.newInstance(2624, 1), container.getResource());
-				}
-			}
-		}
+		checkAllocatedContainers(2624, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -410,19 +497,7 @@ public class YARNSessionITCase extends YarnTestBase {
 			getRunningContainers() >= 2);
 
 		// Check container resource
-		for (int nmId = 0; nmId < NUM_NODEMANAGERS; nmId++) {
-			NodeManager nm = yarnCluster.getNodeManager(nmId);
-			ConcurrentMap<ContainerId, Container> containers = nm.getNMContext().getContainers();
-			if (containers == null || containers.isEmpty()) {
-				continue;
-			}
-			for (Container container : containers.values()) {
-				if (container.getLaunchContext().getCommands().get(0).
-					contains(YarnTaskExecutorRunner.class.getSimpleName())) {
-					assertEquals(Resource.newInstance(2624, 1), container.getResource());
-				}
-			}
-		}
+		checkAllocatedContainers(2624, 1);
 
 		// Submit a job and the session has enough resource to execute
 		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
@@ -471,6 +546,22 @@ public class YARNSessionITCase extends YarnTestBase {
 		if (!testName.getMethodName().equals("testAllocateContainerTimeoutWithResourceSetting")) {
 			ensureNoProhibitedStringInLogFiles(PROHIBITED_STRINGS, WHITELISTED_STRINGS,
 				appsToIgnore.toArray(new String[appsToIgnore.size()]));
+		}
+	}
+
+	private void checkAllocatedContainers(int mem, int vcores) {
+		for (int nmId = 0; nmId < NUM_NODEMANAGERS; nmId++) {
+			NodeManager nm = yarnCluster.getNodeManager(nmId);
+			ConcurrentMap<ContainerId, Container> containers = nm.getNMContext().getContainers();
+			if (containers == null || containers.isEmpty()) {
+				continue;
+			}
+			for (Container container : containers.values()) {
+				if (container.getLaunchContext().getCommands().get(0).
+						contains(YarnTaskExecutorRunner.class.getSimpleName())) {
+					assertEquals(Resource.newInstance(mem, vcores), container.getResource());
+				}
+			}
 		}
 	}
 
