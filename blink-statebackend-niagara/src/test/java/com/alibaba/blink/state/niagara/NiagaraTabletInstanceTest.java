@@ -22,6 +22,7 @@ import org.apache.flink.configuration.ConfigConstants;
 import com.alibaba.niagara.AbstractNiagaraObject;
 import com.alibaba.niagara.NiagaraException;
 import com.alibaba.niagara.NiagaraIterator;
+import com.alibaba.niagara.NiagaraJNI;
 import com.alibaba.niagara.ReadOptions;
 import com.alibaba.niagara.TabletOptions;
 import com.alibaba.niagara.WriteOptions;
@@ -35,6 +36,7 @@ import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -44,6 +46,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -70,11 +73,12 @@ public class NiagaraTabletInstanceTest {
 	private static NiagaraConfiguration configuration = new NiagaraConfiguration();
 
 	@BeforeClass
-	public static void platformCheck() throws IOException {
+	public static void platformCheck() {
 		// Check OS & Kernel version before run unit tests
 		Assume.assumeTrue(System.getProperty("os.name").startsWith("Linux") && System.getProperty("os.version").contains("alios7"));
 
-		NiagaraUtils.ensureNiagaraIsLoaded(temporaryFolder.newFolder().getAbsolutePath());
+		// use working dir to init Niagara
+		ensureNiagaraIsLoaded(new File(System.getProperty("user.dir")).getAbsolutePath());
 		dbInstance = new NiagaraDBInstance(configuration);
 	}
 
@@ -83,7 +87,6 @@ public class NiagaraTabletInstanceTest {
 		if (dbInstance != null) {
 			dbInstance.close();
 		}
-		NiagaraUtils.resetNiagaraLoadedFlag();
 	}
 
 	@Test
@@ -387,5 +390,38 @@ public class NiagaraTabletInstanceTest {
 			}
 		}
 		assertFalse(expectedIterator.hasNext());
+	}
+
+	private static void ensureNiagaraIsLoaded(String tempDirectory){
+		final File tempDirParent = new File(tempDirectory).getAbsoluteFile();
+
+		Throwable lastException = null;
+		for (int attempt = 1; attempt <= 3; attempt++) {
+			try {
+				File tempDirFile = new File(tempDirParent, "niagara-library-" + UUID.randomUUID().toString());
+
+				// make sure the temp path exists
+				// noinspection ResultOfMethodCallIgnored
+				tempDirFile.mkdirs();
+				tempDirFile.deleteOnExit();
+
+				// this initialization here should validate that the loading succeeded
+				NiagaraJNI.loadLibrary(tempDirFile.getAbsolutePath());
+
+				return;
+			} catch (Throwable t) {
+				lastException = t;
+
+				// try to force Niagara to attempt reloading the library
+				try {
+					final Field initField = com.alibaba.niagara.NativeLibraryLoader.class.getDeclaredField("initialized");
+					initField.setAccessible(true);
+					initField.setBoolean(null, false);
+				} catch (Throwable tt) {
+				}
+			}
+		}
+
+		throw new RuntimeException("Could not load the native Niagara library", lastException);
 	}
 }

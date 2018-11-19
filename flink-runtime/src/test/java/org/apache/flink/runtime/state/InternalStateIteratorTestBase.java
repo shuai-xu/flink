@@ -63,7 +63,7 @@ public abstract class InternalStateIteratorTestBase {
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) throws IOException;
+		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
 	@Before
 	public void openStateBackend() throws Exception {

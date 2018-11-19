@@ -18,18 +18,16 @@
 
 package com.alibaba.blink.state.niagara;
 
+import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.state.AbstractInternalStateBackend;
 import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.InternalStateIteratorTestBase;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 
-import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
-
-import java.io.IOException;
 
 /**
  * Unit tests to validate that internal states iterator can be correctly accessed in
@@ -40,19 +38,10 @@ public class NiagaraInternalStateIteratorTest extends InternalStateIteratorTestB
 	@ClassRule
 	public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-	private static String niagaraLoadPath;
-
 	@BeforeClass
-	public static void setupNiagaraLoadPath() throws IOException {
+	public static void setupNiagaraLoadPath() {
 		// Check OS & Kernel version before run unit tests
 		Assume.assumeTrue(System.getProperty("os.name").startsWith("Linux") && System.getProperty("os.version").contains("alios7"));
-
-		niagaraLoadPath = temporaryFolder.newFolder().getAbsolutePath();
-	}
-
-	@AfterClass
-	public static void resetNiagara() throws Exception {
-		NiagaraUtils.resetNiagaraLoadedFlag();
 	}
 
 	@Override
@@ -60,17 +49,11 @@ public class NiagaraInternalStateIteratorTest extends InternalStateIteratorTestB
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) throws IOException {
+		LocalRecoveryConfig localRecoveryConfig) throws Exception {
 
-		NiagaraUtils.ensureNiagaraIsLoaded(niagaraLoadPath);
-		return new NiagaraInternalStateBackend(
-			userClassLoader,
-			temporaryFolder.newFolder().getAbsoluteFile(),
-			new NiagaraConfiguration(),
-			numberOfGroups,
-			groups,
-			true,
-			localRecoveryConfig,
-			null);
+		NiagaraStateBackend stateBackend = new NiagaraStateBackend(temporaryFolder.newFolder().toURI().toString(), true);
+		stateBackend.setDbStoragePath(temporaryFolder.newFolder().getAbsolutePath());
+		DummyEnvironment env = new DummyEnvironment();
+		return stateBackend.createInternalStateBackend(env, "test-op", numberOfGroups, groups);
 	}
 }

@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.testutils.OneShotLatch;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
+import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStorageLocation;
 import org.apache.flink.runtime.state.GroupRange;
@@ -33,7 +34,6 @@ import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
 import org.apache.flink.runtime.state.InternalStateDescriptorBuilder;
-import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateHandleID;
@@ -55,7 +55,6 @@ import junit.framework.TestCase;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -91,7 +90,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
@@ -151,13 +149,6 @@ public class NiagaraInternalStateBackendTest {
 	public static void platformCheck() throws IOException {
 		// Check OS & Kernel version before run unit tests
 		Assume.assumeTrue(System.getProperty("os.name").startsWith("Linux") && System.getProperty("os.version").contains("alios7"));
-
-		NiagaraUtils.ensureNiagaraIsLoaded(TEMPORARY_FOLDER.newFolder().getAbsolutePath());
-	}
-
-	@AfterClass
-	public static void resetNiagara() throws Exception {
-		NiagaraUtils.resetNiagaraLoadedFlag();
 	}
 
 	@After
@@ -397,27 +388,25 @@ public class NiagaraInternalStateBackendTest {
 		testStreamFactory.setWaiterLatch(waiter);
 		testStreamFactory.setAfterNumberInvocations(10);
 
-		backend =  new NiagaraInternalStateBackend(
-			ClassLoader.getSystemClassLoader(),
-			TEMPORARY_FOLDER.newFolder(),
-			new NiagaraConfiguration(),
+		NiagaraStateBackend stateBackend = new NiagaraStateBackend(TEMPORARY_FOLDER.newFolder().toURI().toString(), true);
+		stateBackend.setDbStoragePath(TEMPORARY_FOLDER.newFolder().getAbsolutePath());
+		this.backend = (NiagaraInternalStateBackend) stateBackend.createInternalStateBackend(
+			new DummyEnvironment(),
+			"test-op",
 			10,
-			getGroupsForSubtask(10, 1, 0),
-			true,
-			mock(LocalRecoveryConfig.class),
-			null);
-		backend.restore(null);
+			getGroupsForSubtask(10, 1, 0));
+		this.backend.restore(null);
 
-		state1 = backend.getInternalState(stateDescriptor1);
-		state2 = backend.getInternalState(stateDescriptor2);
+		state1 = this.backend.getInternalState(stateDescriptor1);
+		state2 = this.backend.getInternalState(stateDescriptor2);
 
-		backend.tabletInstance = spy(backend.tabletInstance);
+		this.backend.tabletInstance = spy(this.backend.tabletInstance);
 
 		// spy on final 'niagaraResourceGuard' field
 		final Field resourceGuardField = NiagaraInternalStateBackend.class.getDeclaredField("niagaraResourceGuard");
 		resourceGuardField.setAccessible(true);
-		niagaraResourceGuard = spy(backend.niagaraResourceGuard);
-		resourceGuardField.set(backend, niagaraResourceGuard);
+		niagaraResourceGuard = spy(this.backend.niagaraResourceGuard);
+		resourceGuardField.set(this.backend, niagaraResourceGuard);
 
 		for (int i = 0; i < 100; i++) {
 			Row internalKey1 = Row.of(i);
@@ -430,9 +419,9 @@ public class NiagaraInternalStateBackendTest {
 
 		niagaraObjects = new ArrayList<>();
 
-		TabletOptions tabletOptions = (TabletOptions) Whitebox.getInternalState(backend.tabletInstance, "tabletOptions");
-		WriteOptions writeOptions = (WriteOptions) Whitebox.getInternalState(backend.tabletInstance, "writeOptions");
-		ReadOptions readOptions = (ReadOptions) Whitebox.getInternalState(backend.tabletInstance, "readOptions");
+		TabletOptions tabletOptions = (TabletOptions) Whitebox.getInternalState(this.backend.tabletInstance, "tabletOptions");
+		WriteOptions writeOptions = (WriteOptions) Whitebox.getInternalState(this.backend.tabletInstance, "writeOptions");
+		ReadOptions readOptions = (ReadOptions) Whitebox.getInternalState(this.backend.tabletInstance, "readOptions");
 		niagaraObjects.add(tabletOptions);
 		niagaraObjects.add(writeOptions);
 		niagaraObjects.add(readOptions);
@@ -444,7 +433,7 @@ public class NiagaraInternalStateBackendTest {
 				niagaraObjects.add(niagaraIterator);
 				return niagaraIterator;
 			}
-		}).when(backend.tabletInstance).iterator();
+		}).when(this.backend.tabletInstance).iterator();
 	}
 
 	private GroupSet getGroupsForSubtask(int maxParallelism, int parallelism, int subtaskIndex) {

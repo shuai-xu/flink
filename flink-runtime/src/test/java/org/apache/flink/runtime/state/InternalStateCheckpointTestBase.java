@@ -38,7 +38,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
@@ -100,7 +99,7 @@ public abstract class InternalStateCheckpointTestBase extends TestLogger {
 		int numberOfGroups,
 		GroupSet groups,
 		ClassLoader userClassLoader,
-		LocalRecoveryConfig localRecoveryConfig) throws IOException;
+		LocalRecoveryConfig localRecoveryConfig) throws Exception;
 
 	@Before
 	public void open() throws Exception {
