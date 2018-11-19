@@ -297,6 +297,11 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 					checkState(!taskManagerLocationFuture.isDone(), "The TaskManagerLocationFuture should not be set if we haven't assigned a resource yet.");
 					taskManagerLocationFuture.complete(logicalSlot.getTaskManagerLocation());
 					assignedAllocationID = logicalSlot.getAllocationId();
+					LOG.info("{} is assigned resource {}_{} with {}",
+							getVertexWithAttempt(),
+							logicalSlot.getTaskManagerLocation().getResourceID(),
+							logicalSlot.getPhysicalSlotNumber(),
+							assignedAllocationID);
 					return true;
 				} else {
 					// free assigned resource and return false
@@ -712,8 +717,8 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		}
 
 		if (LOG.isInfoEnabled()) {
-			LOG.info(String.format("Deploying %s (attempt #%d) to %s", vertex.getTaskNameWithSubtaskIndex(),
-					attemptNumber, getAssignedResourceLocation().getHostname()));
+			LOG.info(String.format("Deploying %s (attempt #%d) to slot %s_%s on %s", vertex.getTaskNameWithSubtaskIndex(),
+					attemptNumber, slot.getTaskManagerLocation().getResourceID(), slot.getPhysicalSlotNumber(), getAssignedResourceLocation().getHostname()));
 		}
 
 		executor.execute(
@@ -1411,6 +1416,10 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		final LogicalSlot slot = assignedResource;
 
 		if (slot != null) {
+			LOG.info("{} release assigned slot {}_{}",
+					getVertexWithAttempt(),
+					slot.getTaskManagerLocation().getResourceID(),
+					slot.getPhysicalSlotNumber());
 			slot.releaseSlot(cause).whenComplete(
 				(Object ignored, Throwable throwable) -> {
 					if (throwable != null) {
