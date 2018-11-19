@@ -803,29 +803,12 @@ abstract class TableEnvironment(val config: TableConfig) {
   def explain(table: Table): String
 
   /**
-    * Evaluates a SQL query or DML insert on registered tables and retrieves the result as a
-    * [[Table]].
+    * Explain the whole plan only when subsection optimization is supported, and returns the AST
+    * of the specified Table API and SQL queries and the execution plan.
     *
-    * All tables referenced by the query must be registered in the TableEnvironment.
-    * A [[Table]] is automatically registered when its [[toString]] method is called, for example
-    * when it is embedded into a String.
-    * Hence, SQL queries can directly reference a [[Table]] as follows:
-    *
-    * {{{
-    *   val table: Table = ...
-    *   // the table is not registered to the table environment
-    *   tEnv.sql(s"SELECT * FROM $table")
-    * }}}
-    *
-    * @deprecated Use sqlQuery() instead.
-    * @param query The SQL string to evaluate.
-    * @return The result of the query as Table or null of the DML insert operation.
+    * @param extended Flag to include detailed optimizer estimates.
     */
-  @Deprecated
-  @deprecated("Please use sqlQuery() instead.")
-  def sql(query: String): Table = {
-    sqlQuery(query)
-  }
+  def explain(extended: Boolean = false): String
 
   /**
     * Evaluates a SQL query on registered tables and retrieves the result as a [[Table]].

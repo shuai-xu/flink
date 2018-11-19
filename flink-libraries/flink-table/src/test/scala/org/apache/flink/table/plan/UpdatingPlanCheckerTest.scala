@@ -100,7 +100,7 @@ class UpdatingPlanCheckerTest extends StreamPlanTestBase {
   }
 
   def verifySqlAppendOnly(query: String, isUpdating: Boolean): Unit = {
-    verifyTableAppendOnly(streamUtil.tableEnv.sql(query), isUpdating)
+    verifyTableAppendOnly(streamUtil.tableEnv.sqlQuery(query), isUpdating)
   }
 
   def verifyTableAppendOnly(resultTable: Table, expected: Boolean): Unit = {

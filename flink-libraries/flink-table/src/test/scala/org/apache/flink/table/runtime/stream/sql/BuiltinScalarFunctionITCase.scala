@@ -88,7 +88,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -115,7 +115,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -136,7 +136,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -157,7 +157,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -179,7 +179,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -199,7 +199,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -219,7 +219,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -242,7 +242,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -267,7 +267,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -289,7 +289,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -311,7 +311,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -333,7 +333,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -355,7 +355,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -380,7 +380,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -403,7 +403,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -427,7 +427,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -452,7 +452,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -476,7 +476,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -503,7 +503,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -528,7 +528,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -558,7 +558,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -599,7 +599,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -633,7 +633,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -653,7 +653,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -676,7 +676,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -699,7 +699,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -728,7 +728,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -765,7 +765,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -810,7 +810,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -851,7 +851,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -886,7 +886,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -911,7 +911,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -937,7 +937,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -977,7 +977,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1082,7 +1082,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1110,7 +1110,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1139,7 +1139,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1167,7 +1167,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1192,7 +1192,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val relNode = tEnv.sql(sqlQuery).getRelNode
+    val relNode = tEnv.sqlQuery(sqlQuery).getRelNode
     val optimized = tEnv.optimize(relNode, updatesAsRetraction = false)
     val result = FlinkRelOptUtil.toString(optimized)
     assertEquals(
@@ -1220,7 +1220,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1259,7 +1259,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1287,7 +1287,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1311,7 +1311,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1344,7 +1344,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1377,7 +1377,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1410,7 +1410,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1441,7 +1441,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1472,7 +1472,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1503,7 +1503,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1526,7 +1526,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1551,7 +1551,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1580,7 +1580,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1604,7 +1604,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     val sqlQuery = "SELECT to_base64(from_base64(to_base64(c))) FROM T1"
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1625,7 +1625,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     val sqlQuery = "SELECT from_base64(c) FROM T1"
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1678,7 +1678,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     val sqlQuery = "SELECT uuid() FROM T1"
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1705,7 +1705,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     val sqlQuery = "SELECT uuid(c) FROM T1"
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1727,7 +1727,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     val sqlQuery = "SELECT cardinality(b) FROM T1"
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1757,7 +1757,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1782,7 +1782,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1807,7 +1807,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1831,7 +1831,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1861,7 +1861,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()

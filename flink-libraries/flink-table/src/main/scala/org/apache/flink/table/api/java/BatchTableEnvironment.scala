@@ -32,11 +32,10 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.functions.{AggregateFunction, TableFunction}
 import org.apache.flink.table.dataformat.BoxedWrapperRow
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.RangeInputFormat
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**
@@ -423,14 +422,6 @@ class BatchTableEnvironment(
     } else {
       fromBoundedStream(boundedStream, fields)
     }
-  }
-
-  /**
-    * Creates a [[Table]] with a single `DataTypes.Long` column named `id`, containing elements
-    * in a range from 0 to `end` (exclusive) with step value 1.
-    */
-  def range(end: Long): Table = {
-    range(0, end)
   }
 
   /**

@@ -643,7 +643,7 @@ class RankTest extends TableTestBase {
          |GROUP BY category, shopId
          |""".stripMargin
 
-    val t = tEnv.sql(subquery)
+    val t = tEnv.sqlQuery(subquery)
     tEnv.registerTable("MyView", t)
 
     val sink1 = new TestingRetractTableSink

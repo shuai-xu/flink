@@ -760,47 +760,6 @@ class Table(
   }
 
   /**
-    * Limits a sorted result from an offset position.
-    * Similar to a SQL LIMIT clause. Limit is technically part of the Order By operator and
-    * thus must be preceded by it.
-    *
-    * Example:
-    *
-    * {{{
-    *   // returns unlimited number of records beginning with the 4th record
-    *   tab.orderBy('name.desc).limit(3)
-    * }}}
-    *
-    * @param offset number of records to skip
-    * @deprecated Please use [[Table.offset()]] and [[Table.fetch()]] instead.
-    */
-  @deprecated(message = "Deprecated in favor of Table.offset() and Table.fetch()")
-  def limit(offset: Int): Table = {
-    new Table(tableEnv, Limit(offset = offset, child = logicalPlan).validate(tableEnv))
-  }
-
-  /**
-    * Limits a sorted result to a specified number of records from an offset position.
-    * Similar to a SQL LIMIT clause. Limit is technically part of the Order By operator and
-    * thus must be preceded by it.
-    *
-    * Example:
-    *
-    * {{{
-    *   // returns 5 records beginning with the 4th record
-    *   tab.orderBy('name.desc).limit(3, 5)
-    * }}}
-    *
-    * @param offset number of records to skip
-    * @param fetch number of records to be returned
-   * @deprecated Please use [[Table.offset()]] and [[Table.fetch()]] instead.
-    */
-  @deprecated(message = "Deprecated in favor of Table.offset() and Table.fetch()")
-  def limit(offset: Int, fetch: Int): Table = {
-    new Table(tableEnv, Limit(offset, fetch, logicalPlan).validate(tableEnv))
-  }
-
-  /**
    * Limits a sorted result from an offset position.
    * Similar to a SQL OFFSET clause. Offset is technically part of the Order By operator and
    * thus must be preceded by it.

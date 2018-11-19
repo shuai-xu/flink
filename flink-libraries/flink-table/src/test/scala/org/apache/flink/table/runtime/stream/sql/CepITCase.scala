@@ -70,7 +70,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -117,7 +117,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -164,7 +164,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -211,7 +211,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -255,7 +255,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -300,7 +300,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -346,7 +346,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -408,7 +408,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -470,7 +470,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -532,7 +532,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -579,7 +579,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -623,7 +623,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -669,7 +669,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -718,7 +718,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -772,7 +772,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -820,7 +820,7 @@ class CepITCase {
         |) AS T
         |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -874,7 +874,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -933,7 +933,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -990,7 +990,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1038,7 +1038,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1079,7 +1079,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -1122,7 +1122,7 @@ class CepITCase {
          |) AS T
          |""".stripMargin
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()

@@ -1045,12 +1045,7 @@ abstract class StreamTableEnvironment(
     }
   }
 
-
-  /**
-    * Explain the whole plan only when subsection optimization is supported, and returns the AST
-    * of the specified Table API and SQL queries and the execution plan.
-    */
-  def explain(): String = {
+  def explain(extended: Boolean = false): String = {
     if (!config.getSubsectionOptimization) {
       throw new TableException("Can not explain due to subsection optimization is not supported, " +
                                  "please check your TableConfig.")

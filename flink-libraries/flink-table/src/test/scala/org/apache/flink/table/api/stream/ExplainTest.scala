@@ -87,7 +87,7 @@ class ExplainTest extends AbstractTestBase {
   }
 
   @Test
-  def testSubsectionOptimizationForSQL(): Unit = {
+  def testSubsectionOptimizationForsqlQuery(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -156,7 +156,7 @@ class ExplainTest extends AbstractTestBase {
   }
 
   @Test
-  def testRetractAndUpsertSinkForSQL(): Unit = {
+  def testRetractAndUpsertSinkForsqlQuery(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -191,7 +191,7 @@ class ExplainTest extends AbstractTestBase {
       .toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("MyTable", mytable)
 
-    val t = tEnv.sql("SELECT a, b, c FROM MyTable")
+    val t = tEnv.sqlQuery("SELECT a, b, c FROM MyTable")
     tEnv.registerTable("T", t)
     val retractSink = new TestingRetractTableSink
     val sql =
@@ -203,9 +203,9 @@ class ExplainTest extends AbstractTestBase {
          |  FROM T)
          |WHERE rank_num <= 10
       """.stripMargin
-    tEnv.sql(sql).writeToSink(retractSink)
+    tEnv.sqlQuery(sql).writeToSink(retractSink)
     val upsertSink = new TestingUpsertTableSink(Array())
-    tEnv.sql("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
+    tEnv.sqlQuery("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
 
     val result = replaceString(tEnv.explain())
 
@@ -235,12 +235,12 @@ class ExplainTest extends AbstractTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    val t = tEnv.sql(sql)
+    val t = tEnv.sqlQuery(sql)
     tEnv.registerTable("T", t)
     val retractSink = new TestingRetractTableSink
-    tEnv.sql("SELECT a FROM T where a > 6").writeToSink(retractSink)
+    tEnv.sqlQuery("SELECT a FROM T where a > 6").writeToSink(retractSink)
     val upsertSink = new TestingUpsertTableSink(Array())
-    tEnv.sql("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
+    tEnv.sqlQuery("SELECT a, b FROM T WHERE a < 6").writeToSink(upsertSink)
 
     val result = replaceString(tEnv.explain())
 
@@ -274,7 +274,7 @@ class ExplainTest extends AbstractTestBase {
   }
 
   @Test
-  def testUpsertAndUpsertSinkForSQL(): Unit = {
+  def testUpsertAndUpsertSinkForsqlQuery(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -306,7 +306,7 @@ class ExplainTest extends AbstractTestBase {
   }
 
   @Test
-  def testMultiLevelViewForSQL(): Unit = {
+  def testMultiLevelViewForsqlQuery(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     conf.forbidUnionAllAsBreakPointInSubsectionOptimization(true)

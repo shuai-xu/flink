@@ -512,14 +512,6 @@ class BatchTableEnvironment(
 
   /**
     * Creates a [[Table]] with a single `DataTypes.Long` column named `id`, containing elements
-    * in a range from 0 to `end` (exclusive) with step value 1.
-    */
-  def range(end: Long): Table = {
-    range(0, end)
-  }
-
-  /**
-    * Creates a [[Table]] with a single `DataTypes.Long` column named `id`, containing elements
     * in a range from `start` to `end` (exclusive) with step value 1.
     */
   def range(start: Long, end: Long): Table = {

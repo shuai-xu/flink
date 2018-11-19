@@ -40,7 +40,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -61,7 +61,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -83,7 +83,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -119,7 +119,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -155,7 +155,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -175,7 +175,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -195,7 +195,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()
@@ -215,7 +215,7 @@ class BuiltinTableFunctionITCase extends StreamingTestBase {
 
     tEnv.registerTable("T1", t1)
 
-    val result = tEnv.sql(sqlQuery).toAppendStream[Row]
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     val sink = new TestingAppendSink
     result.addSink(sink)
     env.execute()

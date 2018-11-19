@@ -46,7 +46,7 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
 
   override protected def checkValidTableName(name: String): Unit = ???
 
-  override def sql(query: String): Table = ???
+  override def sqlQuery(query: String): Table = ???
 
   override def registerTableSource(name: String, tableSource: TableSource): Unit = {
     tableSources += name -> tableSource
@@ -71,6 +71,8 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
     * @param table The table for which the AST and execution plan will be returned.
     */
   override def explain(table: Table): String = ???
+
+  override def explain(extended: Boolean): String = ???
 
   override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
 

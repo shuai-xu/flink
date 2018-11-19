@@ -66,7 +66,11 @@ import _root_.scala.collection.mutable
 import _root_.scala.collection.mutable.ArrayBuffer
 
 /**
- *
+ *  A session to construct between [[Table]] and [[DataStream]], its main function is:
+  *
+  *  1. Get a table from [[DataStream]], or through registering a [[TableSource]];
+  *  2. Transform current already construct table to [[DataStream]];
+  *  3. Add [[TableSink]] to the [[Table]].
  * @param config The [[TableConfig]] of this [[BatchTableEnvironment]].
  */
 @InterfaceStability.Evolving
@@ -197,7 +201,7 @@ class BatchTableEnvironment(
     * Set up operator metric collect to be true.
     */
   @VisibleForTesting
-  def setupOperatorMetricCollect(): Unit = {
+  private[flink] def setupOperatorMetricCollect(): Unit = {
     if (streamEnv != null && streamEnv.getConfig != null && config.getOperatorMetricCollect) {
       val parameters = new Configuration()
       Option(streamEnv.getConfig.getGlobalJobParameters).foreach(gb =>
@@ -935,12 +939,6 @@ class BatchTableEnvironment(
 
   def explain(table: Table): String = explain(table: Table, extended = false)
 
-  /**
-   * Explain the whole plan only when subsection optimization is supported, and returns the AST
-   * of the specified Table API and SQL queries and the execution plan.
-   *
-   * @param extended Flag to include detailed optimizer estimates.
-   */
   def explain(extended: Boolean = false): String = {
     if (!config.getSubsectionOptimization) {
       throw new TableException("Can not explain due to subsection optimization is not supported, " +

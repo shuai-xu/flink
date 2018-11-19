@@ -162,7 +162,7 @@ class StreamTableMultiSinksITCase extends AbstractTestBase {
   }
 
   @Test
-  def testMultiSinkInSQL(): Unit = {
+  def testMultiSinkInsqlQuery(): Unit = {
     val conf = new TableConfig
     conf.setSubsectionOptimization(true)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -172,12 +172,12 @@ class StreamTableMultiSinksITCase extends AbstractTestBase {
       .toTable(tEnv, 'id, 'num, 'text)
     tEnv.registerTable("MyTable", mytable)
 
-    val t = tEnv.sql("SELECT num, count(id) as cnt FROM MyTable GROUP BY num")
+    val t = tEnv.sqlQuery("SELECT num, count(id) as cnt FROM MyTable GROUP BY num")
     tEnv.registerTable("T", t)
     val retractSink = new TestingRetractTableSink
-    tEnv.sql("SELECT num, cnt FROM T WHERE num < 4").writeToSink(retractSink)
+    tEnv.sqlQuery("SELECT num, cnt FROM T WHERE num < 4").writeToSink(retractSink)
     val upsertSink = new TestingUpsertTableSink(Array())
-    tEnv.sql("SELECT num, cnt FROM T WHERE num >= 4 AND num < 6").writeToSink(upsertSink)
+    tEnv.sqlQuery("SELECT num, cnt FROM T WHERE num >= 4 AND num < 6").writeToSink(upsertSink)
 
     tEnv.execute()
 

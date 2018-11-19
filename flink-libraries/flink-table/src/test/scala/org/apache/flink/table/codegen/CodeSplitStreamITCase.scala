@@ -253,7 +253,7 @@ class CodeSplitStreamITCase {
       "for system_time as of PROCTIME() AS D ON T.id = D.id"
 
     val sink = new TestingAppendSink
-    tEnv.sql(sql).toAppendStream[Row].addSink(sink)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = Seq(
