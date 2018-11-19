@@ -46,6 +46,7 @@ class FlinkRelMetadataQuery private(
   private[this] var filteredColumnInterval: FilteredColumnInterval.Handler = _
   private[this] var distributionHandler: FlinkDistribution.Handler = _
   private[this] var columnNullCountHandler: ColumnNullCount.Handler = _
+  private[this] var columnOriginNullCountHandler: ColumnOriginNullCount.Handler = _
   private[this] var skewInfoHandler: SkewInfoMeta.Handler = _
   private[this] var modifiedMonotonicityHandler: ModifiedMonotonicityMeta.Handler = _
   private[this] var uniqueColumnsHandler: UniqueColumns.Handler = _
@@ -57,6 +58,8 @@ class FlinkRelMetadataQuery private(
       RelMetadataQuery.initialHandler(classOf[FilteredColumnInterval.Handler])
     this.distributionHandler = RelMetadataQuery.initialHandler(classOf[FlinkDistribution.Handler])
     this.columnNullCountHandler = RelMetadataQuery.initialHandler(classOf[ColumnNullCount.Handler])
+    this.columnOriginNullCountHandler =
+        RelMetadataQuery.initialHandler(classOf[ColumnOriginNullCount.Handler])
     this.skewInfoHandler = RelMetadataQuery.initialHandler(classOf[SkewInfoMeta.Handler])
     this.modifiedMonotonicityHandler =
       RelMetadataQuery.initialHandler(classOf[ModifiedMonotonicityMeta.Handler])
@@ -119,6 +122,23 @@ class FlinkRelMetadataQuery private(
       case e: JaninoRelMetadataProvider.NoHandler =>
         columnNullCountHandler = revise(e.relClass, FlinkMetadata.ColumnNullCount.DEF)
         getColumnNullCount(rel, index)
+    }
+  }
+
+  /**
+    * Returns origin null count of the given column.
+    *
+    * @param rel   the relational expression
+    * @param index the index of the given column
+    * @return the null count of the given column if can be estimated, else return null.
+    */
+  def getColumnOriginNullCount(rel: RelNode, index: Int): JDouble = {
+    try {
+      columnOriginNullCountHandler.getColumnOriginNullCount(rel, this, index)
+    } catch {
+      case e: JaninoRelMetadataProvider.NoHandler =>
+        columnOriginNullCountHandler = revise(e.relClass, FlinkMetadata.ColumnOriginNullCount.DEF)
+        getColumnOriginNullCount(rel, index)
     }
   }
 

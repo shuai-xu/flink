@@ -132,6 +132,34 @@ public abstract class FlinkMetadata {
 
 	}
 
+	/**
+	 * Origin null count, looking until source.
+	 */
+	public interface ColumnOriginNullCount extends Metadata {
+
+		Method METHOD = Types.lookupMethod(ColumnOriginNullCount.class, "getColumnOriginNullCount", int.class);
+
+		MetadataDef<ColumnOriginNullCount> DEF = MetadataDef.of(
+				ColumnOriginNullCount.class,
+				ColumnOriginNullCount.Handler.class,
+				METHOD);
+
+		/**
+		 * Returns origin null count of the given column from a specified relational expression.
+		 *
+		 * @param index the index of the given column in a specified relational expression
+		 * @return origin null count of the given column if can be estimated, else return null.
+		 */
+		Double getColumnOriginNullCount(int index);
+
+		/**
+		 * Handler API.
+		 */
+		interface Handler extends MetadataHandler<ColumnOriginNullCount> {
+			Double getColumnOriginNullCount(RelNode r, RelMetadataQuery mq, int index);
+		}
+
+	}
 
 	/**
 	 * Metadata about how a relational expression is distributed.

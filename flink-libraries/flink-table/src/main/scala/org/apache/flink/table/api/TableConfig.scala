@@ -1411,4 +1411,8 @@ object TableConfig {
   val SQL_EXEC_AGG_INCREMENTAL_ENABLED: ConfigOption[JBoolean] = ConfigOptions
       .key("blink.incrementalAgg.enabled")
       .defaultValue(true)
+
+  val SQL_EXEC_NULL_COUNT_ADD_FILTER_MIN: ConfigOption[JLong] = ConfigOptions
+      .key("sql.exec.null-count.add-filter.min")
+      .defaultValue(2000000L)
 }

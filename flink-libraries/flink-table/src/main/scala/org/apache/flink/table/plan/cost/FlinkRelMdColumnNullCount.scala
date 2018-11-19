@@ -126,8 +126,12 @@ class FlinkRelMdColumnNullCount private extends MetadataHandler[ColumnNullCount]
     val projects = program.getProjectList.map(program.expandLocalRef)
     val (nullCountOfInput,  mappingFieldInInput) = getColumnNullAfterProjects(
       calc.getInput, projects, mq, index)
-    val predicate = program.expandLocalRef(program.getCondition)
-    getColumnNullAfterPredicate(predicate, nullCountOfInput, calc, mappingFieldInInput)
+    if (program.getCondition == null) {
+      nullCountOfInput
+    } else {
+      val predicate = program.expandLocalRef(program.getCondition)
+      getColumnNullAfterPredicate(predicate, nullCountOfInput, calc, mappingFieldInInput)
+    }
   }
 
   private def getColumnNullAfterProjects(

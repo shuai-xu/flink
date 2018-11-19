@@ -37,6 +37,7 @@ object FlinkDefaultRelMetadataProvider {
       FlinkRelMdSkewInfo.SOURCE,
       FlinkRelMdDistribution.SOURCE,
       FlinkRelMdColumnNullCount.SOURCE,
+      FlinkRelMdColumnOriginNullCount.SOURCE,
       FlinkRelMdPopulationSize.SOURCE,
       FlinkRelMdColumnUniqueness.SOURCE,
       FlinkRelMdUniqueKeys.SOURCE,

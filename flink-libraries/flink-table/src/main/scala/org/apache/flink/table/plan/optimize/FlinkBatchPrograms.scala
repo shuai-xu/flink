@@ -22,7 +22,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.tools.RuleSets
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.plan.rules.logical.{JoinDependentFilterPushdownRule, SkewedJoinRule}
+import org.apache.flink.table.plan.rules.logical.{JoinDependentFilterPushdownRule, JoinDeriveNullFilterRule, SkewedJoinRule}
 
 /**
   * Defines a sequence of programs to optimize flink batch exec table plan.
@@ -105,7 +105,9 @@ object FlinkBatchPrograms {
             .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
               .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
               .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-              .add(RuleSets.ofList(JoinDependentFilterPushdownRule.INSTANCE))
+              .add(RuleSets.ofList(
+                JoinDependentFilterPushdownRule.INSTANCE,
+                JoinDeriveNullFilterRule.INSTANCE))
               .build(), "join dependent filter push down")
             .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
               .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
