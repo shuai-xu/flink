@@ -1118,7 +1118,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			allocatedSlots.add(pendingRequest.getSlotRequestId(), allocatedSlot);
 			pendingRequest.getAllocatedSlotFuture().complete(allocatedSlot);
 		} else {
-			log.info("Adding returned slot [{}] to available slots", allocatedSlot.getAllocationId());
+			log.debug("Adding returned slot [{}] to available slots", allocatedSlot.getAllocationId());
 			availableSlots.add(allocatedSlot, clock.relativeTimeMillis());
 		}
 	}

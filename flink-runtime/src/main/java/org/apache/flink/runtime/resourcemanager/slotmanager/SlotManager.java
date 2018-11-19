@@ -718,7 +718,6 @@ public class SlotManager implements AutoCloseable {
 		TaskManagerSlot taskManagerSlot = findMatchingSlot(pendingSlotRequest.getResourceProfile());
 
 		if (taskManagerSlot != null) {
-			LOG.info("Assigning slot {} to {}", taskManagerSlot.getSlotId(), pendingSlotRequest.getAllocationId());
 			allocateSlot(taskManagerSlot, pendingSlotRequest);
 		} else {
 			resourceActions.allocateResource(pendingSlotRequest.getResourceProfile());
@@ -854,7 +853,6 @@ public class SlotManager implements AutoCloseable {
 		PendingSlotRequest pendingSlotRequest = findMatchingRequest(freeSlot);
 
 		if (null != pendingSlotRequest) {
-			LOG.info("Assigning slot {} to {}", freeSlot.getSlotId(), pendingSlotRequest.getAllocationId());
 			allocateSlot(freeSlot, pendingSlotRequest);
 		} else {
 			freeSlots.put(freeSlot.getSlotId(), freeSlot);
