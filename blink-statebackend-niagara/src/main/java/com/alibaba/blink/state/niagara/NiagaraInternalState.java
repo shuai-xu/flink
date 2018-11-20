@@ -774,14 +774,13 @@ public class NiagaraInternalState implements InternalState {
 		RowSerializer rowSerializer = descriptor.getKeySerializer();
 
 		Row result = new Row(len);
-		for (int i = 0; i < len; i++) {
+		if (len == 1) {
 			inputView.skipBytesToRead(1);
-			boolean isNullField = inputView.readBoolean();
-			if (isNullField) {
-				result.setField(i, null);
-			} else {
-				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-				result.setField(i, serializer.deserialize(inputView));
+			deserializerRowField(result, 0, inputView, rowSerializer);
+		} else {
+			for (int i = 0; i < len; i++) {
+				inputView.skipBytesToRead(1);
+				deserializerRowField(result, i, inputView, rowSerializer);
 			}
 		}
 
@@ -796,13 +795,11 @@ public class NiagaraInternalState implements InternalState {
 		RowSerializer rowSerializer = descriptor.getValueSerializer();
 
 		Row result = new Row(len);
-		for (int i = 0; i < len; i++) {
-			boolean isNullField = inputView.readBoolean();
-			if (isNullField) {
-				result.setField(i, null);
-			} else {
-				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-				result.setField(i, serializer.deserialize(inputView));
+		if (len == 1) {
+			deserializerRowField(result, 0, inputView, rowSerializer);
+		} else {
+			for (int i = 0; i < len; i++) {
+				deserializerRowField(result, i, inputView, rowSerializer);
 			}
 		}
 
@@ -820,13 +817,11 @@ public class NiagaraInternalState implements InternalState {
 		// We should check whether input view has been merged.
 		do {
 			Row result = new Row(len);
-			for (int i = 0; i < len; i++) {
-				boolean isNullField = inputView.readBoolean();
-				if (isNullField) {
-					result.setField(i, null);
-				} else {
-					TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-					result.setField(i, serializer.deserialize(inputView));
+			if (len == 1) {
+				deserializerRowField(result, 0, inputView, rowSerializer);
+			} else {
+				for (int i = 0; i < len; i++) {
+					deserializerRowField(result, i, inputView, rowSerializer);
 				}
 			}
 			rows.add(result);
@@ -834,6 +829,19 @@ public class NiagaraInternalState implements InternalState {
 			inputView.read() == NiagaraTabletInstance.MERGE_SEPARATOR);
 
 		return rows;
+	}
+
+	static void deserializerRowField(Row result,
+										int idx,
+										DataInputViewStreamWrapper inputView,
+										RowSerializer rowSerializer) throws IOException {
+		boolean isNullField = inputView.readBoolean();
+		if (isNullField) {
+			result.setField(idx, null);
+		} else {
+			TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[idx];
+			result.setField(idx, serializer.deserialize(inputView));
+		}
 	}
 
 	/**

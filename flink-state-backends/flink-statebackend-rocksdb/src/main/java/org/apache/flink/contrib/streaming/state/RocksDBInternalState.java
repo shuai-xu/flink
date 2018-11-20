@@ -809,16 +809,17 @@ public class RocksDBInternalState implements InternalState {
 		RowSerializer rowSerializer = flag == KEY ? descriptor.getKeySerializer() : descriptor.getValueSerializer();
 
 		Row result = new Row(len);
-		for (int i = 0; i < len; i++) {
+		if (len == 1) {
 			if (flag == KEY) {
 				inputView.skipBytesToRead(1);
 			}
-			boolean isNullField = inputView.readBoolean();
-			if (isNullField) {
-				result.setField(i, null);
-			} else {
-				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-				result.setField(i, serializer.deserialize(inputView));
+			deserializerRowField(result, 0, inputView, rowSerializer);
+		} else {
+			for (int i = 0; i < len; i++) {
+				if (flag == KEY) {
+					inputView.skipBytesToRead(1);
+				}
+				deserializerRowField(result, i, inputView, rowSerializer);
 			}
 		}
 
@@ -833,14 +834,13 @@ public class RocksDBInternalState implements InternalState {
 		RowSerializer rowSerializer = descriptor.getKeySerializer();
 
 		Row result = new Row(len);
-		for (int i = 0; i < len; i++) {
+		if (len == 1) {
 			inputView.skipBytesToRead(1);
-			boolean isNullField = inputView.readBoolean();
-			if (isNullField) {
-				result.setField(i, null);
-			} else {
-				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-				result.setField(i, serializer.deserialize(inputView));
+			deserializerRowField(result, 0, inputView, rowSerializer);
+		} else {
+			for (int i = 0; i < len; i++) {
+				inputView.skipBytesToRead(1);
+				deserializerRowField(result, i, inputView, rowSerializer);
 			}
 		}
 
@@ -855,13 +855,11 @@ public class RocksDBInternalState implements InternalState {
 		RowSerializer rowSerializer = descriptor.getValueSerializer();
 
 		Row result = new Row(len);
-		for (int i = 0; i < len; i++) {
-			boolean isNullField = inputView.readBoolean();
-			if (isNullField) {
-				result.setField(i, null);
-			} else {
-				TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-				result.setField(i, serializer.deserialize(inputView));
+		if (len == 1) {
+			deserializerRowField(result, 0, inputView, rowSerializer);
+		} else {
+			for (int i = 0; i < len; i++) {
+				deserializerRowField(result, i, inputView, rowSerializer);
 			}
 		}
 
@@ -879,13 +877,11 @@ public class RocksDBInternalState implements InternalState {
 		// We should check whether input view has been merged.
 		do {
 			Row result = new Row(len);
-			for (int i = 0; i < len; i++) {
-				boolean isNullField = inputView.readBoolean();
-				if (isNullField) {
-					result.setField(i, null);
-				} else {
-					TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[i];
-					result.setField(i, serializer.deserialize(inputView));
+			if (len == 1) {
+				deserializerRowField(result, 0, inputView, rowSerializer);
+			} else {
+				for (int i = 0; i < len; i++) {
+					deserializerRowField(result, i, inputView, rowSerializer);
 				}
 			}
 			rows.add(result);
@@ -893,6 +889,19 @@ public class RocksDBInternalState implements InternalState {
 			inputView.read() == RocksDBInternalStateBackend.DELIMITER);
 
 		return rows;
+	}
+
+	static void deserializerRowField(Row result,
+										int idx,
+										DataInputViewStreamWrapper inputView,
+										RowSerializer rowSerializer) throws IOException {
+		boolean isNullField = inputView.readBoolean();
+		if (isNullField) {
+			result.setField(idx, null);
+		} else {
+			TypeSerializer<?> serializer = rowSerializer.getFieldSerializers()[idx];
+			result.setField(idx, serializer.deserialize(inputView));
+		}
 	}
 
 	/**
@@ -986,7 +995,7 @@ public class RocksDBInternalState implements InternalState {
 	static void writeInt(ByteArrayOutputStreamWithPos outputStream, int v) {
 		outputStream.write((v >>> 16) & 0xFF);
 		outputStream.write((v >>> 8) & 0xFF);
-		outputStream.write((v >>> 0) & 0xFF);
+		outputStream.write(v & 0xFF);
 	}
 
 
