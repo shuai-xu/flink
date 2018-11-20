@@ -21,26 +21,30 @@ package org.apache.flink.runtime.executiongraph;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.blob.VoidBlobWriter;
+import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy;
 import org.apache.flink.runtime.executiongraph.failover.FailoverStrategy.Factory;
 import org.apache.flink.runtime.executiongraph.restart.InfiniteDelayRestartStrategy;
+import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
 import org.apache.flink.runtime.executiongraph.utils.SimpleSlotProvider;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.Collections;
 import java.util.Random;
 
-import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilExecutionState;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -54,7 +58,8 @@ public class GlobalModVersionTest extends TestLogger {
 	public void testNoLocalFailoverWhileCancelling() throws Exception {
 		final FailoverStrategy mockStrategy = mock(FailoverStrategy.class);
 
-		final ExecutionGraph graph = createSampleGraph(mockStrategy);
+		final TaskManagerGateway taskManagerGateway = spy(new SimpleAckingTaskManagerGateway());
+		final ExecutionGraph graph = createSampleGraph(mockStrategy, taskManagerGateway);
 
 		final ExecutionVertex testVertex = getRandomVertex(graph);
 
@@ -63,12 +68,9 @@ public class GlobalModVersionTest extends TestLogger {
 		assertEquals(1L, graph.getGlobalModVersion());
 
 		// wait until everything is running
-		for (ExecutionVertex v : graph.getVerticesTopologically().iterator().next().getTaskVertices()) {
-			final Execution exec = v.getCurrentExecutionAttempt();
-			waitUntilExecutionState(exec, ExecutionState.DEPLOYING, 1000);
-			exec.switchToRunning();
-			assertEquals(ExecutionState.RUNNING, exec.getState());
-		}
+		verify(taskManagerGateway, Mockito.timeout(2000L).times(graph.getTotalNumberOfVertices()))
+				.submitTask(any(TaskDeploymentDescriptor.class), any(Time.class));
+		ExecutionGraphTestUtils.switchAllVerticesToRunning(graph);
 
 		// now cancel the job
 		graph.cancel();
@@ -103,7 +105,8 @@ public class GlobalModVersionTest extends TestLogger {
 	public void testNoLocalFailoverWhileFailing() throws Exception {
 		final FailoverStrategy mockStrategy = mock(FailoverStrategy.class);
 
-		final ExecutionGraph graph = createSampleGraph(mockStrategy);
+		final TaskManagerGateway taskManagerGateway = spy(new SimpleAckingTaskManagerGateway());
+		final ExecutionGraph graph = createSampleGraph(mockStrategy, taskManagerGateway);
 
 		final ExecutionVertex testVertex = getRandomVertex(graph);
 
@@ -111,12 +114,9 @@ public class GlobalModVersionTest extends TestLogger {
 		assertEquals(JobStatus.RUNNING, graph.getState());
 
 		// wait until everything is running
-		for (ExecutionVertex v : graph.getVerticesTopologically().iterator().next().getTaskVertices()) {
-			final Execution exec = v.getCurrentExecutionAttempt();
-			waitUntilExecutionState(exec, ExecutionState.DEPLOYING, 1000);
-			exec.switchToRunning();
-			assertEquals(ExecutionState.RUNNING, exec.getState());
-		}
+		verify(taskManagerGateway, Mockito.timeout(2000L).times(graph.getTotalNumberOfVertices()))
+				.submitTask(any(TaskDeploymentDescriptor.class), any(Time.class));
+		ExecutionGraphTestUtils.switchAllVerticesToRunning(graph);
 
 		// now send the job into global failover
 		graph.failGlobal(new Exception("global failover"));
@@ -153,12 +153,12 @@ public class GlobalModVersionTest extends TestLogger {
 	//  utilities
 	// ------------------------------------------------------------------------
 
-	private ExecutionGraph createSampleGraph(FailoverStrategy failoverStrategy) throws Exception {
+	private ExecutionGraph createSampleGraph(FailoverStrategy failoverStrategy, TaskManagerGateway taskManagerGateway) throws Exception {
 
 		final JobID jid = new JobID();
 		final int parallelism = new Random().nextInt(10) + 1;
 
-		final SimpleSlotProvider slotProvider = new SimpleSlotProvider(jid, parallelism);
+		final SimpleSlotProvider slotProvider = new SimpleSlotProvider(jid, parallelism, taskManagerGateway);
 
 		JobVertex jv = new JobVertex("test vertex");
 		jv.setInvokableClass(NoOpInvokable.class);

@@ -20,24 +20,32 @@ package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
+import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.execution.SuppressRestartsException;
 import org.apache.flink.runtime.executiongraph.metrics.RestartTimeGauge;
 import org.apache.flink.runtime.executiongraph.restart.RestartCallback;
 import org.apache.flink.runtime.executiongraph.restart.RestartStrategy;
+import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
+import org.apache.flink.runtime.instance.SlotSharingGroupId;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobmanager.scheduler.Scheduler;
+import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
+import org.apache.flink.runtime.jobmaster.SlotRequestId;
 import org.apache.flink.runtime.jobmaster.TestingLogicalSlot;
+import org.apache.flink.runtime.taskmanager.LocalTaskManagerLocation;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,6 +59,8 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ExecutionGraphMetricsTest extends TestLogger {
@@ -74,8 +84,25 @@ public class ExecutionGraphMetricsTest extends TestLogger {
 			Time timeout = Time.seconds(10L);
 			Scheduler scheduler = mock(Scheduler.class);
 
-			CompletableFuture<LogicalSlot> slotFuture1 = CompletableFuture.completedFuture(new TestingLogicalSlot());
-			CompletableFuture<LogicalSlot> slotFuture2 = CompletableFuture.completedFuture(new TestingLogicalSlot());
+			final TaskManagerGateway taskManagerGateway = spy(new SimpleAckingTaskManagerGateway());
+			LogicalSlot slot1 = new TestingLogicalSlot(
+					new LocalTaskManagerLocation(),
+					taskManagerGateway,
+					0,
+					new AllocationID(),
+					new SlotRequestId(),
+					new SlotSharingGroupId(),
+					null);
+			LogicalSlot slot2 = new TestingLogicalSlot(
+					new LocalTaskManagerLocation(),
+					taskManagerGateway,
+					0,
+					new AllocationID(),
+					new SlotRequestId(),
+					new SlotSharingGroupId(),
+					null);
+			CompletableFuture<LogicalSlot> slotFuture1 = CompletableFuture.completedFuture(slot1);
+			CompletableFuture<LogicalSlot> slotFuture2 = CompletableFuture.completedFuture(slot2);
 			when(scheduler.allocateSlots(any(List.class), any(List.class), anyBoolean(), any(List.class), any(Time.class)))
 					.thenReturn(Collections.singletonList(slotFuture1), Collections.singletonList(slotFuture2));
 
@@ -102,8 +129,10 @@ public class ExecutionGraphMetricsTest extends TestLogger {
 			executionGraph.scheduleForExecution();
 			assertEquals(0L, restartingTime.getValue().longValue());
 
-			List<ExecutionAttemptID> executionIDs = new ArrayList<>();
+			verify(taskManagerGateway, Mockito.timeout(2000L).times(1))
+					.submitTask(any(TaskDeploymentDescriptor.class), any(Time.class));
 
+			List<ExecutionAttemptID> executionIDs = new ArrayList<>();
 			for (ExecutionVertex executionVertex: executionGraph.getAllExecutionVertices()) {
 				executionIDs.add(executionVertex.getCurrentExecutionAttempt().getAttemptId());
 			}
@@ -147,8 +176,10 @@ public class ExecutionGraphMetricsTest extends TestLogger {
 			// restart job
 			testingRestartStrategy.restartExecutionGraph();
 
-			executionIDs.clear();
+			verify(taskManagerGateway, Mockito.timeout(2000L).times(2))
+					.submitTask(any(TaskDeploymentDescriptor.class), any(Time.class));
 
+			executionIDs.clear();
 			for (ExecutionVertex executionVertex: executionGraph.getAllExecutionVertices()) {
 				executionIDs.add(executionVertex.getCurrentExecutionAttempt().getAttemptId());
 			}

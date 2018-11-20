@@ -56,6 +56,7 @@ import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
 import org.apache.flink.runtime.testtasks.NoOpInvokable;
+import org.apache.flink.runtime.testutils.DirectScheduledExecutorService;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.TestLogger;
@@ -895,7 +896,7 @@ public class ExecutionGraphRestartTest extends TestLogger {
 		Scheduler scheduler,
 		List<JobVertex> vertices) throws Exception {
 		return ExecutionGraphTestUtils.createExecutionGraphDirectly(
-			TestingUtils.defaultExecutor(),
+			new DirectScheduledExecutorService(),
 			TestingUtils.defaultExecutor(),
 			new JobID(),
 			"Test job",

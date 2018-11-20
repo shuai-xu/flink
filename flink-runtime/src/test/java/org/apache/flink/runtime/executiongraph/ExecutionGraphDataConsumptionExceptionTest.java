@@ -144,6 +144,8 @@ public class ExecutionGraphDataConsumptionExceptionTest {
 		IntermediateResultPartitionID failInterPartitionId = failConsumerVertex.getInputEdges(0)[0].getSource().getPartitionId();
 		ExecutionAttemptID failProducerExecutionId = failProducerVertex.getCurrentExecutionAttempt().getAttemptId();
 
+		verify(tmGateway, Mockito.timeout(STATE_TRANSFER_TIMEOUT).times(executionVertices.get(parallelism.length - 1).size()))
+				.handleMessage(any(TaskMessages.SubmitTask.class));
 		executionGraph.updateState(new TaskExecutionState(
 			executionGraph.getJobID(),
 			failConsumerVertex.getCurrentExecutionAttempt().getAttemptId(),

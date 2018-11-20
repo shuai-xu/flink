@@ -52,6 +52,7 @@ import org.apache.flink.runtime.jobmanager.slots.ActorTaskManagerGateway;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.testingUtils.TestingUtils;
+import org.apache.flink.runtime.testutils.DirectScheduledExecutorService;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.After;
@@ -168,7 +169,7 @@ public class FailoverRegionTest extends TestLogger {
 			new DummyJobInformation(
 				jobId,
 				jobName),
-			TestingUtils.defaultExecutor(),
+			new DirectScheduledExecutorService(),
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			new InfiniteDelayRestartStrategy(10),
@@ -319,7 +320,7 @@ public class FailoverRegionTest extends TestLogger {
 				new DummyJobInformation(
 					jobId,
 					jobName),
-				TestingUtils.defaultExecutor(),
+				new DirectScheduledExecutorService(),
 				TestingUtils.defaultExecutor(),
 				AkkaUtils.getDefaultTimeout(),
 				new InfiniteDelayRestartStrategy(10),
@@ -542,7 +543,7 @@ public class FailoverRegionTest extends TestLogger {
 			JobManagerOptions.EXECUTION_FAILOVER_STRATEGY_REGION_MAX_ATTEMPTS, regionMaxAttempts);
 		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			jobGraph,
-			TestingUtils.defaultExecutor(),
+			new DirectScheduledExecutorService(),
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			restartStrategy,
