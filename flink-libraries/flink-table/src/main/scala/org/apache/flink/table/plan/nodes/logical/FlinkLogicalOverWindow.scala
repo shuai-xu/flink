@@ -72,7 +72,7 @@ class FlinkLogicalOverWindowConverter
       val orderKeySize = group.orderKeys.getFieldCollations.size()
       group.aggCalls.foreach { winAggCall =>
         if (orderKeySize == 0 && winAggCall.op.isInstanceOf[SqlRankFunction]) {
-          throw ValidationException(TableErrors.INST.sqlOverRankWithoutOrderByInvalid())
+          throw new ValidationException(TableErrors.INST.sqlOverRankWithoutOrderByInvalid())
         }
       }
     }

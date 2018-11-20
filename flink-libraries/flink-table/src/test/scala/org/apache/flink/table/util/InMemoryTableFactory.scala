@@ -23,6 +23,8 @@ import java.util
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.
   {CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
+import org.apache.flink.table.api.TableSchema
+import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.descriptors.RowtimeValidator._
 import org.apache.flink.table.descriptors.SchemaValidator._
 import org.apache.flink.table.descriptors.{DescriptorProperties, SchemaValidator}
@@ -77,18 +79,20 @@ class InMemoryTableFactory(terminationCount: Int)
       supportsSourceTimestamps = true,
       supportsSourceWatermarks = true).validate(params)
 
-    val tableSchema = params.getTableSchema(SCHEMA)
+    val tableSchema2 = params.getTableSchema(SCHEMA)
 
     // proctime
     val proctimeAttributeOpt = SchemaValidator.deriveProctimeAttribute(params)
 
-    val (names, types) = tableSchema.getColumnNames.zip(tableSchema.getTypes)
+    val (names, types) = tableSchema2.getFieldNames.zip(tableSchema2.getFieldTypes)
       .filter(_._1 != proctimeAttributeOpt.get()).unzip
+
+    val tableSchema = new TableSchema(names, types.map(t => DataTypes.internal(t)))
     // rowtime
     val rowtimeDescriptors = SchemaValidator.deriveRowtimeAttributes(params)
     new MemoryTableSourceSinkUtil.UnsafeMemoryTableSource(
       tableSchema,
-      DataTypes.createRowType(types, names),
+      DataTypes.createRowType(DataTypes.internalTypes(types), names),
       rowtimeDescriptors,
       proctimeAttributeOpt.get(),
       terminationCount)

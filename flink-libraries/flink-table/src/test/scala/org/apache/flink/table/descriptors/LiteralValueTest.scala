@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.descriptors
 
-import java.math.{BigDecimal => JBigDecimal}
 import java.util.{Arrays => JArrays, List => JList, Map => JMap}
+import java.math.{BigDecimal => JBigDecimal}
 
 import org.apache.flink.table.api.{Types, ValidationException}
 import org.junit.Test

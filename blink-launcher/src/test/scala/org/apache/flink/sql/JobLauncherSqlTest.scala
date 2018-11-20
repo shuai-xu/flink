@@ -162,7 +162,7 @@ class JobLauncherSqlTest {
       SqlJobAdapter.processOutputStatements(true,
         tEnv, sqlNodeInfoList, new Properties(), "", 1, -1, "", "", "", false, false)
     } catch {
-      case e1: TableException => assert(e1.msg
+      case e1: TableException => assert(e1.getMessage
         .contains("Values source input is not supported currently."))
       case _ =>
     }

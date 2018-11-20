@@ -21,6 +21,7 @@ package org.apache.flink.table.sources.csv
 import java.util.{Set => JSet}
 import java.util.TimeZone
 
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
@@ -77,11 +78,11 @@ class CsvTableSource(
   with Logging {
 
   if (fieldNames.length != fieldTypes.length) {
-    throw TableException("Number of field names and field types must be equal.")
+    throw new TableException("Number of field names and field types must be equal.")
   }
 
   if (fieldNames.length != fieldNullables.length) {
-    throw TableException("Number of field names and field nullables must be equal.")
+    throw new TableException("Number of field names and field nullables must be equal.")
   }
 
   private val returnType = new BaseRowType(classOf[GenericRow], fieldTypes, fieldNames)
@@ -374,6 +375,23 @@ object CsvTableSource {
         throw new IllegalArgumentException(s"Duplicate field name $fieldName.")
       }
       schema += (fieldName ->(fieldType, !FlinkTypeFactory.isTimeIndicatorType(fieldType)))
+      this
+    }
+
+    /**
+      * Adds a field with the field name and the type information. Required.
+      * This method can be called multiple times. The call order of this method defines
+      * also the order of the fields in a row.
+      *
+      * @param fieldName the field name
+      * @param fieldType the type information of the field
+      */
+    def field(fieldName: String, fieldType: TypeInformation[_]): Builder = {
+      if (schema.contains(fieldName)) {
+        throw new IllegalArgumentException(s"Duplicate field name $fieldName.")
+      }
+      val internalType = DataTypes.internal(fieldType)
+      schema += (fieldName ->(internalType, !FlinkTypeFactory.isTimeIndicatorType(internalType)))
       this
     }
 

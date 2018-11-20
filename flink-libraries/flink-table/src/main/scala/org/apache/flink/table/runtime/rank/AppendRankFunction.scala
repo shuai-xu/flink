@@ -199,7 +199,6 @@ class AppendRankFunction(
     timestamp: Long,
     ctx: OnTimerContext,
     out: Collector[BaseRow]): Unit = {
-
     if (needToCleanupState(timestamp)) {
       // cleanup cache
       kvSortedMap.remove(executionContext.currentKey())

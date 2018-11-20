@@ -49,7 +49,7 @@ class BatchExecRankRule
     val rank = rel.asInstanceOf[FlinkLogicalRank]
     val (_, rankEnd) = rank.rankRange match {
       case r: ConstantRankRange => (r.rankStart, r.rankEnd)
-      case o => throw TableException(s"$o is not supported now")
+      case o => throw new TableException(s"$o is not supported now")
     }
 
     val cluster = rel.getCluster

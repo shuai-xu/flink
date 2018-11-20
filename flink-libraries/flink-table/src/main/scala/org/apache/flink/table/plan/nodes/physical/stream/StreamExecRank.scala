@@ -140,11 +140,11 @@ class StreamExecRank(
     val rankKind = rankFunction.getKind match {
       case SqlKind.ROW_NUMBER => SqlKind.ROW_NUMBER
       case SqlKind.RANK =>
-        throw TableException("RANK() on streaming table is not supported currently")
+        throw new TableException("RANK() on streaming table is not supported currently")
       case SqlKind.DENSE_RANK =>
-        throw TableException("DENSE_RANK() on streaming table is not supported currently")
+        throw new TableException("DENSE_RANK() on streaming table is not supported currently")
       case k =>
-        throw TableException(s"Streaming tables do not support $k rank function.")
+        throw new TableException(s"Streaming tables do not support $k rank function.")
     }
 
     val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)

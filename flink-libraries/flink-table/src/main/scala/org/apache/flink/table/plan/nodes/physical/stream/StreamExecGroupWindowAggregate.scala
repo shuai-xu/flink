@@ -151,7 +151,7 @@ class StreamExecGroupWindowAggregate(
 
     val timeIdx = if (isRowtimeAttribute(window.timeAttribute)) {
       if (inputTimestampIndex < 0) {
-        throw TableException(
+        throw new TableException(
           TableErrors.INST.sqlGroupWindowAggTranslateTimeAttrNotFound())
       }
       inputTimestampIndex

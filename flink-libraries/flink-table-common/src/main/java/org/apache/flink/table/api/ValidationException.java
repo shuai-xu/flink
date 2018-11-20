@@ -16,34 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.descriptors
+package org.apache.flink.table.api;
 
-import FormatDescriptorValidator.{FORMAT_TYPE, FORMAT_PROPERTY_VERSION}
+import org.apache.flink.annotation.PublicEvolving;
 
 /**
-  * Describes the format of data.
+  * Exception for all errors occurring during validation phase.
   *
-  * @param tpe string identifier for the format
+  * <p>This exception indicates that the user did something wrong.
   */
-abstract class FormatDescriptor(
-    private val tpe: String,
-    private val version: Int)
-  extends Descriptor {
+@PublicEvolving
+public class ValidationException extends RuntimeException {
 
-  override def toString: String = this.getClass.getSimpleName
+	public ValidationException(String message, Throwable cause) {
+		super(message, cause);
+	}
 
-  /**
-    * Internal method for properties conversion.
-    */
-  final private[flink] def addProperties(properties: DescriptorProperties): Unit = {
-    properties.putString(FORMAT_TYPE, tpe)
-    properties.putInt(FORMAT_PROPERTY_VERSION, version)
-    addFormatProperties(properties)
-  }
-
-  /**
-    * Internal method for format properties conversion.
-    */
-  protected def addFormatProperties(properties: DescriptorProperties): Unit
-
+	public ValidationException(String message) {
+		super(message);
+	}
 }

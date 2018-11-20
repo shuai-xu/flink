@@ -22,6 +22,8 @@ import org.apache.flink.util.Preconditions;
 
 import org.apache.avro.specific.SpecificRecord;
 
+import java.util.Map;
+
 /**
  * Format descriptor for Apache Avro records.
  */
@@ -63,12 +65,16 @@ public class Avro extends FormatDescriptor {
 	 * Internal method for format properties conversion.
 	 */
 	@Override
-	public void addFormatProperties(DescriptorProperties properties) {
+	public Map<String, String> toFormatProperties() {
+		final DescriptorProperties properties = new DescriptorProperties();
+
 		if (null != recordClass) {
 			properties.putClass(AvroValidator.FORMAT_RECORD_CLASS, recordClass);
 		}
 		if (null != avroSchema) {
 			properties.putString(AvroValidator.FORMAT_AVRO_SCHEMA, avroSchema);
 		}
+
+		return properties.asMap();
 	}
 }

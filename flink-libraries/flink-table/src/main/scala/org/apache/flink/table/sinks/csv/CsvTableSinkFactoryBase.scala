@@ -21,15 +21,15 @@ package org.apache.flink.table.sinks.csv
 import java.util
 
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator._
 import org.apache.flink.table.descriptors.CsvValidator._
-import org.apache.flink.table.descriptors.DescriptorProperties._
 import org.apache.flink.table.descriptors.FileSystemValidator._
 import org.apache.flink.table.descriptors.FormatDescriptorValidator._
 import org.apache.flink.table.descriptors.SchemaValidator._
 import org.apache.flink.table.descriptors._
 import org.apache.flink.table.factories.TableFactory
+import org.apache.flink.table.util.JavaScalaConversionUtil.toScala
 
 /**
   * Factory base for creating configured instances of [[CsvTableSink]].
@@ -50,13 +50,13 @@ abstract class CsvTableSinkFactoryBase extends TableFactory {
     // connector
     properties.add(CONNECTOR_PATH)
     // format
-    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TYPE}")
-    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.NAME}")
+    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TABLE_SCHEMA_TYPE}")
+    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TABLE_SCHEMA_NAME}")
     properties.add(FORMAT_FIELD_DELIMITER)
     properties.add(CONNECTOR_PATH)
     // schema
-    properties.add(s"$SCHEMA.#.${DescriptorProperties.TYPE}")
-    properties.add(s"$SCHEMA.#.${DescriptorProperties.NAME}")
+    properties.add(s"$SCHEMA.#.${DescriptorProperties.TABLE_SCHEMA_TYPE}")
+    properties.add(s"$SCHEMA.#.${DescriptorProperties.TABLE_SCHEMA_NAME}")
     properties
   }
 
@@ -91,8 +91,8 @@ abstract class CsvTableSinkFactoryBase extends TableFactory {
     val csvTableSink = new CsvTableSink(path, fieldDelimiter)
 
     csvTableSink
-      .configure(formatSchema.getColumnNames,
-        formatSchema.getTypes.asInstanceOf[Array[DataType]])
+      .configure(formatSchema.getFieldNames,
+        DataTypes.internalTypes(formatSchema.getFieldTypes).asInstanceOf[Array[DataType]])
       .asInstanceOf[CsvTableSink]
   }
 }

@@ -36,15 +36,16 @@ class TableSchema(
 
   primaryKey.foreach {
     case field: String if columnNameToIndex.contains(field) =>
-    case field: String => TableException(s"Primary key field: $field not found in table schema")
+    case field: String => new TableException(s"Primary key field: $field not found in table schema")
   }
 
   uniqueKeys.foreach {
     case uniqueKey: Array[String] if uniqueKey.isEmpty =>
-      TableException("Unique key should not be empty.")
+      new TableException("Unique key should not be empty.")
     case uniqueKey: Array[String] => uniqueKey.foreach {
       case field: String if columnNameToIndex.contains(field) =>
-      case field: String => TableException(s"Unique key field: $field not found in table schema")
+      case field: String =>
+        new TableException(s"Unique key field: $field not found in table schema")
     }
   }
 
@@ -55,7 +56,7 @@ class TableSchema(
   def this(names: Array[String], types: Array[InternalType], nullables: Array[Boolean]) = {
     this {
       if (names.length != types.length) {
-        throw TableException(
+        throw new TableException(
           s"Number of column indexes and column names must be equal." +
               s"\nColumn names count is [${names.length}]" +
               s"\nColumn types count is [${types.length}]" +
@@ -64,7 +65,7 @@ class TableSchema(
       }
 
       if (names.length != nullables.length) {
-        throw TableException(
+        throw new TableException(
           s"Number of column indexes and column names must be equal." +
               s"\nColumn names count is [${names.length}]" +
               s"\nColumn types count is [${nullables.length}]"
@@ -77,7 +78,7 @@ class TableSchema(
         val duplicate = names.filter(
           name => columnNameBuffer.-=(name).contains(name))
 
-        throw TableException(
+        throw new TableException(
           s"Table column names must be unique." +
               s"\nThe duplicate columns are: ${duplicate.mkString("[ ", ", ", " ]")}" +
               s"\nAll column names: ${names.mkString("[ ", ", ", " ]")}")

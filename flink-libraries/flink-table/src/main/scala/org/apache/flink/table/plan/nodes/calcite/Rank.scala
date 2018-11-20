@@ -75,18 +75,18 @@ abstract class Rank(
   rankRange match {
     case r: ConstantRankRange =>
       if (r.rankEnd <= 0) {
-        throw TableException(s"Rank end can't smaller than zero. The rank end is ${r.rankEnd}")
+        throw new TableException(s"Rank end can't smaller than zero. The rank end is ${r.rankEnd}")
       }
       if (r.rankStart > r.rankEnd) {
-        throw TableException(
+        throw new TableException(
           s"Rank start '${r.rankStart}' can't greater than rank end '${r.rankEnd}'.")
       }
     case v: VariableRankRange =>
       if (v.rankEndIndex < 0) {
-        throw TableException(s"Rank end index can't smaller than zero.")
+        throw new TableException(s"Rank end index can't smaller than zero.")
       }
       if (v.rankEndIndex >= input.getRowType.getFieldCount) {
-        throw TableException(s"Rank end index can't greater than input field count.")
+        throw new TableException(s"Rank end index can't greater than input field count.")
       }
   }
 

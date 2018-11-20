@@ -187,7 +187,7 @@ object WindowPropertiesRules {
             // replace expression by access to window rowtime
             rexBuilder.makeCast(c.getType, builder.field(propertyName(window, "rowtime")), false)
           case 'streamProctime =>
-            throw ValidationException("A proctime window cannot provide a rowtime attribute.")
+            throw new ValidationException("A proctime window cannot provide a rowtime attribute.")
           case _ =>
             throw new TableException("Unknown window type encountered. Please report this bug.")
         }
@@ -198,7 +198,8 @@ object WindowPropertiesRules {
             // replace expression by access to window proctime
             rexBuilder.makeCast(c.getType, builder.field(propertyName(window, "proctime")), false)
           case 'batchRowtime =>
-            throw ValidationException("PROCTIME window property is not supported in batch queries.")
+            throw new ValidationException(
+              "PROCTIME window property is not supported in batch queries.")
           case _ =>
             throw new TableException("Unknown window type encountered. Please report this bug.")
         }

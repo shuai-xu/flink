@@ -35,11 +35,11 @@ class TestTableSourceWithFieldNullables(
     extends BatchTableSource[Row] {
 
   if (fieldNames.length != fieldTypes.length) {
-    throw TableException("Number of field names and field types must be equal.")
+    throw new TableException("Number of field names and field types must be equal.")
   }
 
   if (fieldNames.length != fieldNullables.length) {
-    throw TableException("Number of field names and field nullables must be equal.")
+    throw new TableException("Number of field names and field nullables must be equal.")
   }
 
   override def getReturnType: DataType =

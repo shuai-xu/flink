@@ -162,7 +162,7 @@ class Table(
     val expandedFields = expandProjectList(fields, logicalPlan, tableEnv)
     val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, tableEnv)
     if (propNames.nonEmpty) {
-      throw ValidationException("Window properties can only be used on windowed tables.")
+      throw new ValidationException("Window properties can only be used on windowed tables.")
     }
 
     if (aggNames.nonEmpty) {
@@ -873,7 +873,7 @@ class Table(
         // replace LIMIT without FETCH by LIMIT with FETCH
         new Table(tableEnv, Limit(o, fetch, c).validate(tableEnv))
       case Limit(_, _, _) =>
-        throw ValidationException("FETCH is already defined.")
+        throw new ValidationException("FETCH is already defined.")
       case _ =>
         new Table(tableEnv, Limit(0, fetch, logicalPlan).validate(tableEnv))
     }
@@ -1060,7 +1060,7 @@ class GroupedTable(
     val expandedFields = expandProjectList(fields, table.logicalPlan, table.tableEnv)
     val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tableEnv)
     if (propNames.nonEmpty) {
-      throw ValidationException("Window properties can only be used on windowed tables.")
+      throw new ValidationException("Window properties can only be used on windowed tables.")
     }
 
     val projectsOnAgg = replaceAggregationsAndProperties(
@@ -1156,7 +1156,7 @@ class OverWindowedTable(
       table.tableEnv)
 
     if(fields.exists(_.isInstanceOf[WindowProperty])){
-      throw ValidationException(
+      throw new ValidationException(
         "Window start and end properties are not available for Over windows.")
     }
 

@@ -232,7 +232,7 @@ class DistinctAggCodeGen(
 
   override def retract(generator: ExprCodeGenerator): String = {
     if (!consumeRetraction) {
-      throw TableException("This should never happen, please file a issue.")
+      throw new TableException("This should never happen, please file a issue.")
     }
     val keyExpr = generateKeyExpression(ctx, generator)
     val key = keyExpr.resultTerm

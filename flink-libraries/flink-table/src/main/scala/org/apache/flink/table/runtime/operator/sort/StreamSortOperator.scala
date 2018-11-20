@@ -135,7 +135,7 @@ class StreamSortOperator(
       inputBuffer += ((input, nowCount + 1))
     } else {
       if (nowCount == 0) {
-        throw TableException("BaseRow Not Exist")
+        throw new TableException("BaseRow Not Exist")
       } else if (nowCount == 1) {
         inputBuffer -= input
       } else {

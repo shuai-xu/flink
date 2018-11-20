@@ -19,9 +19,11 @@
 package org.apache.flink.table.descriptors;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.table.typeutils.TypeStringUtils;
+import org.apache.flink.table.utils.TypeStringUtils;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
+
+import java.util.Map;
 
 import static org.apache.flink.table.descriptors.FormatDescriptorValidator.FORMAT_DERIVE_SCHEMA;
 import static org.apache.flink.table.descriptors.JsonValidator.FORMAT_FAIL_ON_MISSING_FIELD;
@@ -107,12 +109,14 @@ public class Json extends FormatDescriptor {
 	}
 
 	/**
-	 * Internal method for format properties conversion.
+	 * Convert this descriptor into a set of format properties.
 	 */
 	@Override
-	public void addFormatProperties(DescriptorProperties properties) {
+	public Map<String, String> toFormatProperties() {
+		final DescriptorProperties properties = new DescriptorProperties();
+
 		if (deriveSchema != null) {
-			properties.putBoolean(FORMAT_DERIVE_SCHEMA(), deriveSchema);
+			properties.putBoolean(FORMAT_DERIVE_SCHEMA, deriveSchema);
 		}
 
 		if (jsonSchema != null) {
@@ -126,5 +130,7 @@ public class Json extends FormatDescriptor {
 		if (failOnMissingField != null) {
 			properties.putBoolean(FORMAT_FAIL_ON_MISSING_FIELD, failOnMissingField);
 		}
+
+		return properties.asMap();
 	}
 }

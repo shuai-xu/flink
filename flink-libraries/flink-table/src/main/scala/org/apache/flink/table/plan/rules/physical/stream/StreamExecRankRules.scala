@@ -77,7 +77,7 @@ object StreamExecRankRules {
         rankStart + RexLiteral.intValue(sort.fetch) - 1
       } else {
         // we have checked in matches method that fetch is not null
-        throw TableException("This should never happen, please file an issue.")
+        throw new TableException("This should never happen, please file an issue.")
       }
 
       new StreamExecRank(

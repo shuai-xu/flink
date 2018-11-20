@@ -94,7 +94,7 @@ class StreamExecSort(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     if (!tableEnv.getConfig.isNonTemporalSortEnabled) {
-      throw TableException("Sort on a non-time-attribute field is not supported.")
+      throw new TableException("Sort on a non-time-attribute field is not supported.")
     }
 
     val inputTransformation = input.asInstanceOf[StreamExecRel].translateToPlan(

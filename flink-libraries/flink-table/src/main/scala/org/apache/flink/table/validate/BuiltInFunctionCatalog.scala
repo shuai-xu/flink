@@ -61,7 +61,7 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
 
   override def lookupFunction(name: String, children: Seq[Expression]): Expression = {
     val funcClass = functionBuilders
-      .getOrElse(name.toLowerCase, throw ValidationException(s"Undefined function: $name"))
+      .getOrElse(name.toLowerCase, throw new ValidationException(s"Undefined function: $name"))
 
     // Instantiate a function using the provided `children`
     funcClass match {
@@ -70,7 +70,7 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
       case sf if classOf[ScalarFunction].isAssignableFrom(sf) =>
         val scalarSqlFunction = sqlFunctions
           .find(f => f.getName.equalsIgnoreCase(name) && f.isInstanceOf[ScalarSqlFunction])
-          .getOrElse(throw ValidationException(s"Undefined scalar function: $name"))
+          .getOrElse(throw new ValidationException(s"Undefined scalar function: $name"))
           .asInstanceOf[ScalarSqlFunction]
         ScalarFunctionCall(scalarSqlFunction.getScalarFunction, children)
 
@@ -78,7 +78,7 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
       case tf if classOf[TableFunction[_]].isAssignableFrom(tf) =>
         val tableSqlFunction = sqlFunctions
           .find(f => f.getName.equalsIgnoreCase(name) && f.isInstanceOf[TableSqlFunction])
-          .getOrElse(throw ValidationException(s"Undefined table function: $name"))
+          .getOrElse(throw new ValidationException(s"Undefined table function: $name"))
           .asInstanceOf[TableSqlFunction]
         val func = tableSqlFunction.getTableFunction
         TableFunctionCall(name, func, children, getResultTypeOfCTDFunction(
@@ -88,7 +88,7 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
       case af if classOf[AggregateFunction[_, _]].isAssignableFrom(af) =>
         val aggregateFunction = sqlFunctions
           .find(f => f.getName.equalsIgnoreCase(name) && f.isInstanceOf[AggSqlFunction])
-          .getOrElse(throw ValidationException(s"Undefined table function: $name"))
+          .getOrElse(throw new ValidationException(s"Undefined table function: $name"))
           .asInstanceOf[AggSqlFunction]
         val function = aggregateFunction.getFunction
         val externalResultType = aggregateFunction.externalResultType
@@ -122,16 +122,16 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
                   case Success(ctor) =>
                     Try(ctor.newInstance(children: _*).asInstanceOf[Expression]) match {
                       case Success(expr) => expr
-                      case Failure(exception) => throw ValidationException(exception.getMessage)
+                      case Failure(exception) => throw new ValidationException(exception.getMessage)
                     }
                   case Failure(_) =>
-                    throw ValidationException(
+                    throw new ValidationException(
                       s"Invalid number of arguments for function $funcClass")
                 }
             }
         }
       case _ =>
-        throw ValidationException("Unsupported function.")
+        throw new ValidationException("Unsupported function.")
     }
   }
 

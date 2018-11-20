@@ -26,7 +26,6 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.Types;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.Elasticsearch;
 import org.apache.flink.table.descriptors.Json;
 import org.apache.flink.table.descriptors.Schema;
@@ -115,7 +114,7 @@ public abstract class ElasticsearchUpsertTableSinkFactoryTestBase extends TestLo
 					.field(FIELD_TS, Types.SQL_TIMESTAMP()))
 			.inUpsertMode();
 
-		final Map<String, String> propertiesMap = DescriptorProperties.toJavaMap(testDesc);
+		final Map<String, String> propertiesMap = testDesc.toProperties();
 		final TableSink<?> actualSink = TableFactoryService.find(StreamTableSinkFactory.class, propertiesMap)
 			.createStreamTableSink(propertiesMap);
 

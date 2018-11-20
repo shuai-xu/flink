@@ -205,7 +205,7 @@ object TypeUtils {
       case et: TypeInfoWrappedType => et.getTypeInfo
 
       case _ =>
-        throw TableException(s"Type is not supported: $t")
+        throw new TableException(s"Type is not supported: $t")
     }
   }
 

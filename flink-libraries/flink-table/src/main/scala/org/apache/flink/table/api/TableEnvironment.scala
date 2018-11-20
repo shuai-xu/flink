@@ -974,10 +974,10 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     // check that sink table exists
     if (null == sinkTableName || sinkTableName.isEmpty) {
-      throw TableException(TableErrors.INST.sqlInvalidSinkTblName())
+      throw new TableException(TableErrors.INST.sqlInvalidSinkTblName())
     }
     if (!isRegistered(sinkTableName)) {
-      throw TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
+      throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
     }
     val targetTable = getTable(sinkTableName).get
 
@@ -994,7 +994,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       case s: TableSourceSinkTable[_] if s.tableSinkTable.isDefined =>
         s.tableSinkTable.get.tableSink
       case _ =>
-        throw TableException(TableErrors.INST.sqlNotTableSinkError(targetTableName))
+        throw new TableException(TableErrors.INST.sqlNotTableSinkError(targetTableName))
 
     }
 
@@ -1024,7 +1024,7 @@ abstract class TableEnvironment(val config: TableConfig) {
           .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
           .mkString("[", ", ", "]")
 
-      throw ValidationException(
+      throw new ValidationException(
         TableErrors.INST.sqlInsertIntoMismatchedFieldLen(
           targetTableName, srcSchema, sinkSchema))
     } else if (srcFieldTypes.zip(sinkFieldTypes)
@@ -1046,7 +1046,7 @@ abstract class TableEnvironment(val config: TableConfig) {
           .map { case (n, t) => s"$n: ${TypeUtils.getExternalClassForType(t)}" }
           .mkString("[", ", ", "]")
 
-      throw ValidationException(
+      throw new ValidationException(
         TableErrors.INST.sqlInsertIntoMismatchedFieldTypes(
           targetTableName, srcDiffMsg, sinkDiffMsg))
     }
@@ -1478,7 +1478,7 @@ object TableEnvironment {
     if ((clazz.isMemberClass && !Modifier.isStatic(clazz.getModifiers)) ||
       !Modifier.isPublic(clazz.getModifiers) ||
       clazz.getCanonicalName == null) {
-      throw TableException(s"Class '$clazz' described in type information '$t' must be " +
+      throw new TableException(s"Class '$clazz' described in type information '$t' must be " +
         s"static and globally accessible.")
     }
   }

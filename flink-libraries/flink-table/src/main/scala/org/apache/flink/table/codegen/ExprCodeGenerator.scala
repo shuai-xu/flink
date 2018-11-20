@@ -147,7 +147,7 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
         generateExpression(rowtimeExpression.get)
       case DataTypes.ROWTIME_STREAM_MARKER |
            DataTypes.ROWTIME_BATCH_MARKER =>
-        throw TableException("Rowtime extraction expression missing. Please report a bug.")
+        throw new TableException("Rowtime extraction expression missing. Please report a bug.")
       case DataTypes.PROCTIME_STREAM_MARKER =>
         // attribute is proctime indicator.
         // we use a null literal and generate a timestamp when we need it.

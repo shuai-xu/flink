@@ -335,7 +335,7 @@ object CatalogTableRules {
             nameList.add(name)
             nodeList.add(expression.get(name))
           case name: String =>
-            throw TableException(s"$name not existed in computed column expressions")
+            throw new TableException(s"$name not existed in computed column expressions")
         }
         relBuilder.project(nodeList, nameList).build()
       case _ => node

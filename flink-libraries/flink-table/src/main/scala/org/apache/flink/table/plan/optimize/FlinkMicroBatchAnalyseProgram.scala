@@ -66,7 +66,7 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       node match {
         case _: StreamExecWatermarkAssigner =>
-          throw TableException("MicroBatch is not supported when watermark is defined.")
+          throw new TableException("MicroBatch is not supported when watermark is defined.")
 
         case w: StreamExecGroupWindowAggregate =>
           val isEventTime = w.window match {
@@ -79,7 +79,7 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
             case _ => false
           }
           if (isEventTime) {
-            throw TableException("MicroBatch is not supported when Window Aggregate is used.")
+            throw new TableException("MicroBatch is not supported when Window Aggregate is used.")
           }
 
         case m: StreamExecMatch =>
@@ -88,12 +88,12 @@ class FlinkMicroBatchAnalyseProgram[OC <: OptimizeContext] extends FlinkOptimize
             .filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
           // when the event-time field is set, the CEP node is event-time-mode
           if (rowtimeFields.nonEmpty) {
-            throw TableException("MicroBatch is not supported when Event-Time CEP is used.")
+            throw new TableException("MicroBatch is not supported when Event-Time CEP is used.")
           }
 
         case wj: StreamExecWindowJoin =>
           if (wj.isRowTime) {
-            throw TableException(
+            throw new TableException(
               "MicroBatch is not supported when Event-Time WindowedJoin is used.")
           }
 

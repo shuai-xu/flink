@@ -257,7 +257,7 @@ object CalcCodeGenerator {
     }
 
     val processCode = if (condition.isEmpty && onlyFilter) {
-      throw TableException("This calc has no useful projection and no filter. " +
+      throw new TableException("This calc has no useful projection and no filter. " +
         "It should be removed by CalcRemoveRule.")
     } else if (condition.isEmpty) { // only projection
     val projectionCode = produceProjectionCode

@@ -195,7 +195,7 @@ class DefaultPartitionPrunerImpl extends PartitionPruner {
             value.charAt(0)
           case BasicTypeInfo.BIG_INT_TYPE_INFO => new JBigInteger(value)
           case dt: BigDecimalTypeInfo => Decimal.castFrom(value, dt.precision, dt.scale)
-          case _ => throw TableException(s"Unsupported Type: $partitionFieldType, " +
+          case _ => throw new TableException(s"Unsupported Type: $partitionFieldType, " +
             s"please extends PartitionPruner to support it.")
         }
     }

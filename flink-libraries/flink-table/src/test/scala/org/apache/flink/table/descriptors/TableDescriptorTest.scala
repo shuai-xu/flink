@@ -23,7 +23,7 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.utils.CommonTestData.Person
 import org.apache.flink.table.util.TableTestBase
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.{Ignore, Test}
 
 import scala.collection.JavaConverters._
 
@@ -37,6 +37,7 @@ class TableDescriptorTest extends TableTestBase {
     testTableSourceDescriptor(true)
   }
 
+  @Ignore
   @Test
   def testBatchTableSourceDescriptor(): Unit = {
     testTableSourceDescriptor(false)
@@ -75,11 +76,12 @@ class TableDescriptorTest extends TableTestBase {
         .withSchema(schema)
         .inAppendMode()
     } else {
-      return
-//      batchTestUtil().tableEnv
-//        .connect(connector)
-//        .withFormat(format)
-//        .withSchema(schema)
+      //batchTestUtil().tableEnv
+      //  .connect(connector)
+      //  .withFormat(format)
+      //  .withSchema(schema)
+      // TODO: merge TableTestBase & TableTestBatchExecBase
+      throw new RuntimeException("batchTestUtil is not accessible.")
     }
 
     // tests the table factory discovery and thus validates the result automatically
@@ -103,7 +105,7 @@ class TableDescriptorTest extends TableTestBase {
       "format.fields.4.type" -> "PRIMITIVE_ARRAY<SMALLINT>",
       "format.fields.5.name" -> "myfield6",
       "format.fields.5.type" ->
-        "OBJECT_ARRAY<POJO(org.apache.flink.table.runtime.utils.CommonTestData$Person)>",
+        "OBJECT_ARRAY<POJO<org.apache.flink.table.runtime.utils.CommonTestData$Person>>",
       "format.field-delimiter" -> "#",
       "schema.0.name" -> "myfield",
       "schema.0.type" -> "VARCHAR",
@@ -117,7 +119,7 @@ class TableDescriptorTest extends TableTestBase {
       "schema.4.type" -> "PRIMITIVE_ARRAY<SMALLINT>",
       "schema.5.name" -> "myfield6",
       "schema.5.type" ->
-        "OBJECT_ARRAY<POJO(org.apache.flink.table.runtime.utils.CommonTestData$Person)>"
+        "OBJECT_ARRAY<POJO<org.apache.flink.table.runtime.utils.CommonTestData$Person>>"
     )
 
     val expectedProperties = if (isStreaming) {
@@ -131,9 +133,6 @@ class TableDescriptorTest extends TableTestBase {
       expectedCommonProperties
     }
 
-    val actualProperties = new DescriptorProperties(true)
-    descriptor.addProperties(actualProperties)
-
-    assertEquals(expectedProperties.toMap.asJava, actualProperties.asMap)
+    assertEquals(expectedProperties.toMap.asJava, descriptor.toProperties)
   }
 }

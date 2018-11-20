@@ -68,7 +68,7 @@ class FlinkVolcanoProgram[OC <: OptimizeContext] extends FlinkRuleSetProgram[OC]
         throw new TableException(
           TableErrors.INST.sqlVolcanoOptimizeError(
             FlinkRelOptUtil.toString(input),
-            t.msg), t)
+            t.getMessage), t)
       case a: AssertionError =>
         throw new AssertionError(
           TableErrors.INST.sqlVolcanoOptimizeAssertionExp(a.getMessage), a)

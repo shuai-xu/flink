@@ -46,7 +46,7 @@ class StreamExecLogicalWindowAggregateRule
         timeAttribute
 
       case _ =>
-        throw TableException(
+        throw new TableException(
           s"Time attribute expected but ${timeAttribute.getType} encountered.")
     }
   }
@@ -69,7 +69,7 @@ class StreamExecLogicalWindowAggregateRule
     def getOperandAsLong(call: RexCall, idx: Int): Long =
       call.getOperands.get(idx) match {
         case v: RexLiteral => v.getValue.asInstanceOf[JBigDecimal].longValue()
-        case _ => throw TableException("Only constant window descriptors are supported.")
+        case _ => throw new TableException("Only constant window descriptors are supported.")
       }
 
     def getOperandAsTimeIndicator(call: RexCall, idx: Int): ResolvedFieldReference =
@@ -79,7 +79,7 @@ class StreamExecLogicalWindowAggregateRule
             rowType.getFieldList.get(v.getIndex).getName,
             FlinkTypeFactory.toInternalType(v.getType))
         case _ =>
-          throw ValidationException("Window can only be defined over a time attribute column.")
+          throw new ValidationException("Window can only be defined over a time attribute column.")
       }
 
     windowExpr.getOperator match {

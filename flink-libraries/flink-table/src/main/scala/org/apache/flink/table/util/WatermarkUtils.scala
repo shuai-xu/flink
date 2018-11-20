@@ -38,12 +38,12 @@ object WatermarkUtils {
     if (WITH_OFFSET_FUNC.equalsIgnoreCase(funcName)) {
       val operands: util.List[SqlNode] = watermarkCall.getOperandList
       if (operands.size != 2) {
-        throw TableException("Watermark function " +
+        throw new TableException("Watermark function " +
             "'withOffset(<rowtime_field>, <offset>)' only accept two arguments.")
       }
       val timeField: String = operands.get(0).toString
       if (!rowtimeField.equals(timeField)) {
-        throw TableException("The first argument of 'withOffset' must be the rowtime field.")
+        throw new TableException("The first argument of 'withOffset' must be the rowtime field.")
       }
       val offsetStr: String = operands.get(1).toString
       var offset: Long = -1
@@ -51,13 +51,13 @@ object WatermarkUtils {
         offset = offsetStr.toLong
       } catch {
         case e: NumberFormatException =>
-          throw TableException(
+          throw new TableException(
             "The second argument of 'withOffset' must be an integer, but is " + offsetStr, e)
       }
       offset
     }
     else {
-      throw TableException("Unsupported Watermark Function :" + funcName)
+      throw new TableException("Unsupported Watermark Function :" + funcName)
     }
   }
 }

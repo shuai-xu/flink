@@ -104,12 +104,12 @@ class StreamTableJoinHTable(
     val returnType = outputSchema.typeInfo(classOf[BaseRow])
 
     if (joinType != JoinRelType.INNER && joinType != JoinRelType.LEFT) {
-      throw TableException("Only support inner or left join with a HBaseTable.")
+      throw new TableException("Only support inner or left join with a HBaseTable.")
     }
 
     if (keyPairs.size != 1) {
       // invalid join condition,  support single only, e.g, 'id === tid'
-      throw TableException(
+      throw new TableException(
         "Join a HBaseTable should have exactly one equality condition.\n" +
           s"\tLeft: ${leftNode.toString},\n" +
           s"\tRight: ${hTableSource.toString},\n" +

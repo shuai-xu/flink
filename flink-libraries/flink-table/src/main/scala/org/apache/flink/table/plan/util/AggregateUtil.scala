@@ -471,15 +471,17 @@ object AggregateUtil extends Enumeration {
         case NamedWindowProperty(_, prop) =>
           prop match {
             case WindowStart(_) if s.isDefined =>
-              throw TableException("Duplicate window start property encountered. This is a bug.")
+              throw new TableException(
+                "Duplicate window start property encountered. This is a bug.")
             case WindowStart(_) =>
               (Some(i), e, rt, i - 1)
             case WindowEnd(_) if e.isDefined =>
-              throw TableException("Duplicate window end property encountered. This is a bug.")
+              throw new TableException("Duplicate window end property encountered. This is a bug.")
             case WindowEnd(_) =>
               (s, Some(i), rt, i - 1)
             case RowtimeAttribute(_) if rt.isDefined =>
-              throw TableException("Duplicate window rowtime property encountered. This is a bug.")
+              throw new TableException(
+                "Duplicate window rowtime property encountered. This is a bug.")
             case RowtimeAttribute(_) =>
               (s, e, Some(i), i - 1)
             case ProctimeAttribute(_) =>

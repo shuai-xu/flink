@@ -183,7 +183,7 @@ object RowConverters {
     // we do that here to make sure that plan translation was correct
     val types = relType.getFieldList map {f => FlinkTypeFactory.toTypeInfo(f.getType)}
     if (inputTypeInfo.getFieldTypes.toList != types) {
-      throw TableException(
+      throw new TableException(
         s"The field types of physical and logical row types do not match. " +
           s"Physical type is [$relType], Logical type is [$inputTypeInfo]. " +
           s"This is a bug and should not happen. Please file an issue.")

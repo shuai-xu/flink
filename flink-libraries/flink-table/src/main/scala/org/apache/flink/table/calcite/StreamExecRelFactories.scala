@@ -384,7 +384,7 @@ object StreamExecRelFactories {
         child match {
           case scan: FlinkLogicalTableFunctionScan => scan
           case calc: Calc => getTableScan(calc)
-          case _ => throw TableException("This must be a bug, could not find table scan")
+          case _ => throw new TableException("This must be a bug, could not find table scan")
         }
       }
 

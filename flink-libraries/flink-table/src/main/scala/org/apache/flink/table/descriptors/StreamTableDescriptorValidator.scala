@@ -26,9 +26,9 @@ import org.apache.flink.table.descriptors.StreamTableDescriptorValidator._
   * Validator for [[StreamTableDescriptor]].
   */
 class StreamTableDescriptorValidator(
-  supportsAppend: Boolean,
-  supportsRetract: Boolean,
-  supportsUpsert: Boolean)
+    supportsAppend: Boolean,
+    supportsRetract: Boolean,
+    supportsUpsert: Boolean)
   extends DescriptorValidator {
 
   override def validate(properties: DescriptorProperties): Unit = {
@@ -44,7 +44,7 @@ class StreamTableDescriptorValidator(
     }
     properties.validateEnumValues(
       UPDATE_MODE,
-      isOptional = false,
+      false,
       modeList
     )
   }

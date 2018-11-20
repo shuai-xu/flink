@@ -52,13 +52,13 @@ class BatchExecWindowAggregateRule
     // check if we have distinct aggregates
     val distinctAggs = agg.containsDistinctCall()
     if (distinctAggs) {
-      throw TableException("DISTINCT aggregates are currently not supported.")
+      throw new TableException("DISTINCT aggregates are currently not supported.")
     }
 
     // check if we have grouping sets
     val groupSets = agg.getGroupType != Group.SIMPLE
     if (groupSets || agg.indicator) {
-      throw TableException("GROUPING SETS are currently not supported.")
+      throw new TableException("GROUPING SETS are currently not supported.")
     }
 
     !distinctAggs && !groupSets && !agg.indicator

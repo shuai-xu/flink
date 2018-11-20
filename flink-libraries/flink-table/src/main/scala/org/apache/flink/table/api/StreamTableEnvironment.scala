@@ -203,7 +203,7 @@ abstract class StreamTableEnvironment(
       case tableSource: TableSource if TableSourceUtil.hasRowtimeAttribute(tableSource) &&
         execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime =>
 
-        throw TableException(
+        throw new TableException(
           s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
             s"But is: ${execEnv.getStreamTimeCharacteristic}")
       case _ => // ok
@@ -338,8 +338,8 @@ abstract class StreamTableEnvironment(
       tableSink: TableSink[_]): Unit = {
 
     checkValidTableName(name)
-    if (fieldNames == null) throw TableException("fieldNames must not be null.")
-    if (fieldTypes == null) throw TableException("fieldTypes must not be null.")
+    if (fieldNames == null) throw new TableException("fieldNames must not be null.")
+    if (fieldTypes == null) throw new TableException("fieldTypes must not be null.")
     if (fieldNames.length == 0) throw new TableException("fieldNames must not be empty.")
     if (fieldNames.length != fieldTypes.length) {
       throw new TableException("Same number of field names and types required.")
@@ -490,7 +490,7 @@ abstract class StreamTableEnvironment(
 
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw TableException(
+      throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
@@ -503,7 +503,7 @@ abstract class StreamTableEnvironment(
 
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw TableException(
+      throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
@@ -548,7 +548,7 @@ abstract class StreamTableEnvironment(
     // validate and extract time attributes
     val (rowtime, proctime) = validateAndExtractTimeAttributes(DataTypes.of(inputType), fields)
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw TableException(
+      throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
@@ -595,7 +595,7 @@ abstract class StreamTableEnvironment(
 
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw TableException(
+      throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
             s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
@@ -608,7 +608,7 @@ abstract class StreamTableEnvironment(
 
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw TableException(
+      throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
             s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
@@ -987,7 +987,7 @@ abstract class StreamTableEnvironment(
         case node: StreamExecRel =>
           node.translateToPlan(this)
         case _ =>
-          throw TableException("Cannot generate DataStream due to an invalid logical plan. " +
+          throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +
             "This is a bug and should not happen. Please file an issue.")
       }
     }
@@ -1232,7 +1232,7 @@ abstract class StreamTableEnvironment(
           translate(table, n.sink)
         } catch {
           case t: TableException =>
-            throw TableException(s"Error happens when translating plan for sink '${n.sink}'", t)
+            throw new TableException(s"Error happens when translating plan for sink '${n.sink}'", t)
         }
 
         block.setOptimizedPlan(optimizedPlan)

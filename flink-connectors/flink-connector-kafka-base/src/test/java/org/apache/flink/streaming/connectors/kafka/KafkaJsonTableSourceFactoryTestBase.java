@@ -24,7 +24,6 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.FormatDescriptor;
 import org.apache.flink.table.descriptors.Json;
 import org.apache.flink.table.descriptors.Kafka;
@@ -161,11 +160,10 @@ public abstract class KafkaJsonTableSourceFactoryTestBase {
 						.field("proc-time", DataTypes.toTypeInfo(DataTypes.TIMESTAMP)).proctime())
 			.inAppendMode();
 
-		DescriptorProperties properties = new DescriptorProperties(true);
-		testDesc.addProperties(properties);
+		final Map<String, String> properties = testDesc.toProperties();
 		final TableSource factorySource =
 				TableFactoryService.find(StreamTableSourceFactory.class, testDesc)
-						.createStreamTableSource(properties.asMap());
+						.createStreamTableSource(properties);
 
 		assertEquals(builderSource, factorySource);
 	}

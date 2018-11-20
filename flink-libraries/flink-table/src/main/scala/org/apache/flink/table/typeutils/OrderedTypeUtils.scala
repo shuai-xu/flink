@@ -49,7 +49,7 @@ object OrderedTypeUtils {
       case DataTypes.BYTE_ARRAY => new ByteArrayComparator(ord == Order.ASCENDING)
 
       case _ =>
-        throw TableException(s"Type is not supported as the sort key: $t")
+        throw new TableException(s"Type is not supported as the sort key: $t")
     }
   }
 
@@ -89,7 +89,7 @@ object OrderedTypeUtils {
         case et: TypeInfoWrappedType => createOrderedTypeInfoFromTypeInfo(et.getTypeInfo, ord)
 
         case _ =>
-          throw TableException(s"Type is not supported as the sort key: $t")
+          throw new TableException(s"Type is not supported as the sort key: $t")
       }
     } else {
       t match {
@@ -120,7 +120,7 @@ object OrderedTypeUtils {
         case et: TypeInfoWrappedType => createOrderedTypeInfoFromTypeInfo(et.getTypeInfo, ord)
 
         case _ =>
-          throw TableException(s"Type is not supported as the sort key: $t")
+          throw new TableException(s"Type is not supported as the sort key: $t")
       }
     }
   }
@@ -157,7 +157,7 @@ object OrderedTypeUtils {
         case BIG_INT_TYPE_INFO => ASC_BIG_INT_TYPE_INFO
 
         case _ =>
-          throw TableException(s"Type is not supported as the sort key: $typeInfo")
+          throw new TableException(s"Type is not supported as the sort key: $typeInfo")
       }
     } else {
       typeInfo match {
@@ -188,7 +188,7 @@ object OrderedTypeUtils {
         case BIG_INT_TYPE_INFO => DESC_BIG_INT_TYPE_INFO
 
         case _ =>
-          throw TableException(s"Type is not supported as the sort key: $typeInfo")
+          throw new TableException(s"Type is not supported as the sort key: $typeInfo")
       }
     }
   }

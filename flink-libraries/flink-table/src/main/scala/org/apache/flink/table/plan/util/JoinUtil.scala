@@ -92,7 +92,7 @@ object JoinUtil {
       if (allowEmpty) {
         (leftKeys, rightKeys)
       } else {
-        throw TableException(
+        throw new TableException(
           TableErrors.INST.sqlJoinEqualConditionNotFound(
             s"\tleft: ${left.toString}\n\tright: ${right.toString}"))
       }
@@ -111,7 +111,7 @@ object JoinUtil {
           leftKeys.add(pair.source)
           rightKeys.add(pair.target)
         } else {
-          throw TableException(
+          throw new TableException(
             TableErrors.INST.sqlJoinEqualJoinOnIncompatibleTypes(
               s"\tLeft: ${left.toString}\n\tright: ${right.toString}"))
         }

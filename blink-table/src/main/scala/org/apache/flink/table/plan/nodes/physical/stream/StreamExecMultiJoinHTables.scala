@@ -115,7 +115,7 @@ class StreamExecMultiJoinHTables(
 
     for (joinType <- joinTypes.asScala) {
       if (joinType != JoinRelType.INNER && joinType != JoinRelType.LEFT) {
-        throw TableException("Only support inner or left join with a HBaseTable.")
+        throw new TableException("Only support inner or left join with a HBaseTable.")
       }
     }
     val inputDataStream = new DataStream(
@@ -176,7 +176,7 @@ class StreamExecMultiJoinHTables(
           val (idx, keyType) = leftInputWithIdx.find(_._1 == (chain.chainedLeftJoinKeys.get(i)))
             .map(_._2) match {
             case Some(idx) => (idx, inputRowTypeInfo.getTypeAt(idx))
-            case _ => throw TableException(
+            case _ => throw new TableException(
               "This must be a bug, could not match left join key " +
                 "index from root input when start join a HTable")
           }

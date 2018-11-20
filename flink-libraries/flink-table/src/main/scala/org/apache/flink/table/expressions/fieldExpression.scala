@@ -344,7 +344,8 @@ case class RowtimeAttribute(expr: Expression) extends TimeAttribute(expr) {
         // batch time window
         DataTypes.TIMESTAMP
       case _ =>
-        throw TableException("RowtimeAttribute has invalid type. Please report this bug.")
+        throw new TableException("WindowReference of RowtimeAttribute has invalid type. " +
+          "Please report this bug.")
     }
   }
 

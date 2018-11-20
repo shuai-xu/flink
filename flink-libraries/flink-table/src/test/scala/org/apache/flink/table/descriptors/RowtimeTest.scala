@@ -94,10 +94,10 @@ class RowtimeTest extends DescriptorTestBase {
       "rowtime.timestamps.type" -> "custom",
       "rowtime.timestamps.class" -> ("org.apache.flink.table.descriptors." +
         "RowtimeTest$CustomExtractor"),
-      "rowtime.timestamps.serialized" -> ("rO0ABXNyAD5vcmcuYXBhY2hlLmZsaW5rLnRhYmxlLmRlc2NyaX" +
-        "B0b3JzLlJvd3RpbWVUZXN0JEN1c3RvbUV4dHJhY3Rvco24SJYz-nhVAgABTAAFZmllbGR0ABJMamF2YS9sYW" +
-        "5nL1N0cmluZzt4cgA-b3JnLmFwYWNoZS5mbGluay50YWJsZS5zb3VyY2VzLnRzZXh0cmFjdG9ycy5UaW1lc3" +
-        "RhbXBFeHRyYWN0b3JjTy3cOl2oPgIAAHhwdAAHdHNGaWVsZA"),
+      "rowtime.timestamps.serialized" -> ("rO0ABXNyAD5vcmcuYXBhY2hlLmZsaW5rLnRhYmxlLmRlc2NyaXB0b3" +
+        "JzLlJvd3RpbWVUZXN0JEN1c3RvbUV4dHJhY3RvcmakKKmQe_QEAgABTAAFZmllbGR0ABJMamF2YS9sYW5nL1N0cm" +
+        "luZzt4cgA-b3JnLmFwYWNoZS5mbGluay50YWJsZS5zb3VyY2VzLnRzZXh0cmFjdG9ycy5UaW1lc3RhbXBFeHRyYW" +
+        "N0b3LyWD_CQ3ky_AIAAHhwdAAHdHNGaWVsZA"),
       "rowtime.watermarks.type" -> "periodic-bounded",
       "rowtime.watermarks.delay" -> "1000"
     )
@@ -124,7 +124,7 @@ object RowtimeTest {
       argumentFieldTypes(0) match {
         case DataTypes.TIMESTAMP =>
         case _ =>
-          throw ValidationException(
+          throw new ValidationException(
             s"Field 'ts' must be of type Timestamp but is of type ${argumentFieldTypes(0)}.")
       }
     }

@@ -71,7 +71,7 @@ class BatchExecRank(
   require(rankFunction.kind == SqlKind.RANK, "Only RANK is supported now")
   val (rankStart, rankEnd) = rankRange match {
     case r: ConstantRankRange => (r.rankStart, r.rankEnd)
-    case o => throw TableException(s"$o is not supported now")
+    case o => throw new TableException(s"$o is not supported now")
   }
 
   override def deriveRowType(): RelDataType = {

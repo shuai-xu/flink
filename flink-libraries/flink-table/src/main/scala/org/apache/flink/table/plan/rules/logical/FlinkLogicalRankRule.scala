@@ -76,8 +76,9 @@ class FlinkLogicalRankRule
 
         rankRange match {
           case Some(_: ConstantRankRangeWithoutEnd) =>
-            throw TableException("Rank end is not specified. Currently rank only support TopN, " +
-                                   "which means the rank end must be specified.")
+            throw new TableException(
+              "Rank end is not specified. Currently rank only support TopN, " +
+              "which means the rank end must be specified.")
           case _ => // ignore
         }
 

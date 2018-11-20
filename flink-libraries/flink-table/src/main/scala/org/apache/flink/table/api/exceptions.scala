@@ -24,6 +24,8 @@ import org.apache.flink.table.catalog.ExternalCatalogTypes.PartitionSpec
 import org.apache.flink.table.descriptors.DescriptorProperties
 import org.apache.flink.table.factories.{TableFactory => JTableFactory}
 
+import _root_.scala.collection.JavaConverters._
+
 /**
   * Exception for all errors occurring during expression parsing.
   */
@@ -39,38 +41,6 @@ case class SqlParserException(
 
   def this(msg: String) = this(msg, null)
 
-}
-
-/**
-  * General Exception for all errors during table handling.
-  */
-case class TableException(
-    msg: String,
-    cause: Throwable)
-  extends RuntimeException(msg, cause) {
-
-  def this(msg: String) = this(msg, null)
-
-}
-
-object TableException {
-  def apply(msg: String): TableException = new TableException(msg)
-}
-
-/**
-  * Exception for all errors occurring during validation phase.
-  */
-case class ValidationException(
-    msg: String,
-    cause: Throwable)
-  extends RuntimeException(msg, cause) {
-
-  def this(msg: String) = this(msg, null)
-
-}
-
-object ValidationException {
-  def apply(msg: String): ValidationException = new ValidationException(msg)
 }
 
 /**
@@ -255,7 +225,7 @@ case class NoMatchingTableFactoryException(
         |Reason: $message
        |
         |The following properties are requested:
-       |${DescriptorProperties.toString(properties)}
+       |${DescriptorProperties.toString(properties.asJava)}
        |
         |The following factories have been considered:
        |${factories.map(_.getClass.getName).mkString("\n")}
@@ -294,7 +264,7 @@ case class AmbiguousTableFactoryException(
        |${matchingFactories.map(_.getClass.getName).mkString("\n")}
        |
         |The following properties are requested:
-       |${DescriptorProperties.toString(properties)}
+       |${DescriptorProperties.toString(properties.asJava)}
        |
         |The following factories have been considered:
        |${factories.map(_.getClass.getName).mkString("\n")}

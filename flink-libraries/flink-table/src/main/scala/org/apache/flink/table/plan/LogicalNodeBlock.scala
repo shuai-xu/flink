@@ -53,7 +53,7 @@ object LogicalNodeBlockPlanBuilder {
     // checks sink node
     sinkNodes.foreach {
       case _: SinkNode => // do nothing
-      case o => throw TableException(s"Error node: $o, Only SinkNode is supported.")
+      case o => throw new TableException(s"Error node: $o, Only SinkNode is supported.")
     }
     val builder = new LogicalNodeBlockPlanBuilder(tEnv)
     builder.buildLogicalNodeBlockPlan(sinkNodes)
@@ -491,7 +491,7 @@ class LogicalNodeBlock(val outputNode: LogicalNode, tEnv: TableEnvironment) {
           case AliasNode(aliasList, _) => AliasNode(aliasList, child)
           case Project(projectList, _) => Project(projectList, child)
           case Sort(order, _) => Sort(order, child)
-          case _ => throw TableException(s"Unsupported UnaryNode node: $node")
+          case _ => throw new TableException(s"Unsupported UnaryNode node: $node")
         }
       case b: BinaryNode =>
         Preconditions.checkArgument(children.length == 2)
@@ -503,9 +503,9 @@ class LogicalNodeBlock(val outputNode: LogicalNode, tEnv: TableEnvironment) {
           case Union(_, _, all) => Union(left, right, all)
           case Intersect(_, _, all) => Intersect(left, right, all)
           case Minus(_, _, all) => Minus(left, right, all)
-          case _ => throw TableException(s"Unsupported BinaryNode node: $node")
+          case _ => throw new TableException(s"Unsupported BinaryNode node: $node")
         }
-      case _ => throw TableException(s"Unsupported LogicalNode node: $node")
+      case _ => throw new TableException(s"Unsupported LogicalNode node: $node")
     }
   }
 

@@ -36,7 +36,7 @@ object TableFactoryUtil {
       descriptor: Descriptor)
     : TableSource = {
 
-    val javaMap = DescriptorProperties.toJavaMap(descriptor)
+    val javaMap = descriptor.toProperties
 
     tableEnvironment match {
       case _: BatchTableEnvironment =>
@@ -62,7 +62,7 @@ object TableFactoryUtil {
       descriptor: Descriptor)
     : TableSink[T] = {
 
-    val javaMap = DescriptorProperties.toJavaMap(descriptor)
+    val javaMap = descriptor.toProperties
 
     tableEnvironment match {
       case _: BatchTableEnvironment =>

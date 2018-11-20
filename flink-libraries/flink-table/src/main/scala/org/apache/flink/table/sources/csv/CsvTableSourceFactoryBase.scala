@@ -24,7 +24,6 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{
   CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.descriptors.CsvValidator._
-import org.apache.flink.table.descriptors.DescriptorProperties.toScala
 import org.apache.flink.table.descriptors.FileSystemValidator.{
   CONNECTOR_PATH, CONNECTOR_TYPE_VALUE}
 import org.apache.flink.table.descriptors.FormatDescriptorValidator.{
@@ -32,6 +31,7 @@ import org.apache.flink.table.descriptors.FormatDescriptorValidator.{
 import org.apache.flink.table.descriptors.SchemaValidator.SCHEMA
 import org.apache.flink.table.descriptors._
 import org.apache.flink.table.factories.TableFactory
+import org.apache.flink.table.util.JavaScalaConversionUtil.toScala
 
 /**
   * Factory base for creating configured instances of [[CsvTableSource]].
@@ -52,8 +52,8 @@ abstract class CsvTableSourceFactoryBase extends TableFactory {
     // connector
     properties.add(CONNECTOR_PATH)
     // format
-    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TYPE}")
-    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.NAME}")
+    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TABLE_SCHEMA_TYPE}")
+    properties.add(s"$FORMAT_FIELDS.#.${DescriptorProperties.TABLE_SCHEMA_NAME}")
     properties.add(FORMAT_FIELD_DELIMITER)
     properties.add(FORMAT_LINE_DELIMITER)
     properties.add(FORMAT_QUOTE_CHARACTER)
@@ -62,8 +62,8 @@ abstract class CsvTableSourceFactoryBase extends TableFactory {
     properties.add(FORMAT_IGNORE_PARSE_ERRORS)
     properties.add(CONNECTOR_PATH)
     // schema
-    properties.add(s"$SCHEMA.#.${DescriptorProperties.TYPE}")
-    properties.add(s"$SCHEMA.#.${DescriptorProperties.NAME}")
+    properties.add(s"$SCHEMA.#.${DescriptorProperties.TABLE_SCHEMA_TYPE}")
+    properties.add(s"$SCHEMA.#.${DescriptorProperties.TABLE_SCHEMA_NAME}")
     properties
   }
 
@@ -103,7 +103,7 @@ abstract class CsvTableSourceFactoryBase extends TableFactory {
     toScala(params.getOptionalString(FORMAT_LINE_DELIMITER))
       .foreach(csvTableSourceBuilder.lineDelimiter)
 
-    formatSchema.getColumnNames.zip(formatSchema.getTypes).foreach { case (name, tpe) =>
+    formatSchema.getFieldNames.zip(formatSchema.getFieldTypes).foreach { case (name, tpe) =>
       csvTableSourceBuilder.field(name, tpe)
     }
     toScala(params.getOptionalCharacter(FORMAT_QUOTE_CHARACTER))

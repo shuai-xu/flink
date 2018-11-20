@@ -245,17 +245,17 @@ class StreamExecMatch(
             }
 
           case PATTERN_ALTER =>
-            throw TableException("Currently, CEP doesn't support branching patterns.")
+            throw new TableException("Currently, CEP doesn't support branching patterns.")
 
           case PATTERN_PERMUTE =>
-            throw TableException("Currently, CEP doesn't support PERMUTE patterns.")
+            throw new TableException("Currently, CEP doesn't support PERMUTE patterns.")
 
           case PATTERN_EXCLUDE =>
-            throw TableException("Currently, CEP doesn't support '{-' '-}' patterns.")
+            throw new TableException("Currently, CEP doesn't support '{-' '-}' patterns.")
         }
 
       case _ =>
-        throw TableException("")
+        throw new TableException("")
     }
 
     var comparator: EventComparator[BaseRow] = null
