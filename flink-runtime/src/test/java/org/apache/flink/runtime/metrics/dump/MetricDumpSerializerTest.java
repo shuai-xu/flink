@@ -102,9 +102,13 @@ public class MetricDumpSerializerTest {
 
 		SimpleCounter c1 = new SimpleCounter();
 		SimpleCounter c2 = new SimpleCounter();
+		SimpleCounter c3 = new SimpleCounter();
+		SimpleCounter c4 = new SimpleCounter();
 
 		c1.inc(1);
 		c2.inc(2);
+		c3.inc(3);
+		c4.inc(4);
 
 		Gauge<Integer> g1 = new Gauge<Integer>() {
 			@Override
@@ -137,6 +141,8 @@ public class MetricDumpSerializerTest {
 
 		counters.put(c1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.JobManagerQueryScopeInfo("A"), "c1"));
 		counters.put(c2, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.TaskManagerQueryScopeInfo("tmid", "B"), "c2"));
+		counters.put(c3, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E"), "numRecordsIn"));
+		counters.put(c4, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E"), "numRecordsOut"));
 		meters.put(m1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.JobQueryScopeInfo("jid", "C"), "c3"));
 		gauges.put(g1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.TaskQueryScopeInfo("jid", "vid", 2, "D"), "g1"));
 		histograms.put(h1, new Tuple2<QueryScopeInfo, String>(new QueryScopeInfo.OperatorQueryScopeInfo("jid", "vid", 2, "opname", "E"), "h1"));
@@ -145,7 +151,7 @@ public class MetricDumpSerializerTest {
 		List<MetricDump> deserialized = deserializer.deserialize(serialized);
 
 		// ===== Counters ==============================================================================================
-		assertEquals(5, deserialized.size());
+		assertEquals(6, deserialized.size());
 
 		for (MetricDump metric : deserialized) {
 			switch (metric.getCategory()) {
@@ -164,6 +170,12 @@ public class MetricDumpSerializerTest {
 							assertEquals("c2", counterDump.name);
 							assertEquals("tmid", ((QueryScopeInfo.TaskManagerQueryScopeInfo) counterDump.scopeInfo).taskManagerID);
 							counters.remove(c2);
+							break;
+						case 3:
+							counters.remove(c3);
+							break;
+						case 4:
+							counters.remove(c4);
 							break;
 						default:
 							fail();
@@ -221,6 +233,6 @@ public class MetricDumpSerializerTest {
 		}
 		assertTrue(counters.isEmpty());
 		assertTrue(gauges.isEmpty());
-		assertTrue(histograms.isEmpty());
+		assertTrue(!histograms.isEmpty());
 	}
 }

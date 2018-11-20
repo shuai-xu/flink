@@ -41,6 +41,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_RECORDS_IN;
+import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_RECORDS_OUT;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_JM;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_JOB;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_OPERATOR;
@@ -105,6 +107,24 @@ public class MetricDumpSerialization {
 		private DataOutputSerializer buffer = new DataOutputSerializer(1024 * 32);
 
 		/**
+		 * Currently for operator level metrics only dump certain ones to avoid large memory and GC pressure at JM side.
+		 *
+		 * @param scopeInfo metric scope
+		 * @param name      metrics name
+		 * @return boolean whether the metric should be dumped
+		 */
+		private boolean shouldDump(QueryScopeInfo scopeInfo, String name) {
+			if (scopeInfo.getCategory() == INFO_CATEGORY_OPERATOR) {
+				if (name.equals(IO_NUM_RECORDS_IN) || name.equals(IO_NUM_RECORDS_OUT)) {
+					return true;
+				}
+
+				return false;
+			}
+			return true;
+		}
+
+		/**
 		 * Serializes the given metrics and returns the resulting byte array.
 		 *
 		 * <p>Should a {@link Metric} accessed in this method throw an exception it will be omitted from the returned
@@ -131,6 +151,9 @@ public class MetricDumpSerialization {
 			int numCounters = 0;
 			for (Map.Entry<Counter, Tuple2<QueryScopeInfo, String>> entry : counters.entrySet()) {
 				try {
+					if (!shouldDump(entry.getValue().f0, entry.getValue().f1)) {
+						continue;
+					}
 					serializeCounter(buffer, entry.getValue().f0, entry.getValue().f1, entry.getKey());
 					numCounters++;
 				} catch (Exception e) {
@@ -141,6 +164,9 @@ public class MetricDumpSerialization {
 			int numGauges = 0;
 			for (Map.Entry<Gauge<?>, Tuple2<QueryScopeInfo, String>> entry : gauges.entrySet()) {
 				try {
+					if (!shouldDump(entry.getValue().f0, entry.getValue().f1)) {
+						continue;
+					}
 					serializeGauge(buffer, entry.getValue().f0, entry.getValue().f1, entry.getKey());
 					numGauges++;
 				} catch (Exception e) {
@@ -151,6 +177,9 @@ public class MetricDumpSerialization {
 			int numHistograms = 0;
 			for (Map.Entry<Histogram, Tuple2<QueryScopeInfo, String>> entry : histograms.entrySet()) {
 				try {
+					if (!shouldDump(entry.getValue().f0, entry.getValue().f1)) {
+						continue;
+					}
 					serializeHistogram(buffer, entry.getValue().f0, entry.getValue().f1, entry.getKey());
 					numHistograms++;
 				} catch (Exception e) {
@@ -161,6 +190,9 @@ public class MetricDumpSerialization {
 			int numMeters = 0;
 			for (Map.Entry<Meter, Tuple2<QueryScopeInfo, String>> entry : meters.entrySet()) {
 				try {
+					if (!shouldDump(entry.getValue().f0, entry.getValue().f1)) {
+						continue;
+					}
 					serializeMeter(buffer, entry.getValue().f0, entry.getValue().f1, entry.getKey());
 					numMeters++;
 				} catch (Exception e) {

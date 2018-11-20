@@ -133,7 +133,7 @@ public class MetricFetcherTest extends TestLogger {
 			assertEquals("x", store.getTaskManagerMetricStore(tmRID.toString()).metrics.get("abc.gauge"));
 			assertEquals("5.0", store.getJobMetricStore(jobID.toString()).metrics.get("abc.jc"));
 			assertEquals("2", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.abc.tc"));
-			assertEquals("1", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.opname.abc.oc"));
+			assertEquals("1", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.opname.abc.numRecordsIn"));
 		}
 	}
 
@@ -149,7 +149,7 @@ public class MetricFetcherTest extends TestLogger {
 		c1.inc(1);
 		c2.inc(2);
 
-		counters.put(c1, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "oc"));
+		counters.put(c1, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "numRecordsIn"));
 		counters.put(c2, new Tuple2<>(new QueryScopeInfo.TaskQueryScopeInfo(jobID.toString(), "taskid", 2, "abc"), "tc"));
 		meters.put(new Meter() {
 			@Override
