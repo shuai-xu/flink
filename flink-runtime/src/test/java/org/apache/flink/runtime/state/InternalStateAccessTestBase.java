@@ -285,11 +285,12 @@ public abstract class InternalStateAccessTestBase {
 		}
 
 		Integer key = 1;
+		rawPutAllState.setCurrentGroup(getCurrentGroup(key));
 		rawPutAllState.rawPutAll(key, pairs);
 
 		for (Map.Entry<Long, Double> entry : pairs.entrySet()) {
 			Row internalState = Row.of(key, entry.getKey());
-			rawPutAllState.setCurrentGroup(getCurrentGroup(internalState));
+			rawPutAllState.setCurrentGroup(getCurrentGroup(key));
 			Row value = rawPutAllState.get(internalState);
 			assertEquals(entry.getValue(), value.getField(0));
 		}

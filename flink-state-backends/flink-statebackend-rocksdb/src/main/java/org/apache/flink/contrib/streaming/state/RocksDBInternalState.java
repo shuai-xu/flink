@@ -252,8 +252,7 @@ public class RocksDBInternalState implements InternalState {
 		try (RocksDBWriteBatchWrapper writeBatchWrapper = new RocksDBWriteBatchWrapper(backend.getDbInstance().getDb(), backend.getDbInstance().getWriteOptions())) {
 			for (Map.Entry<MK, MV> entry : maps.entrySet()) {
 				Row internalKey = Row.of(key, entry.getKey());
-				int group = getGroupForKey(internalKey);
-				byte[] dbKey = serializeStateKey(group, internalKey);
+				byte[] dbKey = serializeStateKey(currentGroup, internalKey);
 				byte[] dbValue = serializeStateValue(Row.of(entry.getValue()), descriptor);
 				writeBatchWrapper.put(backend.getDbInstance().getDefaultColumnFamily(), dbKey, dbValue);
 			}

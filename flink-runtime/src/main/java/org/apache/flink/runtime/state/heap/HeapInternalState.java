@@ -261,7 +261,6 @@ final class HeapInternalState implements InternalState {
 	public <K, MK, MV> void rawPutAll(K key, Map<MK, MV> maps) {
 		for (Map.Entry<MK, MV> entry : maps.entrySet()) {
 			Row internalKey = Row.of(key, entry.getKey());
-			currentGroup = getGroupForKey(internalKey);
 			put(internalKey, Row.of(entry.getValue()));
 		}
 	}

@@ -249,8 +249,7 @@ public class NiagaraInternalState implements InternalState {
 		Map<byte[], byte[]> keyValueBytesMap = new HashMap<>(maps.size());
 		for (Map.Entry<MK, MV> entry : maps.entrySet()) {
 			Row internalKey = Row.of(key, entry.getKey());
-			int group = getGroupForKey(internalKey);
-			byte[] dbKey = serializeStateKey(group, internalKey);
+			byte[] dbKey = serializeStateKey(currentGroup, internalKey);
 			byte[] dbValue = serializeStateValue(Row.of(entry.getValue()), descriptor);
 			keyValueBytesMap.put(dbKey, dbValue);
 		}
