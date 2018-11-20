@@ -18,22 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.RelDistribution.Type._
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Window.Group
-import org.apache.calcite.rel.core.{AggregateCall, Window}
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rex.{RexLiteral, RexWindowBound}
-import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.fun.SqlLeadLagAggFunction
-import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types._
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen._
@@ -49,6 +37,19 @@ import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToB
 import org.apache.flink.table.runtime.operator.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil}
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.RelDistribution.Type._
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Window.Group
+import org.apache.calcite.rel.core.{AggregateCall, Window}
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rex.{RexLiteral, RexWindowBound}
+import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.fun.SqlLeadLagAggFunction
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.util.ImmutableIntList
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer

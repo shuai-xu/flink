@@ -90,10 +90,6 @@ class StreamExecJoin(
       ruleDescription)
   }
 
-  override def toString: String = {
-    s"$joinTypeToString(where: ($joinConditionToString), join: ($joinSelectionToString))"
-  }
-
   def inferPrimaryKeyAndJoinStateType(
       input: RelNode, joinKeys: Array[Int]): (Option[Array[Int]], JoinStateHandler.Type) = {
     val uniqueKeys = cluster.getMetadataQuery.getUniqueKeys(input)

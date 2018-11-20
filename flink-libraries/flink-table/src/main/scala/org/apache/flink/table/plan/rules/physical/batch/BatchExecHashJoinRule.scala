@@ -97,7 +97,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
 
     def transformToEquiv(leftRequiredTrait: RelTraitSet, rightRequiredTrait: RelTraitSet): Unit = {
       val newLeft = RelOptRule.convert(left, leftRequiredTrait)
-      var newRight = RelOptRule.convert(right, rightRequiredTrait)
+      val newRight = RelOptRule.convert(right, rightRequiredTrait)
       val providedTraitSet = join.getTraitSet.replace(FlinkConventions.BATCHEXEC)
 
       call.transformTo(join match {

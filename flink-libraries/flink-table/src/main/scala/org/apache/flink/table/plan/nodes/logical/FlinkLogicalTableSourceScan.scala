@@ -18,8 +18,12 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
-import java.util.function.Supplier
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.sources._
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan._
@@ -30,14 +34,9 @@ import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.schema.Table
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.sources._
 
-import scala.collection.JavaConverters._
+import java.util
+import java.util.function.Supplier
 
 class FlinkLogicalTableSourceScan(
     cluster: RelOptCluster,
@@ -79,12 +78,6 @@ class FlinkLogicalTableSourceScan(
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
         .item("fields", tableSource.getTableSchema.getColumnNames.mkString(", "))
-  }
-
-  override def toString: String = {
-    val tableName = getTable.getQualifiedName
-    val s = s"table:$tableName, fields:(${getRowType.getFieldNames.asScala.toList.mkString(", ")})"
-    s"Scan($s)"
   }
 }
 

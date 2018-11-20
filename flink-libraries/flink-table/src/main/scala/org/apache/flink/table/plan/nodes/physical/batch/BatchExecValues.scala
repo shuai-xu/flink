@@ -59,10 +59,6 @@ class BatchExecValues(
 
   override def deriveRowType(): RelDataType = rowRelDataType
 
-  override def toString: String = {
-    s"Values(values: (${getRowType.getFieldNames.toList.mkString(", ")}))"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("values", valuesFieldsToString)

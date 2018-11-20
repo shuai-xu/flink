@@ -17,20 +17,9 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util.{List => JList}
-
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Window.Group
-import org.apache.calcite.rel.core.{AggregateCall, Window}
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.rex.RexLiteral
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
@@ -46,6 +35,18 @@ import org.apache.flink.table.runtime.functions.ProcessFunction
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Window.Group
+import org.apache.calcite.rel.core.{AggregateCall, Window}
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.rex.RexLiteral
+import org.apache.calcite.tools.RelBuilder
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConverters._
 
@@ -75,10 +76,6 @@ class StreamExecOverAggregate(
       inputs.get(0),
       outputSchema,
       inputSchema)
-  }
-
-  override def toString: String = {
-    s"OverAggregate($aggOpName)"
   }
 
   override def estimateRowCount(mq: RelMetadataQuery): Double = {

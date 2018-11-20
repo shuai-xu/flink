@@ -17,18 +17,19 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util.{List => JList}
+import org.apache.flink.streaming.api.transformations.{StreamTransformation, UnionTransformation}
+import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{SetOp, Union}
 import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.flink.streaming.api.transformations.{StreamTransformation, UnionTransformation}
-import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
 

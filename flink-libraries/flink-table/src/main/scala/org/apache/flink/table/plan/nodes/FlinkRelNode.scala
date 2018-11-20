@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.nodes
 
+import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
+
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlAsOperator
 import org.apache.calcite.sql.SqlKind._
-import org.apache.flink.table.plan.nodes.ExpressionFormat.ExpressionFormat
 
 import scala.collection.JavaConversions._
 
@@ -64,7 +65,7 @@ trait FlinkRelNode extends RelNode {
           case _ : SqlAsOperator => ops.head
           case _ =>
             expressionFormat match {
-              case ExpressionFormat.Infix if ops.length == 1 =>
+              case ExpressionFormat.Infix if ops.size() == 1 =>
                 val operand = ops.head
                 c.getKind match {
                   case IS_FALSE | IS_NOT_FALSE | IS_TRUE | IS_NOT_TRUE | IS_UNKNOWN | IS_NULL |

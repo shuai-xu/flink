@@ -18,16 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
-
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.RelDistribution.Type
-import org.apache.calcite.rel.RelDistribution.Type.{HASH_DISTRIBUTED, SINGLETON}
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
-import org.apache.calcite.util.{ImmutableBitSet, ImmutableIntList, Util}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
@@ -44,6 +34,17 @@ import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.RankOperator
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.FlinkRelOptUtil
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.RelDistribution.Type
+import org.apache.calcite.rel.RelDistribution.Type.{HASH_DISTRIBUTED, SINGLETON}
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
+import org.apache.calcite.util.{ImmutableBitSet, ImmutableIntList, Util}
+
+import java.util
 
 import scala.collection.JavaConversions._
 

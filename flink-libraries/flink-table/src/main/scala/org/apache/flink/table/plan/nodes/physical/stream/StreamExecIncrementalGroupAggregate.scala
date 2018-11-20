@@ -17,14 +17,9 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
@@ -35,6 +30,12 @@ import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunc
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.tools.RelBuilder
 
 /**
   *
@@ -94,18 +95,6 @@ class StreamExecIncrementalGroupAggregate(
       groupKey)
   }
 
-  override def toString: String = {
-    val shuffleKeyToStr = s"shuffleKey: (${groupingToString(inputNode.getRowType, shuffleKey)})"
-    val groupKeyToStr = s"groupKey: (${groupingToString(inputNode.getRowType, groupKey)})"
-    val selectToStr = s"select: (${streamAggregationToString(
-      inputNode.getRowType,
-      getRowType,
-      finalAggInfoList,
-      groupKey,
-      shuffleKey = Some(shuffleKey))})"
-    s"IncrementalGroupAggregate($shuffleKeyToStr, $groupKeyToStr, $selectToStr)"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("shuffleKey", groupingToString(inputNode.getRowType, shuffleKey))
@@ -118,13 +107,25 @@ class StreamExecIncrementalGroupAggregate(
         shuffleKey = Some(shuffleKey)))
   }
 
+  private def getOperatorName: String = {
+    val shuffleKeyToStr = s"shuffleKey: (${groupingToString(inputNode.getRowType, shuffleKey)})"
+    val groupKeyToStr = s"groupKey: (${groupingToString(inputNode.getRowType, groupKey)})"
+    val selectToStr = s"select: (${streamAggregationToString(
+      inputNode.getRowType,
+      getRowType,
+      finalAggInfoList,
+      groupKey,
+      shuffleKey = Some(shuffleKey))})"
+    s"IncrementalGroupAggregate($shuffleKeyToStr, $groupKeyToStr, $selectToStr)"
+  }
+
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
 
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
-    val opName = this.toString
+    val opName = getOperatorName
 
     val partialAggsHandler = generateAggsHandler(
       "PartialGroupAggsHandler",

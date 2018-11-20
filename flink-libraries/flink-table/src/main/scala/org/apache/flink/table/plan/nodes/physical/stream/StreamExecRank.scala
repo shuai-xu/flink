@@ -17,13 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
-import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException}
@@ -36,6 +29,15 @@ import org.apache.flink.table.plan.util.{RankRange, RankUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.rank._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.FlinkRelOptUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
+import org.apache.calcite.util.ImmutableBitSet
+
+import java.util
 
 import scala.collection.JavaConverters._
 
@@ -66,9 +68,7 @@ class StreamExecRank(
       tableConfig: Option[TableConfig] = None,
       forceRecompute: Boolean = false): RankStrategy = {
     if (strategy == null || forceRecompute) {
-      val tc: TableConfig = tableConfig.getOrElse(
-        cluster.getPlanner.getContext.unwrap(classOf[TableConfig])
-      )
+      val tc: TableConfig = tableConfig.getOrElse(FlinkRelOptUtil.getTableConfig(this))
       strategy = RankUtil.analyzeRankStrategy(cluster, tc, this, sortCollation)
     }
     strategy
@@ -111,17 +111,6 @@ class StreamExecRank(
     }
   }
 
-  override def toString: String = {
-    var result =
-      s"${getStrategy()}(orderBy: (${Rank.sortFieldsToString(sortCollation, schema.relDataType)})"
-    if (partitionKey.nonEmpty) {
-      result += s", partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
-    }
-    result += s", $selectToString"
-    result += s", ${rankRange.toString(inputSchema.fieldNames)})"
-    result
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
       .item("rankFunction", rankFunction.getKind)
@@ -134,8 +123,19 @@ class StreamExecRank(
       .item("select", selectToString)
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
+  private def getOperatorName: String = {
+    var result =
+      s"${getStrategy()}(orderBy: (${Rank.sortFieldsToString(sortCollation, schema.relDataType)})"
+    if (partitionKey.nonEmpty) {
+      result += s", partitionBy: (${partitionFieldsToString(partitionKey, schema.relDataType)})"
+    }
+    result += s", $selectToString"
+    result += s", ${rankRange.toString(inputSchema.fieldNames)})"
+    result
+  }
+
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
     val rankKind = rankFunction.getKind match {
       case SqlKind.ROW_NUMBER => SqlKind.ROW_NUMBER
@@ -241,7 +241,7 @@ class StreamExecRank(
           tableConfig)
     }
     val outputBaseInfo = schema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
-    val rankOpName = this.toString
+    val rankOpName = getOperatorName
 
     val inputTypeInfo = inputSchema.typeInfo(classOf[BaseRow])
     val selector = StreamExecUtil.getKeySelector(partitionKey, inputTypeInfo)

@@ -76,18 +76,6 @@ class BatchExecCorrelate(
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
-  override def toString: String = {
-    val rexCall = scan.getCall.asInstanceOf[RexCall]
-    val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
-    s"${
-      CorrelateUtil.correlateToString(
-        input.getRowType,
-        rexCall,
-        sqlFunction,
-        getExpressionString)
-    } select(${CorrelateUtil.selectToString(relRowType)})"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     val rexCall = scan.getCall.asInstanceOf[RexCall]
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]

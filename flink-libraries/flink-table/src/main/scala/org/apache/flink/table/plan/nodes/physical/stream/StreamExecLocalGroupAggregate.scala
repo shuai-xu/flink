@@ -17,28 +17,29 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import org.apache.flink.annotation.VisibleForTesting
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.common.CommonAggregate
+import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
+import org.apache.flink.table.plan.util.{AggregateInfoList, PartialFinalType, StreamExecUtil}
+import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
+import org.apache.flink.table.runtime.operator.bundle.BundleOperator
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.util.Pair
-import org.apache.flink.annotation.VisibleForTesting
-import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
-import org.apache.flink.table.plan.nodes.common.CommonAggregate
-import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
-import org.apache.flink.table.plan.util.{AggregateInfoList, PartialFinalType, StreamExecUtil}
-import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.aggregate.MiniBatchLocalGroupAggFunction
-import org.apache.flink.table.runtime.operator.bundle.BundleOperator
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.Logging
+
+import java.util.{ArrayList => JArrayList, List => JList}
 
 /**
   *
@@ -89,22 +90,6 @@ class StreamExecLocalGroupAggregate(
       partialFinal)
   }
 
-  override def toString: String = {
-    s"LocalGroupAggregate(${
-      if (groupings.nonEmpty) {
-        s"groupBy: (${groupingToString(inputRelDataType, groupings)}), "
-      } else {
-        ""
-      }
-    }select:(${
-      streamAggregationToString(
-        inputRelDataType,
-        getRowType,
-        aggInfoList,
-        groupings,
-        isLocal = true)}))"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
@@ -138,8 +123,24 @@ class StreamExecLocalGroupAggregate(
     values
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
+  private def getOperatorName: String = {
+    s"LocalGroupAggregate(${
+      if (groupings.nonEmpty) {
+        s"groupBy: (${groupingToString(inputRelDataType, groupings)}), "
+      } else {
+        ""
+      }
+    }select:(${
+      streamAggregationToString(
+        inputRelDataType,
+        getRowType,
+        aggInfoList,
+        groupings,
+        isLocal = true)}))"
+  }
+
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
@@ -178,7 +179,7 @@ class StreamExecLocalGroupAggregate(
 
     new OneInputTransformation(
       inputTransformation,
-      this.toString,
+      getOperatorName,
       operator,
       outRowType,
       inputTransformation.getParallelism)

@@ -18,14 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Calc
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rex.{RexCall, RexInputRef, RexProgram}
-import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.util.mapping.{Mapping, MappingType, Mappings}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.codegen.{CalcCodeGenerator, CodeGeneratorContext}
@@ -34,6 +26,15 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
 import org.apache.flink.table.plan.util.CalcUtil
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Calc
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rex.{RexCall, RexInputRef, RexProgram}
+import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.util.mapping.{Mapping, MappingType, Mappings}
 
 import scala.collection.JavaConversions._
 
@@ -63,8 +64,6 @@ class BatchExecCalc(
   }
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
-
-  override def toString: String = CalcUtil.calcToString(calcProgram, getExpressionString)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)

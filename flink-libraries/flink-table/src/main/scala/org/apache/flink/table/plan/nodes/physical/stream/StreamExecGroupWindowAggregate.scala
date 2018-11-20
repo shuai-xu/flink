@@ -18,13 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.time.Duration
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.api.window.{CountWindow, TimeWindow}
@@ -43,6 +36,14 @@ import org.apache.flink.table.plan.util._
 import org.apache.flink.table.runtime.operator.window.{WindowOperator, WindowOperatorBuilder}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.tools.RelBuilder
+
+import java.time.Duration
 
 class StreamExecGroupWindowAggregate(
     val window: LogicalWindow,
@@ -86,24 +87,6 @@ class StreamExecGroupWindowAggregate(
       grouping,
       inputTimestampIndex,
       emitStrategy)
-  }
-
-  override def toString: String = {
-    s"Aggregate(${
-      if (!grouping.isEmpty) {
-        s"groupBy: (${groupingToString(inputSchema.relDataType, grouping)}), "
-      } else {
-        ""
-      }
-    }window: ($window), " +
-      s"select: (${
-        aggregationToString(
-          inputSchema.relDataType,
-          grouping,
-          getRowType,
-          aggCalls,
-          namedProperties)
-      }))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {

@@ -17,24 +17,28 @@
  */
 package org.apache.flink.table.util
 
-import java.io.{PrintWriter, StringWriter}
-import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort, String => JString}
-import java.math.BigDecimal
-import java.sql.{Date, Time, Timestamp}
-import java.util.Calendar
-
-import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.{Aggregate, AggregateCall}
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.calcite.sql.SqlKind._
-import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{SameRelObjectShuttle, SubplanReuseContext}
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
+
+import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.rel.core.{Aggregate, AggregateCall}
+import org.apache.calcite.rel.externalize.RelWriterImpl
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.calcite.sql.SqlKind._
+import org.apache.calcite.sql.`type`.SqlTypeName._
+import org.apache.calcite.util.Pair
+
+import java.io.{PrintWriter, StringWriter}
+import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort, String => JString}
+import java.math.BigDecimal
+import java.sql.{Date, Time, Timestamp}
+import java.util
+import java.util.Calendar
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -73,6 +77,34 @@ object FlinkRelOptUtil {
       newRel.explain(planWriter)
       sw.toString
     }
+  }
+
+  def getDigest(rel: RelNode, withInput: Boolean = false): String = {
+    val sw: StringWriter = new StringWriter
+    val pw: RelWriter = new RelWriterImpl(
+      new PrintWriter(sw), SqlExplainLevel.DIGEST_ATTRIBUTES, false) {
+      override protected def explain_(
+          rel: RelNode, values: util.List[Pair[String, AnyRef]]): Unit = {
+
+        pw.write(rel.getRelTypeName)
+        pw.write("(")
+        var cnt = 0
+        values.foreach { value =>
+          value.right match {
+            case _: RelNode if !withInput => // ignore
+            case _ =>
+              if (cnt > 0) {
+                pw.write(", ")
+              }
+              pw.write(value.left + "=[" + value.right + "]")
+              cnt += 1
+          }
+        }
+        pw.write(")")
+      }
+    }
+    rel.explain(pw)
+    sw.toString
   }
 
   def getTableConfig(rel: RelNode): TableConfig = {

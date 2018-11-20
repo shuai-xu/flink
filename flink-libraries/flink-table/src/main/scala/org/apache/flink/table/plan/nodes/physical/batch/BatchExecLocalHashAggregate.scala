@@ -17,13 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
-import org.apache.calcite.rel.RelDistribution.Type
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
@@ -35,6 +28,14 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
+import org.apache.calcite.rel.RelDistribution.Type
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.util.ImmutableIntList
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -163,5 +164,4 @@ class BatchExecLocalHashAggregate(
 
   private def getOperatorName = getAggOperatorName("LocalHashAggregate")
 
-  override def toString: String = getOperatorName
 }

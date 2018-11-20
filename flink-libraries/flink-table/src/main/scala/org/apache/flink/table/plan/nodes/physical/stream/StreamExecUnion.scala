@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util.{List => JList}
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.{SetOp, Union}
-import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, UnionTransformation}
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.{SetOp, Union}
+import org.apache.calcite.rel.{RelNode, RelWriter}
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -63,10 +64,6 @@ class StreamExecUnion(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw).item("union", outputRowType.getFieldNames.mkString(", "))
-  }
-
-  override def toString: String = {
-    s"Union All(union: (${outputRowType.getFieldNames.mkString(", ")}))"
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

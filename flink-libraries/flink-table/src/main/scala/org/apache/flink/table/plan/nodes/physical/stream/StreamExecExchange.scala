@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelDistribution, RelNode}
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.transformations.{PartitionTransformation, StreamTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonExchange
 import org.apache.flink.table.plan.util.StreamExecUtil
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.{RelDistribution, RelNode}
 
 import scala.collection.JavaConversions._
 

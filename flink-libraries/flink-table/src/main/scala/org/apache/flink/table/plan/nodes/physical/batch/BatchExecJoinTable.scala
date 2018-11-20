@@ -18,13 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
-import org.apache.calcite.rex.{RexNode, RexProgram}
-import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.InternalType
@@ -33,6 +26,14 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.common.CommonJoinTable
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
+import org.apache.calcite.rex.{RexNode, RexProgram}
+import org.apache.calcite.util.mapping.IntPair
+
+import java.util
 
 class BatchExecJoinTable(
     cluster: RelOptCluster,

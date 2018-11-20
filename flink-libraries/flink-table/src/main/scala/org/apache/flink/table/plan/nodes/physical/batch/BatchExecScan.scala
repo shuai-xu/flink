@@ -18,20 +18,20 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
 import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.util.Logging
 
-import java.lang.{Boolean => JBoolean}
-import java.lang.{Integer => JInteger}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
+
+import java.lang.{Boolean => JBoolean, Integer => JInteger}
 
 trait BatchExecScan extends CommonScan[BinaryRow] with RowBatchExecRel with Logging {
 

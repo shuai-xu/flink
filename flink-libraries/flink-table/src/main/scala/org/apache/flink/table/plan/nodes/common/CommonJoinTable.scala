@@ -17,15 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.common
 
-import java.util
-import java.util.concurrent.TimeUnit
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.rex._
-import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.streaming.api.datastream.AsyncDataStream.OutputMode
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
@@ -47,6 +38,16 @@ import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableConnectorUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.rex._
+import org.apache.calcite.util.mapping.IntPair
+
+import java.util
+import java.util.concurrent.TimeUnit
 
 import scala.collection.JavaConverters._
 
@@ -74,10 +75,6 @@ abstract class CommonJoinTable(
   with FlinkRelNode {
 
   override def deriveRowType(): RelDataType = schema.relDataType
-
-  override def toString: String = {
-    joinToString(schema.relDataType, joinCondition, getExpressionString)
-  }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     joinExplainTerms(

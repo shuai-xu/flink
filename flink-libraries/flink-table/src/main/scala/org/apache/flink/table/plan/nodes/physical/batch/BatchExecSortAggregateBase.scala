@@ -17,12 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -33,6 +27,13 @@ import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.tools.RelBuilder
 
 abstract class BatchExecSortAggregateBase(
     cluster: RelOptCluster,

@@ -18,18 +18,11 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.calcite.tools.RelBuilder
-import org.apache.commons.math3.util.ArithmeticUtils
-import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType, PrimitiveType}
 import org.apache.flink.table.api.window.TimeWindow
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newName}
@@ -41,8 +34,8 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generatorCo
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.functions.DeclarativeAggregateFunction
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.util.AggregateUtil
@@ -50,6 +43,14 @@ import org.apache.flink.table.plan.util.AggregateUtil.asLong
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.runtime.operator.window.grouping.{AbstractWindowsGrouping, HeapWindowsGrouping}
 import org.apache.flink.table.util.RowIterator
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.sql.`type`.SqlTypeName
+import org.apache.calcite.tools.RelBuilder
+import org.apache.commons.math3.util.ArithmeticUtils
 
 abstract class BatchExecWindowAggregateBase(
     window: LogicalWindow,
@@ -125,33 +126,6 @@ abstract class BatchExecWindowAggregateBase(
     groupKeyRowType.getFieldNames :+ "assignedTs$")
 
   override def deriveRowType(): RelDataType = rowRelDataType
-
-  override def toString: String = {
-    s"Aggregate(${
-      if (grouping.nonEmpty) {
-        s"groupBy: (${groupingToString(inputRelDataType, grouping)}), "
-      } else {
-        ""
-      }
-    }${
-      if (auxGrouping.nonEmpty) {
-        s"auxGrouping: (${groupingToString(inputRelDataType, auxGrouping)}), "
-      } else {
-        ""
-      }
-    }window: ($window), " +
-        s"select: (${
-          windowAggregationToString(
-            inputRelDataType,
-            grouping,
-            auxGrouping,
-            rowRelDataType,
-            aggCallToAggFunction,
-            enableAssignPane,
-            isMerge = isMerge,
-            isGlobal = isFinal)
-        }))"
-  }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)

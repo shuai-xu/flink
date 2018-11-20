@@ -17,13 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
-import org.apache.calcite.rel.RelDistribution.Type._
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
@@ -36,6 +29,14 @@ import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.FlinkRelOptUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelTraitSet}
+import org.apache.calcite.rel.RelDistribution.Type._
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.util.{ImmutableIntList, Util}
 
 import scala.collection.JavaConversions._
 
@@ -184,5 +185,4 @@ class BatchExecSortAggregate(
     aggregateNamePrefix + "SortAggregate"
   }
 
-  override def toString: String = getOperatorName
 }

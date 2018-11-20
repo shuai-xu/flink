@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
 
 trait StreamExecScan extends CommonScan[BaseRow] with StreamExecRel {
 
@@ -38,7 +39,7 @@ trait StreamExecScan extends CommonScan[BaseRow] with StreamExecRel {
       config: TableConfig,
       rowtimeExpr: Option[RexNode]
   ): StreamTransformation[BaseRow] = {
-    val ctx = CodeGeneratorContext(config, true).setOperatorBaseClass(
+    val ctx = CodeGeneratorContext(config, supportReference = true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
 
     if (needInternalConversion) {

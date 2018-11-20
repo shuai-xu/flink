@@ -18,13 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.lang.{Boolean => JBoolean, Integer => JInteger}
-
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.TableScan
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
@@ -32,6 +25,14 @@ import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.schema.DataStreamTable
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter}
+
+import java.lang.{Boolean => JBoolean, Integer => JInteger}
 
 import scala.collection.JavaConverters._
 

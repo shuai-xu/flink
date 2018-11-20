@@ -17,13 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util.{ArrayList => JArrayList, List => JList}
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.Pair
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.{DataType, DataTypes}
@@ -39,6 +32,14 @@ import org.apache.flink.table.runtime.aggregate.MiniBatchGlobalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.util.Pair
+
+import java.util.{ArrayList => JArrayList, List => JList}
 
 /**
   *
@@ -94,21 +95,6 @@ class StreamExecGlobalGroupAggregate(
       partialFinal)
   }
 
-  override def toString: String = {
-    s"GlobalGroupAggregate(${
-      if (!groupings.isEmpty) {
-        s"groupBy: (${groupingToString(inputNode.getRowType, groupings)}), "
-      } else {
-        ""
-      }
-    }select:(${streamAggregationToString(
-      inputNode.getRowType,
-      getRowType,
-      globalAggInfoList,
-      groupings,
-      isGlobal = true)}))"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputNode.getRowType, groupings), groupings.nonEmpty)
@@ -139,6 +125,22 @@ class StreamExecGlobalGroupAggregate(
       .map(e => e.function.toString)
       .mkString(", ")))
     values
+  }
+
+
+  private def getOperatorName: String = {
+    s"GlobalGroupAggregate(${
+      if (!groupings.isEmpty) {
+        s"groupBy: (${groupingToString(inputNode.getRowType, groupings)}), "
+      } else {
+        ""
+      }
+    }select:(${streamAggregationToString(
+      inputNode.getRowType,
+      getRowType,
+      globalAggInfoList,
+      groupings,
+      isGlobal = true)}))"
   }
 
   override def translateToPlan(
@@ -214,7 +216,7 @@ class StreamExecGlobalGroupAggregate(
     // partitioned aggregation
     val ret = new OneInputTransformation(
       inputTransformation,
-      this.toString,
+      getOperatorName,
       operator,
       outRowType,
       tableEnv.execEnv.getParallelism)

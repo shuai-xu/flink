@@ -20,6 +20,7 @@ package org.apache.flink.table.resource.batch;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.util.FlinkRelOptUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -80,7 +81,7 @@ public class BatchExecRelStage implements Serializable {
 	public BatchExecRelStage(RowBatchExecRel batchExecRel, int stageID) {
 		this.batchExecRel = batchExecRel;
 		this.stageID = stageID;
-		this.relName = batchExecRel.toString();
+		this.relName = FlinkRelOptUtil.getDigest(batchExecRel, false);
 	}
 
 	public void addTransformation(StreamTransformation<?> transformation) {
@@ -149,7 +150,7 @@ public class BatchExecRelStage implements Serializable {
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder("relStage（");
+		StringBuilder sb = new StringBuilder("relStage(");
 		sb.append("batchExecRel=").append(relName)
 				.append(", stageID=").append(stageID);
 		dependStagesMap.forEach((k, v) -> {

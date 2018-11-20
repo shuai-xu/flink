@@ -17,11 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.core.Sort
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
-import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
@@ -33,6 +28,12 @@ import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.sort.SortLimitOperator
 import org.apache.flink.table.typeutils._
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel.core.Sort
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
+import org.apache.calcite.rex.{RexLiteral, RexNode}
 
 import _root_.scala.collection.JavaConverters._
 
@@ -184,5 +185,4 @@ class BatchExecSortLimit(
         s"limit: $limitToString)"
   }
 
-  override def toString: String = getOperatorName
 }

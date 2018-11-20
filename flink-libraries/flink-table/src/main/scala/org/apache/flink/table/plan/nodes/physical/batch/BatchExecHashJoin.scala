@@ -17,12 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.core._
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.util.{ImmutableIntList, Util}
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -40,6 +34,13 @@ import org.apache.flink.table.runtime.operator.join.batch.hashtable.BinaryHashBu
 import org.apache.flink.table.runtime.operator.join.batch.{HashJoinOperator, HashJoinType}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.ExecResourceUtil
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.core._
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.util.{ImmutableIntList, Util}
 
 import scala.collection.JavaConversions._
 
@@ -73,8 +74,6 @@ trait BatchExecHashJoinBase extends BatchExecJoinBase {
   def insertRuntimeFilter(): Unit = {
     haveInsertRf = true
   }
-
-  override def toString: String = joinOperatorName
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
@@ -251,8 +250,8 @@ class BatchExecHashJoin(
     val isBroadcast: Boolean,
     val description: String,
     override var haveInsertRf: Boolean = false)
-    extends Join(cluster, traitSet, left, right, joinCondition, Set.empty[CorrelationId], joinType)
-        with BatchExecHashJoinBase {
+  extends Join(cluster, traitSet, left, right, joinCondition, Set.empty[CorrelationId], joinType)
+  with BatchExecHashJoinBase {
 
   override val tryDistinctBuildRow = false
 
@@ -290,8 +289,8 @@ class BatchExecHashSemiJoin(
     val tryDistinctBuildRow: Boolean,
     val description: String,
     override var haveInsertRf: Boolean = false)
-    extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
-        with BatchExecHashJoinBase {
+  extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
+  with BatchExecHashJoinBase {
 
   override def isBarrierNode: Boolean = if (leftIsBuild) true else false
 

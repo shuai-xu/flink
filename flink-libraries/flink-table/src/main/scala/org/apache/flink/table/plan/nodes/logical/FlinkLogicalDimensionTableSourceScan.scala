@@ -17,18 +17,17 @@
  */
 package org.apache.flink.table.plan.nodes.logical
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.rel.core.TableScan
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rex.{RexNode, RexProgram}
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
 import org.apache.flink.table.sources.{DimensionTableSource, TableSource}
 
-import scala.collection.JavaConverters._
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.convert.ConverterRule
+import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.{RexNode, RexProgram}
 
 class FlinkLogicalDimensionTableSourceScan(
     cluster: RelOptCluster,
@@ -69,14 +68,6 @@ class FlinkLogicalDimensionTableSourceScan(
       .item("fields", tableSource.getTableSchema.getColumnNames.mkString(", "))
       .item("period", period)
       .item("calcProgram", calcProgram)
-  }
-
-  override def toString: String = {
-    s"""
-      |Scan(table:${getTable.getQualifiedName},
-      |fields:(${getRowType.getFieldNames.asScala.toList.mkString(", ")}, period: $period),
-      |calcProgram: $calcProgram)
-    """.stripMargin.replaceAll("\n", " ")
   }
 }
 

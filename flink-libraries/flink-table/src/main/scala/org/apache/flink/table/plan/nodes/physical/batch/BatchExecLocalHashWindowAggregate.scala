@@ -18,13 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.functions.UserDefinedFunction
@@ -37,6 +30,14 @@ import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.tools.RelBuilder
+
+import java.util
 
 class BatchExecLocalHashWindowAggregate(
     window: LogicalWindow,
@@ -131,5 +132,4 @@ class BatchExecLocalHashWindowAggregate(
 
   private def getOperatorName = "LocalWindowHashAggregateBatchExec"
 
-  override def toString: String = getOperatorName
 }

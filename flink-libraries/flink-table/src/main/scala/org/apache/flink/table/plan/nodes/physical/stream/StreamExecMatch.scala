@@ -18,27 +18,12 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.lang.{Long => JLong}
-import java.math.{BigDecimal => JBigDecimal}
-import java.util
-import java.util.UUID
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.RelFieldCollation.Direction
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.SqlMatchRecognize.{AfterOption, RowsPerMatchOption}
-import org.apache.calcite.sql.`type`.SqlTypeName._
-import org.apache.calcite.sql.fun.SqlStdOperatorTable._
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.ExecutionConfig
+import org.apache.flink.cep._
 import org.apache.flink.cep.nfa.aftermatch.AfterMatchSkipStrategy
 import org.apache.flink.cep.nfa.compiler.NFACompiler
 import org.apache.flink.cep.operator.{FlatSelectCepOperator, FlatSelectTimeoutCepOperator, SelectCepOperator, SelectTimeoutCepOperator}
 import org.apache.flink.cep.pattern.Pattern
-import org.apache.flink.cep._
 import org.apache.flink.streaming.api.operators.co.CoStreamMap
 import org.apache.flink.streaming.api.operators.{ChainingStrategy, ProcessOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, SideOutputTransformation, StreamTransformation, TwoInputTransformation}
@@ -52,6 +37,22 @@ import org.apache.flink.table.runtime.BaseRowRowtimeProcessFunction
 import org.apache.flink.table.runtime.`match`._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.OutputTag
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.RelFieldCollation.Direction
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.SqlMatchRecognize.{AfterOption, RowsPerMatchOption}
+import org.apache.calcite.sql.`type`.SqlTypeName._
+import org.apache.calcite.sql.fun.SqlStdOperatorTable._
+import org.apache.calcite.tools.RelBuilder
+
+import java.lang.{Long => JLong}
+import java.math.{BigDecimal => JBigDecimal}
+import java.util
+import java.util.UUID
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.mutable.ListBuffer
@@ -101,58 +102,6 @@ class StreamExecMatch(
       emit,
       outputSchema,
       inputSchema)
-  }
-
-  override def toString: String = {
-    s"Match(${
-      if (!partitionKeys.isEmpty) {
-        s"PARTITION BY: ${partitionKeys.toArray.map(_.toString).mkString(", ")}, "
-      } else {
-        ""
-      }
-    }${
-      if (!orderKeys.getFieldCollations.isEmpty) {
-        s"ORDER BY: ${orderKeys.getFieldCollations.map {
-          x => inputSchema.fieldNames(x.getFieldIndex)
-        }.mkString(", ")}, "
-      } else {
-        ""
-      }
-    }${
-      if (!measures.isEmpty) {
-        s"MEASURES: ${measures.map {
-          case (k, v) => s"${v.toString} AS $k"
-        }.mkString(", ")}, "
-      } else {
-        ""
-      }
-    }${
-      if (rowsPerMatch != null) {
-        s"${rowsPerMatch.toString}, "
-      }
-    }${
-      s"${after.toString}, "
-    }${
-      s"PATTERN: (${pattern.toString})"
-    }${
-      if (interval != null) {
-        s"WITHIN INTERVAL: $interval, "
-      } else {
-        s", "
-      }
-    }${
-      if (!subsets.isEmpty) {
-        s"SUBSET: ${subsets.map {
-          case (k, v) => s"$k = (${v.toArray.mkString(", ")})"
-        }.mkString(", ")}, "
-      } else {
-        ""
-      }
-    }${
-      s"DEFINE: ${patternDefinitions.map {
-        case (k, v) => s"$k AS ${v.toString}"
-      }.mkString(", ")}"
-    })"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {

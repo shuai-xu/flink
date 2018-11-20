@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.plan.nodes.physical
 
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.sources.TableSource
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelWriter
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.sources.TableSource
 
 import scala.collection.JavaConverters._
 
@@ -46,12 +47,6 @@ abstract class PhysicalTableSourceScan(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw).item("fields", getRowType.getFieldNames.asScala.mkString(", "))
-  }
-
-  override def toString: String = {
-    val tableName = getTable.getQualifiedName
-    val s = s"table:$tableName, fields:(${getRowType.getFieldNames.asScala.toList.mkString(", ")})"
-    s"Scan($s)"
   }
 
   def copy(traitSet: RelTraitSet, relOptTable: FlinkRelOptTable): PhysicalTableSourceScan

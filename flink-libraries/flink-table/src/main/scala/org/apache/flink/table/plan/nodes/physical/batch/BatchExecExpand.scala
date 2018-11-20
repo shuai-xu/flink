@@ -17,12 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.DataTypes
@@ -33,6 +27,13 @@ import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.util.ExpandUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -69,8 +70,6 @@ class BatchExecExpand(
   private def getOperatorName: String = {
     s"BatchExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
   }
-
-  override def toString: String = getOperatorName
 
   /**
     * Internal method, translates the [[BatchExecRel]] node into a Batch operator.

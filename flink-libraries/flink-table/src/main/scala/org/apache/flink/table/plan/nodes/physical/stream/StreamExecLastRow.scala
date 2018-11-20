@@ -18,11 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
@@ -35,6 +30,12 @@ import org.apache.flink.table.runtime.aggregate.{LastRowFunction, MiniBatchLastR
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -72,20 +73,19 @@ class StreamExecLastRow(
   override def consumesRetractions: Boolean = true
 
   override def needsUpdatesAsRetraction(input: RelNode): Boolean = true
-
-  override def toString: String = {
-    val inputNames = inputSchema.relDataType.getFieldNames
-    val keyNames = uniqueKeys.map(inputNames.get(_)).mkString(", ")
-    val outputNames = outputSchema.relDataType.getFieldNames.mkString(", ")
-    s"LastRow: (key: ($keyNames), select: ($outputNames))"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     val inputNames = inputSchema.relDataType.getFieldNames
     val outputNames = outputSchema.relDataType.getFieldNames
     super.explainTerms(pw)
       .item("key", uniqueKeys.map(inputNames.get(_)).mkString(", "))
       .item("select", outputNames.mkString(", "))
+  }
+
+  private def getOperatorName: String = {
+    val inputNames = inputSchema.relDataType.getFieldNames
+    val keyNames = uniqueKeys.map(inputNames.get(_)).mkString(", ")
+    val outputNames = outputSchema.relDataType.getFieldNames.mkString(", ")
+    s"LastRow: (key: ($keyNames), select: ($outputNames))"
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -101,7 +101,7 @@ class StreamExecLastRow(
     val rowTimeFieldIndex = inputSchema.fieldTypeInfos.zipWithIndex
       .filter(e => FlinkTypeFactory.isRowtimeIndicatorType(e._1))
       .map(_._2)
-    if (rowTimeFieldIndex.size > 1) {
+    if (rowTimeFieldIndex.size() > 1) {
       throw new RuntimeException("More than one row time field. Currently this is not supported!")
     }
     val orderIndex = if (rowTimeFieldIndex.isEmpty) {
@@ -137,7 +137,7 @@ class StreamExecLastRow(
 
     val ret = new OneInputTransformation(
       inputTransform,
-      toString,
+      getOperatorName,
       operator,
       rowTypeInfo,
       tableEnv.execEnv.getParallelism

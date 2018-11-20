@@ -17,11 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.core.Sort
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
@@ -36,6 +31,12 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.sort.SortOperator
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.ExecResourceUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel.core.Sort
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
 
 import scala.collection.JavaConversions._
 

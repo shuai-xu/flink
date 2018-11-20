@@ -18,12 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Calc
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rex.RexProgram
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
@@ -32,6 +26,13 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalCalc
 import org.apache.flink.table.plan.util.CalcUtil
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Calc
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.RexProgram
 
 /**
   * Flink RelNode which matches along with LogicalCalc.
@@ -58,8 +59,6 @@ class StreamExecCalc(
       ruleDescription)
   }
 
-  override def toString: String = CalcUtil.calcToString(calcProgram, getExpressionString)
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     pw.input("input", getInput)
       .item("select", CalcUtil.selectionToString(calcProgram, getExpressionString))
@@ -85,7 +84,7 @@ class StreamExecCalc(
     } else {
       None
     }
-    val ctx = CodeGeneratorContext(config, true).setOperatorBaseClass(
+    val ctx = CodeGeneratorContext(config, supportReference = true).setOperatorBaseClass(
       classOf[AbstractProcessStreamOperator[BaseRow]])
     val (substituteStreamOperator, outputType) = CalcCodeGenerator.generateCalcOperator(
       ctx,

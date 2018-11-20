@@ -18,11 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.TableScan
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
@@ -30,6 +25,12 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.Cast
 import org.apache.flink.table.plan.schema.DataStreamTable
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rex.RexNode
 
 /**
   * Flink RelNode which matches along with DataStreamSource.

@@ -18,9 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.RelTraitSet
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -33,6 +30,10 @@ import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{FlinkRelOptUtil, Logging}
+
+import org.apache.calcite.plan.RelTraitSet
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.metadata.RelMetadataQuery
 
 import scala.collection.JavaConversions._
 

@@ -18,20 +18,14 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
-import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.functions.{FlatMapFunction, MapFunction}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation, TwoInputTransformation, UnionTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -42,6 +36,12 @@ import org.apache.flink.table.runtime.operator.KeyedCoProcessOperatorWithWaterma
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
+import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
 
 import scala.collection.JavaConversions._
 
@@ -89,14 +89,6 @@ class StreamExecWindowJoin(
       rightTimeIndex,
       remainCondition,
       ruleDescription)
-  }
-
-  override def toString: String = {
-    JoinUtil.joinToString(
-      outputRowSchema.relDataType,
-      joinCondition,
-      FlinkJoinRelType.toFlinkJoinRelType(joinType),
-      getExpressionString)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
@@ -261,7 +253,6 @@ class StreamExecWindowJoin(
       returnTypeInfo,
       rightP
     )
-    val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
     joinType match {
       case FlinkJoinRelType.INNER =>
         new UnionTransformation(

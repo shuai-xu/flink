@@ -18,15 +18,9 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.RelFieldCollation.Direction
-import org.apache.calcite.rel._
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.Sort
-import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
@@ -37,6 +31,13 @@ import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.operator.sort.{OnlyRowTimeSortOperator, ProcTimeSortOperator, RowTimeSortOperator}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.RelFieldCollation.Direction
+import org.apache.calcite.rel._
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.Sort
+import org.apache.calcite.rex.RexNode
 
 import _root_.scala.collection.JavaConverters._
 
@@ -70,10 +71,6 @@ class StreamExecTemporalSort(
       outputSchema,
       newCollation,
       description)
-  }
-
-  override def toString: String = {
-    SortUtil.sortToString(outputSchema.relDataType, sortCollation, null, null)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {

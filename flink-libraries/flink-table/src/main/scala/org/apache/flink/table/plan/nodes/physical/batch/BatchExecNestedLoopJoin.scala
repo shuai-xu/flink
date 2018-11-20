@@ -18,14 +18,6 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import java.util
-
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.core._
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
@@ -43,6 +35,15 @@ import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.{ExecResourceUtil, ResettableExternalBuffer}
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.core._
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.util.ImmutableIntList
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -72,8 +73,6 @@ trait BatchExecNestedLoopJoinBase extends BatchExecJoinBase {
     }
     s"NestedLoopJoin($joinExpressionStr${if (leftIsBuild) "buildLeft" else "buildRight"})"
   }
-
-  override def toString: String = joinOperatorName
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 

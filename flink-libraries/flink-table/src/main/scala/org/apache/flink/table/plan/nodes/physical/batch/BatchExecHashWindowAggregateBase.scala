@@ -18,6 +18,29 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import org.apache.flink.api.java.typeutils.ListTypeInfo
+import org.apache.flink.runtime.operators.sort.QuickSort
+import org.apache.flink.table.api.functions.UserDefinedFunction
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
+import org.apache.flink.table.api.window.TimeWindow
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
+import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
+import org.apache.flink.table.codegen.CodeGenUtils.{generateFieldAccess, newName}
+import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_ROW
+import org.apache.flink.table.codegen._
+import org.apache.flink.table.codegen.agg.BatchExecHashAggregateCodeGen
+import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
+import org.apache.flink.table.dataformat.BinaryRow
+import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkCostFactory
+import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
+import org.apache.flink.table.runtime.operator.{AbstractStreamOperatorWithMetrics, BytesHashMap}
+import org.apache.flink.table.runtime.sort.BinaryKVInMemorySortBuffer
+import org.apache.flink.table.typeutils.BinaryRowSerializer
+import org.apache.flink.table.util.BytesHashMapSpillMemorySegmentPool
+import org.apache.flink.util.MutableObjectIterator
+
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
@@ -25,28 +48,6 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.tools.RelBuilder
 import org.apache.commons.math3.util.ArithmeticUtils
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.ListTypeInfo
-import org.apache.flink.runtime.operators.sort.QuickSort
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
-import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
-import org.apache.flink.table.api.window.TimeWindow
-import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.codegen.CodeGenUtils.{generateFieldAccess, newName}
-import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_ROW
-import org.apache.flink.table.codegen._
-import org.apache.flink.table.codegen.agg.BatchExecHashAggregateCodeGen
-import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
-import org.apache.flink.table.plan.cost.BatchExecCost._
-import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
-import org.apache.flink.table.dataformat.BinaryRow
-import org.apache.flink.table.runtime.operator.{AbstractStreamOperatorWithMetrics, BytesHashMap}
-import org.apache.flink.table.runtime.sort.BinaryKVInMemorySortBuffer
-import org.apache.flink.table.typeutils.BinaryRowSerializer
-import org.apache.flink.table.util.BytesHashMapSpillMemorySegmentPool
-import org.apache.flink.util.MutableObjectIterator
 
 abstract class BatchExecHashWindowAggregateBase(
     window: LogicalWindow,

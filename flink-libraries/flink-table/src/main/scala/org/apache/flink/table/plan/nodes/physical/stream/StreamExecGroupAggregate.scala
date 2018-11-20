@@ -17,14 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import java.util
-import java.util.{ArrayList => JArrayList, List => JList}
-
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
@@ -33,17 +25,26 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil, PartialFinalType, StreamExecUtil}
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.util.{ImmutableBitSet, Pair}
+
+import java.util
+import java.util.{ArrayList => JArrayList, List => JList}
 
 /**
   *
@@ -114,21 +115,6 @@ class StreamExecGroupAggregate(
       partialFinal)
   }
 
-  override def toString: String = {
-    s"GroupAggregate(${
-      if (groupings.nonEmpty) {
-        s"groupBy: (${groupingToString(inputRelDataType, groupings)}), "
-      } else {
-        ""
-      }
-    }select: (${
-      streamAggregationToString(
-        inputRelDataType,
-        getRowType,
-        aggInfoList,
-        groupings)}))"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
@@ -158,8 +144,22 @@ class StreamExecGroupAggregate(
     values
   }
 
-  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+  private def getOperatorName: String = {
+    s"GroupAggregate(${
+      if (groupings.nonEmpty) {
+        s"groupBy: (${groupingToString(inputRelDataType, groupings)}), "
+      } else {
+        ""
+      }
+    }select: (${
+      streamAggregationToString(
+        inputRelDataType,
+        getRowType,
+        aggInfoList,
+        groupings)}))"
+  }
 
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val tableConfig = tableEnv.getConfig
 
     if (groupings.length > 0 && tableConfig.getMinIdleStateRetentionTime < 0) {
@@ -234,7 +234,7 @@ class StreamExecGroupAggregate(
     // partitioned aggregation
     val ret = new OneInputTransformation(
       inputTransformation,
-      this.toString,
+      getOperatorName,
       operator,
       outRowType,
       tableEnv.execEnv.getParallelism)

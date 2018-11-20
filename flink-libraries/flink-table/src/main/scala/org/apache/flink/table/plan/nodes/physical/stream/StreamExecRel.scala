@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.plan.nodes.physical.stream
 
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+
+import org.apache.calcite.rel.RelNode
 
 trait StreamExecRel extends FlinkPhysicalRel {
 

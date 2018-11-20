@@ -26,10 +26,12 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.nodes.calcite.Expand
 import org.apache.flink.table.plan.util.ExpandUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
+
 import java.util
 
 import scala.collection.JavaConversions._
@@ -57,8 +59,6 @@ class StreamExecExpand(
     )
   }
 
-  override def toString: String = getOperatorName
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("projects", ExpandUtil.projectsToString(projects, input.getRowType, getRowType))
@@ -69,7 +69,6 @@ class StreamExecExpand(
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-
     val config = tableEnv.getConfig
     val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
     val inputType = DataTypes.internal(inputTransformation.getOutputType)

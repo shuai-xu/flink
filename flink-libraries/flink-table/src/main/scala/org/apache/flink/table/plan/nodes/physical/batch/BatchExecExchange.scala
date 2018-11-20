@@ -18,16 +18,14 @@
 
 package org.apache.flink.table.plan.nodes.physical.batch
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelDistribution, RelNode, RelWriter}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.sampling.IntermediateSampleData
 import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, PartitionTransformation, StreamTransformation, TwoInputTransformation}
 import org.apache.flink.streaming.runtime.partitioner._
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
+import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow}
@@ -38,6 +36,9 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.operator.range._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{BinaryHashPartitioner, FlinkRelOptUtil}
+
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.{RelDistribution, RelNode, RelWriter}
 
 import scala.collection.JavaConverters._
 

@@ -74,18 +74,6 @@ class StreamExecCorrelate(
       ruleDescription)
   }
 
-  override def toString: String = {
-    val rexCall = scan.getCall.asInstanceOf[RexCall]
-    val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
-    s"${
-      CorrelateUtil.correlateToString(
-        child.getRowType,
-        rexCall,
-        sqlFunction,
-        getExpressionString)
-    } select(${CorrelateUtil.selectToString(relDataType)})"
-  }
-
   override def explainTerms(pw: RelWriter): RelWriter = {
     val rexCall = scan.getCall.asInstanceOf[RexCall]
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
