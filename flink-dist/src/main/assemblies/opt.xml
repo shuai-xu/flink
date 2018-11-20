@@ -577,27 +577,5 @@
 			<destName>flink-streaming-python_${scala.binary.version}-${project.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
-
-		<file>
-			<source>../blink-launcher/target/blink-launcher-${project.version}.jar</source>
-			<outputDirectory>lib/</outputDirectory>
-			<destName>blink-launcher-${project.version}.jar</destName>
-			<fileMode>0644</fileMode>
-		</file>
-
-		<file>
-			<source>../blink-table/target/blink-table-${project.version}.jar</source>
-			<outputDirectory>lib/</outputDirectory>
-			<destName>blink-table-${project.version}.jar</destName>
-			<fileMode>0644</fileMode>
-		</file>
-
-		<!-- KmonitorReporter tool -->
-		<file>
-			<source>../blink-metrics-kmonitor/target/blink-metrics-kmonitor-${project.version}.jar</source>
-			<outputDirectory>lib/</outputDirectory>
-			<destName>blink-metrics-kmonitor-${project.version}.jar</destName>
-			<fileMode>0644</fileMode>
-		</file>
 	</files>
 </assembly>

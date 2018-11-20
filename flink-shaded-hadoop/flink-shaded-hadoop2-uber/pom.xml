@@ -57,14 +57,16 @@ under the License.
 				Don't deploy this uber-jar. It is not referenced by any other artifact.
 				Its sole purpose is to be included in the 'flink-dist' build.
 			-->
+
+			<!-- deploy it to use in Blink repo -->
  
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-deploy-plugin</artifactId>
-				<configuration>
-					<skip>true</skip>
-				</configuration>
-			</plugin>
+			<!--<plugin>-->
+				<!--<groupId>org.apache.maven.plugins</groupId>-->
+				<!--<artifactId>maven-deploy-plugin</artifactId>-->
+				<!--<configuration>-->
+					<!--<skip>true</skip>-->
+				<!--</configuration>-->
+			<!--</plugin>-->
 
 			<!-- 
 				Build an uber jar of the shaded-hadoop-dependency

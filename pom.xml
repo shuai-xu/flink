@@ -89,10 +89,6 @@ under the License.
 		<module>flink-sql-parser</module>
 		<module>flink-catalog</module>
 		<module>flink-dist</module>
-		<module>blink-launcher</module>
-		<module>blink-table</module>
-		<module>blink-metrics-kmonitor</module>
-		<module>blink-statebackend-niagara</module>
 	</modules>
 
 	<properties>
@@ -1177,9 +1173,6 @@ under the License.
 						<exclude>flink-libraries/flink-table/src/test/resources/tpch/data/*/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/tpch/result/*</exclude>
 						<exclude>flink-libraries/flink-table/src/test/resources/runtime/batch/*</exclude>
-						<exclude>blink-table/src/test/resources/**</exclude>
-						<exclude>blink-launcher/src/test/resources/**</exclude>
-						<exclude>blink-metrics-kmonitor/src/main/resources/**</exclude>
 						<!-- netty test file, still Apache License 2.0 but with a different header -->
 						<exclude>flink-runtime/src/test/java/org/apache/flink/runtime/io/network/buffer/AbstractByteBufTest.java</exclude>
 						<!-- Configuration Files. -->
