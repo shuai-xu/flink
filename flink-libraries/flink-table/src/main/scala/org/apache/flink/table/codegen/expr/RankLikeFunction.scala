@@ -21,8 +21,8 @@ package org.apache.flink.table.codegen.expr
 import java.sql.{Date, Time, Timestamp}
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
+import org.apache.flink.table.api.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.api.types._
-import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.expressions._
 
 /**

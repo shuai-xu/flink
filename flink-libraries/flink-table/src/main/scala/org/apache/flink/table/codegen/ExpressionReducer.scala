@@ -30,11 +30,12 @@ import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.metrics.MetricGroup
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.functions.{FunctionContext, FunctionContextImpl, UserDefinedFunction}
+import org.apache.flink.table.api.functions.{FunctionContext, UserDefinedFunction}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.FunctionCodeGenerator.generateFunction
 import org.apache.flink.table.dataformat.{Decimal, GenericRow}
+import org.apache.flink.table.runtime.functions.FunctionContextImpl
 
 import scala.collection.JavaConverters._
 

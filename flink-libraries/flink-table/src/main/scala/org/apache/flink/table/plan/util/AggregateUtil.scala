@@ -27,7 +27,7 @@ import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.{TableException, Types}
-import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType}
 import org.apache.flink.table.api.types.DataTypes._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty

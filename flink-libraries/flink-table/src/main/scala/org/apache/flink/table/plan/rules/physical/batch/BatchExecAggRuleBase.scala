@@ -24,11 +24,10 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Aggregate
 import org.apache.calcite.rel.{RelCollations, RelFieldCollation}
 import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableException}
-import org.apache.flink.table.api.functions.{AggregateFunction, UserDefinedFunction}
+import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations

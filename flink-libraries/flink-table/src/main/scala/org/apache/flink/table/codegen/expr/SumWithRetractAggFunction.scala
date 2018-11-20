@@ -17,10 +17,10 @@
  */
 package org.apache.flink.table.codegen.expr
 
+import org.apache.flink.table.api.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.expressions.{IsNull, Literal, _}
-import org.apache.flink.table.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.dataformat.Decimal
 
 /**

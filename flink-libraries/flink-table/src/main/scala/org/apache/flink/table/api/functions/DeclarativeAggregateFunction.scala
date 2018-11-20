@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.functions
+package org.apache.flink.table.api.functions
 
-import org.apache.flink.table.api.functions.UserDefinedFunction
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.expressions.{Expression, UnresolvedAggBufferReference, UnresolvedFieldReference}
 
