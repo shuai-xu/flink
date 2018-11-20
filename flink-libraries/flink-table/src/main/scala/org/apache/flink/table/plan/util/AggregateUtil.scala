@@ -17,31 +17,33 @@
  */
 package org.apache.flink.table.plan.util
 
-import java.util
-
-import org.apache.calcite.rel.`type`._
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rex.RexInputRef
-import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
-import org.apache.calcite.sql.fun._
-import org.apache.calcite.sql.validate.SqlMonotonicity
-import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.{TableException, Types}
+import org.apache.flink.streaming.api.bundle.{BundleTrigger, CombinedBundleTrigger, CountBundleTrigger, TimeBundleTrigger}
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType}
 import org.apache.flink.table.api.types.DataTypes._
+import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, DecimalType}
+import org.apache.flink.table.api.{TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.expr.{ConcatAggFunction => _}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.dataview.DataViewUtils.useNullSerializerForStateViewFieldsFromAccType
 import org.apache.flink.table.dataview.{DataViewSpec, MapViewSpec}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions._
 import org.apache.flink.table.functions.sql.{SqlConcatAggFunction, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, MapViewTypeInfo, TypeUtils}
+
+import org.apache.calcite.rel.`type`._
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rex.RexInputRef
+import org.apache.calcite.sql.fun._
+import org.apache.calcite.sql.validate.SqlMonotonicity
+import org.apache.calcite.sql.{SqlKind, SqlRankFunction}
+import org.apache.calcite.tools.RelBuilder
+
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -528,6 +530,31 @@ object AggregateUtil extends Enumeration {
     */
   def timeFieldIndex(inputType: RelDataType, relBuilder: RelBuilder, timeField: Expression): Int = {
     timeField.toRexNode(relBuilder.values(inputType)).asInstanceOf[RexInputRef].getIndex
+  }
+
+  def getMiniBatchTrigger(
+      tableConfig: TableConfig,
+      useLocalAgg: Boolean): CombinedBundleTrigger[BaseRow] = {
+    val triggerTime = if (useLocalAgg) {
+      tableConfig.getMiniBatchTriggerTime / 2
+    } else {
+      tableConfig.getMiniBatchTriggerTime
+    }
+    val timeTrigger: Option[BundleTrigger[BaseRow]] =
+      if (tableConfig.isMicroBatchEnabled) {
+        None
+      } else {
+        Some(new TimeBundleTrigger[BaseRow](triggerTime))
+      }
+    val sizeTrigger: Option[BundleTrigger[BaseRow]] =
+      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
+        None
+      } else {
+        Some(new CountBundleTrigger[BaseRow](tableConfig.getMiniBatchTriggerSize))
+      }
+    new CombinedBundleTrigger[BaseRow](
+      Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*
+    )
   }
 }
 

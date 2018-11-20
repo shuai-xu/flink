@@ -29,7 +29,6 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.ExpressionUtils.{isTimeIntervalLiteral, _}
 import org.apache.flink.table.plan.logical._
-import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util._
@@ -58,7 +57,6 @@ class StreamExecGroupWindowAggregate(
     inputTimestampIndex: Int,
     emitStrategy: EmitStrategy)
   extends SingleRel(cluster, traitSet, inputNode)
-  with CommonAggregate
   with StreamExecRel
   with Logging {
 
@@ -91,11 +89,12 @@ class StreamExecGroupWindowAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputSchema.relDataType, grouping), grouping.nonEmpty)
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputSchema.relDataType, grouping), grouping.nonEmpty)
       .item("window", window)
       .itemIf("properties", namedProperties.map(_.name).mkString(", "), namedProperties.nonEmpty)
       .item(
-        "select", aggregationToString(
+        "select", AggregateNameUtil.aggregationToString(
           inputSchema.relDataType,
           grouping,
           outputSchema.relDataType,
@@ -134,7 +133,7 @@ class StreamExecGroupWindowAggregate(
     // validation
     emitStrategy.checkValidation()
 
-    val aggString = aggregationToString(
+    val aggString = AggregateNameUtil.aggregationToString(
       inputSchema.relDataType,
       grouping,
       outputSchema.relDataType,
@@ -143,7 +142,7 @@ class StreamExecGroupWindowAggregate(
 
     val operatorName = if (grouping.nonEmpty) {
       s"window: ($window), " +
-        s"groupBy: (${groupingToString(inputSchema.relDataType, grouping)}), " +
+        s"groupBy: (${AggregateNameUtil.groupingToString(inputSchema.relDataType, grouping)}), " +
         s"select: ($aggString)"
     } else {
       s"window: ($window), select: ($aggString)"

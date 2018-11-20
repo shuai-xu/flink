@@ -25,6 +25,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.util.AggregateNameUtil
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -133,9 +134,11 @@ class BatchExecSortAggregate(
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .item("isMerge", isMerge)
-      .itemIf("groupBy", groupingToString(inputRelDataType, grouping), grouping.nonEmpty)
-      .itemIf("auxGrouping", groupingToString(inputRelDataType, auxGrouping), auxGrouping.nonEmpty)
-      .item("select", aggregationToString(
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputRelDataType, grouping), grouping.nonEmpty)
+      .itemIf("auxGrouping",
+        AggregateNameUtil.groupingToString(inputRelDataType, auxGrouping), auxGrouping.nonEmpty)
+      .item("select", AggregateNameUtil.aggregationToString(
         inputRelDataType,
         grouping,
         auxGrouping,

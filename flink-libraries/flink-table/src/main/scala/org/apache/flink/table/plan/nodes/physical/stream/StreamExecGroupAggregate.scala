@@ -27,10 +27,9 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.common.CommonAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
-import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil, PartialFinalType, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, PartialFinalType, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
@@ -68,7 +67,6 @@ class StreamExecGroupAggregate(
     groupSet: ImmutableBitSet,
     var partialFinal: PartialFinalType = PartialFinalType.NORMAL)
   extends SingleRel(cluster, traitSet, inputNode)
-  with CommonAggregate
   with StreamExecRel
   with Logging {
 
@@ -117,8 +115,9 @@ class StreamExecGroupAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
-      .item("select", streamAggregationToString(
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
+      .item("select", AggregateNameUtil.streamAggregationToString(
         inputRelDataType,
         getRowType,
         aggInfoList,
@@ -133,8 +132,8 @@ class StreamExecGroupAggregate(
     val needRetractionArray = AggregateUtil.getNeedRetractions(
       groupings.length, needRetraction, modifiedMono, aggCalls)
     val values = new JArrayList[Pair[String, AnyRef]]
-    values.add(Pair.of("groupBy", groupingToString(inputRelDataType, groupings)))
-    values.add(Pair.of("select", aggregationToString(
+    values.add(Pair.of("groupBy", AggregateNameUtil.groupingToString(inputRelDataType, groupings)))
+    values.add(Pair.of("select", AggregateNameUtil.aggregationToString(
       inputRelDataType,
       groupings,
       getRowType,
@@ -147,12 +146,12 @@ class StreamExecGroupAggregate(
   private def getOperatorName: String = {
     s"GroupAggregate(${
       if (groupings.nonEmpty) {
-        s"groupBy: (${groupingToString(inputRelDataType, groupings)}), "
+        s"groupBy: (${AggregateNameUtil.groupingToString(inputRelDataType, groupings)}), "
       } else {
         ""
       }
     }select: (${
-      streamAggregationToString(
+      AggregateNameUtil.streamAggregationToString(
         inputRelDataType,
         getRowType,
         aggInfoList,
@@ -210,7 +209,7 @@ class StreamExecGroupAggregate(
 
       new KeyedBundleOperator(
         aggFunction,
-        getMiniBatchTrigger(tableConfig, useLocalAgg = false),
+        AggregateUtil.getMiniBatchTrigger(tableConfig, useLocalAgg = false),
         valueType,
         tableConfig.getParameters.getBoolean(
           TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))

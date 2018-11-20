@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.nodes.common
+package org.apache.flink.table.plan.util
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
@@ -31,90 +31,14 @@ import org.apache.flink.table.plan.util.AggregateUtil._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-trait CommonAggregate {
+object AggregateNameUtil {
 
-  private[flink] def groupingToString(inputType: RelDataType, grouping: Array[Int]): String = {
-
+  def groupingToString(inputType: RelDataType, grouping: Array[Int]): String = {
     val inFields = inputType.getFieldNames.asScala
     grouping.map( inFields(_) ).mkString(", ")
   }
 
-  private[flink] def buildAggregationToString(
-      inputType: RelDataType,
-      grouping: Array[Int],
-      auxGrouping: Array[Int],
-      rowType: RelDataType,
-      aggs: Seq[AggregateCall],
-      namedProperties: Seq[NamedWindowProperty]): String = {
-
-    val inFields = inputType.getFieldNames.asScala
-    val outFields = rowType.getFieldNames.asScala
-
-    val groupStrings = grouping.map( inFields(_) )
-
-    val aggStrings = aggs.map(a => {
-      val distinct = if (a.isDistinct) {
-        if (a.getArgList.size() == 0) {
-          "DISTINCT"
-        } else {
-          "DISTINCT "
-        }
-      } else {
-        ""
-      }
-      val argList = if (a.getArgList.size() > 0) {
-        a.getArgList.asScala.map(inFields(_)).mkString(", ")
-      } else {
-        "*"
-      }
-      s"${a.getAggregation}($distinct$argList)"
-    })
-
-    val propStrings = namedProperties.map(_.property.toString)
-
-    (groupStrings ++ aggStrings ++ propStrings).zip(outFields).map {
-      case (f, o) => if (f == o) {
-        f
-      } else {
-        s"$f AS $o"
-      }
-    }.mkString(", ")
-  }
-
-  private[flink] def aggregationToString(
-      inputType: RelDataType,
-      grouping: Array[Int],
-      rowType: RelDataType,
-      aggCalls: Seq[AggregateCall],
-      namedProperties: Seq[NamedWindowProperty]): String = {
-    buildAggregationToString(
-      inputType, grouping, Array.empty[Int], rowType, aggCalls, namedProperties)
-  }
-
-  private[flink] def aggregationToString(
-      inputType: RelDataType,
-      grouping: Array[Int],
-      auxGrouping: Array[Int],
-      rowType: RelDataType,
-      namedAggregates: Seq[CalcitePair[AggregateCall, String]],
-      namedProperties: Seq[NamedWindowProperty]): String = {
-    buildAggregationToString(
-      inputType, grouping, auxGrouping, rowType, namedAggregates.map(_.left), namedProperties)
-  }
-
-  private[flink] def aggregationToString(
-      inputType: RelDataType,
-      grouping: Array[Int],
-      rowType: RelDataType,
-      aggCalls: Seq[AggregateCall],
-      aggFunctions: Seq[UserDefinedFunction],
-      isMerge: Boolean,
-      isGlobal: Boolean): String = {
-    aggregationToString(inputType, grouping, Array.empty[Int], rowType, aggCalls, aggFunctions,
-      isMerge, isGlobal)
-  }
-
-  private[flink] def aggregationToString(
+  def aggregationToString(
       inputType: RelDataType,
       grouping: Array[Int],
       auxGrouping: Array[Int],
@@ -124,7 +48,6 @@ trait CommonAggregate {
       isMerge: Boolean,
       isGlobal: Boolean,
       distincts: Seq[DistinctInfo] = Seq()): String = {
-
     val prefix = if (isMerge) {
       "Final_"
     } else if (!isGlobal) {
@@ -238,17 +161,58 @@ trait CommonAggregate {
     }.mkString(", ")
   }
 
-  /**
-    * Returns string for the stream aggregations.
-    * @param inputType    the input row type of the aggregate node
-    * @param outputType   the output row type of the aggregate node
-    * @param aggInfoList  the aggregate information list
-    * @param grouping     the grouping keys of the aggregate node
-    * @param shuffleKey   the shuffle key. none when the aggregate is not incremental aggregate.
-    * @param isLocal      true when the aggregate is a local aggregate
-    * @param isGlobal     true when the aggregate is a global aggregate
-    * @return string for the stream aggregations.
-    */
+  def aggregationToString(
+      inputType: RelDataType,
+      grouping: Array[Int],
+      rowType: RelDataType,
+      aggCalls: Seq[AggregateCall],
+      namedProperties: Seq[NamedWindowProperty]): String = {
+    buildAggregationToString(
+      inputType, grouping, Array.empty[Int], rowType, aggCalls, namedProperties)
+  }
+
+  private def buildAggregationToString(
+      inputType: RelDataType,
+      grouping: Array[Int],
+      auxGrouping: Array[Int],
+      rowType: RelDataType,
+      aggs: Seq[AggregateCall],
+      namedProperties: Seq[NamedWindowProperty]): String = {
+
+    val inFields = inputType.getFieldNames.asScala
+    val outFields = rowType.getFieldNames.asScala
+
+    val groupStrings = grouping.map( inFields(_) )
+
+    val aggStrings = aggs.map(a => {
+      val distinct = if (a.isDistinct) {
+        if (a.getArgList.size() == 0) {
+          "DISTINCT"
+        } else {
+          "DISTINCT "
+        }
+      } else {
+        ""
+      }
+      val argList = if (a.getArgList.size() > 0) {
+        a.getArgList.asScala.map(inFields(_)).mkString(", ")
+      } else {
+        "*"
+      }
+      s"${a.getAggregation}($distinct$argList)"
+    })
+
+    val propStrings = namedProperties.map(_.property.toString)
+
+    (groupStrings ++ aggStrings ++ propStrings).zip(outFields).map {
+      case (f, o) => if (f == o) {
+        f
+      } else {
+        s"$f AS $o"
+      }
+    }.mkString(", ")
+  }
+
   def streamAggregationToString(
       inputType: RelDataType,
       outputType: RelDataType,
@@ -263,15 +227,15 @@ trait CommonAggregate {
     val distinctFieldNames = distincts.indices.map(index => s"distinct$$$index")
     // aggIndex -> distinctFieldName
     val distinctAggs = distincts.zip(distinctFieldNames)
-      .flatMap(f => f._1.aggIndexes.map(i => (i, f._2)))
-      .toMap
+        .flatMap(f => f._1.aggIndexes.map(i => (i, f._2)))
+        .toMap
     val aggFilters = {
       val distinctAggFilters = distincts
-        .flatMap(d => d.aggIndexes.zip(d.filterArgs))
-        .toMap
+          .flatMap(d => d.aggIndexes.zip(d.filterArgs))
+          .toMap
       val otherAggFilters = aggInfos
-        .map(info => (info.aggIndex, info.agg.filterArg))
-        .toMap
+          .map(info => (info.aggIndex, info.agg.filterArg))
+          .toMap
       otherAggFilters ++ distinctAggFilters
     }
 
@@ -421,7 +385,7 @@ trait CommonAggregate {
     }
   }
 
-  private[flink] def windowAggregationToString(
+  def windowAggregationToString(
       inputType: RelDataType,
       grouping: Array[Int],
       auxGrouping: Array[Int],
@@ -442,10 +406,10 @@ trait CommonAggregate {
     val outFields = rowType.getFieldNames.asScala
 
     /**
-      *  - local window agg input type: grouping keys + aux-grouping keys + agg arg list
-      *  - global window agg input type: grouping keys + timestamp + aux-grouping keys + agg buffer
-      *  agg buffer as agg merge args list
-      */
+     *  - local window agg input type: grouping keys + aux-grouping keys + agg arg list
+     *  - global window agg input type: grouping keys + timestamp + aux-grouping keys + agg buffer
+     *  agg buffer as agg merge args list
+     */
     var offset = if (isMerge) {
       grouping.length + 1 + auxGrouping.length
     } else {
@@ -478,10 +442,10 @@ trait CommonAggregate {
     }
 
     /**
-      * - local window agg output type: grouping keys + timestamp + aux-grouping keys + agg buffer
-      * - global window agg output type:
-      * grouping keys + aux-grouping keys + agg result + window props
-      */
+     * - local window agg output type: grouping keys + timestamp + aux-grouping keys + agg buffer
+     * - global window agg output type:
+     * grouping keys + aux-grouping keys + agg result + window props
+     */
     offset = if (!isGlobal) {
       grouping.length + 1 + auxGrouping.length
     } else {
@@ -510,8 +474,8 @@ trait CommonAggregate {
 
     val inNames = grouping.map(inFields(_)) ++ auxGrouping.map(inFields(_)) ++ aggStrings
     val outNames = grouping.indices.map(outFields(_)) ++
-      (grouping.length + 1 until grouping.length + 1 + auxGrouping.length).map(outFields(_)) ++
-      outFieldNames
+        (grouping.length + 1 until grouping.length + 1 + auxGrouping.length).map(outFields(_)) ++
+        outFieldNames
     inNames.zip(outNames).map {
       case (f, o) => if (f == o) {
         f
@@ -519,28 +483,5 @@ trait CommonAggregate {
         s"$prefix$f AS $o"
       }
     }.mkString(", ")
-  }
-
-  private[flink] def getMiniBatchTrigger(tableConfig: TableConfig, useLocalAgg: Boolean) = {
-    val triggerTime = if (useLocalAgg) {
-      tableConfig.getMiniBatchTriggerTime / 2
-    } else {
-      tableConfig.getMiniBatchTriggerTime
-    }
-    val timeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (tableConfig.isMicroBatchEnabled) {
-        None
-      } else {
-        Some(new TimeBundleTrigger[BaseRow](triggerTime))
-      }
-    val sizeTrigger: Option[BundleTrigger[BaseRow]] =
-      if (tableConfig.getMiniBatchTriggerSize == Long.MinValue) {
-        None
-      } else {
-        Some(new CountBundleTrigger[BaseRow](tableConfig.getMiniBatchTriggerSize))
-      }
-    new CombinedBundleTrigger[BaseRow](
-      Array(timeTrigger, sizeTrigger).filter(_.isDefined).map(_.get): _*
-    )
   }
 }

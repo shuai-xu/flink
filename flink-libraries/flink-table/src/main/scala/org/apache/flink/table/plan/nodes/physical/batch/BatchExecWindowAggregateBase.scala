@@ -36,12 +36,12 @@ import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions.{Expression, If, Literal}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
-import org.apache.flink.table.plan.nodes.common.CommonAggregate
-import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.plan.util.AggregateUtil.asLong
+import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.runtime.operator.window.grouping.{AbstractWindowsGrouping, HeapWindowsGrouping}
 import org.apache.flink.table.util.RowIterator
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
@@ -69,7 +69,6 @@ abstract class BatchExecWindowAggregateBase(
     val isFinal: Boolean)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with CommonAggregate
   with RowBatchExecRel {
 
   if (grouping.isEmpty && auxGrouping.nonEmpty) {
@@ -127,12 +126,14 @@ abstract class BatchExecWindowAggregateBase(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputRelDataType, grouping), grouping.nonEmpty)
-      .itemIf("auxGrouping", groupingToString(inputRelDataType, auxGrouping), auxGrouping.nonEmpty)
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputRelDataType, grouping), grouping.nonEmpty)
+      .itemIf("auxGrouping",
+        AggregateNameUtil.groupingToString(inputRelDataType, auxGrouping), auxGrouping.nonEmpty)
       .item("window", window)
       .itemIf("properties", namedProperties.map(_.name).mkString(", "), namedProperties.nonEmpty)
       .item("select",
-        windowAggregationToString(
+        AggregateNameUtil.windowAggregationToString(
           inputRelDataType,
           grouping,
           auxGrouping,

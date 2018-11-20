@@ -28,9 +28,10 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.common.CommonAggregate
+import org.apache.flink.table.plan.util.AggregateNameUtil
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.util.FlinkRelOptUtil
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
@@ -52,7 +53,6 @@ abstract class BatchExecGroupAggregateBase(
     val isFinal: Boolean)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with CommonAggregate
   with RowBatchExecRel {
 
   if (grouping.isEmpty && auxGrouping.nonEmpty) {
@@ -112,18 +112,18 @@ abstract class BatchExecGroupAggregateBase(
 
   private[flink] def getAggOperatorName(prefix: String): String = {
     val groupingStr = if (grouping.nonEmpty) {
-      s"groupBy:(${groupingToString(inputRelDataType, grouping)}),"
+      s"groupBy:(${AggregateNameUtil.groupingToString(inputRelDataType, grouping)}),"
     } else {
       ""
     }
     val auxGroupingStr = if (auxGrouping.nonEmpty) {
-      s"auxGrouping:(${groupingToString(inputRelDataType, auxGrouping)}),"
+      s"auxGrouping:(${AggregateNameUtil.groupingToString(inputRelDataType, auxGrouping)}),"
     } else {
       ""
     }
 
     val projStr = s"select:(${
-      aggregationToString(
+      AggregateNameUtil.aggregationToString(
         inputRelDataType,
         grouping,
         auxGrouping,

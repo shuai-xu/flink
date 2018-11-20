@@ -25,6 +25,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
+import org.apache.flink.table.plan.util.AggregateNameUtil
 import org.apache.flink.table.runtime.operator.OneInputSubstituteStreamOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.ExecResourceUtil
@@ -65,9 +66,10 @@ class BatchExecLocalHashAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .itemIf("groupBy", groupingToString(inputType, grouping), grouping.nonEmpty)
-      .itemIf("auxGrouping", groupingToString(inputType, auxGrouping), auxGrouping.nonEmpty)
-      .item("select", aggregationToString(
+      .itemIf("groupBy", AggregateNameUtil.groupingToString(inputType, grouping), grouping.nonEmpty)
+      .itemIf("auxGrouping",
+        AggregateNameUtil.groupingToString(inputType, auxGrouping), auxGrouping.nonEmpty)
+      .item("select", AggregateNameUtil.aggregationToString(
         inputType,
         grouping,
         auxGrouping,

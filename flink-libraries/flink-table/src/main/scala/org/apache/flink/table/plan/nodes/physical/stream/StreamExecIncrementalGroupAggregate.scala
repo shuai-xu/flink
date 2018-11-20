@@ -24,8 +24,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.common.CommonAggregate
-import org.apache.flink.table.plan.util.{AggregateInfoList, StreamExecUtil}
+import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunction
 import org.apache.flink.table.runtime.operator.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -69,7 +68,6 @@ class StreamExecIncrementalGroupAggregate(
     val shuffleKey: Array[Int],
     val groupKey: Array[Int])
   extends SingleRel(cluster, traitSet, inputNode)
-  with CommonAggregate
   with StreamExecRel
   with Logging {
 
@@ -97,9 +95,9 @@ class StreamExecIncrementalGroupAggregate(
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
-      .item("shuffleKey", groupingToString(inputNode.getRowType, shuffleKey))
-      .item("groupKey", groupingToString(inputNode.getRowType, groupKey))
-      .item("select", streamAggregationToString(
+      .item("shuffleKey", AggregateNameUtil.groupingToString(inputNode.getRowType, shuffleKey))
+      .item("groupKey", AggregateNameUtil.groupingToString(inputNode.getRowType, groupKey))
+      .item("select", AggregateNameUtil.streamAggregationToString(
         inputNode.getRowType,
         getRowType,
         finalAggInfoList,
@@ -108,9 +106,11 @@ class StreamExecIncrementalGroupAggregate(
   }
 
   private def getOperatorName: String = {
-    val shuffleKeyToStr = s"shuffleKey: (${groupingToString(inputNode.getRowType, shuffleKey)})"
-    val groupKeyToStr = s"groupKey: (${groupingToString(inputNode.getRowType, groupKey)})"
-    val selectToStr = s"select: (${streamAggregationToString(
+    val shuffleKeyToStr =
+      s"shuffleKey: (${AggregateNameUtil.groupingToString(inputNode.getRowType, shuffleKey)})"
+    val groupKeyToStr =
+      s"groupKey: (${AggregateNameUtil.groupingToString(inputNode.getRowType, groupKey)})"
+    val selectToStr = s"select: (${AggregateNameUtil.streamAggregationToString(
       inputNode.getRowType,
       getRowType,
       finalAggInfoList,
@@ -162,7 +162,7 @@ class StreamExecIncrementalGroupAggregate(
     val valueTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], partialAccTypes: _*)
     val operator = new KeyedBundleOperator(
       aggFunction,
-      getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
+      AggregateUtil.getMiniBatchTrigger(tableEnv.getConfig, useLocalAgg = true),
       valueTypeInfo,
       tableEnv.getConfig.getParameters.getBoolean(
         TableConfig.BLINK_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
