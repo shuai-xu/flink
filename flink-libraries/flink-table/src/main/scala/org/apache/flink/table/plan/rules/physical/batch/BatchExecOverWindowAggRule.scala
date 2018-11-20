@@ -17,6 +17,13 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalOverWindow
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate
+import org.apache.flink.table.plan.util.{AggregateUtil, OverAggregateUtil, SortUtil}
+
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.{RelOptCluster, RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel._
@@ -24,21 +31,16 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Window.Group
 import org.apache.calcite.rel.core.{AggregateCall, Window}
 import org.apache.calcite.tools.ValidationException
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalOverWindow
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate
-import org.apache.flink.table.plan.util.{AggregateUtil, SortUtil}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class BatchExecOverWindowAggRule extends RelOptRule(
-      operand(classOf[FlinkLogicalOverWindow], operand(classOf[RelNode], any)),
-      "BatchExecOverWindowAggRule") with CommonOverAggregate {
+class BatchExecOverWindowAggRule
+    extends RelOptRule(
+      operand(classOf[FlinkLogicalOverWindow],
+        operand(classOf[RelNode], any)),
+      "BatchExecOverWindowAggRule") {
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val logicWindow = call.rels(0).asInstanceOf[FlinkLogicalOverWindow]
@@ -63,11 +65,11 @@ class BatchExecOverWindowAggRule extends RelOptRule(
       var satisfy = false
       val keyComp = o1.keys.compareTo(o2.keys)
       if (keyComp == 0) {
-        val needCollation1 = needCollationTrait(input, logicWindow, o1)
-        val needCollation2 = needCollationTrait(input, logicWindow, o2)
+        val needCollation1 = OverAggregateUtil.needCollationTrait(input, logicWindow, o1)
+        val needCollation2 = OverAggregateUtil.needCollationTrait(input, logicWindow, o2)
         if (needCollation1 || needCollation2) {
-          val collation1 = createFlinkRelCollation(o1)
-          val collation2 = createFlinkRelCollation(o2)
+          val collation1 = OverAggregateUtil.createFlinkRelCollation(o1)
+          val collation2 = OverAggregateUtil.createFlinkRelCollation(o2)
           satisfy = collation1.satisfies(collation2)
         } else {
           satisfy = true
@@ -93,8 +95,8 @@ class BatchExecOverWindowAggRule extends RelOptRule(
         .replace(FlinkConventions.BATCHEXEC)
         .replace(requiredDistribution)
         .replace(RelCollations.EMPTY)
-      if (needCollationTrait(input, logicWindow, lastGroup)) {
-        val collation = createFlinkRelCollation(lastGroup)
+      if (OverAggregateUtil.needCollationTrait(input, logicWindow, lastGroup)) {
+        val collation = OverAggregateUtil.createFlinkRelCollation(lastGroup)
         if (!collation.equals(RelCollations.EMPTY)) {
           requiredTrait = requiredTrait.replace(collation)
         }

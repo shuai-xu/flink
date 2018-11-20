@@ -31,9 +31,9 @@ import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistri
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
-import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
+import org.apache.flink.table.plan.util.OverAggregateUtil
 import org.apache.flink.table.runtime.operator.overagg._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelOptUtil}
@@ -73,8 +73,7 @@ class BatchExecOverAggregate(
     logicWindow: Window)
   extends SingleRel(cluster, traitSet, inputNode)
   with BatchExecAggregateCodeGen
-  with RowBatchExecRel
-  with CommonOverAggregate {
+  with RowBatchExecRel {
 
   private lazy val modeToGroupToAggCallToAggFunction: Seq[(OverWindowMode, Window.Group, Seq[
       (AggregateCall, UserDefinedFunction)])] = splitOutOffsetOrInsensitiveGroup
@@ -130,8 +129,8 @@ class BatchExecOverAggregate(
     selfProvidedTraitSet = selfProvidedTraitSet.replace(providedDistribution)
     // provided collation
     val firstGroup = windowGroupToAggCallToAggFunction.head._1
-    if (needCollationTrait(input, logicWindow, firstGroup)) {
-      val collation = createFlinkRelCollation(firstGroup)
+    if (OverAggregateUtil.needCollationTrait(input, logicWindow, firstGroup)) {
+      val collation = OverAggregateUtil.createFlinkRelCollation(firstGroup)
       if (!collation.equals(RelCollations.EMPTY)) {
         selfProvidedTraitSet = selfProvidedTraitSet.replace(collation)
       }
@@ -229,15 +228,16 @@ class BatchExecOverAggregate(
     val constants: Seq[RexLiteral] = logicWindow.constants
 
     val writer = super.explainTerms(pw)
-      .itemIf("partitionBy", partitionToString(rowRelDataType, partitionKeys),
+      .itemIf("partitionBy", OverAggregateUtil.partitionToString(rowRelDataType, partitionKeys),
         partitionKeys.nonEmpty)
-      .itemIf("orderBy", orderingToString(rowRelDataType, groups.head.orderKeys.getFieldCollations),
+      .itemIf("orderBy", OverAggregateUtil.orderingToString(
+        rowRelDataType, groups.head.orderKeys.getFieldCollations),
         orderKeyIdxs.nonEmpty)
 
     var offset = inputRelDataType.getFieldCount
     groups.zipWithIndex.foreach { case (group, index) =>
       val namedAggregates = generateNamedAggregates(group)
-      val select = aggregationToString(
+      val select = OverAggregateUtil.aggregationToString(
         inputRelDataType,
         constants,
         rowRelDataType,
@@ -245,7 +245,7 @@ class BatchExecOverAggregate(
         outputInputName = false,
         rowTypeOffset = offset)
       offset += namedAggregates.size
-      val windowRange = windowRangeToString(logicWindow, group)
+      val windowRange = OverAggregateUtil.windowRangeToString(logicWindow, group)
       writer.item("window#" + index, select + windowRange)
     }
     writer.item("select", getRowType.getFieldNames.mkString(", "))
@@ -367,7 +367,8 @@ class BatchExecOverAggregate(
             // The second arg mean the offset for leag/lag function, and the default value is 1L.
             val flag = if (aggCall.getAggregation.kind == SqlKind.LEAD) 1 else -1
             val (offset, calcOffsetFunc) = if (aggCall.getArgList.length >= 2) {
-              val constantIndex = aggCall.getArgList.get(1) - calcOriginInputRows(logicWindow)
+              val constantIndex =
+                aggCall.getArgList.get(1) - OverAggregateUtil.calcOriginInputRows(logicWindow)
               if (constantIndex < 0) {
                 val rowIndex = aggCall.getArgList.get(1)
                 val func = inType.getTypeAt(rowIndex) match {
@@ -477,7 +478,7 @@ class BatchExecOverAggregate(
   private[flink] def createBoundOrdering(isRow: Boolean,
       config: TableConfig, inType: BaseRowType, windowGroup: Window.Group,
       windowBound: RexWindowBound, isLowerBound: Boolean): GeneratedBoundComparator = {
-    val bound = getBoundary(logicWindow, windowBound)
+    val bound = OverAggregateUtil.getBoundary(logicWindow, windowBound)
     if (isRow) {
       new RowBoundComparatorCodeGenerator(
         config, bound.asInstanceOf[Long]).generateBoundComparator(newName("RowBoundComparator"))

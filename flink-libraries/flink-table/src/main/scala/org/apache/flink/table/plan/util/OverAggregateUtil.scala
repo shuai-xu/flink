@@ -16,45 +16,42 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.nodes.common
+package org.apache.flink.table.plan.util
 
-import java.util.{ArrayList => JArrayList}
+import org.apache.flink.table.plan.util.AggregateUtil._
+import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 
 import org.apache.calcite.rel.RelFieldCollation.{Direction, NullDirection}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Window.Group
 import org.apache.calcite.rel.core.{AggregateCall, Window}
-import org.apache.calcite.rel.{RelCollations, RelFieldCollation, RelNode}
+import org.apache.calcite.rel.{RelCollation, RelCollations, RelFieldCollation, RelNode}
 import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexWindowBound}
 import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.flink.table.plan.util.AggregateUtil._
-import org.apache.flink.table.plan.util.SortUtil
-import org.apache.flink.table.runtime.aggregate.RelFieldCollations
+
+import java.util.{ArrayList => JArrayList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
-trait CommonOverAggregate {
+object OverAggregateUtil {
 
-  private[flink] def partitionToString(inputType: RelDataType, partition: Array[Int]): String = {
+  def partitionToString(inputType: RelDataType, partition: Array[Int]): String = {
     val inFields = inputType.getFieldNames.asScala
     partition.map( inFields(_) ).mkString(", ")
   }
 
-  private[flink] def orderingToString(
-    inputType: RelDataType,
-    orderFields: java.util.List[RelFieldCollation]): String = {
-
+  def orderingToString(
+      inputType: RelDataType,
+      orderFields: java.util.List[RelFieldCollation]): String = {
     val inFields = inputType.getFieldList.asScala
-
     val orderingString = orderFields.asScala.map {
       x => s"${inFields(x.getFieldIndex).getName} ${x.direction.shortString}"
     }.mkString(", ")
-
     orderingString
   }
 
-  private[flink] def windowRangeToString(
+  def windowRangeToString(
       logicWindow: Window,
       groupWindow: Group): String = {
 
@@ -90,13 +87,13 @@ trait CommonOverAggregate {
     buf.toString
   }
 
-  private[flink] def aggregationToString(
+  def aggregationToString(
       inputType: RelDataType,
       constants: Seq[RexLiteral],
       rowType: RelDataType,
       namedAggregates: Seq[CalcitePair[AggregateCall, String]],
       outputInputName: Boolean = true,
-      rowTypeOffset: Int = 0) = {
+      rowTypeOffset: Int = 0): String = {
 
     val inFields = inputType.getFieldNames.asScala
     val outFields = rowType.getFieldNames.asScala
@@ -134,7 +131,7 @@ trait CommonOverAggregate {
     }.mkString(", ")
   }
 
-  private[flink] def calcOriginInputRows(logicWindow: Window): Int = {
+  def calcOriginInputRows(logicWindow: Window): Int = {
     logicWindow.getRowType.getFieldCount - logicWindow.groups.flatMap(_.aggCalls).size
   }
 
@@ -143,8 +140,7 @@ trait CommonOverAggregate {
    * The return type only is Long for the ROWS OVER WINDOW.
    * The return type can be Long or BigDecimal for the RANGE OVER WINDOW.
    */
-  private[flink] def getBoundary(
-      logicWindow: Window, windowBound: RexWindowBound) = {
+  def getBoundary(logicWindow: Window, windowBound: RexWindowBound): Any = {
     if (windowBound.isCurrentRow) {
       0L
     } else {
@@ -161,7 +157,7 @@ trait CommonOverAggregate {
     }
   }
 
-  private[flink] def createFlinkRelCollation(group: Group) = {
+  def createFlinkRelCollation(group: Group): RelCollation = {
     val groupSet: Array[Int] = group.keys.toArray
     val collections = group.orderKeys.getFieldCollations
     val (orderKeyIdxs, _, _) = SortUtil.getKeysAndOrders(collections)
@@ -200,8 +196,10 @@ trait CommonOverAggregate {
       true
     } else {
       //rows over window
-      val offsetLower = getBoundary(overWindow, group.lowerBound).asInstanceOf[Long]
-      val offsetUpper = getBoundary(overWindow, group.upperBound).asInstanceOf[Long]
+      val offsetLower = OverAggregateUtil.getBoundary(
+        overWindow, group.lowerBound).asInstanceOf[Long]
+      val offsetUpper = OverAggregateUtil.getBoundary(
+        overWindow, group.upperBound).asInstanceOf[Long]
       if (offsetLower == 0L && offsetUpper == 0L && group.orderKeys.getFieldCollations.isEmpty) {
         false
       } else {

@@ -25,11 +25,10 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.nodes.common.CommonOverAggregate
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToStreamAggregateInfoList}
-import org.apache.flink.table.plan.util.StreamExecUtil
+import org.apache.flink.table.plan.util.{OverAggregateUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.functions.ProcessFunction
 import org.apache.flink.table.runtime.operator.KeyedProcessOperator
@@ -58,7 +57,6 @@ class StreamExecOverAggregate(
     outputSchema: BaseRowSchema,
     inputSchema: BaseRowSchema)
   extends SingleRel(cluster, traitSet, inputNode)
-  with CommonOverAggregate
   with StreamExecRel
   with Logging {
 
@@ -98,13 +96,14 @@ class StreamExecOverAggregate(
     val namedAggregates: Seq[CalcitePair[AggregateCall, String]] = generateNamedAggregates
 
     super.explainTerms(pw)
-      .itemIf("partitionBy",
-        partitionToString(outputSchema.relDataType, partitionKeys), partitionKeys.nonEmpty)
+      .itemIf("partitionBy", OverAggregateUtil.partitionToString(
+        outputSchema.relDataType, partitionKeys), partitionKeys.nonEmpty)
       .item("orderBy",
-        orderingToString(outputSchema.relDataType, overWindow.orderKeys.getFieldCollations))
-      .item("window", windowRangeToString(logicWindow, overWindow))
+        OverAggregateUtil.orderingToString(
+          outputSchema.relDataType, overWindow.orderKeys.getFieldCollations))
+      .item("window", OverAggregateUtil.windowRangeToString(logicWindow, overWindow))
       .item(
-        "select", aggregationToString(
+        "select", OverAggregateUtil.aggregationToString(
           inputSchema.relDataType,
           constants,
           outputSchema.relDataType,
@@ -205,7 +204,7 @@ class StreamExecOverAggregate(
       && !overWindow.lowerBound.isUnbounded
       && overWindow.upperBound.isCurrentRow) {
 
-      val boundValue = getBoundary(logicWindow, overWindow.lowerBound)
+      val boundValue = OverAggregateUtil.getBoundary(logicWindow, overWindow.lowerBound)
 
       if (boundValue.isInstanceOf[BigDecimal]) {
         throw new TableException(
@@ -435,15 +434,16 @@ class StreamExecOverAggregate(
 
     s"over: (${
       if (!partitionKeys.isEmpty) {
-        s"PARTITION BY: ${partitionToString(inputSchema.relDataType, partitionKeys)}, "
+        s"PARTITION BY: ${OverAggregateUtil.partitionToString(
+          inputSchema.relDataType, partitionKeys)}, "
       } else {
         ""
       }
-    }ORDER BY: ${orderingToString(inputSchema.relDataType,
-                                  overWindow.orderKeys.getFieldCollations)}, " +
-      s"${windowRangeToString(logicWindow, overWindow)}, " +
+    }ORDER BY: ${OverAggregateUtil.orderingToString(
+      inputSchema.relDataType, overWindow.orderKeys.getFieldCollations)}, " +
+      s"${OverAggregateUtil.windowRangeToString(logicWindow, overWindow)}, " +
       s"select: (${
-        aggregationToString(
+        OverAggregateUtil.aggregationToString(
           inputSchema.relDataType,
           constants,
           outputSchema.relDataType,
