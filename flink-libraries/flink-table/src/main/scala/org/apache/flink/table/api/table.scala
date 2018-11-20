@@ -19,9 +19,10 @@ package org.apache.flink.table.api
 
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.java.operators.join.JoinType
+import org.apache.flink.table.api.functions.TemporalTableFunction
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Literal, Ordering, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Literal, Ordering, ResolvedFieldReference, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.logical.{Minus, _}
@@ -197,6 +198,75 @@ class Table(
     //get the correct expression for AggFunctionCall
     val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, tableEnv))
     select(withResolvedAggFunctionCall: _*)
+  }
+
+  /**
+    * Creates [[TemporalTableFunction]] backed up by this table as a history table.
+    * Temporal Tables represent a concept of a table that changes over time and for which
+    * Flink keeps track of those changes. [[TemporalTableFunction]] provides a way how to access
+    * those data.
+    *
+    * For more information please check Flink's documentation on Temporal Tables.
+    *
+    * Currently [[TemporalTableFunction]]s are only supported in streaming.
+    *
+    * @param timeAttribute Must points to a time attribute. Provides a way to compare which records
+    *                      are a newer or older version.
+    * @param primaryKey    Defines the primary key. With primary key it is possible to update
+    *                      a row or to delete it.
+    * @return [[TemporalTableFunction]] which is an instance of
+    *        [[org.apache.flink.table.api.functions.TableFunction]]. It takes one single argument,
+    *        the `timeAttribute`, for which it returns matching version of the [[Table]], from which
+    *        [[TemporalTableFunction]] was created.
+    */
+  def createTemporalTableFunction(
+      timeAttribute: String,
+      primaryKey: String): TemporalTableFunction = {
+    createTemporalTableFunction(
+      ExpressionParser.parseExpression(timeAttribute),
+      ExpressionParser.parseExpression(primaryKey))
+  }
+
+  /**
+    * Creates [[TemporalTableFunction]] backed up by this table as a history table.
+    * Temporal Tables represent a concept of a table that changes over time and for which
+    * Flink keeps track of those changes. [[TemporalTableFunction]] provides a way how to access
+    * those data.
+    *
+    * For more information please check Flink's documentation on Temporal Tables.
+    *
+    * Currently [[TemporalTableFunction]]s are only supported in streaming.
+    *
+    * @param timeAttribute Must points to a time indicator. Provides a way to compare which records
+    *                      are a newer or older version.
+    * @param primaryKey    Defines the primary key. With primary key it is possible to update
+    *                      a row or to delete it.
+    * @return [[TemporalTableFunction]] which is an instance of
+    *        [[org.apache.flink.table.api.functions.TableFunction]]. It takes one single argument,
+    *        the `timeAttribute`, for which it returns matching version of the [[Table]], from which
+    *        [[TemporalTableFunction]] was created.
+    */
+  def createTemporalTableFunction(
+      timeAttribute: Expression,
+      primaryKey: Expression): TemporalTableFunction = {
+    val temporalTable = TemporalTable(timeAttribute, primaryKey, logicalPlan)
+      .validate(tableEnv)
+      .asInstanceOf[TemporalTable]
+
+    TemporalTableFunction.create(
+      this,
+      temporalTable.timeAttribute,
+      validatePrimaryKeyExpression(temporalTable.primaryKey))
+  }
+
+  private def validatePrimaryKeyExpression(expression: Expression): String = {
+    expression match {
+      case fieldReference: ResolvedFieldReference =>
+        fieldReference.name
+      case _ => throw new ValidationException(
+        s"Unsupported expression [$expression] as primary key. " +
+          s"Only top-level (not nested) field references are supported.")
+    }
   }
 
   /**

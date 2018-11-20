@@ -719,6 +719,24 @@ case class WindowAggregate(
     logicalSqlVisitor.visit(this)
 }
 
+case class TemporalTable(
+    timeAttribute: Expression,
+    primaryKey: Expression,
+    child: LogicalNode)
+  extends UnaryNode {
+
+  override def output: Seq[Attribute] = child.output
+
+  override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
+    throw new UnsupportedOperationException(
+      "This should never be called. This node is supposed to be used only for validation")
+  }
+
+  override def accept[T](logicalSqlVisitor: LogicalNodeVisitor[T]): T = {
+    logicalSqlVisitor.visit(this)
+  }
+}
+
 /**
   * LogicalNode for calling a user-defined table functions.
   *
