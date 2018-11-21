@@ -84,10 +84,8 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 			Map<JobVertexID, ArrayList<Integer>> vertexToStreamNodeIds = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), JOB_VERTEX_TO_STREAM_NODE_MAP, schedulingConfig.getUserClassLoader());
 			List<RelRunningUnit> relRunningUnits = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), RUNNING_UNIT_CONF_KEY, schedulingConfig.getUserClassLoader());
 			open(scheduler, jobGraph,  vertexToStreamNodeIds, relRunningUnits);
-		} catch (IOException e) {
-			LOG.warn("catch IOException.", e);
-		} catch (ClassNotFoundException e) {
-			LOG.warn("catch ClassNotFoundException.", e);
+		} catch (IOException|ClassNotFoundException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
