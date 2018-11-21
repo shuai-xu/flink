@@ -899,12 +899,19 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 		for (ExecutionVertex ev : vertices) {
 			final Execution exec = ev.getCurrentExecutionAttempt();
-			// these calls are not blocking, they only return futures
-			Tuple2<ScheduledUnit, SlotProfile> scheduleUnitAndSlotProfile = exec.enterScheduledAndPrepareSchedulingResources();
-			slotRequestIds.add(new SlotRequestId());
-			scheduledUnits.add(scheduleUnitAndSlotProfile.f0);
-			slotProfiles.add(scheduleUnitAndSlotProfile.f1);
-			scheduledExecutions.add(exec);
+			try {
+				Tuple2<ScheduledUnit, SlotProfile> scheduleUnitAndSlotProfile = exec.enterScheduledAndPrepareSchedulingResources();
+				slotRequestIds.add(new SlotRequestId());
+				scheduledUnits.add(scheduleUnitAndSlotProfile.f0);
+				slotProfiles.add(scheduleUnitAndSlotProfile.f1);
+				scheduledExecutions.add(exec);
+			} catch (IllegalExecutionStateException e) {
+				LOG.info("The execution {} may be already scheduled by other thread.", ev.getTaskNameWithSubtaskIndex(), e);
+			}
+		}
+
+		if (slotRequestIds.isEmpty()) {
+			return CompletableFuture.completedFuture(null);
 		}
 
 		List<CompletableFuture<LogicalSlot>> allocationFutures =
@@ -1436,7 +1443,11 @@ public class ExecutionGraph implements AccessExecutionGraph {
 						"Please check the schedule logic in " + graphManager.getClass().getCanonicalName());
 			}
 
-			LOG.info("Schedule {} vertices: {}", vertices.size(), vertices);
+			LOG.info("Schedule {} vertices: {}, already scheduled {}", vertices.size(), vertices, alreadyScheduledCount);
+
+			if (vertices.isEmpty()) {
+				return;
+			}
 
 			final CompletableFuture<Void> schedulingFuture = schedule(vertices);
 

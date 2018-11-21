@@ -41,6 +41,7 @@ import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
+import org.apache.flink.runtime.taskexecutor.slot.SlotNotFoundException;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.LocalTaskManagerLocation;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -671,19 +672,18 @@ public class SlotPoolTest extends TestLogger {
 			final AllocationID expiredAllocationId = new AllocationID();
 			final SlotOffer slotToExpire = new SlotOffer(expiredAllocationId, 0, ResourceProfile.UNKNOWN);
 
+			final CompletableFuture<Acknowledge> responseFuture = new CompletableFuture<>();
+
 			final ArrayDeque<CompletableFuture<Acknowledge>> responseQueue = new ArrayDeque<>(2);
 			taskManagerGateway.setFreeSlotFunction((AllocationID allocationId, Throwable cause) -> {
 				if (responseQueue.isEmpty()) {
-					return CompletableFuture.completedFuture(Acknowledge.get());
+					return responseFuture;
 				} else {
 					return responseQueue.pop();
 				}
 			});
 
 			responseQueue.add(FutureUtils.completedExceptionally(new FlinkException("Test failure")));
-
-			final CompletableFuture<Acknowledge> responseFuture = new CompletableFuture<>();
-			responseQueue.add(responseFuture);
 
 			assertThat(
 				slotPoolGateway.registerTaskManager(taskManagerLocation.getResourceID()).get(),
@@ -698,26 +698,6 @@ public class SlotPoolTest extends TestLogger {
 			slotPool.triggerCheckIdleSlot();
 
 			CompletableFuture<LogicalSlot> allocatedSlotFuture = slotPoolGateway.allocateSlot(
-				new SlotRequestId(),
-				new DummyScheduledUnit(),
-				SlotProfile.noRequirements(),
-				true,
-				timeout);
-
-			// wait until the slot has been fulfilled with the previously idling slot
-			final LogicalSlot logicalSlot = allocatedSlotFuture.get();
-			assertThat(logicalSlot.getAllocationId(), Matchers.is(expiredAllocationId));
-
-			// return the slot
-			slotPool.getSlotOwner().returnAllocatedSlot(logicalSlot).get();
-
-			// advance the time so that the returned slot is now idling
-			clock.advanceTime(timeout.toMilliseconds(), TimeUnit.MILLISECONDS);
-
-			slotPool.triggerCheckIdleSlot();
-
-			// request a new slot after the idling slot has been released
-			allocatedSlotFuture = slotPoolGateway.allocateSlot(
 				new SlotRequestId(),
 				new DummyScheduledUnit(),
 				SlotProfile.noRequirements(),
@@ -739,6 +719,65 @@ public class SlotPoolTest extends TestLogger {
 				// expected
 			}
 
+		} finally {
+			RpcUtils.terminateRpcEndpoint(slotPool, timeout);
+		}
+	}
+
+	/**
+	 * Tests that idle slots which cannot be released will not be recycled.
+	 */
+	@Test
+	public void testIdleSlotNotAddedBackIfReleasingFailed() throws Exception {
+		final ManualClock clock = new ManualClock();
+		final SlotPool slotPool = new SlotPool(
+				rpcService,
+				jobId,
+				LocationPreferenceSchedulingStrategy.getInstance(),
+				clock,
+				TestingUtils.infiniteTime(),
+				timeout);
+
+		try {
+			final SlotPoolGateway slotPoolGateway = setupSlotPool(slotPool, resourceManagerGateway);
+
+			final AllocationID expiredAllocationId = new AllocationID();
+			final SlotOffer slotToExpire = new SlotOffer(expiredAllocationId, 0, ResourceProfile.UNKNOWN);
+
+			final ArrayDeque<CompletableFuture<Acknowledge>> responseQueue = new ArrayDeque<>(2);
+			taskManagerGateway.setFreeSlotFunction((AllocationID allocationId, Throwable cause) -> {
+				if (responseQueue.isEmpty()) {
+					return FutureUtils.completedExceptionally(new SlotNotFoundException("Test failure"));
+				} else {
+					return responseQueue.pop();
+				}
+			});
+
+			responseQueue.add(FutureUtils.completedExceptionally(new FlinkException("Test failure")));
+
+			assertThat(
+					slotPoolGateway.registerTaskManager(taskManagerLocation.getResourceID()).get(),
+					Matchers.is(Acknowledge.get()));
+
+			assertThat(
+					slotPoolGateway.offerSlot(taskManagerLocation, taskManagerGateway, slotToExpire).get(),
+					Matchers.is(true));
+
+			clock.advanceTime(timeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			slotPool.triggerCheckIdleSlot();
+
+			long startTime = System.currentTimeMillis();
+			while (true) {
+				if (responseQueue.isEmpty()) {
+					break;
+				} else if (System.currentTimeMillis() - startTime > 2000) {
+					fail("Response queue is not empty");
+				}
+				Thread.sleep(100);
+			}
+
+			assertEquals(0, slotPool.getAvailableSlots().size());
 		} finally {
 			RpcUtils.terminateRpcEndpoint(slotPool, timeout);
 		}

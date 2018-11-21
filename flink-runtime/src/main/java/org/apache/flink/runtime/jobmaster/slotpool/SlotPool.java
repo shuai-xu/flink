@@ -46,6 +46,7 @@ import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
+import org.apache.flink.runtime.taskexecutor.slot.SlotNotFoundException;
 import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.util.clock.Clock;
@@ -1389,30 +1390,38 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			if (availableSlots.tryRemove(allocationID)) {
 
 				log.info("Releasing idle slot {}.", allocationID);
-				final CompletableFuture<Acknowledge> freeSlotFuture = expiredSlot.getTaskManagerGateway().freeSlot(
-					allocationID,
-					cause,
-					rpcTimeout);
-
-				freeSlotFuture.whenCompleteAsync(
-					(Acknowledge ignored, Throwable throwable) -> {
-						if (throwable != null) {
-							if (registeredTaskManagers.contains(expiredSlot.getTaskManagerId())) {
-								log.debug("Releasing slot {} of registered TaskExecutor {} failed. " +
-									"Trying to fulfill a different slot request.", allocationID, expiredSlot.getTaskManagerId(),
-									throwable);
-								tryFulfillSlotRequestOrMakeAvailable(expiredSlot);
-							} else {
-								log.debug("Releasing slot {} failed and owning TaskExecutor {} is no " +
-									"longer registered. Discarding slot.", allocationID, expiredSlot.getTaskManagerId());
-							}
-						}
-					},
-					getMainThreadExecutor());
+				releaseSlotToTaskManager(expiredSlot, cause);
 			}
 		}
 
 		scheduleRunAsync(this::checkIdleSlot, idleSlotTimeout);
+	}
+
+	private void releaseSlotToTaskManager(AllocatedSlot expiredSlot, Throwable cause) {
+		final AllocationID allocationID = expiredSlot.getAllocationId();
+
+		final CompletableFuture<Acknowledge> freeSlotFuture = expiredSlot.getTaskManagerGateway().freeSlot(
+				allocationID,
+				cause,
+				rpcTimeout);
+
+		freeSlotFuture.whenCompleteAsync(
+				(Acknowledge ignored, Throwable throwable) -> {
+					if (throwable != null) {
+						if (throwable instanceof SlotNotFoundException) {
+							log.debug("The slot {} is dropped as the task executor has released it.", allocationID, throwable);
+						}
+						else if (registeredTaskManagers.contains(expiredSlot.getTaskManagerId())) {
+							log.debug("Releasing slot {} of registered TaskExecutor {} failed. Will retry.",
+									allocationID, expiredSlot.getTaskManagerId(), throwable);
+							releaseSlotToTaskManager(expiredSlot, cause);
+						} else {
+							log.debug("Releasing slot {} failed and owning TaskExecutor {} is no " +
+									"longer registered. Discarding slot.", allocationID, expiredSlot.getTaskManagerId());
+						}
+					}
+				},
+				getMainThreadExecutor());
 	}
 
 	/**
