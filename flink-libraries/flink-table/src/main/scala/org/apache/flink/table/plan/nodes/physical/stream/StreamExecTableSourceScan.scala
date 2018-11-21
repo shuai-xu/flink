@@ -25,7 +25,10 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.physical.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.sources.{StreamTableSource, TableSourceUtil}
+import org.apache.flink.table.sources.{RowtimeAttributeDescriptor, StreamTableSource, TableSourceUtil}
+import org.apache.flink.streaming.api.functions.{AssignerWithPeriodicWatermarks, AssignerWithPunctuatedWatermarks}
+import org.apache.flink.streaming.api.watermark.Watermark
+import org.apache.flink.table.sources.wmstrategies.{PeriodicWatermarkAssigner, PreserveWatermarks, PunctuatedWatermarkAssigner}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
@@ -91,13 +94,40 @@ class StreamExecTableSourceScan(
       DataTypes.TIMESTAMP
     )
 
-    convertToInternalRow(
-      inputDataStream.getTransformation,
-      fieldIdxs,
-      getRowType,
-      tableSource.getReturnType,
-      config,
-      rowtimeExpression)
+    val ingestedTable = new DataStream(
+      tableEnv.execEnv,
+      convertToInternalRow(
+        inputDataStream.getTransformation,
+        fieldIdxs,
+        getRowType,
+        tableSource.getReturnType,
+        config,
+        rowtimeExpression))
+
+    // generate watermarks for rowtime indicator
+    val rowtimeDesc: Option[RowtimeAttributeDescriptor] =
+      TableSourceUtil.getRowtimeAttributeDescriptor(tableSource, None)
+
+    val withWatermarks = if (rowtimeDesc.isDefined) {
+      val rowtimeFieldIdx = getRowType.getFieldNames.indexOf(rowtimeDesc.get.getAttributeName)
+      val watermarkStrategy = rowtimeDesc.get.getWatermarkStrategy
+      watermarkStrategy match {
+        case p: PeriodicWatermarkAssigner =>
+          val watermarkGenerator = new PeriodicWatermarkAssignerWrapper(rowtimeFieldIdx, p)
+          ingestedTable.assignTimestampsAndWatermarks(watermarkGenerator)
+        case p: PunctuatedWatermarkAssigner =>
+          val watermarkGenerator = new PunctuatedWatermarkAssignerWrapper(rowtimeFieldIdx, p)
+          ingestedTable.assignTimestampsAndWatermarks(watermarkGenerator)
+        case _: PreserveWatermarks =>
+          // The watermarks have already been provided by the underlying DataStream.
+          ingestedTable
+      }
+    } else {
+      // No need to generate watermarks if no rowtime attribute is specified.
+      ingestedTable
+    }
+
+    withWatermarks.getTransformation
   }
 
   override def needInternalConversion: Boolean = {
@@ -106,5 +136,46 @@ class StreamExecTableSourceScan(
       isStreamTable = false,
       None)
     hasTimeAttributeField(fieldIndexes) || needsConversion(tableSource.getReturnType)
+  }
+}
+
+/**
+  * Generates periodic watermarks based on a [[PeriodicWatermarkAssigner]].
+  *
+  * @param timeFieldIdx the index of the rowtime attribute.
+  * @param assigner the watermark assigner.
+  */
+private class PeriodicWatermarkAssignerWrapper(
+    timeFieldIdx: Int,
+    assigner: PeriodicWatermarkAssigner)
+  extends AssignerWithPeriodicWatermarks[BaseRow] {
+
+  override def getCurrentWatermark: Watermark = assigner.getWatermark
+
+  override def extractTimestamp(row: BaseRow, previousElementTimestamp: Long): Long = {
+    val timestamp: Long = row.getLong(timeFieldIdx)
+    assigner.nextTimestamp(timestamp)
+    0L
+  }
+}
+
+/**
+  * Generates periodic watermarks based on a [[PunctuatedWatermarkAssigner]].
+  *
+  * @param timeFieldIdx the index of the rowtime attribute.
+  * @param assigner the watermark assigner.
+  */
+private class PunctuatedWatermarkAssignerWrapper(
+    timeFieldIdx: Int,
+    assigner: PunctuatedWatermarkAssigner)
+  extends AssignerWithPunctuatedWatermarks[BaseRow] {
+
+  override def checkAndGetNextWatermark(row: BaseRow, ts: Long): Watermark = {
+    val timestamp: Long = row.getLong(timeFieldIdx)
+    assigner.getWatermark(row, timestamp)
+  }
+
+  override def extractTimestamp(element: BaseRow, previousElementTimestamp: Long): Long = {
+    0L
   }
 }

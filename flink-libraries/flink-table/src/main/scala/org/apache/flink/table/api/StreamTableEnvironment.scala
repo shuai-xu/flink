@@ -1418,6 +1418,7 @@ abstract class StreamTableEnvironment(
       sourceTable: Table,
       rowtimeField: String,
       offset: Long): Unit = {
+
     val source = sourceTable.getRelNode
     registerTable(
       tableName,

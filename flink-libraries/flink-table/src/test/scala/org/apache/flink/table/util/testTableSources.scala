@@ -30,7 +30,7 @@ import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
 import org.apache.flink.table.sources._
 import org.apache.flink.table.sources.tsextractors.ExistingField
-import org.apache.flink.table.sources.wmstrategies.{AscendingTimestamps, PreserveWatermarks}
+import org.apache.flink.table.sources.wmstrategies.{AscendingTimestamps, PreserveWatermarks, WatermarkStrategy}
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConverters._
@@ -221,6 +221,34 @@ class TestPreserveWMTableSource[T](
 
   override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[T] = {
     execEnv.addSource(new EventTimeSourceFunction[T](values)).setParallelism(1).returns(returnType)
+  }
+
+  override def getReturnType: DataType = DataTypes.of(returnType)
+
+  override def getTableSchema: TableSchema = tableSchema
+
+  override def explainSource(): String = ""
+
+}
+
+class TestDefinedWMTableSource[T](
+    tableSchema: TableSchema,
+    returnType: TypeInformation[T],
+    values: Seq[T],
+    rowtime: String,
+    watermarkStrategy: WatermarkStrategy)
+    extends StreamTableSource[T]
+        with DefinedRowtimeAttributes {
+
+  override def getRowtimeAttributeDescriptors: util.List[RowtimeAttributeDescriptor] = {
+    Collections.singletonList(new RowtimeAttributeDescriptor(
+      rowtime,
+      new ExistingField(rowtime),
+      watermarkStrategy))
+  }
+
+  override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[T] = {
+    execEnv.fromCollection(values.asJava, returnType)
   }
 
   override def getReturnType: DataType = DataTypes.of(returnType)

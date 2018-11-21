@@ -23,11 +23,11 @@ import java.util
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.api.{Types, ValidationException}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.RowtimeTest.{CustomAssigner, CustomExtractor}
 import org.apache.flink.table.expressions.{Cast, Expression, ResolvedFieldReference}
 import org.apache.flink.table.sources.tsextractors.TimestampExtractor
 import org.apache.flink.table.sources.wmstrategies.PunctuatedWatermarkAssigner
-import org.apache.flink.types.Row
 import org.junit.Test
 
 import scala.collection.JavaConverters._
@@ -109,7 +109,7 @@ class RowtimeTest extends DescriptorTestBase {
 object RowtimeTest {
 
   class CustomAssigner extends PunctuatedWatermarkAssigner() {
-    override def getWatermark(row: Row, timestamp: Long): Watermark =
+    override def getWatermark(row: BaseRow, timestamp: Long): Watermark =
       throw new UnsupportedOperationException()
   }
 

@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import java.lang.{Boolean => JBool, Integer => JInt, Long => JLong}
-
 import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.{GenericTypeInfo, RowTypeInfo}
@@ -27,19 +25,25 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableException, TableSchema, Types}
+import org.apache.flink.table.api.{TableException, TableSchema}
 import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.table.api.types.{DataType, InternalType}
 import org.apache.flink.table.util._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingTestBase, TestingAppendSink}
 import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.sources.wmstrategies.PunctuatedWatermarkAssigner
 import org.apache.flink.table.util.{TestFilterableTableSource, TestPartitionableTableSource, TestTableSourceWithTime}
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 import org.junit.Assert._
 import org.junit.Test
+
+import java.lang.{Boolean => JBool, Integer => JInt, Long => JLong}
+import java.sql.Timestamp
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -122,19 +126,34 @@ class TableSourceITCase extends StreamingTestBase {
     val tableName = "MyTable"
 
     val data = Seq(
-      Row.of("Mary", new JLong(1L), new JInt(10)),
-      Row.of("Bob", new JLong(2L), new JInt(20)),
-      Row.of("Mary", new JLong(2L), new JInt(30)),
-      Row.of("Liz", new JLong(2001L), new JInt(40)))
+      Row.of("Mary", new Timestamp(1L), new JInt(10)),
+      Row.of("Bob", new Timestamp(2L), new JInt(20)),
+      Row.of("Mary", new Timestamp(2L), new JInt(30)),
+      Row.of("Liz", new Timestamp(2001L), new JInt(40)))
 
     val fieldNames = Array("name", "rtime", "amount")
     val schema = new TableSchema(fieldNames,
       Array(DataTypes.STRING, DataTypes.TIMESTAMP, DataTypes.INT))
     val rowType = new RowTypeInfo(
-      Array(Types.STRING, Types.LONG, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
+      Array(Types.STRING, Types.SQL_TIMESTAMP, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
       fieldNames)
 
-    val tableSource = new TestTableSourceWithTime(schema, rowType, data, "rtime", null)
+    val watermarkStrategy = new PunctuatedWatermarkAssigner {
+      /**
+       * Returns the watermark for the current row or null if no watermark should be generated.
+       *
+       * @param row       The current row.
+       * @param timestamp The value of the timestamp attribute for the row.
+       * @return The watermark for this row or null if no watermark should be generated.
+       */
+      override def getWatermark(row: BaseRow, timestamp: Long): Watermark =
+        // timestamp in base row is stored in type of long in millisecond.
+        new Watermark(row.getLong(1))
+    }
+
+    val tableSource = new TestDefinedWMTableSource(
+      schema, rowType, data, "rtime", watermarkStrategy)
+
     tEnv.registerTableSource(tableName, tableSource)
 
     val sink = new TestingAppendSink
@@ -142,15 +161,30 @@ class TableSourceITCase extends StreamingTestBase {
       .window(Tumble over 1.second on 'rtime as 'w)
       .groupBy('name, 'w)
       .select('name, 'w.start, 'amount.sum)
-      .addSink(sink)
+      .toAppendStream[Row]
+        // append current watermark to each row to verify that original watermarks were preserved
+      .process(new ProcessFunction[Row, Row] {
+        override def processElement(
+          value: Row,
+          ctx: ProcessFunction[Row, Row]#Context,
+          out: Collector[Row]): Unit = {
+        val res = new Row(4)
+        res.setField(0, value.getField(0))
+        res.setField(1, value.getField(1))
+        res.setField(2, value.getField(2))
+        res.setField(3, ctx.timerService().currentWatermark())
+        out.collect(res)
+      }
+      }).addSink(sink)
     env.execute()
 
     val expected = mutable.MutableList(
-      "Mary,1970-01-01 00:00:00.0,40",
-      "Bob,1970-01-01 00:00:00.0,20",
-      "Liz,1970-01-01 00:00:02.0,40")
+      "Mary,1970-01-01 00:00:00.0,40,2",
+      "Bob,1970-01-01 00:00:00.0,20,2",
+      "Liz,1970-01-01 00:00:02.0,40,2001")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
+
 
   @Test
   def testProctimeTableSource(): Unit = {

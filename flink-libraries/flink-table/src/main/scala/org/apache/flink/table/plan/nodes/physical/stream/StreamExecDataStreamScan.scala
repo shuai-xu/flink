@@ -21,11 +21,10 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.expressions.Cast
+import org.apache.flink.table.expressions.{Cast, Expression}
 import org.apache.flink.table.plan.schema.DataStreamTable
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
@@ -70,31 +69,50 @@ class StreamExecDataStreamScan(
     val config = tableEnv.getConfig
     val inputDataStream: DataStream[Any] = dataStreamTable.dataStream
 
-    val fieldIdxs = dataStreamTable.fieldIndexes
-
-    // get expression to extract timestamp
     val rowtimeExpr: Option[RexNode] =
-      if (fieldIdxs.contains(DataTypes.ROWTIME_STREAM_MARKER)) {
-        // extract timestamp from StreamRecord
-        Some(
-          Cast(
-            org.apache.flink.table.expressions.StreamRecordTimestamp(),
-            DataTypes.ROWTIME_INDICATOR)
-              .toRexNode(tableEnv.getRelBuilder))
-      } else {
-        None
-      }
+      getRowtimeExpression().map(_.toRexNode(tableEnv.getRelBuilder))
+
     convertToInternalRow(
       inputDataStream.getTransformation,
-      fieldIdxs,
+      dataStreamTable.fieldIndexes,
       getRowType,
       dataStreamTable.dataType,
       config,
       rowtimeExpr)
   }
 
+  private def getRowtimeExpression(): Option[Expression] = {
+    val fieldIdxs = dataStreamTable.fieldIndexes
+
+    if (!fieldIdxs.contains(DataTypes.ROWTIME_STREAM_MARKER)) {
+      None
+    } else {
+
+      val rowtimeField =
+        dataStreamTable.fieldNames(fieldIdxs.indexOf(DataTypes.ROWTIME_STREAM_MARKER))
+
+      // get expression to extract timestamp
+      DataTypes.internal(dataStreamTable.dataType) match {
+        case dataType: BaseRowType
+          if (dataType.getFieldNames.contains(rowtimeField) &&
+              dataType.getTypeAt(
+                dataType.getFieldIndex(rowtimeField)).equals(DataTypes.ROWTIME_INDICATOR)) =>
+          // if rowtimeField already existed in the data stream, use the default rowtime
+          None
+        case _ =>
+          // extract timestamp from StreamRecord
+          Some(
+            Cast(
+              org.apache.flink.table.expressions.StreamRecordTimestamp(),
+              DataTypes.ROWTIME_INDICATOR))
+      }
+    }
+  }
+
   override def needInternalConversion: Boolean = {
-    hasTimeAttributeField(dataStreamTable.fieldIndexes) ||
+    // when there is row time extraction expression, we need internal conversion
+    // when the physical type of the input date stream is not BaseRow, we need internal conversion.
+    getRowtimeExpression().isDefined ||
       needsConversion(dataStreamTable.dataType)
   }
 }

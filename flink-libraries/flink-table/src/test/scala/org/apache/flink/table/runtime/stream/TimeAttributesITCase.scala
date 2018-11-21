@@ -18,27 +18,37 @@
 
 package org.apache.flink.table.runtime.stream
 
-import java.lang.{Integer => JInt, Long => JLong}
-import java.math.BigDecimal
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
+import org.apache.flink.streaming.api.functions.{AssignerWithPunctuatedWatermarks, ProcessFunction}
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
 import org.apache.flink.table.expressions.{ExpressionParser, TimeIntervalUnit}
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc
-import org.apache.flink.table.runtime.stream.TimeAttributesITCase.{AtomicTimestampWithEqualWatermark, TestPojo, TimestampWithEqualWatermark, TimestampWithEqualWatermarkPojo}
+import org.apache.flink.table.runtime.stream.TimeAttributesITCase._
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendPojoSink, TestingAppendSink}
+import org.apache.flink.table.sinks.PrintTableSink
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, BinaryRowTypeInfoTest}
 import org.apache.flink.table.util.TestTableSourceWithTime
 import org.apache.flink.types.Row
+import org.apache.flink.util.Collector
+
 import org.junit.Assert._
 import org.junit.Test
+
+import java.lang.{Integer => JInt, Long => JLong}
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.util.TimeZone
+
+
+import scala.collection.mutable
 
 /**
   * Tests for access and materialization of time attributes.
@@ -580,6 +590,125 @@ class TimeAttributesITCase extends StreamingTestBase {
     )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
+
+  @Test
+  def testRowtimeWithBaseRowSupport(): Unit = {
+    val p1 = new BinaryRow(2)
+    val writer = new BinaryRowWriter(p1)
+    writer.writeInt(0, 12)
+    writer.writeLong(1, 42L)
+    writer.complete()
+
+    val p2 = new BinaryRow(2)
+    val writer2 = new BinaryRowWriter(p2)
+    writer2.writeInt(0, 13)
+    writer2.writeLong(1, 43L)
+    writer2.complete()
+
+    implicit val typeInfo: TypeInformation[BaseRow] =
+      new BaseRowTypeInfo(
+        classOf[BinaryRow],
+        Array(Types.INT, Types.LONG).asInstanceOf[Array[TypeInformation[_]]],
+        Array("c", "a")).asInstanceOf[TypeInformation[BaseRow]]
+    val stream = env
+        .fromElements(p1.asInstanceOf[BaseRow], p2.asInstanceOf[BaseRow])
+        .assignTimestampsAndWatermarks(new TimestampWithEqualWatermarkBaseRow(1))
+      // use aliases, swap all attributes, and skip b2
+    val table = stream.toTable(tEnv, 'd.rowtime, 'c as 'c, 'a as 'a)
+    tEnv.registerTable("MyTable", table)
+
+    val t = tEnv.sqlQuery("SELECT TUMBLE_ROWTIME(d, INTERVAL '0.003' SECOND) FROM MyTable " +
+      "GROUP BY TUMBLE(d, INTERVAL '0.003' SECOND)")
+
+    val sink = new TestingAppendSink
+    val results = t.toAppendStream[Row]
+    results.addSink(sink)
+    env.execute()
+
+    val expected = Seq("1970-01-01 00:00:00.044")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testRegisterTableWithWatermark(): Unit = {
+    val tableName = "MyTable"
+
+    val data = Seq(
+      Row.of("Mary", new Timestamp(1000L), new JInt(10)),
+      Row.of("Bob", new Timestamp(2000L), new JInt(20)),
+      Row.of("Mary", new Timestamp(2000L), new JInt(30)),
+      Row.of("Liz", new Timestamp(2001L), new JInt(40)))
+
+    val fieldNames = Array("name", "rtime", "amount")
+
+    val schema = new TableSchema(fieldNames,
+      Array(DataTypes.STRING, DataTypes.TIMESTAMP, DataTypes.INT))
+
+    val rowType = new RowTypeInfo(
+      Array(Types.STRING, Types.SQL_TIMESTAMP, Types.INT).asInstanceOf[Array[TypeInformation[_]]],
+      fieldNames)
+
+    val tableSource = new TestTableSourceWithTime(schema, rowType, data)
+
+    tEnv.getConfig.setSubsectionOptimization(true)
+    tEnv.registerTableSource(tableName, tableSource)
+
+    tEnv.registerTableWithWatermark("MyTable2", tEnv.scan(tableName), "rtime", 0)
+    tEnv.registerTableSink(
+      "MyTable3",
+      schema.getColumnNames,
+      schema.getTypes.asInstanceOf[Array[DataType]],
+      new PrintTableSink(TimeZone.getDefault))
+    tEnv.registerTableSink(
+      "MyTable4",
+      schema.getColumnNames,
+      schema.getTypes.asInstanceOf[Array[DataType]],
+      new PrintTableSink(TimeZone.getDefault))
+    tEnv.sqlUpdate(
+      "insert into MyTable3 " +
+          "select name, TUMBLE_START(rtime, INTERVAL '1' MINUTE), sum(amount) " +
+          "from MyTable2 group by TUMBLE(rtime, INTERVAL '1' MINUTE), name")
+    tEnv.sqlUpdate(
+      "insert into MyTable4 " +
+          "select name, TUMBLE_START(rtime, INTERVAL '2' MINUTE), sum(amount) " +
+          "from MyTable2 group by TUMBLE(rtime, INTERVAL '2' MINUTE), name")
+
+    tEnv.compile()
+
+    // check the node size of the generated stream graph.
+    assertEquals(11, env.getStreamGraph.getStreamNodes.size())
+
+    val sink = new TestingAppendSink
+    tEnv.scan("MyTable2")
+      .window(Tumble over 1.second on 'rtime as 'w)
+      .groupBy('name, 'w)
+      .select('name, 'w.start, 'amount.sum)
+      .toAppendStream[Row]
+        // append current watermark to each row to verify that original watermarks were preserved
+      .process(new ProcessFunction[Row, Row] {
+        override def processElement(
+          value: Row,
+          ctx: ProcessFunction[Row, Row]#Context,
+          out: Collector[Row]): Unit = {
+        val res = new Row(4)
+        res.setField(0, value.getField(0))
+        res.setField(1, value.getField(1))
+        res.setField(2, value.getField(2))
+        res.setField(3, ctx.timerService().currentWatermark())
+        out.collect(res)
+      }
+      }).addSink(sink)
+    env.execute()
+
+    val expected = mutable.MutableList(
+      "Mary,1970-01-01 00:00:01.0,10,1000",
+      "Mary,1970-01-01 00:00:02.0,30,2000",
+      "Bob,1970-01-01 00:00:02.0,20,2000",
+      "Liz,1970-01-01 00:00:02.0,40,2000")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+
+  }
+
 }
 
 object TimeAttributesITCase {
@@ -615,6 +744,23 @@ object TimeAttributesITCase {
         element: (Long, Int, Double, Float, BigDecimal, String),
         previousElementTimestamp: Long): Long = {
       element._1
+    }
+  }
+
+  class TimestampWithEqualWatermarkBaseRow(val index: Int)
+      extends AssignerWithPunctuatedWatermarks[BaseRow] {
+
+    override def checkAndGetNextWatermark(
+        lastElement: BaseRow,
+        extractedTimestamp: Long)
+    : Watermark = {
+      new Watermark(extractedTimestamp)
+    }
+
+    override def extractTimestamp(
+        element: BaseRow,
+        previousElementTimestamp: Long): Long = {
+      element.getLong(index)
     }
   }
 
