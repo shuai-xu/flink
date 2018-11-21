@@ -68,7 +68,7 @@ class BatchExecExpand(
   }
 
   private def getOperatorName: String = {
-    s"BatchExecExpand: ${rowType.getFieldList.map(_.getName).mkString(", ")}"
+    s"BatchExecExpand: ${getRowType.getFieldList.map(_.getName).mkString(", ")}"
   }
 
   /**
