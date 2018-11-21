@@ -31,6 +31,7 @@ import org.apache.flink.core.testutils.CommonTestUtils;
 import org.apache.flink.runtime.messages.TaskManagerMessages;
 import org.apache.flink.runtime.minicluster.LocalFlinkMiniCluster;
 import org.apache.flink.util.TestLogger;
+import org.apache.flink.util.TimeConvertUtils;
 
 import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -515,10 +516,10 @@ public class TestBaseUtils extends TestLogger {
 				if (val instanceof Tuple) {
 					Tuple t = (Tuple) val;
 					Object first = t.getField(0);
-					StringBuilder bld = new StringBuilder(first == null ? "null" : first.toString());
+					StringBuilder bld = new StringBuilder(first == null ? "null" : TimeConvertUtils.unixDateTimeToString(first));
 					for (int pos = 1; pos < t.getArity(); pos++) {
 						Object next = t.getField(pos);
-						bld.append(',').append(next == null ? "null" : next.toString());
+						bld.append(',').append(next == null ? "null" : TimeConvertUtils.unixDateTimeToString(next));
 					}
 					resultStrings[i] = bld.toString();
 				}
@@ -527,7 +528,7 @@ public class TestBaseUtils extends TestLogger {
 				}
 			}
 			else {
-				resultStrings[i] = (val == null) ? "null" : val.toString();
+				resultStrings[i] = (val == null) ? "null" : TimeConvertUtils.unixDateTimeToString(val);
 			}
 		}
 
