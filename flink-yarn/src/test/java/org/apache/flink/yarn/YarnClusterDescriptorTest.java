@@ -45,6 +45,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -428,8 +429,8 @@ public class YarnClusterDescriptorTest extends TestLogger {
 			File libFile = temporaryFolder.newFile("libFile.jar");
 			File libFolder = temporaryFolder.newFolder().getAbsoluteFile();
 
-			Assert.assertFalse(descriptor.shipFiles.contains(libFile));
-			Assert.assertFalse(descriptor.shipFiles.contains(libFolder));
+			Assert.assertFalse(descriptor.shipFiles.contains(libFile.toURI()));
+			Assert.assertFalse(descriptor.shipFiles.contains(libFolder.toURI()));
 
 			List<File> shipFiles = new ArrayList<>();
 			shipFiles.add(libFile);
@@ -437,17 +438,17 @@ public class YarnClusterDescriptorTest extends TestLogger {
 
 			descriptor.addShipFiles(shipFiles);
 
-			Assert.assertTrue(descriptor.shipFiles.contains(libFile));
-			Assert.assertTrue(descriptor.shipFiles.contains(libFolder));
+			Assert.assertTrue(descriptor.shipFiles.contains(libFile.toURI()));
+			Assert.assertTrue(descriptor.shipFiles.contains(libFolder.toURI()));
 
 			// only execute part of the deployment to test for shipped files
-			Map<File, Path> effectiveShipFiles = new HashMap<>();
+			Map<URI, Path> effectiveShipFiles = new HashMap<>();
 			descriptor.addLibFolderToShipFiles(effectiveShipFiles);
 
 			Assert.assertEquals(0, effectiveShipFiles.size());
 			Assert.assertEquals(2, descriptor.shipFiles.size());
-			Assert.assertTrue(descriptor.shipFiles.contains(libFile));
-			Assert.assertTrue(descriptor.shipFiles.contains(libFolder));
+			Assert.assertTrue(descriptor.shipFiles.contains(libFile.toURI()));
+			Assert.assertTrue(descriptor.shipFiles.contains(libFolder.toURI()));
 		} finally {
 			descriptor.close();
 		}
@@ -470,7 +471,7 @@ public class YarnClusterDescriptorTest extends TestLogger {
 			File libFile = new File(libFolder, "libFile.jar");
 			libFile.createNewFile();
 
-			Map<File, Path> effectiveShipFiles = new HashMap<>();
+			Map<URI, Path> effectiveShipFiles = new HashMap<>();
 
 			final Map<String, String> oldEnv = System.getenv();
 			try {
@@ -484,10 +485,10 @@ public class YarnClusterDescriptorTest extends TestLogger {
 			}
 
 			// only add the ship the folder, not the contents
-			Assert.assertFalse(effectiveShipFiles.keySet().contains(libFile));
-			Assert.assertTrue(effectiveShipFiles.keySet().contains(libFolder));
-			Assert.assertFalse(descriptor.shipFiles.contains(libFile));
-			Assert.assertFalse(descriptor.shipFiles.contains(libFolder));
+			Assert.assertFalse(effectiveShipFiles.keySet().contains(libFile.toURI()));
+			Assert.assertTrue(effectiveShipFiles.keySet().contains(libFolder.toURI()));
+			Assert.assertFalse(descriptor.shipFiles.contains(libFile.toURI()));
+			Assert.assertFalse(descriptor.shipFiles.contains(libFolder.toURI()));
 		} finally {
 			descriptor.close();
 		}

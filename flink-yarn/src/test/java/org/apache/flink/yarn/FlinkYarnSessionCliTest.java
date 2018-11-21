@@ -18,6 +18,7 @@
 
 package org.apache.flink.yarn;
 
+import org.apache.flink.client.cli.CliArgsException;
 import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.HighAvailabilityOptions;
@@ -40,6 +41,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
@@ -333,9 +336,39 @@ public class FlinkYarnSessionCliTest extends TestLogger {
 		assertThat(clusterSpecification.getSlotsPerTaskManager(), is(slotsPerTaskManager));
 	}
 
+	@Test
+	public void testShipArchives() throws Exception {
+		String name = "/tmp/myachive.tar.gz";
+		checkArchiveNames(name, "myachive.tar.gz", "file://" + name);
+		name = "file:///tmp/myachive.tar.gz";
+		checkArchiveNames(name, "myachive.tar.gz", name);
+		name = "/tmp/myachive.tar.gz#test1";
+		checkArchiveNames(name, "test1", "file:///tmp/myachive.tar.gz");
+		name = "hdfs://myhdfs/tmp/myachive.tar.gz#test1";
+		checkArchiveNames(name, "test1", "hdfs://myhdfs/tmp/myachive.tar.gz");
+	}
+
 	///////////
 	// Utils //
 	///////////
+
+	private void checkArchiveNames(String path, String expectKey, String expectValue) throws FlinkException, CliArgsException, URISyntaxException {
+		String[] params =
+				new String[] {"-yta", path};
+
+		FlinkYarnSessionCli yarnCLI = new FlinkYarnSessionCli(
+				new Configuration(),
+				tmp.getRoot().getAbsolutePath(),
+				"y",
+				"yarn");
+
+		final CommandLine commandLine = yarnCLI.parseCommandLineOptions(params, true);
+
+		AbstractYarnClusterDescriptor descriptor = yarnCLI.createClusterDescriptor(commandLine);
+
+		assertTrue(descriptor.shipArchives.containsKey(expectKey));
+		assertEquals(new URI(expectValue), descriptor.shipArchives.get(expectKey));
+	}
 
 	private File writeYarnPropertiesFile(String contents) throws IOException {
 		File tmpFolder = tmp.newFolder();

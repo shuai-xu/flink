@@ -162,7 +162,7 @@ public final class Utils {
 		String relativeTargetPath,
 		@Nullable Path preCopiedPublicPath) throws IOException {
 
-		return setupLocalResource(fs, appId, localSrcPath, homedir, relativeTargetPath, preCopiedPublicPath, null);
+		return setupLocalResource(fs, appId, localSrcPath, homedir, relativeTargetPath, preCopiedPublicPath, null, null);
 	}
 
 	/**
@@ -182,6 +182,8 @@ public final class Utils {
 	 * 		the remote public path to beforehand copy
 	 * @param visibility
 	 * 		local resource visibility
+	 * @param resourceType
+	 *    local resource type
 	 *
 	 * @return Path to remote file (usually hdfs)
 	 */
@@ -192,22 +194,26 @@ public final class Utils {
 		Path homedir,
 		String relativeTargetPath,
 		@Nullable Path preCopiedPublicPath,
-		@Nullable LocalResourceVisibility visibility) throws IOException {
+		@Nullable LocalResourceVisibility visibility,
+		@Nullable LocalResourceType resourceType) throws IOException {
 
 		// default visibility
 		if (visibility == null) {
 			visibility = LocalResourceVisibility.APPLICATION;
 		}
 
-		File localFile = new File(localSrcPath.toUri().getPath());
-		if (localFile.isDirectory()) {
-			throw new IllegalArgumentException("File to copy must not be a directory: " +
-				localSrcPath);
+		if (resourceType == null) {
+			resourceType = LocalResourceType.FILE;
 		}
 
 		Path dst;
 		LocalResource resource;
 		if (preCopiedPublicPath == null) {
+			File localFile = new File(localSrcPath.toUri().getPath());
+			if (localFile.isDirectory()) {
+				throw new IllegalArgumentException("File to copy must not be a directory: " +
+						localSrcPath);
+			}
 			// copy resource to HDFS
 			String suffix =
 				".flink/"
@@ -229,13 +235,13 @@ public final class Utils {
 			//       the values we provide to #registerLocalResource() below.
 			fs.setTimes(dst, localFile.lastModified(), -1);
 			// now create the resource instance
-			resource = registerLocalResource(dst, localFile.length(), localFile.lastModified(), visibility);
+			resource = registerLocalResource(dst, localFile.length(), localFile.lastModified(), visibility, resourceType);
 		} else {
 			dst = preCopiedPublicPath;
 
 			LOG.info("Use the beforehand copied resource {} (the corresponding local path: {}). Visibility: {}.", dst, localSrcPath, visibility.toString());
 
-			resource = registerLocalResource(fs, dst, visibility);
+			resource = registerLocalResource(fs, dst, visibility, resourceType);
 		}
 
 		return Tuple2.of(dst, resource);
@@ -268,24 +274,34 @@ public final class Utils {
 		Path remoteRsrcPath,
 		long resourceSize,
 		long resourceModificationTime,
-		LocalResourceVisibility visibility) {
+		LocalResourceVisibility visibility,
+		LocalResourceType resourceType) {
 
 		LocalResource localResource = Records.newRecord(LocalResource.class);
 		localResource.setResource(ConverterUtils.getYarnUrlFromURI(remoteRsrcPath.toUri()));
 		localResource.setSize(resourceSize);
 		localResource.setTimestamp(resourceModificationTime);
-		localResource.setType(LocalResourceType.FILE);
+		localResource.setType(resourceType);
 		localResource.setVisibility(visibility);
 		return localResource;
 	}
 
 	private static LocalResource registerLocalResource(
+			Path remoteRsrcPath,
+			long resourceSize,
+			long resourceModificationTime,
+			LocalResourceVisibility visibility) {
+		return registerLocalResource(remoteRsrcPath, resourceSize, resourceModificationTime, visibility, LocalResourceType.FILE);
+	}
+
+	private static LocalResource registerLocalResource(
 		FileSystem fs,
 		Path remoteRsrcPath,
-		LocalResourceVisibility visibility) throws IOException {
+		LocalResourceVisibility visibility,
+		LocalResourceType resourceType) throws IOException {
 
 		FileStatus jarStat = fs.getFileStatus(remoteRsrcPath);
-		return registerLocalResource(remoteRsrcPath, jarStat.getLen(), jarStat.getModificationTime(), visibility);
+		return registerLocalResource(remoteRsrcPath, jarStat.getLen(), jarStat.getModificationTime(), visibility, resourceType);
 	}
 
 	private static LocalResource registerLocalResource(FileSystem fs, Path remoteRsrcPath) throws IOException {
@@ -565,7 +581,8 @@ public final class Utils {
 				homeDirPath,
 				"",
 				preCopiedPublicPath,
-				LocalResourceVisibility.APPLICATION).f1;
+				LocalResourceVisibility.APPLICATION,
+				LocalResourceType.FILE).f1;
 
 			log.debug("Prepared local resource for taskmanager config: {}", flinkConf);
 		}
@@ -601,10 +618,17 @@ public final class Utils {
 						attributeMap.put(attKeyAndValue[0], attKeyAndValue[1]);
 					}
 
+					LocalResourceVisibility visibility = LocalResourceVisibility.APPLICATION;
+					LocalResourceType resourceType = LocalResourceType.FILE;
 					final String visibilityKey = LocalResourceVisibility.class.getSimpleName();
 					if (attributeMap.containsKey(visibilityKey)) {
-						resource = registerLocalResource(path.getFileSystem(yarnConfig), path, LocalResourceVisibility.valueOf(attributeMap.get(visibilityKey)));
+						visibility = LocalResourceVisibility.valueOf(attributeMap.get(visibilityKey));
 					}
+					final String resourceTypeKey = LocalResourceType.class.getSimpleName();
+					if (attributeMap.containsKey(resourceTypeKey)) {
+						resourceType = LocalResourceType.valueOf(attributeMap.get(resourceTypeKey));
+					}
+					resource = registerLocalResource(path.getFileSystem(yarnConfig), path, visibility, resourceType);
 				}
 				if (resource == null){
 					resource = registerLocalResource(path.getFileSystem(yarnConfig), path);

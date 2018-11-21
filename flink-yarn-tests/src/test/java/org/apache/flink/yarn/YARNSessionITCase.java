@@ -49,6 +49,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -56,6 +59,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.apache.flink.yarn.util.YarnTestUtils.getTestJarPath;
@@ -541,6 +546,140 @@ public class YARNSessionITCase extends YarnTestBase {
 		LOG.info("Finished " + testName.getMethodName());
 	}
 
+	@Test(timeout = 100000)
+	public void testShipFilesAndAchives() throws Exception {
+		LOG.info("Starting " + testName.getMethodName());
+		String fileName = "hello1";
+		String archiveNewName = "archive1";
+		File shipDir = tmp.newFolder("shipTest");
+		File shipFile = new File(shipDir, fileName);
+		File zipFile = new File(tmp.getRoot(), "myship.zip");
+		Assert.assertTrue(shipFile.createNewFile());
+		FileUtils.writeStringToFile(shipFile, "hello world!");
+		compressDirectoryToZipfile(shipDir, zipFile);
+		Assert.assertTrue(zipFile.exists());
+		Runner runner = startWithArgs(new String[]{"-j", flinkUberjar.getAbsolutePath(),
+						"-n", "1",
+						"-jm", "768",
+						"-tm", "1024",
+						"-s", "3", // set the slots 3 to check if the vCores are set properly!
+						"-nm", "customName",
+						"-t", flinkLibFolder.getAbsolutePath() + "," + shipFile.getAbsolutePath(),
+						"-ta", zipFile.getAbsolutePath() + "#" + archiveNewName},
+				"Flink JobManager is now running",
+				RunTypes.YARN_SESSION);
+
+		// All containers should be launched before job submission
+		while (getRunningContainers() < 2) {
+			LOG.info("Waiting for all containers to be launched");
+			Thread.sleep(500);
+		}
+
+		// ------------------------ Test if JobManager web interface is accessible -------
+
+		final YarnClient yc = YarnClient.createYarnClient();
+		yc.init(YARN_CONFIGURATION);
+		yc.start();
+
+		List<ApplicationReport> apps = yc.getApplications(EnumSet.of(YarnApplicationState.RUNNING));
+		Assert.assertEquals(1, apps.size()); // Only one running
+		ApplicationReport app = apps.get(0);
+		Assert.assertEquals("customName", app.getName());
+		String url = app.getTrackingUrl();
+		if (!url.endsWith("/")) {
+			url += "/";
+		}
+		if (!url.startsWith("http://")) {
+			url = "http://" + url;
+		}
+		LOG.info("Got application URL from YARN {}", url);
+
+		int slotNumber = getSlotNumber(url + "taskmanagers/", 3);
+		Assert.assertEquals("unexpected slot number: " + slotNumber, 3, slotNumber);
+
+		// get the configuration from webinterface & check if the dynamic properties from YARN show up there.
+		String jsonConfig = TestBaseUtils.getFromHTTP(url + "jobmanager/config");
+		Map<String, String> parsedConfig = WebMonitorUtils.fromKeyValueJsonArray(jsonConfig);
+
+		// Check the hostname/port
+		String oC = outContent.toString();
+		Pattern p = Pattern.compile("Flink JobManager is now running on ([a-zA-Z0-9.-]+):([0-9]+)");
+		Matcher matches = p.matcher(oC);
+		String hostname = null;
+		String port = null;
+		while (matches.find()) {
+			hostname = matches.group(1).toLowerCase();
+			port = matches.group(2);
+		}
+		LOG.info("Extracted hostname:port: {} {}", hostname, port);
+
+		Assert.assertEquals("unable to find hostname in " + jsonConfig, hostname,
+				parsedConfig.get(JobManagerOptions.ADDRESS.key()));
+
+		// test logfile access
+		String logs = TestBaseUtils.getFromHTTP(url + "jobmanager/log");
+		Assert.assertTrue(logs.contains("Starting rest endpoint"));
+		Assert.assertTrue(logs.contains("Starting the SlotManager"));
+		Assert.assertTrue(logs.contains("Starting TaskManagers"));
+
+		yc.stop();
+
+		// assert container number
+		Assert.assertTrue("Container number should be greater than 2, while actual is " + getRunningContainers(),
+				getRunningContainers() >= 2);
+
+		// Check files and archives have been localized and linked to the workdir
+		for (int nmId = 0; nmId < NUM_NODEMANAGERS; nmId++) {
+			NodeManager nm = yarnCluster.getNodeManager(nmId);
+			ConcurrentMap<ContainerId, Container> containers = nm.getNMContext().getContainers();
+			if (containers == null || containers.isEmpty()) {
+				continue;
+			}
+			for (Container container : containers.values()) {
+				if (container.getLaunchContext().getCommands().get(0).
+						contains(YarnTaskExecutorRunner.class.getSimpleName())) {
+					File workDir = new File(container.getLaunchContext().getEnvironment().get("PWD"));
+					Assert.assertTrue(new File(workDir, fileName).exists());
+					Assert.assertTrue(new File(workDir, archiveNewName).exists());
+					Assert.assertTrue(new File(new File(workDir, archiveNewName), fileName).exists());
+				}
+			}
+		}
+
+		// Submit a job and the session has enough resource to execute
+		File exampleJarLocation = getTestJarPath("StreamingWordCount.jar");
+		// get temporary file for reading input data for wordcount example
+		File tmpInFile = tmp.newFile();
+		FileUtils.writeStringToFile(tmpInFile, WordCountData.TEXT);
+
+		Runner jobRunner = startWithArgs(new String[]{"run",
+						exampleJarLocation.getAbsolutePath(),
+						"--input", tmpInFile.getAbsoluteFile().toString()},
+				"Job Runtime: ", RunTypes.CLI_FRONTEND);
+
+		jobRunner.join();
+
+		// send "stop" command to command line interface
+		runner.sendStop();
+		// wait for the thread to stop
+		try {
+			runner.join();
+		} catch (InterruptedException e) {
+			LOG.warn("Interrupted while stopping runner", e);
+		}
+		LOG.warn("stopped");
+
+		// ----------- Send output to logger
+		System.setOut(ORIGINAL_STDOUT);
+		System.setErr(ORIGINAL_STDERR);
+		oC = outContent.toString();
+		String eC = errContent.toString();
+		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
+		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
+
+		LOG.info("Finished " + testName.getMethodName());
+	}
+
 	@After
 	public void checkForProhibitedLogContents() {
 		if (!testName.getMethodName().equals("testAllocateContainerTimeoutWithResourceSetting")) {
@@ -562,6 +701,34 @@ public class YARNSessionITCase extends YarnTestBase {
 					assertEquals(Resource.newInstance(mem, vcores), container.getResource());
 				}
 			}
+		}
+	}
+
+	private void compressDirectoryToZipfile(File inputFile, File zipFile) throws IOException {
+		LOG.info("Zipping file {} to {}", inputFile, zipFile);
+		ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile));
+		compressDirectoryToZipfile(out, inputFile, "");
+		out.close();
+	}
+
+	private void compressDirectoryToZipfile(ZipOutputStream out, File f, String base) throws IOException {
+		if (f.isDirectory()) {
+			File[] fl = f.listFiles();
+			if (fl != null) {
+				out.putNextEntry(new ZipEntry(base + "/"));
+				base = base.length() == 0 ? "" : base + "/";
+				for (File aFl : fl) {
+					compressDirectoryToZipfile(out, aFl, base + aFl.getName());
+				}
+			}
+		} else {
+			out.putNextEntry(new ZipEntry(base));
+			FileInputStream in = new FileInputStream(f);
+			int b;
+			while ((b = in.read()) != -1) {
+				out.write(b);
+			}
+			in.close();
 		}
 	}
 

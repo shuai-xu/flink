@@ -69,6 +69,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -114,6 +116,8 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		"help - show these commands\n" +
 		"stop - stop the YARN session";
 
+	private static final String MULTIPLE_VALUE_SEPARATOR = ",";
+
 	//------------------------------------ Command Line argument options -------------------------
 	// the prefix transformation is used by the CliFrontend static constructor.
 	private final Option query;
@@ -121,7 +125,8 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 	private final Option applicationId;
 	// --- or ---
 	private final Option queue;
-	private final Option shipPath;
+	private final Option shipFiles;
+	private final Option shipArchives;
 	private final Option flinkJar;
 	private final Option flinkSharedLibPath;
 	private final Option jmMemory;
@@ -187,7 +192,19 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		query = new Option(shortPrefix + "q", longPrefix + "query", false, "Display available YARN resources (memory, cores)");
 		applicationId = new Option(shortPrefix + "id", longPrefix + "applicationId", true, "Attach to running YARN session");
 		queue = new Option(shortPrefix + "qu", longPrefix + "queue", true, "Specify YARN queue.");
-		shipPath = new Option(shortPrefix + "t", longPrefix + "ship", true, "Ship files in the specified directory (t for transfer)");
+		shipFiles = new Option(shortPrefix + "t", longPrefix + "ship", true,
+				"Ship jars, files and directory for cluster (t for transfer), Use ',' to separate multiple files. " +
+						"The files could be in local file system or distributed file system. " +
+						"Use URI schema to specify which file system the jar belongs. " +
+						"If schema is missing, would try to get the files in local file system. " +
+						"(eg: -" + shortPrefix + "t file:///tmp/dict,hdfs:///$namenode_address/tmp/dependency2.jar)");
+		shipArchives = new Option(shortPrefix + "ta", longPrefix + "shipArchives", true,
+				"Ship archives for cluster (t for transfer), Use ',' to separate multiple files. " +
+						"The archives could be in local file system or distributed file system. " +
+						"Use URI schema to specify which file system the file belongs. " +
+						"If schema is missing, would try to get the archives in local file system. " +
+						"Use '#' after the file path to specify a new name in workdir. " +
+						"(eg: -" + shortPrefix + "ta file:///tmp/a.tar.gz#dict1,hdfs:///$namenode_address/tmp/b.tar.gz)");
 		flinkJar = new Option(shortPrefix + "j", longPrefix + "jar", true, "Path to Flink jar file");
 		flinkSharedLibPath = Option.builder(shortPrefix + "sl")
 			.longOpt(longPrefix + "sharedLib")
@@ -219,7 +236,8 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 		allOptions.addOption(container);
 		allOptions.addOption(queue);
 		allOptions.addOption(query);
-		allOptions.addOption(shipPath);
+		allOptions.addOption(shipFiles);
+		allOptions.addOption(shipArchives);
 		allOptions.addOption(slots);
 		allOptions.addOption(dynamicproperties);
 		allOptions.addOption(DETACHED_OPTION);
@@ -326,19 +344,44 @@ public class FlinkYarnSessionCli extends AbstractCustomCommandLine<ApplicationId
 			LOG.info("Use the shared Flink lib path: {}.", sharedLibPath);
 		}
 
-		List<File> shipFiles = new ArrayList<>();
-		// path to directory to ship
-		if (cmd.hasOption(shipPath.getOpt())) {
-			String shipPath = cmd.getOptionValue(this.shipPath.getOpt());
-			File shipDir = new File(shipPath);
-			if (shipDir.isDirectory()) {
-				shipFiles.add(shipDir);
-			} else {
-				LOG.warn("Ship directory is not a directory. Ignoring it.");
+		List<URI> allShipFiles = new ArrayList<>();
+		// files and directory to ship
+		if (cmd.hasOption(shipFiles.getOpt())) {
+			String shipPath = cmd.getOptionValue(this.shipFiles.getOpt());
+			for (String shipFile : shipPath.split(MULTIPLE_VALUE_SEPARATOR)) {
+				try {
+					URI uri = new URI(shipFile);
+					uri = uri.isAbsolute() ? uri : new URI("file://" + shipFile);
+					allShipFiles.add(uri);
+				} catch (URISyntaxException e) {
+					throw new RuntimeException("Bad syntax for URI: " + shipFile);
+				}
 			}
 		}
 
-		yarnClusterDescriptor.addShipFiles(shipFiles);
+		yarnClusterDescriptor.addShipFileUris(allShipFiles);
+
+		// archives to ship
+		Map<String, URI> allShipArchives = new HashMap<>();
+		if (cmd.hasOption(shipArchives.getOpt())) {
+			String allArchives = cmd.getOptionValue(shipArchives.getOpt());
+			for (String shipArchive : allArchives.split(MULTIPLE_VALUE_SEPARATOR)) {
+				try {
+					String path = StringUtils.substringBeforeLast(shipArchive, "#");
+					String name = StringUtils.substringAfterLast(shipArchive, "#");
+					if (name == null || name.isEmpty()) {
+						name = StringUtils.substringAfterLast(shipArchive, File.separator);
+					}
+					URI uri = new URI(path);
+					uri = uri.isAbsolute() ? uri : new URI("file://" + path);
+					allShipArchives.put(name, uri);
+				} catch (URISyntaxException e) {
+					throw new RuntimeException("Bad syntax for URI: " + shipArchive);
+				}
+			}
+		}
+
+		yarnClusterDescriptor.addShipArchives(allShipArchives);
 
 		// queue
 		if (cmd.hasOption(queue.getOpt())) {
