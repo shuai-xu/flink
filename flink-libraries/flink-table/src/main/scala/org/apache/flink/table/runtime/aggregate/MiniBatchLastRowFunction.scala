@@ -25,7 +25,7 @@ import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction
 import org.apache.flink.table.runtime.sort.RecordEqualiser
@@ -69,11 +69,7 @@ class MiniBatchLastRowFunction(
   override def addInput(value: BaseRow, input: BaseRow): BaseRow = {
     if (isLastRow(value, input, rowtimeIndex)) {
       // put the input into buffer
-      if (input.isInstanceOf[BinaryRow]) {
-        input
-      } else {
-        ser.copy(input)
-      }
+      ser.copy(input)
     } else {
       // the input is not last row, ignore it
       value

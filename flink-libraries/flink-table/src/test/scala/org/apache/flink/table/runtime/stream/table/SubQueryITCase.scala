@@ -19,13 +19,20 @@
 package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.types.Row
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingRetractSink}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingRetractSink}
 
-class SubQueryITCase extends StreamingTestBase {
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+
+@RunWith(classOf[Parameterized])
+class SubQueryITCase(mode: StateBackendMode)
+    extends StreamingWithStateTestBase(mode) {
 
   @Test
   def testInUncorrelated(): Unit = {

@@ -23,7 +23,7 @@ import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.functions.bundle.BundleFunction
 import org.apache.flink.table.runtime.sort.RecordEqualiser
@@ -103,12 +103,7 @@ class MiniBatchGroupAggFunction(
     } else {
       value
     }
-    val inputCopied = if (input.isInstanceOf[BinaryRow]) {
-      input
-    } else {
-      inputSer.copy(input)
-    }
-    acc.add(inputCopied)
+    acc.add(inputSer.copy(input))
     acc
   }
 

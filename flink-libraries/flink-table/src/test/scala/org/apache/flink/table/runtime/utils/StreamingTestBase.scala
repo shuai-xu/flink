@@ -30,6 +30,7 @@ class StreamingTestBase extends AbstractTestBase {
   var env: StreamExecutionEnvironment = _
   var tEnv: StreamTableEnvironment = _
   val _tempFolder = new TemporaryFolder
+  var enableObjectReuse = true
 
   @Rule
   def tempFolder: TemporaryFolder = _tempFolder
@@ -39,9 +40,9 @@ class StreamingTestBase extends AbstractTestBase {
     StreamTestSink.clear()
     this.env = StreamExecutionEnvironment.getExecutionEnvironment
     this.env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    // TODO: enable object reuse as default in the future. Currently, the object reuse will reuse
-    // TODO: network input record, sql operators doesn't handle this
-    // this.env.getConfig.enableObjectReuse()
+    if (enableObjectReuse) {
+      this.env.getConfig.enableObjectReuse()
+    }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
   }
 

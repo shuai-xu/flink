@@ -1991,6 +1991,32 @@ class JoinStreamITCase(minibatch: MiniBatchMode, mode: StateBackendMode)
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
+  @Test
+  def testBigDataOfJoin(): Unit = {
+    env.setParallelism(1)
+
+    val data = new mutable.MutableList[(Int, Long, String)]
+    for (i <- 0 until 500) {
+      data.+=((i % 10, i, i.toString))
+    }
+
+    val t1 = failingDataSource(data).toTable(tEnv, 'a, 'b, 'c)
+    val t2 = failingDataSource(data).toTable(tEnv, 'd, 'e, 'f)
+    tEnv.registerTable("T1", t1)
+    tEnv.registerTable("T2", t2)
+
+    val sql =
+      """
+        |SELECT COUNT(DISTINCT b) FROM (SELECT b FROM T1, T2 WHERE b = e)
+      """.stripMargin
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink).setParallelism(1)
+    env.execute()
+
+    val expected = List("500")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
 }
 
 private class Row4WatermarkExtractor extends

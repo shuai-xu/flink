@@ -44,6 +44,11 @@ import scala.collection.mutable.ArrayBuffer
 
 class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestBase {
 
+  enableObjectReuse = state match {
+    case HEAP_BACKEND => false // TODO gemini not support obj reuse now.
+    case ROCKSDB_BACKEND | NIAGARA_BACKEND => true
+  }
+
   @Before
   override def before(): Unit = {
     super.before()

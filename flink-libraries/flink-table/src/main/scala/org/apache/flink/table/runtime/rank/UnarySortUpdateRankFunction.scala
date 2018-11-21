@@ -494,7 +494,7 @@ class UnarySortUpdateRankFunction[K](
        */
       if (oldPosInHeap) {
         // and it is in heap, update row key map and do rank change
-        rowKeyMap.put(rowKey, inputRow)
+        rowKeyMap.put(rowKey, inputRowSer.copy(inputRow))
         if (oldRank <= rankEnd) {
           if (isRowNumberAppend || hasOffset) {
             /* with row number case */

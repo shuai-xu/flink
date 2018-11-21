@@ -100,14 +100,6 @@ case class GeneratedExpression(
       this
     }
   }
-
-  def cloneRefTermIfNeeded(): String = {
-    if (CodeGenUtils.needCloneRefForType(resultType)) {
-      s"$resultTerm.cloneReference()"
-    } else {
-     resultTerm
-    }
-  }
 }
 
 object GeneratedExpression {

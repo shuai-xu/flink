@@ -34,7 +34,6 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.operator.StreamRecordCollector;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.util.Collector;
@@ -96,11 +95,8 @@ public abstract class KeyedCoBundleOperator
 			checkpointingLock.wait();
 		}
 		BaseRow key = (BaseRow) getCurrentKey();
-		BaseRow row = element.getValue();
+		BaseRow row = inputSer1.copy(element.getValue());
 		List<BaseRow> records = leftBuffer.computeIfAbsent(key, k -> new ArrayList<>());
-		if (!(row instanceof BinaryRow)) {
-			row = inputSer1.copy(row);
-		}
 		records.add(row);
 		coBundleTrigger.onLeftElement(row);
 	}
@@ -112,11 +108,8 @@ public abstract class KeyedCoBundleOperator
 			checkpointingLock.wait();
 		}
 		BaseRow key = (BaseRow) getCurrentKey();
-		BaseRow row = element.getValue();
+		BaseRow row = inputSer2.copy(element.getValue());
 		List<BaseRow> records = rightBuffer.computeIfAbsent(key, k -> new ArrayList<>());
-		if (!(row instanceof BinaryRow)) {
-			row = inputSer2.copy(row);
-		}
 		records.add(row);
 		coBundleTrigger.onRightElement(row);
 	}

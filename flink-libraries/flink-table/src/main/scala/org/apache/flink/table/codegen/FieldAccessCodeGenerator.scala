@@ -48,6 +48,7 @@ object FieldAccessCodeGenerator {
     val resultTypeTerm = externalBoxedTermForType(outType)
     val baseClass = s"${classOf[FieldAccess[_,_]].getCanonicalName}<_, $resultTypeTerm>"
 
+    // TODO gen To External will copy, so we don't need copy now...
     val code =
       j"""
       public class $className extends $baseClass {
