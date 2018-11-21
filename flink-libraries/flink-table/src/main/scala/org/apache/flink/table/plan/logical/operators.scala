@@ -551,11 +551,13 @@ case class CatalogNode(
     logicalSqlVisitor.visit(this)
 }
 
-case class SinkNode(child: LogicalNode, sink: TableSink[_]) extends UnaryNode {
+case class SinkNode(child: LogicalNode, sink: TableSink[_], sinkName: String) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
-    throw UnresolvedException("Invalid call to toRelNode on SinkNode")
+    val flinkRelBuilder = relBuilder.asInstanceOf[FlinkRelBuilder]
+    child.construct(flinkRelBuilder)
+    flinkRelBuilder.sink(sink, sinkName)
   }
 
   override def accept[T](logicalSqlVisitor: LogicalNodeVisitor[T]): T =

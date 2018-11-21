@@ -41,6 +41,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel$;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -49,7 +50,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortWindowAggre
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
@@ -68,27 +68,27 @@ import static org.apache.flink.table.util.ExecResourceUtil.SQL_EXEC_INFER_RESOUR
  */
 public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Void> {
 
-	private final Map<RowBatchExecRel, RelResource> relResMap;
+	private final Map<BatchExecRel<?>, RelResource> relResMap;
 	private final TableConfig tConfig;
-	private final Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap;
+	private final Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap;
 	private final RelMetadataQuery mq;
 
 	public RelManagedCalculatorOnStatistics(
 			TableConfig tConfig,
-			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap,
+			Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap,
 			RelMetadataQuery mq,
-			Map<RowBatchExecRel, RelResource> relResMap) {
+			Map<BatchExecRel<?>, RelResource> relResMap) {
 		this.tConfig = tConfig;
 		this.relShuffleStageMap = relShuffleStageMap;
 		this.mq = mq;
 		this.relResMap = relResMap;
 	}
 
-	private int getResultPartitionCount(RowBatchExecRel batchExecRel) {
+	private int getResultPartitionCount(BatchExecRel<?> batchExecRel) {
 		return relShuffleStageMap.get(batchExecRel).getResultParallelism();
 	}
 
-	private void calculateNoManagedMem(RowBatchExecRel batchExecRel) {
+	private void calculateNoManagedMem(BatchExecRel<?> batchExecRel) {
 		visitChildren(batchExecRel);
 		relResMap.get(batchExecRel).setManagedMem(0, 0, 0);
 	}
@@ -135,7 +135,7 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 		return null;
 	}
 
-	private void calculateHashAgg(RowBatchExecRel hashAgg) {
+	private void calculateHashAgg(BatchExecRel<?> hashAgg) {
 		visitChildren(hashAgg);
 		double memoryInBytes = BatchExecRel$.MODULE$.getBatchExecMemCost(hashAgg);
 		Tuple3<Integer, Integer, Integer> managedMem = ExecResourceUtil.reviseAndGetInferManagedMem(
@@ -303,13 +303,18 @@ public class RelManagedCalculatorOnStatistics implements BatchExecRelVisitor<Voi
 	}
 
 	@Override
+	public Void visit(BatchExecSink<?> sink) {
+		throw new TableException("could not reach sink here.");
+	}
+
+	@Override
 	public Void visit(BatchExecRel<?> batchExec) {
 		throw new TableException("could not reach here. " + batchExec.getClass());
 	}
 
-	private void visitChildren(RowBatchExecRel rowBatchExec) {
+	private void visitChildren(BatchExecRel<?> rowBatchExec) {
 		for (RelNode batchExecRel: rowBatchExec.getInputs()) {
-			((RowBatchExecRel) batchExecRel).accept(this);
+			((BatchExecRel<?>) batchExecRel).accept(this);
 		}
 	}
 }

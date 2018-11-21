@@ -21,9 +21,9 @@ package org.apache.flink.table.resource.batch.calculator;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
@@ -38,28 +38,28 @@ import java.util.Set;
 public class RelFinalParallelismSetter {
 
 	private final BatchTableEnvironment tEnv;
-	private Set<RowBatchExecRel> calculatedRelSet = new HashSet<>();
+	private Set<BatchExecRel<?>> calculatedRelSet = new HashSet<>();
 
 	private RelFinalParallelismSetter(BatchTableEnvironment tEnv) {
 		this.tEnv = tEnv;
 	}
 
-	public static void calculate(BatchTableEnvironment tEnv, RowBatchExecRel rowBatchExecRel) {
+	public static void calculate(BatchTableEnvironment tEnv, BatchExecRel<?> rowBatchExecRel) {
 		new RelFinalParallelismSetter(tEnv).calculate(rowBatchExecRel);
 	}
 
-	private void calculate(RowBatchExecRel rowBatchExecRel) {
-		if (!calculatedRelSet.add(rowBatchExecRel)) {
+	private void calculate(BatchExecRel<?> batchExecRel) {
+		if (!calculatedRelSet.add(batchExecRel)) {
 			return;
 		}
-		if (rowBatchExecRel instanceof BatchExecScan) {
-			calculateSource((BatchExecScan) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof SingleRel) {
-			calculateSingle((SingleRel & RowBatchExecRel) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecValues) {
-			calculateValues((BatchExecValues) rowBatchExecRel);
+		if (batchExecRel instanceof BatchExecScan) {
+			calculateSource((BatchExecScan) batchExecRel);
+		} else if (batchExecRel instanceof SingleRel) {
+			calculateSingle((SingleRel & BatchExecRel<?>) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecValues) {
+			calculateValues((BatchExecValues) batchExecRel);
 		} else {
-			calculateInputs(rowBatchExecRel);
+			calculateInputs(batchExecRel);
 		}
 	}
 
@@ -72,7 +72,7 @@ public class RelFinalParallelismSetter {
 		}
 	}
 
-	private <T extends SingleRel & RowBatchExecRel> void calculateSingle(T singleRel) {
+	private <T extends SingleRel & BatchExecRel<?>> void calculateSingle(T singleRel) {
 		calculateInputs(singleRel);
 		RelNode inputRel = singleRel.getInput();
 		if (inputRel instanceof BatchExecExchange) {
@@ -88,6 +88,6 @@ public class RelFinalParallelismSetter {
 	}
 
 	private void calculateInputs(RelNode relNode) {
-		relNode.getInputs().forEach(i -> calculate((RowBatchExecRel) i));
+		relNode.getInputs().forEach(i -> calculate((BatchExecRel<?>) i));
 	}
 }

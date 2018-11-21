@@ -41,6 +41,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinB
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -49,7 +50,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortWindowAggre
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.util.ExecResourceUtil;
 
@@ -62,15 +62,15 @@ import java.util.Map;
  */
 public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 
-	private final Map<RowBatchExecRel, RelResource> relResMap;
+	private final Map<BatchExecRel<?>, RelResource> relResMap;
 	private final TableConfig tConfig;
 
-	public BatchRelManagedCalculator(TableConfig tConfig, Map<RowBatchExecRel, RelResource> relResMap) {
+	public BatchRelManagedCalculator(TableConfig tConfig, Map<BatchExecRel<?>, RelResource> relResMap) {
 		this.relResMap = relResMap;
 		this.tConfig = tConfig;
 	}
 
-	private void calculateNoManagedMem(RowBatchExecRel batchExecRel) {
+	private void calculateNoManagedMem(BatchExecRel<?> batchExecRel) {
 		visitChildren(batchExecRel);
 		relResMap.get(batchExecRel).setManagedMem(0, 0, 0);
 	}
@@ -183,6 +183,11 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	}
 
 	@Override
+	public Void visit(BatchExecSink<?> sink) {
+		throw new TableException("could not reach sink here.");
+	}
+
+	@Override
 	public Void visit(BatchExecLocalHashAggregate localHashAggregate) {
 		calculateHashAgg(localHashAggregate);
 		return null;
@@ -282,9 +287,9 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		throw new TableException("could not reach here. " + batchExec.getClass());
 	}
 
-	private void visitChildren(RowBatchExecRel rowBatchExec) {
-		for (RelNode batchExecRel: rowBatchExec.getInputs()) {
-			((RowBatchExecRel) batchExecRel).accept(this);
+	private void visitChildren(BatchExecRel<?> batchExec) {
+		for (RelNode batchExecRel: batchExec.getInputs()) {
+			((BatchExecRel<?>) batchExecRel).accept(this);
 		}
 	}
 }

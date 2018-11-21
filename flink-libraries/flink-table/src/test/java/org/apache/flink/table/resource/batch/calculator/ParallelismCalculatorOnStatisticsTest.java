@@ -20,9 +20,9 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortMergeJoin;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
 
@@ -102,8 +102,8 @@ public class ParallelismCalculatorOnStatisticsTest {
 	@Test
 	public void testStatics() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
-		RowBatchExecRel singleRel = mockSingleWithInputStatics(4000);
-		RowBatchExecRel biRel = mockBiWithInputStatics(2000d, 1500d);
+		BatchExecRel<?> singleRel = mockSingleWithInputStatics(4000);
+		BatchExecRel<?> biRel = mockBiWithInputStatics(2000d, 1500d);
 		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30, singleRel, biRel)));
 		new ParallelismCalculatorOnStatistics(mq, tableConfig).calculate(shuffleStage0);
 		verify(shuffleStage0).setResultParallelism(30, false);
@@ -115,20 +115,20 @@ public class ParallelismCalculatorOnStatisticsTest {
 	public void testShuffleStageFinal() {
 		ShuffleStage shuffleStage0 = mock(ShuffleStage.class);
 		when(shuffleStage0.isParallelismFinal()).thenReturn(true);
-		RowBatchExecRel singleRel = mockSingleWithInputStatics(4000);
-		RowBatchExecRel biRel = mockBiWithInputStatics(2000d, 1500d);
+		BatchExecRel<?> singleRel = mockSingleWithInputStatics(4000);
+		BatchExecRel<?> biRel = mockBiWithInputStatics(2000d, 1500d);
 		when(shuffleStage0.getBatchExecRelSet()).thenReturn(getRelSet(Arrays.asList(scanParallelism30, singleRel, biRel)));
 		new ParallelismCalculatorOnStatistics(mq, tableConfig).calculate(shuffleStage0);
 		verify(shuffleStage0, never()).setResultParallelism(anyInt(), anyBoolean());
 	}
 
-	private Set<RowBatchExecRel> getRelSet(List<RowBatchExecRel> rowBatchExecRelList) {
-		Set<RowBatchExecRel> relSet = new HashSet<>();
+	private Set<BatchExecRel<?>> getRelSet(List<BatchExecRel<?>> rowBatchExecRelList) {
+		Set<BatchExecRel<?>> relSet = new HashSet<>();
 		relSet.addAll(rowBatchExecRelList);
 		return relSet;
 	}
 
-	private RowBatchExecRel mockSingleWithInputStatics(double inputRowCount) {
+	private BatchExecRel<?> mockSingleWithInputStatics(double inputRowCount) {
 		BatchExecCalc rel = mock(BatchExecCalc.class);
 		RelNode input = mock(RelNode.class);
 		when(rel.getInput()).thenReturn(input);
@@ -136,7 +136,7 @@ public class ParallelismCalculatorOnStatisticsTest {
 		return rel;
 	}
 
-	private RowBatchExecRel mockBiWithInputStatics(double leftInputRowCount, double rightInputRowCount) {
+	private BatchExecRel<?> mockBiWithInputStatics(double leftInputRowCount, double rightInputRowCount) {
 		BatchExecSortMergeJoin rel = mock(BatchExecSortMergeJoin.class);
 		RelNode leftInput = mock(RelNode.class);
 		RelNode rightInput = mock(RelNode.class);

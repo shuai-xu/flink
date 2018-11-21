@@ -37,7 +37,7 @@ import org.apache.flink.table.api.{Table, TableException, _}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.LogicalNodeBlock
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.sources.TableSource
 import org.junit.Assert._
@@ -326,12 +326,12 @@ case class BatchExecTableTestUtil(test: TableTestBatchExecBase) extends TableTes
 
     val ruKeeper = new RunningUnitKeeper(tableEnv)
     optimized match {
-      case rowBatchExecRel: RowBatchExecRel => ruKeeper.buildRUs(rowBatchExecRel)
+      case batchExecRel: BatchExecRel[_] => ruKeeper.buildRUs(batchExecRel)
       case _ => Unit
     }
 
     if (printResource) {
-      ruKeeper.calculateRelResource(optimized.asInstanceOf[RowBatchExecRel])
+      ruKeeper.calculateRelResource(optimized.asInstanceOf[BatchExecRel[_]])
     }
 
     if (printPlanBefore) {

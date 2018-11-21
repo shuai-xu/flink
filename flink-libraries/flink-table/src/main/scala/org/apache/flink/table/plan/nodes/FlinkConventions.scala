@@ -20,9 +20,9 @@ package org.apache.flink.table.plan.nodes
 
 import org.apache.calcite.plan.{Convention, RelTraitSet}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRel
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalRel
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel
 
 /**
  * Override the default convention implementation to support using AbstractConverter for conversion
@@ -51,5 +51,5 @@ object FlinkConventions {
 
   val LOGICAL: Convention = new Convention.Impl("LOGICAL", classOf[FlinkLogicalRel])
   val STREAMEXEC: Convention = new FlinkConvention("STREAMEXEC", classOf[StreamExecRel])
-  val BATCHEXEC: Convention = new FlinkConvention("BATCHEXEC", classOf[RowBatchExecRel])
+  val BATCHEXEC: Convention = new FlinkConvention("BATCHEXEC", classOf[BatchExecRel[_]])
 }

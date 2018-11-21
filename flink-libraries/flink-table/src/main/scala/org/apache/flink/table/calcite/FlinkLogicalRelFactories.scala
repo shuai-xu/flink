@@ -33,10 +33,12 @@ import org.apache.calcite.sql.{SemiJoinType, SqlKind}
 import org.apache.calcite.sql.SqlKind.{EXCEPT, INTERSECT, UNION}
 import org.apache.calcite.tools.{RelBuilder, RelBuilderFactory}
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.calcite.FlinkRelFactories.ExpandFactory
+import org.apache.flink.table.api.QueryConfig
+import org.apache.flink.table.calcite.FlinkRelFactories.{ExpandFactory, SinkFactory}
 import org.apache.flink.table.plan.nodes.calcite.LogicalExpand
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
+import org.apache.flink.table.sinks.TableSink
 
 import scala.collection.JavaConversions._
 
@@ -305,6 +307,18 @@ object FlinkLogicalRelFactories {
         projects: util.List[util.List[RexNode]],
         expandIdIndex: Int): RelNode = {
       FlinkLogicalExpand.create(input, rowType, projects, expandIdIndex)
+    }
+  }
+
+  /**
+    * Implementation of [[FlinkRelFactories#SinkFactory]] that returns a [[FlinkLogicalSink]].
+    */
+  class SinkFactoryImpl extends SinkFactory {
+    def createSink(
+      input: RelNode,
+      sink: TableSink[_],
+      sinkName: String): RelNode = {
+      FlinkLogicalSink.create(input, sink, sinkName)
     }
   }
 }

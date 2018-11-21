@@ -24,9 +24,9 @@ import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.MockRelTestBase;
 import org.apache.flink.table.resource.RelResource;
 
@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
 public class BatchRelCpuHeapMemCalculatorTest extends MockRelTestBase {
 	private StreamExecutionEnvironment sEnv = StreamExecutionEnvironment.getExecutionEnvironment();
 	private BatchTableEnvironment tEnv;
-	private Map<RowBatchExecRel, RelResource> relResMap;
+	private Map<BatchExecRel<?>, RelResource> relResMap;
 	private BatchRelCpuHeapMemCalculator relCpuHeapMemCalculator;
 
 	@Before

@@ -31,21 +31,20 @@ import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
-import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
+import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.catalog.ExternalCatalog
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{BatchExecCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize.BatchOptimizeContext
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
@@ -55,7 +54,6 @@ import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{BatchTableSource, _}
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util._
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.util.{AbstractID, Preconditions}
@@ -151,9 +149,8 @@ class BatchTableEnvironment(
         .asInstanceOf[TypeSerializer[T]]
     val id = new AbstractID().toString
     sink.init(typeSerializer, id)
-    val result = translate[T](table, outType, sink)
-    val execSink = emitBoundedStreamSink(sink, result)
-    val res = executeInternal(ArrayBuffer(execSink.getTransformation), jobName)
+    val stream = translate(table, sink)
+    val res = executeInternal(ArrayBuffer(stream.getTransformation), jobName)
     val accResult: JArrayList[Array[Byte]] = res.getAccumulatorResult(id)
     SerializedListAccumulator.deserializeList(accResult, typeSerializer).asScala
   }
@@ -241,24 +238,10 @@ class BatchTableEnvironment(
     // Check the query configuration to be a batch one.
 
     if (config.getSubsectionOptimization) {
-      sinkNodes += SinkNode(table.logicalPlan, sink)
+      sinkNodes += SinkNode(table.logicalPlan, sink, sinkName)
     } else {
-      sink match {
-        case batchTableSink: BatchTableSink[T] =>
-          val outputType = sink.getOutputType
-          val result = translate[T](table, outputType, sink)
-          transformations.add(emitBoundedStreamSink(batchTableSink, result).getTransformation)
-        case compatibleTableSink: BatchCompatibleStreamTableSink[_] =>
-          val result = translate[T](
-            table,
-            compatibleTableSink.getOutputType,
-            sink,
-            withChangeFlag = true)
-          transformations.add(emitBoundedStreamSink(compatibleTableSink, result).getTransformation)
-        case _ =>
-          throw new TableException("BatchTableSink or CompatibleStreamTableSink" +
-            " can be registered in BatchTableEnvironment")
-      }
+      val stream = translate(table, sink, sinkName)
+      transformations.add(stream.getTransformation)
     }
   }
 
@@ -274,12 +257,9 @@ class BatchTableEnvironment(
       // translates recursively LogicalNodeBlock into BoundedStream
       blockPlan.foreach {
         sinkBlock =>
-          val result: DataStream[_] = translateLogicalNodeBlock(sinkBlock)
+          val boundedStream: DataStream[_] = translateLogicalNodeBlock(sinkBlock)
           sinkBlock.outputNode match {
             case sinkNode: SinkNode =>
-              val boundedStream = emitBoundedStreamSink(
-                sinkNode.sink.asInstanceOf[TableSink[Any]],
-                result.asInstanceOf[DataStream[Any]])
               transformations.add(boundedStream.getTransformation)
             case _ => throw new TableException("SinkNode required here")
           }
@@ -299,87 +279,37 @@ class BatchTableEnvironment(
     }
 
     val blockLogicalPlan = block.getLogicalPlan
-    val logicalPlan = blockLogicalPlan match {
-      case n: SinkNode => n.child // ignore sink node
-      case o => o
-    }
-
-    val table = new Table(this, logicalPlan)
+    val table = new Table(this, blockLogicalPlan)
 
     val relNode = table.getRelNode
     val batchExecPlan = optimize(relNode)
     addQueryPlan(relNode, batchExecPlan)
 
-    val boundedStream: DataStream[_] = blockLogicalPlan match {
-      case n: SinkNode =>
-        n.sink match {
-          case compatibleTableSink: BatchCompatibleStreamTableSink[_] =>
-            translate(batchExecPlan, relNode.getRowType, withChangeFlag = true,
-              compatibleTableSink.getOutputType, compatibleTableSink)
-          case _ =>
-            val outputType = n.sink.getOutputType
-            translate(batchExecPlan, relNode.getRowType, withChangeFlag = false, outputType, n.sink)
-        }
+    val boundedStream: DataStream[_] = batchExecPlan match {
+      case n: BatchExecSink[_] =>
+        val outputType = n.sink.getOutputType
+        translate(n, outputType)
       case _ =>
         val outputType = DataTypes.createRowType(table.getSchema.getTypes: _*)
-        translate(batchExecPlan, relNode.getRowType, withChangeFlag = false, outputType, null)
-    }
-
-    if (!blockLogicalPlan.isInstanceOf[SinkNode]) {
-      val name = createUniqueTableName()
-      registerIntermediateBoundedStreamInternal(
-        // It is not a SinkNode, so it will be referenced by other blockLogicalPlan.
-        // When registering a data collection, we should send a correct type.
-        // If no this correct type, it will be converted from Flink's fieldTypes,
-        // while STRING_TYPE_INFO will lose the length of varchar.
-        relNode.getRowType,
-        name,
-        boundedStream,
-        table.getSchema)
-      val newTable = scan(name)
-      block.setNewOutputNode(newTable.logicalPlan)
-      block.setOutputTableName(name)
+        val stream = translate(batchExecPlan, outputType)
+        val name = createUniqueTableName()
+        registerIntermediateBoundedStreamInternal(
+          // It is not a SinkNode, so it will be referenced by other blockLogicalPlan.
+          // When registering a data collection, we should send a correct type.
+          // If no this correct type, it will be converted from Flink's fieldTypes,
+          // while STRING_TYPE_INFO will lose the length of varchar.
+          relNode.getRowType,
+          name,
+          stream,
+          table.getSchema)
+        val newTable = scan(name)
+        block.setNewOutputNode(newTable.logicalPlan)
+        block.setOutputTableName(name)
+        stream
     }
 
     block.setOptimizedPlan(batchExecPlan)
     boundedStream
-  }
-
-  private def emitBoundedStreamSink[T](
-      sink: TableSink[T], boundedStream: DataStream[T]): DataStreamSink[_] = {
-    sink match {
-      case sinkBatch: BatchTableSink[T] =>
-        val boundedSink = sinkBatch.emitBoundedStream(boundedStream, config, streamEnv.getConfig)
-        assignDefaultResourceAndParallelism(boundedStream, boundedSink)
-        boundedSink
-      case compatible: BatchCompatibleStreamTableSink[T] =>
-        val boundedSink = compatible.emitBoundedStream(
-          boundedStream.asInstanceOf[DataStream[T]])
-        assignDefaultResourceAndParallelism(boundedStream, boundedSink)
-        boundedSink
-      case _ => throw new TableException("BatchTableSink or " +
-          "CompatibleStreamTableSink required to emit batch exec Table")
-    }
-  }
-
-  private def assignDefaultResourceAndParallelism(
-      boundedStream: DataStream[_], boundedSink: DataStreamSink[_]) {
-    val sinkTransformation = boundedSink.getTransformation
-    val streamTransformation = boundedStream.getTransformation
-    val preferredResources = sinkTransformation.getPreferredResources
-    if (preferredResources == null) {
-      val heapMem = ExecResourceUtil.getSinkMem(getConfig)
-      val resource = ExecResourceUtil.getResourceSpec(getConfig, heapMem)
-      sinkTransformation.setResources(resource, resource)
-    }
-    if (!sinkTransformation.isParallelismLocked) {
-      val configSinkParallelism = ExecResourceUtil.getSinkParallelism(getConfig)
-      if (configSinkParallelism > 0) {
-        sinkTransformation.setParallelism(configSinkParallelism)
-      } else if (streamTransformation.getParallelism > 0) {
-        sinkTransformation.setParallelism(streamTransformation.getParallelism)
-      }
-    }
   }
 
   /**
@@ -496,20 +426,26 @@ class BatchTableEnvironment(
    * operators.
    *
    * @param table      The root node of the relational expression tree.
-   * @param resultType The [[DataType]] of the resulting [[DataStream]].
-   * @tparam A The type of the resulting [[DataStream]].
    * @return The [[DataStream]] that corresponds to the translated [[Table]].
    */
   protected def translate[A](
       table: Table,
-      resultType: DataType,
-      sink: TableSink[_],
-      withChangeFlag: Boolean = false)
+      sink: TableSink[A],
+      sinkName: String = null)
     : DataStream[A] = {
-    val relNode = table.getRelNode
-    val boundedStreamPlan = optimize(relNode)
-    addQueryPlan(relNode, boundedStreamPlan)
-    translate(boundedStreamPlan, relNode.getRowType, withChangeFlag, resultType, sink)
+    val sinkNode = relBuilder.push(table.getRelNode).asInstanceOf[FlinkRelBuilder].
+                   sink(sink, sinkName).build()
+    val optimizedSinkNode = optimize(sinkNode)
+    addQueryPlan(sinkNode, optimizedSinkNode)
+    optimizedSinkNode match {
+      case batchExecSink: BatchExecSink[A] =>
+        translate(batchExecSink, sink.getOutputType)
+      case _ =>
+        throw new TableException(
+          s"Cannot generate BoundedStream due to an invalid logical plan. " +
+            "This is a bug and should not happen. Please file an issue.")
+
+    }
   }
 
   /**
@@ -517,87 +453,23 @@ class BatchTableEnvironment(
    * Converts to target type if necessary.
    *
    * @param logicalPlan The root node of the relational expression tree.
-   * @param logicalType The row type of the result. Since the logicalPlan can lose the
-   *                    field naming during optimization we pass the row type separately.
    * @param resultType  The [[DataType]] of the resulting [[DataStream]].
-   * @tparam OUT The type of the resulting [[DataStream]].
    * @return The [[DataStream]] that corresponds to the translated [[Table]].
    */
   protected def translate[OUT](
       logicalPlan: RelNode,
-      logicalType: RelDataType,
-      withChangeFlag: Boolean,
-      resultType: DataType,
-      sink: TableSink[_]): DataStream[OUT] = {
+      resultType: DataType): DataStream[OUT] = {
     TableEnvironment.validateType(resultType)
 
     logicalPlan match {
-      case node: RowBatchExecRel =>
+      case node: BatchExecRel[OUT] =>
         ruKeeper.buildRUs(node)
         ruKeeper.calculateRelResource(node)
         val plan = node.translateToPlan(this)
-
-        val parTransformation = if (sink != null) {
-          PartitionUtils.createPartitionTransformation(sink, plan)
-        } else {
-          plan
-        }
-        val convertTransformation =
-          getConversionMapper[BaseRow, OUT](
-            parTransformation,
-            parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]],
-            logicalType,
-            "BoundedStreamSinkConversion",
-            withChangeFlag,
-            resultType)
-        new DataStream(streamEnv, convertTransformation)
+        new DataStream(streamEnv, plan)
       case _ =>
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +
             "This is a bug and should not happen. Please file an issue.")
-    }
-  }
-
-  /**
-    * If the input' outputType is incompatible with the external type, here need create a final
-    * converter that maps the internal row type to external type.
-    *
-    * @param physicalTypeInfo the input of the sink
-    * @param relType          the input relDataType with correct field names
-    * @param name             name of the map operator. Must not be unique but has to be a
-    *                         valid Java class identifier.
-    * @param withChangeFlag   Set to true to emit records with change flags.
-    * @param resultType       The [[DataType]] of the resulting [[DataStream]].
-    */
-  private def getConversionMapper[IN, OUT](
-    input: StreamTransformation[IN],
-    physicalTypeInfo: BaseRowTypeInfo[_],
-    relType: RelDataType,
-    name: String,
-    withChangeFlag: Boolean,
-    resultType: DataType): StreamTransformation[OUT] = {
-
-    val (converterOperator, outputTypeInfo) = RowConverters.generateRowConverterOperator[IN, OUT](
-      config,
-      CodeGeneratorContext(config, supportReference = true),
-      physicalTypeInfo,
-      relType,
-      name,
-      None,
-      withChangeFlag,
-      resultType)
-    converterOperator match {
-      case None => input.asInstanceOf[StreamTransformation[OUT]]
-      case Some(operator) =>
-        val transformation = new OneInputTransformation(
-          input,
-          s"SinkConversion to ${TypeUtils.getExternalClassForType(resultType).getSimpleName}",
-          operator,
-          outputTypeInfo,
-          input.getParallelism)
-        val defaultResource = ExecResourceUtil.getDefaultResourceSpec(getConfig)
-        transformation.setParallelismLocked(true)
-        transformation.setResources(defaultResource, defaultResource)
-        transformation
     }
   }
 
@@ -912,12 +784,9 @@ class BatchTableEnvironment(
     val optimizedPlan = optimize(ast)
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
-    val boundedStream = translate[BinaryRow](
+    val boundedStream = translate(
       optimizedPlan,
-      ast.getRowType,
-      withChangeFlag = false,
-      new BaseRowType(classOf[BinaryRow], fieldTypes: _*),
-      null)
+      new BaseRowType(classOf[BinaryRow], fieldTypes: _*))
     val streamGraph = StreamGraphGenerator.generate(
       StreamGraphGenerator.Context.buildBatchProperties(streamEnv),
       ArrayBuffer(boundedStream.getTransformation))

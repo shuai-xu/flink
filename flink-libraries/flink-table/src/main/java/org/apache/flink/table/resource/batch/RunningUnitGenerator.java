@@ -41,6 +41,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinB
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -49,7 +50,6 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortWindowAggre
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTableSourceScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.batch.RunningUnitGenerator.RelStageExchangeInfo;
 
 import org.apache.calcite.rel.BiRel;
@@ -68,7 +68,7 @@ import java.util.Map;
  */
 public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageExchangeInfo>> {
 
-	private final Map<RowBatchExecRel, List<RelStageExchangeInfo>> outputInfoMap = new LinkedHashMap<>();
+	private final Map<BatchExecRel<?>, List<RelStageExchangeInfo>> outputInfoMap = new LinkedHashMap<>();
 	private final List<RelRunningUnit> runningUnits = new LinkedList<>();
 	private final TableConfig tableConfig;
 
@@ -118,7 +118,7 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 		return visitSourceRel(values);
 	}
 
-	private List<RelStageExchangeInfo> visitSourceRel(RowBatchExecRel sourceRel) {
+	private List<RelStageExchangeInfo> visitSourceRel(BatchExecRel<?> sourceRel) {
 		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(sourceRel);
 		if (outputInfoList == null) {
 			BatchExecRelStage relStage = new BatchExecRelStage(sourceRel, 0);
@@ -129,11 +129,11 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 		return outputInfoList;
 	}
 
-	private <T extends SingleRel & RowBatchExecRel> List<RelStageExchangeInfo> visitOneStageSingleRel(
+	private <T extends SingleRel & BatchExecRel<?>> List<RelStageExchangeInfo> visitOneStageSingleRel(
 			T singleRel) {
 		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(singleRel);
 		if (outputInfoList == null) {
-			List<RelStageExchangeInfo> inputInfoList = ((RowBatchExecRel) singleRel.getInput()).accept(this);
+			List<RelStageExchangeInfo> inputInfoList = ((BatchExecRel<?>) singleRel.getInput()).accept(this);
 			BatchExecRelStage relStage = new BatchExecRelStage(singleRel, 0);
 			addIntoInputRunningUnit(inputInfoList, relStage);
 			outputInfoList = Collections.singletonList(new RelStageExchangeInfo(relStage));
@@ -192,11 +192,11 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 		return visitTwoStageSingleRel(hashAggregate);
 	}
 
-	private <T extends SingleRel & RowBatchExecRel> List<RelStageExchangeInfo> visitTwoStageSingleRel(
+	private <T extends SingleRel & BatchExecRel<?>> List<RelStageExchangeInfo> visitTwoStageSingleRel(
 			T singleRel) {
 		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(singleRel);
 		if (outputInfoList == null) {
-			List<RelStageExchangeInfo> inputInfoList = ((RowBatchExecRel) singleRel.getInput()).accept(this);
+			List<RelStageExchangeInfo> inputInfoList = ((BatchExecRel<?>) singleRel.getInput()).accept(this);
 			BatchExecRelStage inStage = new BatchExecRelStage(singleRel, 0);
 			BatchExecRelStage outStage = new BatchExecRelStage(singleRel, 1);
 			outStage.addDependStage(inStage, BatchExecRelStage.DependType.DATA_TRIGGER);
@@ -264,8 +264,8 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 			BatchExecRelStage buildStage = new BatchExecRelStage(hashJoin, 0);
 			BatchExecRelStage probeStage = new BatchExecRelStage(hashJoin, 1);
 			probeStage.addDependStage(buildStage, BatchExecRelStage.DependType.PRIORITY);
-			RowBatchExecRel buildInput = (RowBatchExecRel) (leftIsBuild ? joinRel.getLeft() : joinRel.getRight());
-			RowBatchExecRel probeInput = (RowBatchExecRel) (leftIsBuild ? joinRel.getRight() : joinRel.getLeft());
+			BatchExecRel<?> buildInput = (BatchExecRel<?>) (leftIsBuild ? joinRel.getLeft() : joinRel.getRight());
+			BatchExecRel<?> probeInput = (BatchExecRel<?>) (leftIsBuild ? joinRel.getRight() : joinRel.getLeft());
 
 			List<RelStageExchangeInfo> buildInputInfoList = buildInput.accept(this);
 			List<RelStageExchangeInfo> probeInputInfoList = probeInput.accept(this);
@@ -283,7 +283,7 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 	public List<RelStageExchangeInfo> visit(BatchExecExchange exchange) {
 		List<RelStageExchangeInfo> outputInfoList = outputInfoMap.get(exchange);
 		if (outputInfoList == null) {
-			List<RelStageExchangeInfo>  inputInfoList = ((RowBatchExecRel) exchange.getInput()).accept(this);
+			List<RelStageExchangeInfo>  inputInfoList = ((BatchExecRel<?>) exchange.getInput()).accept(this);
 			if (exchange.getDataExchangeModeForDeadlockBreakup(tableConfig) == DataExchangeMode.BATCH) {
 				outputInfoList = new ArrayList<>(inputInfoList.size());
 				for (RelStageExchangeInfo relStageExchangeInfo : inputInfoList) {
@@ -309,8 +309,8 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 				probeStage.addDependStage(buildStage, BatchExecRelStage.DependType.PRIORITY);
 				outStage.addDependStage(probeStage, BatchExecRelStage.DependType.DATA_TRIGGER);
 
-				RowBatchExecRel buildInput = (RowBatchExecRel) joinRel.getLeft();
-				RowBatchExecRel probeInput = (RowBatchExecRel) joinRel.getRight();
+				BatchExecRel<?> buildInput = (BatchExecRel<?>) joinRel.getLeft();
+				BatchExecRel<?> probeInput = (BatchExecRel<?>) joinRel.getRight();
 
 				List<RelStageExchangeInfo> buildInputInfoList = buildInput.accept(this);
 				List<RelStageExchangeInfo> probeInputInfoList = probeInput.accept(this);
@@ -339,8 +339,8 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 			outStage.addDependStage(in0Stage, BatchExecRelStage.DependType.DATA_TRIGGER);
 			outStage.addDependStage(in1Stage, BatchExecRelStage.DependType.DATA_TRIGGER);
 
-			List<RelStageExchangeInfo> in0InfoList = ((RowBatchExecRel) joinRel.getLeft()).accept(this);
-			List<RelStageExchangeInfo> in1InfoList = ((RowBatchExecRel) joinRel.getRight()).accept(this);
+			List<RelStageExchangeInfo> in0InfoList = ((BatchExecRel<?>) joinRel.getLeft()).accept(this);
+			List<RelStageExchangeInfo> in1InfoList = ((BatchExecRel<?>) joinRel.getRight()).accept(this);
 			addIntoInputRunningUnit(in0InfoList, in0Stage);
 			addIntoInputRunningUnit(in1InfoList, in1Stage);
 			newRunningUnitWithRelStage(outStage);
@@ -362,10 +362,15 @@ public class RunningUnitGenerator implements BatchExecRelVisitor<List<RelStageEx
 		if (outputInfoList == null) {
 			outputInfoList = new LinkedList<>();
 			for (RelNode relNode : union.getInputs()) {
-				outputInfoList.addAll(((RowBatchExecRel) relNode).accept(this));
+				outputInfoList.addAll(((BatchExecRel<?>) relNode).accept(this));
 			}
 		}
 		return outputInfoList;
+	}
+
+	@Override
+	public List<RelStageExchangeInfo> visit(BatchExecSink<?> sink) {
+		throw new TableException("could not reach sink here.");
 	}
 
 	@Override

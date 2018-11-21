@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -28,23 +28,23 @@ import java.util.Set;
  */
 public class ShuffleStage {
 
-	private final Set<RowBatchExecRel> batchExecRelSet = new LinkedHashSet<>();
+	private final Set<BatchExecRel<?>> batchExecRelSet = new LinkedHashSet<>();
 	private int resultParallelism = -1;
 	private boolean isParallelismFinal = false;
 
-	public void addRel(RowBatchExecRel rowBatchExecRel) {
-		batchExecRelSet.add(rowBatchExecRel);
+	public void addRel(BatchExecRel<?> batchExecRel) {
+		batchExecRelSet.add(batchExecRel);
 	}
 
-	public void addRelSet(Set<RowBatchExecRel> rowBatchExecRelSet) {
+	public void addRelSet(Set<BatchExecRel<?>> rowBatchExecRelSet) {
 		batchExecRelSet.addAll(rowBatchExecRelSet);
 	}
 
-	public void removeRel(RowBatchExecRel rowBatchExecRel) {
+	public void removeRel(BatchExecRel<?> rowBatchExecRel) {
 		this.batchExecRelSet.remove(rowBatchExecRel);
 	}
 
-	public Set<RowBatchExecRel> getBatchExecRelSet() {
+	public Set<BatchExecRel<?>> getBatchExecRelSet() {
 		return this.batchExecRelSet;
 	}
 

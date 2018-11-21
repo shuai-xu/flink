@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 
 import java.io.Serializable;
 import java.util.LinkedHashSet;
@@ -33,14 +33,14 @@ import java.util.Set;
 public class RelRunningUnit implements Serializable {
 
 	private final List<BatchExecRelStage> relStageList = new LinkedList<>();
-	private transient Set<RowBatchExecRel> relSet = new LinkedHashSet<>();
+	private transient Set<BatchExecRel<?>> relSet = new LinkedHashSet<>();
 
 	public void addRelStage(BatchExecRelStage relStage) {
 		this.relStageList.add(relStage);
 		this.relSet.add(relStage.getBatchExecRel());
 	}
 
-	public Set<RowBatchExecRel> getRelSet() {
+	public Set<BatchExecRel<?>> getRelSet() {
 		return relSet;
 	}
 

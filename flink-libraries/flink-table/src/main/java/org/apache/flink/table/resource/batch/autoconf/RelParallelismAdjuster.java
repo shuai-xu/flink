@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.autoconf;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.RelRunningUnit;
 import org.apache.flink.table.resource.batch.ShuffleStage;
@@ -34,23 +34,23 @@ import java.util.Set;
 public class RelParallelismAdjuster {
 
 	private final double totalCpu;
-	private final Map<RowBatchExecRel, RelResource> relResourceMap;
+	private final Map<BatchExecRel<?>, RelResource> relResourceMap;
 	private Map<ShuffleStage, Set<RelRunningUnit>> overlapRunningUnits = new LinkedHashMap<>();
 	private Map<RelRunningUnit, Set<ShuffleStage>> overlapShuffleStages = new LinkedHashMap<>();
 
 	public static void adjustParallelism(double totalCpu,
-			Map<RowBatchExecRel, RelResource> relResourceMap,
-			Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap,
-			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+			Map<BatchExecRel<?>, RelResource> relResourceMap,
+			Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap,
+			Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap) {
 		new RelParallelismAdjuster(totalCpu, relResourceMap).adjust(relRunningUnitMap, relShuffleStageMap);
 	}
 
-	private RelParallelismAdjuster(double totalCpu, Map<RowBatchExecRel, RelResource> relResourceMap) {
+	private RelParallelismAdjuster(double totalCpu, Map<BatchExecRel<?>, RelResource> relResourceMap) {
 		this.totalCpu = totalCpu;
 		this.relResourceMap = relResourceMap;
 	}
 
-	private void adjust(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap, Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+	private void adjust(Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap, Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap) {
 		buildOverlap(relRunningUnitMap, relShuffleStageMap);
 
 		for (ShuffleStage shuffleStage : relShuffleStageMap.values()) {
@@ -69,10 +69,10 @@ public class RelParallelismAdjuster {
 		}
 	}
 
-	private void buildOverlap(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap, Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap) {
+	private void buildOverlap(Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap, Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap) {
 		for (ShuffleStage shuffleStage : relShuffleStageMap.values()) {
 			Set<RelRunningUnit> runningUnitSet = new LinkedHashSet<>();
-			for (RowBatchExecRel rel : shuffleStage.getBatchExecRelSet()) {
+			for (BatchExecRel<?> rel : shuffleStage.getBatchExecRelSet()) {
 				runningUnitSet.addAll(relRunningUnitMap.get(rel));
 			}
 			overlapRunningUnits.put(shuffleStage, runningUnitSet);
@@ -84,7 +84,7 @@ public class RelParallelismAdjuster {
 					continue;
 				}
 				Set<ShuffleStage> shuffleStageSet = new LinkedHashSet<>();
-				for (RowBatchExecRel rel : runningUnit.getRelSet()) {
+				for (BatchExecRel<?> rel : runningUnit.getRelSet()) {
 					shuffleStageSet.add(relShuffleStageMap.get(rel));
 				}
 				overlapShuffleStages.put(runningUnit, shuffleStageSet);
@@ -116,7 +116,7 @@ public class RelParallelismAdjuster {
 
 	private double getCpu(ShuffleStage shuffleStage, int parallelism) {
 		double totalCpu = 0;
-		for (RowBatchExecRel rel : shuffleStage.getBatchExecRelSet()) {
+		for (BatchExecRel<?> rel : shuffleStage.getBatchExecRelSet()) {
 			totalCpu = Math.max(totalCpu, relResourceMap.get(rel).getCpu());
 		}
 		totalCpu *= parallelism;

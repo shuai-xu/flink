@@ -25,7 +25,8 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilderFactory
-import org.apache.flink.table.plan.nodes.calcite.LogicalExpand
+import org.apache.flink.table.plan.nodes.calcite.{LogicalExpand, LogicalSink}
+import org.apache.flink.table.sinks.TableSink
 
 /**
   * Contains factory interface and default implementation for creating various rel nodes.
@@ -35,6 +36,8 @@ object FlinkRelFactories {
   val FLINK_REL_BUILDER: RelBuilderFactory = FlinkRelBuilder.proto(Contexts.empty)
 
   val DEFAULT_EXPAND_FACTORY = new ExpandFactoryImpl
+
+  val DEFAULT_SINK_FACTORY = new SinkFactoryImpl
 
   /**
     * Can create a [[LogicalExpand]] of the
@@ -57,5 +60,29 @@ object FlinkRelFactories {
         rowType: RelDataType,
         projects: util.List[util.List[RexNode]],
         expandIdIndex: Int): RelNode = LogicalExpand.create(input, rowType, projects, expandIdIndex)
+  }
+
+
+  /**
+    * Can create a [[LogicalSink]] of the
+    * appropriate type for this rule's calling convention.
+    */
+  trait SinkFactory {
+
+    def createSink(
+      input: RelNode,
+      sink: TableSink[_],
+      sinkName: String): RelNode
+  }
+
+  /**
+    * Implementation of [[SinkFactory]] that returns a [[LogicalSink]].
+    */
+  class SinkFactoryImpl extends SinkFactory {
+
+    def createSink(
+      input: RelNode,
+      sink: TableSink[_],
+      sinkName: String): RelNode = LogicalSink.create(input, sink, sinkName)
   }
 }

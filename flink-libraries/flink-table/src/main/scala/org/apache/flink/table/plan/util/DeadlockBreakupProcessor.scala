@@ -34,9 +34,9 @@ import scala.collection.mutable
 /**
   * A DeadlockBreakupHandler that finds out all deadlocks in the plan, and resolves them.
   *
-  * NOTES: This program can be only applied on [[RowBatchExecRel]] tree.
+  * NOTES: This program can be only applied on [[BatchExecRel]] tree.
   *
-  * Reused node (may be a [[RowBatchExecRel]] which has more than one outputs or
+  * Reused node (may be a [[BatchExecRel]] which has more than one outputs or
   * a [[BatchExecBoundedStreamScan]] which transformation is used for different scan)
   * might lead to a deadlock when HashJoin or NestedLoopJoin have same reused input.
   * Sets Exchange node(if it does not exist, add one) as BATCH mode to break up the deadlock.
@@ -82,7 +82,7 @@ class DeadlockBreakupProcessor {
 
   def process(input: RelNode): RelNode = {
     input match {
-      case root: RowBatchExecRel =>
+      case root: BatchExecRel[_] =>
         val finder = new ReuseNodeFinder()
         finder.go(root)
         root.accept(new DeadlockBreakupShuttleImpl(finder))

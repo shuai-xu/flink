@@ -437,7 +437,7 @@ abstract class StreamTableEnvironment(
       sinkName: String): Unit = {
 
     if (config.getSubsectionOptimization) {
-      sinkNodes += SinkNode(table.logicalPlan, sink)
+      sinkNodes += SinkNode(table.logicalPlan, sink, sinkName)
     } else {
       val (result: DataStream[T], _) =
         translate(table, sink)

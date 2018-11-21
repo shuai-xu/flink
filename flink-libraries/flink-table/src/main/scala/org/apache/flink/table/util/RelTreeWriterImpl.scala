@@ -26,7 +26,7 @@ import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.cost.BatchExecCost
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecScan, RowBatchExecRel}
+import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.util.SubplanReuseContext
 
 import scala.collection.JavaConversions._
@@ -76,7 +76,7 @@ class RelTreeWriterImpl(
     if (!isReuseOtherRel) {
       if (printResource) {
         rel match {
-          case rowBatchExec: RowBatchExecRel =>
+          case rowBatchExec: BatchExecRel[_] =>
             printValues.add(Pair.of(
               "partition",
               rowBatchExec.resultPartitionCount.asInstanceOf[AnyRef]))
@@ -105,7 +105,7 @@ class RelTreeWriterImpl(
       }
       if (printMemCost || printResource) {
         rel match {
-          case rowBatchExec: RowBatchExecRel =>
+          case rowBatchExec: BatchExecRel[_] =>
             val memCost = mq.getNonCumulativeCost(rowBatchExec).asInstanceOf[BatchExecCost].memory
             printValues.add(Pair.of(
               "memCost",
@@ -122,7 +122,7 @@ class RelTreeWriterImpl(
 
       if (withRelNodeId) {
         rel match {
-          case rowBatchExec: RowBatchExecRel =>
+          case rowBatchExec: BatchExecRel[_] =>
             printValues.add(Pair.of("__id__", rowBatchExec.getId.toString))
         }
       }
@@ -196,7 +196,7 @@ class RelTreeWriterImpl(
   }
 
   private def addResourceToPrint(
-      rowBatchExec: RowBatchExecRel,
+      rowBatchExec: BatchExecRel[_],
       printValues: JArrayList[Pair[String, AnyRef]]): Unit = {
     if (rowBatchExec.resource != null) {
       printValues.add(Pair.of(

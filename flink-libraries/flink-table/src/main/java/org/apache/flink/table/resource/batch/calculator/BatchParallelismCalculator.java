@@ -19,8 +19,8 @@
 package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.table.api.TableConfig;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
 
@@ -42,9 +42,9 @@ public class BatchParallelismCalculator extends ShuffleStageParallelismCalculato
 		if (shuffleStage.isParallelismFinal()) {
 			return;
 		}
-		Set<RowBatchExecRel> relSet = shuffleStage.getBatchExecRelSet();
+		Set<BatchExecRel<?>> relSet = shuffleStage.getBatchExecRelSet();
 		int maxSourceParallelism = -1;
-		for (RowBatchExecRel rel : relSet) {
+		for (BatchExecRel<?> rel : relSet) {
 			if (rel instanceof BatchExecScan) {
 				int result = calculateSource((BatchExecScan) rel);
 				if (result > maxSourceParallelism) {

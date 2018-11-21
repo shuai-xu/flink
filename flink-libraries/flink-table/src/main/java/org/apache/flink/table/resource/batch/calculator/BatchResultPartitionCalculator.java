@@ -23,10 +23,10 @@ import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecJoinBase;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.ResourceCalculator;
 import org.apache.flink.table.util.ExecResourceUtil;
 
@@ -41,31 +41,31 @@ import org.slf4j.LoggerFactory;
 /**
  * Calculating resultPartitionCount with visiting every [[BatchExecRel]].
  */
-public class BatchResultPartitionCalculator extends ResourceCalculator<RowBatchExecRel> {
+public class BatchResultPartitionCalculator extends ResourceCalculator<BatchExecRel<?>> {
 	private static final Logger LOG = LoggerFactory.getLogger(BatchResultPartitionCalculator.class);
 
 	public BatchResultPartitionCalculator(TableEnvironment tEnv) {
 		super(tEnv);
 	}
 
-	public void calculate(RowBatchExecRel rowBatchExecRel) {
-		if (rowBatchExecRel.resultPartitionCount() > 0) {
+	public void calculate(BatchExecRel<?> batchExecRel) {
+		if (batchExecRel.resultPartitionCount() > 0) {
 			return;
 		}
-		if (rowBatchExecRel instanceof BatchExecScan) {
-			calculateSource((BatchExecScan) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecUnion) {
-			calculateUnion((BatchExecUnion) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecExchange) {
-			calculateExchange((BatchExecExchange) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecJoinBase) {
-			calculateJoin((BatchExecJoinBase) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof SingleRel) {
-			calculateSingle((SingleRel & RowBatchExecRel) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecValues) {
-			calculateValues((BatchExecValues) rowBatchExecRel);
+		if (batchExecRel instanceof BatchExecScan) {
+			calculateSource((BatchExecScan) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecUnion) {
+			calculateUnion((BatchExecUnion) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecExchange) {
+			calculateExchange((BatchExecExchange) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecJoinBase) {
+			calculateJoin((BatchExecJoinBase) batchExecRel);
+		} else if (batchExecRel instanceof SingleRel) {
+			calculateSingle((SingleRel & BatchExecRel<?>) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecValues) {
+			calculateValues((BatchExecValues) batchExecRel);
 		} else {
-			throw new TableException("could not reach here. " + rowBatchExecRel.getClass());
+			throw new TableException("could not reach here. " + batchExecRel.getClass());
 		}
 	}
 
@@ -118,9 +118,9 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<RowBatchE
 	private void calculateJoin(BatchExecJoinBase joinBatchExec) {
 		calculateInputs(joinBatchExec);
 		int rightResultPartitionCount =
-				((RowBatchExecRel) ((BiRel) joinBatchExec).getRight()).resultPartitionCount();
+				((BatchExecRel<?>) ((BiRel) joinBatchExec).getRight()).resultPartitionCount();
 		int leftResultPartitionCount =
-				((RowBatchExecRel) ((BiRel) joinBatchExec).getLeft()).resultPartitionCount();
+				((BatchExecRel<?>) ((BiRel) joinBatchExec).getLeft()).resultPartitionCount();
 
 		if (((BiRel) joinBatchExec).getRight() instanceof BatchExecExchange &&
 				((BatchExecExchange) ((BiRel) joinBatchExec).getRight()).getDistribution().getType() == RelDistribution.Type.BROADCAST_DISTRIBUTED) {
@@ -130,10 +130,10 @@ public class BatchResultPartitionCalculator extends ResourceCalculator<RowBatchE
 		}
 	}
 
-	private <T extends SingleRel & RowBatchExecRel> void calculateSingle(T singleRel) {
+	private <T extends SingleRel & BatchExecRel<?>> void calculateSingle(T singleRel) {
 		calculateInputs(singleRel);
 		RelNode inputRel = singleRel.getInput();
-		(singleRel).setResultPartitionCount(((RowBatchExecRel) inputRel).resultPartitionCount());
+		(singleRel).setResultPartitionCount(((BatchExecRel<?>) inputRel).resultPartitionCount());
 	}
 
 	private void calculateValues(BatchExecValues valuesBatchExec) {

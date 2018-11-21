@@ -133,9 +133,7 @@ class PlanUtilTest extends AbstractTestBase {
     * @param sink        table slink to output result
     */
   private def execute(inputOfSink: Table, sink: CollectTableSink[Row]): Unit = {
-    val sinkTransformation = sink.emitBoundedStream(
-      tableEnv.toBoundedStream(inputOfSink, sink.getOutputType, sink),
-      tableEnv.getConfig, env.getConfig).getTransformation
+    val sinkTransformation = tableEnv.toBoundedStream(inputOfSink, sink).getTransformation
     setDumpFileToConfig()
     val streamGraph = StreamGraphGenerator.generate(
       Context.buildBatchProperties(tableEnv.streamEnv),

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.autoconf;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.BatchExecRelStage;
 import org.apache.flink.table.resource.batch.RelRunningUnit;
@@ -44,10 +44,10 @@ import static org.mockito.Mockito.when;
 public class RelParallelismAdjusterTest {
 
 	private double totalCpu = 100;
-	private List<RowBatchExecRel> relList;
-	private Map<RowBatchExecRel, RelResource> relResourceMap;
-	private Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap;
-	private Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap;
+	private List<BatchExecRel<?>> relList;
+	private Map<BatchExecRel<?>, RelResource> relResourceMap;
+	private Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap;
+	private Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap;
 
 	@Before
 	public void setUp() {
@@ -177,11 +177,11 @@ public class RelParallelismAdjusterTest {
 	private void putSameRunningUnit(int... indexes) {
 		RelRunningUnit runningUnit = new RelRunningUnit();
 		for (int index : indexes) {
-			RowBatchExecRel rel = relList.get(index);
+			BatchExecRel<?> rel = relList.get(index);
 			runningUnit.addRelStage(new BatchExecRelStage(rel, 0));
 		}
 		for (int index : indexes) {
-			RowBatchExecRel rel = relList.get(index);
+			BatchExecRel<?> rel = relList.get(index);
 			relRunningUnitMap.computeIfAbsent(rel, k->new LinkedHashSet<>()).add(runningUnit);
 		}
 	}
@@ -193,11 +193,11 @@ public class RelParallelismAdjusterTest {
 	public void putSameShuffleStage(int... indexes) {
 		ShuffleStage shuffleStage = new ShuffleStage();
 		for (int index : indexes) {
-			RowBatchExecRel rel = relList.get(index);
+			BatchExecRel<?> rel = relList.get(index);
 			shuffleStage.addRel(rel);
 		}
 		for (int index : indexes) {
-			RowBatchExecRel rel = relList.get(index);
+			BatchExecRel<?> rel = relList.get(index);
 			relShuffleStageMap.put(rel, shuffleStage);
 		}
 	}
@@ -209,7 +209,7 @@ public class RelParallelismAdjusterTest {
 	private void createRelList(int num) {
 		relList = new LinkedList<>();
 		for (int i = 0; i < num; i++) {
-			RowBatchExecRel rel = mock(RowBatchExecRel.class);
+			BatchExecRel<?> rel = mock(BatchExecRel.class);
 			when(rel.toString()).thenReturn("id: " + i);
 			relList.add(rel);
 			RelResource resource = new RelResource();

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.autoconf;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.RelRunningUnit;
 
@@ -41,11 +41,11 @@ import static org.mockito.Mockito.when;
  */
 public class RelReservedManagedMemAdjusterTest {
 
-	private List<RowBatchExecRel> relList;
+	private List<BatchExecRel<?>> relList;
 	private List<RelRunningUnit> runningUnitList;
-	private Map<RowBatchExecRel, RelResource> relResourceMap = new HashMap<>();
-	private Map<RowBatchExecRel, Integer> relParallelismMap = new HashMap<>();
-	private Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
+	private Map<BatchExecRel<?>, RelResource> relResourceMap = new HashMap<>();
+	private Map<BatchExecRel<?>, Integer> relParallelismMap = new HashMap<>();
+	private Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
 
 	@Test
 	public void testAdjust() {
@@ -121,7 +121,7 @@ public class RelReservedManagedMemAdjusterTest {
 
 	private void setRunningUnitRelSet(int runningUnitIndex, int... relIndexes) {
 		RelRunningUnit runningUnit = runningUnitList.get(runningUnitIndex);
-		Set<RowBatchExecRel> relSet = new LinkedHashSet<>();
+		Set<BatchExecRel<?>> relSet = new LinkedHashSet<>();
 		for (int relIndex : relIndexes) {
 			relSet.add(relList.get(relIndex));
 		}
@@ -131,7 +131,7 @@ public class RelReservedManagedMemAdjusterTest {
 	private void createRelList(int num) {
 		relList = new LinkedList<>();
 		for (int i = 0; i < num; i++) {
-			relList.add(mock(RowBatchExecRel.class));
+			relList.add(mock(BatchExecRel.class));
 		}
 	}
 

@@ -25,7 +25,8 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.autoconf.RelManagedCalculatorOnStatistics;
 import org.apache.flink.table.resource.batch.autoconf.RelParallelismAdjuster;
@@ -67,9 +68,9 @@ public class RunningUnitKeeper {
 	private List<RelRunningUnit> runningUnits;
 	private BatchResultPartitionCalculator resultPartitionCalculator;
 	private BatchRelCpuHeapMemCalculator relCpuHeapMemCalculator;
-	private final Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
+	private final Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap = new LinkedHashMap<>();
 	// rel --> shuffleStage
-	private final Map<RowBatchExecRel, Set<BatchExecRelStage>> relStagesMap = new LinkedHashMap<>();
+	private final Map<BatchExecRel<?>, Set<BatchExecRelStage>> relStagesMap = new LinkedHashMap<>();
 	private boolean supportRunningUnit = true;
 
 	public RunningUnitKeeper(BatchTableEnvironment tableEnv) {
@@ -87,7 +88,10 @@ public class RunningUnitKeeper {
 		relStagesMap.clear();
 	}
 
-	public void buildRUs(RowBatchExecRel rootNode) {
+	public void buildRUs(BatchExecRel<?> rootNode) {
+		if (rootNode instanceof BatchExecSink<?>) {
+			rootNode = (BatchExecRel<?>) ((BatchExecSink) rootNode).getInput();
+		}
 		// not support subsectionOptimization or external shuffle temporarily
 		if (tableConfig.getSubsectionOptimization()
 				|| tableConfig.enableRangePartition()) {
@@ -98,7 +102,7 @@ public class RunningUnitKeeper {
 		rootNode.accept(visitor);
 		runningUnits = visitor.getRunningUnits();
 		for (RelRunningUnit runningUnit : runningUnits) {
-			for (RowBatchExecRel rel : runningUnit.getRelSet()) {
+			for (BatchExecRel<?> rel : runningUnit.getRelSet()) {
 				relRunningUnitMap.computeIfAbsent(rel, k -> new LinkedHashSet<>()).add(runningUnit);
 			}
 		}
@@ -118,8 +122,11 @@ public class RunningUnitKeeper {
 		}
 	}
 
-	public void calculateRelResource(RowBatchExecRel rootNode) {
-		Map<RowBatchExecRel, RelResource> relResourceMap = new LinkedHashMap<>();
+	public void calculateRelResource(BatchExecRel<?> rootNode) {
+		if (rootNode instanceof BatchExecSink<?>) {
+			rootNode = (BatchExecRel<?>) ((BatchExecSink) rootNode).getInput();
+		}
+		Map<BatchExecRel<?>, RelResource> relResourceMap = new LinkedHashMap<>();
 		this.relCpuHeapMemCalculator.setRelResourceMap(relResourceMap);
 		this.relCpuHeapMemCalculator.calculate(rootNode);
 		if (!supportRunningUnit) {
@@ -127,7 +134,7 @@ public class RunningUnitKeeper {
 			// we are not able to set resource according to statics when runningUnits are not build.
 			this.resultPartitionCalculator.calculate(rootNode);
 			rootNode.accept(new BatchRelManagedCalculator(tableConfig, relResourceMap));
-			for (Map.Entry<RowBatchExecRel, RelResource> entry : relResourceMap.entrySet()) {
+			for (Map.Entry<BatchExecRel<?>, RelResource> entry : relResourceMap.entrySet()) {
 				entry.getKey().setResource(entry.getValue());
 				LOG.info(entry.getKey() + " resource: " + entry.getValue());
 			}
@@ -135,7 +142,7 @@ public class RunningUnitKeeper {
 		}
 		InferMode inferMode = ExecResourceUtil.getInferMode(tableConfig);
 		RelFinalParallelismSetter.calculate(tableEnv, rootNode);
-		Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
+		Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap = ShuffleStageGenerator.generate(rootNode);
 		RelMetadataQuery mq = rootNode.getCluster().getMetadataQuery();
 		getShuffleStageParallelismCalculator(mq, tableConfig, inferMode).calculate(relShuffleStageMap.values());
 		Tuple2<Double, Long> resourceLimit = ExecResourceUtil.getRunningUnitResourceLimit(tableConfig);
@@ -146,7 +153,7 @@ public class RunningUnitKeeper {
 		if (resourceLimit != null) {
 			adjustReservedManagedMem(relShuffleStageMap, relResourceMap, resourceLimit.f1);
 		}
-		for (RowBatchExecRel rel : relShuffleStageMap.keySet()) {
+		for (BatchExecRel<?> rel : relShuffleStageMap.keySet()) {
 			rel.setResultPartitionCount(relShuffleStageMap.get(rel).getResultParallelism());
 			rel.setResource(relResourceMap.get(rel));
 			LOG.info(rel + " resource: " + relResourceMap.get(rel));
@@ -165,9 +172,9 @@ public class RunningUnitKeeper {
 	}
 
 	private BatchExecRelVisitor<Void> getRelManagedCalculator(
-			Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap,
+			Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap,
 			InferMode inferMode, RelMetadataQuery mq,
-			Map<RowBatchExecRel, RelResource> relResourceMap) {
+			Map<BatchExecRel<?>, RelResource> relResourceMap) {
 		if (inferMode.equals(InferMode.ALL)) {
 			return new RelManagedCalculatorOnStatistics(tableConfig, relShuffleStageMap, mq, relResourceMap);
 		} else {
@@ -175,16 +182,16 @@ public class RunningUnitKeeper {
 		}
 	}
 
-	private void adjustReservedManagedMem(Map<RowBatchExecRel, ShuffleStage> relShuffleStageMap, Map<RowBatchExecRel, RelResource> relResourceMap, long totalMem) {
+	private void adjustReservedManagedMem(Map<BatchExecRel<?>, ShuffleStage> relShuffleStageMap, Map<BatchExecRel<?>, RelResource> relResourceMap, long totalMem) {
 		int minManagedMemory = ExecResourceUtil.getOperatorMinManagedMem(tableConfig);
-		Map<RowBatchExecRel, Integer> relParallelismMap = new HashMap<>();
-		for (Map.Entry<RowBatchExecRel, ShuffleStage> entry : relShuffleStageMap.entrySet()) {
+		Map<BatchExecRel<?>, Integer> relParallelismMap = new HashMap<>();
+		for (Map.Entry<BatchExecRel<?>, ShuffleStage> entry : relShuffleStageMap.entrySet()) {
 			relParallelismMap.put(entry.getKey(), entry.getValue().getResultParallelism());
 		}
 		RelReservedManagedMemAdjuster.adjust(totalMem, relResourceMap, relParallelismMap, minManagedMemory, relRunningUnitMap);
 	}
 
-	public void addTransformation(RowBatchExecRel rel, StreamTransformation<?> transformation) {
+	public void addTransformation(BatchExecRel<?> rel, StreamTransformation<?> transformation) {
 		if (!supportRunningUnit || !relStagesMap.containsKey(rel)) {
 			return;
 		}

@@ -28,7 +28,7 @@ import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.schedule.VertexScheduler;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.resource.batch.BatchExecRelStage;
 import org.apache.flink.table.resource.batch.RelRunningUnit;
 import org.apache.flink.util.TestLogger;
@@ -202,7 +202,7 @@ public class RunningUnitGraphManagerPluginTest extends TestLogger {
 
 	private void createBatchExecRelStages(int num) {
 		for (int i = 0; i < num; i++) {
-			relStageList.add(new BatchExecRelStage(mock(RowBatchExecRel.class), 0));
+			relStageList.add(new BatchExecRelStage(mock(BatchExecRel.class), 0));
 		}
 	}
 

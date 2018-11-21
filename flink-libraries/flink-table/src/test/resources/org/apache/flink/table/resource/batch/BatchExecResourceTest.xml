@@ -331,20 +331,22 @@ Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
             +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 
 [[Sink]]
-Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
-+- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
-   +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
-      +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
-         +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
-            +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=92, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+Sink(partition=[-1], memCost=[0.0], rowcount=[1.0])
++- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
+   +- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
+      +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
+         +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
+            +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+               +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 
 [[Sink]]
-Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
-+- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
-   +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
-      +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
-         +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
-            +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=92, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+Sink(partition=[-1], memCost=[0.0], rowcount=[1.0])
++- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
+   +- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
+      +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
+         +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
+            +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+               +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 ]]>
     </Resource>
   </TestCase>
@@ -360,20 +362,22 @@ Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
             +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 
 [[Sink]]
-Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
-+- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
-   +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
-      +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
-         +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
-            +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=92, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+Sink(partition=[-1], memCost=[0.0], rowcount=[1.0])
++- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
+   +- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
+      +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
+         +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
+            +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+               +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 
 [[Sink]]
-Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
-+- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
-   +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
-      +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
-         +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
-            +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=92, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+Sink(partition=[-1], memCost=[0.0], rowcount=[1.0])
++- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
+   +- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
+      +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
+         +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
+            +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+               +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 ]]>
     </Resource>
   </TestCase>
@@ -413,20 +417,22 @@ Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedM
             +- BoundedStreamScan(partition=[1], sourceRes=[Resource: {cpu=0.3, heap=52}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=98, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 
 [[Sink]]
-Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
-+- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
-   +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
-      +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
-         +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
-            +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=92, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+Sink(partition=[-1], memCost=[0.0], rowcount=[1.0])
++- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
+   +- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
+      +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
+         +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
+            +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+               +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 
 [[Sink]]
-Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
-+- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
-   +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
-      +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
-         +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
-            +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], conversionRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=92, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+Sink(partition=[-1], memCost=[0.0], rowcount=[1.0])
++- Calc(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1.0])
+   +- HashAggregate(partition=[1], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[1.0])
+      +- Exchange(partition=[1], memCost=[0.0], rowcount=[20.0])
+         +- LocalHashAggregate(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[4.0], rowcount=[20.0])
+            +- Calc(partition=[18], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
+               +- BoundedStreamScan(partition=[18], sourceRes=[Resource: {cpu=0.3, heap=46}], resource=[RelResource{cpu=0.3, heapMem=46, reservedManagedMem=0, preferManagedMem=0, maxManagedMem=0}], memCost=[0.0], rowcount=[1000.0])
 ]]>
     </Resource>
   </TestCase>

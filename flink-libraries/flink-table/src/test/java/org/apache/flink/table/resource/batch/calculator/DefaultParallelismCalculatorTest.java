@@ -20,8 +20,8 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
 
@@ -84,8 +84,8 @@ public class DefaultParallelismCalculatorTest {
 		verify(shuffleStage0).setResultParallelism(50, false);
 	}
 
-	private Set<RowBatchExecRel> getRelSet(List<RowBatchExecRel> rowBatchExecRelList) {
-		Set<RowBatchExecRel> relSet = new HashSet<>();
+	private Set<BatchExecRel<?>> getRelSet(List<BatchExecRel<?>> rowBatchExecRelList) {
+		Set<BatchExecRel<?>> relSet = new HashSet<>();
 		relSet.addAll(rowBatchExecRelList);
 		return relSet;
 	}

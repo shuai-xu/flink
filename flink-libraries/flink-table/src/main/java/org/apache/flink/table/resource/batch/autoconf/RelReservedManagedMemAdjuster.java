@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.resource.batch.autoconf;
 
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.batch.RelRunningUnit;
 
@@ -38,15 +38,15 @@ public class RelReservedManagedMemAdjuster {
 	// total mem limit.
 	private final long totalMem;
 	// to get resource of rel.
-	private final Map<RowBatchExecRel, RelResource> relResourceMap;
+	private final Map<BatchExecRel<?>, RelResource> relResourceMap;
 	// to get parallelism of rel.
-	private final Map<RowBatchExecRel, Integer> relParallelismMap;
+	private final Map<BatchExecRel<?>, Integer> relParallelismMap;
 
 	private final int minManagedMemory;
 
 	private RelReservedManagedMemAdjuster(long totalMem,
-			Map<RowBatchExecRel, RelResource> relResourceMap,
-			Map<RowBatchExecRel, Integer> relParallelismMap,
+			Map<BatchExecRel<?>, RelResource> relResourceMap,
+			Map<BatchExecRel<?>, Integer> relParallelismMap,
 			int minManagedMemory) {
 		this.totalMem = totalMem;
 		this.relResourceMap = relResourceMap;
@@ -55,17 +55,17 @@ public class RelReservedManagedMemAdjuster {
 	}
 
 	public static void adjust(long totalMem,
-			Map<RowBatchExecRel, RelResource> relResourceMap,
-			Map<RowBatchExecRel, Integer> relParallelismMap,
+			Map<BatchExecRel<?>, RelResource> relResourceMap,
+			Map<BatchExecRel<?>, Integer> relParallelismMap,
 			int minManagedMemory,
-			Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap) {
+			Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap) {
 		new RelReservedManagedMemAdjuster(totalMem, relResourceMap, relParallelismMap, minManagedMemory).adjust(relRunningUnitMap);
 	}
 
-	private void adjust(Map<RowBatchExecRel, Set<RelRunningUnit>> relRunningUnitMap) {
+	private void adjust(Map<BatchExecRel<?>, Set<RelRunningUnit>> relRunningUnitMap) {
 
-		for (Map.Entry<RowBatchExecRel, Set<RelRunningUnit>> entry : relRunningUnitMap.entrySet()) {
-			RowBatchExecRel rel = entry.getKey();
+		for (Map.Entry<BatchExecRel<?>, Set<RelRunningUnit>> entry : relRunningUnitMap.entrySet()) {
+			BatchExecRel rel = entry.getKey();
 			RelResource resource = relResourceMap.get(rel);
 			if (resource.getReservedManagedMem() == 0 || resource.isReservedManagedFinal()) {
 				continue;
@@ -85,11 +85,11 @@ public class RelReservedManagedMemAdjuster {
 		}
 	}
 
-	private int calculateReservedManaged(RowBatchExecRel rel, RelRunningUnit runningUnit) {
+	private int calculateReservedManaged(BatchExecRel<?> rel, RelRunningUnit runningUnit) {
 		long remain = totalMem;
 		long need = 0;
 		LOG.debug("before calculateReserved for a runningUnit：" + runningUnit.hashCode() + ", total: " + remain + ", rel: " + rel.hashCode());
-		for (RowBatchExecRel r : runningUnit.getRelSet()) {
+		for (BatchExecRel<?> r : runningUnit.getRelSet()) {
 			RelResource resource = relResourceMap.get(r);
 			int parallelism = relParallelismMap.get(r);
 			// minus heap mem of rel.

@@ -37,6 +37,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecNestedLoopJoinB
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecOverAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRank;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSort;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortAggregate;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSortLimit;
@@ -182,6 +183,11 @@ public class BatchExecRelShuttleImpl implements BatchExecRelVisitor<BatchExecRel
 	@Override
 	public BatchExecRel<?> visit(BatchExecJoinTable joinTable) {
 		return visitInputs(joinTable);
+	}
+
+	@Override
+	public BatchExecRel<?> visit(BatchExecSink<?> sink) {
+		return visitInputs(sink);
 	}
 
 	@Override

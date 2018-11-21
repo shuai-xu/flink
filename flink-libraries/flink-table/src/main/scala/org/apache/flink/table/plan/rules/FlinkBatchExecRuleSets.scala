@@ -238,7 +238,8 @@ object FlinkBatchExecRuleSets {
     FlinkLogicalNativeTableScan.CONVERTER,
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
-    FlinkLogicalRank.CONVERTER
+    FlinkLogicalRank.CONVERTER,
+    FlinkLogicalSink.CONVERTER
   )
 
   /**
@@ -354,7 +355,9 @@ object FlinkBatchExecRuleSets {
     BatchExecJoinTableRule.INSTANCE,
     // rank
     BatchExecRankRule.INSTANCE,
-    RemoveRedundantLocalRankRule.INSTANCE
+    RemoveRedundantLocalRankRule.INSTANCE,
+    // sink
+    BatchExecSinkRule.INSTANCE
   )
 
   val BATCH_EXEC_POST_PHYSICAL_RULES: RuleSet = RuleSets.ofList(

@@ -20,8 +20,8 @@ package org.apache.flink.table.resource;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 
 import org.apache.calcite.rel.BiRel;
 import org.apache.calcite.rel.RelNode;
@@ -40,9 +40,9 @@ import static org.mockito.Mockito.when;
  */
 public class MockRelTestBase {
 
-	protected List<RowBatchExecRel> relList;
+	protected List<BatchExecRel<?>> relList;
 
-	protected void updateRel(int index, RowBatchExecRel rel) {
+	protected void updateRel(int index, BatchExecRel<?> rel) {
 		relList.set(index, rel);
 		when(rel.toString()).thenReturn("id: " + index);
 		if (rel instanceof BatchExecScan) {
@@ -53,7 +53,7 @@ public class MockRelTestBase {
 	protected void createRelList(int num) {
 		relList = new LinkedList<>();
 		for (int i = 0; i < num; i++) {
-			RowBatchExecRel rel = mock(BatchExecCalc.class);
+			BatchExecRel rel = mock(BatchExecCalc.class);
 			when(rel.getInputs()).thenReturn(new ArrayList<>());
 			when(rel.toString()).thenReturn("id: " + i);
 			relList.add(rel);

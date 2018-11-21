@@ -33,13 +33,14 @@ import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.tools.RelBuilder.{AggCall, GroupKey}
 import org.apache.calcite.tools.{FrameworkConfig, RelBuilder, RelBuilderFactory}
 import org.apache.calcite.util.{ImmutableBitSet, Util}
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{QueryConfig, TableConfig}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.calcite.FlinkRelFactories.ExpandFactory
+import org.apache.flink.table.calcite.FlinkRelFactories.{ExpandFactory, SinkFactory}
 import org.apache.flink.table.expressions.WindowProperty
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, LogicalWindowAggregate}
 import org.apache.flink.table.plan.util.RankRange
+import org.apache.flink.table.sinks.TableSink
 
 /**
   * Flink specific [[RelBuilder]] that changes the default type factory to a [[FlinkTypeFactory]].
@@ -57,6 +58,12 @@ class FlinkRelBuilder(
     Util.first(
       getContext.unwrap(classOf[ExpandFactory]),
       FlinkRelFactories.DEFAULT_EXPAND_FACTORY)
+  }
+
+  private val sinkFactory: SinkFactory = {
+    Util.first(
+      getContext.unwrap(classOf[SinkFactory]),
+      FlinkRelFactories.DEFAULT_SINK_FACTORY)
   }
 
   private def getContext = if (context == null) {
@@ -93,6 +100,14 @@ class FlinkRelBuilder(
     val input = build()
     val expand = expandFactory.createExpand(input, outputRowType, projects, expandIdIndex)
     push(expand)
+  }
+
+  def sink(
+    sink: TableSink[_],
+    sinkName: String): RelBuilder = {
+    val input = build()
+    val sinkNode = sinkFactory.createSink(input, sink, sinkName)
+    push(sinkNode)
   }
 
   def rank(

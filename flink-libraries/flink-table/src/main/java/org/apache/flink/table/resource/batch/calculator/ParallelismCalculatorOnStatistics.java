@@ -20,8 +20,8 @@ package org.apache.flink.table.resource.batch.calculator;
 
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.batch.ShuffleStage;
 import org.apache.flink.table.util.ExecResourceUtil;
 
@@ -40,7 +40,7 @@ import java.util.Set;
  */
 public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCalculator {
 	private final RelMetadataQuery mq;
-	private final Map<RowBatchExecRel, Integer> calculatedResultMap = new HashMap<>();
+	private final Map<BatchExecRel<?>, Integer> calculatedResultMap = new HashMap<>();
 
 	public ParallelismCalculatorOnStatistics(
 			RelMetadataQuery mq,
@@ -54,36 +54,36 @@ public class ParallelismCalculatorOnStatistics extends ShuffleStageParallelismCa
 		if (shuffleStage.isParallelismFinal()) {
 			return;
 		}
-		Set<RowBatchExecRel> relSet = shuffleStage.getBatchExecRelSet();
-		for (RowBatchExecRel rel : relSet) {
+		Set<BatchExecRel<?>> relSet = shuffleStage.getBatchExecRelSet();
+		for (BatchExecRel rel : relSet) {
 			shuffleStage.setResultParallelism(calculate(rel), false);
 		}
 	}
 
-	private int calculate(RowBatchExecRel rowBatchExecRel) {
-		if (calculatedResultMap.containsKey(rowBatchExecRel)) {
-			return calculatedResultMap.get(rowBatchExecRel);
+	private int calculate(BatchExecRel<?> batchExecRel) {
+		if (calculatedResultMap.containsKey(batchExecRel)) {
+			return calculatedResultMap.get(batchExecRel);
 		}
 		int result;
-		if (rowBatchExecRel instanceof BatchExecScan) {
-			result = calculateSource((BatchExecScan) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof SingleRel) {
-			result = calculateSingle((SingleRel & RowBatchExecRel) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BiRel) {
-			result = calculateBiRel((BiRel & RowBatchExecRel) rowBatchExecRel);
+		if (batchExecRel instanceof BatchExecScan) {
+			result = calculateSource((BatchExecScan) batchExecRel);
+		} else if (batchExecRel instanceof SingleRel) {
+			result = calculateSingle((SingleRel) batchExecRel);
+		} else if (batchExecRel instanceof BiRel) {
+			result = calculateBiRel((BiRel) batchExecRel);
 		} else {
-			throw new TableException("could not reach here. " + rowBatchExecRel.getClass());
+			throw new TableException("could not reach here. " + batchExecRel.getClass());
 		}
-		calculatedResultMap.put(rowBatchExecRel, result);
+		calculatedResultMap.put(batchExecRel, result);
 		return result;
 	}
 
-	private <T extends SingleRel & RowBatchExecRel> int calculateSingle(T singleRel) {
+	private int calculateSingle(SingleRel singleRel) {
 		double rowCount = mq.getRowCount(singleRel.getInput());
 		return ExecResourceUtil.calOperatorParallelism(rowCount, getTableConfig());
 	}
 
-	private <T extends BiRel & RowBatchExecRel> int calculateBiRel(T biRel) {
+	private int calculateBiRel(BiRel biRel) {
 		double maxRowCount = Math.max(mq.getRowCount(biRel.getLeft()), mq.getRowCount(biRel.getRight()));
 		return ExecResourceUtil.calOperatorParallelism(maxRowCount, getTableConfig());
 	}

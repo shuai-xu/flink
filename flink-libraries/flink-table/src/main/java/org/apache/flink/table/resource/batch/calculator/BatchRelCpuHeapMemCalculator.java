@@ -21,9 +21,9 @@ package org.apache.flink.table.resource.batch.calculator;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecExchange;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
 import org.apache.flink.table.resource.RelResource;
 import org.apache.flink.table.resource.ResourceCalculator;
 import org.apache.flink.table.util.ExecResourceUtil;
@@ -37,31 +37,31 @@ import java.util.Set;
 /**
  * Cpu and heap memory calculator for relNode.
  */
-public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<RowBatchExecRel> {
+public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<BatchExecRel<?>> {
 
-	private Map<RowBatchExecRel, RelResource> relResMap;
-	private final Set<RowBatchExecRel> calculatedRelSet = new HashSet<>();
+	private Map<BatchExecRel<?>, RelResource> relResMap;
+	private final Set<BatchExecRel<?>> calculatedRelSet = new HashSet<>();
 
 	public BatchRelCpuHeapMemCalculator(TableEnvironment tEnv) {
 		super(tEnv);
 	}
 
-	public void setRelResourceMap(Map<RowBatchExecRel, RelResource> relResMap) {
+	public void setRelResourceMap(Map<BatchExecRel<?>, RelResource> relResMap) {
 		this.relResMap = relResMap;
 	}
 
-	public void calculate(RowBatchExecRel rowBatchExecRel) {
-		if (!calculatedRelSet.add(rowBatchExecRel)) {
+	public void calculate(BatchExecRel<?> batchExecRel) {
+		if (!calculatedRelSet.add(batchExecRel)) {
 			return;
 		}
-		if (rowBatchExecRel instanceof BatchExecScan) {
-			calculateSource((BatchExecScan) rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecUnion) {
-			calculateInputs(rowBatchExecRel);
-		} else if (rowBatchExecRel instanceof BatchExecExchange) {
-			calculateExchange((BatchExecExchange) rowBatchExecRel);
+		if (batchExecRel instanceof BatchExecScan) {
+			calculateSource((BatchExecScan) batchExecRel);
+		} else if (batchExecRel instanceof BatchExecUnion) {
+			calculateInputs(batchExecRel);
+		} else if (batchExecRel instanceof BatchExecExchange) {
+			calculateExchange((BatchExecExchange) batchExecRel);
 		} else {
-			calculateDefaultRel(rowBatchExecRel);
+			calculateDefaultRel(batchExecRel);
 		}
 	}
 
@@ -84,7 +84,7 @@ public class BatchRelCpuHeapMemCalculator extends ResourceCalculator<RowBatchExe
 		scanBatchExec.setResForSourceAndConversion(sourceRes, conversionRes);
 	}
 
-	private void calculateDefaultRel(RowBatchExecRel rel) {
+	private void calculateDefaultRel(BatchExecRel<?> rel) {
 		calculateInputs(rel);
 		RelResource relResource = getDefaultRelResource();
 		relResMap.put(rel, relResource);

@@ -19,7 +19,7 @@
 package org.apache.flink.table.resource.batch;
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
-import org.apache.flink.table.plan.nodes.physical.batch.RowBatchExecRel;
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecRel;
 import org.apache.flink.table.util.FlinkRelOptUtil;
 
 import java.io.Serializable;
@@ -64,7 +64,7 @@ public class BatchExecRelStage implements Serializable {
 		DATA_TRIGGER, PRIORITY
 	}
 
-	private final transient RowBatchExecRel batchExecRel;
+	private final transient BatchExecRel<?> batchExecRel;
 	private final Set<RelRunningUnit> runningUnitSet = new LinkedHashSet<>();
 	private int stageID;
 
@@ -78,7 +78,7 @@ public class BatchExecRelStage implements Serializable {
 	private final List<Integer> transformationIDList = new LinkedList<>();
 	private final String relName;
 
-	public BatchExecRelStage(RowBatchExecRel batchExecRel, int stageID) {
+	public BatchExecRelStage(BatchExecRel<?> batchExecRel, int stageID) {
 		this.batchExecRel = batchExecRel;
 		this.stageID = stageID;
 		this.relName = FlinkRelOptUtil.getDigest(batchExecRel, false);
@@ -106,7 +106,7 @@ public class BatchExecRelStage implements Serializable {
 		dependStagesMap.computeIfAbsent(type, k -> new LinkedList<>()).add(relStage);
 	}
 
-	public RowBatchExecRel getBatchExecRel() {
+	public BatchExecRel<?> getBatchExecRel() {
 		return batchExecRel;
 	}
 

@@ -487,7 +487,7 @@ class LogicalNodeBlock(val outputNode: LogicalNode, tEnv: TableEnvironment) {
           case WindowAggregate(grouping, window, property, aggregate, _) =>
             WindowAggregate(grouping, window, property, aggregate, child)
           case Distinct(_) => Distinct(child)
-          case SinkNode(_, sink) => SinkNode(child, sink)
+          case SinkNode(_, sink, sinkName) => SinkNode(child, sink, sinkName)
           case AliasNode(aliasList, _) => AliasNode(aliasList, child)
           case Project(projectList, _) => Project(projectList, child)
           case Sort(order, _) => Sort(order, child)
