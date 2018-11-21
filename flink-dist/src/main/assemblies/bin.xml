@@ -202,6 +202,20 @@ under the License.
 			</excludes>
 		</fileSet>
 
+		<!-- copy jar files of the table examples -->
+		<fileSet>
+			<directory>../flink-examples/flink-examples-table/target</directory>
+			<outputDirectory>examples/table</outputDirectory>
+			<fileMode>0644</fileMode>
+			<includes>
+				<include>*.jar</include>
+			</includes>
+			<excludes>
+				<exclude>flink-examples-table*.jar</exclude>
+				<exclude>original-*.jar</exclude>
+			</excludes>
+		</fileSet>
+
 		<!-- copy jar files of the gelly examples -->
 		<fileSet>
 			<directory>../flink-libraries/flink-gelly-examples/target</directory>
