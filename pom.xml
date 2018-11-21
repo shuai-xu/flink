@@ -86,7 +86,6 @@ under the License.
 		<module>flink-docs</module>
 		<module>flink-stability-test</module>
 		<module>flink-yarn-shuffle</module>
-		<module>flink-sql-parser</module>
 		<module>flink-catalog</module>
 		<module>flink-dist</module>
 	</modules>
