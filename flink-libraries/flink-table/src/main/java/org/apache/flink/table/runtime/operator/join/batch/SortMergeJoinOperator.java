@@ -144,7 +144,7 @@ public class SortMergeJoinOperator extends AbstractStreamOperatorWithMetrics<Bas
 	public void open() throws Exception {
 		super.open();
 
-		conf = getContainingTask().getJobConfiguration();
+		conf = getSqlConf();
 
 		// code gen classes.
 		this.classes = cookGeneratedClasses(getContainingTask().getUserCodeClassLoader());

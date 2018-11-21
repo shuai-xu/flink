@@ -91,33 +91,16 @@ public class SortOperator extends AbstractStreamOperatorWithMetrics<BinaryRow>
 		comparator.init(gSorter.serializers(), gSorter.comparators());
 		this.sorter = new BinaryExternalSorter(this.getContainingTask(), memManager, reservedMemorySize,
 				maxMemorySize, perRequestMemorySize, ioManager, inputSerializer, binarySerializer,
-				computer, comparator, getContainingTask().getJobConfiguration());
+				computer, comparator, getSqlConf());
 		this.sorter.startThreads();
 		gSorter = null;
 
 		collector = new StreamRecordCollector<>(output);
 
 		//register the the metrics.
-		getMetricGroup().gauge("memoryUsedSizeInBytes", new Gauge<Long>() {
-			@Override
-			public Long getValue() {
-				return sorter.getUsedMemoryInBytes();
-			}
-		});
-
-		getMetricGroup().gauge("numSpillFiles", new Gauge<Long>() {
-			@Override
-			public Long getValue() {
-				return sorter.getNumSpillFiles();
-			}
-		});
-
-		getMetricGroup().gauge("spillInBytes", new Gauge<Long>() {
-			@Override
-			public Long getValue() {
-				return sorter.getSpillInBytes();
-			}
-		});
+		getMetricGroup().gauge("memoryUsedSizeInBytes", (Gauge<Long>) sorter::getUsedMemoryInBytes);
+		getMetricGroup().gauge("numSpillFiles", (Gauge<Long>) sorter::getNumSpillFiles);
+		getMetricGroup().gauge("spillInBytes", (Gauge<Long>) sorter::getSpillInBytes);
 	}
 
 	protected void cookGeneratedClasses(ClassLoader cl) throws CompileException {

@@ -20,6 +20,7 @@ package org.apache.flink.table.runtime.operator;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.accumulators.LongCounter;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
@@ -127,5 +128,14 @@ public class AbstractStreamOperatorWithMetrics<OUT> extends AbstractStreamOperat
 		} else {
 			return false;
 		}
+	}
+
+	public Configuration getSqlConf() {
+		Configuration conf = getContainingTask().getJobConfiguration();
+		ExecutionConfig.GlobalJobParameters paras = getExecutionConfig().getGlobalJobParameters();
+		if (paras != null) {
+			conf.addAll(paras.toMap());
+		}
+		return conf;
 	}
 }

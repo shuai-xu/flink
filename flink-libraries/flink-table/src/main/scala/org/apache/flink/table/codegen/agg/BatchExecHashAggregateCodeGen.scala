@@ -637,7 +637,7 @@ trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
        |    new $binaryRowSerializerTypeTerm($aggBufferTypesTerm),
        |    $keyComputerTerm, $recordComparatorTerm,
        |    getContainingTask().getEnvironment().getMemoryManager().getPageSize(),
-       |    getContainingTask().getJobConfiguration()
+       |    getSqlConf()
        |  );
        """.stripMargin
   }

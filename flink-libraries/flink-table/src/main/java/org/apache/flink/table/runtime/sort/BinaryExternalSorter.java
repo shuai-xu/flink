@@ -292,8 +292,10 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		final int eachBufferAdditionalLimitNumPages = (int) (additionalLimitNumPages / numSortBuffers);
 
 		LOG.info("BinaryExternalSorter with initial memory segments {},And the preferred memory {} segments, " +
-				"per request {} segments from floating memory pool.", numMinPagesTotal, (int)
-				(maxMemorySize / memoryManager.getPageSize()), perRequestBuffersNum);
+				"per request {} segments from floating memory pool, maxNumFileHandles({})," +
+				" compressionEnable({}), compressionCodec({}), compressionBlockSize({}).", numMinPagesTotal,
+				(int) (maxMemorySize / memoryManager.getPageSize()), perRequestBuffersNum, maxNumFileHandles,
+				compressionEnable, compressionCodec, compressionBlockSize);
 
 		this.sortBuffers = new ArrayList<>();
 		for (int i = 0; i < numSortBuffers; i++) {
