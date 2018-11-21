@@ -38,6 +38,9 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.management.ClassLoadingMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -205,6 +208,20 @@ public class MetricUtils {
 			}
 		});
 
+		MetricGroup process = metrics.addGroup("Process");
+		process.gauge("rss", new Gauge<Double>() {
+			@Override
+			public Double getValue() {
+				return ProcessMemCollector.getRssMem();
+			}
+		});
+		process.gauge("total", new Gauge<Double>() {
+			@Override
+			public Double getValue() {
+				return ProcessMemCollector.getTotalMem();
+			}
+		});
+
 		final MBeanServer con = ManagementFactory.getPlatformMBeanServer();
 
 		final String directBufferPoolName = "java.nio:type=BufferPool,name=direct";
@@ -263,6 +280,12 @@ public class MetricUtils {
 					return mxBean.getProcessCpuTime();
 				}
 			});
+			metrics.gauge("Usage", new Gauge<Double>() {
+				@Override
+				public Double getValue() {
+					return ProcessCpuCollector.getUsage();
+				}
+			});
 		} catch (Exception e) {
 			LOG.warn("Cannot access com.sun.management.OperatingSystemMXBean.getProcessCpuLoad()" +
 				" - CPU load metrics will not be available.", e);
@@ -291,6 +314,166 @@ public class MetricUtils {
 				LOG.warn("Could not read attribute {}.", attributeName, e);
 				return errorValue;
 			}
+		}
+	}
+
+	/**
+	 * Collect process CPU metrics.
+	 */
+	public static class ProcessCpuCollector {
+		private static final Logger LOG = LoggerFactory.getLogger(ProcessCpuCollector.class);
+
+		private static final String CPU_STAT_FILE = "/proc/stat";
+		private static final String PROCESS_STAT_FILE = "/proc/self/stat";
+		private static final int AVAILABLE_PROCESSOR_COUNT = Runtime.getRuntime().availableProcessors();
+
+		private static double currentSystemCpuTotal = 0;
+		private static double currentProcCpuClock = 0;
+
+		public static double getUsage() {
+			try {
+				double procCpuClock = getProcessCpuClock();
+				double totalCpuStat = getTotalCpuClock();
+				if (totalCpuStat == 0) {
+					return 0;
+				}
+				return procCpuClock / totalCpuStat * AVAILABLE_PROCESSOR_COUNT;
+			} catch (IOException ex) {
+				LOG.warn("collect cpu load exception " + ex.getMessage());
+				return 0;
+			}
+		}
+
+		private static String getFirstLineFromFile(String fileName) throws IOException {
+			BufferedReader br = null;
+			try {
+				br = new BufferedReader(new FileReader(fileName));
+				String line = br.readLine();
+				return line;
+			} finally {
+				if (br != null) {
+					br.close();
+				}
+			}
+		}
+
+		private static double getProcessCpuClock() throws IOException {
+			double lastProcCpuClock = currentProcCpuClock;
+			String content = getFirstLineFromFile(PROCESS_STAT_FILE);
+			if (content == null) {
+				throw new IOException("read /proc/self/stat null !");
+			}
+			String[] processStats = content.split(" ", -1);
+			if (processStats.length < 17) {
+				LOG.error("parse cpu stat file failed! the first line is:" + content);
+				throw new IOException("parse process stat file failed!");
+			}
+			int rBracketPos = 0;
+			for (int i = processStats.length - 1; i > 0; i--) {
+				if (processStats[i].contains(")")) {
+					rBracketPos = i;
+					break;
+				}
+			}
+			if (rBracketPos == 0) {
+				throw new IOException("get right bracket pos error");
+			}
+			double cpuTotal = 0;
+			for (int i = rBracketPos + 12; i < rBracketPos + 16; i++) {
+				cpuTotal += Double.parseDouble(processStats[i]);
+			}
+			currentProcCpuClock = cpuTotal;
+			return currentProcCpuClock - lastProcCpuClock;
+		}
+
+		private static double getTotalCpuClock() throws IOException {
+			double lastSystemCpuTotal = currentSystemCpuTotal;
+			String line = getFirstLineFromFile(CPU_STAT_FILE);
+			if (line == null) {
+				throw new IOException("read /proc/stat null !");
+			}
+			String[] cpuStats = line.split(" ", -1);
+			if (cpuStats.length < 11) {
+				LOG.error("parse cpu stat file failed! the first line is:" + line);
+				throw new IOException("parse cpu stat file failed!");
+			}
+			double statCpuTotal = 0;
+			for (int i = 2; i < cpuStats.length; i++) {
+				statCpuTotal += Double.parseDouble(cpuStats[i]);
+			}
+			currentSystemCpuTotal = statCpuTotal;
+
+			return currentSystemCpuTotal - lastSystemCpuTotal;
+		}
+	}
+
+	/**
+	 * Collect process memory metrics.
+	 */
+	public static class ProcessMemCollector {
+		private static final Logger LOG = LoggerFactory.getLogger(ProcessMemCollector.class);
+		private static final double KILO = 1024;
+		private static final String MEMORY_TOTAL_USE_TOKEN = "VmSize";
+		private static final String MEMORY_RSS_USE_TOKEN = "VmRSS";
+		private static final String MEM_STAT_FILE = "/proc/self/status";
+
+		public static double getTotalMem() {
+			BufferedReader br = null;
+			try {
+				br = new BufferedReader(new FileReader(MEM_STAT_FILE));
+				while (true) {
+					String line = br.readLine();
+					if (null == line) {
+						break;
+					}
+					if (line.startsWith(MEMORY_TOTAL_USE_TOKEN)) {
+						return getNumber(line);
+					}
+				}
+			} catch (IOException ex) {
+				LOG.warn("collect mem use exception " + ex.getMessage());
+			} finally {
+				if (br != null) {
+					try {
+						br.close();
+					} catch (IOException ex) {
+					}
+				}
+			}
+			return 0.0;
+		}
+
+		public static double getRssMem() {
+			BufferedReader br = null;
+			try {
+				br = new BufferedReader(new FileReader(MEM_STAT_FILE));
+				while (true) {
+					String line = br.readLine();
+					if (null == line) {
+						break;
+					}
+					if (line.startsWith(MEMORY_RSS_USE_TOKEN)) {
+						return getNumber(line);
+					}
+				}
+			} catch (IOException ex) {
+				LOG.warn("collect mem use exception " + ex.getMessage());
+			} finally {
+				if (br != null) {
+					try {
+						br.close();
+					} catch (IOException ex) {
+					}
+				}
+			}
+			return 0.0;
+		}
+
+		private static double getNumber(String line) {
+			int beginIndex = line.indexOf(":") + 1;
+			int endIndex = line.indexOf("kB") - 1;
+			String memSize = line.substring(beginIndex, endIndex).trim();
+			return Double.parseDouble(memSize);
 		}
 	}
 }

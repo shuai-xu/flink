@@ -28,6 +28,10 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.metrics.Meter;
+import org.apache.flink.metrics.MeterView;
+import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.StoppingException;
 import org.apache.flink.runtime.accumulators.AccumulatorSnapshot;
@@ -307,9 +311,39 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	// ------ Fields that are only relevant for archived execution graphs ------------
 	private String jsonPlan;
 
+	private Meter failOverMetrics;
+
 	// --------------------------------------------------------------------------------------------
 	//   Constructors
 	// --------------------------------------------------------------------------------------------
+
+	public ExecutionGraph(
+		JobInformation jobInformation,
+		ScheduledExecutorService futureExecutor,
+		Executor ioExecutor,
+		Time rpcTimeout,
+		RestartStrategy restartStrategy,
+		FailoverStrategy.Factory failoverStrategyFactory,
+		SlotProvider slotProvider,
+		ClassLoader userClassLoader,
+		BlobWriter blobWriter,
+		ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
+		Time allocationTimeout) throws IOException {
+
+		this(
+			jobInformation,
+			futureExecutor,
+			ioExecutor,
+			rpcTimeout,
+			restartStrategy,
+			failoverStrategyFactory,
+			slotProvider,
+			userClassLoader,
+			blobWriter,
+			resultPartitionLocationTrackerProxy,
+			allocationTimeout,
+			new UnregisteredMetricsGroup());
+	}
 
 	public ExecutionGraph(
 			JobInformation jobInformation,
@@ -322,7 +356,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			ClassLoader userClassLoader,
 			BlobWriter blobWriter,
 			ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
-			Time allocationTimeout) throws IOException {
+			Time allocationTimeout,
+			MetricGroup metricGroup) throws IOException {
 
 		checkNotNull(futureExecutor);
 
@@ -367,6 +402,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		LOG.info("Job recovers via failover strategy: {}", failoverStrategy.getStrategyName());
 
 		this.schedulingFutures = new ConcurrentHashMap<>();
+
+		this.failOverMetrics = metricGroup.meter("task_failover", new MeterView(60));
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1880,6 +1917,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			// avoiding redundant local failover
 			if (execution.getGlobalModVersion() == globalModVersion) {
 				try {
+					if (this.failOverMetrics != null) {
+						this.failOverMetrics.markEvent();
+					}
 					// fail all checkpoints which the failed task has not yet acknowledged
 					if (checkpointCoordinator != null) {
 						checkpointCoordinator.failUnacknowledgedPendingCheckpointsFor(execution.getAttemptId(), ex);
