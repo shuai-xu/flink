@@ -19,6 +19,7 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -438,11 +439,18 @@ public final class Utils {
 		String clientHomeDir = env.get(YarnConfigKeys.ENV_CLIENT_HOME_DIR);
 		require(clientHomeDir != null, "Environment variable %s not set", YarnConfigKeys.ENV_CLIENT_HOME_DIR);
 
+		org.apache.flink.configuration.Configuration taskManagerConfig = new org.apache.flink.configuration.Configuration((flinkConfig));
+
+		// exclude tmp dir if set by env, preserve if configured by user
+		if (taskManagerConfig.getString(CoreOptions.TMP_DIRS).equals(env.get(ApplicationConstants.Environment.LOCAL_DIRS.key()))) {
+			taskManagerConfig.remove(CoreOptions.TMP_DIRS);
+		}
+
 		// write taskmanager configuration to file
 
 		File taskManagerConfigFile = new File(workingDirectory, "taskmanager-conf.yaml");
 		LOG.info("Writing TaskManager configuration to {}", taskManagerConfigFile.getAbsolutePath());
-		BootstrapTools.writeConfiguration(flinkConfig, taskManagerConfigFile);
+		BootstrapTools.writeConfiguration(taskManagerConfig, taskManagerConfigFile);
 
 		Path homeDirPath = new Path(clientHomeDir);
 		FileSystem fs = homeDirPath.getFileSystem(yarnConfig);

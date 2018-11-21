@@ -324,6 +324,15 @@ public final class DelegatingConfiguration extends Configuration {
 		return backingConfig.contains(prefixOption(configOption, prefix));
 	}
 
+	@Override
+	public void remove(String key) {
+		backingConfig.remove(prefix + key);
+	}
+
+	@Override
+	public void remove(ConfigOption<?> configOption) {
+		backingConfig.remove(prefixOption(configOption, prefix));
+	}
 	// --------------------------------------------------------------------------------------------
 
 	@Override

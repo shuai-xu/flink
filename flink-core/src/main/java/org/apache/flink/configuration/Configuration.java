@@ -722,6 +722,18 @@ public class Configuration extends ExecutionConfig.GlobalJobParameters
 		}
 	}
 
+	public void remove(String key) {
+		synchronized (this.confData) {
+			this.confData.remove(key);
+		}
+	}
+
+	public void remove(ConfigOption<?> configOption) {
+		synchronized (this.confData) {
+			this.confData.remove(configOption.key());
+		}
+	}
+
 	// --------------------------------------------------------------------------------------------
 
 	@Override
