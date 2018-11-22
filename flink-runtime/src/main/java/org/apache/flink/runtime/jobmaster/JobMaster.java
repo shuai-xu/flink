@@ -1766,6 +1766,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		return executionGraph;
 	}
 
+	@VisibleForTesting
+	SlotPool getSlotPool() {
+		return slotPool;
+	}
+
 	//----------------------------------------------------------------------------------------------
 	// Utility classes
 	//----------------------------------------------------------------------------------------------

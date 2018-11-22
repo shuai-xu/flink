@@ -988,10 +988,16 @@ public class ExecutionGraph implements AccessExecutionGraph {
 							LOG.info("Batch request {} slots, but only {} are fulfilled.",
 									allAssignFutures.getNumFuturesTotal(), allAssignFutures.getNumFuturesCompleted());
 
+							List<Execution> needMarkFailExecutions = new ArrayList<>();
+							// Complete all futures first, or else the execution fail may cause global failover,
+							// and other executions may fail first without clear the pending request.
 							for (int i = 0; i < allocationFutures.size(); i++) {
 								if (!allocationFutures.get(i).completeExceptionally(throwable)) {
-									scheduledExecutions.get(i).markFailed(ExceptionUtils.stripCompletionException(throwable));
+									needMarkFailExecutions.add(scheduledExecutions.get(i));
 								}
+							}
+							for (Execution execution : needMarkFailExecutions) {
+								execution.markFailed(ExceptionUtils.stripCompletionException(throwable));
 							}
 							throw new CompletionException(throwable);
 						}

@@ -124,6 +124,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -1023,6 +1024,110 @@ public class JobMasterTest extends TestLogger {
 
 			for (int i = 0; i < slotAllocationIds.size(); i++) {
 				cancelAllocationFutures.get(i).get(2, TimeUnit.SECONDS);
+			}
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	/**
+	 * Test that pending request should be cleared and won't be fulfill by released slots. For BLINK-17900880.
+	 *
+	 * @throws Exception
+	 */
+	@Test
+	public void testPendingSlotRequestsWillBeClearedWhenJobFailover() throws Exception {
+		int parallelism = 100;
+		final String resourceManagerAddress = "rm";
+		final ResourceManagerId resourceManagerId = ResourceManagerId.generate();
+		final ResourceID rmResourceId = new ResourceID(resourceManagerAddress);
+
+		final TestingResourceManagerGateway resourceManagerGateway = new TestingResourceManagerGateway(
+				resourceManagerId,
+				rmResourceId,
+				fastHeartbeatInterval,
+				resourceManagerAddress,
+				"localhost");
+
+		// Half of the allocations will be cancelled.
+		final List<AllocationID> cancelAllocationIds = new ArrayList<>(parallelism / 2);
+		resourceManagerGateway.setCancelSlotConsumer((allocationId) -> cancelAllocationIds.add(allocationId));
+
+		final List<AllocationID> slotAllocationIds = new ArrayList<>(parallelism);
+		resourceManagerGateway.setRequestSlotConsumer((slotRequest) -> slotAllocationIds.add(slotRequest.getAllocationId()));
+
+		CompletableFuture<Acknowledge> requestSlotFuture = new CompletableFuture<>();
+		resourceManagerGateway.setRequestSlotFuture(requestSlotFuture);
+
+		rpcService.registerGateway(resourceManagerAddress, resourceManagerGateway);
+
+		final String taskExecutorAddress = "tm";
+		final TestingTaskExecutorGateway taskExecutorGateway = new TestingTaskExecutorGatewayBuilder().createTestingTaskExecutorGateway();
+		rpcService.registerGateway(taskExecutorAddress, taskExecutorGateway);
+
+		JobVertex source = new JobVertex("vertex");
+		source.setParallelism(parallelism);
+		source.setInvokableClass(AbstractInvokable.class);
+		source.setSlotSharingGroup(new SlotSharingGroup());
+
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
+		configuration.setBoolean(JobManagerOptions.SLOT_ENABLE_SHARED_SLOT, false);
+
+		final JobMaster jobMaster = createJobMaster(
+				configuration,
+				jobGraph,
+				haServices,
+				new TestingJobManagerSharedServicesBuilder().setRestartStrategyFactory(
+						new NoRestartStrategy.NoRestartStrategyFactory()).build(),
+				new TestingHeartbeatServices(10000, 60000, rpcService.getScheduledExecutor()));
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			rmLeaderRetrievalService.notifyListener(resourceManagerGateway.getAddress(), resourceManagerGateway.getFencingToken().toUUID());
+
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			TaskManagerLocation taskManagerLocation = new LocalTaskManagerLocation();
+			jobMasterGateway.registerTaskManager(taskExecutorAddress, taskManagerLocation, testingTimeout).get();
+
+			long startTime = System.currentTimeMillis();
+			while (true) {
+				if (slotAllocationIds.size() == parallelism) {
+					break;
+				} else if (System.currentTimeMillis() - startTime > 2000) {
+					fail("RM does not receive all allocation");
+				}
+				Thread.sleep(100);
+			}
+
+			List<SlotOffer> slotOffers = new ArrayList<>(parallelism / 2);
+			// Fulfill the last half allocations.
+			for (int i = parallelism / 2; i< parallelism; i++) {
+				slotOffers.add(new SlotOffer(slotAllocationIds.get(i), i, new ResourceProfile(1, 100)));
+			}
+			jobMasterGateway.offerSlots(taskManagerLocation.getResourceID(), slotOffers, testingTimeout).get();
+
+			ExecutionGraph eg = jobMaster.getExecutionGraph();
+
+			requestSlotFuture.completeExceptionally(new TimeoutException("Testing timeout"));
+
+			ExecutionGraphTestUtils.waitUntilJobStatus(eg, JobStatus.FAILED, 2000L);
+
+			startTime = System.currentTimeMillis();
+			while (true) {
+				if (cancelAllocationIds.size() == parallelism / 2 && jobMaster.getSlotPool().getAvailableSlotsSize() == parallelism / 2) {
+					break;
+				} else if (System.currentTimeMillis() - startTime > 2000) {
+					fail("RM does not receive all cancellation");
+				}
+				Thread.sleep(100);
 			}
 		} finally {
 			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);

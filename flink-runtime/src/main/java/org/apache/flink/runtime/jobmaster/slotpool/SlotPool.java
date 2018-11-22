@@ -1025,7 +1025,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 					log.debug("Could not find slot {} in slot sharing group {}. Ignoring release slot request.", slotRequestId, slotSharingGroupId);
 				}
 			} else {
-				log.debug("Could not find slot sharing group {}. Ignoring release slot request.", slotSharingGroupId);
+				log.info("Could not find slot sharing group {}. Ignoring release slot request.", slotSharingGroupId);
 			}
 		} else {
 			final PendingRequest pendingRequest = removePendingRequest(slotRequestId);
@@ -1483,6 +1483,11 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 	@VisibleForTesting
 	protected AvailableSlots getAvailableSlots() {
 		return availableSlots;
+	}
+
+	@VisibleForTesting
+	public int getAvailableSlotsSize() {
+		return availableSlots.size();
 	}
 
 	@VisibleForTesting
