@@ -18,11 +18,7 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.{Join, JoinRelType, SemiJoin}
-import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.api.OperatorType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution.BROADCAST_DISTRIBUTED
 import org.apache.flink.table.plan.nodes.FlinkConventions.BATCHEXEC
@@ -30,6 +26,11 @@ import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogical
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecNestedLoopJoin, BatchExecNestedLoopSemiJoin}
 import org.apache.flink.table.plan.rules.physical.batch.BatchExecNestedLoopJoinRule.transformToNestedLoopJoin
 import org.apache.flink.table.util.FlinkRelOptUtil
+
+import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.core.{Join, JoinRelType, SemiJoin}
 
 class BatchExecNestedLoopJoinRule(joinClass: Class[_ <: Join])
   extends RelOptRule(
@@ -61,8 +62,7 @@ class BatchExecNestedLoopJoinRule(joinClass: Class[_ <: Join])
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val conf = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val join = call.rels(0).asInstanceOf[Join]
+    val join: Join = call.rel(0)
     val left = join.getLeft
     val right = {
       val right = join.getRight
@@ -70,7 +70,7 @@ class BatchExecNestedLoopJoinRule(joinClass: Class[_ <: Join])
         case _: SemiJoin =>
           // We can do a distinct to buildSide(right) when semi join.
           val distinctKeys = 0 until right.getRowType.getFieldCount
-          val useBuildDistinct = chooseSemiBuildDistinct(right, distinctKeys, conf)
+          val useBuildDistinct = chooseSemiBuildDistinct(right, distinctKeys)
           if (useBuildDistinct) {
             addLocalDistinctAgg(right, distinctKeys, call.builder())
           } else {

@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.plan.util
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.plan.FlinkJoinRelType
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.mapping.IntPair
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.FlinkJoinRelType
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

@@ -936,7 +936,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a0=[$6], b0=[$7],
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin])
+SortMergeJoin(where=[=(a, d0)], join=[a, b, c, d, e, f, a0, b0, c0, d0, e0, f0], joinType=[InnerJoin], leftSorted=[true], rightSorted=[true])
 :- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin], reuse_id=[1])
 :  :- Exchange(distribution=[hash[a]])
 :  :  +- Calc(select=[a, b, c], where=[LIKE(c, 'He%')])

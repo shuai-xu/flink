@@ -18,11 +18,16 @@
 
 package org.apache.flink.table.plan
 
+import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.functions.TableFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBatchExecBase
+
+import org.apache.commons.lang3.StringUtils
 import org.junit.{Before, Test}
 
 class RemoveCollationTest extends TableTestBatchExecBase {
@@ -35,8 +40,13 @@ class RemoveCollationTest extends TableTestBatchExecBase {
     util.tableEnv.getConfig.setParameters(new Configuration)
     util.addTable("x", CommonTestData.get3Source(Array("a", "b", "c")))
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
+    util.addTable("t1", CommonTestData.get3Source(Array("a1", "b1", "c1")))
+    util.addTable("t2", CommonTestData.get3Source(Array("d1", "e1", "f1")))
+
     util.tableEnv.alterTableStats("x", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(100L)))
+    util.tableEnv.alterTableStats("t1", Some(TableStats(100L)))
+    util.tableEnv.alterTableStats("t2", Some(TableStats(100L)))
   }
 
   @Test
@@ -175,5 +185,134 @@ class RemoveCollationTest extends TableTestBatchExecBase {
         |)
       """.stripMargin
     util.verifyPlan(sqlQuery)
+  }
+
+  @Test
+  def testRemoveCollation_MultipleSortMergeJoins1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+
+    val sql =
+      """
+        |select * from
+        |   x join y on a = d
+        |   join t1 on a = a1
+        |   left outer join t2 on a = d1
+      """.stripMargin
+
+    util.verifyPlan(sql)
+  }
+
+  @Test
+  def testRemoveCollation_MultipleSortMergeJoins_MultiJoinKeys1(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+
+    val sql =
+      """
+        |select * from
+        |   x join y on a = d and b = e
+        |   join t1 on a = a1 and b = b1
+        |   left outer join t2 on a = d1 and b = e1
+      """.stripMargin
+
+    util.verifyPlan(sql)
+  }
+
+  @Test
+  def testRemoveCollation_MultipleSortMergeJoins2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+
+    val sql =
+      """
+        |select * from
+        |   x join y on a = d
+        |   join t1 on d = a1
+        |   left outer join t2 on a1 = d1
+      """.stripMargin
+
+    util.verifyPlan(sql)
+  }
+
+  @Test
+  def testRemoveCollation_MultipleSortMergeJoins_MultiJoinKeys2(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+
+    val sql =
+      """
+        |select * from
+        |   x join y on a = d and b = e
+        |   join t1 on d = a1 and e = b1
+        |   left outer join t2 on a1 = d1 and b1 = e1
+      """.stripMargin
+
+    util.verifyPlan(sql)
+  }
+
+  @Test
+  def testRemoveCollation_MultipleSortMergeJoins3(): Unit = {
+    util.tableEnv.getConfig.getParameters.setString(
+      TableConfig.SQL_PHYSICAL_OPERATORS_DISABLED, "HashJoin,NestedLoopJoin")
+    util.addTable[(String, String, String, String, String)]("tb1",
+      Set(Set("id")), 'id, 'key, 'tb2_ids, 'tb3_ids, 'name)
+    util.addTable[(String, String)]("tb2", Set(Set("id")), 'id, 'name)
+    util.addTable[(String, String)]("tb3", Set(Set("id")), 'id, 'name)
+    util.addTable[(String, String)]("tb4", Set(Set("id")), 'id, 'name)
+    util.addTable[(String, String)]("tb5", Set(Set("id")), 'id, 'name)
+    util.tableEnv.registerFunction("split", new Split())
+
+    val sql =
+      """
+        |with v1 as (
+        | select id, tb2_id from tb1, LATERAL TABLE(split(tb2_ids)) AS T(tb2_id)
+        |),
+        |v2 as (
+        | select id, tb3_id from tb1, LATERAL TABLE(split(tb3_ids)) AS T(tb3_id)
+        |),
+        |
+        |join_tb2 as (
+        | select tb1_id, concat_agg(tb2_name, ',') as tb2_names
+        | from (
+        |  select v1.id as tb1_id, tb2.name as tb2_name
+        |   from v1 left outer join tb2 on tb2_id = tb2.id
+        | ) group by tb1_id
+        |),
+        |
+        |join_tb3 as (
+        | select tb1_id, concat_agg(tb3_name, ',') as tb3_names
+        | from (
+        |  select v2.id as tb1_id, tb3.name as tb3_name
+        |   from v2 left outer join tb3 on tb3_id = tb3.id
+        | ) group by tb1_id
+        |)
+        |
+        |select
+        |   tb1.id,
+        |   tb1.tb2_ids,
+        |   tb1.tb3_ids,
+        |   tb1.name,
+        |   tb2_names,
+        |   tb3_names,
+        |   tb4.name,
+        |   tb5.name
+        | from tb1
+        |   left outer join join_tb2 on tb1.id = join_tb2.tb1_id
+        |   left outer join join_tb3 on tb1.id = join_tb3.tb1_id
+        |   left outer join tb4 on tb1.key = tb4.id
+        |   left outer join tb5 on tb1.key = tb5.id
+      """.stripMargin
+
+    util.verifyPlan(sql)
+  }
+
+}
+
+class Split extends TableFunction[String] {
+  def eval(str: String): Unit = {
+    if (null != str) {
+      StringUtils.split(str, ",").foreach(collect)
+    }
   }
 }

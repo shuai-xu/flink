@@ -18,16 +18,19 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.{Join, SemiJoin}
-import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.table.api.{OperatorType, TableConfig}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecSortMergeJoin, BatchExecSortMergeSemiJoin}
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecSortMergeJoin, BatchExecSortMergeSemiJoin}
+import org.apache.flink.table.runtime.aggregate.RelFieldCollations
+import org.apache.flink.table.util.FlinkRelOptUtil
+
+import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
+import org.apache.calcite.rel.core.{Join, SemiJoin}
+import org.apache.calcite.rel.{RelCollations, RelNode}
+import org.apache.calcite.util.ImmutableIntList
 
 import scala.collection.JavaConversions._
 
@@ -39,7 +42,7 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
   with BatchExecJoinRuleBase {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val join = call.rel(0).asInstanceOf[Join]
+    val join: Join = call.rel(0)
     val joinInfo = join.analyzeCondition
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
     val isEnable = tableConfig.enabledGivenOpType(OperatorType.SortMergeJoin)
@@ -47,8 +50,7 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val conf = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val join = call.rels(0).asInstanceOf[Join]
+    val join: Join = call.rel(0)
     val left = join.getLeft
     val right = {
       val right = join.getRight
@@ -56,7 +58,7 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
         case _: SemiJoin =>
           // We can do a distinct to buildSide(right) when semi join.
           val distinctKeys = 0 until right.getRowType.getFieldCount
-          val useBuildDistinct = chooseSemiBuildDistinct(right, distinctKeys, conf)
+          val useBuildDistinct = chooseSemiBuildDistinct(right, distinctKeys)
           if (useBuildDistinct) {
             addLocalDistinctAgg(right, distinctKeys, call.builder())
           } else {
@@ -68,20 +70,37 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
 
     val joinInfo = join.analyzeCondition
 
+    def getTraitSetByShuffleKeys(
+        shuffleKeys: ImmutableIntList,
+        requireStrict: Boolean,
+        requireCollation: Boolean): RelTraitSet = {
+      var traitSet = call.getPlanner.emptyTraitSet()
+        .replace(FlinkConventions.BATCHEXEC)
+        .replace(FlinkRelDistribution.hash(shuffleKeys, requireStrict))
+      if (requireCollation) {
+        val fieldCollations = shuffleKeys.map(RelFieldCollations.of(_))
+        val relCollation = RelCollations.of(fieldCollations)
+        traitSet = traitSet.replace(relCollation)
+      }
+      traitSet
+    }
+
     def transformToEquiv(
         leftRequiredShuffleKeys: ImmutableIntList,
-        rightRequiredShuffleKeys: ImmutableIntList): Unit = {
-      val leftRequiredTrait = join.getTraitSet
-          .replace(FlinkConventions.BATCHEXEC)
-          .replace(FlinkRelDistribution.hash(leftRequiredShuffleKeys))
-      val rightRequiredTrait = join.getTraitSet
-          .replace(FlinkConventions.BATCHEXEC)
-          .replace(FlinkRelDistribution.hash(rightRequiredShuffleKeys))
+        rightRequiredShuffleKeys: ImmutableIntList,
+        requireLeftSorted: Boolean,
+        requireRightSorted: Boolean): Unit = {
+
+      val leftRequiredTrait = getTraitSetByShuffleKeys(
+        leftRequiredShuffleKeys, requireStrict = true, requireLeftSorted)
+      val rightRequiredTrait = getTraitSetByShuffleKeys(
+        rightRequiredShuffleKeys, requireStrict = true, requireRightSorted)
 
       val newLeft = RelOptRule.convert(left, leftRequiredTrait)
       val newRight = RelOptRule.convert(right, rightRequiredTrait)
-      val providedTraitSet = join.getTraitSet.replace(FlinkConventions.BATCHEXEC)
-      call.transformTo(join match {
+
+      val providedTraitSet = call.getPlanner.emptyTraitSet().replace(FlinkConventions.BATCHEXEC)
+      val newJoin = join match {
         case sj: SemiJoin =>
           new BatchExecSortMergeSemiJoin(
             sj.getCluster,
@@ -92,6 +111,8 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
             joinInfo.leftKeys,
             joinInfo.rightKeys,
             sj.isAnti,
+            requireLeftSorted,
+            requireRightSorted,
             description)
         case _ =>
           new BatchExecSortMergeJoin(
@@ -101,17 +122,28 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
             newRight,
             join.getCondition,
             join.getJoinType,
+            requireLeftSorted,
+            requireRightSorted,
             description)
-      })
+      }
+      call.transformTo(newJoin)
     }
-    transformToEquiv(joinInfo.leftKeys, joinInfo.rightKeys)
+
+    Array((false, false), (true, false), (false, true), (true, true)).foreach {
+      case (requireLeftSorted, requireRightSorted) =>
+        transformToEquiv(joinInfo.leftKeys, joinInfo.rightKeys,
+          requireLeftSorted, requireRightSorted)
+    }
 
     // add more possibility to only shuffle by partial joinKeys, now only single one
-    val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
+    val tableConfig = FlinkRelOptUtil.getTableConfig(join)
     val isShuffleByPartialKeyEnabled = tableConfig.joinShuffleByPartialKeyEnabled
     if (isShuffleByPartialKeyEnabled && joinInfo.pairs().length > 1) {
       joinInfo.pairs().foreach { pair =>
-        transformToEquiv(ImmutableIntList.of(pair.source), ImmutableIntList.of(pair.target))
+        // sort require full key not partial key,
+        // so requireLeftSorted and requireRightSorted should both be false here
+        transformToEquiv(ImmutableIntList.of(pair.source), ImmutableIntList.of(pair.target),
+          requireLeftSorted = false, requireRightSorted = false)
       }
     }
   }

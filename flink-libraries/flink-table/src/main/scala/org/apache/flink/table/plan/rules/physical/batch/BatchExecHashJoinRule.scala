@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import java.lang.Double
-import java.util
+import org.apache.flink.table.api.{OperatorType, TableConfig}
+import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoin, BatchExecHashSemiJoin}
 
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.{Join, SemiJoin}
 import org.apache.calcite.util.ImmutableIntList
-import org.apache.flink.table.api.{OperatorType, TableConfig}
-import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoin, BatchExecHashSemiJoin}
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
+
+import java.lang.Double
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -43,7 +44,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
   with BatchExecJoinRuleBase {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val join = call.rels(0).asInstanceOf[Join]
+    val join: Join = call.rel(0)
     val joinInfo = join.analyzeCondition
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[TableConfig])
     val enableShuffleHash = tableConfig.enabledGivenOpType(OperatorType.ShuffleHashJoin)
@@ -58,8 +59,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val conf = call.getPlanner.getContext.unwrap(classOf[TableConfig])
-    val join = call.rels(0).asInstanceOf[Join]
+    val join: Join = call.rel(0)
     val joinInfo = join.analyzeCondition
 
     val left = join.getLeft
@@ -69,7 +69,7 @@ class BatchExecHashJoinRule(joinClass: Class[_ <: Join])
         case _: SemiJoin =>
           // We can do a distinct to buildSide(right) when semi join.
           val distinctKeys = 0 until right.getRowType.getFieldCount
-          val useBuildDistinct = chooseSemiBuildDistinct(right, distinctKeys, conf)
+          val useBuildDistinct = chooseSemiBuildDistinct(right, distinctKeys)
           if (useBuildDistinct) {
             (addLocalDistinctAgg(right, distinctKeys, call.builder()), true)
           } else {

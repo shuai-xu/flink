@@ -102,11 +102,12 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
     *         into Join.
     *         The second element is the distribution requirement of left child if the requirement
     *         can be push down into join.
-    *         The third elememts is the distribution requirement of right child if the requirement
+    *         The third elememt is the distribution requirement of right child if the requirement
     *         can be push down into join.
     */
-  def pushDownHashDistributionIntoNonBroadcastJoin(requiredDistribution: FlinkRelDistribution)
-    : (Boolean, FlinkRelDistribution, FlinkRelDistribution) = {
+  def pushDownHashDistributionIntoNonBroadcastJoin(
+      requiredDistribution: FlinkRelDistribution)
+  : (Boolean, FlinkRelDistribution, FlinkRelDistribution) = {
     // Only HashDistribution can be push down into Non-broadcast HashJoin
     if (requiredDistribution.getType != HASH_DISTRIBUTED) {
       return (false, null, null)
@@ -245,8 +246,7 @@ trait BatchExecJoinBase extends Join with RowBatchExecRel {
   private[flink] def generateConditionFunction(
       config: TableConfig,
       leftType: BaseRowType,
-      rightType: BaseRowType)
-  : GeneratedJoinConditionFunction = {
+      rightType: BaseRowType): GeneratedJoinConditionFunction = {
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, false, config.getNullCheck)
         .bindInput(leftType)

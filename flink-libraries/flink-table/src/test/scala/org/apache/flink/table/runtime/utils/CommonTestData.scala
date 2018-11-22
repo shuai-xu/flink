@@ -134,7 +134,7 @@ object CommonTestData {
       Array(true, true, true),
       "\\|",
       "$",
-      tableStats = Some(new TableStats(data.size.toLong)))
+      tableStats = Some(TableStats(data.size.toLong)))
   }
 
   def getSmall3Data: mutable.MutableList[(Integer, lang.Long, String)] = {

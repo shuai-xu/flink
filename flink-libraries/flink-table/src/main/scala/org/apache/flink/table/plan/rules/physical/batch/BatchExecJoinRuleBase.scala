@@ -18,8 +18,12 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
-import java.lang.Double
-import java.util.Collections
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalHashAggregate, BatchExecRel}
+import org.apache.flink.table.util.FlinkRelOptUtil
 
 import org.apache.calcite.plan.RelOptRule
 import org.apache.calcite.rel.RelNode
@@ -28,13 +32,9 @@ import org.apache.calcite.rel.core.Join
 import org.apache.calcite.sql.validate.SqlValidatorUtil
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalHashAggregate, BatchExecRel}
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalJoin, FlinkLogicalSemiJoin}
 
-import scala.collection.JavaConverters._
+import java.lang.Double
+import java.util.Collections
 
 trait BatchExecJoinRuleBase {
 
@@ -60,16 +60,15 @@ trait BatchExecJoinRuleBase {
 
   def chooseSemiBuildDistinct(
       buildRel: RelNode,
-      distinctKeys: Seq[Int],
-      conf: TableConfig): Boolean = {
+      distinctKeys: Seq[Int]): Boolean = {
+    val tableConfig = FlinkRelOptUtil.getTableConfig(buildRel)
     val mq = buildRel.getCluster.getMetadataQuery
-    val ratioConf = conf.getParameters.getDouble(
+    val ratioConf = tableConfig.getParameters.getDouble(
       TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO,
       TableConfig.SQL_EXEC_SEMI_BUILD_DISTINCT_NDV_RATIO_DEFAULT)
     val inputRows = mq.getRowCount(buildRel)
     val ndvOfGroupKey = mq.getDistinctRowCount(
-      buildRel, ImmutableBitSet.builder().addAll(
-        distinctKeys.map(Integer.valueOf).asJava).build(), null)
+      buildRel, ImmutableBitSet.of(distinctKeys: _*), null)
     if (ndvOfGroupKey == null) false else ndvOfGroupKey / inputRows < ratioConf
   }
 

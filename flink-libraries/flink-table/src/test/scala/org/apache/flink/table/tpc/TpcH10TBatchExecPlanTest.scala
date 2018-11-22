@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.tpc
 
-import java.util
+import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
 
 import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
-import org.junit.Ignore
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -36,8 +36,8 @@ class TpcH10TBatchExecPlanTest(
     explainLevel: SqlExplainLevel,
     joinReorderEnabled: Boolean,
     printOptimizedResult: Boolean)
-    extends TpcHBatchExecPlanTest(
-      caseName, factor, statsMode, explainLevel, joinReorderEnabled, printOptimizedResult)
+  extends TpcHBatchExecPlanTest(
+    caseName, factor, statsMode, explainLevel, joinReorderEnabled, printOptimizedResult)
 
 object TpcH10TBatchExecPlanTest {
   @Parameterized.Parameters(name = "caseName={0}, factor={1}, statsMode={2}, joinReorder={4}")

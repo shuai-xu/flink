@@ -109,6 +109,270 @@ SortAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_COUNT(count$0)
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testRemoveCollation_MultipleSortMergeJoins1">
+    <Resource name="sql">
+      <![CDATA[
+select * from
+   x join y on a = d
+   join t1 on a = a1
+   left outer join t2 on a = d1
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a1=[$6], b1=[$7], c1=[$8], d1=[$9], e1=[$10], f1=[$11])
++- LogicalJoin(condition=[=($0, $9)], joinType=[left])
+   :- LogicalJoin(condition=[=($0, $6)], joinType=[inner])
+   :  :- LogicalJoin(condition=[=($0, $3)], joinType=[inner])
+   :  :  :- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+   :  :  +- LogicalTableScan(table=[[y, source: [selectedFields=[d, e, f]]]])
+   :  +- LogicalTableScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]])
+   +- LogicalTableScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortMergeJoin(where=[=(a, d1)], join=[a, b, c, d, e, f, a1, b1, c1, d1, e1, f1], joinType=[LeftOuterJoin], leftSorted=[true])
+:- SortMergeJoin(where=[=(a, a1)], join=[a, b, c, d, e, f, a1, b1, c1], joinType=[InnerJoin], leftSorted=[true])
+:  :- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin])
+:  :  :- Exchange(distribution=[hash[a]])
+:  :  :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:  :  +- Exchange(distribution=[hash[d]])
+:  :     +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
+:  +- Exchange(distribution=[hash[a1]])
+:     +- TableSourceScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]], fields=[a1, b1, c1])
++- Exchange(distribution=[hash[d1]])
+   +- TableSourceScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]], fields=[d1, e1, f1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveCollation_MultipleSortMergeJoins2">
+    <Resource name="sql">
+      <![CDATA[
+select * from
+   x join y on a = d
+   join t1 on d = a1
+   left outer join t2 on a1 = d1
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a1=[$6], b1=[$7], c1=[$8], d1=[$9], e1=[$10], f1=[$11])
++- LogicalJoin(condition=[=($6, $9)], joinType=[left])
+   :- LogicalJoin(condition=[=($3, $6)], joinType=[inner])
+   :  :- LogicalJoin(condition=[=($0, $3)], joinType=[inner])
+   :  :  :- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+   :  :  +- LogicalTableScan(table=[[y, source: [selectedFields=[d, e, f]]]])
+   :  +- LogicalTableScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]])
+   +- LogicalTableScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortMergeJoin(where=[=(a1, d1)], join=[a, b, c, d, e, f, a1, b1, c1, d1, e1, f1], joinType=[LeftOuterJoin], leftSorted=[true])
+:- SortMergeJoin(where=[=(d, a1)], join=[a, b, c, d, e, f, a1, b1, c1], joinType=[InnerJoin], leftSorted=[true])
+:  :- SortMergeJoin(where=[=(a, d)], join=[a, b, c, d, e, f], joinType=[InnerJoin])
+:  :  :- Exchange(distribution=[hash[a]])
+:  :  :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:  :  +- Exchange(distribution=[hash[d]])
+:  :     +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
+:  +- Exchange(distribution=[hash[a1]])
+:     +- TableSourceScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]], fields=[a1, b1, c1])
++- Exchange(distribution=[hash[d1]])
+   +- TableSourceScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]], fields=[d1, e1, f1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveCollation_MultipleSortMergeJoins3">
+    <Resource name="sql">
+      <![CDATA[
+with v1 as (
+ select id, tb2_id from tb1, LATERAL TABLE(split(tb2_ids)) AS T(tb2_id)
+),
+v2 as (
+ select id, tb3_id from tb1, LATERAL TABLE(split(tb3_ids)) AS T(tb3_id)
+),
+
+join_tb2 as (
+ select tb1_id, concat_agg(tb2_name, ',') as tb2_names
+ from (
+  select v1.id as tb1_id, tb2.name as tb2_name
+   from v1 left outer join tb2 on tb2_id = tb2.id
+ ) group by tb1_id
+),
+
+join_tb3 as (
+ select tb1_id, concat_agg(tb3_name, ',') as tb3_names
+ from (
+  select v2.id as tb1_id, tb3.name as tb3_name
+   from v2 left outer join tb3 on tb3_id = tb3.id
+ ) group by tb1_id
+)
+
+select
+   tb1.id,
+   tb1.tb2_ids,
+   tb1.tb3_ids,
+   tb1.name,
+   tb2_names,
+   tb3_names,
+   tb4.name,
+   tb5.name
+ from tb1
+   left outer join join_tb2 on tb1.id = join_tb2.tb1_id
+   left outer join join_tb3 on tb1.id = join_tb3.tb1_id
+   left outer join tb4 on tb1.key = tb4.id
+   left outer join tb5 on tb1.key = tb5.id
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(id=[$0], tb2_ids=[$2], tb3_ids=[$3], name=[$4], tb2_names=[$6], tb3_names=[$8], name0=[$10], name1=[$12])
++- LogicalJoin(condition=[=($1, $11)], joinType=[left])
+   :- LogicalJoin(condition=[=($1, $9)], joinType=[left])
+   :  :- LogicalJoin(condition=[=($0, $7)], joinType=[left])
+   :  :  :- LogicalJoin(condition=[=($0, $5)], joinType=[left])
+   :  :  :  :- LogicalTableScan(table=[[tb1]])
+   :  :  :  +- LogicalAggregate(group=[{0}], tb2_names=[CONCAT_AGG($1, $2)])
+   :  :  :     +- LogicalProject(tb1_id=[$0], tb2_name=[$1], $f2=[','])
+   :  :  :        +- LogicalProject(tb1_id=[$0], tb2_name=[$3])
+   :  :  :           +- LogicalJoin(condition=[=($1, $2)], joinType=[left])
+   :  :  :              :- LogicalProject(id=[$0], tb2_id=[$5])
+   :  :  :              :  +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{2}])
+   :  :  :              :     :- LogicalTableScan(table=[[tb1]])
+   :  :  :              :     +- LogicalTableFunctionScan(invocation=[split($cor0.tb2_ids)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+   :  :  :              +- LogicalTableScan(table=[[tb2]])
+   :  :  +- LogicalAggregate(group=[{0}], tb3_names=[CONCAT_AGG($1, $2)])
+   :  :     +- LogicalProject(tb1_id=[$0], tb3_name=[$1], $f2=[','])
+   :  :        +- LogicalProject(tb1_id=[$0], tb3_name=[$3])
+   :  :           +- LogicalJoin(condition=[=($1, $2)], joinType=[left])
+   :  :              :- LogicalProject(id=[$0], tb3_id=[$5])
+   :  :              :  +- LogicalCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{3}])
+   :  :              :     :- LogicalTableScan(table=[[tb1]])
+   :  :              :     +- LogicalTableFunctionScan(invocation=[split($cor1.tb3_ids)], rowType=[RecordType(VARCHAR(65536) f0)], elementType=[class [Ljava.lang.Object;])
+   :  :              +- LogicalTableScan(table=[[tb3]])
+   :  +- LogicalTableScan(table=[[tb4]])
+   +- LogicalTableScan(table=[[tb5]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+Calc(select=[id, tb2_ids, tb3_ids, name, tb2_names, tb3_names, name0, name1])
++- SortMergeJoin(where=[=(key, id0)], join=[id, key, tb2_ids, tb3_ids, name, tb2_names, tb3_names, name0, id0, name1], joinType=[LeftOuterJoin], leftSorted=[true])
+   :- Calc(select=[id, key, tb2_ids, tb3_ids, name, tb2_names, tb3_names, name0])
+   :  +- SortMergeJoin(where=[=(key, id0)], join=[id, key, tb2_ids, tb3_ids, name, tb2_names, tb3_names, id0, name0], joinType=[LeftOuterJoin])
+   :     :- Exchange(distribution=[hash[key]])
+   :     :  +- Calc(select=[id, key, tb2_ids, tb3_ids, name, tb2_names, tb3_names])
+   :     :     +- SortMergeJoin(where=[=(id, tb1_id)], join=[id, key, tb2_ids, tb3_ids, name, tb2_names, tb1_id, tb3_names], joinType=[LeftOuterJoin], leftSorted=[true], rightSorted=[true])
+   :     :        :- Calc(select=[id, key, tb2_ids, tb3_ids, name, tb2_names])
+   :     :        :  +- SortMergeJoin(where=[=(id, tb1_id)], join=[id, key, tb2_ids, tb3_ids, name, tb1_id, tb2_names], joinType=[LeftOuterJoin], rightSorted=[true])
+   :     :        :     :- Exchange(distribution=[hash[id]])
+   :     :        :     :  +- TableSourceScan(table=[[tb1]], fields=[id, key, tb2_ids, tb3_ids, name])
+   :     :        :     +- SortAggregate(isMerge=[true], groupBy=[tb1_id], select=[tb1_id, Final_CONCAT_AGG(accDelimiter$0, concatAcc$1) AS tb2_names])
+   :     :        :        +- Sort(orderBy=[tb1_id ASC])
+   :     :        :           +- Exchange(distribution=[hash[tb1_id]])
+   :     :        :              +- LocalSortAggregate(groupBy=[tb1_id], select=[tb1_id, Partial_CONCAT_AGG(tb2_name, $f2) AS (accDelimiter$0, concatAcc$1)])
+   :     :        :                 +- Sort(orderBy=[tb1_id ASC])
+   :     :        :                    +- Calc(select=[id AS tb1_id, name AS tb2_name, ',' AS $f2])
+   :     :        :                       +- SortMergeJoin(where=[=(f0, id0)], join=[id, f0, id0, name], joinType=[LeftOuterJoin])
+   :     :        :                          :- Exchange(distribution=[hash[f0]])
+   :     :        :                          :  +- Correlate(invocation=[split($cor0.tb2_ids)], correlate=[table(split($cor0.tb2_ids))], select=[id,f0], rowType=[RecordType(VARCHAR(65536) id, VARCHAR(65536) f0)], joinType=[INNER])
+   :     :        :                          :     +- TableSourceScan(table=[[tb1]], fields=[id, key, tb2_ids, tb3_ids, name])
+   :     :        :                          +- Exchange(distribution=[hash[id]])
+   :     :        :                             +- TableSourceScan(table=[[tb2]], fields=[id, name])
+   :     :        +- SortAggregate(isMerge=[true], groupBy=[tb1_id], select=[tb1_id, Final_CONCAT_AGG(accDelimiter$0, concatAcc$1) AS tb3_names])
+   :     :           +- Sort(orderBy=[tb1_id ASC])
+   :     :              +- Exchange(distribution=[hash[tb1_id]])
+   :     :                 +- LocalSortAggregate(groupBy=[tb1_id], select=[tb1_id, Partial_CONCAT_AGG(tb3_name, $f2) AS (accDelimiter$0, concatAcc$1)])
+   :     :                    +- Sort(orderBy=[tb1_id ASC])
+   :     :                       +- Calc(select=[id AS tb1_id, name AS tb3_name, ',' AS $f2])
+   :     :                          +- SortMergeJoin(where=[=(f0, id0)], join=[id, f0, id0, name], joinType=[LeftOuterJoin])
+   :     :                             :- Exchange(distribution=[hash[f0]])
+   :     :                             :  +- Correlate(invocation=[split($cor1.tb3_ids)], correlate=[table(split($cor1.tb3_ids))], select=[id,f0], rowType=[RecordType(VARCHAR(65536) id, VARCHAR(65536) f0)], joinType=[INNER])
+   :     :                             :     +- TableSourceScan(table=[[tb1]], fields=[id, key, tb2_ids, tb3_ids, name])
+   :     :                             +- Exchange(distribution=[hash[id]])
+   :     :                                +- TableSourceScan(table=[[tb3]], fields=[id, name])
+   :     +- Exchange(distribution=[hash[id]])
+   :        +- TableSourceScan(table=[[tb4]], fields=[id, name])
+   +- Exchange(distribution=[hash[id]])
+      +- TableSourceScan(table=[[tb5]], fields=[id, name])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveCollation_MultipleSortMergeJoins_MultiJoinKeys1">
+    <Resource name="sql">
+      <![CDATA[
+select * from
+   x join y on a = d and b = e
+   join t1 on a = a1 and b = b1
+   left outer join t2 on a = d1 and b = e1
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a1=[$6], b1=[$7], c1=[$8], d1=[$9], e1=[$10], f1=[$11])
++- LogicalJoin(condition=[AND(=($0, $9), =($1, $10))], joinType=[left])
+   :- LogicalJoin(condition=[AND(=($0, $6), =($1, $7))], joinType=[inner])
+   :  :- LogicalJoin(condition=[AND(=($0, $3), =($1, $4))], joinType=[inner])
+   :  :  :- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+   :  :  +- LogicalTableScan(table=[[y, source: [selectedFields=[d, e, f]]]])
+   :  +- LogicalTableScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]])
+   +- LogicalTableScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortMergeJoin(where=[AND(=(a, d1), =(b, e1))], join=[a, b, c, d, e, f, a1, b1, c1, d1, e1, f1], joinType=[LeftOuterJoin], leftSorted=[true])
+:- SortMergeJoin(where=[AND(=(a, a1), =(b, b1))], join=[a, b, c, d, e, f, a1, b1, c1], joinType=[InnerJoin], leftSorted=[true])
+:  :- SortMergeJoin(where=[AND(=(a, d), =(b, e))], join=[a, b, c, d, e, f], joinType=[InnerJoin])
+:  :  :- Exchange(distribution=[hash[a, b]])
+:  :  :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:  :  +- Exchange(distribution=[hash[d, e]])
+:  :     +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
+:  +- Exchange(distribution=[hash[a1, b1]])
+:     +- TableSourceScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]], fields=[a1, b1, c1])
++- Exchange(distribution=[hash[d1, e1]])
+   +- TableSourceScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]], fields=[d1, e1, f1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRemoveCollation_MultipleSortMergeJoins_MultiJoinKeys2">
+    <Resource name="sql">
+      <![CDATA[
+select * from
+   x join y on a = d and b = e
+   join t1 on d = a1 and e = b1
+   left outer join t2 on a1 = d1 and b1 = e1
+      ]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], e=[$4], f=[$5], a1=[$6], b1=[$7], c1=[$8], d1=[$9], e1=[$10], f1=[$11])
++- LogicalJoin(condition=[AND(=($6, $9), =($7, $10))], joinType=[left])
+   :- LogicalJoin(condition=[AND(=($3, $6), =($4, $7))], joinType=[inner])
+   :  :- LogicalJoin(condition=[AND(=($0, $3), =($1, $4))], joinType=[inner])
+   :  :  :- LogicalTableScan(table=[[x, source: [selectedFields=[a, b, c]]]])
+   :  :  +- LogicalTableScan(table=[[y, source: [selectedFields=[d, e, f]]]])
+   :  +- LogicalTableScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]])
+   +- LogicalTableScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortMergeJoin(where=[AND(=(a1, d1), =(b1, e1))], join=[a, b, c, d, e, f, a1, b1, c1, d1, e1, f1], joinType=[LeftOuterJoin], leftSorted=[true])
+:- SortMergeJoin(where=[AND(=(d, a1), =(e, b1))], join=[a, b, c, d, e, f, a1, b1, c1], joinType=[InnerJoin], leftSorted=[true])
+:  :- SortMergeJoin(where=[AND(=(a, d), =(b, e))], join=[a, b, c, d, e, f], joinType=[InnerJoin])
+:  :  :- Exchange(distribution=[hash[a, b]])
+:  :  :  +- TableSourceScan(table=[[x, source: [selectedFields=[a, b, c]]]], fields=[a, b, c])
+:  :  +- Exchange(distribution=[hash[d, e]])
+:  :     +- TableSourceScan(table=[[y, source: [selectedFields=[d, e, f]]]], fields=[d, e, f])
+:  +- Exchange(distribution=[hash[a1, b1]])
+:     +- TableSourceScan(table=[[t1, source: [selectedFields=[a1, b1, c1]]]], fields=[a1, b1, c1])
++- Exchange(distribution=[hash[d1, e1]])
+   +- TableSourceScan(table=[[t2, source: [selectedFields=[d1, e1, f1]]]], fields=[d1, e1, f1])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testRemoveCollation_OverWindowAgg">
     <Resource name="sql">
       <![CDATA[

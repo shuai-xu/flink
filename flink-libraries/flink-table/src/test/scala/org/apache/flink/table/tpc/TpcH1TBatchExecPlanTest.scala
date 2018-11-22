@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.tpc
 
-import java.util
+import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
 
 import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
-import org.junit.Ignore
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.util
 
 import scala.collection.JavaConversions._
 

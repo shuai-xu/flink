@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -39,13 +39,17 @@ import org.apache.flink.table.util.ExecResourceUtil.InferMode
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
+import org.apache.calcite.rel.{RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.ImmutableIntList
 
 import scala.collection.JavaConversions._
 
 trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
+
+  val leftSorted: Boolean
+
+  val rightSorted: Boolean
 
   lazy val joinOperatorName: String = if (getCondition != null) {
     val inFields = inputDataType.getFieldNames.toList
@@ -60,6 +64,11 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
   override def isBarrierNode: Boolean = true
 
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
+
+  override def explainTerms(pw: RelWriter): RelWriter =
+    super.explainTerms(pw)
+      .itemIf("leftSorted", leftSorted, leftSorted)
+      .itemIf("rightSorted", rightSorted, rightSorted)
 
   override def satisfyTraitsByInput(requiredTraitSet: RelTraitSet): RelNode = {
     val requiredDistribution = requiredTraitSet.getTrait(FlinkRelDistributionTraitDef.INSTANCE)
@@ -114,15 +123,33 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     if (leftRowCnt == null || rightRowCnt == null) {
       return null
     }
-    val leftSortCpuCost = COMPARE_CPU_COST * leftRowCnt * Math.log(leftRowCnt)
-    val rightSortCpuCost = COMPARE_CPU_COST * rightRowCnt * Math.log(rightRowCnt)
+    val numOfSort = joinInfo.leftKeys.size()
+    val leftSortCpuCost: Double = if (leftSorted) {
+      // cost of writing lhs data to buffer
+      leftRowCnt
+    } else {
+      // sort cost
+      COMPARE_CPU_COST * numOfSort * leftRowCnt * Math.log(leftRowCnt)
+    }
+    val rightSortCpuCost: Double = if (rightSorted) {
+      // cost of writing rhs data to buffer
+      rightRowCnt
+    } else {
+      // sort cost
+      COMPARE_CPU_COST * numOfSort * rightRowCnt * Math.log(rightRowCnt)
+    }
     // cost of evaluating each join condition
     val joinConditionCpuCost = COMPARE_CPU_COST * (leftRowCnt + rightRowCnt)
     val cpuCost = leftSortCpuCost + rightSortCpuCost + joinConditionCpuCost
     val costFactory = planner.getCostFactory.asInstanceOf[FlinkCostFactory]
     // assume memory is big enough, so sort process and mergeJoin process will not spill to disk.
-    val sortMemCost = BatchExecRel.calcNeedMemoryForSort(mq, getLeft) +
-        BatchExecRel.calcNeedMemoryForSort(mq, getRight)
+    var sortMemCost = 0D
+    if (!leftSorted) {
+      sortMemCost += BatchExecRel.calcNeedMemoryForSort(mq, getLeft)
+    }
+    if (!rightSorted) {
+      sortMemCost += BatchExecRel.calcNeedMemoryForSort(mq, getRight)
+    }
     costFactory.makeCost(mq.getRowCount(this), cpuCost, 0, 0, sortMemCost)
   }
 
@@ -151,6 +178,16 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     */
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
+    if (leftSorted || rightSorted) {
+      throw new TableException("not support now")
+    }
+
+    if (getLeft.isInstanceOf[BatchExecSort] || getRight.isInstanceOf[BatchExecSort]) {
+      // SortMergeJoin with inner sort is more efficient than SortMergeJoin with outer sort
+      LOG.warn("This will not happen under normal case. The plan is correct, but not efficient. " +
+        "Correct the cost model to choose a more efficient plan.")
+    }
+
     val config = tableEnv.getConfig
 
     val leftInput = getLeft.asInstanceOf[RowBatchExecRel].translateToPlan(tableEnv)
@@ -256,6 +293,8 @@ class BatchExecSortMergeJoin(
     right: RelNode,
     joinCondition: RexNode,
     joinType: JoinRelType,
+    override val leftSorted: Boolean,
+    override val rightSorted: Boolean,
     val description: String)
   extends Join(cluster, traitSet, left, right, joinCondition, Set.empty[CorrelationId], joinType)
   with BatchExecSortMergeJoinBase {
@@ -274,6 +313,8 @@ class BatchExecSortMergeJoin(
       right,
       conditionExpr,
       joinType,
+      leftSorted,
+      rightSorted,
       description)
 }
 
@@ -286,6 +327,8 @@ class BatchExecSortMergeSemiJoin(
     leftKeys: ImmutableIntList,
     rightKeys: ImmutableIntList,
     isAntiJoin: Boolean,
+    override val leftSorted: Boolean,
+    override val rightSorted: Boolean,
     val description: String)
   extends SemiJoin(cluster, traitSet, left, right, joinCondition, leftKeys, rightKeys, isAntiJoin)
   with BatchExecSortMergeJoinBase {
@@ -307,6 +350,8 @@ class BatchExecSortMergeSemiJoin(
       joinInfo.leftKeys,
       joinInfo.rightKeys,
       isAnti,
+      leftSorted,
+      rightSorted,
       description)
   }
 }
