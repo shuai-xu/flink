@@ -989,7 +989,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       targetTable: schema.Table,
       targetTableName: String) = {
     val tableSink = targetTable match {
-      case s: CatalogTable => s.tableSink
+      case s: org.apache.flink.table.plan.schema.CatalogTable => s.tableSink
       case s: TableSinkTable[_] => s.tableSink
       case s: TableSourceSinkTable[_] if s.tableSinkTable.isDefined =>
         s.tableSinkTable.get.tableSink

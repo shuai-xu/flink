@@ -28,16 +28,14 @@ import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.sql.validate.SqlMonikerType
 import org.apache.flink.table.api.ExternalCatalogAlreadyExistException
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.plan.schema.CatalogTable
 import org.apache.flink.table.runtime.utils.CommonTestData
-import org.apache.flink.table.sources.{BatchTableSource, TableSource}
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.junit.Assert._
 import org.junit.{Before, Test}
 
 import scala.collection.JavaConverters._
 
-class ExternalCatalogSchemaTest {
+class ExternalCatalogDatabaseTest {
 
   private val schemaName: String = "test"
   private var externalCatalogSchema: SchemaPlus = _
@@ -86,7 +84,7 @@ class ExternalCatalogSchemaTest {
   def testGetTable(): Unit = {
     val relOptTable = calciteCatalogReader.getTable(Lists.newArrayList(schemaName, db, tb))
     assertNotNull(relOptTable)
-    val table = relOptTable.unwrap(classOf[CatalogTable])
+    val table = relOptTable.unwrap(classOf[org.apache.flink.table.plan.schema.CatalogTable])
     assertTrue(table.batchTableSource.isInstanceOf[CsvTableSource])
   }
 

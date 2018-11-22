@@ -25,7 +25,6 @@ import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelProtoD
 import org.apache.calcite.schema._
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.table.api.{CatalogNotExistException, ExternalCatalogAlreadyExistException, FunctionAlreadyExistException, TableNotExistException}
-import org.apache.flink.table.plan.schema.CatalogTable
 import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
@@ -79,7 +78,7 @@ class ExternalCatalogSchema(
     */
   override def getTable(name: String): Table = try {
     val externalCatalogTable = catalog.getTable(name)
-    new  CatalogTable(name, externalCatalogTable, isStreaming)
+    new org.apache.flink.table.plan.schema.CatalogTable(name, externalCatalogTable, isStreaming)
   } catch {
     case TableNotExistException(table, _, _) => {
       LOG.warn(s"Table $table does not exist in externalCatalog $catalogIdentifier")

@@ -333,6 +333,78 @@ object CommonTestData {
     catalog
   }
 
+  def getTestFlinkInMemoryCatalog: ReadableCatalog = {
+    val csvRecord1 = Seq(
+      "1#1#Hi",
+      "2#2#Hello",
+      "3#2#Hello world"
+    )
+    val tempFilePath1 = writeToTempFile(csvRecord1.mkString("$"), "csv-test1", "tmp")
+    val properties1 = new util.HashMap[String, String]()
+    properties1.put("path", tempFilePath1)
+    properties1.put("fieldDelim", "#")
+    properties1.put("rowDelim", "$")
+
+    val catalogTable1 = new CatalogTable(
+      "csv",
+      new TableSchema(
+        Array("a", "b", "c"),
+        Array(
+          DataTypes.INT,
+          DataTypes.LONG,
+          DataTypes.STRING)),
+      null,
+      properties1
+    )
+
+    val csvRecord2 = Seq(
+      "1#1#0#Hallo#1",
+      "2#2#1#Hallo Welt#2",
+      "2#3#2#Hallo Welt wie#1",
+      "3#4#3#Hallo Welt wie gehts?#2",
+      "3#5#4#ABC#2",
+      "3#6#5#BCD#3",
+      "4#7#6#CDE#2",
+      "4#8#7#DEF#1",
+      "4#9#8#EFG#1",
+      "4#10#9#FGH#2",
+      "5#11#10#GHI#1",
+      "5#12#11#HIJ#3",
+      "5#13#12#IJK#3",
+      "5#14#13#JKL#2",
+      "5#15#14#KLM#2"
+    )
+    val tempFilePath2 = writeToTempFile(csvRecord2.mkString("$"), "csv-test2", "tmp")
+    val properties2 = new util.HashMap[String, String]()
+    properties2.put("path", tempFilePath2)
+    properties2.put("fieldDelim", "#")
+    properties2.put("rowDelim", "$")
+    val catalogTable2 = new CatalogTable(
+      "csv",
+      new TableSchema(
+        Array("d", "e", "f", "g", "h"),
+        Array(
+          DataTypes.INT,
+          DataTypes.LONG,
+          DataTypes.INT,
+          DataTypes.STRING,
+          DataTypes.LONG)
+      ),
+      null,
+      properties2
+    )
+    val catalog = new FlinkInMemoryCatalog("test")
+    val schema1 = new CatalogDatabase()
+    val schema2 = new CatalogDatabase()
+    catalog.createDatabase("s1", schema1, false)
+    catalog.createDatabase("s2", schema2, false)
+
+    // Register the table with both catalogs
+    catalog.createTable(new ObjectPath("s1", "tb1"), catalogTable1, false);
+    catalog.createTable(new ObjectPath("s2", "tb1"), catalogTable2, false)
+    catalog
+  }
+
   def getWithDecimalCsvTableSource: CsvTableSource = {
     val records = Seq(
       Seq(Decimal.castFrom(0, 7, 2),

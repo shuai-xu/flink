@@ -176,6 +176,38 @@ case class FunctionAlreadyExistException(
 }
 
 /**
+  * Exception for operation on a nonexistent database
+  *
+  * @param catalog catalog name
+  * @param database database name
+  * @param cause the cause
+  */
+case class DatabaseNotExistException(
+  catalog: String,
+  database: String,
+  cause: Throwable)
+  extends RuntimeException(s"Database $catalog.$database does not exist.", cause) {
+
+  def this(catalog: String, database: String) = this(catalog, database, null)
+}
+
+/**
+  * Exception for adding an already existent database
+  *
+  * @param catalog catalog name
+  * @param database database name
+  * @param cause the cause
+  */
+case class DatabaseAlreadyExistException(
+  catalog: String,
+  database: String,
+  cause: Throwable)
+  extends RuntimeException(s"Database $catalog.$database already exists.", cause) {
+
+  def this(catalog: String, database: String) = this(catalog, database, null)
+}
+
+/**
   * Exception for operation on a nonexistent catalog
   *
   * @param catalog catalog name
