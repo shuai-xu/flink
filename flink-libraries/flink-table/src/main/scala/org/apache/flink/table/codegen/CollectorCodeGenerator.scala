@@ -78,6 +78,7 @@ object CollectorCodeGenerator {
 
         public $className() throws Exception {
           ${ctx.reuseInitCode()}
+          ${ctx.reuseOpenCode()}
         }
 
         @Override
@@ -113,6 +114,7 @@ object CollectorCodeGenerator {
 
         public $className() throws Exception {
           ${ctx.reuseInitCode()}
+          ${ctx.reuseOpenCode()}
         }
 
         @Override
@@ -183,6 +185,7 @@ object CollectorCodeGenerator {
 
         public $className() throws Exception {
           ${ctx.reuseInitCode()}
+          ${ctx.reuseOpenCode()}
         }
 
         @Override
@@ -223,6 +226,7 @@ object CollectorCodeGenerator {
 
         public $className() throws Exception {
           ${ctx.reuseInitCode()}
+          ${ctx.reuseOpenCode()}
         }
 
         @Override

@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.functions.tablefunctions.StringSplit
+import org.apache.flink.table.runtime.utils.JavaUserDefinedScalarFunctions.UdfWithOpen
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink, TestingAppendTableSink, TestingUpsertTableSink}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
@@ -71,6 +72,34 @@ class CorrelateITCase extends StreamingTestBase {
 
     val expected = List(
       "1,abc", "1,abc", "1,bcd", "1,bcd", "1,hhh", "1,hhh", "1,xxx", "1,xxx")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testUdfIsOpenedAfterUdtf(): Unit = {
+    val data = List(
+      (1, 2, "abc-bcd"),
+      (1, 2, "hhh"),
+      (1, 2, "xxx"))
+
+    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
+    tEnv.registerTable("T1", t1)
+
+    // UdfWithOpen checks open method is opened, and add a '$' prefix to the given string
+    tEnv.registerFunction("func", new UdfWithOpen)
+
+    val query1 =
+      """
+        |SELECT a, v
+        |FROM T1, lateral table(STRING_SPLIT(c, '-')) as T(v)
+        |WHERE func(v) LIKE '$%'
+      """.stripMargin
+
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(query1).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1,abc", "1,bcd","1,hhh", "1,xxx")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
