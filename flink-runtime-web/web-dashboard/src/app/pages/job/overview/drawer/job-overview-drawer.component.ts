@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
-import { INodeCorrect } from '../../../../interfaces/job';
-import { StatusService } from '../../../../services/status.service';
+import { NodesItemCorrectInterface } from 'interfaces';
+import { StatusService } from 'services';
 
 @Component({
   selector       : 'flink-job-overview-drawer',
@@ -10,7 +10,7 @@ import { StatusService } from '../../../../services/status.service';
 })
 export class JobOverviewDrawerComponent implements OnInit {
 
-  @Input() node: INodeCorrect;
+  @Input() node: NodesItemCorrectInterface;
   @Output() closeDrawer = new EventEmitter();
 
   index = 0;

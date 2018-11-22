@@ -22,22 +22,26 @@
   </thead>
   <tbody>
     <tr *ngFor="let taskManager of listOfTaskManager; trackBy:trackTaskManagerBy;">
-      <td nzLeft="0px">{{ taskManager.host }}</td>
+      <td nzLeft="0px"><a [routerLink]="['../../../','task-manager',taskManager['resource-id'],'metric']" target="_blank">{{ taskManager.host }}</a></td>
       <td>
-        <span *ngIf="taskManager.metrics['read-bytes-complete']">{{ taskManager.metrics['read-bytes'] | humanizeBytes }}</span>
-        <span *ngIf="!taskManager.metrics['read-bytes-complete']">...</span>
+        <span *ngIf="taskManager.metrics['read-bytes-complete'];else loadingTemplate">
+          {{ taskManager.metrics['read-bytes'] | humanizeBytes }}
+        </span>
       </td>
       <td>
-        <span *ngIf="taskManager.metrics['read-records-complete']">{{ taskManager.metrics['read-records'] | number }}</span>
-        <span *ngIf="!taskManager.metrics['read-records-complete']">...</span>
+        <span *ngIf="taskManager.metrics['read-records-complete'];else loadingTemplate">
+          {{ taskManager.metrics['read-records'] | number }}
+        </span>
       </td>
       <td>
-        <span *ngIf="taskManager.metrics['write-bytes-complete']">{{ taskManager.metrics['write-bytes'] | humanizeBytes }}</span>
-        <span *ngIf="!taskManager.metrics['write-bytes-complete']">...</span>
+        <span *ngIf="taskManager.metrics['write-bytes-complete'];else loadingTemplate">
+          {{ taskManager.metrics['write-bytes'] | humanizeBytes }}
+        </span>
       </td>
       <td>
-        <span *ngIf="taskManager.metrics['write-records-complete']">{{ taskManager.metrics['write-records'] | number }}</span>
-        <span *ngIf="!taskManager.metrics['write-records-complete']">...</span>
+        <span *ngIf="taskManager.metrics['write-records-complete'];else loadingTemplate">
+          {{ taskManager.metrics['write-records'] | number }}
+        </span>
       </td>
       <td>{{ taskManager['start-time'] | date:'yyyy-MM-dd HH:mm:ss' }}</td>
       <td>{{ taskManager['end-time'] | date:'yyyy-MM-dd HH:mm:ss' }}</td>
@@ -51,3 +55,6 @@
     </tr>
   </tbody>
 </nz-table>
+<ng-template #loadingTemplate>
+  <i nz-icon type="loading"></i>
+</ng-template>

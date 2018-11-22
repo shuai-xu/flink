@@ -1,14 +1,16 @@
-export interface IJar {
+export interface JarListInterface {
   address: string;
-  files: IJarFile[];
+  files: FilesItem[];
 }
 
-export interface IJarFile {
+interface FilesItem {
   id: string;
   name: string;
   uploaded: number;
-  entry: Array<{
-    description: string;
-    name: string;
-  }>;
+  entry: EntryItem[];
+}
+
+interface EntryItem {
+  name: string;
+  description: null;
 }

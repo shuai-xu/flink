@@ -1,0 +1,6 @@
+<nz-button-group nzSize="small">
+  <button nz-button (click)="goToPage(0)" [nzType]="page === 0?'primary':'default'"><i nz-icon type="vertical-right" theme="outline"></i> First Page</button>
+  <button nz-button (click)="goToPage(page - 1)" [disabled]="page === 0"><i nz-icon type="left" theme="outline"></i></button>
+  <button nz-button (click)="goToPage(page + 1)" [disabled]="page === -1"><i nz-icon type="right" theme="outline"></i></button>
+  <button nz-button (click)="goToPage(-1)" [nzType]="page <= -1?'primary':'default'">Last Page <i nz-icon type="vertical-left" theme="outline"></i></button>
+</nz-button-group>

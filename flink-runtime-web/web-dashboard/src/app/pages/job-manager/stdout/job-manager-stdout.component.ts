@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
-import { JobManagerService } from '../../../services/job-manager.service';
-import { MonacoEditorComponent } from '../../../share/monaco-editor/monaco-editor.component';
+import { JobManagerService } from 'services';
+import { MonacoEditorComponent } from 'share/common/monaco-editor/monaco-editor.component';
 
 @Component({
   selector       : 'flink-job-manager-stdout',
@@ -11,7 +11,12 @@ import { MonacoEditorComponent } from '../../../share/monaco-editor/monaco-edito
 export class JobManagerStdoutComponent implements OnInit {
   @ViewChild(MonacoEditorComponent) monacoEditorComponent: MonacoEditorComponent;
   stdout = '';
-
+  pageChanged(page) {
+    this.jobManagerService.loadStdout(page).subscribe(data => {
+      this.stdout = data;
+      this.cdr.markForCheck();
+    });
+  }
   constructor(private jobManagerService: JobManagerService, private cdr: ChangeDetectorRef) {
   }
 

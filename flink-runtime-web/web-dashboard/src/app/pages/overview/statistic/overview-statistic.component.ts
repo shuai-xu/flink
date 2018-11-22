@@ -1,9 +1,8 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, takeUntil } from 'rxjs/operators';
-import { IOverview } from '../../../interfaces/overview';
-import { OverviewService } from '../../../services/overview.service';
-import { StatusService } from '../../../services/status.service';
+import { OverviewInterface } from 'interfaces';
+import { OverviewService, StatusService } from 'services';
 
 @Component({
   selector   : 'flink-overview-statistic',
@@ -11,7 +10,7 @@ import { StatusService } from '../../../services/status.service';
   styleUrls  : [ './overview-statistic.component.less' ]
 })
 export class OverviewStatisticComponent implements OnInit, OnDestroy {
-  statistic = <IOverview>{};
+  statistic = <OverviewInterface>{};
   destroy$ = new Subject();
   isLoading = true;
 

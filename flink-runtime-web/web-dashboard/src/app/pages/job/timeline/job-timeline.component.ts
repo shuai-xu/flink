@@ -12,8 +12,8 @@ import * as G2 from '@antv/g2';
 import { Subject } from 'rxjs';
 import { filter, first, takeUntil } from 'rxjs/operators';
 import { COLOR_MAP } from '../../../app.config';
-import { IVertex } from '../../../interfaces/job';
-import { JobService } from '../../../services/job.service';
+import { VerticesItemInterface } from 'interfaces';
+import { JobService } from 'services';
 
 @Component({
   selector       : 'flink-job-timeline',
@@ -23,7 +23,7 @@ import { JobService } from '../../../services/job.service';
 })
 export class JobTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   destroy$ = new Subject();
-  listOfVertex: IVertex[] = [];
+  listOfVertex: VerticesItemInterface[] = [];
   listOfSubTaskTimeLine = [];
   mainChartInstance;
   subTaskChartInstance;

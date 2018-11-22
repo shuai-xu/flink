@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { INodeCorrect } from '../../../../interfaces/job';
+import { NodesItemCorrectInterface } from 'interfaces';
 
 @Component({
   selector       : 'flink-job-overview-drawer-detail',
@@ -8,7 +8,7 @@ import { INodeCorrect } from '../../../../interfaces/job';
   styleUrls      : [ './job-overview-drawer-detail.component.less' ]
 })
 export class JobOverviewDrawerDetailComponent implements OnInit {
-  @Input() node: INodeCorrect;
+  @Input() node: NodesItemCorrectInterface;
 
   constructor() {
   }

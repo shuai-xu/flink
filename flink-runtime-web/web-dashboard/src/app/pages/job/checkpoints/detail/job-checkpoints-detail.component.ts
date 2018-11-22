@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { first } from 'rxjs/operators';
-import { JobService } from '../../../../services/job.service';
+import { JobService } from 'services';
 
 @Component({
   selector   : 'flink-job-checkpoints-detail',

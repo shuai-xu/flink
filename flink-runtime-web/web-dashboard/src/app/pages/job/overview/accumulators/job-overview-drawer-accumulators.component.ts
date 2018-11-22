@@ -1,9 +1,9 @@
 import { Component, Input, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
-import { INodeCorrect } from '../../../../interfaces/job';
-import { JobService } from '../../../../services/job.service';
-import { StatusService } from '../../../../services/status.service';
+import { NodesItemCorrectInterface } from 'interfaces';
+import { JobService } from 'services';
+import { StatusService } from 'services';
 
 @Component({
   selector       : 'flink-job-overview-drawer-accumulators',
@@ -12,7 +12,7 @@ import { StatusService } from '../../../../services/status.service';
   styleUrls      : [ './job-overview-drawer-accumulators.component.less' ]
 })
 export class JobOverviewDrawerAccumulatorsComponent implements OnInit, OnDestroy {
-  @Input() node: INodeCorrect;
+  @Input() node: NodesItemCorrectInterface;
   destroy$ = new Subject();
   listOfAccumulator = [];
   listOfSubTaskAccumulator = [];

@@ -1,31 +1,31 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
-import { flatMap, map, shareReplay } from 'rxjs/operators';
+import { flatMap, map } from 'rxjs/operators';
 import { BASE_URL } from '../app.config';
+import { JobBackpressureInterface, JobOverviewInterface, JobsItemInterface } from 'interfaces';
 import {
-  ICheckPoint,
-  ICheckPointConfig,
-  ICheckPointDetail,
-  ICheckPointSubTask,
-  IException,
-  IJob,
-  IJobConfig,
-  IJobDetail,
-  IJobDetailCorrect,
-  IJobSubTaskTime,
-  IVertex,
-  IVertexTaskManager,
-  IVertexTaskManagerDetail,
-  ISubTask
-} from '../interfaces/job';
+  CheckPointInterface,
+  CheckPointConfigInterface,
+  CheckPointDetailInterface,
+  CheckPointSubTaskInterface,
+  JobExceptionInterface,
+  JobConfigInterface,
+  JobDetailInterface,
+  JobDetailCorrectInterface,
+  JobSubTaskTimeInterface,
+  VerticesItemInterface,
+  JobVertexTaskManagerInterface,
+  VertexTaskManagerDetailInterface,
+  JobSubTaskInterface
+} from 'interfaces';
 
 @Injectable({
   providedIn: 'root'
 })
 export class JobService {
-  jobDetail: IJobDetailCorrect;
-  jobDetail$ = new Subject<IJobDetailCorrect>();
+  jobDetail: JobDetailCorrectInterface;
+  jobDetail$ = new Subject<JobDetailCorrectInterface>();
 
   constructor(private httpClient: HttpClient) {
   }
@@ -39,15 +39,15 @@ export class JobService {
   }
 
   loadJobs() {
-    return this.httpClient.get<{ jobs: IJob[] }>(`${BASE_URL}/jobs/overview`).pipe(
+    return this.httpClient.get<JobOverviewInterface>(`${BASE_URL}/jobs/overview`).pipe(
       map(data => {
         data.jobs.forEach(job => {
-          job.completed = [ 'FINISHED', 'FAILED', 'CANCELED' ].indexOf(job.state) > -1;
           for (const key in job.tasks) {
             const upperCaseKey = key.toUpperCase();
             job.tasks[ upperCaseKey ] = job.tasks[ key ];
             delete job.tasks[ key ];
           }
+          job.completed = [ 'FINISHED', 'FAILED', 'CANCELED' ].indexOf(job.state) > -1;
           this.setEndTimes(job);
         });
         return data.jobs || [];
@@ -56,11 +56,11 @@ export class JobService {
   }
 
   loadJobConfig(jobId) {
-    return this.httpClient.get<IJobConfig>(`${BASE_URL}/jobs/${jobId}/config`);
+    return this.httpClient.get<JobConfigInterface>(`${BASE_URL}/jobs/${jobId}/config`);
   }
 
   loadJob(jobId) {
-    return this.httpClient.get<IJobDetail>(`${BASE_URL}/jobs/${jobId}`).pipe(
+    return this.httpClient.get<JobDetailInterface>(`${BASE_URL}/jobs/${jobId}`).pipe(
       map(job => this.convertJob(job))
     );
   }
@@ -79,15 +79,15 @@ export class JobService {
   }
 
   loadExceptions(jobId) {
-    return this.httpClient.get<IException>(`${BASE_URL}/jobs/${jobId}/exceptions`);
+    return this.httpClient.get<JobExceptionInterface>(`${BASE_URL}/jobs/${jobId}/exceptions`);
   }
 
   loadOperatorBackPressure(jobId, vertexId) {
-    return this.httpClient.get(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/backpressure`);
+    return this.httpClient.get<JobBackpressureInterface>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/backpressure`);
   }
 
   loadSubTasks(jobId, vertexId) {
-    return this.httpClient.get<{ subtasks: ISubTask[] }>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}`).pipe(map(
+    return this.httpClient.get<{ subtasks: JobSubTaskInterface[] }>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}`).pipe(map(
       item => {
         item.subtasks.forEach(task => this.setEndTimes(task));
         return item.subtasks;
@@ -96,11 +96,13 @@ export class JobService {
   }
 
   loadSubTaskTimes(jobId, vertexId) {
-    return this.httpClient.get<IJobSubTaskTime>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/subtasktimes`);
+    return this.httpClient.get<JobSubTaskTimeInterface>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/subtasktimes`);
   }
 
   loadTaskManagers(jobId, vertexId) {
-    return this.httpClient.get<IVertexTaskManager>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/taskmanagers`).pipe(map(item => {
+    return this.httpClient.get<JobVertexTaskManagerInterface>(
+      `${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/taskmanagers`
+    ).pipe(map(item => {
       if (item.taskmanagers) {
         item.taskmanagers.forEach(taskManager => {
           this.setEndTimes(taskManager);
@@ -112,31 +114,35 @@ export class JobService {
 
 
   loadCheckpointStats(jobId) {
-    return this.httpClient.get<ICheckPoint>(`${BASE_URL}/jobs/${jobId}/checkpoints`);
+    return this.httpClient.get<CheckPointInterface>(`${BASE_URL}/jobs/${jobId}/checkpoints`);
   }
 
   loadCheckpointConfig(jobId) {
-    return this.httpClient.get<ICheckPointConfig>(`${BASE_URL}/jobs/${jobId}/checkpoints/config`);
+    return this.httpClient.get<CheckPointConfigInterface>(`${BASE_URL}/jobs/${jobId}/checkpoints/config`);
   }
 
   loadCheckpointDetails(jobId, checkPointId) {
-    return this.httpClient.get<ICheckPointDetail>(`${BASE_URL}/jobs/${jobId}/checkpoints/details/${checkPointId}`);
+    return this.httpClient.get<CheckPointDetailInterface>(`${BASE_URL}/jobs/${jobId}/checkpoints/details/${checkPointId}`);
   }
 
   loadCheckpointSubtaskDetails(jobId, checkPointId, vertexId) {
-    return this.httpClient.get<ICheckPointSubTask>(`${BASE_URL}/jobs/${jobId}/checkpoints/details/${checkPointId}/subtasks/${vertexId}`);
+    return this.httpClient.get<CheckPointSubTaskInterface>(
+      `${BASE_URL}/jobs/${jobId}/checkpoints/details/${checkPointId}/subtasks/${vertexId}`
+    );
   }
 
-  private convertJob(job: IJobDetail): IJobDetailCorrect {
+  private convertJob(job: JobDetailInterface): JobDetailCorrectInterface {
     const links = [];
     if (job.vertices) {
       job.vertices.forEach(vertex => this.setEndTimes(vertex));
     }
     if (job.plan.nodes.length) {
       job.plan.nodes.forEach(node => {
-        let detail = {};
+        let detail = {} as VerticesItemInterface;
         if (job.vertices && job.vertices.length) {
-          detail = job.vertices.find(vertex => vertex.id === node.id);
+          detail = job.vertices.find(vertex => {
+            return vertex.id === node.id;
+          });
         }
         node[ 'detail' ] = detail;
         if (node.inputs && node.inputs.length) {
@@ -147,10 +153,10 @@ export class JobService {
       });
     }
     job.plan[ 'links' ] = links;
-    return job as IJobDetailCorrect;
+    return job as JobDetailCorrectInterface;
   }
 
-  private setEndTimes(item: IJob | IVertex | ISubTask | IVertexTaskManagerDetail) {
+  private setEndTimes(item: JobsItemInterface | VerticesItemInterface | JobSubTaskInterface | VertexTaskManagerDetailInterface) {
     if (item[ 'end-time' ] <= -1) {
       item[ 'end-time' ] = (item[ 'start-time' ] || item[ 'start_time' ]) + item.duration;
     }

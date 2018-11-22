@@ -1,27 +1,102 @@
-# Flink Web Monitor
+Flink Runtime Web
+=================
+[![Travis branch](https://travis-ci.com/vthinkxie/flink-runtime-web.svg?branch=master)](https://travis-ci.com/vthinkxie/flink-runtime-web)
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 6.1.0.
+Flink Runtime Web is an open source, dashboard and metric monitor for [Flink](https://flink.apache.org/).
 
-## Development server
+![](https://img.alicdn.com/tfs/TB1AHpPnlLoK1RjSZFuXXXn0XXa-2740-1920.png)
+![](https://img.alicdn.com/tfs/TB1gVpYngHqK1RjSZFEXXcGMXXa-2790-1872.png)
+![](https://img.alicdn.com/tfs/TB1SGJOnhTpK1RjSZR0XXbEwXXa-2790-1872.png)
+![](https://img.alicdn.com/tfs/TB1Y0GdniLaK1RjSZFxXXamPFXa-2624-1850.png)
+![](https://img.alicdn.com/tfs/TB1g8pQngHqK1RjSZFPXXcwapXa-2628-1798.png)
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## Development & Debugging
 
-## Code scaffolding
+### 1.Install Dependencies
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+Clone this git to local, and install dependencies
 
-## Build
+```bash
+$ npm install
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+### 2.Start a Local Flink Cluster
 
-## Running unit tests
+More information can be found [here](https://ci.apache.org/projects/flink/flink-docs-release-1.6/quickstart/setup_quickstart.html).
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```bash
+$ ./bin/start-cluster.sh
+```
 
-## Running end-to-end tests
+### 3.Proxy the frontend to the backend.
 
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
+You can modify the proxy target in the `proxy.conf.json`, the default proxy target is `localhost:8081`.
 
-## Further help
+```bash
+$ npm run proxy
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+## CodeStyle & Lint
+
+```bash
+$ npm run lint
+```
+
+## Building & Deployment
+
+```bash
+$ npm run build
+```
+
+Entry files will be built and generated in `dist` directory, where you can deploy it to different environments.
+
+
+## Integration with Flink Build Process
+
+Add plugin to [flink-runtime-web](https://github.com/apache/flink/blob/master/flink-runtime-web/pom.xml)
+
+```xml
+<plugin>
+  <groupId>com.github.eirslett</groupId>
+  <artifactId>frontend-maven-plugin</artifactId>
+  <version>1.5</version>
+  <executions>
+    <execution>
+      <id>install node and npm</id>
+      <goals>
+        <goal>install-node-and-npm</goal>
+      </goals>
+      <configuration>
+        <nodeVersion>v11.0.0</nodeVersion>
+      </configuration>
+    </execution>
+    <execution>
+      <id>npm install</id>
+      <goals>
+        <goal>npm</goal>
+      </goals>
+      <configuration>
+        <arguments>install</arguments>
+      </configuration>
+    </execution>
+    <execution>
+      <id>npm run build</id>
+      <goals>
+        <goal>npm</goal>
+      </goals>
+      <configuration>
+        <arguments>run build</arguments>
+      </configuration>
+    </execution>
+  </executions>
+  <configuration>
+    <workingDirectory>web-dashboard</workingDirectory>
+  </configuration>
+</plugin>
+```
+
+## Dependency
+
+- Framework: [Angular](https://angular.io)
+- CLI Tools: [Angular CLI](https://cli.angular.io)
+- UI Components: [NG-ZORRO](https://github.com/NG-ZORRO/ng-zorro-antd)

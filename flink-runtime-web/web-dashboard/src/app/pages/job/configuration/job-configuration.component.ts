@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { first, flatMap } from 'rxjs/operators';
-import { JobService } from '../../../services/job.service';
+import { JobService } from 'services';
 
 @Component({
   selector   : 'flink-job-configuration',

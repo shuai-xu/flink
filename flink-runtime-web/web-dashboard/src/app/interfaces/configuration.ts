@@ -1,4 +1,4 @@
-export interface IConfiguration {
+export interface ConfigurationInterface {
   'refresh-interval': number;
   'timezone-name': string;
   'timezone-offset': number;

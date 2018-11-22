@@ -1,5 +1,6 @@
 export const LONG_MIN_VALUE = -9223372036854776000;
 export const COLOR_MAP = {
+  TOTAL      : '#112641',
   RUNNING    : '#52c41a',
   FAILED     : '#f5222d',
   FINISHED   : '#1890ff',

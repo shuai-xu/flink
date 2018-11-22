@@ -1,11 +1,11 @@
-export interface IOverview {
-  'flink-commit': string;
-  'flink-version': string;
+export interface OverviewInterface {
+  taskmanagers: number;
+  'slots-total': number;
+  'slots-available': number;
+  'jobs-running': number;
+  'jobs-finished': number;
   'jobs-cancelled': number;
   'jobs-failed': number;
-  'jobs-finished': number;
-  'jobs-running': number;
-  'slots-available': number;
-  'slots-total': number;
-  'taskmanagers': number;
+  'flink-version': string;
+  'flink-commit': string;
 }

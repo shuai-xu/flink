@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { TaskManagerService } from '../../../services/task-manager.service';
+import { TaskManagerService } from 'services';
 
 @Component({
   selector   : 'flink-task-manager-metrics',

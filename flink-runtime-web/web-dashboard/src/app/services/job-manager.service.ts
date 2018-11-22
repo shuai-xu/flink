@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BASE_URL } from '../app.config';
 
@@ -11,12 +11,16 @@ export class JobManagerService {
     return this.httpClient.get<Array<{ key: string; value: string; }>>(`${BASE_URL}/jobmanager/config`);
   }
 
-  loadLogs() {
-    return this.httpClient.get(`${BASE_URL}/jobmanager/log`, { responseType: 'text' });
+  loadLogs(page = -1, count = 102400) {
+    const start = page * count;
+    const params = new HttpParams().append('start', `${start}`).append('count', `${count}`);
+    return this.httpClient.get(`${BASE_URL}/jobmanager/log`, { params: params, responseType: 'text' });
   }
 
-  loadStdout() {
-    return this.httpClient.get(`${BASE_URL}/jobmanager/stdout`, { responseType: 'text' });
+  loadStdout(page = -1, count = 102400) {
+    const start = page * count;
+    const params = new HttpParams().append('start', `${start}`).append('count', `${count}`);
+    return this.httpClient.get(`${BASE_URL}/jobmanager/stdout`, { params: params, responseType: 'text' });
   }
 
   constructor(private httpClient: HttpClient) {

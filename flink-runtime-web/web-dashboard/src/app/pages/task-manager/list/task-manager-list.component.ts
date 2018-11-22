@@ -2,9 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { first, flatMap, takeUntil } from 'rxjs/operators';
-import { ITaskManager } from '../../../interfaces/task-manager';
-import { StatusService } from '../../../services/status.service';
-import { TaskManagerService } from '../../../services/task-manager.service';
+import { StatusService, TaskManagerService } from 'services';
 
 @Component({
   selector   : 'flink-task-manager-list',
@@ -12,7 +10,7 @@ import { TaskManagerService } from '../../../services/task-manager.service';
   styleUrls  : [ './task-manager-list.component.less' ]
 })
 export class TaskManagerListComponent implements OnInit, OnDestroy {
-  listOfTaskManager: ITaskManager[] = [];
+  listOfTaskManager = [];
   isLoading = true;
   destroy$ = new Subject();
 

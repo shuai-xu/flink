@@ -23,7 +23,7 @@
           <nz-divider [nzType]="'vertical'"></nz-divider>
           Back Pressure Status:
           <span>
-            <nz-badge [nzStatus]="labelState(backpressure['backpressure-level'])" [nzText]="backpressure['backpressure-level'] || '-'"></nz-badge>
+            <nz-badge class="pressure-badge" [nzStatus]="labelState(backpressure['backpressure-level'])" [nzText]="backpressure['backpressure-level'] || '-'"></nz-badge>
           </span>
         </span>
         <span *ngIf="node.detail.status !== 'RUNNING'">

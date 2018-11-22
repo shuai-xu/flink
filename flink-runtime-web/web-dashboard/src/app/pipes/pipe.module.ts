@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HumanizeDurationPipe } from './humanize-duration.pipe';
 import { HumanizeBytesPipe } from './humanize-bytes.pipe';
+import { HumanizeDatePipe } from './humanize-date.pipe';
 import { HumanizeWatermarkPipe } from './humanize-watermark.pipe';
 
 @NgModule({
@@ -11,12 +12,14 @@ import { HumanizeWatermarkPipe } from './humanize-watermark.pipe';
   declarations: [
     HumanizeDurationPipe,
     HumanizeBytesPipe,
-    HumanizeWatermarkPipe
+    HumanizeWatermarkPipe,
+    HumanizeDatePipe
   ],
   exports     : [
     HumanizeDurationPipe,
     HumanizeBytesPipe,
-    HumanizeWatermarkPipe
+    HumanizeWatermarkPipe,
+    HumanizeDatePipe
   ]
 })
 export class PipeModule {

@@ -1,9 +1,8 @@
 import { Component, OnInit, ChangeDetectionStrategy, Input, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
-import { INodeCorrect } from '../../../../interfaces/job';
-import { JobService } from '../../../../services/job.service';
-import { StatusService } from '../../../../services/status.service';
+import { JobBackpressureInterface, NodesItemCorrectInterface } from 'interfaces';
+import { JobService, StatusService } from 'services';
 
 @Component({
   selector       : 'flink-job-overview-drawer-backpressure',
@@ -12,11 +11,11 @@ import { StatusService } from '../../../../services/status.service';
   styleUrls      : [ './job-overview-drawer-backpressure.component.less' ]
 })
 export class JobOverviewDrawerBackpressureComponent implements OnInit, OnDestroy {
-  @Input() node: INodeCorrect;
+  @Input() node: NodesItemCorrectInterface;
   destroy$ = new Subject();
   isLoading = true;
   now = Date.now();
-  backpressure = {};
+  backpressure = {} as JobBackpressureInterface;
   listOfSubTaskBackpressure = [];
 
   labelState(state) {

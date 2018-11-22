@@ -2,6 +2,23 @@
   "compileOnSave": false,
   "compilerOptions": {
     "baseUrl": "./",
+    "paths": {
+      "services": [
+        "src/app/services"
+      ],
+      "interfaces": [
+        "src/app/interfaces"
+      ],
+      "core": [
+        "src/app/core"
+      ],
+      "share/*": [
+        "src/app/share/*"
+      ],
+      "pipes/*": [
+        "src/app/pipes/*"
+      ]
+    },
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
     "declaration": false,
@@ -14,7 +31,7 @@
       "node_modules/@types"
     ],
     "lib": [
-      "es2017",
+      "es2018",
       "dom"
     ]
   }

@@ -1,10 +1,9 @@
 import { Component, Input, OnInit, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
-import { deepFind } from '../../../../core/deepFind';
-import { INodeCorrect, ISubTask } from '../../../../interfaces/job';
-import { JobService } from '../../../../services/job.service';
-import { StatusService } from '../../../../services/status.service';
+import { deepFind } from 'core';
+import { NodesItemCorrectInterface, JobSubTaskInterface } from 'interfaces';
+import { JobService, StatusService } from 'services';
 
 @Component({
   selector       : 'flink-job-overview-drawer-subtasks',
@@ -13,8 +12,8 @@ import { StatusService } from '../../../../services/status.service';
   styleUrls      : [ './job-overview-drawer-subtasks.component.less' ]
 })
 export class JobOverviewDrawerSubtasksComponent implements OnInit, OnDestroy {
-  @Input() node: INodeCorrect;
-  listOfTask: ISubTask[] = [];
+  @Input() node: NodesItemCorrectInterface;
+  listOfTask: JobSubTaskInterface[] = [];
   destroy$ = new Subject();
   sortName = null;
   sortValue = null;

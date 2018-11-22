@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { JobManagerService } from '../../../services/job-manager.service';
+import { JobManagerService } from 'services';
 
 @Component({
   selector   : 'flink-job-manager-configuration',

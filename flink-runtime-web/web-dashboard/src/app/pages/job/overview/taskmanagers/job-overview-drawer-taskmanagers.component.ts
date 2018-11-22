@@ -1,10 +1,9 @@
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
-import { deepFind } from '../../../../core/deepFind';
-import { INodeCorrect } from '../../../../interfaces/job';
-import { JobService } from '../../../../services/job.service';
-import { StatusService } from '../../../../services/status.service';
+import { deepFind } from 'core';
+import { NodesItemCorrectInterface } from 'interfaces';
+import { JobService, StatusService } from 'services';
 
 @Component({
   selector   : 'flink-job-overview-drawer-taskmanagers',
@@ -12,7 +11,7 @@ import { StatusService } from '../../../../services/status.service';
   styleUrls  : [ './job-overview-drawer-taskmanagers.component.less' ]
 })
 export class JobOverviewDrawerTaskmanagersComponent implements OnInit, OnDestroy {
-  @Input() node: INodeCorrect;
+  @Input() node: NodesItemCorrectInterface;
   listOfTaskManager = [];
   destroy$ = new Subject();
   sortName = null;

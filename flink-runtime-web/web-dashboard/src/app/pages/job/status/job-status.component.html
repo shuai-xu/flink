@@ -2,11 +2,16 @@
   <div class="name">
     <h2>{{ detail.name }}</h2>
     <nz-divider [nzType]="'vertical'"></nz-divider>
-    <span>{{ detail.jid }}</span>
-    <nz-divider [nzType]="'vertical'"></nz-divider>
     <flink-job-badge [state]="detail.state"></flink-job-badge>
+    <nz-divider [nzType]="'vertical'"></nz-divider>
+    <flink-task-badge [tasks]="detail['status-counts']"></flink-task-badge>
   </div>
   <div class="status">
+    <div class="field">
+      <span>ID:</span>
+      <span>{{ detail.jid }}</span>
+    </div>
+    <nz-divider [nzType]="'vertical'"></nz-divider>
     <div class="field">
       <span>Start Time:</span>
       <span>{{ detail['start-time'] | date:'yyyy-MM-dd HH:mm:ss' }}</span>
@@ -23,8 +28,6 @@
       <span>Duration:</span>
       <span>{{ detail.duration | humanizeDuration}}</span>
     </div>
-    <nz-divider [nzType]="'vertical'"></nz-divider>
-    <flink-task-description [tasks]="detail['status-counts']"></flink-task-description>
   </div>
   <flink-navigation [listOfNavigation]="listOfNavigation"></flink-navigation>
   <div class="operate">

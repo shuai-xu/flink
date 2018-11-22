@@ -1,8 +1,8 @@
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { distinctUntilKeyChanged, takeUntil } from 'rxjs/operators';
-import { IJobDetailCorrect } from '../../../interfaces/job';
-import { JobService } from '../../../services/job.service';
+import { JobDetailCorrectInterface } from 'interfaces';
+import { JobService } from 'services';
 
 @Component({
   selector   : 'flink-job-status',
@@ -36,7 +36,7 @@ export class JobStatusComponent implements OnInit, OnDestroy {
     }
   ];
 
-  get detail(): IJobDetailCorrect {
+  get detail(): JobDetailCorrectInterface {
     return this.jobService.jobDetail;
   }
 

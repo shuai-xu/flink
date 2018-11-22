@@ -4,9 +4,8 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { flatMap, takeUntil } from 'rxjs/operators';
-import { JarService } from '../../services/jar.service';
-import { StatusService } from '../../services/status.service';
-import { DagreComponent } from '../../share/dagre/dagre.component';
+import { JarService, StatusService } from 'services';
+import { DagreComponent } from 'share/common/dagre/dagre.component';
 
 @Component({
   selector   : 'flink-submit',
@@ -89,7 +88,14 @@ export class SubmitComponent implements OnInit, OnDestroy {
   }
 
   submit(jar) {
-    this.jarService.runJob(jar.id, this.validateForm.value).subscribe(data => {
+    this.jarService.runJob(
+      jar.id,
+      this.validateForm.get('entryClass').value,
+      this.validateForm.get('parallelism').value,
+      this.validateForm.get('programArgs').value,
+      this.validateForm.get('savepointPath').value,
+      this.validateForm.get('allowNonRestoredState').value
+    ).subscribe(data => {
       this.router.navigate([ 'job', data.jobid ]).then();
     });
   }

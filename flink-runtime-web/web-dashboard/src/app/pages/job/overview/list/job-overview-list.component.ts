@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ChangeDetectionStrategy, ElementRef } from '@angular/core';
-import { deepFind } from '../../../../core/deepFind';
-import { INodeCorrect } from '../../../../interfaces/job';
+import { deepFind } from 'core';
+import { NodesItemCorrectInterface } from 'interfaces';
 
 @Component({
   selector       : 'flink-job-overview-list',
@@ -9,15 +9,15 @@ import { INodeCorrect } from '../../../../interfaces/job';
   styleUrls      : [ './job-overview-list.component.less' ]
 })
 export class JobOverviewListComponent implements OnInit {
-  _nodes: INodeCorrect[] = [];
+  _nodes: NodesItemCorrectInterface[] = [];
   sortName = 'detail.topology-id';
   sortValue = 'ascend';
   left = 390;
   @Output() nodeClick = new EventEmitter();
-  @Input() selectedNode: INodeCorrect;
+  @Input() selectedNode: NodesItemCorrectInterface;
 
   @Input()
-  set nodes(value: INodeCorrect[]) {
+  set nodes(value: NodesItemCorrectInterface[]) {
     this._nodes = value;
     this.search();
   }
@@ -50,7 +50,7 @@ export class JobOverviewListComponent implements OnInit {
     return node.id;
   }
 
-  clickNode(node: INodeCorrect) {
+  clickNode(node: NodesItemCorrectInterface) {
     this.nodeClick.emit(node);
   }
 

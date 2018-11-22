@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { first } from 'rxjs/operators';
-import { deepFind } from '../../../../core/deepFind';
-import { JobService } from '../../../../services/job.service';
+import { deepFind } from 'core';
+import { JobService } from 'services';
 
 @Component({
   selector   : 'flink-job-checkpoints-subtask',

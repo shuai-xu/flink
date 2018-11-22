@@ -1,8 +1,8 @@
 import { formatDate } from '@angular/common';
 import { Component, OnInit, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { first, flatMap } from 'rxjs/operators';
-import { JobService } from '../../../services/job.service';
-import { MonacoEditorComponent } from '../../../share/monaco-editor/monaco-editor.component';
+import { JobService } from 'services';
+import { MonacoEditorComponent } from 'share/common/monaco-editor/monaco-editor.component';
 
 @Component({
   selector       : 'flink-job-exceptions',

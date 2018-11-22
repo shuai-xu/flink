@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subject } from 'rxjs';
 import { first, skip, takeUntil } from 'rxjs/operators';
-import { INodeCorrect } from '../../../interfaces/job';
-import { JobService } from '../../../services/job.service';
-import { DagreComponent } from '../../../share/dagre/dagre.component';
+import { NodesItemCorrectInterface } from 'interfaces';
+import { JobService } from 'services';
+import { DagreComponent } from 'share/common/dagre/dagre.component';
 import { trigger, state, animate, style, transition } from '@angular/animations';
-import { isNil } from 'lodash';
 
 @Component({
   selector       : 'flink-job-overview',
@@ -29,15 +28,15 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
   nodes = [];
   links = [];
   destroy$ = new Subject();
-  selectedNode: INodeCorrect;
+  selectedNode: NodesItemCorrectInterface;
   top = 500;
   @ViewChild(DagreComponent) dagreComponent: DagreComponent;
 
-  onNodeClick(node: INodeCorrect) {
+  onNodeClick(node: NodesItemCorrectInterface) {
     this.selectedNode = node;
   }
 
-  onListNodeClick(node: INodeCorrect) {
+  onListNodeClick(node: NodesItemCorrectInterface) {
     this.dagreComponent.focusNode(node);
   }
 

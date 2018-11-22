@@ -2,8 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { flatMap, takeUntil } from 'rxjs/operators';
-import { JobService } from '../../services/job.service';
-import { StatusService } from '../../services/status.service';
+import { JobService, StatusService } from 'services';
 
 @Component({
   selector   : 'flink-job',

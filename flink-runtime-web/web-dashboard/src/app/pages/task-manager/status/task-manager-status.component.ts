@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { TaskManagerService } from '../../../services/task-manager.service';
+import { TaskManagerService } from 'services';
 
 @Component({
   selector   : 'flink-task-manager-status',
@@ -10,8 +10,7 @@ export class TaskManagerStatusComponent implements OnInit {
   @Input() isLoading = true;
   listOfNavigation = [
     { path: 'metrics', title: 'Metrics' },
-    { path: 'logs', title: 'Logs' },
-    { path: 'stdout', title: 'Stdout' }
+    { path: 'log', title: 'Log' }
   ];
 
   get detail() {

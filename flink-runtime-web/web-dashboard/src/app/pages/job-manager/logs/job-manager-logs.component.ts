@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
-import { JobManagerService } from '../../../services/job-manager.service';
-import { MonacoEditorComponent } from '../../../share/monaco-editor/monaco-editor.component';
+import { JobManagerService } from 'services';
+import { MonacoEditorComponent } from 'share/common/monaco-editor/monaco-editor.component';
 
 @Component({
   selector       : 'flink-job-manager-logs',
@@ -11,6 +11,13 @@ import { MonacoEditorComponent } from '../../../share/monaco-editor/monaco-edito
 export class JobManagerLogsComponent implements OnInit {
   @ViewChild(MonacoEditorComponent) monacoEditorComponent: MonacoEditorComponent;
   logs = '';
+
+  pageChanged(page) {
+    this.jobManagerService.loadLogs(page).subscribe(data => {
+      this.logs = data;
+      this.cdr.markForCheck();
+    });
+  }
 
   constructor(private jobManagerService: JobManagerService, private cdr: ChangeDetectorRef) {
   }

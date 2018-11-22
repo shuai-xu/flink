@@ -1,4 +1,4 @@
-<nz-tabset [nzTabBarGutter]="4" [nzSize]="'small'" [nzAnimated]="{inkBar:true, tabPane:false}">
+<nz-tabset [nzTabBarGutter]="4" [nzSize]="'small'" [nzAnimated]="{inkBar:true, tabPane:false}" [nzTabBarExtraContent]="extraTemplate">
   <nz-tab nzTitle="Overview">
     <nz-table
       class="no-border small"
@@ -224,3 +224,7 @@
     </nz-table>
   </nz-tab>
 </nz-tabset>
+
+<ng-template #extraTemplate>
+  <button nz-button nzType="primary" class="refresh" nzSize="small" (click)="refresh()"><i nz-icon type="sync"></i>Refresh</button>
+</ng-template>

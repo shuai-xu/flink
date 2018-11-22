@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { first, flatMap } from 'rxjs/operators';
-import { JobService } from '../../../services/job.service';
+import { JobService } from 'services';
 
 @Component({
   selector   : 'flink-job-checkpoints',
@@ -10,9 +10,16 @@ import { JobService } from '../../../services/job.service';
 export class JobCheckpointsComponent implements OnInit {
   checkPointStats = {};
   checkPointConfig;
+
   trackHistoryBy(index, node) {
     return node.id;
   }
+
+  refresh() {
+    this.jobService.loadCheckpointStats(this.jobService.jobDetail.jid).subscribe(data => this.checkPointStats = data);
+    this.jobService.loadCheckpointConfig(this.jobService.jobDetail.jid).subscribe(data => this.checkPointConfig = data);
+  }
+
   constructor(private jobService: JobService) {
   }
 

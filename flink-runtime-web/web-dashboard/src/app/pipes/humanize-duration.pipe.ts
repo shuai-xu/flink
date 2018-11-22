@@ -9,6 +9,8 @@ export class HumanizeDurationPipe implements PipeTransform {
   transform(value: number, args?: any): any {
     if (isNil(value)) {
       return '-';
+    } else if (value < 0) {
+      return '-';
     } else {
       const ms = value % 1000;
       let x = Math.floor(value / 1000);

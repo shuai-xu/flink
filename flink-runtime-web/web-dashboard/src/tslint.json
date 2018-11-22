@@ -10,8 +10,8 @@
     "component-selector": [
       true,
       [
-        "element",
-        "attribute"
+        "attribute",
+        "element"
       ],
       "flink",
       "kebab-case"

@@ -2,8 +2,8 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
-import { PipeModule } from '../../pipes/pipe.module';
-import { ShareModule } from '../../share/share.module';
+import { PipeModule } from 'pipes/pipe.module';
+import { ShareModule } from 'share/share.module';
 
 import { JobRoutingModule } from './job-routing.module';
 import { JobStatusComponent } from './status/job-status.component';

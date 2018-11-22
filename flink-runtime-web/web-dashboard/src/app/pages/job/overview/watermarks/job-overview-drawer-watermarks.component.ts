@@ -1,19 +1,17 @@
 import { Component, Input, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
-import { INodeCorrect } from '../../../../interfaces/job';
-import { JobService } from '../../../../services/job.service';
-import { MetricsService } from '../../../../services/metrics.service';
-import { StatusService } from '../../../../services/status.service';
+import { NodesItemCorrectInterface } from 'interfaces';
+import { JobService, MetricsService, StatusService } from 'services';
 
 @Component({
   selector       : 'flink-job-overview-drawer-watermarks',
   templateUrl    : './job-overview-drawer-watermarks.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: [ './job-overview-drawer-watermarks.component.less' ]
+  styleUrls      : [ './job-overview-drawer-watermarks.component.less' ]
 })
 export class JobOverviewDrawerWatermarksComponent implements OnInit, OnDestroy {
-  @Input() node: INodeCorrect;
+  @Input() node: NodesItemCorrectInterface;
   destroy$ = new Subject();
   listOfWaterMark = [];
   isLoading = true;

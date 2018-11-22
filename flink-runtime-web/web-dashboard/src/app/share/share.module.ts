@@ -1,18 +1,20 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
-import { PipeModule } from '../pipes/pipe.module';
-import { DagreModule } from './dagre/dagre.module';
-import { LayoutComponent } from './layout/layout.component';
-import { TaskBadgeComponent } from './task-badge/task-badge.component';
-import { JobBadgeComponent } from './job-badge/job-badge.component';
-import { JobListComponent } from './job-list/job-list.component';
-import { TaskDescriptionComponent } from './task-description/task-description.component';
-import { MonacoEditorComponent } from './monaco-editor/monaco-editor.component';
-import { NavigationComponent } from './navigation/navigation.component';
-import { FileReadDirective } from './file-read/file-read.directive';
-import { ResizeComponent } from './resize/resize.component';
+import { PipeModule } from 'pipes/pipe.module';
+import { PaginationComponent } from './common/pagination/pagination.component';
+import { DagreModule } from './common/dagre/dagre.module';
+import { LayoutComponent } from './common/layout/layout.component';
+import { TaskBadgeComponent } from './customize/task-badge/task-badge.component';
+import { JobBadgeComponent } from './customize/job-badge/job-badge.component';
+import { JobListComponent } from './customize/job-list/job-list.component';
+import { MonacoEditorComponent } from './common/monaco-editor/monaco-editor.component';
+import { NavigationComponent } from './common/navigation/navigation.component';
+import { FileReadDirective } from './common/file-read/file-read.directive';
+import { ResizeComponent } from './common/resize/resize.component';
+import { JobChartComponent } from './customize/job-chart/job-chart.component';
 
 @NgModule({
   imports     : [
@@ -20,30 +22,33 @@ import { ResizeComponent } from './resize/resize.component';
     NgZorroAntdModule,
     PipeModule,
     RouterModule,
-    DagreModule
+    DagreModule,
+    FormsModule
   ],
   declarations: [
     LayoutComponent,
     TaskBadgeComponent,
     JobBadgeComponent,
     JobListComponent,
-    TaskDescriptionComponent,
     MonacoEditorComponent,
     NavigationComponent,
     FileReadDirective,
-    ResizeComponent
+    ResizeComponent,
+    JobChartComponent,
+    PaginationComponent
   ],
   exports     : [
     LayoutComponent,
     TaskBadgeComponent,
     JobBadgeComponent,
     JobListComponent,
-    TaskDescriptionComponent,
     DagreModule,
     MonacoEditorComponent,
     NavigationComponent,
     FileReadDirective,
-    ResizeComponent
+    ResizeComponent,
+    JobChartComponent,
+    PaginationComponent
   ]
 })
 export class ShareModule {
