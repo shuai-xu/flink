@@ -68,15 +68,14 @@ for jar in `find "$FLINK_OPT_DIR/sql-client" -name *.jar`; do
         FLINK_SQL_CLIENT_JARS="$FLINK_SQL_CLIENT_JARS":"$jar"
     fi
 done
-FLINK_TABLE_JAR=$(find "$FLINK_OPT_DIR" -regex ".*flink-table.*.jar")
-FLINK_SQL_CLIENT_JARS="$FLINK_SQL_CLIENT_JARS":"$FLINK_TABLE_JAR"
+
 FLINK_SQL_CLIENT_JAR=$(find "$FLINK_OPT_DIR/sql-client" -regex ".*flink-sql-client.*.jar")
 
 # check if SQL client jar is in /opt
 if [ -n "$FLINK_SQL_CLIENT_JAR" ]; then
 
     # start client with jar
-    exec $JAVA_RUN $JVM_ARGS "${log_setting[@]}" -classpath "`manglePathList "$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS:$FLINK_SQL_CLIENT_JARS"`" org.apache.flink.table.client.SqlClient "$@" --jar "`manglePath $FLINK_SQL_CLIENT_JAR`" --jar "`manglePath $FLINK_TABLE_JAR`"
+    exec $JAVA_RUN $JVM_ARGS "${log_setting[@]}" -classpath "`manglePathList "$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS:$FLINK_SQL_CLIENT_JARS"`" org.apache.flink.table.client.SqlClient "$@" --jar "`manglePath $FLINK_SQL_CLIENT_JAR`"
 # write error message to stderr
 else
     (>&2 echo "[ERROR] Flink SQL Client JAR file 'flink-sql-client*.jar' not found in /opt directory should be located in $FLINK_OPT_DIR/sql-client.")
