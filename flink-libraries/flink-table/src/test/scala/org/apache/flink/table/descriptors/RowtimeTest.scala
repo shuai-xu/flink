@@ -84,8 +84,8 @@ class RowtimeTest extends DescriptorTestBase {
       "rowtime.watermarks.type" -> "custom",
       "rowtime.watermarks.class" -> "org.apache.flink.table.descriptors.RowtimeTest$CustomAssigner",
       "rowtime.watermarks.serialized" -> ("rO0ABXNyAD1vcmcuYXBhY2hlLmZsaW5rLnRhYmxlLmRlc2NyaX" +
-        "B0b3JzLlJvd3RpbWVUZXN0JEN1c3RvbUFzc2lnbmVyeDcuDvfbu0kCAAB4cgBHb3JnLmFwYWNoZS5mbGluay" +
-        "50YWJsZS5zb3VyY2VzLndtc3RyYXRlZ2llcy5QdW5jdHVhdGVkV2F0ZXJtYXJrQXNzaWduZXKBUc57oaWu9A" +
+        "B0b3JzLlJvd3RpbWVUZXN0JEN1c3RvbUFzc2lnbmVyvyZVn_qL5NoCAAB4cgBHb3JnLmFwYWNoZS5mbGluay" +
+        "50YWJsZS5zb3VyY2VzLndtc3RyYXRlZ2llcy5QdW5jdHVhdGVkV2F0ZXJtYXJrQXNzaWduZXJO5QVJMeARJg" +
         "IAAHhyAD1vcmcuYXBhY2hlLmZsaW5rLnRhYmxlLnNvdXJjZXMud21zdHJhdGVnaWVzLldhdGVybWFya1N0cm" +
         "F0ZWd5mB_uSxDZ8-MCAAB4cA")
     )
@@ -95,9 +95,9 @@ class RowtimeTest extends DescriptorTestBase {
       "rowtime.timestamps.class" -> ("org.apache.flink.table.descriptors." +
         "RowtimeTest$CustomExtractor"),
       "rowtime.timestamps.serialized" -> ("rO0ABXNyAD5vcmcuYXBhY2hlLmZsaW5rLnRhYmxlLmRlc2NyaXB0b3" +
-        "JzLlJvd3RpbWVUZXN0JEN1c3RvbUV4dHJhY3RvcmakKKmQe_QEAgABTAAFZmllbGR0ABJMamF2YS9sYW5nL1N0cm" +
+        "JzLlJvd3RpbWVUZXN0JEN1c3RvbUV4dHJhY3Rvco24SJYz-nhVAgABTAAFZmllbGR0ABJMamF2YS9sYW5nL1N0cm" +
         "luZzt4cgA-b3JnLmFwYWNoZS5mbGluay50YWJsZS5zb3VyY2VzLnRzZXh0cmFjdG9ycy5UaW1lc3RhbXBFeHRyYW" +
-        "N0b3LyWD_CQ3ky_AIAAHhwdAAHdHNGaWVsZA"),
+        "N0b3JjTy3cOl2oPgIAAHhwdAAHdHNGaWVsZA"),
       "rowtime.watermarks.type" -> "periodic-bounded",
       "rowtime.watermarks.delay" -> "1000"
     )
