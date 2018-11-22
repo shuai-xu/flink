@@ -1376,10 +1376,12 @@ class JobManager(
               try {
                 val savepointPath = savepointSettings.getRestorePath()
                 val allowNonRestored = savepointSettings.allowNonRestoredState()
+                val resumeFromLatestCheckpoint = savepointSettings.resumeFromLatestCheckpoint()
 
                 executionGraph.getCheckpointCoordinator.restoreSavepoint(
                   savepointPath,
                   allowNonRestored,
+                  resumeFromLatestCheckpoint,
                   executionGraph.getAllVertices,
                   executionGraph.getUserClassLoader
                 )

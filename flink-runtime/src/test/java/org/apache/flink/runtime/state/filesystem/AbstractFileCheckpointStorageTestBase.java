@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -114,6 +115,53 @@ public abstract class AbstractFileCheckpointStorageTestBase {
 	}
 
 	@Test
+	public void testLatestCheckpointResolution() throws Exception {
+		final FileSystem fs = FileSystem.getLocalFileSystem();
+		final File checkpointBasePath = tmp.newFolder();
+		final Path jobCheckpointBasePath = new Path(Path.fromLocalFile(checkpointBasePath), "/job1");
+
+		String latestCheckpointDir = null;
+		byte[] latestCheckpointMetaData = null;
+		for (int chkId = 1; chkId < 10; chkId++) {
+			final Path subCheckpointDir = new Path(jobCheckpointBasePath + "/" +  AbstractFsCheckpointStorage.CHECKPOINT_DIR_PREFIX + chkId);
+			if (chkId % 2 == 0) {
+				latestCheckpointDir = subCheckpointDir.toString();
+				final Path metadataFile = new Path(subCheckpointDir, AbstractFsCheckpointStorage.METADATA_FILE_NAME);
+				final byte[] data = new byte[23686];
+				ThreadLocalRandom.current().nextBytes(data);
+				latestCheckpointMetaData = data;
+				try (FSDataOutputStream out = fs.create(metadataFile, WriteMode.NO_OVERWRITE)) {
+					out.write(data);
+				}
+			} else {
+				// empty checkpoint directory
+				fs.mkdirs(subCheckpointDir);
+			}
+		}
+
+		// create the storage for some random checkpoint directory
+		final CheckpointStorage storage = createCheckpointStorage(randomTempPath());
+
+		final String pointer1 = jobCheckpointBasePath.getPath();
+		final String pointer2 = jobCheckpointBasePath.getPath() + '/';
+
+		CompletedCheckpointStorageLocation completed1 = storage.resolveLatestCheckpoint(pointer1);
+		CompletedCheckpointStorageLocation completed2 = storage.resolveLatestCheckpoint(pointer2);
+
+		assertEquals(latestCheckpointDir, completed1.getExternalPointer());
+		assertEquals(latestCheckpointDir, completed2.getExternalPointer());
+
+		StreamStateHandle handle1 = completed1.getMetadataHandle();
+		StreamStateHandle handle2 = completed2.getMetadataHandle();
+
+		assertNotNull(handle1);
+		assertNotNull(handle2);
+
+		validateContents(handle1, latestCheckpointMetaData);
+		validateContents(handle2, latestCheckpointMetaData);
+	}
+
+	@Test
 	public void testFailingPointerPathResolution() throws Exception {
 		// create the storage for some random checkpoint directory
 		final CheckpointStorage storage = createCheckpointStorage(randomTempPath());
@@ -139,6 +187,44 @@ public abstract class AbstractFileCheckpointStorageTestBase {
 		// non-existing file
 		try {
 			storage.resolveCheckpoint(tmp.newFile().toURI().toString() + "_not_existing");
+			fail("expected exception");
+		} catch (IOException ignored) {}
+	}
+
+	@Test
+	public void testFailingLatestCheckpointResolution() throws Exception {
+		// create the storage for some random checkpoint directory
+		final CheckpointStorage storage = createCheckpointStorage(randomTempPath());
+
+		// null value
+		try {
+			storage.resolveLatestCheckpoint(null);
+			fail("expected exception");
+		} catch (NullPointerException ignored) {}
+
+		// empty string
+		try {
+			storage.resolveLatestCheckpoint("");
+			fail("expected exception");
+		} catch (IllegalArgumentException ignored) {}
+
+		// not a file path at all
+		try {
+			storage.resolveLatestCheckpoint("this-is_not/a#filepath.at.all");
+			fail("expected exception");
+		} catch (IOException ignored) {}
+
+		// non-existing file
+		try {
+			storage.resolveLatestCheckpoint(tmp.newFile().toURI().toString() + "_not_existing");
+			fail("expected exception");
+		} catch (IOException ignored) {}
+
+		// resume from an empty folder
+		try {
+			File checkpointDir = new File(tmp.newFolder(), "/job-id/chk-1");
+			checkpointDir.mkdirs();
+			storage.resolveLatestCheckpoint(checkpointDir.getParent());
 			fail("expected exception");
 		} catch (IOException ignored) {}
 	}

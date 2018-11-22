@@ -42,6 +42,7 @@ import static org.apache.flink.client.cli.CliFrontendParser.LIBJARS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.LOGGING_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.MULTIPLE_VALUE_SEPARATOR;
 import static org.apache.flink.client.cli.CliFrontendParser.PARALLELISM_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.RESUME_PATH_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.SAVEPOINT_ALLOW_NON_RESTORED_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.SAVEPOINT_PATH_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.YARN_DETACHED_OPTION;
@@ -126,10 +127,18 @@ public abstract class ProgramOptions extends CommandLineOptions {
 		detachedMode = line.hasOption(DETACHED_OPTION.getOpt()) || line.hasOption(
 			YARN_DETACHED_OPTION.getOpt());
 
+		if (line.hasOption(SAVEPOINT_PATH_OPTION.getOpt()) && line.hasOption(RESUME_PATH_OPTION.getOpt())) {
+			throw new CliArgsException("Please only offer either savepoint path or resume path.");
+		}
+
 		if (line.hasOption(SAVEPOINT_PATH_OPTION.getOpt())) {
 			String savepointPath = line.getOptionValue(SAVEPOINT_PATH_OPTION.getOpt());
 			boolean allowNonRestoredState = line.hasOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION.getOpt());
 			this.savepointSettings = SavepointRestoreSettings.forPath(savepointPath, allowNonRestoredState);
+		} else if (line.hasOption(RESUME_PATH_OPTION.getOpt())){
+			String checkpointPath = line.getOptionValue(RESUME_PATH_OPTION.getOpt());
+			boolean allowNonRestoredState = line.hasOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION.getOpt());
+			this.savepointSettings = SavepointRestoreSettings.forResumePath(checkpointPath, allowNonRestoredState);
 		} else {
 			this.savepointSettings = SavepointRestoreSettings.none();
 		}

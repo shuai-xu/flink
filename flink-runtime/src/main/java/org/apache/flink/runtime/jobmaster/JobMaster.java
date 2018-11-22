@@ -1488,6 +1488,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 				checkpointCoordinator.restoreSavepoint(
 					savepointRestoreSettings.getRestorePath(),
 					savepointRestoreSettings.allowNonRestoredState(),
+					savepointRestoreSettings.resumeFromLatestCheckpoint(),
 					executionGraphToRestore.getAllVertices(),
 					userCodeLoader);
 			}

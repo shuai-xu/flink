@@ -1177,6 +1177,7 @@ public class CheckpointCoordinator {
 	 * @param savepointPointer The pointer to the savepoint.
 	 * @param allowNonRestored True if allowing checkpoint state that cannot be
 	 *                         mapped to any job vertex in tasks.
+	 * @param resumeFromLatestCheckpoint True if resuming from latest completed checkpoint automatically.
 	 * @param tasks            Map of job vertices to restore. State for these
 	 *                         vertices is restored via
 	 *                         {@link Execution#setInitialState(JobManagerTaskRestore)}.
@@ -1186,19 +1187,27 @@ public class CheckpointCoordinator {
 	public boolean restoreSavepoint(
 			String savepointPointer,
 			boolean allowNonRestored,
+			boolean resumeFromLatestCheckpoint,
 			Map<JobVertexID, ExecutionJobVertex> tasks,
 			ClassLoader userClassLoader) throws Exception {
 
 		Preconditions.checkNotNull(savepointPointer, "The savepoint path cannot be null.");
 
-		LOG.info("Starting job {} from savepoint {} ({})",
-				job, savepointPointer, (allowNonRestored ? "allowing non restored state" : ""));
-
-		final CompletedCheckpointStorageLocation checkpointLocation = checkpointStorage.resolveCheckpoint(savepointPointer);
+		final CompletedCheckpointStorageLocation checkpointLocation = resumeFromLatestCheckpoint ?
+			checkpointStorage.resolveLatestCheckpoint(savepointPointer) :
+			checkpointStorage.resolveCheckpoint(savepointPointer);
 
 		// Load the savepoint as a checkpoint into the system
 		CompletedCheckpoint savepoint = Checkpoints.loadAndValidateCheckpoint(
 				job, tasks, checkpointLocation, userClassLoader, allowNonRestored);
+
+		if (resumeFromLatestCheckpoint) {
+			LOG.info("Starting job {} from latest completed checkpoint {} ({})",
+				job, savepoint.getExternalPointer(), (allowNonRestored ? "allowing non restored state" : ""));
+		} else {
+			LOG.info("Starting job {} from savepoint {} ({})",
+				job, savepointPointer, (allowNonRestored ? "allowing non restored state" : ""));
+		}
 
 		completedCheckpointStore.addCheckpoint(savepoint);
 

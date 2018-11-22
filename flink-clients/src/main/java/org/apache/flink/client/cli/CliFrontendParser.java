@@ -79,6 +79,9 @@ public class CliFrontendParser {
 	static final Option SAVEPOINT_PATH_OPTION = new Option("s", "fromSavepoint", true,
 			"Path to a savepoint to restore the job from (for example hdfs:///flink/savepoint-1537).");
 
+	static final Option RESUME_PATH_OPTION = new Option("r", "resume", true,
+		"Path to a previous-job dir to restore the job from latest externalized checkpoint (for example hdfs:///user-defined-dir/job-id).");
+
 	static final Option SAVEPOINT_ALLOW_NON_RESTORED_OPTION = new Option("n", "allowNonRestoredState", false,
 			"Allow to skip savepoint state that cannot be restored. " +
 					"You need to allow this if you removed an operator from your " +
@@ -155,6 +158,9 @@ public class CliFrontendParser {
 		SAVEPOINT_PATH_OPTION.setRequired(false);
 		SAVEPOINT_PATH_OPTION.setArgName("savepointPath");
 
+		RESUME_PATH_OPTION.setRequired(false);
+		RESUME_PATH_OPTION.setArgName("resumePath");
+
 		SAVEPOINT_ALLOW_NON_RESTORED_OPTION.setRequired(false);
 
 		ZOOKEEPER_NAMESPACE_OPTION.setRequired(false);
@@ -212,7 +218,8 @@ public class CliFrontendParser {
 		Options options = buildGeneralOptions(new Options());
 		options = getProgramSpecificOptions(options);
 		options.addOption(SAVEPOINT_PATH_OPTION);
-		return options.addOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION);
+		options.addOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION);
+		return options.addOption(RESUME_PATH_OPTION);
 	}
 
 	static Options getInfoCommandOptions() {
@@ -254,7 +261,8 @@ public class CliFrontendParser {
 	private static Options getRunOptionsWithoutDeprecatedOptions(Options options) {
 		Options o = getProgramSpecificOptionsWithoutDeprecatedOptions(options);
 		o.addOption(SAVEPOINT_PATH_OPTION);
-		return o.addOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION);
+		o.addOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION);
+		return o.addOption(RESUME_PATH_OPTION);
 	}
 
 	private static Options getInfoOptionsWithoutDeprecatedOptions(Options options) {
