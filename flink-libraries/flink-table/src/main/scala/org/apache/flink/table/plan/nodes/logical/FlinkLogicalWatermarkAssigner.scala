@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.calcite.{LogicalWatermarkAssigner, WatermarkAssigner}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.calcite.{LogicalWatermarkAssigner, WatermarkAssigner}
+
+import java.util
 
 class FlinkLogicalWatermarkAssigner(
     cluster: RelOptCluster,

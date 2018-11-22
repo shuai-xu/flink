@@ -18,16 +18,17 @@
 
 package org.apache.flink.table.api.stream.sql
 
-import org.apache.calcite.plan.Contexts
-import org.apache.calcite.sql.validate.SqlMonotonicity.{CONSTANT, DECREASING, INCREASING, NOT_MONOTONIC}
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.{CalciteConfigBuilder, FlinkChainContext}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
+import org.apache.calcite.plan.Contexts
+import org.apache.calcite.sql.validate.SqlMonotonicity.{CONSTANT, DECREASING, INCREASING, NOT_MONOTONIC}
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

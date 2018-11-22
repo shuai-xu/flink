@@ -18,8 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.lang.reflect.Type
-import java.util.{List => JList, Set => JSet}
+import org.apache.flink.table.api.functions.TemporalTableFunction
+import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelOptRuleCall, RelTraitSet}
@@ -29,14 +31,12 @@ import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.TableFunctionScan
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan
 import org.apache.calcite.rel.metadata.RelColumnMapping
-import org.apache.calcite.rex.{RexLiteral, RexUtil}
+import org.apache.calcite.rex.{RexCall, RexLiteral, RexNode, RexUtil}
 import org.apache.calcite.sql.SemiJoinType
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.calcite.rex.{RexCall, RexNode}
-import org.apache.flink.table.api.functions.TemporalTableFunction
-import org.apache.flink.table.functions.utils.TableSqlFunction
-import org.apache.flink.table.plan.nodes.FlinkConventions
+
+import java.lang.reflect.Type
+import java.util.{List => JList, Set => JSet}
 
 class FlinkLogicalTableFunctionScan(
     cluster: RelOptCluster,

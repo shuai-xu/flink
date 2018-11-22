@@ -18,16 +18,17 @@
 
 package org.apache.flink.table.plan.stats
 
-import org.apache.calcite.avatica.util.Quoting
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.BigDecimalTypeInfo
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo._
 import org.apache.flink.table.api.{BatchTableEnvironment, TableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.catalog.ExternalCatalog
-import org.apache.flink.table.plan.cost.FlinkRelMdSize
+import org.apache.flink.table.plan.metadata.FlinkRelMdSize
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.avatica.util.Quoting
+import org.apache.calcite.rel.`type`.RelDataType
 
 import scala.collection.JavaConverters._
 

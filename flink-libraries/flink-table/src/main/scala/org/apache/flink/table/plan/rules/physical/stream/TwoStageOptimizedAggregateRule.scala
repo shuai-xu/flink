@@ -18,21 +18,21 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import java.util.{ArrayList => JArrayList}
-
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTrait}
-import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTrait, FlinkRelDistribution, FlinkRelDistributionTraitDef}
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule._
 import org.apache.flink.table.plan.util.AggregateUtil._
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateUtil}
+
+import org.apache.calcite.plan.RelOptRule.{any, operand}
+import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
+import org.apache.calcite.rel.RelNode
+
+import java.util.{ArrayList => JArrayList}
 
 // use the two stage agg optimize the plan
 class TwoStageOptimizedAggregateRule extends RelOptRule(

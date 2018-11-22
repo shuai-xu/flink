@@ -18,13 +18,6 @@
 
 package org.apache.flink.table.util
 
-import java.util
-import java.util.{ArrayList => JArrayList}
-
-import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.tools.RuleSet
-import org.apache.calcite.util.ImmutableBitSet
-import org.apache.commons.lang3.SystemUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
@@ -37,11 +30,19 @@ import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+
+import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.tools.RuleSet
+import org.apache.calcite.util.ImmutableBitSet
+import org.apache.commons.lang3.SystemUtils
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
+
+import java.util
+import java.util.{ArrayList => JArrayList}
 
 /**
   * Test base for testing Table API / SQL plans.

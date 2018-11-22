@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.stats.SkewInfoInternal
+
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.util.mapping.IntPair
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.stats.SkewInfoInternal
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

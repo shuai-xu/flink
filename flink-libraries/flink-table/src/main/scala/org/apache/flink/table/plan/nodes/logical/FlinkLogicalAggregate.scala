@@ -18,7 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util.{List => JList}
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
+import org.apache.flink.table.plan.util.PartialFinalType
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
@@ -28,10 +31,8 @@ import org.apache.calcite.rel.logical.LogicalAggregate
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule._
-import org.apache.flink.table.plan.util.PartialFinalType
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
 

@@ -18,16 +18,17 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalExpand}
 
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.{RexInputRef, RexLiteral, RexNode}
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalExpand}
-import org.apache.flink.table.plan.nodes.FlinkConventions
+
+import java.util
 
 import scala.collection.JavaConversions._
 

@@ -17,21 +17,13 @@
  */
 package org.apache.flink.table.plan.util
 
-import java.util
-
-import org.apache.calcite.plan.{RelOptCluster, RelOptUtil}
-import org.apache.calcite.rel.RelFieldCollation.Direction
-import org.apache.calcite.rel.{RelCollation, RelFieldCollation}
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.validate.SqlMonotonicity
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -39,6 +31,15 @@ import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.{BinaryRowKeySelector, NullBinaryRowKeySelector}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.FlinkRexUtil
+
+import org.apache.calcite.plan.{RelOptCluster, RelOptUtil}
+import org.apache.calcite.rel.RelFieldCollation.Direction
+import org.apache.calcite.rel.{RelCollation, RelFieldCollation}
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.validate.SqlMonotonicity
+
+import java.util
 
 import scala.collection.JavaConversions._
 

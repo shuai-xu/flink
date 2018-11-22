@@ -18,8 +18,9 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
-import java.util.function.Supplier
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.util.CalcUtil
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.convert.ConverterRule
@@ -28,9 +29,9 @@ import org.apache.calcite.rel.logical.LogicalCalc
 import org.apache.calcite.rel.metadata.{RelMdCollation, RelMetadataQuery}
 import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode, RelWriter}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexProgram}
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.util.CalcUtil
+
+import java.util
+import java.util.function.Supplier
 
 import scala.collection.JavaConversions._
 

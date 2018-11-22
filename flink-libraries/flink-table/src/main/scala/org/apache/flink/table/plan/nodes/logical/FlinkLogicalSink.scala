@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.logical
 
 import java.util
 
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.calcite.{LogicalSink, Sink}
 import org.apache.flink.table.sinks.TableSink
@@ -88,7 +88,7 @@ object FlinkLogicalSink {
       sink,
       sinkName)
     val newTraitSet = FlinkRelMetadataQuery.traitSet(sinkNode)
-                      .replace(FlinkConventions.LOGICAL).simplify()
+        .replace(FlinkConventions.LOGICAL).simplify()
     sinkNode.copy(newTraitSet, sinkNode.getInputs).asInstanceOf[FlinkLogicalSink]
   }
 }

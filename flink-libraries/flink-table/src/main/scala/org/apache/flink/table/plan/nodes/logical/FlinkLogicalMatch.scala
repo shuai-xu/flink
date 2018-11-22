@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelCollation, RelNode}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Match
 import org.apache.calcite.rel.logical.LogicalMatch
+import org.apache.calcite.rel.{RelCollation, RelNode}
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
+
+import java.util
 
 class FlinkLogicalMatch(
     cluster: RelOptCluster,

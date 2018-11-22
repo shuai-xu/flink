@@ -18,26 +18,28 @@
 
 package org.apache.flink.table.plan
 
-import java.util.concurrent.TimeUnit
-
 import org.apache.flink.api.common.time.Time
-import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{Table, Types}
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.expressions.utils.Func1
-import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.util._
-import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithRetract
-import org.junit.Assert._
-import org.junit.Test
-import org.apache.calcite.sql.validate.SqlMonotonicity._
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{Table, Types}
+import org.apache.flink.table.expressions.utils.Func1
+import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
+import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithRetract
 import org.apache.flink.table.runtime.utils.StreamTestData
+import org.apache.flink.table.util._
+
+import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
+
+import org.apache.calcite.sql.validate.SqlMonotonicity._
+import org.apache.calcite.tools.RuleSets
+import org.junit.Assert._
+import org.junit.Test
+
+import java.util.concurrent.TimeUnit
 
 class ModifiedMonotonicityTest extends TableTestBase {
 

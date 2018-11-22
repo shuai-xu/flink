@@ -25,7 +25,7 @@ import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
 import org.apache.flink.table.plan.cost.FlinkBatchCost
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery.reuseOrCreate
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
@@ -102,7 +102,7 @@ object BatchExecRel {
   val HASH_COLLISION_WEIGHT = 2
 
   private[flink] def getBatchExecMemCost(relNode: BatchExecRel[_]): Double = {
-    val mq = reuseOrCreate(relNode.getCluster.getMetadataQuery)
+    val mq = FlinkRelMetadataQuery.reuseOrCreate(relNode.getCluster.getMetadataQuery)
     val relCost = mq.getNonCumulativeCost(relNode)
     relCost match {
       case execCost: FlinkBatchCost => execCost.memory
@@ -122,7 +122,7 @@ object BatchExecRel {
 
   private[flink] def binaryRowAverageSize(rel: RelNode): Double = {
     val binaryType = FlinkTypeFactory.toInternalBaseRowType(rel.getRowType, classOf[BinaryRow])
-    val mq = reuseOrCreate(rel.getCluster.getMetadataQuery)
+    val mq = FlinkRelMetadataQuery.reuseOrCreate(rel.getCluster.getMetadataQuery)
     val columnSizes = mq.getAverageColumnSizes(rel)
     var length = 0d
     columnSizes.zip(binaryType.getFieldTypes).foreach { case (columnSize, internal) =>

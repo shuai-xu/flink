@@ -18,13 +18,6 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.util
-
-import org.apache.calcite.plan._
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
-import org.apache.calcite.rex.RexBuilder
-import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
@@ -43,8 +36,9 @@ import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescr
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`._
-import org.apache.flink.table.plan.cost.{FlinkStreamCost, FlinkCostFactory, FlinkRelMetadataQuery}
+import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
 import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
 import org.apache.flink.table.plan.optimize.StreamOptimizeContext
@@ -58,6 +52,14 @@ import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
 import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
+
+import org.apache.calcite.plan._
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
+import org.apache.calcite.rex.RexBuilder
+import org.apache.calcite.sql2rel.SqlToRelConverter
+
+import _root_.java.util
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._

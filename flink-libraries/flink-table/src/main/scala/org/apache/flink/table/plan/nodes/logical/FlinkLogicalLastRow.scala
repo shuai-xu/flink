@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.calcite.LogicalLastRow
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.calcite.LogicalLastRow
+
+import java.util
 
 import scala.collection.JavaConversions._
 

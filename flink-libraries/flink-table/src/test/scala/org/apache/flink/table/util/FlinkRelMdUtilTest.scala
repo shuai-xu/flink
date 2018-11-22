@@ -18,20 +18,19 @@
 
 package org.apache.flink.table.util
 
-
-import java.math.BigDecimal
+import org.apache.flink.table.plan.metadata.FlinkRelMdHandlerTestBase
+import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase}
 
 import org.apache.calcite.rel.SingleRel
 import org.apache.calcite.rel.metadata.RelMdUtil
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable.{AND, EQUALS, GREATER_THAN, LESS_THAN}
-import org.apache.flink.table.plan.cost.FlinkRelMdHandlerTestBase
-import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalWindowAggregate}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase}
-import org.apache.flink.table.util.FlinkRelMdUtil
 import org.junit.Assert.assertEquals
 import org.junit.Test
+
+import java.math.BigDecimal
 
 class FlinkRelMdUtilTest {
 

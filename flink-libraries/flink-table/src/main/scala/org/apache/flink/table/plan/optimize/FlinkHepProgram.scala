@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.plan.optimize
 
+import org.apache.flink.table.plan.metadata.FlinkRelMdNonCumulativeCost
+import org.apache.flink.util.Preconditions
+
 import org.apache.calcite.plan.RelTrait
 import org.apache.calcite.plan.hep.{HepPlanner, HepProgram}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.cost.FlinkRelMdNonCumulativeCost
-import org.apache.flink.util.Preconditions
 
 /**
   * A FlinkOptimizeProgram that runs with [[HepPlanner]].

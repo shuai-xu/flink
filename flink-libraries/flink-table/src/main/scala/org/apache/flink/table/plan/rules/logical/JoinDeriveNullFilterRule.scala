@@ -18,6 +18,10 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.util.FlinkRelOptUtil
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
@@ -26,9 +30,6 @@ import org.apache.calcite.rel.logical.LogicalJoin
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.ImmutableIntList
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.util.FlinkRelOptUtil
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

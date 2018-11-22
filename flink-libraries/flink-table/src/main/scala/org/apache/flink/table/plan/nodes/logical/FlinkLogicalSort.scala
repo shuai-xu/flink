@@ -18,6 +18,10 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
+import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Sort
@@ -26,9 +30,6 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
 import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
 
 class FlinkLogicalSort(
     cluster: RelOptCluster,

@@ -18,10 +18,11 @@
 
 package org.apache.flink.table.calcite
 
+import org.apache.flink.table.plan.metadata.FlinkDefaultRelMetadataProvider
+
 import org.apache.calcite.plan.{RelOptCluster, RelOptPlanner}
 import org.apache.calcite.rel.metadata.{DefaultRelMetadataProvider, JaninoRelMetadataProvider, RelMetadataQuery}
 import org.apache.calcite.rex.RexBuilder
-import org.apache.flink.table.plan.cost.FlinkDefaultRelMetadataProvider
 
 /**
   * The utility class is to create special [[RelOptCluster]] instance which use

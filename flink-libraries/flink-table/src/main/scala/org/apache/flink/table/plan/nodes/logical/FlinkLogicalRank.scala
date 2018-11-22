@@ -17,7 +17,10 @@
  */
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, Rank}
+import org.apache.flink.table.plan.util.RankRange
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
@@ -25,10 +28,8 @@ import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.{RelCollation, RelNode, RelWriter}
 import org.apache.calcite.sql.SqlRankFunction
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.calcite.{LogicalRank, Rank}
-import org.apache.flink.table.plan.util.RankRange
+
+import java.util
 
 import scala.collection.JavaConversions._
 

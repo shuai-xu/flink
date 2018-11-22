@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.calcite
 
-import java.util
-import java.util.concurrent.atomic.AtomicInteger
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptPlanner, RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexBuilder
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+
+import java.util
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
   * Flink specific [[RelOptCluster]] to use [[FlinkRelMetadataQuery]] instead of

@@ -17,8 +17,14 @@
  */
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util
-import java.util.Collections
+import org.apache.flink.table.api.types.{BaseRowType, InternalType}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+import org.apache.flink.table.plan.metadata.FlinkRelMdSize
+import org.apache.flink.table.plan.schema.{BaseRowSchema, TimeIndicatorRelDataType}
+import org.apache.flink.table.plan.util.CalcUtil
+import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
@@ -29,14 +35,9 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.validate.SqlValidatorUtil
 import org.apache.calcite.util.Litmus
 import org.apache.calcite.util.mapping.IntPair
-import org.apache.flink.table.api.types.{BaseRowType, InternalType}
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.plan.cost.FlinkRelMdSize
-import org.apache.flink.table.plan.schema.{BaseRowSchema, TimeIndicatorRelDataType}
-import org.apache.flink.table.plan.util.CalcUtil
-import org.apache.flink.table.sources.{DimensionTableSource, IndexKey}
+
+import java.util
+import java.util.Collections
 
 import scala.collection.JavaConverters._
 

@@ -18,35 +18,36 @@
 
 package org.apache.flink.table.calcite
 
-import java.lang.{String => JString}
-import java.util
-import java.util.function.Supplier
-import java.util.{Collections, ArrayList => JArrayList}
-
-import com.google.common.collect.ImmutableList
-import org.apache.calcite.plan._
-import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode}
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
-import org.apache.calcite.rel.core._
-import org.apache.calcite.rel.core.RelFactories._
-import org.apache.calcite.rel.metadata.RelMdCollation
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.{SemiJoinType, SqlKind}
-import org.apache.calcite.sql.SqlKind.UNION
-import org.apache.calcite.sql.validate.SqlValidatorUtil
-import org.apache.calcite.tools.{RelBuilder, RelBuilderFactory}
-import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkRelFactories.ExpandFactory
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule._
 import org.apache.flink.table.plan.schema.{BaseRowSchema, DataStreamTable, FlinkRelOptTable, TableSourceTable}
+
+import com.google.common.collect.ImmutableList
+import org.apache.calcite.plan._
+import org.apache.calcite.plan.volcano.RelSubset
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
+import org.apache.calcite.rel.core.RelFactories._
+import org.apache.calcite.rel.core._
+import org.apache.calcite.rel.metadata.RelMdCollation
+import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode}
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind.UNION
+import org.apache.calcite.sql.validate.SqlValidatorUtil
+import org.apache.calcite.sql.{SemiJoinType, SqlKind}
+import org.apache.calcite.tools.{RelBuilder, RelBuilderFactory}
+import org.apache.calcite.util.ImmutableBitSet
+
+import java.lang.{String => JString}
+import java.util
+import java.util.function.Supplier
+import java.util.{Collections, ArrayList => JArrayList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

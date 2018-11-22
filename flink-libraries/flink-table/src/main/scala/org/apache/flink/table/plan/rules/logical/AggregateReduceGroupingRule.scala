@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.Aggregate.Group
 import org.apache.calcite.rel.core.{Aggregate, AggregateCall, RelFactories}
 import org.apache.calcite.tools.RelBuilderFactory
-import org.apache.flink.table.functions.sql.internal.SqlAuxiliaryGroupAggFunction
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

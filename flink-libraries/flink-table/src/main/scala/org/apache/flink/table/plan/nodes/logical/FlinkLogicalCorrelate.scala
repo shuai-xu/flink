@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
@@ -25,8 +28,6 @@ import org.apache.calcite.rel.core.{Correlate, CorrelationId}
 import org.apache.calcite.rel.logical.LogicalCorrelate
 import org.apache.calcite.sql.SemiJoinType
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
 
 class FlinkLogicalCorrelate(
     cluster: RelOptCluster,

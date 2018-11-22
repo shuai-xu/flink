@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.plan.nodes.logical
 
-import java.util.{List => JList}
+import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Window
-import org.apache.flink.table.errorcode.TableErrors
 import org.apache.calcite.rel.logical.LogicalWindow
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.sql.SqlRankFunction
-import org.apache.flink.table.api.ValidationException
-import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConversions._
 

@@ -18,16 +18,17 @@
 
 package org.apache.flink.table.plan.optimize
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.plan.metadata.FlinkRelMdNonCumulativeCost
+import org.apache.flink.table.util.FlinkRelOptUtil
+import org.apache.flink.util.Preconditions
+
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptPlanner.CannotPlanException
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.tools.{Programs, RuleSet}
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.cost.FlinkRelMdNonCumulativeCost
-import org.apache.flink.table.util.FlinkRelOptUtil
-import org.apache.flink.util.Preconditions
 
 /**
   * A FlinkRuleSetProgram that runs with [[org.apache.calcite.plan.volcano.VolcanoPlanner]].
