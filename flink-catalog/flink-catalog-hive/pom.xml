@@ -217,6 +217,10 @@
 					<groupId>org.apache.curator</groupId>
 					<artifactId>apache-curator</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>jline</groupId>
+					<artifactId>jline</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
@@ -299,6 +303,7 @@
 										<exclude>META-INF/*.SF</exclude>
 										<exclude>META-INF/*.DSA</exclude>
 										<exclude>META-INF/*.RSA</exclude>
+										<exclude>jline/**</exclude>
 									</excludes>
 								</filter>
 							</filters>

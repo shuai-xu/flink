@@ -337,6 +337,10 @@ under the License.
 					<groupId>org.apache.curator</groupId>
 					<artifactId>apache-curator</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>jline</groupId>
+					<artifactId>jline</artifactId>
+				</exclusion>
 
 			</exclusions>
 		</dependency>
@@ -639,6 +643,9 @@ under the License.
 									<artifact>org.spark-project.hive:hive-exec</artifact>
 									<excludes>
 										<exclude>org/apache/hadoop/hive/shims/**</exclude>
+									</excludes>
+									<excludes>
+										<exclude>jline/**</exclude>
 									</excludes>
 								</filter>
 								<filter>
