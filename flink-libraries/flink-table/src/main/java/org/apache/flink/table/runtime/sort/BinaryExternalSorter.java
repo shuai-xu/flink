@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
+import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
@@ -42,7 +43,6 @@ import org.apache.flink.table.runtime.CompressedHeaderlessChannelWriterOutputVie
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.BinaryMergeIterator;
 import org.apache.flink.table.util.ChannelWithMeta;
-import org.apache.flink.table.util.MemUtil;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.slf4j.Logger;
@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -74,17 +75,17 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	//                              Constants
 	// ------------------------------------------------------------------------
 
-	/** The minimal number of buffers to use by the writers. */
-	protected static final int MIN_NUM_WRITE_BUFFERS = 2;
+	/** The number of buffers used to read each spill file. */
+	protected static final int NUM_READ_BUFFERS = 2;
 
-	/** The maximal number of buffers to use by the writers. */
-	protected static final int MAX_NUM_WRITE_BUFFERS = 4;
+	/** The number of buffers to use by the writers. */
+	protected static final int NUM_WRITE_BUFFERS = 2;
 
 	/** The minimum number of segments that are required for the sort to operate. */
 	protected static final int MIN_NUM_SORT_MEM_SEGMENTS = 10;
 
 	public static final long SORTER_MIN_NUM_SORT_MEM =
-			(MIN_NUM_SORT_MEM_SEGMENTS + MIN_NUM_WRITE_BUFFERS) * MemoryManager.DEFAULT_PAGE_SIZE;
+			MIN_NUM_SORT_MEM_SEGMENTS * MemoryManager.DEFAULT_PAGE_SIZE;
 
 	/** Logging. */
 	private static final Logger LOG = LoggerFactory.getLogger(BinaryExternalSorter.class);
@@ -99,9 +100,14 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	private static final CircularElement EOF_MARKER = new CircularElement();
 
 	/**
-	 * The currWriteBuffer that is passed as marker for signal beginning of spilling.
+	 * The currWriteBuffer that is passed as marker for signaling the beginning of spilling.
 	 */
 	private static final CircularElement SPILLING_MARKER = new CircularElement();
+
+	/**
+	 * The ChannelWithMeta that is passed as marker for signaling the final merge.
+	 */
+	private static final ChannelWithMeta FINAL_MERGE_MARKER = new ChannelWithMeta(null, -1, -1);
 
 	// ------------------------------------------------------------------------
 	//                                   Memory
@@ -120,9 +126,6 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 	protected final int fixedReadMemoryNum;
 
-	/** The memory segments used to stage data to be written. */
-	protected final List<MemorySegment> writeMemory;
-
 	/** The memory manager through which memory is allocated and released. */
 	protected final MemoryManager memoryManager;
 
@@ -140,6 +143,9 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 	/** The thread that handles spilling to secondary storage. */
 	private ThreadBase spillThread;
+
+	/** The thread that handles merging from the secondary storage. */
+	private ThreadBase mergeThread;
 
 	/**
 	 * Final result iterator.
@@ -178,10 +184,13 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 	private final BinaryExternalMerger merger;
 
+	private final int memorySegmentSize;
+
 	private final boolean compressionEnable;
 	private final String compressionCodec;
 	private final int compressionBlockSize;
 
+	private final boolean parallelMergeEnable;
 
 	// ------------------------------------------------------------------------
 	//                         Constructor & Shutdown
@@ -215,54 +224,29 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
 		compressionCodec = conf.getString(TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC());
 		compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
+		parallelMergeEnable = conf.getBoolean(TableConfig.SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE());
+
 		checkArgument(maxNumFileHandles >= 2);
 		checkNotNull(ioManager);
 		checkNotNull(normalizedKeyComputer);
 		checkNotNull(comparator);
 		this.serializer = (BinaryRowSerializer) serializer.duplicate();
 		this.memoryManager = checkNotNull(memoryManager);
-
-		// adjust the memory quotas to the page size
-		final int numMinPagesTotal = (int) (reservedMemorySize / memoryManager.getPageSize());
+		this.memorySegmentSize = memoryManager.getPageSize();
 
 		if (reservedMemorySize < SORTER_MIN_NUM_SORT_MEM) {
 			throw new IllegalArgumentException("Too little memory provided to sorter to perform task. " +
-					"Required are at least " + (MIN_NUM_WRITE_BUFFERS + MIN_NUM_SORT_MEM_SEGMENTS) +
+					"Required are at least " + SORTER_MIN_NUM_SORT_MEM +
 					" pages. Current page size is " + memoryManager.getPageSize() + " bytes.");
 		}
 
-		// determine how many buffers to use for writing
-		final int numWriteBuffers;
-
-		// determine how many buffers we have when we do a full mere with maximal fan-in
-		final int minBuffersForMerging = maxNumFileHandles + MIN_NUM_WRITE_BUFFERS;
-
-		if (compressionEnable) {
-			// compression don't need this memory.
-			numWriteBuffers = 0;
-		} else {
-			if (minBuffersForMerging > numMinPagesTotal) {
-				numWriteBuffers = MIN_NUM_WRITE_BUFFERS;
-				maxNumFileHandles = numMinPagesTotal - MIN_NUM_WRITE_BUFFERS;
-			} else {
-				// we are free to choose. make sure that we do not eat up too much memory for writing
-				final int fractionalAuxBuffers = numMinPagesTotal / (100);
-
-				if (fractionalAuxBuffers >= MAX_NUM_WRITE_BUFFERS) {
-					numWriteBuffers = MAX_NUM_WRITE_BUFFERS;
-				} else {
-					numWriteBuffers = Math.max(MIN_NUM_WRITE_BUFFERS, fractionalAuxBuffers); // at least the lower bound
-				}
-			}
-		}
-
-		final int sortMemPages = numMinPagesTotal - numWriteBuffers;
+		// adjust the memory quotas to the page size
+		final int sortMemPages = (int) (reservedMemorySize / memoryManager.getPageSize());
 		final long sortMemory = ((long) sortMemPages) * memoryManager.getPageSize();
 
 		// decide how many sort buffers to use
 		int numSortBuffers = 1;
-		final long sortMaxMemSize = Math.max(maxMemorySize, reservedMemorySize) -
-				numWriteBuffers * memoryManager.getPageSize();
+		final long sortMaxMemSize = Math.max(maxMemorySize, reservedMemorySize);
 		if (sortMaxMemSize > 100 * 1024 * 1024L) {
 			numSortBuffers = 2;
 		}
@@ -270,16 +254,12 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		this.sortReadMemory = new ArrayList<>();
 		List<MemorySegment> readMemory;
 		try {
-			readMemory = memoryManager.allocatePages(owner, numMinPagesTotal);
+			readMemory = memoryManager.allocatePages(owner, sortMemPages);
 		} catch (MemoryAllocationException e) {
-			LOG.error("Can't allocate {} pages from fixed memory pool.", numMinPagesTotal, e);
+			LOG.error("Can't allocate {} pages from fixed memory pool.", sortMemPages, e);
 			throw new RuntimeException(e);
 		}
 		this.fixedReadMemoryNum = readMemory.size();
-		this.writeMemory = new ArrayList<>(numWriteBuffers);
-		for (int i = 0; i < numWriteBuffers; i++) {
-			this.writeMemory.add(readMemory.remove(readMemory.size() - 1));
-		}
 
 		// circular circularQueues pass buffers between the threads
 		final CircularQueues circularQueues = new CircularQueues();
@@ -293,9 +273,9 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 		LOG.info("BinaryExternalSorter with initial memory segments {},And the preferred memory {} segments, " +
 				"per request {} segments from floating memory pool, maxNumFileHandles({})," +
-				" compressionEnable({}), compressionCodec({}), compressionBlockSize({}).", numMinPagesTotal,
-				(int) (maxMemorySize / memoryManager.getPageSize()), perRequestBuffersNum, maxNumFileHandles,
-				compressionEnable, compressionCodec, compressionBlockSize);
+				" compressionEnable({}), compressionCodec({}), compressionBlockSize({}).", sortMemPages,
+			(int) (maxMemorySize / memoryManager.getPageSize()), perRequestBuffersNum, maxNumFileHandles,
+			compressionEnable, compressionCodec, compressionBlockSize);
 
 		this.sortBuffers = new ArrayList<>();
 		for (int i = 0; i < numSortBuffers; i++) {
@@ -350,9 +330,12 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 		// start the thread that handles spilling to secondary storage
 		this.spillThread = getSpillingThread(
-				exceptionHandler, circularQueues, memoryManager, ioManager,
-				(BinaryRowSerializer) serializer.duplicate(), comparator,
-				this.sortReadMemory, this.writeMemory, maxNumFileHandles, merger);
+				exceptionHandler, circularQueues, ioManager,
+				(BinaryRowSerializer) serializer.duplicate(), comparator);
+
+		// start the thread that handles merging from second storage
+		this.mergeThread = getMergingThread(
+			exceptionHandler, circularQueues, ioManager, maxNumFileHandles, merger);
 
 		// propagate the context class loader to the spawned threads
 		ClassLoader contextLoader = Thread.currentThread().getContextClassLoader();
@@ -362,6 +345,9 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 			}
 			if (this.spillThread != null) {
 				this.spillThread.setContextClassLoader(contextLoader);
+			}
+			if (this.mergeThread != null) {
+				this.mergeThread.setContextClassLoader(contextLoader);
 			}
 		}
 	}
@@ -379,6 +365,9 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		}
 		if (this.spillThread != null) {
 			this.spillThread.start();
+		}
+		if (this.mergeThread != null) {
+			this.mergeThread.start();
 		}
 	}
 
@@ -431,64 +420,33 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 					LOG.error("Error shutting down spilling thread: " + t.getMessage(), t);
 				}
 			}
+			if (this.mergeThread != null) {
+				try {
+					this.mergeThread.shutdown();
+				} catch (Throwable t) {
+					LOG.error("Error shutting down merging thread: " + t.getMessage(), t);
+				}
+			}
 
 			try {
 				if (this.sortThread != null) {
 					this.sortThread.join();
 					this.sortThread = null;
 				}
-
 				if (this.spillThread != null) {
 					this.spillThread.join();
 					this.spillThread = null;
 				}
+				if (this.mergeThread != null) {
+					this.mergeThread.join();
+					this.mergeThread = null;
+				}
 			} catch (InterruptedException iex) {
 				LOG.debug("Closing of sort/merger was interrupted. " +
-						"The reading/sorting/spilling threads may still be working.", iex);
+						"The reading/sorting/spilling/merging threads may still be working.", iex);
 			}
 		} finally {
-
-			// RELEASE ALL MEMORY. If the threads and channels are still running, this should cause
-			// exceptions, because their memory segments are freed
-			try {
-				if (!this.writeMemory.isEmpty()) {
-					this.memoryManager.release(this.writeMemory);
-				}
-				this.writeMemory.clear();
-			} catch (Throwable ignored) {
-				LOG.info("error.", ignored);
-			}
-
-			try {
-				this.sortBuffers.stream().forEach(sortBuffer -> sortBuffer.returnToSegmentPool());
-				this.sortBuffers.clear();
-			} catch (Throwable ignored) {
-				LOG.info("error.", ignored);
-			}
-
-			List<MemorySegment> mergeReadMemory = new ArrayList<>();
-			for (List<MemorySegment> segs : sortReadMemory) {
-				mergeReadMemory.addAll(segs);
-			}
-
-			try {
-				if (mergeReadMemory.size() > fixedReadMemoryNum) {
-					int releaseNum = mergeReadMemory.size() - fixedReadMemoryNum;
-					MemUtil.releaseSpecificNumFloatingSegments(memoryManager, mergeReadMemory, releaseNum);
-				}
-			} catch (Throwable ignored) {
-				LOG.info("error.", ignored);
-			}
-
-			try {
-				if (!mergeReadMemory.isEmpty()) {
-					this.memoryManager.release(mergeReadMemory);
-				}
-				mergeReadMemory.clear();
-			} catch (Throwable ignored) {
-				LOG.info("error.", ignored);
-			}
-			sortReadMemory.clear();
+			releaseSortMemory();
 
 			// Eliminate object references for MemorySegments.
 			circularQueues = null;
@@ -500,18 +458,56 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 		}
 	}
 
+	private void releaseSortMemory() {
+		// RELEASE ALL MEMORY. If the threads and channels are still running, this should cause
+		// exceptions, because their memory segments are freed
+
+		try {
+			// floating segments are released in `dispose()` method
+			this.sortBuffers.forEach(BinaryInMemorySortBuffer::dispose);
+			this.sortBuffers.clear();
+		} catch (Throwable ignored) {
+			LOG.info("error.", ignored);
+		}
+
+		releaseCoreSegments();
+		sortReadMemory.clear();
+	}
+
+	private void releaseCoreSegments() {
+		// NOTE: This method can only be called after disposing some buffers
+
+		List<MemorySegment> coreSegments = new ArrayList<>();
+		for (List<MemorySegment> segs : sortReadMemory) {
+			coreSegments.addAll(segs);
+		}
+
+		try {
+			if (!coreSegments.isEmpty()) {
+				this.memoryManager.release(coreSegments);
+			}
+			coreSegments.clear();
+		} catch (Throwable ignored) {
+			LOG.info("error.", ignored);
+		}
+	}
+
 	protected ThreadBase getSortingThread(ExceptionHandler<IOException> exceptionHandler,
 			CircularQueues queues) {
 		return new SortingThread(exceptionHandler, queues);
 	}
 
 	protected SpillingThread getSpillingThread(ExceptionHandler<IOException> exceptionHandler,
-			CircularQueues queues, MemoryManager memoryManager, IOManager ioManager,
-			BinaryRowSerializer serializer, RecordComparator comparator,
-			List<List<MemorySegment>> sortReadMemorys, List<MemorySegment> writeMemory,
-			int maxFileHandles, BinaryExternalMerger merger) {
-		return new SpillingThread(exceptionHandler, queues,
-				memoryManager, ioManager, serializer, comparator, sortReadMemorys, writeMemory, maxFileHandles, merger);
+			CircularQueues queues, IOManager ioManager,
+			BinaryRowSerializer serializer, RecordComparator comparator) {
+		return new SpillingThread(exceptionHandler, queues, ioManager, serializer, comparator);
+	}
+
+	protected MergingThread getMergingThread(
+			ExceptionHandler<IOException> exceptionHandler,
+			CircularQueues queues, IOManager ioManager,
+			int maxNumFileHandles, BinaryExternalMerger merger) {
+		return new MergingThread(exceptionHandler, queues, ioManager, maxNumFileHandles, merger);
 	}
 
 	public void write(BaseRow current) throws IOException {
@@ -704,10 +700,13 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 		final BlockingQueue<CircularElement> spill;
 
+		final BlockingQueue<ChannelWithMeta> merge;
+
 		protected CircularQueues() {
 			this.empty = new LinkedBlockingQueue<>();
 			this.sort = new LinkedBlockingQueue<>();
 			this.spill = new LinkedBlockingQueue<>();
+			this.merge = new LinkedBlockingQueue<>();
 		}
 	}
 
@@ -900,59 +899,35 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	}
 
 	/**
-	 * The thread that handles the spilling of intermediate results and sets up the merging. It also
-	 * merges the
-	 * channels until sufficiently few channels remain to perform the final streamed merge.
+	 * The thread that handles the spilling of intermediate results.
 	 */
 	protected class SpillingThread extends ThreadBase {
 
-		protected final MemoryManager memManager;            // memory manager to release memory
-
 		protected final IOManager ioManager;                // I/O manager to create channels
 
-		protected final BinaryRowSerializer serializer;        // The serializer for the data type
+		protected final BinaryRowSerializer serializer;     // The serializer for the data type
 
-		protected final List<MemorySegment> writeMemory;    // memory segments for writing
+		protected final List<MemorySegment> writeMemory;    // memory segments for writing spill files
 
 		protected final RecordComparator comparator;
 
-		protected final List<List<MemorySegment>> mergeReadMemorys;    // memory segments for sorting/reading
-
-		protected final int maxFanIn;
-
-		protected final int numWriteBuffersToCluster;
-
-		private final BinaryExternalMerger merger;
-
 		/**
 		 * Creates the spilling thread.
-		 *  @param exceptionHandler  The exception handler to call for all exceptions.
+		 * @param exceptionHandler  The exception handler to call for all exceptions.
 		 * @param queues            The circularQueues used to pass buffers between the threads.
-		 * @param memManager        The memory manager used to allocate buffers for the readers and
- *                          writers.
-		 * @param ioManager         The I/I manager used to instantiate readers and writers from.
+		 * @param ioManager         The I/O manager used to instantiate readers and writers from.
 		 * @param serializer
 		 * @param comparator
-		 * @param sortReadMemorys
-		 * @param writeMemory
-		 * @param maxNumFileHandles
-		 * @param merger
 		 */
 		public SpillingThread(ExceptionHandler<IOException> exceptionHandler,
-				CircularQueues queues, MemoryManager memManager, IOManager ioManager,
-				BinaryRowSerializer serializer, RecordComparator comparator,
-				List<List<MemorySegment>> sortReadMemorys, List<MemorySegment> writeMemory,
-				int maxNumFileHandles, BinaryExternalMerger merger) {
+				CircularQueues queues, IOManager ioManager,
+				BinaryRowSerializer serializer, RecordComparator comparator) {
 			super(exceptionHandler, "SortMerger spilling thread", queues);
-			this.memManager = memManager;
 			this.ioManager = ioManager;
 			this.serializer = serializer;
 			this.comparator = comparator;
-			this.mergeReadMemorys = sortReadMemorys;
-			this.writeMemory = writeMemory;
-			this.maxFanIn = maxNumFileHandles;
-			this.numWriteBuffersToCluster = writeMemory.size() >= 4 ? writeMemory.size() / 2 : 1;
-			this.merger = merger;
+
+			this.writeMemory = new ArrayList<>();
 		}
 
 		/**
@@ -990,14 +965,11 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 			// ------------------- In-Memory Merge ------------------------
 			if (cacheOnly) {
-
 				List<MutableObjectIterator<BinaryRow>> iterators = new ArrayList<>(cache.size());
 
 				for (CircularElement cached : cache) {
 					iterators.add(cached.buffer.getIterator());
 				}
-
-				disposeSortBuffers(true);
 
 				// set lazy iterator
 				List<BinaryRow> reusableEntries = new ArrayList<>();
@@ -1007,6 +979,12 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 				setResultIterator(iterators.isEmpty() ? EmptyMutableObjectIterator.get() :
 						iterators.size() == 1 ? iterators.get(0) : new BinaryMergeIterator<>(
 								iterators, reusableEntries, comparator::compare));
+
+				releaseEmptyBuffers();
+
+				// signal merging thread to exit (because there is nothing to merge externally)
+				this.queues.merge.add(FINAL_MERGE_MARKER);
+
 				return;
 			}
 
@@ -1014,7 +992,6 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 			final FileIOChannel.Enumerator enumerator =
 					this.ioManager.createChannelEnumerator();
-			List<ChannelWithMeta> channelIDs = new ArrayList<>();
 
 			// loop as long as the thread is marked alive and we do not see the final currWriteBuffer
 			while (isRunning()) {
@@ -1023,7 +1000,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 					element = cache.isEmpty() ? queues.spill.take() : cache.poll();
 				} catch (InterruptedException iex) {
 					if (isRunning()) {
-						LOG.error("Sorting thread was interrupted (without being shut down) while grabbing a buffer. " +
+						LOG.error("Spilling thread was interrupted (without being shut down) while grabbing a buffer. " +
 								"Retrying to grab buffer...");
 						continue;
 					} else {
@@ -1068,7 +1045,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 							BlockChannelWriter<MemorySegment> blockWriter = this.ioManager.createBlockChannelWriter(channel);
 							writer = blockWriter;
 							HeaderlessChannelWriterOutputView output = new HeaderlessChannelWriterOutputView(
-									blockWriter, this.writeMemory, this.memManager.getPageSize());
+									blockWriter, getWriteMemoryFromHeap(this.writeMemory), memorySegmentSize);
 							element.buffer.writeToOutput(output);
 							spillInBytes += writer.getSize();
 							bytesInLastBuffer = output.close();
@@ -1082,7 +1059,8 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 						throw e;
 					}
 
-					channelIDs.add(new ChannelWithMeta(channel, blockCount, bytesInLastBuffer));
+					// pass spill file meta to merging thread
+					this.queues.merge.add(new ChannelWithMeta(channel, blockCount, bytesInLastBuffer));
 				}
 
 				// pass empty sort-buffer to reading thread
@@ -1090,70 +1068,172 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 				this.queues.empty.add(element);
 			}
 
-			// clear the sort buffers, but do not return the memory to the manager, as we use it for merging
-			disposeSortBuffers(false);
+			// clear the sort buffers, as both sorting and spilling threads are done.
+			releaseSortMemory();
 
-			// ------------------- Merging Phase ------------------------
+			// signal merging thread to begin the final merge
+			this.queues.merge.add(FINAL_MERGE_MARKER);
 
-			// make sure we have enough memory to merge and for large record handling
-			List<MemorySegment> mergeReadMemory = new ArrayList<>();
-			for (List<MemorySegment> segs : mergeReadMemorys) {
-				mergeReadMemory.addAll(segs);
+			// Spilling thread done.
+		}
+
+		protected final void releaseEmptyBuffers() {
+			while (!this.queues.empty.isEmpty()) {
+				try {
+					CircularElement element = this.queues.empty.take();
+					element.buffer.dispose();
+				} catch (InterruptedException iex) {
+					if (isRunning()) {
+						LOG.error("Spilling thread was interrupted (without being shut down) while collecting empty " +
+							"buffers to release them. Retrying to collect buffers...");
+					} else {
+						break;
+					}
+				}
 			}
+			releaseCoreSegments();
+		}
+	}
 
-			// merge channels until sufficient file handles are available
-			while (isRunning() && channelIDs.size() > this.maxFanIn) {
-				channelIDs = merger.mergeChannelList(channelIDs, mergeReadMemory, this.writeMemory);
+	/**
+	 * The thread that merges the intermediate spill files and the merged files
+	 * until sufficiently few channels remain to perform the final streamed merge.
+	 */
+	protected class MergingThread extends ThreadBase {
+
+		protected final IOManager ioManager;                // I/O manager to create channels
+
+		protected final List<MemorySegment> readMemory;     // memory segments for reading spill files
+
+		protected final List<MemorySegment> writeMemory;    // memory segments for writing spill files
+
+		protected final int maxFanIn;
+
+		private final BinaryExternalMerger merger;
+
+		public MergingThread(
+				ExceptionHandler<IOException> exceptionHandler,
+				CircularQueues queues, IOManager ioManager,
+				int maxNumFileHandles, BinaryExternalMerger merger) {
+			super(exceptionHandler, "SortMerger merging thread", queues);
+			this.ioManager = ioManager;
+			this.maxFanIn = maxNumFileHandles;
+			this.merger = merger;
+
+			this.readMemory = new ArrayList<>();
+			this.writeMemory = new ArrayList<>();
+		}
+
+		@Override
+		protected void go() throws IOException {
+
+			final List<ChannelWithMeta> spillChannelIDs = new ArrayList<>();
+			List<ChannelWithMeta> finalMergeChannelIDs = new ArrayList<>();
+			ChannelWithMeta channelID;
+
+			while (isRunning()) {
+				try {
+					channelID = this.queues.merge.take();
+				} catch (InterruptedException iex) {
+					if (isRunning()) {
+						LOG.error("Merging thread was interrupted (without being shut down) " +
+							"while grabbing a channel with meta. Retrying...");
+						continue;
+					} else {
+						return;
+					}
+				}
+
+				if (!isRunning()) {
+					return;
+				}
+				if (channelID == FINAL_MERGE_MARKER) {
+					finalMergeChannelIDs.addAll(spillChannelIDs);
+					spillChannelIDs.clear();
+					// sort file channels by block numbers, to ensure a better merging performance
+					finalMergeChannelIDs.sort(Comparator.comparingInt(ChannelWithMeta::getBlockCount));
+					break;
+				}
+
+				spillChannelIDs.add(channelID);
+				// if parallel merge is disabled, we will only do the final merge
+				// otherwise we wait for `maxFanIn` number of channels to begin a merge
+				if (!parallelMergeEnable || spillChannelIDs.size() < maxFanIn) {
+					continue;
+				}
+
+				// perform a intermediate merge
+				finalMergeChannelIDs.addAll(merger.mergeChannelList(
+					spillChannelIDs,
+					getReadMemoryFromHeap(this.readMemory, spillChannelIDs.size(), maxFanIn),
+					getWriteMemoryFromHeap(this.writeMemory)));
+				spillChannelIDs.clear();
 			}
-
-			// from here on, we won't write again
-			this.memManager.release(this.writeMemory);
-			this.writeMemory.clear();
 
 			// check if we have spilled some data at all
-			if (channelIDs.isEmpty()) {
-				setResultIterator(EmptyMutableObjectIterator.get());
+			if (finalMergeChannelIDs.isEmpty()) {
+				if (iterator == null) {
+					// only set the iterator if it's not set
+					// by the in memory merge stage of spilling thread.
+					setResultIterator(EmptyMutableObjectIterator.get());
+				}
 			} else {
+				// merge channels until sufficient file handles are available
+				while (isRunning() && finalMergeChannelIDs.size() > this.maxFanIn) {
+					finalMergeChannelIDs = merger.mergeChannelList(
+						finalMergeChannelIDs,
+						getReadMemoryFromHeap(this.readMemory, finalMergeChannelIDs.size(), maxFanIn),
+						getWriteMemoryFromHeap(this.writeMemory));
+				}
+
 				// Beginning final merge.
 
+				// no need to call `getReadMemoryFromHeap` again,
+				// because `finalMergeChannelIDs` must become smaller
+
 				// allocate the memory for the final merging step
-				List<List<MemorySegment>> readBuffers = new ArrayList<>(channelIDs.size());
+				List<List<MemorySegment>> readBuffers = new ArrayList<>(finalMergeChannelIDs.size());
 
 				// allocate the read memory and register it to be released
-				getSegmentsForReaders(readBuffers, mergeReadMemory, channelIDs.size());
+				getSegmentsForReaders(
+					readBuffers,
+					getReadMemoryFromHeap(this.readMemory, finalMergeChannelIDs.size(), maxFanIn),
+					finalMergeChannelIDs.size());
 
 				List<FileIOChannel> openChannels = new ArrayList<>();
-				BinaryMergeIterator iterator = merger.getMergingIterator(
-						channelIDs, readBuffers, openChannels);
+				BinaryMergeIterator<BinaryRow> iterator = merger.getMergingIterator(
+					finalMergeChannelIDs, readBuffers, openChannels);
 				channelManager.addOpenChannels(openChannels);
 
 				setResultIterator(iterator);
 			}
 
-			// Spilling and merging thread done.
+			// Merging thread done.
+		}
+	}
+
+	private List<MemorySegment> getReadMemoryFromHeap(
+			List<MemorySegment> readMemory, int numFileHandles, int maxNumFileHandles) {
+		if (compressionEnable) {
+			return readMemory;
 		}
 
-		/**
-		 * Releases the memory that is registered for in-memory sorted run generation.
-		 */
-		protected final void disposeSortBuffers(boolean releaseMemory) {
-			while (!this.queues.empty.isEmpty()) {
-				try {
-					CircularElement element = this.queues.empty.take();
-					element.buffer.dispose();
-					if (releaseMemory) {
-						this.memManager.release(element.memory);
-					}
-				} catch (InterruptedException iex) {
-					if (isRunning()) {
-						LOG.error("Spilling thread was interrupted (without being shut down) while collecting empty " +
-								"buffers to release them. Retrying to collect buffers...");
-					} else {
-						return;
-					}
-				}
-			}
+		int numSegmentsNeeded = Math.min(numFileHandles, maxNumFileHandles) * NUM_READ_BUFFERS;
+		for (int i = readMemory.size(); i <= numSegmentsNeeded; i++) {
+			readMemory.add(MemorySegmentFactory.allocateUnpooledSegment(memorySegmentSize));
 		}
+		return readMemory;
+	}
+
+	private List<MemorySegment> getWriteMemoryFromHeap(List<MemorySegment> writeMemory) {
+		if (compressionEnable) {
+			return writeMemory;
+		}
+
+		for (int i = writeMemory.size(); i <= NUM_WRITE_BUFFERS; i++) {
+			writeMemory.add(MemorySegmentFactory.allocateUnpooledSegment(memorySegmentSize));
+		}
+		return writeMemory;
 	}
 
 	public long getUsedMemoryInBytes() {

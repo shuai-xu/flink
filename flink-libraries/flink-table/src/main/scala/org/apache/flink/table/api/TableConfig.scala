@@ -836,6 +836,10 @@ object TableConfig {
     ConfigOptions.key("sql.exec.spill.compression.block-size")
         .defaultValue(new Integer(64 * 1024))
 
+  val SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE: ConfigOption[JBoolean] =
+    ConfigOptions.key("sql.exec.sort.parallel-merge.enable")
+        .defaultValue(new JBoolean(false))
+
   // =================================== Join ===================================
   /**
     * Sets the HashTable reserved memory for hashJoin operator. It defines the lower limit for.

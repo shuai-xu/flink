@@ -63,21 +63,31 @@ public class BinaryExternalSorterTest {
 	private BinaryRowSerializer serializer;
 	private Configuration conf;
 
-	public BinaryExternalSorterTest(boolean useBufferedIO, boolean spillCompress) {
+	public BinaryExternalSorterTest(
+			boolean useBufferedIO,
+			boolean spillCompress,
+			boolean parallelMergeEnable) {
 		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
 		conf = new Configuration();
 		if (!spillCompress) {
 			conf.setBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE(), false);
 		}
+		if (parallelMergeEnable) {
+			conf.setBoolean(TableConfig.SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE(), true);
+		}
 	}
 
-	@Parameterized.Parameters(name = "useBufferedIO-{0} spillCompress-{1}")
+	@Parameterized.Parameters(name = "useBufferedIO-{0} spillCompress-{1} parallelMerge-{2}")
 	public static Collection<Boolean[]> parameters() {
 		return Arrays.asList(
-				new Boolean[]{true, true},
-				new Boolean[]{true, false},
-				new Boolean[]{false, false},
-				new Boolean[]{false, true});
+				new Boolean[]{false, false, false},
+				new Boolean[]{false, false, true},
+				new Boolean[]{false, true, false},
+				new Boolean[]{false, true, true},
+				new Boolean[]{true, false, false},
+				new Boolean[]{true, false, true},
+				new Boolean[]{true, true, false},
+				new Boolean[]{true, true, true});
 	}
 
 	private static String getString(int count) {
@@ -94,6 +104,7 @@ public class BinaryExternalSorterTest {
 		this.memoryManager = new MemoryManager(MEMORY_SIZE, 1);
 		TypeInformation[] types = new TypeInformation[]{Types.INT, Types.STRING};
 		this.serializer = new BinaryRowSerializer(types);
+		this.conf.setInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES(), 128);
 	}
 
 	@After
@@ -243,6 +254,42 @@ public class BinaryExternalSorterTest {
 				0,
 				this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
 				conf, 0.7f);
+		sorter.startThreads();
+		sorter.write(reader);
+
+		MutableObjectIterator<BinaryRow> iterator = sorter.getIterator();
+
+		BinaryRow next = serializer.createInstance();
+		for (int i = 0; i < size; i++) {
+			next = iterator.next(next);
+			Assert.assertEquals(i, next.getInt(0));
+			Assert.assertEquals(getString(i), next.getBinaryString(1).toString());
+		}
+
+		sorter.close();
+	}
+
+	@Test
+	public void testMergeManyTimes() throws Exception {
+
+		int size = 1000_000;
+
+		MockBinaryRowReader reader = new MockBinaryRowReader(size);
+
+		LOG.debug("initializing sortmerger");
+
+		Tuple2<NormalizedKeyComputer, RecordComparator> tuple2 = getIntSortBase(0, true, "testSpilling");
+		long minMemorySize = memoryManager.computeNumberOfPages(0.01) * MemoryManager.DEFAULT_PAGE_SIZE;
+		conf.setInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES(), 8);
+
+		BinaryExternalSorter sorter = new BinaryExternalSorter(
+			new Object(),
+			this.memoryManager,
+			minMemorySize,
+			minMemorySize,
+			0,
+			this.ioManager, (TypeSerializer) serializer, serializer, tuple2.f0, tuple2.f1,
+			conf, 0.7f);
 		sorter.startThreads();
 		sorter.write(reader);
 
