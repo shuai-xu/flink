@@ -21,27 +21,33 @@ package org.apache.flink.table.plan.cost
 import org.apache.calcite.plan.RelOptCost
 import org.apache.calcite.runtime.Utilities
 
+/**
+ * A [[RelOptCost]] that extends network cost and memory cost.
+ */
 abstract class AbstractFlinkCost(
     val rowCount: Double,
     val cpu: Double,
     val io: Double,
     val network: Double,
     val memory: Double)
-  extends FlinkCost {
+  extends RelOptCost {
 
+  /**
+   * @return number of rows processed; this should not be confused with the
+   *         row count produced by a relational expression
+   *         ({ @link org.apache.calcite.rel.RelNode#estimateRowCount})
+   */
   override def getRows: Double = rowCount
 
+  /**
+   * @return usage of CPU resources
+   */
   override def getCpu: Double = cpu
 
+  /**
+   * @return usage of I/O resources
+   */
   override def getIo: Double = io
-
-  override def getNetwork: Double = network
-
-  override def getMemory: Double = memory
-
-  override def isLt(other: RelOptCost): Boolean = {
-    isLe(other) && !(this == other)
-  }
 
   override def hashCode(): Int = {
     Utilities.hashCode(rowCount) +

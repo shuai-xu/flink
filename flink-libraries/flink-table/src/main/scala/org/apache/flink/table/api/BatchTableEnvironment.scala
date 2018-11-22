@@ -42,7 +42,7 @@ import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
-import org.apache.flink.table.plan.cost.{BatchExecCost, FlinkCostFactory}
+import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecRel, BatchExecSink}
 import org.apache.flink.table.plan.optimize.BatchOptimizeContext
@@ -111,7 +111,7 @@ class BatchTableEnvironment(
   /**
    * Returns specific FlinkCostFactory of this Environment.
    */
-  override protected def getFlinkCostFactory: FlinkCostFactory = BatchExecCost.FACTORY
+  override protected def getFlinkCostFactory: FlinkCostFactory = FlinkBatchCost.FACTORY
 
   /**
    * Triggers the program execution.

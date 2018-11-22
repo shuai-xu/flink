@@ -32,7 +32,7 @@ import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.BatchExecHashAggregateCodeGen
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.BinaryRow
-import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.runtime.operator.{AbstractStreamOperatorWithMetrics, BytesHashMap}

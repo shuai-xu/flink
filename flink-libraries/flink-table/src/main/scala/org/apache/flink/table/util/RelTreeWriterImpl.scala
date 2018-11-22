@@ -17,17 +17,18 @@
  */
 package org.apache.flink.table.util
 
-import java.io.PrintWriter
-import java.util.{ArrayList => JArrayList, List => JList}
+import org.apache.flink.api.common.operators.ResourceSpec
+import org.apache.flink.table.plan.cost.FlinkBatchCost
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecRel, BatchExecScan}
+import org.apache.flink.table.plan.util.SubplanReuseContext
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
-import org.apache.flink.api.common.operators.ResourceSpec
-import org.apache.flink.table.plan.cost.BatchExecCost
-import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.util.SubplanReuseContext
+
+import java.io.PrintWriter
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConversions._
 
@@ -106,7 +107,7 @@ class RelTreeWriterImpl(
       if (printMemCost || printResource) {
         rel match {
           case rowBatchExec: BatchExecRel[_] =>
-            val memCost = mq.getNonCumulativeCost(rowBatchExec).asInstanceOf[BatchExecCost].memory
+            val memCost = mq.getNonCumulativeCost(rowBatchExec).asInstanceOf[FlinkBatchCost].memory
             printValues.add(Pair.of(
               "memCost",
               memCost.asInstanceOf[AnyRef]))

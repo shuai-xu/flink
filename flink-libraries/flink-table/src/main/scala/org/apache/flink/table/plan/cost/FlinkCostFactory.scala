@@ -32,5 +32,4 @@ trait FlinkCostFactory extends RelOptCostFactory {
     network: Double,
     memory: Double): RelOptCost
 
-  def makeCost(rowCount: Double, cpu: Double, io: Double, network: Double): RelOptCost
 }

@@ -52,7 +52,7 @@ object MetadataTestUtil {
       .newConfigBuilder
       .defaultSchema(defaultSchema)
       .parserConfig(sqlParserConfig)
-      .costFactory(new DataSetCostFactory)
+      .costFactory(new FlinkStreamCostFactory)
       .typeSystem(new FlinkTypeSystem)
       .operatorTable(sqlOperatorTable)
       .executor(new ExpressionReducer(config))

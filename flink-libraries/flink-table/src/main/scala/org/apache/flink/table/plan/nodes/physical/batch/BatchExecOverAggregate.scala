@@ -29,7 +29,7 @@ import org.apache.flink.table.codegen.agg.{AggsHandlerCodeGenerator, BatchExecAg
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
-import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindowMode
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}

@@ -29,7 +29,7 @@ import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, 
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
-import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.runtime.operator.TwoInputSubstituteStreamOperator

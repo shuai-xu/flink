@@ -23,38 +23,27 @@ import org.apache.calcite.plan.RelOptCost
 /**
   * This class is based on Apache Calcite's `org.apache.calcite.plan.volcano.VolcanoCost#Factory`.
   */
-class DataSetCostFactory extends FlinkCostFactory {
+class FlinkStreamCostFactory extends FlinkCostFactory {
 
   override def makeCost(
-    rowCount: Double,
-    cpu: Double,
-    io: Double,
-    network: Double,
-    memory: Double): RelOptCost = {
-    new DataSetCost(rowCount, cpu, io, network, memory)
-  }
-
-  override def makeCost(rowCount: Double, cpu: Double, io: Double, network: Double): RelOptCost = {
-    new DataSetCost(rowCount, cpu, io, network, 0.0)
+      rowCount: Double,
+      cpu: Double,
+      io: Double,
+      network: Double,
+      memory: Double): RelOptCost = {
+    new FlinkStreamCost(rowCount, cpu, io, network, memory)
   }
 
   override def makeCost(dRows: Double, dCpu: Double, dIo: Double): RelOptCost = {
-    new DataSetCost(dRows, dCpu, dIo, 0.0, 0.0)
+    new FlinkStreamCost(dRows, dCpu, dIo, 0.0, 0.0)
   }
 
-  override def makeHugeCost: RelOptCost = {
-    DataSetCost.Huge
-  }
+  override def makeHugeCost: RelOptCost = FlinkStreamCost.Huge
 
-  override def makeInfiniteCost: RelOptCost = {
-    DataSetCost.Infinity
-  }
+  override def makeInfiniteCost: RelOptCost = FlinkStreamCost.Infinity
 
-  override def makeTinyCost: RelOptCost = {
-    DataSetCost.Tiny
-  }
+  override def makeTinyCost: RelOptCost = FlinkStreamCost.Tiny
 
-  override def makeZeroCost: RelOptCost = {
-    DataSetCost.Zero
-  }
+  override def makeZeroCost: RelOptCost = FlinkStreamCost.Zero
+
 }

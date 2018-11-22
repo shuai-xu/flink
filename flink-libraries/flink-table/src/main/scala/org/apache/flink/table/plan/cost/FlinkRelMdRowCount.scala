@@ -18,18 +18,7 @@
 
 package org.apache.flink.table.plan.cost
 
-import java.lang.Double
-
-import org.apache.calcite.adapter.enumerable.EnumerableLimit
-import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rel.core._
-import org.apache.calcite.rel.metadata._
-import org.apache.calcite.rel.{RelNode, SingleRel}
-import org.apache.calcite.rex.{RexLiteral, RexNode}
-import org.apache.calcite.util._
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.expressions.ExpressionUtils._
-import org.apache.flink.table.plan.cost.BatchExecCost._
 import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, TumblingGroupWindow}
 import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate, Rank}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
@@ -38,6 +27,16 @@ import org.apache.flink.table.plan.stats.ValueInterval
 import org.apache.flink.table.plan.util.AggregateUtil._
 import org.apache.flink.table.util.FlinkRelMdUtil._
 import org.apache.flink.table.util.{ExecResourceUtil, FlinkRelMdUtil, FlinkRelOptUtil}
+
+import org.apache.calcite.adapter.enumerable.EnumerableLimit
+import org.apache.calcite.plan.volcano.RelSubset
+import org.apache.calcite.rel.core._
+import org.apache.calcite.rel.metadata._
+import org.apache.calcite.rel.{RelNode, SingleRel}
+import org.apache.calcite.rex.{RexLiteral, RexNode}
+import org.apache.calcite.util._
+
+import java.lang.Double
 
 import scala.collection.JavaConversions._
 

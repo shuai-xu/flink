@@ -24,7 +24,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedOperator}
 import org.apache.flink.table.dataformat.{BinaryRow, GenericRow, JoinedRow}
-import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.runtime.operator.AbstractStreamOperatorWithMetrics
 

@@ -22,7 +22,7 @@ import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
-import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory}
+import org.apache.flink.table.plan.cost.{FlinkStreamCost, FlinkCostFactory}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
@@ -42,7 +42,7 @@ class MockTableEnvironment extends TableEnvironment(new TableConfig) {
       sink: TableSink[T],
       sinkName: String): Unit = ???
 
-  override protected def getFlinkCostFactory: FlinkCostFactory = DataSetCost.FACTORY
+  override protected def getFlinkCostFactory: FlinkCostFactory = FlinkStreamCost.FACTORY
 
   override protected def checkValidTableName(name: String): Unit = ???
 

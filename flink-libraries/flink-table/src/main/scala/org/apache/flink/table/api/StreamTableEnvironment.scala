@@ -43,7 +43,7 @@ import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescr
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`._
-import org.apache.flink.table.plan.cost.{DataSetCost, FlinkCostFactory, FlinkRelMetadataQuery}
+import org.apache.flink.table.plan.cost.{FlinkStreamCost, FlinkCostFactory, FlinkRelMetadataQuery}
 import org.apache.flink.table.plan.logical.{LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecRel, _}
@@ -419,7 +419,7 @@ abstract class StreamTableEnvironment(
     * Returns specific FlinkCostFactory of this Environment.
     * Currently we use DataSetCostFactory, and will change this later.
     */
-  override protected def getFlinkCostFactory: FlinkCostFactory = DataSetCost.FACTORY
+  override protected def getFlinkCostFactory: FlinkCostFactory = FlinkStreamCost.FACTORY
 
   /**
     * Writes a [[Table]] to a [[TableSink]].

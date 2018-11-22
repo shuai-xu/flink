@@ -24,7 +24,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.SortCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.batch.BatchExecRelVisitor
-import org.apache.flink.table.plan.cost.BatchExecCost
+import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.cost.FlinkRelMetadataQuery.reuseOrCreate
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
@@ -105,7 +105,7 @@ object BatchExecRel {
     val mq = reuseOrCreate(relNode.getCluster.getMetadataQuery)
     val relCost = mq.getNonCumulativeCost(relNode)
     relCost match {
-      case execCost: BatchExecCost => execCost.memory
+      case execCost: FlinkBatchCost => execCost.memory
       case _ => 0d
     }
   }

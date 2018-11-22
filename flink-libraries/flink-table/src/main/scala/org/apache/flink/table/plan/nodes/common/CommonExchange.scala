@@ -23,7 +23,7 @@ import org.apache.calcite.rel.core.Exchange
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelDistribution, RelNode, RelWriter}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.cost.BatchExecCost._
+import org.apache.flink.table.plan.cost.FlinkBatchCost._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 
 import scala.collection.JavaConverters._
