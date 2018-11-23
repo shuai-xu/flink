@@ -171,8 +171,8 @@ public class SortMergeJoinIteratorTest {
 	public void inner(
 			Tuple2<MutableObjectIterator<BinaryRow>, MutableObjectIterator<BinaryRow>> data,
 			List<Tuple2<BinaryRow, BinaryRow>> compare) throws Exception {
-		MutableObjectIterator<BinaryRow> input1 = data.f0;
-		MutableObjectIterator<BinaryRow> input2 = data.f1;
+		MutableObjectIterator input1 = data.f0;
+		MutableObjectIterator input2 = data.f1;
 		if (leftIsSmall) {
 			input1 = data.f1;
 			input2 = data.f0;
@@ -190,7 +190,7 @@ public class SortMergeJoinIteratorTest {
 						serializer), new boolean[]{true})) {
 			int id = 0;
 			while (iterator.nextInnerJoin()) {
-				BinaryRow probe = iterator.getProbeRow();
+				BaseRow probe = iterator.getProbeRow();
 				ResettableExternalBuffer.BufferIterator iter = iterator.getMatchBuffer().newIterator();
 				while (iter.advanceNext()) {
 					BaseRow row = iter.getRow();
@@ -209,8 +209,8 @@ public class SortMergeJoinIteratorTest {
 	public void oneSideOuter(
 			Tuple2<MutableObjectIterator<BinaryRow>, MutableObjectIterator<BinaryRow>> data,
 			List<Tuple2<BinaryRow, BinaryRow>> compare) throws Exception {
-		MutableObjectIterator<BinaryRow> input1 = data.f0;
-		MutableObjectIterator<BinaryRow> input2 = data.f1;
+		MutableObjectIterator input1 = data.f0;
+		MutableObjectIterator input2 = data.f1;
 		if (leftIsSmall) {
 			input1 = data.f1;
 			input2 = data.f0;
@@ -228,7 +228,7 @@ public class SortMergeJoinIteratorTest {
 						serializer), new boolean[]{true})) {
 			int id = 0;
 			while (iterator.nextOuterJoin()) {
-				BinaryRow probe = iterator.getProbeRow();
+				BaseRow probe = iterator.getProbeRow();
 				if (iterator.matchKey == null) {
 					Tuple2<BinaryRow, BinaryRow> expected = compare.get(id++);
 					if (leftIsSmall) {

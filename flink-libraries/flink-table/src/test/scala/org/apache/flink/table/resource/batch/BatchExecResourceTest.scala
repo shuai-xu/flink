@@ -241,7 +241,11 @@ object BatchExecResourceTest {
       53
     )
     tableConfig.getParameters.setInteger(
-      ExecResourceUtil.SQL_EXEC_SORT_PREFER_BUFFER_MEM,
+      TableConfig.SQL_EXEC_SORT_PREFER_BUFFER_MEM,
+      57
+    )
+    tableConfig.getParameters.setInteger(
+      TableConfig.SQL_EXEC_SORT_MAX_BUFFER_MEM,
       57
     )
     tableConfig.getParameters.setInteger(

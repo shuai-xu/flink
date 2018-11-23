@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.operator.join.batch;
 
 import org.apache.flink.table.codegen.Projection;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
@@ -32,13 +33,13 @@ import java.io.IOException;
  */
 public abstract class SortMergeJoinIterator implements Closeable {
 
-	private final Projection<BinaryRow, BinaryRow> probeProjection;
+	private final Projection<BaseRow, BinaryRow> probeProjection;
 	private final Projection<BinaryRow, BinaryRow> bufferedProjection;
 	protected final RecordComparator keyComparator;
-	private final MutableObjectIterator<BinaryRow> probeIterator;
+	private final MutableObjectIterator<BaseRow> probeIterator;
 	private final MutableObjectIterator<BinaryRow> bufferedIterator;
 
-	private BinaryRow probeRow;
+	private BaseRow probeRow;
 	protected BinaryRow probeKey;
 	protected BinaryRow bufferedRow;
 	protected BinaryRow bufferedKey;
@@ -55,7 +56,7 @@ public abstract class SortMergeJoinIterator implements Closeable {
 			Projection probeProjection,
 			Projection bufferedProjection,
 			RecordComparator keyComparator,
-			MutableObjectIterator<BinaryRow> probeIterator,
+			MutableObjectIterator<BaseRow> probeIterator,
 			MutableObjectIterator<BinaryRow> bufferedIterator,
 			ResettableExternalBuffer buffer,
 			boolean[] filterNulls) throws IOException {
@@ -120,7 +121,7 @@ public abstract class SortMergeJoinIterator implements Closeable {
 				&& keyComparator.compare(probeKey, bufferedKey) == 0);
 	}
 
-	public BinaryRow getProbeRow() {
+	public BaseRow getProbeRow() {
 		return probeRow;
 	}
 

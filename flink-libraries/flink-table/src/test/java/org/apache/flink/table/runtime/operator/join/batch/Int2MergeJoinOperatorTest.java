@@ -38,33 +38,16 @@ import org.codehaus.commons.compiler.CompileException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.util.Arrays;
-import java.util.Collection;
 
 import static org.junit.Assert.fail;
 
 /**
- * Random test for {@link SortMergeJoinOperator}.
+ * Test for {@link MergeJoinOperator}.
  */
-@RunWith(Parameterized.class)
-public class Int2SortMergeJoinOperatorTest {
-
-	private boolean leftIsSmaller;
+public class Int2MergeJoinOperatorTest {
 
 	private MemoryManager memManager;
 	private IOManager ioManager;
-
-	public Int2SortMergeJoinOperatorTest(boolean leftIsSmaller) {
-		this.leftIsSmaller = leftIsSmaller;
-	}
-
-	@Parameterized.Parameters
-	public static Collection<Boolean> parameters() {
-		return Arrays.asList(true, false);
-	}
 
 	@Before
 	public void setup() {
@@ -91,12 +74,38 @@ public class Int2SortMergeJoinOperatorTest {
 		int probeValsPerKey = 10;
 
 		// create a build input that gives 300 pairs with 3 values sharing the same key
-		MutableObjectIterator<BinaryRow> buildInput = new UniformBinaryRowGenerator(numKeys, buildValsPerKey, false);
+		MutableObjectIterator<BinaryRow> buildInput = new UniformBinaryRowGenerator(numKeys, buildValsPerKey, true);
 		// create a probe input that gives 1000 pairs with 10 values sharing a key
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
 
 		buildJoin(buildInput, probeInput, FlinkJoinRelType.INNER, numKeys * buildValsPerKey * probeValsPerKey,
-				numKeys, 165);
+			numKeys, 165);
+	}
+
+	@Test
+	public void testInnerJoinSameNumberOfRecordsPerKey() throws Exception {
+		int numKeys = 100;
+		int buildValsPerKey = 5;
+		int probeValsPerKey = 5;
+
+		MutableObjectIterator<BinaryRow> buildInput = new UniformBinaryRowGenerator(numKeys, buildValsPerKey, true);
+		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
+
+		buildJoin(buildInput, probeInput, FlinkJoinRelType.INNER, numKeys * buildValsPerKey * probeValsPerKey,
+			numKeys, 100);
+	}
+
+	@Test
+	public void testInnerJoinSameKey() throws Exception {
+		int numKeys = 1;
+		int buildValsPerKey = 30;
+		int probeValsPerKey = 100;
+
+		MutableObjectIterator<BinaryRow> buildInput = new UniformBinaryRowGenerator(numKeys, buildValsPerKey, true);
+		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
+
+		buildJoin(buildInput, probeInput, FlinkJoinRelType.INNER, numKeys * buildValsPerKey * probeValsPerKey,
+			numKeys, 192000);
 	}
 
 	@Test
@@ -113,7 +122,7 @@ public class Int2SortMergeJoinOperatorTest {
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys2, probeValsPerKey, true);
 
 		buildJoin(buildInput, probeInput, FlinkJoinRelType.LEFT, numKeys1 * buildValsPerKey * probeValsPerKey,
-				numKeys1, 165);
+			numKeys1, 165);
 	}
 
 	@Test
@@ -147,55 +156,47 @@ public class Int2SortMergeJoinOperatorTest {
 	}
 
 	private void buildJoin(
-			MutableObjectIterator<BinaryRow> input1,
-			MutableObjectIterator<BinaryRow> input2,
-			FlinkJoinRelType type,
-			int expertOutSize, int expertOutKeySize, int expertOutVal) throws Exception {
+		MutableObjectIterator<BinaryRow> input1,
+		MutableObjectIterator<BinaryRow> input2,
+		FlinkJoinRelType type,
+		int expertOutSize, int expertOutKeySize, int expertOutVal) throws Exception {
 
 		Int2HashJoinOperatorTest.joinAndAssert(
-				getOperator(type),
-				input1, input2, expertOutSize, expertOutKeySize, expertOutVal);
+			getOperator(type),
+			input1, input2, expertOutSize, expertOutKeySize, expertOutVal);
 	}
 
-	private StreamOperator getOperator(FlinkJoinRelType type) {
-		return new TestSortMergeJoinOperator(type, leftIsSmaller);
+	protected StreamOperator getOperator(FlinkJoinRelType type) {
+		return new TestMergeJoinOperator(type);
 	}
 
 	/**
 	 * Override cookGeneratedClasses.
 	 */
-	static class TestSortMergeJoinOperator extends SortMergeJoinOperator {
+	static class TestMergeJoinOperator extends MergeJoinOperator {
 
-		public TestSortMergeJoinOperator(FlinkJoinRelType type, boolean leftIsSmaller) {
-			super(32 * 32 * 1024, 32 * 32 * 1024, 0, 1024 * 1024, type, leftIsSmaller,
-					null, null, null,
-					new GeneratedSorter(null, null, null, null),
-					new GeneratedSorter(null, null, null, null),
-					new GeneratedSorter(null, null, null, null),
-					new boolean[]{true});
+		private TestMergeJoinOperator(FlinkJoinRelType type) {
+			super(32 * 32 * 1024, 32 * 32 * 1024, type,
+				null, null, null,
+				new GeneratedSorter(null, null, null, null),
+				new boolean[]{true});
 		}
 
 		@Override
 		protected CookedClasses cookGeneratedClasses(ClassLoader cl) throws CompileException {
-			Class<NormalizedKeyComputer> computerClass;
 			Class<RecordComparator> comparatorClass;
 			try {
 				Tuple2<NormalizedKeyComputer, RecordComparator> base =
-						InMemorySortTest.getIntSortBase(0, true, "Int2SortMergeJoinOperatorTest");
-				computerClass = (Class<NormalizedKeyComputer>) base.f0.getClass();
+					InMemorySortTest.getIntSortBase(0, true, "Int2MergeJoinOperatorTest");
 				comparatorClass = (Class<RecordComparator>) base.f1.getClass();
 			} catch (Exception e) {
 				throw new RuntimeException();
 			}
 			return new CookedClasses(
-					(Class) MyConditionFunction.class,
-					comparatorClass,
-					(Class) MyProjection.class,
-					(Class) MyProjection.class,
-					computerClass,
-					computerClass,
-					comparatorClass,
-					comparatorClass
+				(Class) MyConditionFunction.class,
+				comparatorClass,
+				(Class) MyProjection.class,
+				(Class) MyProjection.class
 			);
 		}
 	}

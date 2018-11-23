@@ -259,11 +259,18 @@ public class String2HashJoinOperatorTest {
 		}
 	}
 
-	public static BinaryRow newRow(String s0, String s1) {
-		BinaryRow row = new BinaryRow(2);
+	public static BinaryRow newRow(String... s) {
+		BinaryRow row = new BinaryRow(s.length);
 		BinaryRowWriter writer = new BinaryRowWriter(row);
-		writer.writeString(0, s0);
-		writer.writeString(1, s1);
+
+		for (int i = 0; i < s.length; i++) {
+			if (s[i] == null) {
+				writer.setNullAt(i);
+			} else {
+				writer.writeString(i, s[i]);
+			}
+		}
+
 		writer.complete();
 		return row;
 	}

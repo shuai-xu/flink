@@ -42,6 +42,7 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 
 import static java.lang.Long.valueOf;
 import static org.apache.flink.api.common.typeinfo.BasicTypeInfo.INT_TYPE_INFO;
@@ -58,9 +59,9 @@ public class Int2HashJoinOperatorTest {
 		int numKeys = 100;
 		int buildValsPerKey = 3;
 		int probeValsPerKey = 10;
+
 		// create a build input that gives 300 pairs with 3 values sharing the same key
 		MutableObjectIterator<BinaryRow> buildInput = new UniformBinaryRowGenerator(numKeys, buildValsPerKey, false);
-
 		// create a probe input that gives 1000 pairs with 10 values sharing a key
 		MutableObjectIterator<BinaryRow> probeInput = new UniformBinaryRowGenerator(numKeys, probeValsPerKey, true);
 
@@ -194,25 +195,25 @@ public class Int2HashJoinOperatorTest {
 			MutableObjectIterator<BinaryRow> buildInput,
 			MutableObjectIterator<BinaryRow> probeInput,
 			boolean leftOut, boolean rightOut, boolean buildLeft,
-			int expertOutSize, int expertOutKeySize, int expertOutVal) throws Exception {
+			int expectOutSize, int expectOutKeySize, int expectOutVal) throws Exception {
 		HashJoinType type = HashJoinType.of(buildLeft, leftOut, rightOut);
 		StreamOperator operator = new TestHashJoinOperator(33 * 32 * 1024, type, !buildLeft);
-		joinAndAssert(operator, buildInput, probeInput, expertOutSize, expertOutKeySize, expertOutVal);
+		joinAndAssert(operator, buildInput, probeInput, expectOutSize, expectOutKeySize, expectOutVal);
 	}
 
 	static void joinAndAssert(
 			StreamOperator operator,
 			MutableObjectIterator<BinaryRow> input1,
 			MutableObjectIterator<BinaryRow> input2,
-			int expertOutSize,
-			int expertOutKeySize,
-			int expertOutVal) throws Exception {
+			int expectOutSize,
+			int expectOutKeySize,
+			int expectOutVal) throws Exception {
 		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, INT_TYPE_INFO, INT_TYPE_INFO);
 		BaseRowTypeInfo<JoinedRow> baseRowType = new BaseRowTypeInfo<>(
-				JoinedRow.class, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO);
+			JoinedRow.class, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO, INT_TYPE_INFO);
 		TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness =
-				new TwoInputStreamTaskTestHarness<>(TwoInputStreamTask::new,
-					2, 2, new int[]{1, 2}, typeInfo, typeInfo, baseRowType);
+			new TwoInputStreamTaskTestHarness<>(TwoInputStreamTask::new,
+				2, 1, new int[]{1, 2}, typeInfo, typeInfo, baseRowType);
 		testHarness.memorySize = 36 * 1024 * 1024;
 		testHarness.getExecutionConfig().enableObjectReuse();
 		testHarness.setupOutputForSingletonOperatorChain();
@@ -222,20 +223,32 @@ public class Int2HashJoinOperatorTest {
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();
 
+		Random random = new Random();
 		do {
-			BinaryRow binaryRow = input1.next();
-			if (binaryRow == null) {
-				break;
-			}
-			testHarness.processElement(new StreamRecord<>(binaryRow), 0 , 0);
-		} while (true);
+			BinaryRow row1 = null;
+			BinaryRow row2 = null;
 
-		do {
-			BinaryRow binaryRow = input2.next();
-			if (binaryRow == null) {
+			if (random.nextInt(2) == 0) {
+				row1 = input1.next();
+				if (row1 == null) {
+					row2 = input2.next();
+				}
+			} else {
+				row2 = input2.next();
+				if (row2 == null) {
+					row1 = input1.next();
+				}
+			}
+
+			if (row1 == null && row2 == null) {
 				break;
 			}
-			testHarness.processElement(new StreamRecord<>(binaryRow), 1, 0);
+
+			if (row1 != null) {
+				testHarness.processElement(new StreamRecord<>(row1), 0 , 0);
+			} else {
+				testHarness.processElement(new StreamRecord<>(row2), 1 , 0);
+			}
 		} while (true);
 
 		testHarness.endInput();
@@ -244,12 +257,12 @@ public class Int2HashJoinOperatorTest {
 
 		Queue<Object> actual = testHarness.getOutput();
 
-		Assert.assertEquals("Output was not correct.", expertOutSize, actual.size());
+		Assert.assertEquals("Output was not correct.", expectOutSize, actual.size());
 
 		// Don't verify the output value when experOutVal is -1
-		if (expertOutVal != -1) {
+		if (expectOutVal != -1) {
 			// create the map for validating the results
-			HashMap<Integer, Long> map = new HashMap<>(expertOutKeySize);
+			HashMap<Integer, Long> map = new HashMap<>(expectOutKeySize);
 
 			for (Object o : actual) {
 				StreamRecord<BaseRow> record = (StreamRecord<BaseRow>) o;
@@ -275,13 +288,13 @@ public class Int2HashJoinOperatorTest {
 				map.put(key, contained);
 			}
 
-			Assert.assertEquals("Wrong number of keys", expertOutKeySize, map.size());
+			Assert.assertEquals("Wrong number of keys", expectOutKeySize, map.size());
 			for (Map.Entry<Integer, Long> entry : map.entrySet()) {
 				long val = entry.getValue();
 				int key = entry.getKey();
 
 				Assert.assertEquals("Wrong number of values in per-key cross product for key " + key,
-						expertOutVal, val);
+						expectOutVal, val);
 			}
 		}
 	}

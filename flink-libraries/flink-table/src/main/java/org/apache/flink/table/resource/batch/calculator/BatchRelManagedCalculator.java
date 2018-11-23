@@ -159,14 +159,31 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 	@Override
 	public Void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
 		visitChildren(sortMergeJoin);
+
+		int numOfSort = 0;
+		if (!sortMergeJoin.leftSorted()) {
+			numOfSort += 1;
+		}
+		if (!sortMergeJoin.rightSorted()) {
+			numOfSort += 1;
+		}
+
 		int externalBufferMemoryMb = ExecResourceUtil.getExternalBufferManagedMemory(
-				tConfig) * sortMergeJoin.getExternalBufferNum();
+			tConfig) * sortMergeJoin.getExternalBufferNum();
+		int mergeBufferMemoryMb = ExecResourceUtil.getMergeJoinBufferManagedMemory(tConfig);
+
 		int sortMemory = ExecResourceUtil.getSortBufferManagedMemory(tConfig);
-		int reservedMemory = sortMemory * 2 + externalBufferMemoryMb;
-		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(
-				tConfig);
-		int preferMemory = preferSortMemory * 2 + externalBufferMemoryMb;
-		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, preferMemory);
+		int preferSortMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(tConfig);
+		int maxSortMemory = ExecResourceUtil.getSortBufferManagedMaxMemory(tConfig);
+
+		int reservedMemory =
+			sortMemory * numOfSort + mergeBufferMemoryMb * (2 - numOfSort) + externalBufferMemoryMb;
+		int preferMemory =
+			preferSortMemory * numOfSort + mergeBufferMemoryMb * (2 - numOfSort) + externalBufferMemoryMb;
+		int maxMemory =
+			maxSortMemory * numOfSort + mergeBufferMemoryMb * (2 - numOfSort) + externalBufferMemoryMb;
+
+		relResMap.get(sortMergeJoin).setManagedMem(reservedMemory, preferMemory, maxMemory);
 		return null;
 	}
 
@@ -254,7 +271,8 @@ public class BatchRelManagedCalculator implements BatchExecRelVisitor<Void> {
 		visitChildren(sort);
 		int reservedMemory = ExecResourceUtil.getSortBufferManagedMemory(tConfig);
 		int preferMemory = ExecResourceUtil.getSortBufferManagedPreferredMemory(tConfig);
-		relResMap.get(sort).setManagedMem(reservedMemory, preferMemory, preferMemory);
+		int maxMemory = ExecResourceUtil.getSortBufferManagedMaxMemory(tConfig);
+		relResMap.get(sort).setManagedMem(reservedMemory, preferMemory, maxMemory);
 		return null;
 	}
 

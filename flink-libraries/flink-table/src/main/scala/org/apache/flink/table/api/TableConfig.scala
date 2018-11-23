@@ -808,14 +808,26 @@ object TableConfig {
   val SQL_EXEC_SORT_DEFAULT_LIMIT = "sql.exec.sort.default-limit"
   val SQL_EXEC_SORT_DEFAULT_LIMIT_DEFAULT: Int = 200
 
-  /**
-    * Sets the buffer reserved memory size for sort. It defines the lower limit for the sort.
-    */
-  val SQL_EXEC_SORT_BUFFER_MEM = "sql.exec.sort.buffer-memory-mb"
-  /**
-   * The default value for the sort's reserved and prefer buffer.
-   */
-  val SQL_EXEC_SORT_BUFFER_MEM_DEFAULT = 256
+  val SQL_EXEC_SORT_BUFFER_MEM: ConfigOption[Integer] =
+    ConfigOptions.key("sql.exec.sort.buffer-memory-mb")
+      .defaultValue(new Integer(256))
+      .withDescription(
+        "Sets the buffer reserved memory size for sort. " +
+          "It defines the lower limit for the sort.")
+
+  val SQL_EXEC_SORT_PREFER_BUFFER_MEM: ConfigOption[Integer] =
+    ConfigOptions.key("sql.exec.sort.prefer-buffer-memory-mb")
+      .defaultValue(new Integer(256))
+      .withDescription(
+        "Sets the preferred buffer memory size for sort. " +
+          "It defines the applied memory for the sort.")
+
+  val SQL_EXEC_SORT_MAX_BUFFER_MEM: ConfigOption[Integer] =
+    ConfigOptions.key("sql.exec.sort.max-buffer-memory-mb")
+      .defaultValue(new Integer(256))
+      .withDescription(
+        "Sets the max buffer memory size for sort. " +
+          "It defines the upper memory for the sort.")
 
   val SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES: ConfigOption[Integer] =
     ConfigOptions.key("sql.exec.sort.max-num-file-handles")
@@ -857,6 +869,12 @@ object TableConfig {
     */
   val SQL_HASH_JOIN_BROADCAST_THRESHOLD = "sql.exec.hash-join.broadcast-threshold"
   val SQL_HASH_JOIN_BROADCAST_THRESHOLD_DEFAULT: Long = 1 * 1024 * 1024
+
+  val SQL_MERGE_JOIN_BUFFER_MEM: ConfigOption[Integer] =
+    ConfigOptions.key("sql.exec.merge-join.buffer-memory-mb")
+      .defaultValue(new Integer(64))
+      .withDescription(
+        "The default value for memory size of buffer in merge join.")
 
   // =================================== Aggregate ===================================
   /**

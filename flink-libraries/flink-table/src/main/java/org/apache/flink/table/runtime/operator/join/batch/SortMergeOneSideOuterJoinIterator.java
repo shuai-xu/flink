@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.operator.join.batch;
 
 import org.apache.flink.table.codegen.Projection;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.runtime.sort.RecordComparator;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
@@ -37,7 +38,7 @@ public class SortMergeOneSideOuterJoinIterator extends SortMergeJoinIterator {
 			Projection probeProjection,
 			Projection bufferedProjection,
 			RecordComparator keyComparator,
-			MutableObjectIterator<BinaryRow> probeIterator,
+			MutableObjectIterator<BaseRow> probeIterator,
 			MutableObjectIterator<BinaryRow> bufferedIterator,
 			ResettableExternalBuffer buffer,
 			boolean[] filterNullKeys) throws IOException {

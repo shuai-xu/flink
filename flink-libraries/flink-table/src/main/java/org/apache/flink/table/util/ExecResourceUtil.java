@@ -29,12 +29,6 @@ import org.apache.flink.table.api.TableConfig;
 public class ExecResourceUtil {
 
 	/**
-	 * Sets the preferred buffer memory size for sort. It defines the upper limit for
-	 * the sort.
-	 */
-	public static final String SQL_EXEC_SORT_PREFER_BUFFER_MEM = "sql.exec.sort.prefer-buffer-memory-mb";
-
-	/**
 	 * Sets the HashTable preferred memory for hashJoin operator. It defines the upper limit.
 	 */
 	public static final String SQL_EXEC_HASH_JOIN_TABLE_PREFER_MEM = "sql.exec.hash-join.table-prefer-memory-mb";
@@ -134,8 +128,27 @@ public class ExecResourceUtil {
 	 */
 	public static int getSortBufferManagedMemory(TableConfig tConfig) {
 		return tConfig.getParameters().getInteger(
-				TableConfig.SQL_EXEC_SORT_BUFFER_MEM(),
-				TableConfig.SQL_EXEC_SORT_BUFFER_MEM_DEFAULT());
+				TableConfig.SQL_EXEC_SORT_BUFFER_MEM());
+	}
+
+	/**
+	 * Gets the preferred managedMemory for sort buffer.
+	 * @param tConfig TableConfig.
+	 * @return the prefer managedMemory for sort buffer.
+	 */
+	public static int getSortBufferManagedPreferredMemory(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_SORT_PREFER_BUFFER_MEM());
+	}
+
+	/**
+	 * Gets the max managedMemory for sort buffer.
+	 * @param tConfig TableConfig.
+	 * @return the max managedMemory for sort buffer.
+	 */
+	public static int getSortBufferManagedMaxMemory(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				TableConfig.SQL_EXEC_SORT_MAX_BUFFER_MEM());
 	}
 
 	/**
@@ -147,6 +160,16 @@ public class ExecResourceUtil {
 		return tConfig.getParameters().getInteger(
 				TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM(),
 				TableConfig.SQL_EXEC_EXTERNAL_BUFFER_MEM_DEFAULT());
+	}
+
+	/**
+	 * Gets the config managedMemory for external buffer in merge join.
+	 * @param tConfig TableConfig.
+	 * @return the config managedMemory for external buffer in merge join.
+	 */
+	public static int getMergeJoinBufferManagedMemory(TableConfig tConfig) {
+		return tConfig.getParameters().getInteger(
+				TableConfig.SQL_MERGE_JOIN_BUFFER_MEM());
 	}
 
 	/**
@@ -299,17 +322,6 @@ public class ExecResourceUtil {
 		int minParallelism = getOperatorMinParallelism(tConfig);
 		int resultParallelism = (int) (rowCount / getRelCountPerPartition(tConfig));
 		return Math.max(Math.min(resultParallelism, maxParallelism), minParallelism);
-	}
-
-	/**
-	 * Gets the preferred managedMemory for sort buffer.
-	 * @param tConfig TableConfig.
-	 * @return the prefer managedMemory for sort buffer.
-	 */
-	public static int getSortBufferManagedPreferredMemory(TableConfig tConfig) {
-		return tConfig.getParameters().getInteger(
-				SQL_EXEC_SORT_PREFER_BUFFER_MEM,
-				getSortBufferManagedMemory(tConfig));
 	}
 
 	/**

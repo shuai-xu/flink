@@ -714,6 +714,53 @@ class JoinITCase(expectedJoinType: JoinType) extends QueryTest with JoinITCaseBa
       )
     }
   }
+
+  @Test
+  def testJoinCollation(): Unit = {
+    checkResult(
+      """
+        |WITH v1 AS (
+        |  SELECT t1.a AS a, (t1.b + t2.b) AS b
+        |    FROM SmallTable3 AS t1, SmallTable3 AS t2 WHERE t1.a = t2.a
+        |),
+        |
+        |v2 AS (
+        |  SELECT t1.a AS a, (t1.b * t2.b) AS b
+        |    FROM SmallTable3 AS t1, SmallTable3 AS t2 WHERE t1.a = t2.a
+        |)
+        |
+        |SELECT v1.a, v2.a, v1.b, v2.b FROM v1, v2 WHERE v1.a = v2.a
+      """.stripMargin,
+      Seq(
+        row(1, 1, 2L, 1L),
+        row(2, 2, 4L, 4L),
+        row(3, 3, 4L, 4L)
+      )
+    )
+
+    checkResult(
+      """
+        |WITH v1 AS (
+        |  SELECT t1.a AS a, (t1.b + t2.b) AS b
+        |    FROM SmallTable3 AS t1, SmallTable3 AS t2 WHERE t1.a = t2.a
+        |),
+        |
+        |v2 AS (
+        |  SELECT t1.b AS a, (t1.b * t2.b) AS b
+        |    FROM SmallTable3 AS t1, SmallTable3 AS t2 WHERE t1.b = t2.b
+        |)
+        |
+        |SELECT v1.a, v2.a, v1.b, v2.b FROM v1, v2 WHERE v1.a = v2.a
+      """.stripMargin,
+      Seq(
+        row(1, 1L, 2L, 1L),
+        row(2, 2L, 4L, 4L),
+        row(2, 2L, 4L, 4L),
+        row(2, 2L, 4L, 4L),
+        row(2, 2L, 4L, 4L)
+      )
+    )
+  }
 }
 
 object JoinITCase {

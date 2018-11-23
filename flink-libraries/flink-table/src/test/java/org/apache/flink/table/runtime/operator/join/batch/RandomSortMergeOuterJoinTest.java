@@ -31,12 +31,12 @@ import org.apache.flink.runtime.operators.testutils.TestData.TupleGenerator;
 import org.apache.flink.runtime.operators.testutils.TestData.TupleGenerator.KeyMode;
 import org.apache.flink.runtime.operators.testutils.TestData.TupleGenerator.ValueMode;
 import org.apache.flink.runtime.operators.testutils.TestData.TupleGeneratorIterator;
+import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.table.plan.FlinkJoinRelType;
 import org.apache.flink.table.runtime.operator.join.batch.RandomSortMergeInnerJoinTest.TestSortMergeJoinOperator;
 import org.apache.flink.util.MutableObjectIterator;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.apache.flink.table.runtime.operator.join.batch.RandomSortMergeInnerJoinTest.join;
 import static org.apache.flink.table.runtime.operator.join.batch.RandomSortMergeInnerJoinTest.match;
@@ -61,7 +62,6 @@ public class RandomSortMergeOuterJoinTest {
 	private static final long SEED2 = 231434613412342L;
 
 	@Test
-	@Ignore
 	public void testFullOuterJoinWithHighNumberOfCommonKeys() {
 		testOuterJoinWithHighNumberOfCommonKeys(FlinkJoinRelType.FULL, 200, 500, 2048, 0.02f, 200, 500, 2048, 0.02f);
 	}
@@ -142,8 +142,8 @@ public class RandomSortMergeOuterJoinTest {
 			input1 = new MergeIterator<>(inList1, comparator1.duplicate());
 			input2 = new MergeIterator<>(inList2, comparator2.duplicate());
 
-			TestSortMergeJoinOperator operator = new TestSortMergeJoinOperator(outerJoinType, false);
-			match(expectedMatchesMap, transformToBinary(join(operator, input1, input2)));
+			StreamOperator operator = getOperator(outerJoinType);
+			match(expectedMatchesMap, transformToBinary(myJoin(operator, input1, input2)));
 
 			// assert that each expected match was seen
 			for (Entry<Integer, Collection<Match>> entry : expectedMatchesMap.entrySet()) {
@@ -155,6 +155,13 @@ public class RandomSortMergeOuterJoinTest {
 			e.printStackTrace();
 			Assert.fail("An exception occurred during the test: " + e.getMessage());
 		}
+	}
+
+	public LinkedBlockingQueue<Object> myJoin(
+			StreamOperator operator,
+			MutableObjectIterator<Tuple2<Integer, String>> input1,
+			MutableObjectIterator<Tuple2<Integer, String>> input2) throws Exception {
+		return join(operator, input1, input2);
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -214,5 +221,9 @@ public class RandomSortMergeOuterJoinTest {
 		}
 
 		return map;
+	}
+
+	protected StreamOperator getOperator(FlinkJoinRelType outerJoinType) {
+		return new TestSortMergeJoinOperator(outerJoinType, false);
 	}
 }

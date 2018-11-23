@@ -123,7 +123,7 @@ public class RandomSortMergeInnerJoinTest {
 		input1.reset();
 		input2.reset();
 
-		TestSortMergeJoinOperator operator = new TestSortMergeJoinOperator(FlinkJoinRelType.INNER, leftIsSmall);
+		StreamOperator operator = getOperator();
 
 		match(expectedMatchesMap, transformToBinary(join(operator, input1, input2)));
 
@@ -190,7 +190,7 @@ public class RandomSortMergeInnerJoinTest {
 			input1 = new MergeIterator<>(inList1, comparator1.duplicate());
 			input2 = new MergeIterator<>(inList2, comparator2.duplicate());
 
-			TestSortMergeJoinOperator operator = new TestSortMergeJoinOperator(FlinkJoinRelType.INNER, leftIsSmall);
+			StreamOperator operator = getOperator();
 
 			match(expectedMatchesMap, transformToBinary(join(operator, input1, input2)));
 
@@ -236,13 +236,21 @@ public class RandomSortMergeInnerJoinTest {
 			StreamOperator operator,
 			MutableObjectIterator<Tuple2<Integer, String>> input1,
 			MutableObjectIterator<Tuple2<Integer, String>> input2) throws Exception {
+		return join(operator, input1, input2, true);
+	}
+
+	public static LinkedBlockingQueue<Object> join(
+			StreamOperator operator,
+			MutableObjectIterator<Tuple2<Integer, String>> input1,
+			MutableObjectIterator<Tuple2<Integer, String>> input2,
+			boolean input1First) throws Exception {
 		BaseRowTypeInfo typeInfo = new BaseRowTypeInfo<>(BinaryRow.class, INT_TYPE_INFO, STRING_TYPE_INFO);
 		BaseRowTypeInfo<JoinedRow> joinedInfo = new BaseRowTypeInfo<>(
 				JoinedRow.class, INT_TYPE_INFO, STRING_TYPE_INFO, INT_TYPE_INFO, STRING_TYPE_INFO);
 		final TwoInputStreamTaskTestHarness<BinaryRow, BinaryRow, JoinedRow> testHarness =
-				new TwoInputStreamTaskTestHarness<>(
-						TwoInputStreamTask::new, 2, 1, new int[]{1, 2}, typeInfo, typeInfo,
-						joinedInfo);
+			new TwoInputStreamTaskTestHarness<>(
+				TwoInputStreamTask::new, 2, 1, new int[]{1, 2}, typeInfo, typeInfo,
+				joinedInfo);
 
 		// Deep pit!!! Cause in TwoInputStreamTaskTestHarness, one record one buffer.
 		testHarness.bufferSize = 10 * 1024;
@@ -259,15 +267,32 @@ public class RandomSortMergeInnerJoinTest {
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();
 
-		Tuple2<Integer, String> tuple2 = new Tuple2<>();
-		while ((tuple2 = input1.next(tuple2)) != null) {
-			testHarness.processElement(new StreamRecord<>(newRow(tuple2.f0, tuple2.f1), initialTime), 0, 0);
+		if (input1First) {
+			Tuple2<Integer, String> tuple2 = new Tuple2<>();
+			while ((tuple2 = input1.next(tuple2)) != null) {
+				testHarness.processElement(new StreamRecord<>(newRow(tuple2.f0, tuple2.f1), initialTime), 0, 0);
+			}
+			testHarness.endInput(0);
+
+			tuple2 = new Tuple2<>();
+			while ((tuple2 = input2.next(tuple2)) != null) {
+				testHarness.processElement(new StreamRecord<>(newRow(tuple2.f0, tuple2.f1), initialTime), 1, 0);
+			}
+			testHarness.endInput(1);
+		} else {
+			Tuple2<Integer, String> tuple2 = new Tuple2<>();
+			while ((tuple2 = input2.next(tuple2)) != null) {
+				testHarness.processElement(new StreamRecord<>(newRow(tuple2.f0, tuple2.f1), initialTime), 1, 0);
+			}
+			testHarness.endInput(1);
+
+			tuple2 = new Tuple2<>();
+			while ((tuple2 = input1.next(tuple2)) != null) {
+				testHarness.processElement(new StreamRecord<>(newRow(tuple2.f0, tuple2.f1), initialTime), 0, 0);
+			}
+			testHarness.endInput(0);
 		}
-		tuple2 = new Tuple2<>();
-		while ((tuple2 = input2.next(tuple2)) != null) {
-			testHarness.processElement(new StreamRecord<>(newRow(tuple2.f0, tuple2.f1), initialTime), 1, 0);
-		}
-		testHarness.endInput();
+
 		testHarness.waitForTaskCompletion();
 		return testHarness.getOutput();
 	}
@@ -281,10 +306,10 @@ public class RandomSortMergeInnerJoinTest {
 		return row;
 	}
 
-	private Map<Integer, Collection<Match>> matchValues(
+	public static Map<Integer, Collection<Match>> matchValues(
 			Map<Integer, Collection<String>> leftMap,
 			Map<Integer, Collection<String>> rightMap) {
-		Map<Integer, Collection<Match>> map = new HashMap<Integer, Collection<Match>>();
+		Map<Integer, Collection<Match>> map = new HashMap<>();
 
 		for (Integer key : leftMap.keySet()) {
 			Collection<String> leftValues = leftMap.get(key);
@@ -330,6 +355,10 @@ public class RandomSortMergeInnerJoinTest {
 		return map;
 	}
 
+	protected StreamOperator getOperator() {
+		return new TestSortMergeJoinOperator(FlinkJoinRelType.INNER, leftIsSmall);
+	}
+
 	/**
 	 * Override cookGeneratedClasses.
 	 */
@@ -340,7 +369,8 @@ public class RandomSortMergeInnerJoinTest {
 					null, null, null,
 					new GeneratedSorter(null, null, null, null),
 					new GeneratedSorter(null, null, null, null),
-					new GeneratedSorter(null, null, null, null), new boolean[]{true});
+					new GeneratedSorter(null, null, null, null),
+					new boolean[]{true});
 		}
 
 		@Override

@@ -39,6 +39,26 @@ public enum FlinkJoinRelType {
 		}
 	}
 
+	public boolean isLeftOuter() {
+		switch (this) {
+			case LEFT:
+			case FULL:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	public boolean isRightOuter() {
+		switch (this) {
+			case RIGHT:
+			case FULL:
+				return true;
+			default:
+				return false;
+		}
+	}
+
 	/** Convert JoinRelType to FlinkJoinRelType. */
 	public static FlinkJoinRelType toFlinkJoinRelType(JoinRelType joinType) {
 		switch (joinType) {

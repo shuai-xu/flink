@@ -18,8 +18,8 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
+import org.apache.flink.table.api.BatchTableEnvironment
 import org.apache.flink.table.api.types.{BaseRowType, DataTypes}
-import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
@@ -31,12 +31,11 @@ import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.util.{JoinUtil, SortUtil}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
-import org.apache.flink.table.runtime.operator.join.batch.SortMergeJoinOperator
+import org.apache.flink.table.runtime.operator.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.ExecResourceUtil
 import org.apache.flink.table.util.ExecResourceUtil.InferMode
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.metadata.RelMetadataQuery
@@ -49,8 +48,29 @@ import scala.collection.JavaConversions._
 trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
   val leftSorted: Boolean
-
   val rightSorted: Boolean
+
+  def isMergeJoinSupportedType(tpe: FlinkJoinRelType): Boolean =
+    tpe == FlinkJoinRelType.INNER ||
+      tpe == FlinkJoinRelType.LEFT ||
+      tpe == FlinkJoinRelType.RIGHT ||
+      tpe == FlinkJoinRelType.FULL
+
+  val smjType: SortMergeJoinType.Value = {
+    (leftSorted, rightSorted) match {
+      case (true, true) if isMergeJoinSupportedType(flinkJoinType) =>
+        SortMergeJoinType.MergeJoin
+      case (false, true) //TODO support more
+        if flinkJoinType == FlinkJoinRelType.INNER ||
+          flinkJoinType == FlinkJoinRelType.RIGHT =>
+        SortMergeJoinType.SortLeftJoin
+      case (true, false) //TODO support more
+        if flinkJoinType == FlinkJoinRelType.INNER ||
+          flinkJoinType == FlinkJoinRelType.LEFT =>
+        SortMergeJoinType.SortRightJoin
+      case _ => SortMergeJoinType.SortMergeJoin
+    }
+  }
 
   lazy val joinOperatorName: String = if (getCondition != null) {
     val inFields = inputDataType.getFieldNames.toList
@@ -165,11 +185,25 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     }
   }
 
-  private def calcSortMemory(ratio: Double, totalSortMemory: Long): Long = {
-    val minGuaranteedMemory = BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-    val maxGuaranteedMemory = totalSortMemory - BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
-    val inferLeftSortMemory = (totalSortMemory * ratio).toLong
-    Math.max(Math.min(inferLeftSortMemory, maxGuaranteedMemory), minGuaranteedMemory)
+  private def calcSortMemory(
+      ratio: Double,
+      totalSortMemory: Long): (Long, Long) = {
+    if (leftSorted) {
+      (0, totalSortMemory)
+    } else if (rightSorted) {
+      (totalSortMemory, 0)
+    } else {
+      val leftMinMemory =
+        if (leftSorted) 0 else BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM
+      val leftMaxMemory =
+        totalSortMemory - (
+          if (rightSorted) 0 else BinaryExternalSorter.SORTER_MIN_NUM_SORT_MEM)
+      val leftInferMemory = (totalSortMemory * ratio).toLong
+
+      val leftMemory = Math.max(Math.min(leftMaxMemory, leftInferMemory), leftMinMemory)
+      val rightMemory = totalSortMemory - leftMemory
+      (leftMemory, rightMemory)
+    }
   }
 
   /**
@@ -179,9 +213,6 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     */
   override def translateToPlanInternal(
       tableEnv: BatchTableEnvironment): StreamTransformation[BaseRow] = {
-    if (leftSorted || rightSorted) {
-      throw new TableException("not support now")
-    }
 
     if (getLeft.isInstanceOf[BatchExecSort] || getRight.isInstanceOf[BatchExecSort]) {
       // SortMergeJoin with inner sort is more efficient than SortMergeJoin with outer sort
@@ -202,45 +233,83 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
 
     val condFunc = generateConditionFunction(config, leftType, rightType)
 
-    val externalBufferMemory = ExecResourceUtil.
-        getExternalBufferManagedMemory(config)
+    val externalBufferMemory = ExecResourceUtil.getExternalBufferManagedMemory(config)
     val externalBufferMemorySize = externalBufferMemory * ExecResourceUtil.SIZE_IN_MB
+
+    val mergeBufferMemory = ExecResourceUtil.getMergeJoinBufferManagedMemory(config)
+    val mergeBufferMemorySize = mergeBufferMemory * ExecResourceUtil.SIZE_IN_MB
 
     val perRequestSize =
       ExecResourceUtil.getPerRequestManagedMemory(config)* ExecResourceUtil.SIZE_IN_MB
     val infer = ExecResourceUtil.getInferMode(config).equals(InferMode.ALL)
 
-    val leftRatio = if (infer) {
-      inferLeftRowCountRatio
-    } else {
-      0.5d
-    }
+    val totalReservedSortMemory = (resource.getReservedManagedMem -
+      externalBufferMemory * getExternalBufferNum -
+      mergeBufferMemory * (2 - getSortNum)) * ExecResourceUtil.SIZE_IN_MB
 
-    val totalReservedSortMemory = (resource.getReservedManagedMem - externalBufferMemory *
-        getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
+    val totalMaxSortMemory = (resource.getMaxManagedMem -
+      externalBufferMemory * getExternalBufferNum -
+      mergeBufferMemory * (2 - getSortNum)) * ExecResourceUtil.SIZE_IN_MB
 
-    val totalMaxSortMemory = (resource.getMaxManagedMem - externalBufferMemory *
-        getExternalBufferNum) * ExecResourceUtil.SIZE_IN_MB
+    val leftRatio = if (infer) inferLeftRowCountRatio else 0.5d
 
-    val sortReservedMemorySize1 = calcSortMemory(leftRatio, totalReservedSortMemory)
-
-    val preferManagedMemorySize1 = calcSortMemory(leftRatio, totalMaxSortMemory)
+    val (leftReservedSortMemorySize, rightReservedSortMemorySize) =
+      calcSortMemory(leftRatio, totalReservedSortMemory)
+    val (leftMaxSortMemorySize, rightMaxSortMemorySize) =
+      calcSortMemory(leftRatio, totalMaxSortMemory)
 
     // sort code gen
-    val operator = new SortMergeJoinOperator(
-      sortReservedMemorySize1, preferManagedMemorySize1,
-      totalReservedSortMemory - sortReservedMemorySize1,
-      totalMaxSortMemory - preferManagedMemorySize1,
-      perRequestSize, externalBufferMemorySize,
-      flinkJoinType, estimateOutputSize(getLeft) < estimateOutputSize(getRight), condFunc,
-      ProjectionCodeGenerator.generateProjection(
-        CodeGeneratorContext(config), "SMJProjection", leftType, keyType, leftAllKey.toArray),
-      ProjectionCodeGenerator.generateProjection(
-        CodeGeneratorContext(config), "SMJProjection", rightType, keyType, rightAllKey.toArray),
-      newGeneratedSorter(leftAllKey.toArray, leftType),
-      newGeneratedSorter(rightAllKey.toArray, rightType),
-      newGeneratedSorter(leftAllKey.indices.toArray, keyType),
-      filterNulls)
+    val operator = smjType match {
+      case SortMergeJoinType.MergeJoin =>
+        new MergeJoinOperator(
+          mergeBufferMemorySize, mergeBufferMemorySize,
+          flinkJoinType,
+          condFunc,
+          ProjectionCodeGenerator.generateProjection(
+            CodeGeneratorContext(config), "MJProjection",
+            leftType, keyType, leftAllKey.toArray),
+          ProjectionCodeGenerator.generateProjection(
+            CodeGeneratorContext(config), "MJProjection",
+            rightType, keyType, rightAllKey.toArray),
+          newGeneratedSorter(leftAllKey.indices.toArray, keyType),
+          filterNulls)
+
+      case SortMergeJoinType.SortLeftJoin | SortMergeJoinType.SortRightJoin =>
+        val (reservedSortMemory, maxSortMemory, sortKeys) = if (rightSorted) {
+          (leftReservedSortMemorySize, leftMaxSortMemorySize, leftAllKey.toArray)
+        } else {
+          (rightReservedSortMemorySize, rightMaxSortMemorySize, rightAllKey.toArray)
+        }
+
+        new OneSideSortMergeJoinOperator(
+          reservedSortMemory, maxSortMemory,
+          perRequestSize, mergeBufferMemorySize, externalBufferMemorySize,
+          flinkJoinType, rightSorted, condFunc,
+          ProjectionCodeGenerator.generateProjection(
+            CodeGeneratorContext(config), "OneSideSMJProjection",
+            leftType, keyType, leftAllKey.toArray),
+          ProjectionCodeGenerator.generateProjection(
+            CodeGeneratorContext(config), "OneSideSMJProjection",
+            rightType, keyType, rightAllKey.toArray),
+          newGeneratedSorter(sortKeys, leftType),
+          newGeneratedSorter(leftAllKey.indices.toArray, keyType),
+          filterNulls)
+
+      case _ =>
+        new SortMergeJoinOperator(
+          leftReservedSortMemorySize, leftMaxSortMemorySize,
+          rightReservedSortMemorySize, rightMaxSortMemorySize,
+          perRequestSize, externalBufferMemorySize,
+          flinkJoinType, estimateOutputSize(getLeft) < estimateOutputSize(getRight), condFunc,
+          ProjectionCodeGenerator.generateProjection(
+            CodeGeneratorContext(config), "SMJProjection", leftType, keyType, leftAllKey.toArray),
+          ProjectionCodeGenerator.generateProjection(
+            CodeGeneratorContext(config), "SMJProjection", rightType, keyType, rightAllKey.toArray),
+          newGeneratedSorter(leftAllKey.toArray, leftType),
+          newGeneratedSorter(rightAllKey.toArray, rightType),
+          newGeneratedSorter(leftAllKey.indices.toArray, keyType),
+          filterNulls)
+    }
 
     val transformation = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftInput,
@@ -259,8 +328,12 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     if (flinkJoinType == FlinkJoinRelType.FULL) 2 else 1
   }
 
+  private[flink] def getSortNum: Int = {
+    (if (leftSorted) 0 else 1) + (if (rightSorted) 0 else 1)
+  }
+
   private def newGeneratedSorter(originalKeys: Array[Int], t: BaseRowType): GeneratedSorter = {
-    val originalOrders = originalKeys.map((_) => true)
+    val originalOrders = originalKeys.map(_ => true)
     val (keys, orders, nullsIsLast) = SortUtil.deduplicateSortKeys(
       originalKeys,
       originalOrders,
@@ -285,6 +358,11 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
     mq.getAverageRowSize(relNode) * mq.getRowCount(relNode)
   }
 
+}
+
+object SortMergeJoinType extends Enumeration{
+  type SortMergeJoinType = Value
+  val MergeJoin, SortLeftJoin, SortRightJoin, SortMergeJoin = Value
 }
 
 class BatchExecSortMergeJoin(
