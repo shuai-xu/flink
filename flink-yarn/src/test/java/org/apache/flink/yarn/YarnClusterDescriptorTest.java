@@ -33,8 +33,12 @@ import org.apache.flink.yarn.configuration.YarnConfigOptions;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,11 +46,13 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,11 +76,15 @@ public class YarnClusterDescriptorTest extends TestLogger {
 	private File flinkJar;
 
 	@BeforeClass
-	public static void setupClass() {
+	public static void setupClass() throws IOException, YarnException {
 		yarnConfiguration = new YarnConfiguration();
-		yarnClient = YarnClient.createYarnClient();
+		yarnClient = Mockito.spy(YarnClient.createYarnClient());
 		yarnClient.init(yarnConfiguration);
 		yarnClient.start();
+
+		NodeReport report = Mockito.mock(NodeReport.class);
+		Mockito.doReturn(Resource.newInstance(1024, 1)).when(report).getCapability();
+		Mockito.doReturn(Collections.singletonList(report)).when(yarnClient).getNodeReports(NodeState.RUNNING);
 	}
 
 	@Before
