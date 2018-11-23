@@ -88,8 +88,8 @@ public class RMQTableSink implements UpsertStreamTableSink<Row>,
 	}
 
 	@Override
-	public void emitDataStream(DataStream<Tuple2<Boolean, Row>> dataStream) {
-		emitBoundedStream(dataStream);
+	public DataStreamSink<?> emitDataStream(DataStream<Tuple2<Boolean, Row>> dataStream) {
+		return emitBoundedStream(dataStream);
 	}
 
 	@Override

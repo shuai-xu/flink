@@ -20,7 +20,7 @@ package org.apache.flink.table.sinks
 
 import java.lang.{Boolean => JBool}
 
-import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.Table
 
 /**
@@ -60,5 +60,5 @@ trait BaseUpsertStreamTableSink[T] extends StreamTableSink[T] {
   def setIsAppendOnly(isAppendOnly: JBool): Unit
 
   /** Emits the DataStream. */
-  def emitDataStream(dataStream: DataStream[T]): Unit
+  def emitDataStream(dataStream: DataStream[T]): DataStreamSink[_]
 }

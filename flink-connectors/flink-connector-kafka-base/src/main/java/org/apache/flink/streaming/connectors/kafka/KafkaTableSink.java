@@ -21,6 +21,7 @@ package org.apache.flink.streaming.connectors.kafka;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
 import org.apache.flink.table.api.TableSchema;
@@ -139,13 +140,14 @@ public abstract class KafkaTableSink implements AppendStreamTableSink<Row> {
 	}
 
 	@Override
-	public void emitDataStream(DataStream<Row> dataStream) {
+	public DataStreamSink emitDataStream(DataStream<Row> dataStream) {
 		SinkFunction<Row> kafkaProducer = createKafkaProducer(
 			topic,
 			properties,
 			serializationSchema.orElseThrow(() -> new IllegalStateException("No serialization schema defined.")),
 			partitioner);
-		dataStream.addSink(kafkaProducer).name(TableConnectorUtil.generateRuntimeName(this.getClass(), fieldNames));
+		return dataStream.addSink(kafkaProducer).name(TableConnectorUtil.generateRuntimeName(this.getClass(),
+			fieldNames));
 	}
 
 	@Override

@@ -113,7 +113,7 @@ object MemoryTableSourceSinkUtil {
       sink
     }
 
-    override def emitDataStream(dataStream: DataStream[Row]): Unit = {
+    override def emitDataStream(dataStream: DataStream[Row]): DataStreamSink[Row] = {
       dataStream.addSink(new MemoryAppendSink)
         .setParallelism(dataStream.getParallelism)
         .name(TableConnectorUtil.generateRuntimeName(this.getClass, getFieldNames))

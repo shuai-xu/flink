@@ -93,7 +93,7 @@ extends TableSinkBase[JTuple2[JBool, Row]] with RetractStreamTableSink[Row] {
 
   override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes: _*)
 
-  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): Unit = {
+  override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]) = {
     val csvRows = dataStream.map(new RetractCsvFormatter(fieldDelim.getOrElse(","),
       outputFieldNames.getOrElse(false),
       getFieldNames,
@@ -113,6 +113,7 @@ extends TableSinkBase[JTuple2[JBool, Row]] with RetractStreamTableSink[Row] {
     if (numFiles.isDefined) {
       sink.setParallelism(numFiles.get)
     }
+    sink
   }
 }
 
