@@ -92,7 +92,7 @@ abstract class TableTestUtil {
 
   def addTable[T: TypeInformation](name: String, fields: Expression*): Table
 
-  def addFunction[T: TypeInformation](name: String, function: TableFunction[T]): Unit
+  def addFunction[T: TypeInformation](name: String, function: TableFunction[T]): TableFunction[T]
 
   def addFunction(name: String, function: ScalarFunction): Unit
 
@@ -162,8 +162,9 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
   def addFunction[T: TypeInformation](
       name: String,
-      function: TableFunction[T]): Unit = {
+      function: TableFunction[T]): TableFunction[T] = {
     tableEnv.registerFunction(name, function)
+    function
   }
 
   def addFunction(name: String, function: ScalarFunction): Unit = {

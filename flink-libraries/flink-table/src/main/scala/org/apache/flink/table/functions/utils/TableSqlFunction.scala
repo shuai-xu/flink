@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.functions.utils
 
+import java.sql.Timestamp
 import java.util
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory, RelDataTypeFactoryImpl}
@@ -27,7 +28,7 @@ import org.apache.calcite.sql.`type`.SqlOperandTypeChecker.Consistency
 import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.sql.validate.{SqlUserDefinedTableFunction, SqlUserDefinedTableMacro}
-import org.apache.calcite.util.NlsString
+import org.apache.calcite.util.{NlsString, TimestampString}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.plan.schema.FlinkTableFunction
@@ -103,6 +104,10 @@ class TableSqlFunction(
               t.asInstanceOf[RelDataTypeFactoryImpl#JavaType].getJavaClass
                   == classOf[BinaryString]) {
             o.asInstanceOf[NlsString].getValue
+          } else if (o != null && o.isInstanceOf[TimestampString] &&
+            t.isInstanceOf[RelDataTypeFactoryImpl#JavaType] &&
+            t.asInstanceOf[RelDataTypeFactoryImpl#JavaType].getJavaClass == classOf[Timestamp]) {
+            new Timestamp(o.asInstanceOf[TimestampString].getMillisSinceEpoch)
           } else {
             SqlUserDefinedTableMacro.coerce(o, t)
           }

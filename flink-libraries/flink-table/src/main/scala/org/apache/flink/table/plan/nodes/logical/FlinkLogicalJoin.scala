@@ -39,7 +39,13 @@ class FlinkLogicalJoin(
     right: RelNode,
     condition: RexNode,
     joinType: JoinRelType)
-  extends Join(cluster, traitSet, left, right, condition, Set.empty[CorrelationId].asJava, joinType)
+  extends FlinkLogicalJoinBase(
+    cluster,
+    traitSet,
+    left,
+    right,
+    condition,
+    joinType)
   with FlinkLogicalRel {
 
   override def copy(
@@ -51,20 +57,6 @@ class FlinkLogicalJoin(
       semiJoinDone: Boolean): Join = {
 
     new FlinkLogicalJoin(cluster, traitSet, left, right, conditionExpr, joinType)
-  }
-
-  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
-    val leftRowCnt = mq.getRowCount(getLeft)
-    val leftRowSize = mq.getAverageRowSize(getLeft)
-
-    val rightRowCnt = mq.getRowCount(getRight)
-    val rightRowSize = mq.getAverageRowSize(getRight)
-
-    val ioCost = (leftRowCnt * leftRowSize) + (rightRowCnt * rightRowSize)
-    val cpuCost = leftRowCnt + rightRowCnt
-    val rowCnt = leftRowCnt + rightRowCnt
-
-    planner.getCostFactory.makeCost(rowCnt, cpuCost, ioCost)
   }
 }
 

@@ -72,6 +72,8 @@ class FlinkRelBuilder(
     context
   }
 
+  def getRelOptSchema: RelOptSchema = relOptSchema
+
   def getPlanner: RelOptPlanner = cluster.getPlanner
 
   def getCluster: RelOptCluster = relOptCluster

@@ -544,6 +544,10 @@ object FlinkTypeFactory {
     case _ => false
   }
 
+  def isProctimeIndicatorType(dataType: DataType): Boolean = {
+    isProctimeIndicatorType(DataTypes.to(dataType))
+  }
+
   def isRowtimeIndicatorType(relDataType: RelDataType): Boolean = relDataType match {
     case ti: TimeIndicatorRelDataType if ti.isEventTime => true
     case _ => false
@@ -552,6 +556,10 @@ object FlinkTypeFactory {
   def isRowtimeIndicatorType(typeInfo: TypeInformation[_]): Boolean = typeInfo match {
     case ti: TimeIndicatorTypeInfo if ti.isEventTime => true
     case _ => false
+  }
+
+  def isRowtimeIndicatorType(dataType: DataType): Boolean = {
+    isRowtimeIndicatorType(DataTypes.to(dataType))
   }
 
   def isTimeIndicatorType(relDataType: RelDataType): Boolean = relDataType match {

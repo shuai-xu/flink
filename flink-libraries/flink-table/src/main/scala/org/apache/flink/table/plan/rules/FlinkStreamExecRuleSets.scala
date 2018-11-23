@@ -19,10 +19,11 @@
 package org.apache.flink.table.plan.rules
 
 import org.apache.calcite.rel.core.RelFactories
-import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalUnion, LogicalMinus}
+import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalMinus, LogicalUnion}
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.table.plan.nodes.logical._
+import org.apache.flink.table.plan.rules.datastream.StreamExecTemporalTableJoinRule
 import org.apache.flink.table.plan.rules.logical._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
 import org.apache.flink.table.plan.rules.physical.stream._
@@ -46,6 +47,14 @@ object FlinkStreamExecRuleSets {
     SubQueryRemoveRule.FILTER,
     SubQueryRemoveRule.PROJECT,
     SubQueryRemoveRule.JOIN)
+
+  /**
+    * Handles proper conversion of correlate queries with temporal table functions
+    * into temporal table joins. This can create new table scans in the plan.
+    */
+  val TEMPORAL_JOIN_RULES: RuleSet = RuleSets.ofList(
+    LogicalCorrelateToTemporalTableJoinRule.INSTANCE
+  )
 
   val REWRITE_RELNODE_RULES: RuleSet = RuleSets.ofList(
     // unnest rule
@@ -213,6 +222,7 @@ object FlinkStreamExecRuleSets {
     FlinkLogicalCalc.CONVERTER,
     FlinkLogicalCorrelate.CONVERTER,
     FlinkLogicalJoin.CONVERTER,
+    FlinkLogicalTemporalTableJoin.CONVERTER,
     FlinkLogicalSemiJoin.CONVERTER,
     FlinkLogicalSort.STREAM_CONVERTER,
     FlinkLogicalUnion.CONVERTER,
@@ -318,6 +328,7 @@ object FlinkStreamExecRuleSets {
     StreamExecUnionRule.INSTANCE,
     StreamExecJoinRule.INSTANCE,
     StreamExecSemiJoinRule.INSTANCE,
+    StreamExecTemporalTableJoinRule.INSTANCE,
     StreamExecValuesRule.INSTANCE,
     StreamExecCorrelateRule.INSTANCE,
     StreamExecWindowJoinRule.INSTANCE,

@@ -21,8 +21,8 @@ package org.apache.flink.table.api.functions;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.types.BaseRowType;
 import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
-import org.apache.flink.types.Row;
 
 import java.sql.Timestamp;
 
@@ -34,8 +34,9 @@ import java.sql.Timestamp;
  * <p>This function shouldn't be evaluated. Instead calls to it should be rewritten by the optimiser
  * into other operators (like Temporal Table Join).
  */
-public class TemporalTableFunction extends TableFunction<Row> {
-	private final Table underlyingHistoryTable;
+public class TemporalTableFunction extends TableFunction<BaseRow> {
+
+	private final transient Table underlyingHistoryTable;
 	private final Expression timeAttribute;
 	private final String primaryKey;
 	private final BaseRowType rowType;

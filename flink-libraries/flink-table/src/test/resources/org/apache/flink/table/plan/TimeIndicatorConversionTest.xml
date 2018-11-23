@@ -159,4 +159,46 @@ StreamExecCalc(select=[w$end AS rowtime, long, EXPR$2])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMaterializeRightSideOfTemporalTableJoin">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[TMP_0])
+  StreamExecGroupWindowAggregate(groupBy=[currency], window=[TumblingGroupWindow('w, 'proctime, 1000.millis)], select=[currency, SUM(converted_amount) AS TMP_0])
+    StreamExecExchange(distribution=[hash[currency]])
+      StreamExecCalc(select=[*(o_amount, rate) AS converted_amount, currency, proctime], where=[=(currency, o_currency)])
+        StreamExecCalc(select=[o_amount, o_currency, currency, rate, PROCTIME(proctime) AS proctime])
+          StreamExecTemporalTableJoin(where=[__TEMPORAL_JOIN_CONDITION(o_proctime, currency)], join=[o_amount, o_currency, o_proctime, currency, rate, proctime], joinType=[InnerJoin])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testDoNotMaterializeLeftSideOfTemporalTableJoin">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[TMP_0])
+  StreamExecGroupWindowAggregate(groupBy=[currency], window=[TumblingGroupWindow('w, 'o_proctime, 1000.millis)], select=[currency, SUM(converted_amount) AS TMP_0])
+    StreamExecExchange(distribution=[hash[currency]])
+      StreamExecCalc(select=[*(o_amount, rate) AS converted_amount, currency, o_proctime])
+        StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_proctime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_proctime, currency, rate], joinType=[InnerJoin])
+          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecCalc(select=[currency, rate])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMaterializeLeftRowtimeWithProcessingTimeTemporalTableJoin">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[TMP_0])
+  StreamExecGroupWindowAggregate(groupBy=[currency], window=[TumblingGroupWindow('w, 'o_rowtime, 1000.millis)], select=[currency, SUM(converted_amount) AS TMP_0])
+    StreamExecExchange(distribution=[hash[currency]])
+      StreamExecCalc(select=[*(o_amount, rate) AS converted_amount, currency, CAST(o_rowtime) AS o_rowtime])
+        StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_proctime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_proctime, o_rowtime, currency, rate], joinType=[InnerJoin])
+          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+          StreamExecCalc(select=[currency, rate])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
 </Root>

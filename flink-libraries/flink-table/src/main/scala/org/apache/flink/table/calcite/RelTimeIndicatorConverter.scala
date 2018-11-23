@@ -28,7 +28,7 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions}
-import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner, LogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalTemporalTableJoin, LogicalWatermarkAssigner, LogicalWindowAggregate}
 import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.validate.BasicOperatorTable
 
@@ -47,6 +47,8 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
       .getTypeFactory
       .asInstanceOf[FlinkTypeFactory]
       .createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, isNullable = false)
+
+  val materializerUtils = new RexTimeIndicatorMaterializerUtils(rexBuilder)
 
   override def visit(intersect: LogicalIntersect): RelNode =
     visitSetOp(intersect)
@@ -109,6 +111,9 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
         lastRow.getTraitSet,
         input,
         lastRow.uniqueKeys)
+
+    case temporalTableJoin: LogicalTemporalTableJoin =>
+      visit(temporalTableJoin)
 
     case _ =>
       throw new TableException(s"Unsupported logical operator: ${other.getClass.getSimpleName}")
@@ -175,6 +180,17 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     })
 
     LogicalJoin.create(left, right, newCondition, join.getVariablesSet, join.getJoinType)
+  }
+
+  def visit(temporalJoin: LogicalTemporalTableJoin): RelNode = {
+    val left = temporalJoin.getLeft.accept(this)
+    val right = temporalJoin.getRight.accept(this)
+
+    val rewrittenTemporalJoin = temporalJoin.copy(temporalJoin.getTraitSet, List(left, right))
+
+    val indicesToMaterialize = gatherIndicesToMaterialize(rewrittenTemporalJoin, left, right)
+
+    materializerUtils.projectAndMaterializeFields(rewrittenTemporalJoin, indicesToMaterialize)
   }
 
   override def visit(correlate: LogicalCorrelate): RelNode = {
@@ -300,27 +316,63 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
       `match`.getEmit)
   }
 
+  private def gatherIndicesToMaterialize(
+    temporalJoin: Join,
+    left: RelNode,
+    right: RelNode)
+  : Set[Int] = {
+
+    // Materialize all of the time attributes from the right side of temporal join
+    var indicesToMaterialize =
+      (left.getRowType.getFieldCount until temporalJoin.getRowType.getFieldCount).toSet
+
+    if (!hasRowtimeAttribute(right.getRowType)) {
+      // No rowtime on the right side means that this must be a processing time temporal join
+      // and that we can not provide watermarks even if there is a rowtime time attribute
+      // on the left side (besides processing time attribute used for temporal join).
+      for (fieldIndex <- 0 until left.getRowType.getFieldCount) {
+        val fieldName = left.getRowType.getFieldNames.get(fieldIndex)
+        val fieldType = left.getRowType.getFieldList.get(fieldIndex).getType
+        if (isRowtimeIndicatorType(fieldType)) {
+          indicesToMaterialize += fieldIndex
+        }
+      }
+    }
+
+    indicesToMaterialize
+  }
+
+  private def gatherIndicesToMaterialize(aggregate: Aggregate, input: RelNode): Set[Int] = {
+    val indicesToMaterialize = mutable.Set[Int]()
+
+    // check arguments of agg calls
+    aggregate.getAggCallList.foreach(call => if (call.getArgList.size() == 0) {
+      // count(*) has an empty argument list
+      (0 until input.getRowType.getFieldCount).foreach(indicesToMaterialize.add)
+    } else {
+      // for other aggregations
+      call.getArgList.map(_.asInstanceOf[Int]).foreach(indicesToMaterialize.add)
+    })
+
+    // check grouping sets
+    aggregate.getGroupSets.foreach(set =>
+      set.asList().map(_.asInstanceOf[Int]).foreach(indicesToMaterialize.add)
+    )
+
+    indicesToMaterialize.toSet
+  }
+
+  private def hasRowtimeAttribute(rowType: RelDataType): Boolean = {
+    rowType.getFieldList.exists(field => isRowtimeIndicatorType(field.getType))
+  }
+
   private def convertAggregate(aggregate: Aggregate): LogicalAggregate = {
     // visit children and update inputs
     val input = aggregate.getInput.accept(this)
 
     // add a project to materialize aggregation arguments/grouping keys
 
-    val refIndices = mutable.Set[Int]()
-
-    // check arguments of agg calls
-    aggregate.getAggCallList.foreach(call => if (call.getArgList.size() == 0) {
-        // count(*) has an empty argument list
-        (0 until input.getRowType.getFieldCount).foreach(refIndices.add)
-      } else {
-        // for other aggregations
-        call.getArgList.map(_.asInstanceOf[Int]).foreach(refIndices.add)
-      })
-
-    // check grouping sets
-    aggregate.getGroupSets.foreach(set =>
-      set.asList().map(_.asInstanceOf[Int]).foreach(refIndices.add)
-    )
+    val refIndices = gatherIndicesToMaterialize(aggregate, input)
 
     val needsMaterialization = refIndices.exists(idx =>
       isTimeIndicatorType(input.getRowType.getFieldList.get(idx).getType))
@@ -545,6 +597,76 @@ class RexTimeIndicatorMaterializer(
       // materialize function's operands only
       case _ =>
         updatedCall.clone(updatedCall.getType, materializedOperands)
+    }
+  }
+}
+
+
+/**
+  * Helper class for shared logic of materializing time attributes in [[RelNode]] and [[RexNode]].
+  */
+class RexTimeIndicatorMaterializerUtils(rexBuilder: RexBuilder) {
+
+  private val timestamp = rexBuilder
+    .getTypeFactory
+    .asInstanceOf[FlinkTypeFactory]
+    .createTypeFromTypeInfo(SqlTimeTypeInfo.TIMESTAMP, isNullable = false)
+
+  def getTimestamp: RelDataType = {
+    timestamp
+  }
+
+  def projectAndMaterializeFields(input: RelNode, indicesToMaterialize: Set[Int]) : RelNode = {
+    val projects = input.getRowType.getFieldList.map { field =>
+      materializeIfContains(
+        new RexInputRef(field.getIndex, field.getType),
+        field.getIndex,
+        indicesToMaterialize)
+    }
+
+    LogicalProject.create(
+      input,
+      projects,
+      input.getRowType.getFieldNames)
+  }
+
+  def getRowTypeWithoutIndicators(relType: RelDataType): RelDataType = {
+    val outputTypeBuilder = rexBuilder
+      .getTypeFactory
+      .asInstanceOf[FlinkTypeFactory]
+      .builder()
+
+    relType.getFieldList.asScala.zipWithIndex.foreach { case (field, idx) =>
+      if (FlinkTypeFactory.isTimeIndicatorType(field.getType)) {
+        outputTypeBuilder.add(field.getName, timestamp)
+      } else {
+        outputTypeBuilder.add(field.getName, field.getType)
+      }
+    }
+
+    outputTypeBuilder.build()
+  }
+
+  def materializeIfContains(expr: RexNode, index: Int, indicesToMaterialize: Set[Int]): RexNode = {
+    if (indicesToMaterialize.contains(index)) {
+      materialize(expr)
+    }
+    else {
+      expr
+    }
+  }
+
+  def materialize(expr: RexNode): RexNode = {
+    if (isTimeIndicatorType(expr.getType)) {
+      if (isRowtimeIndicatorType(expr.getType)) {
+        // cast rowtime indicator to regular timestamp
+        rexBuilder.makeAbstractCast(timestamp, expr)
+      } else {
+        // generate proctime access
+        rexBuilder.makeCall(ProctimeSqlFunction, expr)
+      }
+    } else {
+      expr
     }
   }
 }

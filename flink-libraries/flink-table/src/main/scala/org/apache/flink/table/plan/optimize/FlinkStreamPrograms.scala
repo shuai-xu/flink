@@ -78,6 +78,11 @@ object FlinkStreamPrograms {
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+          .add(FlinkStreamExecRuleSets.TEMPORAL_JOIN_RULES)
+          .build(), "convert correlate with temporal table function into temporal table join")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkStreamExecRuleSets.REWRITE_RELNODE_RULES)
           .build(), "relnode rewrite")
         .build())

@@ -21,10 +21,11 @@ import java.sql.Timestamp
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.TemporalTableFunction
-import org.apache.flink.table.api.{TableSchema, ValidationException}
+import org.apache.flink.table.api.{TableException, TableSchema, ValidationException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.ResolvedFieldReference
 import org.apache.flink.table.util.{TableTestBase, TableTestUtil}
+import org.hamcrest.Matchers.containsString
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 
@@ -32,11 +33,100 @@ class TemporalTableJoinTest extends TableTestBase {
 
   val util: TableTestUtil = streamTestUtil()
 
+  val orders = util.addTable[(Long, String, Timestamp)](
+    "Orders", 'o_amount, 'o_currency, 'o_rowtime.rowtime)
+
   val ratesHistory = util.addTable[(String, Int, Timestamp)](
     "RatesHistory", 'currency, 'rate, 'rowtime.rowtime)
 
-  val rates = ratesHistory.createTemporalTableFunction('rowtime, 'currency)
-  util.addFunction("Rates", rates)
+  val rates = util.addFunction(
+    "Rates",
+    ratesHistory.createTemporalTableFunction('rowtime, 'currency))
+
+  val proctimeOrders = util.addTable[(Long, String)](
+    "ProctimeOrders", 'o_amount, 'o_currency, 'o_proctime.proctime)
+
+  val proctimeRatesHistory = util.addTable[(String, Int)](
+    "ProctimeRatesHistory", 'currency, 'rate, 'proctime.proctime)
+
+  val proctimeRates = proctimeRatesHistory.createTemporalTableFunction('proctime, 'currency)
+
+  @Test
+  def testSimpleJoin(): Unit = {
+    val result = orders
+      .join(rates('o_rowtime), "currency = o_currency")
+      .select("o_amount * rate").as("rate")
+
+    util.verifyPlan(result)
+  }
+
+  @Test
+  def testSimpleProctimeJoin(): Unit = {
+    val result = proctimeOrders
+      .join(proctimeRates('o_proctime), "currency = o_currency")
+      .select("o_amount * rate").as("rate")
+
+    util.verifyPlan(result)
+  }
+
+  /**
+    * Test versioned joins with more complicated query.
+    * Important thing here is that we have complex OR join condition
+    * and there are some columns that are not being used (are being pruned).
+    */
+  @Test
+  def testComplexJoin(): Unit = {
+    val util = streamTestUtil()
+    val thirdTable = util.addTable[(String, Int)]("ThirdTable", 't3_comment, 't3_secondary_key)
+    val orders = util.addTable[(Timestamp, String, Long, String, Int)](
+      "Orders", 'o_rowtime.rowtime, 'o_comment, 'o_amount, 'o_currency, 'o_secondary_key)
+
+    val ratesHistory = util.addTable[(Timestamp, String, String, Int, Int)](
+      "RatesHistory", 'rowtime.rowtime, 'comment, 'currency, 'rate, 'secondary_key)
+    val rates = util.addFunction(
+      "Rates",
+      ratesHistory.createTemporalTableFunction('rowtime, 'currency))
+
+    val result = orders
+      .join(rates('o_rowtime))
+      .filter('currency === 'o_currency || 'secondary_key === 'o_secondary_key)
+      .select('o_amount * 'rate, 'secondary_key).as('rate, 'secondary_key)
+      .join(thirdTable, 't3_secondary_key === 'secondary_key)
+
+    util.verifyPlan(result)
+  }
+
+  @Test
+  def testTemporalTableFunctionOnTopOfQuery(): Unit = {
+    val filteredRatesHistory = ratesHistory
+      .filter('rate > 100)
+      .select('currency, 'rate * 2, 'rowtime)
+      .as('currency, 'rate, 'rowtime)
+
+    val filteredRates = filteredRatesHistory.createTemporalTableFunction('rowtime, 'currency)
+    util.addFunction("FilteredRates",filteredRates)
+
+    val result = orders
+      .join(filteredRates('o_rowtime), "currency = o_currency")
+      .select("o_amount * rate")
+      .as('rate)
+
+    util.verifyPlan(result)
+  }
+
+  @Test
+  def testUncorrelatedJoin(): Unit = {
+    expectedException.expect(classOf[TableException])
+    expectedException.expectMessage(containsString("Cannot generate a valid execution plan"))
+
+    val result = orders
+      .join(rates(
+        java.sql.Timestamp.valueOf("2016-06-27 10:10:42.123")),
+            "o_currency = currency")
+      .select("o_amount * rate")
+
+    util.explain(result)
+  }
 
   @Test
   def testTemporalTableFunctionScan(): Unit = {
@@ -50,11 +140,7 @@ class TemporalTableJoinTest extends TableTestBase {
 
   @Test
   def testProcessingTimeIndicatorVersion(): Unit = {
-    val util: TableTestUtil = streamTestUtil()
-    val ratesHistory = util.addTable[(String, Int)](
-      "RatesHistory", 'currency, 'rate, 'proctime.proctime)
-    val rates = ratesHistory.createTemporalTableFunction('proctime, 'currency)
-    assertRatesFunction(ratesHistory.getSchema, rates, true)
+    assertRatesFunction(proctimeRatesHistory.getSchema, proctimeRates, true)
   }
 
   @Test
@@ -80,4 +166,3 @@ class TemporalTableJoinTest extends TableTestBase {
       rates.getResultType(null, null).getFieldTypes.asInstanceOf[Array[Object]])
   }
 }
-
