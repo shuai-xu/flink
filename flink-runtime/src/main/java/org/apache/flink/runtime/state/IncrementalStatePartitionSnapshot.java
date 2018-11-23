@@ -25,6 +25,8 @@ import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
+
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -60,6 +62,7 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 	/**
 	 * Primary meta data state of the incremental checkpoint.
 	 */
+	@Nonnull
 	private final StreamStateHandle metaStateHandle;
 
 	/**
@@ -215,6 +218,7 @@ public class IncrementalStatePartitionSnapshot implements StatePartitionSnapshot
 		return groups;
 	}
 
+	@Nonnull
 	public StreamStateHandle getMetaStateHandle() {
 		return metaStateHandle;
 	}

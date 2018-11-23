@@ -590,6 +590,7 @@ public class RocksDBStateBackendConfigTest {
 
 		TaskManagerRuntimeInfo tmInfo = new TestingTaskManagerRuntimeInfo(new Configuration(), tempDirStrings);
 		when(env.getTaskManagerInfo()).thenReturn(tmInfo);
+		when(env.getTaskConfiguration()).thenReturn(tmInfo.getConfiguration());
 
 		TestTaskStateManager taskStateManager = new TestTaskStateManager();
 		when(env.getTaskStateManager()).thenReturn(taskStateManager);

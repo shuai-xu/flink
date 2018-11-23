@@ -109,6 +109,11 @@ public class PrioritizedOperatorSubtaskState {
 		return prioritizedManagedKeyedState;
 	}
 
+	/**
+	 * Returns an immutable list with all alternative snapshots to restore the managed internal state, in the order in
+	 * which we should attempt to restore.
+	 */
+	@Nonnull
 	public List<StateObjectCollection<StatePartitionSnapshot>> getPrioritizedManagedInternalState() {
 		return prioritizedManagedInternalState;
 	}
@@ -219,7 +224,6 @@ public class PrioritizedOperatorSubtaskState {
 			List<StateObjectCollection<StatePartitionSnapshot>> managedInternalAlternatives = new ArrayList<>(size);
 			List<StateObjectCollection<OperatorStateHandle>> rawOperatorAlternatives = new ArrayList<>(size);
 			List<StateObjectCollection<KeyedStateHandle>> rawKeyedAlternatives = new ArrayList<>(size);
-			List<StateObjectCollection<StatePartitionSnapshot>> rawInternalAlternatives = new ArrayList<>(size);
 
 			for (OperatorSubtaskState subtaskState : alternativesByPriority) {
 
@@ -235,6 +239,9 @@ public class PrioritizedOperatorSubtaskState {
 			// Key-groups should match.
 			BiFunction<KeyedStateHandle, KeyedStateHandle, Boolean> keyedStateApprover =
 				(ref, alt) -> ref.getKeyGroupRange().equals(alt.getKeyGroupRange());
+
+			BiFunction<StatePartitionSnapshot, StatePartitionSnapshot, Boolean> internalStateApprover =
+				(ref, alt) -> ref.getGroups().equals(alt.getGroups());
 
 			// State meta data should match.
 			BiFunction<OperatorStateHandle, OperatorStateHandle, Boolean> operatorStateApprover =
@@ -257,7 +264,10 @@ public class PrioritizedOperatorSubtaskState {
 					jobManagerState.getRawOperatorState(),
 					rawOperatorAlternatives,
 					operatorStateApprover),
-				Collections.singletonList(jobManagerState.getManagedInternalState()),
+				resolvePrioritizedAlternatives(
+					jobManagerState.getManagedInternalState(),
+					managedInternalAlternatives,
+					internalStateApprover),
 				restored);
 		}
 

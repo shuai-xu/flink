@@ -43,6 +43,7 @@ import com.alibaba.blink.state.niagara.NiagaraStateBackend;
 import org.apache.curator.test.TestingServer;
 import org.junit.AssumptionViolatedException;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
@@ -242,6 +243,7 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void testExternalizedIncrementalNiagaraCheckpointsWithLocalRecoveryZookeeper() throws Exception {
 		if (IS_LINUX_ALIOS) {
@@ -262,6 +264,7 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void testExternalizedFullNiagaraCheckpointsWithLocalRecoveryZookeeper() throws Exception {
 		if (IS_LINUX_ALIOS) {

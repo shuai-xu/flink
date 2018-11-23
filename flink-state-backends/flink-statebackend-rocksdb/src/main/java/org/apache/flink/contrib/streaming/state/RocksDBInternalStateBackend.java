@@ -35,6 +35,7 @@ import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.InternalState;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
@@ -272,7 +273,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 				if (stateSnapshot instanceof DefaultStatePartitionSnapshot) {
 					RocksDBFullRestoreOperation operation = new RocksDBFullRestoreOperation(this);
 					operation.restore(restoredSnapshots);
-				} else if (stateSnapshot instanceof IncrementalStatePartitionSnapshot) {
+				} else if (stateSnapshot instanceof IncrementalStatePartitionSnapshot || stateSnapshot instanceof IncrementalLocalStatePartitionSnapshot) {
 					RocksDBIncrementalRestoreOperation restoreOperation = new RocksDBIncrementalRestoreOperation(this);
 					restoreOperation.restore(restoredSnapshots);
 				} else {

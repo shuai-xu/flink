@@ -23,10 +23,10 @@ import org.apache.flink.util.ExceptionUtils;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
-import java.util.Set;
+import java.util.Map;
 
 /**
- * State handle for local copies of {@link IncrementalKeyedStateHandle}. Consists of a {@link DirectoryStateHandle} that
+ * State handle for local copies of {@link IncrementalStatePartitionSnapshot}. Consists of a {@link DirectoryStateHandle} that
  * represents the directory of the native RocksDB snapshot, the key groups, and a stream state handle for Flink's state
  * meta data file.
  */
@@ -50,16 +50,16 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 	@Nonnull
 	private final DirectoryStateHandle directoryStateHandle;
 
-	/** Set with the ids of all shared state handles created by the checkpoint. */
+	/** Map with the local state handle ID and unique gobal id of all shared state handles created by the checkpoint. */
 	@Nonnull
-	private final Set<StateHandleID> sharedStateHandleIDs;
+	private final Map<StateHandleID, String> sharedStateHandleIDs;
 
 	public IncrementalLocalStatePartitionSnapshot(
 		@Nonnull GroupSet groups,
 		@Nonnegative long checkpointId,
 		@Nonnull StreamStateHandle metaStateHandle,
 		@Nonnull DirectoryStateHandle directoryStateHandle,
-		@Nonnull Set<StateHandleID> sharedStateHandleIDs
+		@Nonnull Map<StateHandleID, String> sharedStateHandleIDs
 	) {
 		this.groups = groups;
 		this.checkpointId = checkpointId;
@@ -83,7 +83,7 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 	}
 
 	@Nonnull
-	public Set<StateHandleID> getSharedStateHandleIDs() {
+	public Map<StateHandleID, String> getSharedStateHandleIDs() {
 		return sharedStateHandleIDs;
 	}
 
@@ -116,6 +116,12 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 
 		IncrementalLocalKeyedStateHandle that = (IncrementalLocalKeyedStateHandle) o;
 
+		if (!getDirectoryStateHandle().equals(that.getDirectoryStateHandle())) {
+			return false;
+		}
+		if (!getSharedStateHandleIDs().equals(that.getSharedStateHandleIDs())) {
+			return false;
+		}
 		return getMetaStateHandle().equals(that.getMetaDataState());
 	}
 
@@ -150,6 +156,8 @@ public class IncrementalLocalStatePartitionSnapshot implements StatePartitionSna
 	public int hashCode() {
 		int result = super.hashCode();
 		result = 31 * result + getMetaStateHandle().hashCode();
+		result = 31 * result + getDirectoryStateHandle().hashCode();
+		result = 31 * result + getSharedStateHandleIDs().hashCode();
 		return result;
 	}
 

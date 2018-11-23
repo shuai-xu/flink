@@ -22,14 +22,17 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.fs.FSDataOutputStream;
+import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.GroupSet;
+import org.apache.flink.runtime.state.IncrementalLocalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.IncrementalStatePartitionSnapshot;
 import org.apache.flink.runtime.state.InternalStateDescriptor;
+import org.apache.flink.runtime.state.PlaceholderStreamStateHandle;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.StreamStateHandle;
@@ -43,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -65,19 +69,12 @@ public class RocksDBIncrementalRestoreOperation {
 
 	private final CloseableRegistry closeableRegistry = new CloseableRegistry();
 
-	private Map<String, InternalStateDescriptor> descriptors = new HashMap<>();
-
 	void restore(Collection<StatePartitionSnapshot> restoredSnapshots) throws Exception {
 		if (restoredSnapshots.size() == 1) {
 			StatePartitionSnapshot rawStateSnapshot = restoredSnapshots.iterator().next();
-			if (!(rawStateSnapshot instanceof IncrementalStatePartitionSnapshot)) {
-				throw new IllegalStateException("Unexpected state handle type, " +
-					"expected: " + IncrementalStatePartitionSnapshot.class +
-					", but found: " + rawStateSnapshot.getClass());
-			}
-			IncrementalStatePartitionSnapshot stateSnapshot = (IncrementalStatePartitionSnapshot) rawStateSnapshot;
-			if (stateSnapshot.getGroups().equals(stateBackend.getGroups())) {
-				stateBackend.setDbInstance(restoreIntegratedTabletInstance(stateSnapshot));
+
+			if (rawStateSnapshot.getGroups().equals(stateBackend.getGroups())) {
+				stateBackend.setDbInstance(restoreIntegratedTabletInstance(rawStateSnapshot));
 				return;
 			}
 		}
@@ -157,60 +154,99 @@ public class RocksDBIncrementalRestoreOperation {
 	}
 
 	private RocksDBInstance restoreIntegratedTabletInstance(
-		IncrementalStatePartitionSnapshot restoredStateSnapshot
+		StatePartitionSnapshot rawStateSnapshot
 	) throws Exception {
+
+		Map<StateHandleID, Tuple2<String, StreamStateHandle>> sstFiles = null;
+		StreamStateHandle metaStateHandle = null;
+		long checkpointID = -1;
+
 		Path localDataPath = new Path(stateBackend.getInstanceRocksDBPath().getAbsolutePath());
 		FileSystem localFileSystem = localDataPath.getFileSystem();
 
-		// return an empty instance if there is no state at all
-		StreamStateHandle metaStateHandle = restoredStateSnapshot.getMetaStateHandle();
-		if (metaStateHandle == null) {
-			return createRocksDBInstance(localDataPath);
+		try {
+			if (rawStateSnapshot instanceof IncrementalStatePartitionSnapshot) {
+				LOG.info("Restoring from the remote file system.");
+
+				IncrementalStatePartitionSnapshot restoredStateSnapshot = (IncrementalStatePartitionSnapshot) rawStateSnapshot;
+
+				metaStateHandle = restoredStateSnapshot.getMetaStateHandle();
+				Map<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandle = restoredStateSnapshot.getSharedState();
+
+				// download the files into the local data path
+				for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandleEntry : sharedStateHandle.entrySet()) {
+					StateHandleID stateHandleID = sharedStateHandleEntry.getKey();
+					String fileName = stateHandleID.getKeyString();
+					StreamStateHandle stateHandle = sharedStateHandleEntry.getValue().f1;
+
+					restoreFile(localDataPath, fileName, stateHandle);
+				}
+
+				for (Map.Entry<StateHandleID, StreamStateHandle> privateStateHandleEntry : restoredStateSnapshot.getPrivateState().entrySet()) {
+					String stateName = privateStateHandleEntry.getKey().getKeyString();
+					StreamStateHandle stateHandle = privateStateHandleEntry.getValue();
+					restoreFile(localDataPath, stateName, stateHandle);
+				}
+
+				sstFiles = restoredStateSnapshot.getSharedState();
+				checkpointID = restoredStateSnapshot.getCheckpointId();
+
+			} else if (rawStateSnapshot instanceof IncrementalLocalStatePartitionSnapshot) {
+
+				// Recovery from local incremental state.
+				IncrementalLocalStatePartitionSnapshot restoredStateSnapshot = (IncrementalLocalStatePartitionSnapshot) rawStateSnapshot;
+				LOG.info("Restoring from local recovery path {}.", restoredStateSnapshot.getDirectoryStateHandle().getDirectory());
+
+				sstFiles = new HashMap<>();
+
+				metaStateHandle = restoredStateSnapshot.getMetaStateHandle();
+
+				for (Map.Entry<StateHandleID, String> entry : restoredStateSnapshot.getSharedStateHandleIDs().entrySet()) {
+					StateHandleID stateHandleID = entry.getKey();
+					String uniqueId = entry.getValue();
+
+					sstFiles.put(stateHandleID, Tuple2.of(uniqueId, new PlaceholderStreamStateHandle()));
+				}
+
+				Path localRecoverDirectory = restoredStateSnapshot.getDirectoryStateHandle().getDirectory();
+				FileStatus[] fileStatuses = localFileSystem.listStatus(localRecoverDirectory);
+
+				if (!localFileSystem.mkdirs(localDataPath)) {
+					throw new IOException("Cannot create local base path for RocksDB.");
+				}
+
+				if (fileStatuses == null) {
+					throw new IOException("Cannot list file statues. Local recovery directory " + localRecoverDirectory + " does not exist.");
+				}
+				for (FileStatus fileStatus : fileStatuses) {
+					String fileName = fileStatus.getPath().getName();
+
+					File restoreFile = new File(localRecoverDirectory.getPath(), fileName);
+					File targetFile = new File(localDataPath.getPath(), fileName);
+					Files.createLink(targetFile.toPath(), restoreFile.toPath());
+				}
+
+				checkpointID = restoredStateSnapshot.getCheckpointId();
+			}
+		} catch (Exception e) {
+			LOG.info("Fail to restore rocksDB instance at {}, and try to remove it if existed.", localDataPath);
+			try {
+				if (localFileSystem.exists(localDataPath)) {
+					localFileSystem.delete(localDataPath, true);
+				}
+			} catch (IOException e1) {
+				LOG.warn("Fail to remove local data path {} after restore operation failure.", localDataPath);
+			}
+			throw e;
 		}
 
 		// restore the state descriptors
 		restoreMetaData(metaStateHandle);
 
-		// use the restored sst files as the base for the next checkpoint.
-		long checkpointID = restoredStateSnapshot.getCheckpointId();
-		Map<StateHandleID, Tuple2<String, StreamStateHandle>> sstFiles = new HashMap<>();
-
-		Map<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandle = restoredStateSnapshot.getSharedState();
-		for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> newFileEntry : sharedStateHandle.entrySet()) {
-			StateHandleID stateHandleID = newFileEntry.getKey();
-			String uniqueId = newFileEntry.getValue().f0;
-			StreamStateHandle stateHandle = newFileEntry.getValue().f1;
-
-			sstFiles.put(stateHandleID, Tuple2.of(uniqueId, stateHandle));
-		}
-
 		synchronized (stateBackend.materializedSstFiles) {
 			stateBackend.materializedSstFiles.put(checkpointID, sstFiles);
-			stateBackend.lastCompletedCheckpointId = checkpointID;
 		}
-
-		// restore the files in local data path
-		try {
-			LOG.info("Restoring from the remote file system.");
-
-			// download the files into the local data path
-			for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandleEntry : sharedStateHandle.entrySet()) {
-				String stateName = sharedStateHandleEntry.getKey().getKeyString();
-				StreamStateHandle stateHandle = sharedStateHandleEntry.getValue().f1;
-				restoreFile(localDataPath, stateName, stateHandle);
-			}
-
-			for (Map.Entry<StateHandleID, StreamStateHandle> privateStateHandleEntry : restoredStateSnapshot.getPrivateState().entrySet()) {
-				String stateName = privateStateHandleEntry.getKey().getKeyString();
-				StreamStateHandle stateHandle = privateStateHandleEntry.getValue();
-				restoreFile(localDataPath, stateName, stateHandle);
-			}
-
-		} catch (Exception e) {
-			if (localFileSystem.exists(localDataPath)) {
-				localFileSystem.delete(localDataPath, true);
-			}
-		}
+		stateBackend.lastCompletedCheckpointId = checkpointID;
 
 		return createRocksDBInstance(localDataPath);
 	}
@@ -243,7 +279,7 @@ public class RocksDBIncrementalRestoreOperation {
 			}
 
 			long endMillis = System.currentTimeMillis();
-			LOG.info("Successfully restored file {} from {}, {} bytes, {} ms",
+			LOG.debug("Successfully restored file {} from {}, {} bytes, {} ms",
 				localFilePath, restoreStateHandle, restoreStateHandle.getStateSize(),
 				(endMillis - startMillis));
 

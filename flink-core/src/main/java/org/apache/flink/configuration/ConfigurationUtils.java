@@ -54,6 +54,18 @@ public class ConfigurationUtils {
 		return splitPaths(configValue);
 	}
 
+	/**
+	 * Extracts the working state directories as defined by {@link CheckpointingOptions#WORKING_DIRS}.
+	 *
+	 * @param configuration configuration object
+	 * @return array of configured directories (in order)
+	 */
+	@Nonnull
+	public static String[] parseWorkingDirectories(Configuration configuration) {
+		String configValue = configuration.getString(CheckpointingOptions.WORKING_DIRS, "");
+		return splitPaths(configValue);
+	}
+
 	@Nonnull
 	private static String[] splitPaths(@Nonnull String separatedPaths) {
 		return separatedPaths.length() > 0 ? separatedPaths.split(",|" + File.pathSeparator) : EMPTY;

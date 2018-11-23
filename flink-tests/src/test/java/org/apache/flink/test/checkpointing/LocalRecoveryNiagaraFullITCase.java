@@ -20,12 +20,15 @@ package org.apache.flink.test.checkpointing;
 
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
 import static org.apache.flink.test.checkpointing.AbstractEventTimeWindowCheckpointingITCase.StateBackendEnum.NIAGARA_FULLY_ASYNC;
 
 /**
  * Tests file-based local recovery with the RocksDB state-backend.
+ * TODO re-enable this test after Niagara state-backend supports local recovery.
  */
+@Ignore
 public class LocalRecoveryNiagaraFullITCase extends AbstractLocalRecoveryITCase {
 	@BeforeClass
 	public static void platformCheck() {

@@ -18,11 +18,15 @@
 
 package org.apache.flink.runtime.checkpoint;
 
+import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
+import org.apache.flink.runtime.state.GroupRange;
+import org.apache.flink.runtime.state.GroupSet;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
+import org.apache.flink.runtime.state.StatePartitionSnapshot;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
 
 import java.util.HashMap;
@@ -59,6 +63,15 @@ public class StateHandleDummyUtil {
 	 */
 	public static KeyedStateHandle createNewKeyedStateHandle(KeyGroupRange keyGroupRange) {
 		return new DummyKeyedStateHandle(keyGroupRange);
+	}
+
+	public static StatePartitionSnapshot createNewInternalStateHandle(GroupSet groupSet) {
+		return new DummyInternalStateHandle(groupSet);
+	}
+
+	public static StatePartitionSnapshot createNewInternalStateHandle(KeyGroupRange range) {
+		GroupRange groupRange = GroupRange.of(range.getStartKeyGroup(), range.getEndKeyGroup() + 1);
+		return new DummyInternalStateHandle(groupRange);
 	}
 
 	/**
@@ -100,6 +113,15 @@ public class StateHandleDummyUtil {
 			new KeyGroupRange(keyGroupRange.getStartKeyGroup(), keyGroupRange.getEndKeyGroup()));
 	}
 
+	public static StatePartitionSnapshot deepDummyCopy(StatePartitionSnapshot original) {
+		if (original == null) {
+			return null;
+		}
+
+		GroupRange groups = (GroupRange) original.getGroups();
+		return new DummyInternalStateHandle(GroupRange.of(groups.getStartGroup(), groups.getEndGroup()));
+	}
+
 	/**
 	 * KeyedStateHandle that only holds a key-group information.
 	 */
@@ -135,5 +157,48 @@ public class StateHandleDummyUtil {
 		public long getStateSize() {
 			return 0L;
 		}
+	}
+
+	private static class DummyInternalStateHandle implements StatePartitionSnapshot {
+		private static final long serialVersionUID = 1L;
+
+		private final GroupSet groupSet;
+
+		private DummyInternalStateHandle(GroupSet groupSet) {
+			this.groupSet = groupSet;
+		}
+
+		@Override
+		public GroupSet getGroups() {
+			return groupSet;
+		}
+
+		@Override
+		public StatePartitionSnapshot getIntersection(GroupSet groups) {
+			return new DummyInternalStateHandle(this.groupSet.intersect(groups));
+		}
+
+		@Override
+		public void registerSharedStates(SharedStateRegistry stateRegistry) {
+
+		}
+
+		@Override
+		public void discardState() throws Exception {
+
+		}
+
+		@Override
+		public long getStateSize() {
+			return 0;
+		}
+	}
+
+	public static StatePartitionSnapshot deepDummyStataPartitionSnapshotCopy(StatePartitionSnapshot original) {
+		if (original == null) {
+			return null;
+		}
+
+		return new DefaultStatePartitionSnapshot(original.getGroups());
 	}
 }

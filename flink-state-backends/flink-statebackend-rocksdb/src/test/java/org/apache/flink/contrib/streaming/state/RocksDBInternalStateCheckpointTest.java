@@ -39,8 +39,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import static org.mockito.Mockito.mock;
-
 /**
  * Tests for {@link RocksDBInternalStateBackend}'s checkpoint.
  */
@@ -89,7 +87,7 @@ public class RocksDBInternalStateCheckpointTest extends InternalStateCheckpointT
 			numberOfGroups,
 			groups,
 			true,
-			mock(LocalRecoveryConfig.class),
+			localRecoveryConfig,
 			null);
 	}
 

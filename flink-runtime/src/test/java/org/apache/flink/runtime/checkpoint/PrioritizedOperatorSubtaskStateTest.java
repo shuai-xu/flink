@@ -18,8 +18,6 @@
 
 package org.apache.flink.runtime.checkpoint;
 
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
-import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateHandle;
@@ -40,9 +38,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 
+import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.createNewInternalStateHandle;
 import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.createNewKeyedStateHandle;
 import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.createNewOperatorStateHandle;
 import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.deepDummyCopy;
+import static org.apache.flink.runtime.checkpoint.StateHandleDummyUtil.deepDummyStataPartitionSnapshotCopy;
 
 public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 
@@ -113,6 +113,12 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 					PrioritizedOperatorSubtaskState::getPrioritizedRawKeyedState,
 					prioritizedOperatorSubtaskState,
 					primaryAndFallback.getRawKeyedState().size() == 1 ? validAlternatives : onlyPrimary));
+
+				Assert.assertTrue(checkResultAsExpected(
+					OperatorSubtaskState::getManagedInternalState,
+					PrioritizedOperatorSubtaskState::getPrioritizedManagedInternalState,
+					prioritizedOperatorSubtaskState,
+					primaryAndFallback.getManagedInternalState().size() == 1 ? validAlternatives : onlyPrimary));
 			}
 		}
 	}
@@ -192,11 +198,11 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 				StateObjectCollection.empty() :
 				mode == 1?
 					new StateObjectCollection<>(
-						Collections.singleton(createNewManagedInternalState(keyGroupRange))) :
+						Collections.singleton(createNewInternalStateHandle(keyGroupRange))) :
 					new StateObjectCollection<>(
 						Arrays.asList(
-							createNewManagedInternalState(keyGroupRange1),
-							createNewManagedInternalState(keyGroupRange2)));
+							createNewInternalStateHandle(keyGroupRange1),
+							createNewInternalStateHandle(keyGroupRange2)));
 		return new OperatorSubtaskState(s1, s2, s3, s4, s5);
 	}
 
@@ -220,13 +226,14 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 				return new OperatorSubtaskState();
 			case 2:
 				KeyGroupRange otherRange = new KeyGroupRange(8, 16);
+
 				int numNamedStates = 2;
 				return new OperatorSubtaskState(
 					createNewOperatorStateHandle(numNamedStates, random),
 					createNewOperatorStateHandle(numNamedStates, random),
 					createNewKeyedStateHandle(otherRange),
 					createNewKeyedStateHandle(otherRange),
-					null);
+					createNewInternalStateHandle(otherRange));
 			default:
 				throw new IllegalArgumentException("Mode: " + mode);
 		}
@@ -308,19 +315,5 @@ public class PrioritizedOperatorSubtaskStateTest extends TestLogger {
 			throw new IllegalStateException();
 		}
 		return (T) result;
-	}
-
-	private StatePartitionSnapshot createNewManagedInternalState(KeyGroupRange range) {
-		StatePartitionSnapshot snapshot = new DefaultStatePartitionSnapshot(
-			GroupRange.of(range.getStartKeyGroup(), range.getEndKeyGroup() + 1));
-		return snapshot;
-	}
-
-	private StatePartitionSnapshot deepDummyStataPartitionSnapshotCopy(StatePartitionSnapshot original) {
-		if (original == null) {
-			return null;
-		}
-
-		return new DefaultStatePartitionSnapshot(original.getGroups());
 	}
 }

@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ConfigurationUtils;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.execution.Environment;
@@ -58,8 +59,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -326,36 +327,43 @@ public class RocksDBStateBackend extends AbstractStateBackend implements Configu
 
 		// initialize the paths where the local RocksDB files should be stored
 		if (localRocksDbDirectories == null) {
-			// initialize from the temp directories
-			initializedDbBasePaths = env.getIOManager().getSpillingDirectories();
-		}
-		else {
-			List<File> dirs = new ArrayList<>(localRocksDbDirectories.length);
-			StringBuilder errorMessage = new StringBuilder();
+			String[] workingDirs = ConfigurationUtils.parseWorkingDirectories(env.getTaskManagerInfo().getConfiguration());
+			if (workingDirs.length == 0) {
+				// initialize from the temp directories
+				initializedDbBasePaths = env.getIOManager().getSpillingDirectories();
 
-			for (File f : localRocksDbDirectories) {
-				File testDir = new File(f, UUID.randomUUID().toString());
-				if (!testDir.mkdirs()) {
-					String msg = "Local DB files directory '" + f
-							+ "' does not exist and cannot be created. ";
-					LOG.error(msg);
-					errorMessage.append(msg);
-				} else {
-					dirs.add(f);
-				}
-				//noinspection ResultOfMethodCallIgnored
-				testDir.delete();
-			}
-
-			if (dirs.isEmpty()) {
-				throw new IOException("No local storage directories available. " + errorMessage);
+				nextDirectory = ThreadLocalRandom.current().nextInt(initializedDbBasePaths.length);
+				isInitialized = true;
+				return;
 			} else {
-				initializedDbBasePaths = dirs.toArray(new File[dirs.size()]);
+				setDbStoragePaths(workingDirs);
 			}
 		}
 
-		nextDirectory = new Random().nextInt(initializedDbBasePaths.length);
+		List<File> dirs = new ArrayList<>(localRocksDbDirectories.length);
+		StringBuilder errorMessage = new StringBuilder();
 
+		for (File f : localRocksDbDirectories) {
+			File testDir = new File(f, UUID.randomUUID().toString());
+			if (!testDir.mkdirs()) {
+				String msg = "Local DB files directory '" + f
+						+ "' does not exist and cannot be created. ";
+				LOG.error(msg);
+				errorMessage.append(msg);
+			} else {
+				dirs.add(f);
+			}
+			//noinspection ResultOfMethodCallIgnored
+			testDir.delete();
+		}
+
+		if (dirs.isEmpty()) {
+			throw new IOException("No local storage directories available. " + errorMessage);
+		} else {
+			initializedDbBasePaths = dirs.toArray(new File[dirs.size()]);
+		}
+
+		nextDirectory = ThreadLocalRandom.current().nextInt(initializedDbBasePaths.length);
 		isInitialized = true;
 	}
 

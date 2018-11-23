@@ -20,12 +20,15 @@ package org.apache.flink.test.checkpointing;
 
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
 import static org.apache.flink.test.checkpointing.AbstractEventTimeWindowCheckpointingITCase.StateBackendEnum.NIAGARA_INCREMENTAL_ZK;
 
 /**
  * Tests file-based local recovery with the Niagara state-backend and incremental checkpointing enabled.
+ * TODO re-enable this test after Niagara state-backend supports local recovery.
  */
+@Ignore
 public class LocalRecoveryNiagaraIncrementalITCase extends AbstractLocalRecoveryITCase {
 	@BeforeClass
 	public static void platformCheck() {

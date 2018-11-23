@@ -21,7 +21,6 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.StateHandleDummyUtil;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
-import org.apache.flink.runtime.state.DefaultStatePartitionSnapshot;
 import org.apache.flink.runtime.state.DoneFuture;
 import org.apache.flink.runtime.state.GroupRange;
 import org.apache.flink.runtime.state.KeyGroupRange;
@@ -54,6 +53,8 @@ public class OperatorSnapshotFinalizerTest extends TestLogger {
 			StateHandleDummyUtil.createNewKeyedStateHandle(new KeyGroupRange(0, 0));
 		OperatorStateHandle operatorTemplate =
 			StateHandleDummyUtil.createNewOperatorStateHandle(2, random);
+		StatePartitionSnapshot internalStateTemplate =
+			StateHandleDummyUtil.createNewInternalStateHandle(GroupRange.of(0, 1));
 
 		SnapshotResult<KeyedStateHandle> snapKeyMan = SnapshotResult.withLocalState(
 			StateHandleDummyUtil.deepDummyCopy(keyedTemplate),
@@ -72,8 +73,8 @@ public class OperatorSnapshotFinalizerTest extends TestLogger {
 			StateHandleDummyUtil.deepDummyCopy(operatorTemplate));
 
 		SnapshotResult<StatePartitionSnapshot> snapInternalMan = SnapshotResult.withLocalState(
-			new DefaultStatePartitionSnapshot(GroupRange.of(0, 1)),
-			new DefaultStatePartitionSnapshot(GroupRange.of(0, 1)));
+			StateHandleDummyUtil.deepDummyCopy(internalStateTemplate),
+			StateHandleDummyUtil.deepDummyCopy(internalStateTemplate));
 
 		DoneFuture<SnapshotResult<KeyedStateHandle>> managedKeyed = new PseudoNotDoneFuture<>(snapKeyMan);
 		DoneFuture<SnapshotResult<KeyedStateHandle>> rawKeyed = new PseudoNotDoneFuture<>(snapKeyRaw);

@@ -67,6 +67,14 @@ public class CheckpointingOptions {
 				" this option.");
 
 	/**
+	 * The config parameter defining the working directories for file-based state backend.
+	 */
+	public static final ConfigOption<String> WORKING_DIRS = ConfigOptions
+			.key("state.backend.working-dirs")
+			.noDefaultValue()
+			.withDescription("The working directories for file-based state backend.");
+
+	/**
 	 * This option configures local recovery for this state backend. By default, local recovery is deactivated.
 	 */
 	public static final ConfigOption<Boolean> LOCAL_RECOVERY = ConfigOptions

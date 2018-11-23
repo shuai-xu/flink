@@ -19,6 +19,7 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.configuration.AkkaOptions;
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
@@ -136,6 +137,26 @@ public class YarnTaskExecutorRunner {
 			else {
 				LOG.info("Setting directories for temporary files to: {}", localDirs);
 				configuration.setString(CoreOptions.TMP_DIRS, localDirs);
+			}
+
+			if (configuration.getBoolean(CheckpointingOptions.LOCAL_RECOVERY)) {
+				if (configuration.contains(CheckpointingOptions.LOCAL_RECOVERY_TASK_MANAGER_STATE_ROOT_DIRS)) {
+					LOG.info("Using specified directories {} as root directories for local recovery.",
+						configuration.getValue(CheckpointingOptions.LOCAL_RECOVERY_TASK_MANAGER_STATE_ROOT_DIRS));
+				} else {
+					LOG.info("Setting root directories for local recovery as current working dir {}.", currDir);
+					configuration.setString(CheckpointingOptions.LOCAL_RECOVERY_TASK_MANAGER_STATE_ROOT_DIRS, currDir);
+				}
+			}
+
+			if (configuration.contains(CheckpointingOptions.WORKING_DIRS)) {
+				LOG.info("Using specified directories {} as root directories for all file-based state backend " +
+						"in the Flink config: {}.",
+					configuration.getValue(CheckpointingOptions.WORKING_DIRS), CheckpointingOptions.WORKING_DIRS.key());
+			} else {
+				LOG.info("Setting working directories {} for all file-based state backend " +
+					"in the Flink config: {}.", currDir, CheckpointingOptions.WORKING_DIRS.key());
+				configuration.setString(CheckpointingOptions.WORKING_DIRS, currDir);
 			}
 
 			// configure local directory for shuffle service
