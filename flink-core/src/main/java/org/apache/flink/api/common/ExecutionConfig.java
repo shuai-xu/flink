@@ -151,8 +151,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 	/** This flag defines if we use compression for the state snapshot data or not. Default: false */
 	private boolean useSnapshotCompression = false;
 
-	/** Determines if a task fails or not if there is an error in writing its checkpoint data. Default: true */
-	private boolean failTaskOnCheckpointError = true;
+	/** Determines if a task fails or not if there is an error in writing its checkpoint data. Default: false */
+	private boolean failTaskOnCheckpointError = false;
 
 	// ------------------------------- User code values --------------------------------------------
 

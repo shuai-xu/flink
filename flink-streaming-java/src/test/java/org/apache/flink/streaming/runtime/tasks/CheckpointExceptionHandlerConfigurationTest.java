@@ -53,7 +53,7 @@ public class CheckpointExceptionHandlerConfigurationTest extends TestLogger {
 	@Test
 	public void testFailIsDefaultConfig() {
 		ExecutionConfig newExecutionConfig = new ExecutionConfig();
-		Assert.assertTrue(newExecutionConfig.isFailTaskOnCheckpointError());
+		Assert.assertFalse(newExecutionConfig.isFailTaskOnCheckpointError());
 	}
 
 	private void testConfigForwarding(boolean failOnException) throws Exception {
