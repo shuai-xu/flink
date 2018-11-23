@@ -169,7 +169,7 @@ public class HiveUDAFFunction extends AggregateFunction<BaseRow, GenericUDAFEval
 				finalEvaluatorByVoid = true;
 			} else {
 				SimpleGenericUDAFParameterInfo paramInfo = new SimpleGenericUDAFParameterInfo(
-						inputInspectors, false, false);
+						inputInspectors, false, false, false);
 				finalEvaluator = resolver.getEvaluator(paramInfo);
 				finalEvaluatorByVoid = false;
 			}
@@ -193,7 +193,7 @@ public class HiveUDAFFunction extends AggregateFunction<BaseRow, GenericUDAFEval
 				partial1EvaluatorByVoid = true;
 			} else {
 				SimpleGenericUDAFParameterInfo paramInfo = new SimpleGenericUDAFParameterInfo(
-						inputInspectors, false, false);
+						inputInspectors, false, false, false);
 				partial1Evaluator = resolver.getEvaluator(paramInfo);
 				partial1EvaluatorByVoid = false;
 			}
@@ -217,7 +217,7 @@ public class HiveUDAFFunction extends AggregateFunction<BaseRow, GenericUDAFEval
 				partial2EvaluatorByVoid = true;
 			} else {
 				SimpleGenericUDAFParameterInfo paramInfo = new SimpleGenericUDAFParameterInfo(
-						inputInspectors, false, false);
+						inputInspectors, false, false, false);
 				partial2Evaluator = resolver.getEvaluator(paramInfo);
 				partial2EvaluatorByVoid = false;
 			}
@@ -237,7 +237,7 @@ public class HiveUDAFFunction extends AggregateFunction<BaseRow, GenericUDAFEval
 		objectInspectors[0] = PrimitiveObjectInspectorFactory.getPrimitiveJavaObjectInspector(
 				PrimitiveObjectInspector.PrimitiveCategory.LONG);
 		return new SimpleGenericUDAFParameterInfo(
-				objectInspectors, false, false);
+				objectInspectors, false, false, false);
 	}
 
 	@Override

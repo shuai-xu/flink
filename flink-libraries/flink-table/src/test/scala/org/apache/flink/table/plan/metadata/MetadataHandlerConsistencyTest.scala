@@ -108,7 +108,7 @@ class MetadataHandlerConsistencyTest(
     val reflections = new Reflections(
       new ConfigurationBuilder()
           .useParallelExecutor(Runtime.getRuntime.availableProcessors)
-          .addUrls(ClasspathHelper.forPackage("org.apache.flink")))
+          .addUrls(ClasspathHelper.forPackage("org.apache.flink.table.plan.cost")))
     reflections.getSubTypesOf(classOf[MetadataHandler[_]]).filter(
       mdhClass => !mdhClass.isInterface && !Modifier.isAbstract(mdhClass.getModifiers)).toList
   }
