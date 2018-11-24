@@ -676,7 +676,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				// non-union case
 				inputReaders[i] = new MutableRecordReader<>(
 						getEnvironment().getInputGate(currentReaderOffset),
-						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+						getEnvironment().getTaskManagerInfo().getTmpDirectories(),
+						getEnvironment().getTaskManagerInfo().getConfiguration());
 			} else if (groupSize > 1){
 				// union case
 				InputGate[] readers = new InputGate[groupSize];
@@ -685,7 +686,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				}
 				inputReaders[i] = new MutableRecordReader<>(
 						new UnionInputGate(readers),
-						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+						getEnvironment().getTaskManagerInfo().getTmpDirectories(),
+						getEnvironment().getTaskManagerInfo().getConfiguration());
 			} else {
 				throw new Exception("Illegal input group size in task configuration: " + groupSize);
 			}
@@ -719,7 +721,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				// non-union case
 				broadcastInputReaders[i] = new MutableRecordReader<>(
 						getEnvironment().getInputGate(currentReaderOffset),
-						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+						getEnvironment().getTaskManagerInfo().getTmpDirectories(),
+						getEnvironment().getTaskManagerInfo().getConfiguration());
 			} else if (groupSize > 1){
 				// union case
 				InputGate[] readers = new InputGate[groupSize];
@@ -728,7 +731,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				}
 				broadcastInputReaders[i] = new MutableRecordReader<>(
 						new UnionInputGate(readers),
-						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+						getEnvironment().getTaskManagerInfo().getTmpDirectories(),
+						getEnvironment().getTaskManagerInfo().getConfiguration());
 			} else {
 				throw new Exception("Illegal input group size in task configuration: " + groupSize);
 			}

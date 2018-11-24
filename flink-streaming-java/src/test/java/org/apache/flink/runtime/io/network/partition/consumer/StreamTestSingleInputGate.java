@@ -85,6 +85,7 @@ public class StreamTestSingleInputGate<T> extends TestSingleInputGate {
 	@SuppressWarnings("unchecked")
 	private void setupInputChannels() throws IOException, InterruptedException {
 
+		InputChannel[] origInputChannels = new InputChannel[numInputChannels];
 		for (int i = 0; i < numInputChannels; i++) {
 			final int channelIndex = i;
 			final RecordSerializer<SerializationDelegate<Object>> recordSerializer = new SpanningRecordSerializer<SerializationDelegate<Object>>();
@@ -93,6 +94,7 @@ public class StreamTestSingleInputGate<T> extends TestSingleInputGate {
 
 			inputQueues[channelIndex] = new ConcurrentLinkedQueue<InputValue<Object>>();
 			inputChannels[channelIndex] = new TestInputChannel(inputGate, i);
+			origInputChannels[channelIndex] = inputChannels[channelIndex].getInputChannel();
 
 			final Answer<Optional<BufferAndAvailability>> answer = new Answer<Optional<BufferAndAvailability>>() {
 				@Override
@@ -135,6 +137,7 @@ public class StreamTestSingleInputGate<T> extends TestSingleInputGate {
 			inputGate.setInputChannel(new IntermediateResultPartitionID(),
 				inputChannels[channelIndex].getInputChannel());
 		}
+		when(inputGate.getAllInputChannels()).thenReturn(origInputChannels);
 	}
 
 	public void sendElement(Object element, int channel) {

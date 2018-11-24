@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.DataOutputSerializer;
 import org.apache.flink.core.memory.HeapMemorySegment;
 import org.apache.flink.core.memory.MemorySegment;
@@ -34,6 +35,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.UnionInputGate;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
@@ -100,7 +102,8 @@ public class InputGateFetcherTest {
 			inputProcessor,
 			this,
 			inputGate1.getNumberOfInputChannels(),
-			true);
+			true,
+			new Configuration());
 
 		// The first EOP would be ignored
 		assertEquals(bufferOrEvent, fetcher.getNextBufferOrEvent());
@@ -152,7 +155,8 @@ public class InputGateFetcherTest {
 			mock(InputProcessor.class),
 			this,
 			4,
-			true);
+			true,
+			new Configuration());
 
 		// Read from the input gate
 		fetcher.setCurrentRecordDeserializer(null);
@@ -222,7 +226,8 @@ public class InputGateFetcherTest {
 				mock(InputProcessor.class),
 				this,
 				4,
-				true);
+				true,
+				new Configuration());
 
 			// Read from the input gate
 			objectReusedFetcher.setCurrentRecordDeserializer(null);
@@ -254,7 +259,8 @@ public class InputGateFetcherTest {
 				mock(InputProcessor.class),
 				this,
 				4,
-				false);
+				false,
+				new Configuration());
 
 			objectNonReusedFetcher.setCurrentRecordDeserializer(null);
 			final DeserializationResult result = objectNonReusedFetcher.getNextResult();
@@ -279,6 +285,7 @@ public class InputGateFetcherTest {
 
 		final InputGate inputGate = mock(InputGate.class);
 		when(inputGate.moreAvailable()).thenReturn(false);
+		when(inputGate.getAllInputChannels()).thenReturn(new InputChannel[]{});
 
 		final FakeInputGateFetcher<Integer> fetcher = new FakeInputGateFetcher<>(
 			mock(InputSelector.InputSelection.class),
@@ -289,7 +296,8 @@ public class InputGateFetcherTest {
 			inputProcessor,
 			this,
 			4,
-			true);
+			true,
+			new Configuration());
 
 		fetcher.addNextResult(PARTIAL_RECORD);
 		fetcher.addNextResult(INTERMEDIATE_RECORD_FROM_BUFFER);
@@ -319,10 +327,11 @@ public class InputGateFetcherTest {
 			IOManager ioManager,
 			InputProcessor inputProcessor, Object checkpointLock,
 			int basedChannelCount,
-			boolean objectReuse) {
+			boolean objectReuse,
+			Configuration taskManagerConfig) {
 
 			super(inputSelection, inputGate, serializer, barrierHandler, ioManager, inputProcessor,
-				checkpointLock, basedChannelCount, objectReuse);
+				checkpointLock, basedChannelCount, objectReuse, taskManagerConfig);
 		}
 
 		void addNextResult(DeserializationResult nextResult) {

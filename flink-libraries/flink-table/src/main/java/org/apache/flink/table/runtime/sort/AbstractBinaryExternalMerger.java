@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.sort;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelReader;
@@ -56,7 +57,7 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 	protected final int maxFanIn;
 	protected final SpillChannelManager channelManager;
 	private final boolean compressionEnable;
-	private final String compressionCodec;
+	private final BlockCompressionFactory compressionCodecFactory;
 	private final int compressionBlockSize;
 
 	public AbstractBinaryExternalMerger(
@@ -65,14 +66,14 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 			int maxFanIn,
 			SpillChannelManager channelManager,
 			boolean compressionEnable,
-			String compressionCodec,
+			BlockCompressionFactory compressionCodecFactory,
 			int compressionBlockSize) {
 		this.ioManager = ioManager;
 		this.pageSize = pageSize;
 		this.maxFanIn = maxFanIn;
 		this.channelManager = channelManager;
 		this.compressionEnable = compressionEnable;
-		this.compressionCodec = compressionCodec;
+		this.compressionCodecFactory = compressionCodecFactory;
 		this.compressionBlockSize = compressionBlockSize;
 	}
 
@@ -110,7 +111,7 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 			AbstractChannelReaderInputView inView;
 			if (compressionEnable) {
 				CompressedHeaderlessChannelReaderInputView in = new CompressedHeaderlessChannelReaderInputView(
-						channel.getChannel(), ioManager, compressionCodec, compressionBlockSize, channel.getBlockCount());
+						channel.getChannel(), ioManager, compressionCodecFactory, compressionBlockSize, channel.getBlockCount());
 				inView = in;
 				openChannels.add(in.getReader());
 			} else {
@@ -211,7 +212,7 @@ public abstract class AbstractBinaryExternalMerger<Entry> implements Closeable {
 				BufferFileWriter bufferWriter = this.ioManager.createBufferFileWriter(mergedChannelID);
 				writer = bufferWriter;
 				CompressedHeaderlessChannelWriterOutputView output = new CompressedHeaderlessChannelWriterOutputView(
-						bufferWriter, compressionCodec, compressionBlockSize);
+						bufferWriter, compressionCodecFactory, compressionBlockSize);
 				writeMergingOutput(mergeIterator, output);
 				output.close();
 				numBlocksWritten = output.getBlockCount();

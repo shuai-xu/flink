@@ -389,6 +389,23 @@ public class TaskManagerOptions {
 		key("taskmanager.output.local-output-dirs")
 			.defaultValue("");
 
+	public static final ConfigOption<Boolean> TASK_EXTERNAL_SHUFFLE_ENABLE_COMPRESSION =
+		key("task.external.shuffle.compression.enable")
+			.defaultValue(false)
+			.withDescription("Whether to enable compress shuffle data in external shuffle.");
+
+	public static final ConfigOption<String> TASK_EXTERNAL_SHUFFLE_COMPRESSION_CODEC =
+		key("task.external.shuffle.compression.codec")
+			.defaultValue("lz4")
+			.withDescription("The codec to use when compress or decompress external shuffle data. " +
+				"Currently supported codecs are lz4, bzip2, gzip. User can also implement " +
+				"interface BlockCompressionFactory and set its class to specify other codecs.");
+
+	public static final ConfigOption<Integer> TASK_EXTERNAL_SHUFFLE_COMPRESSION_BUFFER_SIZE =
+		key("task.external.shuffle.compression.buffer-size")
+			.defaultValue(32 * 1024)
+			.withDescription("The max buffer size to compress external shuffle data.");
+
 	// ------------------------------------------------------------------------
 	//  Managed Memory Options
 	// ------------------------------------------------------------------------

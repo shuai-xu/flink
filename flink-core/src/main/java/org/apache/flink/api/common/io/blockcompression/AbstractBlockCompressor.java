@@ -18,8 +18,9 @@
 
 package org.apache.flink.api.common.io.blockcompression;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * A compressor which compresses a whole byte array each time.
@@ -36,57 +37,77 @@ public abstract class AbstractBlockCompressor {
 	}
 
 	/**
-	 * Compress data from src byte buffer and write result to dst byte buffer.
-	 * Note that dst byte buffer will be cleared before filled with compressed data.
+	 * Compresses data from source byte buffer and writes result to destination byte buffer.
+	 * Source data starts from {@link ByteBuffer#position()}, the length of source data is {@link ByteBuffer#remaining()}.
+	 * Destination data starts from {@link ByteBuffer#position()}.
+	 * @throws InsufficientBufferException destination buffer is not enough, user may allocate larger memory and retry.
 	 */
-	public int compress(ByteBuffer src, ByteBuffer dst) throws IOException {
-		return compress(src, 0, src.remaining(), dst);
+	public int compress(ByteBuffer src, ByteBuffer dst) throws InsufficientBufferException {
+		return compress(src, 0, src.remaining(), dst, 0);
 	}
 
-	public int compress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst) throws IOException {
-		byte[] srcArr;
-		if (src.hasArray()) {
-			srcArr = src.array();
-			srcOff += src.arrayOffset() + src.position();
-		} else {
-			int len = srcOff + srcLen;
-			if (reuseSrcHeapBuff == null || reuseSrcHeapBuff.length < len) {
-				reuseSrcHeapBuff = new byte[len];
-			}
-			srcArr = reuseSrcHeapBuff;
-			src.get(srcArr, 0, len);
+	/**
+	 * Compresses data from source byte buffer and writes result to destination byte buffer.
+	 * Source data starts from ({@link ByteBuffer#position()} + {@code srcOff}), the length of source data is {@code srcLen}.
+	 * Destination data starts from {@link ByteBuffer#position() + {@code dstOff}}.
+	 */
+	public int compress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst, int dstOff) throws InsufficientBufferException {
+		checkArgument(srcOff >= 0 && dstOff >= 0);
+
+		// Source data starts from (src.position() + srcOff)
+		if (srcOff > 0) {
+			src.position(src.position() + srcOff);
 		}
 
-		dst.clear();
+		// Destination data starts from (dst.position() + dstOff)
+		if (dstOff > 0) {
+			dst.position(dst.position() + dstOff);
+		}
+
+		byte[] srcArr;
+		int srcArrOff;
+		if (src.hasArray()) {
+			srcArr = src.array();
+			srcArrOff = src.arrayOffset() + src.position();
+			src.position(src.position() + srcLen);
+		} else {
+			if (reuseSrcHeapBuff == null || reuseSrcHeapBuff.length < srcLen) {
+				reuseSrcHeapBuff = new byte[srcLen];
+			}
+			srcArr = reuseSrcHeapBuff;
+			srcArrOff = 0;
+			src.get(srcArr, 0, srcLen);
+		}
 
 		byte[] dstArr;
-		int dstOff;
+		int dstArrOff;
 		if (dst.hasArray()) {
 			dstArr = dst.array();
-			dstOff = dst.arrayOffset();
+			dstArrOff = dst.arrayOffset() + dst.position();
 		} else {
-			int len = dst.capacity();
+			int len = dst.capacity() - dst.position();
 			if (reuseDstHeapBuff == null || reuseDstHeapBuff.length < len) {
 				reuseDstHeapBuff = new byte[len];
 			}
 			dstArr = reuseDstHeapBuff;
-			dstOff = 0;
+			dstArrOff = 0;
 		}
 
-		int compressedLen = compress(srcArr, srcOff, srcLen, dstArr, dstOff);
-		if (!dst.hasArray()) {
-			dst.put(dstArr, dstOff, compressedLen);
+		int compressedLen = compress(srcArr, srcArrOff, srcLen, dstArr, dstArrOff);
+
+		if (dst.hasArray()) {
+			dst.position(dst.position() + compressedLen);
+		} else {
+			dst.put(dstArr, dstArrOff, compressedLen);
 		}
-		dst.position(0);
-		dst.limit(compressedLen);
 
 		return compressedLen;
 	}
 
-	public int compress(byte[] src, byte[] dst) throws IOException {
+	public int compress(byte[] src, byte[] dst) throws InsufficientBufferException {
 		return compress(src, 0, src.length, dst, 0);
 	}
 
 	public abstract int compress(
-			byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws IOException;
+			byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws InsufficientBufferException;
 }

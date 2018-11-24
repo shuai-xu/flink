@@ -32,18 +32,26 @@ public class GzipBlockDecompressor extends AbstractBlockDecompressor {
 	private ReusableByteArrayInputStream srcStream;
 
 	@Override
-	public int decompress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws IOException {
-		if (srcStream == null) {
-			srcStream = new ReusableByteArrayInputStream(src, srcOff, srcLen);
-		} else {
-			srcStream.reuse(src, srcOff, srcLen);
+	public int decompress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws InsufficientBufferException, DataCorruptionException{
+		try {
+			if (srcStream == null) {
+				srcStream = new ReusableByteArrayInputStream(src, srcOff, srcLen);
+			} else {
+				srcStream.reuse(src, srcOff, srcLen);
+			}
+			GzipCompressorInputStream decompressStream = new GzipCompressorInputStream(srcStream);
+
+			int decompressedLen = decompressStream.read(dst, dstOff, dst.length - dstOff);
+			srcStream.close();
+			decompressStream.close();
+
+			if (decompressedLen < 0) {
+				throw new DataCorruptionException("Fail to decompress, decompressedLen: " + decompressedLen);
+			}
+
+			return decompressedLen;
+		} catch (IOException e) {
+			throw new DataCorruptionException(e);
 		}
-		GzipCompressorInputStream decompressStream = new GzipCompressorInputStream(srcStream);
-
-		int decompressedLen = decompressStream.read(dst, dstOff, dst.length - dstOff);
-		srcStream.close();
-		decompressStream.close();
-
-		return decompressedLen;
 	}
 }

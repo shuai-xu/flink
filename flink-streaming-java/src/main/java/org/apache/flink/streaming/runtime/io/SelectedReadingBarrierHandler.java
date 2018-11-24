@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 
 import java.io.IOException;
@@ -92,4 +93,12 @@ public interface SelectedReadingBarrierHandler extends CheckpointBarrierHandler 
 	 * @return the number of all channels.
 	 */
 	int getNumberOfInputChannels();
+
+	/**
+	 * Get all the {@link InputChannel}s in this {@link SelectedReadingBarrierHandler}.
+	 *
+	 * @return an array contains all the input channels, the index of an input channel
+	 *         in the array equals to its channel index in this barrier handler.
+	 */
+	InputChannel[] getAllInputChannels();
 }

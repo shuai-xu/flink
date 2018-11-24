@@ -79,7 +79,16 @@ public interface RecordSerializer<T extends IOReadableWritable> {
 	 * @return how much information was written to the target buffer and
 	 *         whether this buffer is full
 	 */
-	SerializationResult copyToBufferBuilder(BufferBuilder bufferBuilder) throws IOException;
+	SerializationResult copyToBufferBuilder(BufferBuilder bufferBuilder);
+
+	/**
+	 * Flush all the intermediate data to the given target buffer.
+	 * @param bufferBuilder the new target buffer to use
+	 * @return how much information was written to the target buffer and
+	 *         whether this buffer is full
+	 * @throws IOException
+	 */
+	SerializationResult flushToBufferBuilder(BufferBuilder bufferBuilder);
 
 	/**
 	 * Clears the buffer and checks to decrease the size of intermediate data serialization buffer

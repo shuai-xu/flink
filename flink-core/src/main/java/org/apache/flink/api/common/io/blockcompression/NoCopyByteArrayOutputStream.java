@@ -20,6 +20,11 @@ package org.apache.flink.api.common.io.blockcompression;
 
 import java.io.ByteArrayOutputStream;
 
+/**
+ * Warning: This.buf will be changed if the output data size exceeds original buffer length and it won't
+ * generate any exception since ByteArrayOutputStream just grows its buffer automatically. So check written
+ * bytes is necessary to avoid incomplete data.
+ */
 class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 	private int off;
 

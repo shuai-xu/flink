@@ -51,6 +51,7 @@ public class TestInputChannel {
 		this.inputGate = checkNotNull(inputGate);
 
 		when(mock.getChannelIndex()).thenReturn(channelIndex);
+		when(mock.getInputGate()).thenReturn(inputGate);
 	}
 
 	public TestInputChannel readBuffer() throws IOException, InterruptedException {

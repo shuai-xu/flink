@@ -21,9 +21,11 @@ package org.apache.flink.runtime.io.network.partition.external.writer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.io.network.api.serialization.SerializerManager;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.operators.sort.SortedDataFile;
 import org.apache.flink.runtime.operators.sort.SortedDataFileFactory;
+import org.apache.flink.runtime.plugable.SerializationDelegate;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,13 +38,16 @@ public class BufferSortedDataFileFactory<T> implements SortedDataFileFactory<T> 
 	private final String partitionDataRootPath;
 	private final TypeSerializer<T> serialize;
 	private final IOManager ioManager;
+	private final SerializerManager<SerializationDelegate<T>> serializerManager;
 
 	private int nextFileId;
 
-	public BufferSortedDataFileFactory(String partitionDataRootPath, TypeSerializer<T> serialize, IOManager ioManager) {
+	public BufferSortedDataFileFactory(String partitionDataRootPath, TypeSerializer<T> serialize, IOManager ioManager,
+		SerializerManager<SerializationDelegate<T>> serializerManager) {
 		this.partitionDataRootPath = partitionDataRootPath;
 		this.serialize = serialize;
 		this.ioManager = ioManager;
+		this.serializerManager = serializerManager;
 	}
 
 	@Override
@@ -50,6 +55,7 @@ public class BufferSortedDataFileFactory<T> implements SortedDataFileFactory<T> 
 		int fileId = nextFileId++;
 		String path = ExternalBlockShuffleUtils.generateSpillPath(partitionDataRootPath, fileId);
 
-		return new BufferSortedDataFile<T>(ioManager.createChannel(new File(path)), fileId, serialize, ioManager, writeMemory);
+		return new BufferSortedDataFile<T>(ioManager.createChannel(new File(path)), fileId, serialize, ioManager,
+			writeMemory, serializerManager);
 	}
 }

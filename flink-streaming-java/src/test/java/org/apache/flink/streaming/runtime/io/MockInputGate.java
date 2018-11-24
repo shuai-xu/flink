@@ -20,15 +20,21 @@ package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.runtime.event.TaskEvent;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGateListener;
+import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Mock {@link InputGate}.
@@ -128,4 +134,16 @@ public class MockInputGate implements InputGate {
 	public void registerListener(InputGateListener listener) {
 	}
 
+	@Override
+	public InputChannel[] getAllInputChannels() {
+		SingleInputGate inputGate = mock(SingleInputGate.class);
+		when(inputGate.getConsumedPartitionType()).thenReturn(ResultPartitionType.PIPELINED);
+		InputChannel[] inputChannels = new InputChannel[numChannels];
+		for (int i = 0; i < inputChannels.length; i++) {
+			InputChannel inputChannel = mock(InputChannel.class);
+			when(inputChannel.getInputGate()).thenReturn(inputGate);
+			inputChannels[i] = inputChannel;
+		}
+		return inputChannels;
+	}
 }

@@ -17,6 +17,8 @@
 
 package org.apache.flink.table.runtime.sort;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
@@ -75,7 +77,7 @@ public class BufferedKVExternalSorter {
 	private final int writeNumMemory;
 
 	private final boolean compressionEnable;
-	private final String compressionCodec;
+	private final BlockCompressionFactory compressionCodecFactory;
 	private final int compressionBlockSize;
 
 	public BufferedKVExternalSorter(
@@ -93,7 +95,10 @@ public class BufferedKVExternalSorter {
 		this.sorter = new QuickSort();
 		this.maxNumFileHandles = conf.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES());
 		this.compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
-		this.compressionCodec = conf.getString(TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC());
+		this.compressionCodecFactory = this.compressionEnable
+			? BlockCompressionFactoryLoader.createBlockCompressionFactory(conf.getString(
+			TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC()), conf)
+			: null;
 		this.compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
 		this.writeNumMemory = compressionEnable ? 0 : WRITE_MEMORY_NUM;
 		this.ioManager = ioManager;
@@ -104,7 +109,7 @@ public class BufferedKVExternalSorter {
 				maxNumFileHandles, channelManager,
 				keySerializer, valueSerializer, comparator,
 				compressionEnable,
-				compressionCodec,
+			compressionCodecFactory,
 				compressionBlockSize);
 	}
 
@@ -177,7 +182,7 @@ public class BufferedKVExternalSorter {
 				BufferFileWriter bufferWriter = this.ioManager.createBufferFileWriter(channel);
 				writer = bufferWriter;
 				CompressedHeaderlessChannelWriterOutputView output = new CompressedHeaderlessChannelWriterOutputView(
-						bufferWriter, compressionCodec, compressionBlockSize);
+						bufferWriter, compressionCodecFactory, compressionBlockSize);
 				buffer.writeToOutput(output);
 				output.close();
 				blockCount = output.getBlockCount();

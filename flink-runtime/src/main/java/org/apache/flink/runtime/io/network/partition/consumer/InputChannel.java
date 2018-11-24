@@ -121,6 +121,10 @@ public abstract class InputChannel {
 		inputGate.notifyChannelNonEmpty(this);
 	}
 
+	public SingleInputGate getInputGate() {
+		return inputGate;
+	}
+
 	// ------------------------------------------------------------------------
 	// Consume
 	// ------------------------------------------------------------------------

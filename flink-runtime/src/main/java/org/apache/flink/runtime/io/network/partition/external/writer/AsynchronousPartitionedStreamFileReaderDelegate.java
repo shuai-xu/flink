@@ -49,7 +49,7 @@ public class AsynchronousPartitionedStreamFileReaderDelegate implements RequestD
 	private final List<PartitionIndex> partitionIndices;
 
 	private int nextPartitionIdx;
-	private int nextOffset;
+	private long nextOffset;
 
 	public AsynchronousPartitionedStreamFileReaderDelegate(IOManager ioManager, FileIOChannel.ID channel,
 														   List<MemorySegment> segments,

@@ -18,6 +18,7 @@
 
 package org.apache.flink.api.common.io.blockcompression;
 
+import org.apache.flink.configuration.Configuration;
 import org.junit.Test;
 import sun.misc.Cleaner;
 import sun.nio.ch.DirectBuffer;
@@ -25,9 +26,10 @@ import sun.nio.ch.DirectBuffer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory.CompressionMethod.BZIP2;
-import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory.CompressionMethod.GZIP;
-import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory.CompressionMethod.LZ4;
+import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader.CompressionMethod;
+import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader.CompressionMethod.BZIP2;
+import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader.CompressionMethod.GZIP;
+import static org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader.CompressionMethod.LZ4;
 import static org.junit.Assert.assertEquals;
 
 public class BlockCompressionTest {
@@ -65,9 +67,11 @@ public class BlockCompressionTest {
 		runByteBufferTest(GZIP, true, 16);
 	}
 
-	private void runArrayTest(BlockCompressionFactory.CompressionMethod method, int originalLen) throws IOException {
-		AbstractBlockCompressor compressor = BlockCompressionFactory.getCompressor(method);
-		AbstractBlockDecompressor decompressor = BlockCompressionFactory.getDecompressor(method);
+	private void runArrayTest(CompressionMethod method, int originalLen) throws IOException {
+		BlockCompressionFactory blockCompressionFactory = BlockCompressionFactoryLoader.createBlockCompressionFactory(
+			method.name(), new Configuration());
+		AbstractBlockCompressor compressor = blockCompressionFactory.getCompressor();
+		AbstractBlockDecompressor decompressor = blockCompressionFactory.getDecompressor();
 
 		int originalOff = 64;
 		byte[] data = new byte[originalOff + originalLen];
@@ -89,10 +93,12 @@ public class BlockCompressionTest {
 	}
 
 	private void runByteBufferTest(
-		BlockCompressionFactory.CompressionMethod method,
+		BlockCompressionFactoryLoader.CompressionMethod method,
 		boolean isDirect, int originalLen) throws IOException {
-		AbstractBlockCompressor compressor = BlockCompressionFactory.getCompressor(method);
-		AbstractBlockDecompressor decompressor = BlockCompressionFactory.getDecompressor(method);
+		BlockCompressionFactory blockCompressionFactory = BlockCompressionFactoryLoader.createBlockCompressionFactory(
+			method.name(), new Configuration());
+		AbstractBlockCompressor compressor = blockCompressionFactory.getCompressor();
+		AbstractBlockDecompressor decompressor = blockCompressionFactory.getDecompressor();
 
 		int originalOff = 64;
 		ByteBuffer data;
@@ -119,8 +125,9 @@ public class BlockCompressionTest {
 		} else {
 			compressedData = ByteBuffer.allocate(maxCompressedLen);
 		}
-		int compressedLen = compressor.compress(data, originalOff, originalLen, compressedData);
-		assertEquals(compressedLen, compressedData.limit());
+		int compressedLen = compressor.compress(data, originalOff, originalLen, compressedData, 0);
+		assertEquals(compressedLen, compressedData.position());
+		compressedData.flip();
 
 		int compressedOff = 32;
 		ByteBuffer copiedCompressedData;
@@ -147,8 +154,9 @@ public class BlockCompressionTest {
 			decompressedData = ByteBuffer.allocate(originalLen);
 		}
 		int decompressedLen = decompressor.decompress(
-			copiedCompressedData, compressedOff, compressedLen, decompressedData);
-		assertEquals(decompressedLen, decompressedData.remaining());
+			copiedCompressedData, compressedOff, compressedLen, decompressedData, 0);
+		assertEquals(decompressedLen, decompressedData.position());
+		decompressedData.flip();
 
 		for (int i = 0; i < decompressedLen; i++) {
 			assertEquals((byte) i, decompressedData.get());

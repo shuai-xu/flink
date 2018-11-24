@@ -37,7 +37,6 @@ import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -1511,7 +1510,7 @@ public class UnilateralSortMerger<E> implements Sorter<E> {
 				if (numSpilledFiles == 0) {
 					// only long records
 					longRecMem = this.mergeReadMemory;
-					mergeReadMemory = Collections.emptyList();
+					mergeReadMemory = new ArrayList<MemorySegment>();
 				} else {
 					int maxMergedStreams = Math.min(this.mergeFactor, numSpilledFiles);
 

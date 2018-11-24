@@ -18,6 +18,7 @@
 
 package org.apache.flink.streaming.runtime.io.benchmark;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.network.api.reader.MutableRecordReader;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.util.EnvironmentInformation;
@@ -37,7 +38,7 @@ public class SerializingLongReceiver extends ReceiverThread {
 			inputGate,
 			new String[]{
 				EnvironmentInformation.getTemporaryFileDirectory()
-			});
+			}, new Configuration());
 	}
 
 	protected void readRecords(long lastExpectedRecord) throws Exception {

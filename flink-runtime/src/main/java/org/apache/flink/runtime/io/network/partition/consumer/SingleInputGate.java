@@ -251,6 +251,15 @@ public class SingleInputGate implements InputGate {
 		return numberOfInputChannels;
 	}
 
+	@Override
+	public InputChannel[] getAllInputChannels() {
+		InputChannel[] channelArr = new InputChannel[numberOfInputChannels];
+		for (InputChannel channel : this.inputChannels.values()) {
+			channelArr[channel.channelIndex] = channel;
+		}
+		return channelArr;
+	}
+
 	public IntermediateDataSetID getConsumedResultId() {
 		return consumedResultId;
 	}

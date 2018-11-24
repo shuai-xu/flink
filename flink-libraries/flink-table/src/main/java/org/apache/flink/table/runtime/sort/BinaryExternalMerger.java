@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.sort;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
 import org.apache.flink.runtime.io.disk.ChannelReaderInputViewIterator;
 import org.apache.flink.runtime.io.disk.iomanager.AbstractChannelReaderInputView;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -52,9 +53,9 @@ public class BinaryExternalMerger extends AbstractBinaryExternalMerger<BinaryRow
 			BinaryRowSerializer serializer,
 			RecordComparator comparator,
 			boolean compressionEnable,
-			String compressionCodec,
+			BlockCompressionFactory compressionCodecFactory,
 			int compressionBlockSize) {
-		super(ioManager, pageSize, maxFanIn, channelManager, compressionEnable, compressionCodec, compressionBlockSize);
+		super(ioManager, pageSize, maxFanIn, channelManager, compressionEnable, compressionCodecFactory, compressionBlockSize);
 		this.serializer = serializer;
 		this.comparator = comparator;
 	}

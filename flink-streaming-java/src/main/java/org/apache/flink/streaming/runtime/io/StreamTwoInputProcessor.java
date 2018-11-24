@@ -28,7 +28,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.api.serialization.RecordDeserializer;
 import org.apache.flink.runtime.io.network.api.serialization.RecordDeserializer.DeserializationResult;
-import org.apache.flink.runtime.io.network.api.serialization.SpillingAdaptiveSpanningRecordDeserializer;
+import org.apache.flink.runtime.io.network.api.serialization.SerializerManagerUtility;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
@@ -186,12 +186,10 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 		int numberOfAllInputChannels = barrierHandler.getNumberOfInputChannels();
 
 		// Initialize one deserializer per input channel
-		this.recordDeserializerOfChannels = new SpillingAdaptiveSpanningRecordDeserializer[numberOfAllInputChannels];
-
-		for (int i = 0; i < recordDeserializerOfChannels.length; i++) {
-			recordDeserializerOfChannels[i] = new SpillingAdaptiveSpanningRecordDeserializer<>(
-				ioManager.getSpillingDirectoriesPaths());
-		}
+		SerializerManagerUtility<DeserializationDelegate<StreamElement>> serializerManagerUtility =
+			new SerializerManagerUtility<>(taskManagerConfig);
+		this.recordDeserializerOfChannels = serializerManagerUtility.createRecordDeserializers(
+			barrierHandler.getAllInputChannels(), ioManager.getSpillingDirectoriesPaths());
 
 		// determine which unioned channels belong to input 1 and which belong to input 2
 		this.numChannelsOfInputs = new int[numberOfInputs];

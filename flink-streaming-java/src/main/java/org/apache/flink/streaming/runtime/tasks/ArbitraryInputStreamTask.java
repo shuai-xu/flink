@@ -147,7 +147,8 @@ public class ArbitraryInputStreamTask<OUT> extends StreamTask<OUT, StreamOperato
 					(OneInputStreamOperator) headOperator,
 					operatorConfig.getTypeSerializerIn1(userClassLoader),
 					streamStatusSubMaintainer,
-					getExecutionConfig().isObjectReuseEnabled());
+					getExecutionConfig().isObjectReuseEnabled(),
+					getEnvironment().getTaskManagerInfo().getConfiguration());
 			} else if (headOperator instanceof TwoInputStreamOperator) {
 				if (streamEdge.getTypeNumber() == 1) {
 					processor.bindFirstOfTwoInputOperator(
@@ -157,7 +158,8 @@ public class ArbitraryInputStreamTask<OUT> extends StreamTask<OUT, StreamOperato
 						(TwoInputStreamOperator) headOperator,
 						operatorConfig.getTypeSerializerIn1(userClassLoader),
 						streamStatusSubMaintainer,
-						getExecutionConfig().isObjectReuseEnabled());
+						getExecutionConfig().isObjectReuseEnabled(),
+						getEnvironment().getTaskManagerInfo().getConfiguration());
 				} else {
 					processor.bindSecondOfTwoInputOperator(
 						streamEdge,
@@ -166,7 +168,8 @@ public class ArbitraryInputStreamTask<OUT> extends StreamTask<OUT, StreamOperato
 						(TwoInputStreamOperator) headOperator,
 						operatorConfig.getTypeSerializerIn2(userClassLoader),
 						streamStatusSubMaintainer,
-						getExecutionConfig().isObjectReuseEnabled());
+						getExecutionConfig().isObjectReuseEnabled(),
+						getEnvironment().getTaskManagerInfo().getConfiguration());
 				}
 			} else {
 				throw new RuntimeException("Unsupported of " + headOperator + " yet");

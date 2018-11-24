@@ -64,7 +64,7 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 	private final FixedLengthBufferPool bufferPool;
 	private final BufferFileWriter[] fileWriters;
 	private final BufferBuilder[] currentBufferBuilders;
-	private final int[] bytesWritten;
+	private final long[] bytesWritten;
 
 	public PartitionHashFileWriter(
 		int numPartitions,
@@ -95,7 +95,7 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 		this.bufferPool = new FixedLengthBufferPool(memory, false);
 		this.fileWriters = new BufferFileWriter[numPartitions];
 		this.currentBufferBuilders = new BufferBuilder[numPartitions];
-		this.bytesWritten = new int[numPartitions];
+		this.bytesWritten = new long[numPartitions];
 
 		for (int i = 0; i < numPartitions; i++) {
 			String path = ExternalBlockShuffleUtils.generateDataPath(partitionDataRootPath, i);

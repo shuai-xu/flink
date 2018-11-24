@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.runtime;
 
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -46,6 +49,9 @@ public class CompressedViewTest {
 
 	private IOManager ioManager;
 
+	private BlockCompressionFactory compressionFactory = BlockCompressionFactoryLoader.createBlockCompressionFactory(
+		"lz4", new Configuration());
+
 	public CompressedViewTest(boolean useBufferedIO) {
 		ioManager = useBufferedIO ? new IOManagerAsync(1024 * 1024, 1024 * 1024) : new IOManagerAsync();
 	}
@@ -70,7 +76,7 @@ public class CompressedViewTest {
 			FileIOChannel.ID channel = ioManager.createChannel();
 			BufferFileWriter writer = this.ioManager.createBufferFileWriter(channel);
 			CompressedHeaderlessChannelWriterOutputView outputView =
-					new CompressedHeaderlessChannelWriterOutputView(writer, "lz4", BUFFER_SIZE);
+					new CompressedHeaderlessChannelWriterOutputView(writer, compressionFactory, BUFFER_SIZE);
 
 			for (int i = 0; i < testRounds; i++) {
 				outputView.writeInt(i);
@@ -79,7 +85,7 @@ public class CompressedViewTest {
 			int blockCount = outputView.getBlockCount();
 
 			CompressedHeaderlessChannelReaderInputView inputView =
-					new CompressedHeaderlessChannelReaderInputView(channel, ioManager, "lz4", BUFFER_SIZE, blockCount);
+					new CompressedHeaderlessChannelReaderInputView(channel, ioManager, compressionFactory, BUFFER_SIZE, blockCount);
 
 			for (int i = 0; i < testRounds; i++) {
 				assertEquals(i, inputView.readInt());

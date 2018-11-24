@@ -175,4 +175,12 @@ public interface InputGate {
 	 * @return null if this is a single InputGate.
 	 */
 	InputGate getSubInputGate(int index);
+
+	/**
+	 * Get all the {@link InputChannel}s in this {@link InputGate}.
+	 *
+	 * @return an array contains all the input channels, the index of an input channel
+	 *         in the array equals to its channel index in the input gate.
+	 */
+	InputChannel[] getAllInputChannels();
 }

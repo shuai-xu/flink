@@ -29,6 +29,7 @@ import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 
@@ -248,6 +249,11 @@ public class BarrierBuffer implements SelectedReadingBarrierHandler {
 	@Override
 	public int getNumberOfInputChannels() {
 		return inputGate.getNumberOfInputChannels();
+	}
+
+	@Override
+	public InputChannel[] getAllInputChannels() {
+		return inputGate.getAllInputChannels();
 	}
 
 	private void completeBufferedSequence() throws IOException {

@@ -45,11 +45,11 @@ public final class CompressedHeaderlessChannelWriterOutputView extends AbstractP
 	private int numCompressedBytes;
 
 	public CompressedHeaderlessChannelWriterOutputView(
-			BufferFileWriter writer, String compressionCodec, int compressionBlockSize) throws IOException {
+			BufferFileWriter writer, BlockCompressionFactory compressionCodecFactory, int compressionBlockSize) throws IOException {
 		super(compressionBlockSize, 0);
 
 		buffer = MemorySegmentFactory.wrap(new byte[segmentSize]);
-		compressor = BlockCompressionFactory.getCompressor(compressionCodec);
+		compressor = compressionCodecFactory.getCompressor();
 		for (int i = 0; i < 2; i++) {
 			compressedBuffers.add(MemorySegmentFactory.wrap(
 					new byte[compressor.getMaxCompressedSize(segmentSize)]));

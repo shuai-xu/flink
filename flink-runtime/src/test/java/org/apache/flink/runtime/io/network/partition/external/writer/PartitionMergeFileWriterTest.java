@@ -18,8 +18,13 @@
 
 package org.apache.flink.runtime.io.network.partition.external.writer;
 
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.runtime.io.network.api.serialization.SerializerManager;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
+import org.apache.flink.runtime.taskmanager.TaskManager;
 import org.apache.flink.util.MutableObjectIterator;
 
 import java.io.IOException;
@@ -32,6 +37,8 @@ public class PartitionMergeFileWriterTest extends PersistentFileWriterTestBase {
 	@Override
 	protected PersistentFileWriter<Integer> createFileWriter(int numberPartitions, String partitionRootPath) throws Exception {
 
+		Configuration configuration = new Configuration();
+
 		return new PartitionMergeFileWriter<>(
 			numberPartitions,
 			partitionRootPath,
@@ -42,6 +49,7 @@ public class PartitionMergeFileWriterTest extends PersistentFileWriterTestBase {
 			memoryManager.allocatePages(parentTask, NUM_PAGES),
 			ioManager,
 			serializer,
+			new SerializerManager<>(ResultPartitionType.BLOCKING, configuration),
 			parentTask);
 	}
 

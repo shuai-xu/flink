@@ -21,6 +21,7 @@ package org.apache.flink.streaming.runtime.io;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
@@ -178,7 +179,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 		OneInputStreamOperator<IN, ?> operator,
 		TypeSerializer<IN> typeSerializer,
 		StreamStatusSubMaintainer streamStatusSubMaintainer,
-		boolean isObjectReuse) {
+		boolean isObjectReuse,
+		Configuration taskManagerConfig) {
 
 		checkNotNull(barrierHandler);
 
@@ -197,7 +199,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 				inputGate.getNumberOfInputChannels()),
 			checkpointLock,
 			maxChannelIndex,
-			isObjectReuse);
+			isObjectReuse,
+			taskManagerConfig);
 		inputGateFetcher.registerAvailableListener(this);
 
 		inputFetchers.add(inputGateFetcher);
@@ -212,7 +215,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 		TwoInputStreamOperator<IN, ?, ?> operator,
 		TypeSerializer<IN> typeSerializer,
 		StreamStatusSubMaintainer streamStatusSubMaintainer,
-		boolean isObjectReuse) {
+		boolean isObjectReuse,
+		Configuration taskManagerConfig) {
 
 		checkNotNull(barrierHandler);
 
@@ -231,7 +235,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 				inputGate.getNumberOfInputChannels()),
 			checkpointLock,
 			maxChannelIndex,
-			isObjectReuse);
+			isObjectReuse,
+			taskManagerConfig);
 		inputGateFetcher.registerAvailableListener(this);
 
 		inputFetchers.add(inputGateFetcher);
@@ -246,7 +251,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 		TwoInputStreamOperator<IN, ?, ?> operator,
 		TypeSerializer<IN> typeSerializer,
 		StreamStatusSubMaintainer streamStatusSubMaintainer,
-		boolean isObjectReuse) {
+		boolean isObjectReuse,
+		Configuration taskManagerConfig) {
 
 		checkNotNull(barrierHandler);
 
@@ -265,7 +271,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 				inputGate.getNumberOfInputChannels()),
 			checkpointLock,
 			maxChannelIndex,
-			isObjectReuse);
+			isObjectReuse,
+			taskManagerConfig);
 		inputGateFetcher.registerAvailableListener(this);
 
 		inputFetchers.add(inputGateFetcher);

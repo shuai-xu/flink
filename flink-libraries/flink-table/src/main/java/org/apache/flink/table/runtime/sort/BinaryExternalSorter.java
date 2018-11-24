@@ -19,6 +19,8 @@
 package org.apache.flink.table.runtime.sort;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
+import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactoryLoader;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
@@ -187,7 +189,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 	private final int memorySegmentSize;
 
 	private final boolean compressionEnable;
-	private final String compressionCodec;
+	private final BlockCompressionFactory compressionCodecFactory;
 	private final int compressionBlockSize;
 
 	private final boolean parallelMergeEnable;
@@ -221,8 +223,11 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 			RecordComparator comparator, Configuration conf,
 			float startSpillingFraction) throws IOException {
 		int maxNumFileHandles = conf.getInteger(TableConfig.SQL_EXEC_SORT_MAX_NUM_FILE_HANDLES());
-		compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
-		compressionCodec = conf.getString(TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC());
+		this.compressionEnable = conf.getBoolean(TableConfig.SQL_EXEC_SPILL_COMPRESSION_ENABLE());
+		this.compressionCodecFactory = this.compressionEnable
+			? BlockCompressionFactoryLoader.createBlockCompressionFactory(conf.getString(
+				TableConfig.SQL_EXEC_SPILL_COMPRESSION_CODEC()), conf)
+			: null;
 		compressionBlockSize = conf.getInteger(TableConfig.SQL_EXEC_SPILL_COMPRESSION_BLOCK_SIZE());
 		parallelMergeEnable = conf.getBoolean(TableConfig.SQL_EXEC_SORT_PARALLEL_MERGE_ENABLE());
 
@@ -273,9 +278,9 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 
 		LOG.info("BinaryExternalSorter with initial memory segments {},And the preferred memory {} segments, " +
 				"per request {} segments from floating memory pool, maxNumFileHandles({})," +
-				" compressionEnable({}), compressionCodec({}), compressionBlockSize({}).", sortMemPages,
+				" compressionEnable({}), compressionCodecFactory({}), compressionBlockSize({}).", sortMemPages,
 			(int) (maxMemorySize / memoryManager.getPageSize()), perRequestBuffersNum, maxNumFileHandles,
-			compressionEnable, compressionCodec, compressionBlockSize);
+			compressionEnable, compressionEnable ? compressionCodecFactory.getClass() : null, compressionBlockSize);
 
 		this.sortBuffers = new ArrayList<>();
 		for (int i = 0; i < numSortBuffers; i++) {
@@ -323,7 +328,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 				ioManager, memoryManager.getPageSize(),
 				maxNumFileHandles, channelManager,
 				(BinaryRowSerializer) serializer.duplicate(), comparator,
-				compressionEnable, compressionCodec, compressionBlockSize);
+				compressionEnable, compressionCodecFactory, compressionBlockSize);
 
 		// start the thread that sorts the buffers
 		this.sortThread = getSortingThread(exceptionHandler, circularQueues);
@@ -1033,7 +1038,7 @@ public class BinaryExternalSorter implements Sorter<BinaryRow> {
 							BufferFileWriter bufferWriter = this.ioManager.createBufferFileWriter(channel);
 							writer = bufferWriter;
 							CompressedHeaderlessChannelWriterOutputView output = new CompressedHeaderlessChannelWriterOutputView(
-									bufferWriter, compressionCodec, compressionBlockSize);
+									bufferWriter, compressionCodecFactory, compressionBlockSize);
 							element.buffer.writeToOutput(output);
 							output.close();
 							spillInBytes += output.getNumBytes();

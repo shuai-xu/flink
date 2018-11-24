@@ -29,6 +29,7 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.io.network.api.serialization.SerializerManager;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
@@ -36,6 +37,7 @@ import org.apache.flink.runtime.io.network.partition.external.writer.PartitionHa
 import org.apache.flink.runtime.io.network.partition.external.writer.PartitionMergeFileWriter;
 import org.apache.flink.runtime.io.network.partition.external.writer.PersistentFileWriter;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.util.ExceptionUtils;
 
 import org.slf4j.Logger;
@@ -65,6 +67,7 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 	private final boolean mergeToOneFile;
 	private final double shuffleMemory;
 	private final int numPages;
+	private final SerializerManager<SerializationDelegate<T>> serializerManager;
 
 	private PersistentFileWriter<T> fileWriter;
 
@@ -111,6 +114,9 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 			"The shuffle memory should be larger than 0, but actually is: " + shuffleMemory);
 		checkArgument(numPages > 0,
 			"The number of pages should be larger than 0, but actually is: " + numPages);
+
+		this.serializerManager = new SerializerManager<SerializationDelegate<T>>(
+			ResultPartitionType.BLOCKING, taskManagerConfiguration);
 	}
 
 	private void initialize() {
@@ -142,7 +148,8 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 			List<MemorySegment> memory = memoryManager.allocatePages(parentTask, numPages);
 
 			// If the memory amount is less that the number of subpartitions, it should enter partition merge process.
-			if (numberOfSubpartitions <= hashMaxSubpartitions && numberOfSubpartitions <= memory.size()) {
+			if (numberOfSubpartitions <= hashMaxSubpartitions && numberOfSubpartitions <= memory.size()
+				&& !serializerManager.useCompression()) {
 				fileWriter = new PartitionHashFileWriter<T>(
 					numberOfSubpartitions,
 					partitionRootPath,
@@ -161,6 +168,7 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 					memory,
 					ioManager,
 					typeSerializer,
+					serializerManager,
 					parentTask);
 			}
 

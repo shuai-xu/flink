@@ -127,6 +127,18 @@ public class UnionInputGate implements InputGate, InputGateListener {
 	}
 
 	@Override
+	public InputChannel[] getAllInputChannels() {
+		InputChannel[] channelArr = new InputChannel[totalNumberOfInputChannels];
+		inputGateToIndexOffsetMap.forEach((inputGate, inputChannelOffset) -> {
+			InputChannel[] channelArrForSubInputGate = inputGate.getAllInputChannels();
+			for (int i = 0; i < channelArrForSubInputGate.length; i++) {
+				channelArr[i + inputChannelOffset] = channelArrForSubInputGate[i];
+			}
+		});
+		return channelArr;
+	}
+
+	@Override
 	public boolean isFinished() {
 		for (InputGate inputGate : inputGates) {
 			if (!inputGate.isFinished()) {

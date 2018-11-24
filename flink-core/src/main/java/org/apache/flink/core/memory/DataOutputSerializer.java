@@ -65,6 +65,12 @@ public class DataOutputSerializer implements DataOutputView {
 		return this.wrapper;
 	}
 
+	public ByteBuffer wrapAsWritableByteBuffer() {
+		this.wrapper.position(position);
+		this.wrapper.limit(this.wrapper.capacity());
+		return this.wrapper;
+	}
+
 	/**
 	 * @deprecated Replaced by {@link #getSharedBuffer()} for a better, safer name.
 	 */
@@ -101,6 +107,8 @@ public class DataOutputSerializer implements DataOutputView {
 
 	public void clear() {
 		this.position = 0;
+		this.wrapper.position(0);
+		this.wrapper.limit(this.wrapper.capacity());
 	}
 
 	public int length() {
@@ -117,6 +125,14 @@ public class DataOutputSerializer implements DataOutputView {
 			this.buffer = this.startBuffer;
 			this.wrapper = ByteBuffer.wrap(this.buffer);
 		}
+	}
+
+	public int position() {
+		return position;
+	}
+
+	public void position(int position) {
+		this.position = position;
 	}
 
 	@Override
@@ -297,6 +313,13 @@ public class DataOutputSerializer implements DataOutputView {
 		}
 
 		this.position = count;
+	}
+
+	public void ensureCapacity(int len) throws IOException {
+		if (len <= this.buffer.length) {
+			return;
+		}
+		resize(len - this.buffer.length);
 	}
 
 	private void resize(int minCapacityAdd) throws IOException {

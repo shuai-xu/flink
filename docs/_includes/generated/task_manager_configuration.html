@@ -43,6 +43,21 @@
             <td>The maximum number of bytes that a checkpoint alignment may buffer. If the checkpoint alignment buffers more than the configured amount of data, the checkpoint is aborted (skipped). A value of -1 indicates that there is no limit.</td>
         </tr>
         <tr>
+            <td><h5>task.external.shuffle.compression.buffer-size</h5></td>
+            <td style="word-wrap: break-word;">32768</td>
+            <td>The max buffer size to compress external shuffle data.</td>
+        </tr>
+        <tr>
+            <td><h5>task.external.shuffle.compression.codec</h5></td>
+            <td style="word-wrap: break-word;">"lz4"</td>
+            <td>The codec to use when compress or decompress external shuffle data. Currently supported codecs are lz4, bzip2, gzip. User can also implement interface BlockCompressionFactory and set its class to specify other codecs.</td>
+        </tr>
+        <tr>
+            <td><h5>task.external.shuffle.compression.enable</h5></td>
+            <td style="word-wrap: break-word;">false</td>
+            <td>Whether to enable compress shuffle data in external shuffle.</td>
+        </tr>
+        <tr>
             <td><h5>task.external.shuffle.max-concurrent-requests</h5></td>
             <td style="word-wrap: break-word;">10</td>
             <td></td>

@@ -124,4 +124,9 @@ public class SpanningRecordSerializer<T extends IOReadableWritable> implements R
 	public boolean hasSerializedData() {
 		return lengthBuffer.hasRemaining() || dataBuffer.hasRemaining();
 	}
+
+	@Override
+	public SerializationResult flushToBufferBuilder(BufferBuilder targetBuffer) {
+		return copyToBufferBuilder(targetBuffer);
+	}
 }

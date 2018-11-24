@@ -99,9 +99,9 @@ public class DefaultFileMergePolicy<T> implements MergePolicy<T> {
 			Preconditions.checkState(isFinalMergeStarted, "Final merge should have been started.");
 			return null;
 		} else if (isFinalMergeStarted) {
-			Preconditions.checkArgument(numMergeReadMemory >= 4,
-				"At least 4 read buffers is needed, but actual is " + numMergeReadMemory);
 			LinkedList<DataFileInfo<T>> dataFiles = layeredDataFiles.get(0);
+			Preconditions.checkArgument(numMergeReadMemory >= 4 || dataFiles.size() <= 1,
+				"At least 4 read buffers is needed, but actual is " + numMergeReadMemory);
 			// sort the file list so the smaller files can be picked out and got merged
 			dataFiles.sort(new FileLengthComparator<>());
 			if (dataFiles.size() > mergeFactor && !mergeToOneFile) {

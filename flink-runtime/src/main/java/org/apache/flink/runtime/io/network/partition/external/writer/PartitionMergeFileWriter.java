@@ -30,6 +30,7 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.io.network.api.serialization.SerializerManager;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
 import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
@@ -39,6 +40,7 @@ import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.sort.PushedUnilateralSortMerger;
 import org.apache.flink.runtime.operators.sort.SortedDataFile;
 import org.apache.flink.runtime.operators.sort.SortedDataFileMerger;
+import org.apache.flink.runtime.plugable.SerializationDelegate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +77,7 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 		List<MemorySegment> memory,
 		IOManager ioManager,
 		TypeSerializer<T> serializer,
+		SerializerManager<SerializationDelegate<T>> serializerManager,
 		AbstractInvokable parentTask) throws IOException, MemoryAllocationException {
 		checkArgument(numPartitions > 0,
 			"The number of subpartitions should be larger than 0, but actually is: " + numPartitions);
@@ -98,7 +101,7 @@ public class PartitionMergeFileWriter<T> implements PersistentFileWriter<T> {
 			keyPositions, comparators, serializers);
 
 		BufferSortedDataFileFactory<T> sortedDataFileFactory = new BufferSortedDataFileFactory<>(
-			partitionDataRootPath, typeSerializer, ioManager);
+			partitionDataRootPath, typeSerializer, ioManager, serializerManager);
 
 		PartitionedBufferSortedDataFileFactory<T> partitionedBufferSortedDataFileFactory =
 			new PartitionedBufferSortedDataFileFactory<T>(sortedDataFileFactory, numPartitions);

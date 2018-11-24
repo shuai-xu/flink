@@ -27,7 +27,7 @@ import org.apache.flink.runtime.io.disk.iomanager.BufferFileWriter;
 import org.apache.flink.runtime.io.disk.iomanager.FileIOChannel;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.serialization.RecordSerializer;
-import org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSerializer;
+import org.apache.flink.runtime.io.network.api.serialization.SerializerManager;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
@@ -48,9 +48,6 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 	private final FileIOChannel.ID channelID;
 	private final int fileId;
 
-	private final TypeSerializer<T> serializer;
-	private final IOManager ioManager;
-
 	private final RecordSerializer<IOReadableWritable> recordSerializer;
 	private final SerializationDelegate<T> serializationDelegate;
 	private final CopySerializationDelegate<T> copySerializationDelegate;
@@ -58,19 +55,17 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 	private final FixedLengthBufferPool bufferPool;
 	private final BufferFileWriter streamFileWriter;
 	private BufferBuilder currentBufferBuilders;
-	private int bytesWritten;
+	private long bytesWritten;
 
 	private boolean isWritingFinished;
 
 	public BufferSortedDataFile(FileIOChannel.ID channelID, int fileId, TypeSerializer<T> serializer,
-								IOManager ioManager, List<MemorySegment> writeMemory) throws IOException {
+								IOManager ioManager, List<MemorySegment> writeMemory,
+								SerializerManager<SerializationDelegate<T>> serializerManager) throws IOException {
 		this.channelID = channelID;
 		this.fileId = fileId;
 
-		this.serializer = serializer;
-		this.ioManager = ioManager;
-
-		this.recordSerializer = new SpanningRecordSerializer<>();
+		this.recordSerializer = serializerManager.getRecordSerializer();
 		this.serializationDelegate = new SerializationDelegate<>(serializer);
 		this.copySerializationDelegate = new CopySerializationDelegate<>(serializer);
 
@@ -90,8 +85,6 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 
 	@Override
 	public void writeRecord(T record) throws IOException {
-		System.out.println("add " + record);
-
 		serializationDelegate.setInstance(record);
 		recordSerializer.serializeRecord(serializationDelegate);
 		copyToFile();
@@ -113,6 +106,10 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 			return;
 		}
 
+		if (recordSerializer.hasSerializedData()) {
+			flushInternalSerializer();
+		}
+		checkState(!recordSerializer.hasSerializedData(), "All data should be written at once");
 		tryFinishCurrentBufferBuilder();
 
 		streamFileWriter.close();
@@ -141,7 +138,27 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 	}
 
 	public void flush() throws IOException {
+		if (recordSerializer.hasSerializedData()) {
+			flushInternalSerializer();
+		}
+		checkState(!recordSerializer.hasSerializedData(), "All data should be written at once");
 		tryFinishCurrentBufferBuilder();
+	}
+
+	private void flushInternalSerializer() throws IOException {
+		BufferBuilder bufferBuilder = getCurrentBufferBuilder();
+		RecordSerializer.SerializationResult result = recordSerializer.flushToBufferBuilder(bufferBuilder);
+
+		while (result.isFullBuffer()) {
+			tryFinishCurrentBufferBuilder();
+
+			if (result.isFullRecord()) {
+				break;
+			}
+
+			bufferBuilder = getCurrentBufferBuilder();
+			result = recordSerializer.flushToBufferBuilder(bufferBuilder);
+		}
 	}
 
 	public long getBytesWritten() {
@@ -168,8 +185,6 @@ public class BufferSortedDataFile<T> implements SortedDataFile<T> {
 			bufferBuilder = getCurrentBufferBuilder();
 			result = recordSerializer.copyToBufferBuilder(bufferBuilder);
 		}
-
-		checkState(!recordSerializer.hasSerializedData(), "All data should be written at once");
 	}
 
 	private BufferBuilder getCurrentBufferBuilder() throws IOException {

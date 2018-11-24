@@ -38,20 +38,29 @@ public class GzipBlockCompressor extends AbstractBlockCompressor {
 	}
 
 	@Override
-	public int compress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws IOException {
-		if (dstStream == null) {
-			dstStream = new NoCopyByteArrayOutputStream(dst, dstOff);
-		} else {
-			dstStream.reuse(dst, dstOff);
+	public int compress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) {
+		try {
+			if (dstStream == null) {
+				dstStream = new NoCopyByteArrayOutputStream(dst, dstOff);
+			} else {
+				dstStream.reuse(dst, dstOff);
+			}
+			GzipCompressorOutputStream compressStream = new GzipCompressorOutputStream(dstStream);
+
+			compressStream.write(src, srcOff, srcLen);
+			compressStream.close();
+
+			int compressedLen = dstStream.getNumBytesWritten();
+			dstStream.close();
+
+			if (compressedLen > (dst.length - dstOff)) {
+				throw new InsufficientBufferException("destination buffer remains " + (dst.length - dstOff) +
+					" bytes, requires " + compressedLen + " bytes.");
+			}
+
+			return compressedLen;
+		} catch (IOException e) {
+			throw new DataCorruptionException(e);
 		}
-		GzipCompressorOutputStream compressStream = new GzipCompressorOutputStream(dstStream);
-
-		compressStream.write(src, srcOff, srcLen);
-		compressStream.close();
-
-		int compressedLen = dstStream.getNumBytesWritten();
-		dstStream.close();
-
-		return compressedLen;
 	}
 }

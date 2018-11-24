@@ -23,7 +23,6 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.util.SafeUtils;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -41,55 +40,69 @@ public class Lz4BlockDecompressor extends AbstractBlockDecompressor {
 	}
 
 	@Override
-	public int decompress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst) throws IOException {
-		final int compressedLen = src.getInt(srcOff);
-		final int originalLen = src.getInt(srcOff + 4);
+	public int decompress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst, int dstOff) throws DataCorruptionException {
+		final int prevSrcOff = src.position() + srcOff;
+		final int prevDstOff = dst.position() + dstOff;
+
+		final int compressedLen = src.getInt(prevSrcOff);
+		final int originalLen = src.getInt(prevSrcOff + 4);
 		if (originalLen < 0
 			|| compressedLen < 0
 			|| (originalLen == 0 && compressedLen != 0)
 			|| (originalLen != 0 && compressedLen == 0)) {
-			throw new IOException("Input is corrupted");
+			throw new DataCorruptionException("Input is corrupted, invalid length.");
+		}
+
+		if (dst.capacity() - prevDstOff < originalLen) {
+			throw new InsufficientBufferException("Buffer length too small");
+		}
+
+		if (src.limit() - prevSrcOff - 8 < compressedLen) {
+			throw new DataCorruptionException("Source data is not integral for decompression.");
 		}
 
 		try {
 			final int compressedLen2 = decompressor.decompress(
-				src, srcOff + 8, dst, 0, originalLen);
+				src, prevSrcOff + 8, dst, prevDstOff, originalLen);
 			if (compressedLen != compressedLen2) {
-				throw new IOException("Input is corrupted");
+				throw new DataCorruptionException("Input is corrupted, unexpected compressed length.");
 			}
+			src.position(prevSrcOff + compressedLen + 8);
+			dst.position(prevDstOff + originalLen);
 		} catch (LZ4Exception e) {
-			throw new IOException("Input is corrupted", e);
+			throw new DataCorruptionException("Input is corrupted", e);
 		}
 
 		return originalLen;
 	}
 
 	@Override
-	public int decompress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws IOException {
+	public int decompress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws InsufficientBufferException, DataCorruptionException {
 		final int compressedLen = SafeUtils.readIntLE(src, srcOff);
 		final int originalLen = SafeUtils.readIntLE(src, srcOff + 4);
 		if (originalLen < 0
 			|| compressedLen < 0
 			|| (originalLen == 0 && compressedLen != 0)
 			|| (originalLen != 0 && compressedLen == 0)) {
-			throw new IOException("Input is corrupted");
-		}
-		if (dst.length - dstOff < originalLen) {
-			throw new IOException("Buffer length too small");
+			throw new DataCorruptionException("Input is corrupted, invalid length.");
 		}
 
-		if (Math.min(srcLen, src.length - srcOff) < compressedLen) {
-			throw new IOException("Compressed buffer length too small");
+		if (dst.length - dstOff < originalLen) {
+			throw new InsufficientBufferException("Buffer length too small");
+		}
+
+		if (src.length - srcOff - 8 < compressedLen) {
+			throw new DataCorruptionException("Source data is not integral for decompression.");
 		}
 
 		try {
 			final int compressedLen2 = decompressor.decompress(
 				src, srcOff + 8, dst, dstOff, originalLen);
 			if (compressedLen != compressedLen2) {
-				throw new IOException("Input is corrupted");
+				throw new DataCorruptionException("Input is corrupted");
 			}
 		} catch (LZ4Exception e) {
-			throw new IOException("Input is corrupted", e);
+			throw new DataCorruptionException("Input is corrupted", e);
 		}
 
 		return originalLen;

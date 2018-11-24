@@ -18,8 +18,9 @@
 
 package org.apache.flink.api.common.io.blockcompression;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * A decompressor which decompresses a whole byte array each time.
@@ -30,57 +31,79 @@ public abstract class AbstractBlockDecompressor {
 	private byte[] reuseDstHeapBuff;
 
 	/**
-	 * Decompress data from src byte buffer and write result to dst byte buffer.
-	 * Note that dst byte buffer will be cleared before filled with decompressed data.
+	 * Decompresses data from source byte buffer and writes result to destination byte buffer.
+	 * Source data starts from {@link ByteBuffer#position()}, the length of source data is {@link ByteBuffer#remaining()}.
+	 * Destination data starts from {@link ByteBuffer#position()}.
+	 * @throws DataCorruptionException fatal exception which suggests data corruption.
+	 * @throws InsufficientBufferException destination buffer is not enough, user may allocate larger memory and retry.
 	 */
-	public int decompress(ByteBuffer src, ByteBuffer dst) throws IOException {
-		return decompress(src, 0, src.remaining(), dst);
+	public int decompress(ByteBuffer src, ByteBuffer dst) throws DataCorruptionException, InsufficientBufferException {
+		return decompress(src, 0, src.remaining(), dst, 0);
 	}
 
-	public int decompress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst) throws IOException {
-		byte[] srcArr;
-		if (src.hasArray()) {
-			srcArr = src.array();
-			srcOff += src.arrayOffset() + src.position();
-		} else {
-			int len = srcOff + srcLen;
-			if (reuseSrcHeapBuff == null || reuseSrcHeapBuff.length < len) {
-				reuseSrcHeapBuff = new byte[len];
-			}
-			srcArr = reuseSrcHeapBuff;
-			src.get(srcArr, 0, len);
+	/**
+	 * Decompresses data from source byte buffer and writes result to destination byte buffer.
+	 * Source data starts from ({@link ByteBuffer#position()} + {@code srcOff}), the length of source data is {@code srcLen}.
+	 * Destination data starts from {@link ByteBuffer#position() + {@code dstOff}}.
+	 */
+	public int decompress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst, int dstOff) throws DataCorruptionException, InsufficientBufferException {
+		checkArgument(srcOff >= 0, "source offset shouldn't be negative.");
+		checkArgument(dstOff >= 0, "destination offset shouldn't be negative");
+
+		// Source data starts from (src.position() + srcOff)
+		if (srcOff > 0) {
+			src.position(src.position() + srcOff);
 		}
 
-		dst.clear();
+		// Destination data starts from (dst.position() + dstOff)
+		if (dstOff > 0) {
+			dst.position(dst.position() + dstOff);
+		}
+
+		byte[] srcArr;
+		int srcArrOff;
+		if (src.hasArray()) {
+			srcArr = src.array();
+			srcArrOff = src.arrayOffset() + src.position();
+			src.position(src.position() + srcLen);
+		} else {
+			if (reuseSrcHeapBuff == null || reuseSrcHeapBuff.length < srcLen) {
+				reuseSrcHeapBuff = new byte[srcLen];
+			}
+			srcArr = reuseSrcHeapBuff;
+			srcArrOff = 0;
+			src.get(srcArr, 0, srcLen);
+		}
 
 		byte[] dstArr;
-		int dstOff;
+		int dstArrOff;
 		if (dst.hasArray()) {
 			dstArr = dst.array();
-			dstOff = dst.arrayOffset();
+			dstArrOff = dst.arrayOffset() + dst.position();
 		} else {
-			int len = dst.capacity();
+			int len = dst.capacity() - dst.position();
 			if (reuseDstHeapBuff == null || reuseDstHeapBuff.length < len) {
 				reuseDstHeapBuff = new byte[len];
 			}
 			dstArr = reuseDstHeapBuff;
-			dstOff = 0;
+			dstArrOff = 0;
 		}
 
-		int decompressedLen = decompress(srcArr, srcOff, srcLen, dstArr, dstOff);
-		if (!dst.hasArray()) {
-			dst.put(dstArr, dstOff, decompressedLen);
+		int decompressedLen = decompress(srcArr, srcArrOff, srcLen, dstArr, dstArrOff);
+
+		if (dst.hasArray()) {
+			dst.position(dst.position() + decompressedLen);
+		} else {
+			dst.put(dstArr, dstArrOff, decompressedLen);
 		}
-		dst.position(0);
-		dst.limit(decompressedLen);
 
 		return decompressedLen;
 	}
 
-	public int decompress(byte[] src, byte[] dst) throws IOException {
+	public int decompress(byte[] src, byte[] dst) throws DataCorruptionException, InsufficientBufferException {
 		return decompress(src, 0, src.length, dst, 0);
 	}
 
 	public abstract int decompress(
-			byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws IOException;
+			byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws DataCorruptionException, InsufficientBufferException;
 }

@@ -94,6 +94,15 @@ public class DataInputDeserializer implements DataInputView, java.io.Serializabl
 		this.buffer = null;
 	}
 
+	public ByteBuffer wrapAsByteBuffer(int length) {
+		if (length <= (end - position)) {
+			return ByteBuffer.wrap(buffer, position, length);
+		} else {
+			throw new IllegalArgumentException("require more than remaining bytes, required length: "
+				+ length + ", bytes left: " + (end - position));
+		}
+	}
+
 	// ----------------------------------------------------------------------------------------
 	//                               Data Input
 	// ----------------------------------------------------------------------------------------

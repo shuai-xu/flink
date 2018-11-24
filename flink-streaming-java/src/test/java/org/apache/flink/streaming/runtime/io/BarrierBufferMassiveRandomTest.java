@@ -25,9 +25,12 @@ import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGateListener;
+import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 
 import org.junit.Test;
 
@@ -36,6 +39,8 @@ import java.util.Optional;
 import java.util.Random;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * The test generates two random streams (input channels) which independently
@@ -217,6 +222,19 @@ public class BarrierBufferMassiveRandomTest {
 		@Override
 		public InputGate getSubInputGate(int index) {
 			return null;
+		}
+
+		@Override
+		public InputChannel[] getAllInputChannels() {
+			SingleInputGate inputGate = mock(SingleInputGate.class);
+			when(inputGate.getConsumedPartitionType()).thenReturn(ResultPartitionType.PIPELINED);
+			InputChannel[] inputChannels = new InputChannel[numChannels];
+			for (int i = 0; i < inputChannels.length; i++) {
+				InputChannel inputChannel = mock(InputChannel.class);
+				when(inputChannel.getInputGate()).thenReturn(inputGate);
+				inputChannels[i] = inputChannel;
+			}
+			return inputChannels;
 		}
 	}
 }

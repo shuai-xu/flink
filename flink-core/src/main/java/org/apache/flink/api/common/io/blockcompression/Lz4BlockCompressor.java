@@ -19,8 +19,10 @@
 package org.apache.flink.api.common.io.blockcompression;
 
 import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 /**
@@ -43,23 +45,46 @@ public class Lz4BlockCompressor extends AbstractBlockCompressor {
 	}
 
 	@Override
-	public int compress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst) {
-		int maxCompressedSize = compressor.maxCompressedLength(srcLen);
-		int compressedLength = compressor.compress(src, srcOff, srcLen, dst, 8, maxCompressedSize);
-		dst.putInt(compressedLength);
-		dst.putInt(srcLen);
+	public int compress(ByteBuffer src, int srcOff, int srcLen, ByteBuffer dst, int dstOff) throws InsufficientBufferException {
+		try {
+			final int prevSrcOff = src.position() + srcOff;
+			final int prevDstOff = dst.position() + dstOff;
 
-		dst.position(0);
-		dst.limit(8 + compressedLength);
-		return 8 + compressedLength;
+			int maxCompressedSize = compressor.maxCompressedLength(srcLen);
+			int compressedLength = compressor.compress(
+				src, prevSrcOff, srcLen, dst, prevDstOff + 8, maxCompressedSize);
+
+			src.position(prevSrcOff + srcLen);
+
+			dst.position(prevDstOff);
+			dst.putInt(compressedLength);
+			dst.putInt(srcLen);
+			dst.position(prevDstOff + compressedLength + 8);
+
+			return 8 + compressedLength;
+		} catch (LZ4Exception e) {
+			throw new InsufficientBufferException(e);
+		} catch (BufferOverflowException e) {
+			throw new InsufficientBufferException(e);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			throw new InsufficientBufferException(e);
+		}
 	}
 
 	@Override
-	public int compress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) {
-		int compressedLength = compressor.compress(src, srcOff, srcLen, dst, dstOff + 8);
-		writeIntLE(compressedLength, dst, dstOff);
-		writeIntLE(srcLen, dst, dstOff + 4);
-		return 8 + compressedLength;
+	public int compress(byte[] src, int srcOff, int srcLen, byte[] dst, int dstOff) throws InsufficientBufferException {
+		try {
+			int compressedLength = compressor.compress(src, srcOff, srcLen, dst, dstOff + 8);
+			writeIntLE(compressedLength, dst, dstOff);
+			writeIntLE(srcLen, dst, dstOff + 4);
+			return 8 + compressedLength;
+		} catch (LZ4Exception e) {
+			throw new InsufficientBufferException(e);
+		} catch (BufferOverflowException e) {
+			throw new InsufficientBufferException(e);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			throw new InsufficientBufferException(e);
+		}
 	}
 
 	private static void writeIntLE(int i, byte[] buf, int off) {
