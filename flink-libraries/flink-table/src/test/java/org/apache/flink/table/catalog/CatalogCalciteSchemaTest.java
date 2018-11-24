@@ -121,6 +121,29 @@ public class CatalogCalciteSchemaTest {
 	}
 
 	@Test
+	public void testRegisterCatalog() {
+		assertTrue(rootSchemaPlus.getTableNames().isEmpty());
+
+		assertEquals(2, rootSchemaPlus.getSubSchemaNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(metadataSchema, catalogName)), rootSchemaPlus.getSubSchemaNames());
+
+		SchemaPlus schema = rootSchemaPlus.getSubSchema(catalogName);
+		assertTrue(schema.getTableNames().isEmpty());
+		assertEquals(2, schema.getSubSchemaNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(db1, db2)), schema.getSubSchemaNames());
+
+		SchemaPlus s1 = schema.getSubSchema(db1);
+		assertTrue(s1.getSubSchemaNames().isEmpty());
+		assertEquals(1, s1.getTableNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(table1)), s1.getTableNames());
+
+		SchemaPlus s2 = schema.getSubSchema(db2);
+		assertTrue(s2.getSubSchemaNames().isEmpty());
+		assertEquals(1, s2.getTableNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(table2)), s2.getTableNames());
+	}
+
+	@Test
 	public void testGetSubSchema() {
 		List<SqlMoniker> allSchemaObjectNames = calciteCatalogReader.getAllSchemaObjectNames(Arrays.asList(catalogName));
 
