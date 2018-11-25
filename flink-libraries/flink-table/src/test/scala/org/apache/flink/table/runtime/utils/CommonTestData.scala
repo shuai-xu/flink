@@ -24,6 +24,7 @@ import java.sql.Timestamp
 import java.{lang, util}
 
 import org.apache.calcite.avatica.util.DateTimeUtils
+import org.apache.calcite.schema.SchemaPlus
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.TableSchema
@@ -345,7 +346,7 @@ object CommonTestData {
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
 
-    val catalogTable1 = new CatalogTable(
+    val catalogTable1 = ExternalCatalogTable(
       "csv",
       new TableSchema(
         Array("a", "b", "c"),
@@ -353,7 +354,6 @@ object CommonTestData {
           DataTypes.INT,
           DataTypes.LONG,
           DataTypes.STRING)),
-      null,
       properties1
     )
 
@@ -379,7 +379,7 @@ object CommonTestData {
     properties2.put("path", tempFilePath2)
     properties2.put("fieldDelim", "#")
     properties2.put("rowDelim", "$")
-    val catalogTable2 = new CatalogTable(
+    val catalogTable2 = ExternalCatalogTable(
       "csv",
       new TableSchema(
         Array("d", "e", "f", "g", "h"),
@@ -390,18 +390,17 @@ object CommonTestData {
           DataTypes.STRING,
           DataTypes.LONG)
       ),
-      null,
       properties2
     )
     val catalog = new FlinkInMemoryCatalog("test")
-    val schema1 = new CatalogDatabase()
-    val schema2 = new CatalogDatabase()
-    catalog.createDatabase("s1", schema1, false)
-    catalog.createDatabase("s2", schema2, false)
+    val db1 = new CatalogDatabase()
+    val db2 = new CatalogDatabase()
+    catalog.createDatabase("db1", db1, false)
+    catalog.createDatabase("db2", db2, false)
 
     // Register the table with both catalogs
-    catalog.createTable(new ObjectPath("s1", "tb1"), catalogTable1, false);
-    catalog.createTable(new ObjectPath("s2", "tb1"), catalogTable2, false)
+    catalog.createTable(new ObjectPath("db1", "tb1"), catalogTable1, false);
+    catalog.createTable(new ObjectPath("db2", "tb2"), catalogTable2, false)
     catalog
   }
 

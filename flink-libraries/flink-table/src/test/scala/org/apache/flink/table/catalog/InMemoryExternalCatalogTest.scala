@@ -425,3 +425,27 @@ class InMemoryExternalCatalogTest {
   }
 
 }
+
+object InMemoryExternalCatalogTest {
+  def createTable(): ExternalCatalogTable = {
+    val schema = new TableSchema(
+      Array("first", "second"),
+      Array(
+        DataTypes.STRING,
+        DataTypes.INT
+      )
+    )
+    ExternalCatalogTable("csv", schema)
+  }
+
+  def createAnotherTable(): ExternalCatalogTable = {
+    val schema = new TableSchema(
+      Array("first", "second"),
+      Array(
+        DataTypes.STRING,
+        DataTypes.STRING  // different from create table instance.
+      )
+    )
+    ExternalCatalogTable("csv", schema)
+  }
+}

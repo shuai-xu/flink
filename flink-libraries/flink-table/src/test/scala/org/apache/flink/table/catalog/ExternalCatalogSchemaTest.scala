@@ -35,7 +35,7 @@ import org.junit.{Before, Test}
 
 import scala.collection.JavaConverters._
 
-class ExternalCatalogDatabaseTest {
+class ExternalCatalogSchemaTest {
 
   private val schemaName: String = "test"
   private var externalCatalogSchema: SchemaPlus = _

@@ -91,7 +91,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @throws TableAlreadyExistException thrown if table already exists and ignoreIfExists is false
 	 * @throws DatabaseNotExistException thrown if the database that this table belongs to doesn't exist
 	 */
-	void createTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfExists)
+	void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException;
 
 	/**
@@ -115,7 +115,8 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 *                          if set to true, nothing happens.
 	 * @throws TableNotExistException   thrown if the table does not exist
 	 */
-	void alterTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfNotExists) throws TableNotExistException;
+	void alterTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfNotExists)
+		throws TableNotExistException;
 
 	/**
 	 * Renames an existing table.

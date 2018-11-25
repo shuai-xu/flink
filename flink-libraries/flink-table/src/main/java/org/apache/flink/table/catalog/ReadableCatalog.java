@@ -71,6 +71,6 @@ public interface ReadableCatalog extends Closeable {
 	 * @throws TableNotExistException    thrown if the table does not exist in the catalog.
 	 * @return The requested table.
 	 */
-	CatalogTable getTable(ObjectPath tableName) throws TableNotExistException;
+	ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException;
 
 }

@@ -21,6 +21,7 @@ package org.apache.flink.table.catalog;
 import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
+import org.apache.flink.table.plan.schema.CatalogTable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rel.type.RelDataType;
@@ -165,18 +166,14 @@ public class CatalogCalciteSchema implements Schema {
 		@Override
 		public Table getTable(String tableName) {
 			try {
-				CatalogTable table = catalog.getTable(new ObjectPath(dbName, tableName));
-				return getTableFromCatalogTable(table);
+				ExternalCatalogTable table = catalog.getTable(new ObjectPath(dbName, tableName));
+				// TODO: pass in isStreaming which is currently set to false by default
+				return new CatalogTable(tableName, table, false);
 			} catch (TableNotExistException e) {
 				LOGGER.warn(
 					String.format("Table %s.%s does not exist in catalog %s", dbName, tableName, catalogName));
 				return null;
 			}
-		}
-
-		// TODO: implement this
-		private Table getTableFromCatalogTable(CatalogTable table) {
-			return null;
 		}
 
 		@Override

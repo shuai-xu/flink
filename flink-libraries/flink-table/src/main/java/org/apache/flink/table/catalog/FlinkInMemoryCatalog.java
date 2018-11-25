@@ -42,7 +42,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	private String catalogName;
 
 	private final Map<String, CatalogDatabase> databases;
-	private final Map<ObjectPath, CatalogTable> tables;
+	private final Map<ObjectPath, ExternalCatalogTable> tables;
 
 	public FlinkInMemoryCatalog(String name) {
 		Preconditions.checkArgument(!StringUtils.isNullOrWhitespaceOnly(name), "name cannot be null or empty");
@@ -63,7 +63,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void createTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfExists)
+	public void createTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
 
 		if (tables.containsKey(tableName) && !ignoreIfExists) {
@@ -85,7 +85,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfNotExists) throws TableNotExistException {
+	public void alterTable(ObjectPath tableName, ExternalCatalogTable table, boolean ignoreIfNotExists) throws TableNotExistException {
 		if (tables.containsKey(tableName)) {
 			tables.put(tableName, table);
 		} else if (!ignoreIfNotExists) {
@@ -122,9 +122,9 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public CatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
+	public ExternalCatalogTable getTable(ObjectPath tableName) throws TableNotExistException {
 
-		CatalogTable table = tables.get(tableName);
+		ExternalCatalogTable table = tables.get(tableName);
 
 		if (table == null) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());

@@ -23,6 +23,8 @@ import org.apache.flink.table.calcite.FlinkCalciteCatalogReader;
 import org.apache.flink.table.calcite.FlinkTypeFactory;
 import org.apache.flink.table.calcite.FlinkTypeSystem;
 import org.apache.flink.table.runtime.utils.CommonTestData;
+import org.apache.flink.table.sources.TableSource;
+import org.apache.flink.table.sources.csv.CsvTableSource;
 
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
@@ -34,7 +36,6 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.sql.validate.SqlMonikerType;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -48,25 +49,31 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
- * Test for CatalogCalciteSchema.
+ * Test for CatalogCalciteSchema, mostly translated from ExternalCatalogSchema.
  */
 public class CatalogCalciteSchemaTest {
+	private final String metadataSchema = "metadata";
 	private final String catalogName = "test";
-	private final String schemaName = "s1";
-	private final String tableName = "tb1";
+	private final String db1 = "db1";
+	private final String table1 = "tb1";
+	private final String db2 = "db2";
+	private final String table2 = "tb2";
 
 	private SchemaPlus catalogSchema;
 	private CalciteCatalogReader calciteCatalogReader;
 
+	private SchemaPlus rootSchemaPlus;
+
 	@Before
 	public void setup() {
-		final SchemaPlus rootSchemaPlus = CalciteSchema.createRootSchema(true, false).plus();
+		rootSchemaPlus = CalciteSchema.createRootSchema(true, false).plus();
 		final ReadableCatalog catalog = CommonTestData.getTestFlinkInMemoryCatalog();
 
 		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog);
-		catalogSchema = rootSchemaPlus.getSubSchema("schemaName");
+		catalogSchema = rootSchemaPlus.getSubSchema("test");
 
 		FlinkTypeFactory typeFactory = new FlinkTypeFactory(new FlinkTypeSystem());
 		Properties prop = new Properties();
@@ -91,6 +98,29 @@ public class CatalogCalciteSchemaTest {
 	}
 
 	@Test
+	public void testRegisterCatalog() {
+		assertTrue(rootSchemaPlus.getTableNames().isEmpty());
+
+		assertEquals(2, rootSchemaPlus.getSubSchemaNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(metadataSchema, catalogName)), rootSchemaPlus.getSubSchemaNames());
+
+		SchemaPlus schema = rootSchemaPlus.getSubSchema(catalogName);
+		assertTrue(schema.getTableNames().isEmpty());
+		assertEquals(2, schema.getSubSchemaNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(db1, db2)), schema.getSubSchemaNames());
+
+		SchemaPlus s1 = schema.getSubSchema(db1);
+		assertTrue(s1.getSubSchemaNames().isEmpty());
+		assertEquals(1, s1.getTableNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(table1)), s1.getTableNames());
+
+		SchemaPlus s2 = schema.getSubSchema(db2);
+		assertTrue(s2.getSubSchemaNames().isEmpty());
+		assertEquals(1, s2.getTableNames().size());
+		assertEquals(new HashSet<>(Arrays.asList(table2)), s2.getTableNames());
+	}
+
+	@Test
 	public void testGetSubSchema() {
 		List<SqlMoniker> allSchemaObjectNames = calciteCatalogReader.getAllSchemaObjectNames(Arrays.asList(catalogName));
 
@@ -102,29 +132,32 @@ public class CatalogCalciteSchemaTest {
 		assertEquals(
 			new HashSet<List<String>>() {{
 				add(Arrays.asList(catalogName));
-				add(Arrays.asList(catalogName, "s1"));
-				add(Arrays.asList(catalogName, "s2"));
+				add(Arrays.asList(catalogName, "db1"));
+				add(Arrays.asList(catalogName, "db2"));
 			}},
 			subSchemas
 		);
 	}
 
-	//TODO: re-enable this
-	@Ignore
 	@Test
 	public void testGetTable() {
-		RelOptTable relOptTable = calciteCatalogReader.getTable(Arrays.asList(catalogName, schemaName, tableName));
+		RelOptTable relOptTable = calciteCatalogReader.getTable(Arrays.asList(catalogName, db1, table1));
 
 		assertNotNull(relOptTable);
 
-		org.apache.flink.table.plan.schema.CatalogTable table = relOptTable.unwrap(org.apache.flink.table.plan.schema.CatalogTable.class);
+		org.apache.flink.table.plan.schema.CatalogTable table =
+			relOptTable.unwrap(org.apache.flink.table.plan.schema.CatalogTable.class);
 
-//		assertTrue((table.batchTableSource() instanceof CsvTableSource));
+		assertNotNull(table);
+
+		TableSource tableSource = table.batchTableSource();
+
+		assertTrue(tableSource instanceof CsvTableSource);
 	}
 
 	@Test
 	public void testGetNotExistTable() {
-		RelOptTable relOptTable = calciteCatalogReader.getTable(Arrays.asList(schemaName, schemaName, "nonexist-tb"));
+		RelOptTable relOptTable = calciteCatalogReader.getTable(Arrays.asList(catalogName, db1, "nonexist-tb"));
 		assertNull(relOptTable);
 	}
 }
