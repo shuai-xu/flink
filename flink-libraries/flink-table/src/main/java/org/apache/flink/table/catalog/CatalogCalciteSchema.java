@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.catalog;
 
+import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
 
@@ -130,9 +131,15 @@ public class CatalogCalciteSchema implements Schema {
 	}
 
 	public static void registerCatalog(SchemaPlus parentSchema, String catalogName, ReadableCatalog catalog) {
-		CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog);
-		SchemaPlus schemaPlusOfNewCatalog = parentSchema.add(catalogName, newCatalog);
-		newCatalog.registerSubSchemas(schemaPlusOfNewCatalog);
+		SchemaPlus catalogSchema = parentSchema.getSubSchema(catalogName);
+
+		if (catalogSchema != null) {
+			throw new CatalogAlreadyExistException(catalogName);
+		} else {
+			CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog);
+			SchemaPlus schemaPlusOfNewCatalog = parentSchema.add(catalogName, newCatalog);
+			newCatalog.registerSubSchemas(schemaPlusOfNewCatalog);
+		}
 	}
 
 	public void registerSubSchemas(SchemaPlus schemaPlus) {

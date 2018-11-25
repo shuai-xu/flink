@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.catalog;
 
+import org.apache.flink.table.api.CatalogAlreadyExistException;
 import org.apache.flink.table.calcite.FlinkCalciteCatalogReader;
 import org.apache.flink.table.calcite.FlinkTypeFactory;
 import org.apache.flink.table.calcite.FlinkTypeSystem;
@@ -79,6 +80,14 @@ public class CatalogCalciteSchemaTest {
 			typeFactory,
 			calciteConnConfig
 		);
+	}
+
+	@Test(expected = CatalogAlreadyExistException.class)
+	public void testDuplicatedRegisterCatalog() {
+		SchemaPlus rootSchemaPlus = CalciteSchema.createRootSchema(true, false).plus();
+		ReadableCatalog catalog = CommonTestData.getTestFlinkInMemoryCatalog();
+		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, schemaName, catalog);
+		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, schemaName, catalog);
 	}
 
 	@Test
