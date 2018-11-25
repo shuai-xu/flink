@@ -111,7 +111,7 @@ public class CheckpointExceptionHandlerConfigurationTest extends TestLogger {
 	@Test
 	public void testCheckpointConfigDefault() throws Exception {
 		StreamExecutionEnvironment streamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment();
-		Assert.assertTrue(streamExecutionEnvironment.getCheckpointConfig().isFailOnCheckpointingErrors());
+		Assert.assertFalse(streamExecutionEnvironment.getCheckpointConfig().isFailOnCheckpointingErrors());
 	}
 
 	@Test

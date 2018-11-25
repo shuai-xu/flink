@@ -69,8 +69,8 @@ public class CheckpointConfig implements java.io.Serializable {
 	/** Cleanup behaviour for persistent checkpoints. */
 	private ExternalizedCheckpointCleanup externalizedCheckpointCleanup;
 
-	/** Determines if a tasks are failed or not if there is an error in their checkpointing. Default: true */
-	private boolean failOnCheckpointingErrors = true;
+	/** Determines if a tasks are failed or not if there is an error in their checkpointing. Default: false */
+	private boolean failOnCheckpointingErrors = false;
 
 	// ------------------------------------------------------------------------
 

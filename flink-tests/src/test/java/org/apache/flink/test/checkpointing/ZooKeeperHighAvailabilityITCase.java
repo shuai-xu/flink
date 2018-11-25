@@ -164,6 +164,7 @@ public class ZooKeeperHighAvailabilityITCase extends TestLogger {
 		env.setParallelism(1);
 		env.setRestartStrategy(RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 0));
 		env.enableCheckpointing(10); // Flink doesn't allow lower than 10 ms
+		env.getCheckpointConfig().setFailOnCheckpointingErrors(true);
 
 		File checkpointLocation = TEMPORARY_FOLDER.newFolder();
 		env.setStateBackend((StateBackend) new FsStateBackend(checkpointLocation.toURI()));
