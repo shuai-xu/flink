@@ -49,7 +49,7 @@ under the License.
 
 	<groupId>org.apache.flink</groupId>
 	<artifactId>force-shading</artifactId>
-	<version>blink-3.0-SNAPSHOT</version>
+	<version>blink-3.1-SNAPSHOT</version>
 
 	<packaging>jar</packaging>
 
