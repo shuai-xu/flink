@@ -54,7 +54,6 @@ public class NettyConfig {
 	 */
 	public static final int MAX_ORDER = 11;
 
-
 	// - Config keys ----------------------------------------------------------
 
 	public static final ConfigOption<Integer> NUM_ARENAS = ConfigOptions
@@ -168,9 +167,12 @@ public class NettyConfig {
 	}
 
 	public int getNumberOfArenas() {
+		final int nettyMemory = config.getInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY);
+		final int maxNumberOfArenas = Math.max(1, (int) (nettyMemory * 1024L * 1024L / getChunkSize()) - 1);
+
 		// default: number of slots
 		final int configValue = config.getInteger(NUM_ARENAS);
-		return configValue == -1 ? numberOfSlots : configValue;
+		return configValue == -1 ? Math.min(numberOfSlots, maxNumberOfArenas) : configValue;
 	}
 
 	public int getServerNumThreads() {
