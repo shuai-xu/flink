@@ -71,11 +71,9 @@ import org.apache.flink.util.TestLogger;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.PoisonPill;
-import com.alibaba.blink.state.niagara.NiagaraStateBackend;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingServer;
 import org.junit.AfterClass;
-import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -118,9 +116,6 @@ public class JobManagerHACheckpointRecoveryITCase extends TestLogger {
 	private static final FiniteDuration TestTimeOut = new FiniteDuration(5, TimeUnit.MINUTES);
 
 	private static final File FileStateBackendBasePath;
-
-	private static final boolean IS_LINUX_ALIOS = System.getProperty("os.name").startsWith("Linux") &&
-		System.getProperty("os.version").contains("alios7");
 
 	static {
 		try {
@@ -345,18 +340,6 @@ public class JobManagerHACheckpointRecoveryITCase extends TestLogger {
 			new RocksDBStateBackend(
 				new FsStateBackend(FileStateBackendBasePath.getAbsoluteFile().toURI(), 16),
 				true));
-	}
-
-	@Test
-	public void testCheckpointedStreamingProgramIncrementalNiagara() throws Exception {
-		if (IS_LINUX_ALIOS) {
-			testCheckpointedStreamingProgram(
-				new NiagaraStateBackend(
-					new FsStateBackend(FileStateBackendBasePath.getAbsoluteFile().toURI(), 16),
-					true));
-		} else {
-			throw new AssumptionViolatedException("Not alios machine, Niagara related tests would not run.");
-		}
 	}
 
 	private void testCheckpointedStreamingProgram(AbstractStateBackend stateBackend) throws Exception {

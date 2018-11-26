@@ -183,7 +183,7 @@ class StreamExecGroupAggregate(
       needMerge = false,
       tableConfig.getNullCheck,
       // TODO: gemini state backend do not copy key currently, we have to copy input field
-      // TODO: copy is not need when state backend is rocksdb or niagara, improve this in future
+      // TODO: copy is not need when state backend is rocksdb, improve this in future
       // TODO: but other operators do not copy this input field.....
       copyInputField = true)
 

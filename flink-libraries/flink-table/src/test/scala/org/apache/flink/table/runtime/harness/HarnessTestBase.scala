@@ -21,7 +21,6 @@ import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.{Comparator, Queue => JQueue}
 
-import com.alibaba.blink.state.niagara.NiagaraStateBackend
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
@@ -38,7 +37,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, KeyedTwoInputStreamOperatorTestHarness, TestHarnessUtil}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.utils.StreamingTestBase
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, NIAGARA_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.BaseRowUtil
 import org.junit.runners.Parameterized
@@ -57,8 +56,6 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
 
       case ROCKSDB_BACKEND =>
         new RocksDBStateBackend("file://" + tempFolder.newFolder().getAbsoluteFile)
-      case NIAGARA_BACKEND =>
-        new NiagaraStateBackend("file://" + tempFolder.newFolder().getAbsoluteFile, true)
     }
   }
 
@@ -198,14 +195,7 @@ object HarnessTestBase {
 
   @Parameterized.Parameters(name = "StateBackend={0}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    val isLinuxAliOS = System.getProperty("os.name").startsWith("Linux") &&
-      System.getProperty("os.version").contains("alios7")
-
-    if (isLinuxAliOS) {
-      Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(NIAGARA_BACKEND), Array(ROCKSDB_BACKEND))
-    } else {
-      Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
-    }
+    Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
   }
 
   /**

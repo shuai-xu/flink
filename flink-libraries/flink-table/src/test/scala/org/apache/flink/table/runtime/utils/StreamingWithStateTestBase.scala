@@ -19,7 +19,6 @@ package org.apache.flink.table.runtime.utils
 
 import java.util
 
-import com.alibaba.blink.state.niagara.NiagaraStateBackend
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
@@ -34,7 +33,7 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.api.TableEnvironment
-import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, NIAGARA_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
+import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.junit.runners.Parameterized
 import org.junit.{After, Assert, Before}
 
@@ -46,7 +45,7 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
 
   enableObjectReuse = state match {
     case HEAP_BACKEND => false // TODO gemini not support obj reuse now.
-    case ROCKSDB_BACKEND | NIAGARA_BACKEND => true
+    case ROCKSDB_BACKEND => true
   }
 
   @Before
@@ -64,9 +63,6 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
         conf.setBoolean(CheckpointingOptions.INCREMENTAL_CHECKPOINTS, true)
         env.setStateBackend(new RocksDBStateBackend(
           "file://" + tempFolder.newFolder().getAbsoluteFile).configure(conf))
-      case NIAGARA_BACKEND =>
-        env.setStateBackend(
-          new NiagaraStateBackend("file://" + tempFolder.newFolder().getAbsoluteFile, true))
     }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
     FailingCollectionSource.failedBefore = true
@@ -232,17 +228,9 @@ object StreamingWithStateTestBase {
 
   val HEAP_BACKEND = StateBackendMode("HEAP")
   val ROCKSDB_BACKEND = StateBackendMode("ROCKSDB")
-  val NIAGARA_BACKEND = StateBackendMode("NIAGARA")
 
   @Parameterized.Parameters(name = "StateBackend={0}")
   def parameters(): util.Collection[Array[java.lang.Object]] = {
-    val isLinuxAliOS = System.getProperty("os.name").startsWith("Linux") &&
-      System.getProperty("os.version").contains("alios7")
-
-    if (isLinuxAliOS) {
-      Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(NIAGARA_BACKEND), Array(ROCKSDB_BACKEND))
-    } else {
-      Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
-    }
+    Seq[Array[AnyRef]](Array(HEAP_BACKEND), Array(ROCKSDB_BACKEND))
   }
 }
