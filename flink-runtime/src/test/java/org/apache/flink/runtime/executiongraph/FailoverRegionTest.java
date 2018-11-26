@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.runtime.akka.AkkaUtils;
 import org.apache.flink.runtime.blob.VoidBlobWriter;
@@ -173,7 +172,7 @@ public class FailoverRegionTest extends TestLogger {
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			new InfiniteDelayRestartStrategy(10),
-			new FailoverPipelinedRegionWithDirectExecutor(),
+			new FailoverPipelinedRegionWithDirectExecutor(100),
 			slotProvider,
 			ordered);
 
@@ -390,7 +389,7 @@ public class FailoverRegionTest extends TestLogger {
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			new InfiniteDelayRestartStrategy(10),
-			new FailoverPipelinedRegionWithDirectExecutor(),
+			new FailoverPipelinedRegionWithDirectExecutor(100),
 			scheduler,
 			VoidBlobWriter.getInstance());
 
@@ -539,15 +538,13 @@ public class FailoverRegionTest extends TestLogger {
 		v3.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 
 		JobGraph jobGraph = new JobGraph(jobId, jobName, v1, v2, v3);
-		jobGraph.getJobConfiguration().setInteger(
-			JobManagerOptions.EXECUTION_FAILOVER_STRATEGY_REGION_MAX_ATTEMPTS, regionMaxAttempts);
 		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 			jobGraph,
 			new DirectScheduledExecutorService(),
 			TestingUtils.defaultExecutor(),
 			AkkaUtils.getDefaultTimeout(),
 			restartStrategy,
-			new FailoverPipelinedRegionWithDirectExecutor(),
+			new FailoverPipelinedRegionWithDirectExecutor(regionMaxAttempts),
 			scheduler,
 			VoidBlobWriter.getInstance());
 
@@ -567,9 +564,15 @@ public class FailoverRegionTest extends TestLogger {
 	 */
 	private static class FailoverPipelinedRegionWithDirectExecutor implements Factory {
 
+		private int regionFailLimit;
+
+		public FailoverPipelinedRegionWithDirectExecutor(int regionFailLimit) {
+			this.regionFailLimit = regionFailLimit;
+		}
+
 		@Override
 		public FailoverStrategy create(ExecutionGraph executionGraph) {
-			return new RestartPipelinedRegionStrategy(executionGraph, Executors.directExecutor());
+			return new RestartPipelinedRegionStrategy(executionGraph, Executors.directExecutor(), regionFailLimit);
 		}
 	}
 

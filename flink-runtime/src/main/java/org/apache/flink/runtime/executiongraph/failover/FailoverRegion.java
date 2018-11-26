@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.executiongraph.failover;
 
-import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
@@ -75,13 +74,12 @@ public class FailoverRegion {
 	/** The number the region has failed and restarted. */
 	private volatile int regionFailCount = 0;
 
-	public FailoverRegion(ExecutionGraph executionGraph, Executor executor, List<ExecutionVertex> connectedExecutions) {
+	public FailoverRegion(ExecutionGraph executionGraph, Executor executor, List<ExecutionVertex> connectedExecutions,
+						  int regionFailLimit) {
 		this.executionGraph = checkNotNull(executionGraph);
 		this.executor = checkNotNull(executor);
 		this.connectedExecutionVertices = checkNotNull(connectedExecutions);
-
-		regionFailLimit = executionGraph.getJobConfiguration().getInteger(
-			JobManagerOptions.EXECUTION_FAILOVER_STRATEGY_REGION_MAX_ATTEMPTS);
+		this.regionFailLimit = regionFailLimit;
 
 		LOG.debug("Created failover region {} with vertices: {}", id, connectedExecutions);
 	}

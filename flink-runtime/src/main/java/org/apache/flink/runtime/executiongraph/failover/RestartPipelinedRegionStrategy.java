@@ -54,24 +54,27 @@ public class RestartPipelinedRegionStrategy extends FailoverStrategy {
 	/** The log object used for debugging. */
 	private static final Logger LOG = LoggerFactory.getLogger(RestartPipelinedRegionStrategy.class);
 
-	/** The execution graph on which this FailoverStrategy works */
+	/** The execution graph on which this FailoverStrategy works. */
 	private final ExecutionGraph executionGraph;
 
-	/** The executor used for future actions */
+	/** The executor used for future actions. */
 	private final Executor executor;
 
-	/** Fast lookup from vertex to failover region */
+	/** Fast lookup from vertex to failover region. */
 	private final HashMap<ExecutionVertex, FailoverRegion> vertexToRegion;
 
+	/** The max number a region can fail. */
+	private int regionFailLimit;
 
 	/**
 	 * Creates a new failover strategy to restart pipelined regions that works on the given
 	 * execution graph and uses the execution graph's future executor to call restart actions.
-	 * 
+	 *
 	 * @param executionGraph The execution graph on which this FailoverStrategy will work
+	 * @param regionFailLimit The max number a region can fail
 	 */
-	public RestartPipelinedRegionStrategy(ExecutionGraph executionGraph) {
-		this(executionGraph, executionGraph.getFutureExecutor());
+	public RestartPipelinedRegionStrategy(ExecutionGraph executionGraph, int regionFailLimit) {
+		this(executionGraph, executionGraph.getFutureExecutor(), regionFailLimit);
 	}
 
 	/**
@@ -80,11 +83,13 @@ public class RestartPipelinedRegionStrategy extends FailoverStrategy {
 	 * 
 	 * @param executionGraph The execution graph on which this FailoverStrategy will work
 	 * @param executor  The executor used for future actions
+	 * @param regionFailLimit The max number a region can fail
 	 */
-	public RestartPipelinedRegionStrategy(ExecutionGraph executionGraph, Executor executor) {
+	public RestartPipelinedRegionStrategy(ExecutionGraph executionGraph, Executor executor, int regionFailLimit) {
 		this.executionGraph = checkNotNull(executionGraph);
 		this.executor = checkNotNull(executor);
 		this.vertexToRegion = new HashMap<>();
+		this.regionFailLimit = regionFailLimit;
 	}
 
 	// ------------------------------------------------------------------------
@@ -256,10 +261,10 @@ public class RestartPipelinedRegionStrategy extends FailoverStrategy {
 
 		// now that we have all regions, create the failover region objects 
 		LOG.info("Creating {} individual failover regions for job {} ({})",
-				executionGraph.getJobName(), executionGraph.getJobID());
+			distinctRegions.keySet().size(), executionGraph.getJobName(), executionGraph.getJobID());
 
 		for (List<ExecutionVertex> region : distinctRegions.keySet()) {
-			final FailoverRegion failoverRegion = new FailoverRegion(executionGraph, executor, region);
+			final FailoverRegion failoverRegion = new FailoverRegion(executionGraph, executor, region, regionFailLimit);
 			for (ExecutionVertex ev : region) {
 				this.vertexToRegion.put(ev, failoverRegion);
 			}
@@ -282,7 +287,7 @@ public class RestartPipelinedRegionStrategy extends FailoverStrategy {
 			}
 		}
 
-		final FailoverRegion singleRegion = new FailoverRegion(executionGraph, executor, allVertices);
+		final FailoverRegion singleRegion = new FailoverRegion(executionGraph, executor, allVertices, regionFailLimit);
 		for (ExecutionVertex ev : allVertices) {
 			vertexToRegion.put(ev, singleRegion);
 		}
@@ -309,9 +314,15 @@ public class RestartPipelinedRegionStrategy extends FailoverStrategy {
 	 */
 	public static class Factory implements FailoverStrategy.Factory {
 
+		private int regionFailLimit = 100;
+
 		@Override
 		public FailoverStrategy create(ExecutionGraph executionGraph) {
-			return new RestartPipelinedRegionStrategy(executionGraph);
+			return new RestartPipelinedRegionStrategy(executionGraph, regionFailLimit);
+		}
+
+		public void setRegionFailLimit(int regionFailLimit) {
+			this.regionFailLimit = regionFailLimit;
 		}
 	}
 }

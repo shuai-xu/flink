@@ -357,7 +357,7 @@ public class PipelinedRegionFailoverConcurrencyTest extends TestLogger {
 
 		@Override
 		public FailoverStrategy create(ExecutionGraph executionGraph) {
-			return new RestartPipelinedRegionStrategy(executionGraph, executor);
+			return new RestartPipelinedRegionStrategy(executionGraph, executor, 100);
 		}
 	}
 }
