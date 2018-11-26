@@ -236,6 +236,7 @@ public abstract class KafkaProducerTestBase extends KafkaTestBase {
 
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.enableCheckpointing(500);
+		env.getCheckpointConfig().setFailOnCheckpointingErrors(true);
 		env.setParallelism(1);
 		env.setRestartStrategy(RestartStrategies.noRestart());
 		env.getConfig().disableSysoutLogging();
