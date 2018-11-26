@@ -57,7 +57,6 @@ public interface ResultPartitionWriter<T> {
 	 */
 	void emitRecord(T record, int targetChannel, boolean isBroadcast, boolean flushAlways) throws IOException, InterruptedException;
 
-
 	/**
 	 * Broadcasts an event to all subpartitions.
 	 *

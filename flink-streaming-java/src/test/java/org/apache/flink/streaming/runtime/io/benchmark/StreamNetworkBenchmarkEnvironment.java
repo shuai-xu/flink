@@ -20,8 +20,10 @@ package org.apache.flink.streaming.runtime.io.benchmark;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.LongValueSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.deployment.InputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
@@ -33,6 +35,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
+import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.api.writer.RoundRobinChannelSelector;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
@@ -54,11 +57,13 @@ import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.taskmanager.TaskActions;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.streaming.runtime.io.StreamRecordWriter;
+import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.apache.flink.util.ExceptionUtils.suppressExceptions;
@@ -67,7 +72,7 @@ import static org.apache.flink.util.ExceptionUtils.suppressExceptions;
  * Context for network benchmarks executed by the external
  * <a href="https://github.com/dataArtisans/flink-benchmarks">flink-benchmarks</a> project.
  */
-public class StreamNetworkBenchmarkEnvironment<T> {
+public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 
 	private static final int BUFFER_SIZE = TaskManagerOptions.MEMORY_SEGMENT_SIZE.defaultValue();
 
@@ -92,9 +97,12 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 	protected IOManager ioManager;
 
 	protected int channels;
+	protected boolean broadcastMode = false;
 	protected boolean localMode = false;
 
 	protected ResultPartitionID[] partitionIds;
+
+	private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
 	/**
 	 * Sets up the environment including buffer pools and netty threads.
@@ -113,9 +121,11 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 	public void setUp(
 			int writers,
 			int channels,
+			boolean broadcastMode,
 			boolean localMode,
 			int senderBufferPoolSize,
 			int receiverBufferPoolSize) throws Exception {
+		this.broadcastMode = broadcastMode;
 		this.localMode = localMode;
 		this.channels = channels;
 		this.partitionIds = new ResultPartitionID[writers];
@@ -145,6 +155,7 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 		suppressExceptions(senderEnv::shutdown);
 		suppressExceptions(receiverEnv::shutdown);
 		suppressExceptions(ioManager::shutdown);
+		suppressExceptions(executor::shutdown);
 	}
 
 	public SerializingLongReceiver createReceiver() throws Exception {
@@ -167,10 +178,16 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 		return receiver;
 	}
 
-	public StreamRecordWriter<T> createRecordWriter(int partitionIndex, long flushTimeout, TypeSerializer<T> typeSerializer) throws Exception {
+	public StreamRecordWriter<T> createRecordWriter(int partitionIndex, long flushTimeout) throws Exception {
+		return createRecordWriter(partitionIndex,  flushTimeout, false);
+	}
+
+	public StreamRecordWriter<T> createRecordWriter(
+		int partitionIndex, long flushTimeout, boolean broadcastMode) throws Exception {
+		ChannelSelector channelSelector = broadcastMode ? new BroadcastPartitioner<>() : new RoundRobinChannelSelector<>();
 		ResultPartitionWriter sender = createResultPartition(jobId, partitionIds[partitionIndex], senderEnv, channels);
-		sender.setTypeSerializer(typeSerializer);
-		return new StreamRecordWriter<>(sender,  new RoundRobinChannelSelector<T>(), flushTimeout);
+
+		return new StreamRecordWriter<T>(sender, channelSelector , flushTimeout);
 	}
 
 	private void generatePartitionIds() throws Exception {
@@ -212,7 +229,7 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 			NetworkEnvironment environment,
 			int channels) throws Exception {
 
-		InternalResultPartition internalResultPartition = new InternalResultPartition(
+		InternalResultPartition<T> resultPartition = new InternalResultPartition<T>(
 			"sender task",
 			new NoOpTaskActions(),
 			jobId,
@@ -225,9 +242,11 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 			ioManager,
 			false);
 
-		environment.setupPartition(internalResultPartition);
+		TypeSerializer typeSerializer = new LongValueSerializer();
+		resultPartition.setTypeSerializer(typeSerializer);
+		environment.setupPartition(resultPartition);
 
-		return internalResultPartition;
+		return resultPartition;
 	}
 
 	private InputGate createInputGate(
@@ -238,7 +257,6 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 			NetworkEnvironment environment,
 			final int channels) throws IOException {
 
-		PartitionRequestManager partitionRequestManager = new PartitionRequestManager(Integer.MAX_VALUE, channels);
 		InputGate[] gates = new InputGate[channels];
 		for (int channel = 0; channel < channels; ++channel) {
 			int finalChannel = channel;
@@ -262,9 +280,9 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 				environment,
 				new NoOpTaskActions(),
 				UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-				partitionRequestManager,
+				new PartitionRequestManager(Integer.MAX_VALUE, channelDescriptors.length),
 				BlockingShuffleType.TM,
-				Executors.newSingleThreadExecutor());
+				executor);
 
 			environment.setupInputGate(gate);
 			gates[channel] = gate;
@@ -288,13 +306,14 @@ public class StreamNetworkBenchmarkEnvironment<T> {
 	private static final class NoOpTaskActions implements TaskActions {
 
 		@Override
-		public void triggerPartitionProducerStateCheck(
-			JobID jobId,
-			IntermediateDataSetID intermediateDataSetId,
-			ResultPartitionID resultPartitionId) {}
+		public void triggerPartitionProducerStateCheck(JobID jobId, IntermediateDataSetID intermediateDataSetId, ResultPartitionID resultPartitionId) {
+
+		}
 
 		@Override
-		public void failExternally(Throwable cause) {}
+		public void failExternally(Throwable cause) {
+
+		}
 	}
 
 	private static final class NoOpResultPartitionConsumableNotifier implements ResultPartitionConsumableNotifier {

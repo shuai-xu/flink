@@ -18,8 +18,8 @@
 
 package org.apache.flink.streaming.runtime.io.benchmark;
 
-import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.types.LongValue;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -31,9 +31,9 @@ import java.util.concurrent.TimeUnit;
 public class StreamNetworkPointToPointBenchmark {
 	private static final long RECEIVER_TIMEOUT = 2000;
 
-	private StreamNetworkBenchmarkEnvironment<Long> environment;
+	private StreamNetworkBenchmarkEnvironment<LongValue> environment;
 	private ReceiverThread receiver;
-	private RecordWriter<Long> recordWriter;
+	private RecordWriter<LongValue> recordWriter;
 
 	/**
 	 * Executes the latency benchmark with the given number of records.
@@ -44,14 +44,14 @@ public class StreamNetworkPointToPointBenchmark {
 	 * 		whether to flush the {@link RecordWriter} after the last record
 	 */
 	public void executeBenchmark(long records, boolean flushAfterLastEmit) throws Exception {
-		Long value = 0L;
+		final LongValue value = new LongValue(0);
 
 		CompletableFuture<?> recordsReceived = receiver.setExpectedRecord(records);
 
 		for (int i = 1; i < records; i++) {
 			recordWriter.emit(value);
 		}
-		value = records;
+		value.setValue(records);
 		recordWriter.broadcastEmit(value);
 		if (flushAfterLastEmit) {
 			recordWriter.flushAll();
@@ -69,10 +69,10 @@ public class StreamNetworkPointToPointBenchmark {
 	 */
 	public void setUp(long flushTimeout) throws Exception {
 		environment = new StreamNetworkBenchmarkEnvironment<>();
-		environment.setUp(1, 1, false, -1, -1);
+		environment.setUp(1, 1, false, false, -1, -1);
 
 		receiver = environment.createReceiver();
-		recordWriter = environment.createRecordWriter(0, flushTimeout, new LongSerializer());
+		recordWriter = environment.createRecordWriter(0, flushTimeout);
 	}
 
 	/**
