@@ -3,21 +3,23 @@
   [nzSize]="'small'"
   [nzLoading]="isLoading"
   [nzData]="listOfTask"
-  [nzScroll]="{x:'1430px',y:'428px'}"
+  [nzScroll]="{x:'1550px',y:'428px'}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
     <tr>
       <th nzWidth="80px" nzLeft="0px">ID</th>
+      <th nzSortKey="metrics.buffers-in-pool-usage-max" nzShowSort nzWidth="100px">In Queue</th>
+      <th nzSortKey="metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="100px">Out Queue</th>
       <th nzSortKey="metrics.read-bytes" nzShowSort nzWidth="140px">Bytes Received</th>
       <th nzSortKey="metrics.read-records" nzShowSort nzWidth="150px">Records Received</th>
       <th nzSortKey="metrics.write-bytes" nzShowSort nzWidth="120px">Bytes Sent</th>
       <th nzSortKey="metrics.write-records" nzShowSort nzWidth="120px">Records Sent</th>
       <th nzSortKey="attempt" nzShowSort nzWidth="100px">Attempt</th>
       <th nzSortKey="host" nzShowSort nzWidth="200px">Host</th>
-      <th nzSortKey="start_time" nzShowSort nzWidth="150px">Start Time</th>
+      <th nzSortKey="start_time" nzShowSort nzWidth="160px">Start Time</th>
       <th nzSortKey="duration" nzShowSort nzWidth="100px">Duration</th>
-      <th nzSortKey="end-time" nzShowSort nzWidth="150px">End Time</th>
+      <th nzSortKey="end-time" nzShowSort nzWidth="160px">End Time</th>
       <th nzSortKey="status" nzShowSort nzWidth="120px" nzRight="0px">Status</th>
     </tr>
   </thead>
@@ -25,6 +27,16 @@
     <tr *ngFor="let task of listOfTask; trackBy:trackTaskBy;">
       <td nzLeft="0">
         <a [routerLink]="['../../../','task-manager',task['resource-id'],'log']" target="_blank">LOG {{ task.subtask }}</a>
+      </td>
+      <td>
+        <span *ngIf="task.metrics['buffers-in-pool-usage-max-complete'];else loadingTemplate">
+          {{ task.metrics['buffers-in-pool-usage-max'] | percent }}
+        </span>
+      </td>
+      <td>
+        <span *ngIf="task.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
+          {{ task.metrics['buffers-out-pool-usage-max'] | percent }}
+        </span>
       </td>
       <td>
         <span *ngIf="task.metrics['read-bytes-complete'];else loadingTemplate">

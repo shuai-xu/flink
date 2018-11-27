@@ -36,6 +36,16 @@
           <nz-form-text>{{ node.detail.duration | humanizeDuration }}</nz-form-text>
         </nz-form-control>
       </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">In Queue</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['buffers-in-pool-usage-max-complete'];else loadingTemplate">
+              {{ node.detail.metrics['buffers-in-pool-usage-max'] | percent }}
+            </span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
     </form>
   </div>
   <div nz-col [nzSpan]="12">
@@ -84,6 +94,16 @@
           <nz-form-text>
             <span *ngIf="node.detail.metrics['write-bytes-complete'];else loadingTemplate">
               {{ node.detail.metrics['write-bytes'] | humanizeBytes }}
+            </span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Out Queue</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
+              {{ node.detail.metrics['buffers-out-pool-usage-max'] | percent }}
             </span>
           </nz-form-text>
         </nz-form-control>

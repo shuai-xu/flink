@@ -43,6 +43,9 @@ import {
   MenuFoldOutline,
   MenuUnfoldOutline,
   DeploymentUnitOutline,
+  VerticalLeftOutline,
+  VerticalRightOutline,
+  RollbackOutline,
   SyncOutline
 } from '@ant-design/icons-angular/icons';
 
@@ -92,6 +95,9 @@ import {
         MenuUnfoldOutline,
         InterationTwoTone,
         DeploymentUnitOutline,
+        VerticalLeftOutline,
+        VerticalRightOutline,
+        RollbackOutline,
         SyncOutline
       ]
     },

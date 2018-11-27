@@ -29,7 +29,7 @@ export class TaskManagerService {
     return this.httpClient.get<{ logs: Array<{ name: string, size: number }> }>(`${BASE_URL}/taskmanagers/${taskManagerId}/logs`);
   }
 
-  loadLog(taskManagerId, logName, page = -1, count = 102400) {
+  loadLog(taskManagerId, logName, page = -1, count = 10240) {
     const start = page * count;
     const params = new HttpParams().append('start', `${start}`).append('count', `${count}`);
     return this.httpClient.get(`${BASE_URL}/taskmanagers/${taskManagerId}/log/${logName}`, { params: params, responseType: 'text' });

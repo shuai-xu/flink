@@ -2,13 +2,15 @@
   class="no-border small"
   [nzSize]="'small'"
   [nzData]="nodes"
-  [nzScroll]="{x:((1310+left)+'px')}"
+  [nzScroll]="{x:((1510+left)+'px')}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
     <tr>
       <th nzLeft="0px" [nzWidth]="left+'px'">Name</th>
       <th nzSortKey="detail.status" nzShowSort nzWidth="120px">Status</th>
+      <th nzSortKey="detail.metrics.buffers-in-pool-usage-max" nzShowSort nzWidth="100px">In Queue</th>
+      <th nzSortKey="detail.metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="100px">Out Queue</th>
       <th nzSortKey="detail.metrics.read-bytes" nzShowSort nzWidth="150px">Bytes Received</th>
       <th nzSortKey="detail.metrics.read-records" nzShowSort nzWidth="150px">Records Received</th>
       <th nzSortKey="detail.metrics.write-bytes" nzShowSort nzWidth="150px">Bytes Sent</th>
@@ -27,6 +29,16 @@
       </td>
       <td>
         <flink-job-badge [state]="node.detail.status"></flink-job-badge>
+      </td>
+      <td>
+        <span *ngIf="node.detail.metrics['buffers-in-pool-usage-max-complete'];else loadingTemplate">
+          {{ node.detail.metrics['buffers-in-pool-usage-max'] | percent }}
+        </span>
+      </td>
+      <td>
+        <span *ngIf="node.detail.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
+          {{ node.detail.metrics['buffers-out-pool-usage-max'] | percent }}
+        </span>
       </td>
       <td>
         <span *ngIf="node.detail.metrics['read-bytes-complete'];else loadingTemplate">

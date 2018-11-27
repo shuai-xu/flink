@@ -11,13 +11,13 @@ export class JobManagerService {
     return this.httpClient.get<Array<{ key: string; value: string; }>>(`${BASE_URL}/jobmanager/config`);
   }
 
-  loadLogs(page = -1, count = 102400) {
+  loadLogs(page = -1, count = 10240) {
     const start = page * count;
     const params = new HttpParams().append('start', `${start}`).append('count', `${count}`);
     return this.httpClient.get(`${BASE_URL}/jobmanager/log`, { params: params, responseType: 'text' });
   }
 
-  loadStdout(page = -1, count = 102400) {
+  loadStdout(page = -1, count = 10240) {
     const start = page * count;
     const params = new HttpParams().append('start', `${start}`).append('count', `${count}`);
     return this.httpClient.get(`${BASE_URL}/jobmanager/stdout`, { params: params, responseType: 'text' });

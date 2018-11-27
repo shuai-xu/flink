@@ -10,7 +10,7 @@ import { NodesItemCorrectInterface } from 'interfaces';
 })
 export class JobOverviewListComponent implements OnInit {
   _nodes: NodesItemCorrectInterface[] = [];
-  sortName = 'detail.topology-id';
+  sortName;
   sortValue = 'ascend';
   left = 390;
   @Output() nodeClick = new EventEmitter();

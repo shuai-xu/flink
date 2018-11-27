@@ -5,7 +5,6 @@ import {
   HostListener,
   Input
 } from '@angular/core';
-import { select } from 'd3-selection';
 import { NodesItemCorrectInterface } from 'interfaces';
 import { isNil } from 'lodash';
 
@@ -46,7 +45,7 @@ export class NodeComponent {
   }
 
   get inQ() {
-    return this.node.detail && this.node.detail.metrics[ 'buffers-in-pool-usage-max' ];
+    return (this.node.detail && this.node.detail.metrics[ 'buffers-in-pool-usage-max' ]);
   }
 
   get showInQ() {
@@ -54,7 +53,7 @@ export class NodeComponent {
   }
 
   get outQ() {
-    return this.node.detail && this.node.detail.metrics[ 'buffers-out-pool-usage-max' ];
+    return (this.node.detail && this.node.detail.metrics[ 'buffers-out-pool-usage-max' ]);
   }
 
   get showOutQ() {
