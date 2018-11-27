@@ -47,11 +47,11 @@ public class StreamJoinSQLExample {
 		StreamTableEnvironment tEnv = TableEnvironment.getTableEnvironment(env);
 
 		DataStream<Order> order = env.fromElements(
-			new Order(Timestamp.valueOf("2018-10-15 09:01:20"), 2,1, 7),
-			new Order(Timestamp.valueOf("2018-10-15 09:05:02"), 3,2, 9),
-			new Order(Timestamp.valueOf("2018-10-15 09:05:02"), 1,3, 9),
-			new Order(Timestamp.valueOf("2018-10-15 10:07:22"), 1,4, 9),
-			new Order(Timestamp.valueOf("2018-10-15 10:55:01"), 5,5, 8));
+			new Order(Timestamp.valueOf("2018-10-15 09:01:20"), 2, 1, 7),
+			new Order(Timestamp.valueOf("2018-10-15 09:05:02"), 3, 2, 9),
+			new Order(Timestamp.valueOf("2018-10-15 09:05:02"), 1, 3, 9),
+			new Order(Timestamp.valueOf("2018-10-15 10:07:22"), 1, 4, 9),
+			new Order(Timestamp.valueOf("2018-10-15 10:55:01"), 5, 5, 8));
 		DataStream<Shipment> shipment = env.fromElements(
 			new Shipment(Timestamp.valueOf("2018-10-15 09:11:00"), 3),
 			new Shipment(Timestamp.valueOf("2018-10-15 10:01:21"), 1),
@@ -79,7 +79,7 @@ public class StreamJoinSQLExample {
 	// *************************************************************************
 
 	/**
-	 * Order(createTime, unit, orderId, productId)
+	 * Order(createTime, unit, orderId, productId).
 	 */
 	public static class Order{
 		public Timestamp createTime;
@@ -104,7 +104,7 @@ public class StreamJoinSQLExample {
 	}
 
 	/**
-	 * Shipment(createTime, orderId)
+	 * Shipment(createTime, orderId).
 	 */
 	public static class Shipment {
 		public Timestamp createTime;
