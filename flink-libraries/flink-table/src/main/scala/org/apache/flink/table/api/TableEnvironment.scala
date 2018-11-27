@@ -23,7 +23,6 @@ import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.calcite.config.Lex
-import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.logical.LogicalTableModify
 import org.apache.calcite.schema
@@ -76,10 +75,7 @@ import _root_.scala.collection.mutable
   */
 abstract class TableEnvironment(val config: TableConfig) {
 
-  // the catalog to hold all registered and translated tables
-  // we disable caching here to prevent side effects
-  private val internalSchema: CalciteSchema = CalciteSchema.createRootSchema(true, false)
-  private val rootSchema: SchemaPlus = internalSchema.plus()
+  private val catalogManager: CatalogManager = new CatalogManager();
 
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
@@ -104,7 +100,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   // the configuration to create a Calcite planner
   protected lazy val frameworkConfig: FrameworkConfig = Frameworks
     .newConfigBuilder
-    .defaultSchema(rootSchema)
+    .defaultSchema(catalogManager.getRootSchema)
     .parserConfig(getSqlParserConfig)
     .costFactory(getFlinkCostFactory)
     .operatorTable(getSqlOperatorTable)
@@ -214,6 +210,66 @@ abstract class TableEnvironment(val config: TableConfig) {
       .withConvertTableAccess(false)
       .build()
 
+  // ------ APIs for new catalog architecture ------
+
+  /**
+    * Registers an [[ReadableCatalog]] under a unique name in the TableEnvironment's schema.
+    * All tables registered in the [[ReadableCatalog]] can be accessed.
+    *
+    * @param name            The name under which the catalog will be registered
+    * @param catalog         The catalog to register
+    */
+  def registerCatalog(name: String, catalog: ReadableCatalog): Unit = ???
+
+  /**
+    * Registers an [[ReadableCatalog]] under a unique name in the TableEnvironment's schema.
+    * All tables registered in the [[ReadableCatalog]] can be accessed.
+    *
+    * @param name            The name under which the catalog will be registered
+    * @param catalog         The catalog to register
+    *
+    */
+  @throws[CatalogAlreadyExistException]
+  def registerCatalogInternal(
+    name: String,
+    catalog: ReadableCatalog,
+    isStreaming: Boolean): Unit = {
+
+    catalogManager.registerCatalog(name, catalog, isStreaming)
+  }
+
+  /**
+    * Get a registered catalog.
+    *
+    * @param catalogName
+    * @return ReadableCatalog
+    */
+  @throws[CatalogNotExistException]
+  def getCatalog(catalogName: String): ReadableCatalog = {
+    catalogManager.getCatalog(catalogName)
+  }
+
+  /**
+    * Set a default catalog.
+    *
+    * @param name            Name of the catalog
+    */
+  def setDefaultCatalog(name: String): Unit = {
+    catalogManager.setDefaultCatalog(name)
+  }
+
+  /**
+    * Set a default catalog and database.
+    *
+    * @param catalogName     Name of the catalog
+    * @param dbName          Name of the database
+    */
+  def setDefaultDatabase(catalogName: String, dbName: String): Unit = {
+    catalogManager.setDefaultDatabase(catalogName, dbName)
+  }
+
+  // ------ APIs for old catalog architecture ------
+
   /**
     * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
     * All tables registered in the [[ExternalCatalog]] can be accessed.
@@ -222,6 +278,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param name            The name under which the externalCatalog will be registered
     * @param externalCatalog The externalCatalog to register
     */
+  @deprecated
   def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = ???
 
   /**
@@ -231,9 +288,10 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param name            The name under which the externalCatalog will be registered
     * @param externalCatalog The externalCatalog to register
     */
+  @deprecated
   protected def registerExternalCatalogInternal(
       name: String, externalCatalog: ExternalCatalog, isStreaming: Boolean): Unit = {
-    if (rootSchema.getSubSchema(name) != null) {
+    if (catalogManager.getRootSchema.getSubSchema(name) != null) {
       throw new ExternalCatalogAlreadyExistException(name)
     }
 
@@ -244,7 +302,8 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     this.externalCatalogs.put(name, externalCatalog)
     // create an external catalog calcite schema, register it on the root schema
-    ExternalCatalogSchema.registerCatalog(rootSchema, name, externalCatalog, isStreaming)
+    ExternalCatalogSchema.registerCatalog(
+      catalogManager.getRootSchema, name, externalCatalog, isStreaming)
   }
 
   /**
@@ -253,6 +312,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @param name The name to look up the [[ExternalCatalog]]
     * @return The [[ExternalCatalog]]
     */
+  @deprecated
   def getRegisteredExternalCatalog(name: String): ExternalCatalog = {
     this.externalCatalogs.get(name) match {
       case Some(catalog) => catalog
@@ -682,7 +742,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   protected def replaceRegisteredTable(name: String, table: AbstractTable): Unit = {
 
     if (isRegistered(name)) {
-      rootSchema.add(name, table)
+      catalogManager.getRootSchema.add(name, table)
     } else {
       throw new TableException(s"Table \'$name\' is not registered.")
     }
@@ -767,7 +827,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor
 
   private def getSchema(schemaPath: Array[String]): SchemaPlus = {
-    var schema = rootSchema
+    var schema = catalogManager.getRootSchema
     for (schemaName <- schemaPath) {
       schema = schema.getSubSchema(schemaName)
       if (schema == null) {
@@ -784,7 +844,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     */
   def listTables(): Array[String] = {
     // TODO list from external meta
-    rootSchema.getTableNames.asScala.toArray
+    catalogManager.getRootSchema.getTableNames.asScala.toArray
   }
 
   /**
@@ -1069,7 +1129,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       throw new TableException(s"Table \'$name\' already exists. " +
         s"Please, choose a different name.")
     } else {
-      rootSchema.add(name, table)
+      catalogManager.getRootSchema.add(name, table)
     }
   }
 
@@ -1087,7 +1147,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @return true, if a table is registered under the name, false otherwise.
     */
   protected[flink] def isRegistered(name: String): Boolean = {
-    val memContains: Boolean = rootSchema.getTableNames.contains(name)
+    val memContains: Boolean = catalogManager.getRootSchema.getTableNames.contains(name)
     if (!memContains) {
       val schemaPaths = Array(TableEnvironment.DEFAULT_SCHEMA)
       val schema = getSchema(schemaPaths)
@@ -1140,7 +1200,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
 
     val pathNames = name.split('.').toList
-    getTableFromSchema(rootSchema, pathNames)
+    getTableFromSchema(catalogManager.getRootSchema, pathNames)
   }
 
   /**

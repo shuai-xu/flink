@@ -29,7 +29,7 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.catalog.ExternalCatalog
+import org.apache.flink.table.catalog.{ExternalCatalog, ReadableCatalog}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
@@ -52,13 +52,11 @@ import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeCheckUtils, TypeUtils}
 import org.apache.flink.table.util._
 import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
 import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql2rel.SqlToRelConverter
-
 import _root_.java.util
 
 import _root_.scala.collection.JavaConversions._
@@ -1482,6 +1480,10 @@ abstract class StreamTableEnvironment(
 
   override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
     registerExternalCatalogInternal(name, externalCatalog, true)
+  }
+
+  override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
+    registerCatalogInternal(name, catalog, true)
   }
 }
 

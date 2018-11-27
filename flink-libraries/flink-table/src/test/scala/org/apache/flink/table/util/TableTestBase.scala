@@ -31,16 +31,14 @@ import org.apache.flink.table.api.{Table, TableEnvironment, TableSchema}
 import org.apache.flink.table.calcite.CalciteConfigBuilder
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.commons.lang3.SystemUtils
 import org.junit.Assert.assertEquals
-import org.junit.Rule
+import org.junit.{Before, Rule}
 import org.junit.rules.{ExpectedException, TestName}
 import org.mockito.Mockito.{mock, when}
-
 import java.util
 import java.util.{ArrayList => JArrayList}
 
@@ -199,6 +197,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     val actual = SystemUtils.LINE_SEPARATOR + RelOptUtil.toString(optimized)
+
     verifyPlan(test.name.getMethodName, actual)
   }
 

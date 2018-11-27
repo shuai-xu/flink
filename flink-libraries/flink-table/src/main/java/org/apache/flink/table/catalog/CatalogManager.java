@@ -25,6 +25,7 @@ import org.apache.flink.util.StringUtils;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,6 +43,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * query parsing and analysis.)
  */
 public class CatalogManager {
+	public static final String DEFAULT_CATALOG_NAME = "default_catalog";
+
 	// The catalog to hold all registered and translated tables
 	// We disable caching here to prevent side effects
 	private CalciteSchema internalSchema = CalciteSchema.createRootSchema(true, false);
@@ -54,17 +57,31 @@ public class CatalogManager {
 	private String defaultCatalog;
 	private String defaultDb;
 
+	public CatalogManager() {
+		catalogs = new HashMap<>();
+
+		catalogs.put(DEFAULT_CATALOG_NAME, new FlinkInMemoryCatalog(DEFAULT_CATALOG_NAME));
+
+		defaultCatalog = DEFAULT_CATALOG_NAME;
+
+		// TODO: may need to create and set a default database
+	}
+
+	/**
+	 * Currently in design doc but not used. May be used in the future when TableEnvironment is initialized with
+	 * multiple catalogs
+	 */
 	public CatalogManager(Map<String, ReadableCatalog> catalogs, String defaultCatalog) {
 		this.catalogs = checkNotNull(catalogs, "catalogs cannot be null");
 
-		checkArgument(StringUtils.isNullOrWhitespaceOnly(defaultCatalog), "defaultCatalog cannot be null or empty");
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(defaultCatalog), "defaultCatalog cannot be null or empty");
 		checkArgument(catalogs.keySet().contains(defaultCatalog), "defaultCatalog must be in catalogs");
 
 		this.defaultCatalog = defaultCatalog;
 	}
 
-	public void registerCatalog(String catalogName, ReadableCatalog catalog, boolean isStreaming) {
-		checkArgument(StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
+	public void registerCatalog(String catalogName, ReadableCatalog catalog, boolean isStreaming) throws CatalogAlreadyExistException {
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
 		checkNotNull(catalog, "catalog cannot be null");
 
 		if (catalogs.containsKey(catalogName)) {
@@ -72,7 +89,7 @@ public class CatalogManager {
 		}
 
 		catalogs.put(catalogName, catalog);
-//		ExternalCatalogSchema.registerCatalog(rootSchema, catalogName, catalog, isStreaming);
+		CatalogCalciteSchema.registerCatalog(rootSchema, catalogName, catalog, isStreaming);
 	}
 
 	public ReadableCatalog getCatalog(String catalogName) throws CatalogNotExistException {
@@ -88,7 +105,7 @@ public class CatalogManager {
 	}
 
 	public void setDefaultCatalog(String catalogName) {
-		checkArgument(StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
 		checkArgument(catalogs.keySet().contains(catalogName),
 			String.format("Cannot find registered catalog %s", catalogName));
 
@@ -99,7 +116,7 @@ public class CatalogManager {
 		return catalogs.get(defaultCatalog);
 	}
 
-	public void setDefaultSchema(String catalogName, String dbName) {
+	public void setDefaultDatabase(String catalogName, String dbName) {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
 		checkArgument(catalogs.containsKey(catalogName),

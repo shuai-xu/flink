@@ -328,7 +328,7 @@ object CommonTestData {
     catalog.createSubCatalog("db2", db2, ignoreIfExists = false)
 
     // Register the table with both catalogs
-    catalog.createTable("tb1", externalCatalogTable1, ignoreIfExists = false)
+//    catalog.createTable("tb1", externalCatalogTable1, ignoreIfExists = false)
     db1.createTable("tb1", externalCatalogTable1, ignoreIfExists = false)
     db2.createTable("tb2", externalCatalogTable2, ignoreIfExists = false)
     catalog
@@ -345,7 +345,6 @@ object CommonTestData {
     properties1.put("path", tempFilePath1)
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
-
     val catalogTable1 = ExternalCatalogTable(
       "csv",
       new TableSchema(

@@ -52,10 +52,13 @@ public class CatalogCalciteSchema implements Schema {
 
 	private final String catalogName;
 	private final ReadableCatalog catalog;
+	// TODO: Currently Blink assumes isStreaming cannot vary from table to table within a catalog. Need to reconsider it
+	private final boolean isStreaming;
 
-	public CatalogCalciteSchema(String catalogName, ReadableCatalog catalog) {
+	public CatalogCalciteSchema(String catalogName, ReadableCatalog catalog, boolean isStreaming) {
 		this.catalogName = catalogName;
 		this.catalog = catalog;
+		this.isStreaming = isStreaming;
 	}
 
 	/**
@@ -69,7 +72,7 @@ public class CatalogCalciteSchema implements Schema {
 	public Schema getSubSchema(String schemaName) {
 		try {
 			CatalogDatabase schema = catalog.getDatabase(schemaName);
-			return new CalciteDatabaseSchema(schemaName, catalog);
+			return new CalciteDatabaseSchema(schemaName, catalog, isStreaming);
 		} catch (DatabaseNotExistException e) {
 			LOGGER.warn(String.format("Schema %s does not exist in catalog %s", schemaName, catalogName));
 			return null;
@@ -131,13 +134,18 @@ public class CatalogCalciteSchema implements Schema {
 		return this;
 	}
 
-	public static void registerCatalog(SchemaPlus parentSchema, String catalogName, ReadableCatalog catalog) {
+	public static void registerCatalog(
+		SchemaPlus parentSchema,
+		String catalogName,
+		ReadableCatalog catalog,
+		boolean isStreaming) {
+
 		SchemaPlus catalogSchema = parentSchema.getSubSchema(catalogName);
 
 		if (catalogSchema != null) {
 			throw new CatalogAlreadyExistException(catalogName);
 		} else {
-			CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog);
+			CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog, isStreaming);
 			SchemaPlus schemaPlusOfNewCatalog = parentSchema.add(catalogName, newCatalog);
 			newCatalog.registerSubSchemas(schemaPlusOfNewCatalog);
 		}
@@ -157,18 +165,19 @@ public class CatalogCalciteSchema implements Schema {
 
 		private final String dbName;
 		private final ReadableCatalog catalog;
+		private final boolean isStreaming;
 
-		public CalciteDatabaseSchema(String dbName, ReadableCatalog catalog) {
+		public CalciteDatabaseSchema(String dbName, ReadableCatalog catalog, boolean isStreaming) {
 			this.dbName = dbName;
 			this.catalog = catalog;
+			this.isStreaming = isStreaming;
 		}
 
 		@Override
 		public Table getTable(String tableName) {
 			try {
 				ExternalCatalogTable table = catalog.getTable(new ObjectPath(dbName, tableName));
-				// TODO: pass in isStreaming which is currently set to false by default
-				return new CatalogTable(tableName, table, false);
+				return new CatalogTable(tableName, table, isStreaming);
 			} catch (TableNotExistException e) {
 				LOGGER.warn(
 					String.format("Table %s.%s does not exist in catalog %s", dbName, tableName, catalogName));

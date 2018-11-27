@@ -37,7 +37,7 @@ import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.types.{BaseRowType, DataType, DataTypes}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.catalog.ExternalCatalog
+import org.apache.flink.table.catalog.{ExternalCatalog, ReadableCatalog}
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
@@ -886,5 +886,9 @@ class BatchTableEnvironment(
 
   override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
     registerExternalCatalogInternal(name, externalCatalog, false)
+  }
+
+  override def registerCatalog(name: String, catalog: ReadableCatalog): Unit = {
+    registerCatalogInternal(name, catalog, false)
   }
 }
