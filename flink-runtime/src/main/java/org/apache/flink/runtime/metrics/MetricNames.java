@@ -27,6 +27,8 @@ public class MetricNames {
 
 	private static final String SUFFIX_RATE = "PerSecond";
 
+	public static final String IO_NUM_TPS = "tps";
+	public static final String IO_NUM_DELAY = "delay";
 	public static final String IO_NUM_RECORDS_IN = "numRecordsIn";
 	public static final String IO_NUM_RECORDS_OUT = "numRecordsOut";
 	public static final String IO_NUM_RECORDS_IN_RATE = IO_NUM_RECORDS_IN + SUFFIX_RATE;
