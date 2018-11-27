@@ -41,6 +41,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
 /**
  * The memory manager governs the memory that Flink uses for sorting, hashing, and caching. Memory
  * is represented in segments of equal size. Operators allocate the memory by requesting a number
@@ -341,7 +343,7 @@ public class MemoryManager {
 		}
 	}
 
-	public void release(MemorySegment segment) {
+	public void release(@Nullable MemorySegment segment) {
 		release(segment, true);
 	}
 
@@ -354,12 +356,13 @@ public class MemoryManager {
 	 *
 	 * @param segment The segment to be released.
 	 * @param isCoreSegment Whether the released segment is core or not.
+	 * @return Whether the segment has been released.
 	 * @throws IllegalArgumentException Thrown, if the given segment is of an incompatible type.
 	 */
-	public void release(MemorySegment segment, boolean isCoreSegment) {
+	public boolean release(@Nullable MemorySegment segment, boolean isCoreSegment) {
 		// check if segment is null or has already been freed
 		if (segment == null || segment.getOwner() == null) {
-			return;
+			return false;
 		}
 
 		final Object owner = segment.getOwner();
@@ -367,7 +370,7 @@ public class MemoryManager {
 		synchronized (lock) {
 			// prevent double return to this memory manager
 			if (segment.isFreed()) {
-				return;
+				return false;
 			}
 			if (isShutDown) {
 				throw new IllegalStateException("Memory manager has been shut down.");
@@ -376,13 +379,17 @@ public class MemoryManager {
 			// remove the reference in the map for the owner
 			AllocatedSegmentsWrapper allocatedSegments = isCoreSegment ?
 				allocatedCoreSegments : allocatedFloatingSegments;
-			allocatedSegments.releaseSegment(owner, segment);
+			boolean hasRemoved = allocatedSegments.removeAllocatedSegments(segment);
 
-			releaseMemorySegment(segment);
+			if (hasRemoved) {
+				releaseMemorySegment(segment);
+			}
+
+			return hasRemoved;
 		}
 	}
 
-	public void release(Collection<MemorySegment> segments) {
+	public void release(@Nullable Collection<MemorySegment> segments) {
 		release(segments, true);
 	}
 
@@ -394,13 +401,17 @@ public class MemoryManager {
 	 *
 	 * @param segments The segments to be released.
 	 * @param isCoreSegment Whether the released segments are core or not.
+	 * @return The list of segments that have not been released.
 	 * @throws NullPointerException Thrown, if the given collection is null.
 	 * @throws IllegalArgumentException Thrown, id the segments are of an incompatible type.
 	 */
-	public void release(Collection<MemorySegment> segments, boolean isCoreSegment) {
+	@Nullable
+	public Collection<MemorySegment> release(@Nullable Collection<MemorySegment> segments, boolean isCoreSegment) {
 		if (segments == null) {
-			return;
+			return null;
 		}
+
+		List<MemorySegment> notReleased = new ArrayList<>();
 
 		synchronized (lock) {
 			if (isShutDown) {
@@ -423,8 +434,13 @@ public class MemoryManager {
 							continue;
 						}
 
-						allocatedSegments.releaseSegment(seg.getOwner(), seg);
-						releaseMemorySegment(seg);
+						boolean hasRemoved = allocatedSegments.removeAllocatedSegments(seg);
+
+						if (hasRemoved) {
+							releaseMemorySegment(seg);
+						} else {
+							notReleased.add(seg);
+						}
 					}
 
 					segments.clear();
@@ -437,6 +453,8 @@ public class MemoryManager {
 				}
 			} while (!successfullyReleased);
 		}
+
+		return notReleased;
 	}
 
 	/**
@@ -454,8 +472,8 @@ public class MemoryManager {
 				throw new IllegalStateException("Memory manager has been shut down.");
 			}
 
-			releaseMemorySegments(allocatedCoreSegments.releaseSegments(owner));
-			releaseMemorySegments(allocatedFloatingSegments.releaseSegments(owner));
+			releaseMemorySegments(allocatedCoreSegments.removeAllocatedSegments(owner));
+			releaseMemorySegments(allocatedFloatingSegments.removeAllocatedSegments(owner));
 		}
 	}
 
@@ -564,30 +582,39 @@ public class MemoryManager {
 		}
 
 		/**
-		 * Releases a segment for the specific memory owner.
+		 * Removes a specific segment from the allocated segments.
 		 *
-		 * @param owner The memory owner.
 		 * @param segment The memory segment to be released.
+		 * @return Whether the segment has been released.
 		 */
-		void releaseSegment(Object owner, MemorySegment segment) {
+		boolean removeAllocatedSegments(MemorySegment segment) {
+			Object owner = checkNotNull(segment.getOwner());
+
 			Set<MemorySegment> segmentsForOwner = allocatedSegments.get(owner);
 			if (segmentsForOwner != null) {
-				segmentsForOwner.remove(segment);
-				if (segmentsForOwner.isEmpty()) {
-					allocatedSegments.remove(owner);
+				boolean hasRemoved = segmentsForOwner.remove(segment);
+
+				if (hasRemoved) {
+					if (segmentsForOwner.isEmpty()) {
+						allocatedSegments.remove(owner);
+					}
+					numAvailablePages++;
 				}
-				numAvailablePages++;
+
+				return hasRemoved;
 			}
+
+			return false;
 		}
 
 		/**
-		 * Releases all the segments for the specific memory owner.
+		 * Releases all the segments for the specific memory owner from the allocated segments.
 		 *
 		 * @param owner The memory owner.
 		 * @return All the memory segments for this owner.
 		 */
 		@Nullable
-		Set<MemorySegment> releaseSegments(Object owner) {
+		Set<MemorySegment> removeAllocatedSegments(Object owner) {
 			Set<MemorySegment> segmentsForOwner = allocatedSegments.remove(owner);
 			if (segmentsForOwner != null) {
 				numAvailablePages += segmentsForOwner.size();

@@ -283,11 +283,13 @@ class LocalBufferPool implements BufferPool {
 			notificationResult = listener.notifyBufferAvailable(new NetworkBuffer(segment, this));
 
 			if (notificationResult.needsMoreBuffers()) {
-				if (isDestroyed) {
-					// cleanup tasks how they would have been done if we only had one synchronized block
-					listener.notifyBufferDestroyed();
-				} else {
-					registeredListeners.add(listener);
+				synchronized (availableMemorySegments) {
+					if (isDestroyed) {
+						// cleanup tasks how they would have been done if we only had one synchronized block
+						listener.notifyBufferDestroyed();
+					} else {
+						registeredListeners.add(listener);
+					}
 				}
 			}
 		}

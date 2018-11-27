@@ -33,9 +33,12 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -135,6 +138,42 @@ public class MemoryManagerTest {
 		allocateTooMuch(false);
 	}
 
+	@Test
+	public void releaseSingleOnlyIfContains() throws Exception {
+		final AbstractInvokable mockInvoke = new DummyInvokable();
+
+		boolean[][] applyCoreAndReleaseCoreTypes = new boolean[][] {
+			{true, true},
+			{true, false},
+			{false, true},
+			{false, false}
+		};
+
+		for (boolean[] applyCoreAndReleaseCore : applyCoreAndReleaseCoreTypes) {
+			int numPages = applyCoreAndReleaseCore[0] ? NUM_CORE_PAGES : floatingMemorySize;
+			if (numPages > 0) {
+				MemorySegment memorySegment = memoryManager.allocatePages(mockInvoke, 1, applyCoreAndReleaseCore[0]).get(0);
+				boolean hasReleased = memoryManager.release(memorySegment, applyCoreAndReleaseCore[1]);
+				assertEquals(applyCoreAndReleaseCore[0] == applyCoreAndReleaseCore[1], hasReleased);
+
+				// Ensure released for passing the memory manager valid check.
+				if (!hasReleased) {
+					memoryManager.release(memorySegment, applyCoreAndReleaseCore[0]);
+				}
+			}
+		}
+	}
+
+	@Test
+	public void releaseMultipleCoreOnlyIfContains() throws Exception {
+		releaseMultipleOnlyIfContains(true);
+	}
+
+	@Test
+	public void releaseMultipleFloatingOnlyIfContains() throws Exception {
+		releaseMultipleOnlyIfContains(false);
+	}
+
 	private void allocateAllSingle(boolean isCore) {
 		final AbstractInvokable mockInvoke = new DummyInvokable();
 		final List<MemorySegment> segments = new ArrayList<>();
@@ -215,6 +254,27 @@ public class MemoryManagerTest {
 			allMemorySegmentsValid(segments));
 
 		this.memoryManager.releaseAll(mockInvoke);
+	}
+
+	private void releaseMultipleOnlyIfContains(boolean releaseCore) throws Exception {
+		final AbstractInvokable mockInvoke = new DummyInvokable();
+
+		List<MemorySegment> coreSegments = memoryManager.allocatePages(mockInvoke, NUM_CORE_PAGES, true);
+		List<MemorySegment> floatingSegments = memoryManager.allocatePages(mockInvoke, numFloatingPages, false);
+
+		List<MemorySegment> allMemorySegments = new ArrayList<>();
+		allMemorySegments.addAll(coreSegments);
+		allMemorySegments.addAll(floatingSegments);
+		Collections.shuffle(allMemorySegments);
+
+		Collection<MemorySegment> notReleased = memoryManager.release(allMemorySegments, releaseCore);
+
+		assertEquals(releaseCore ? numFloatingPages : NUM_CORE_PAGES, notReleased.size());
+		assertEquals(releaseCore ? new HashSet<>(floatingSegments) : new HashSet<>(coreSegments),
+			new HashSet<>(notReleased));
+
+		notReleased = memoryManager.release(notReleased, !releaseCore);
+		assertEquals(0, notReleased.size());
 	}
 
 	private boolean allMemorySegmentsValid(List<MemorySegment> memSegs) {
