@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.rules.datastream
+package org.apache.flink.table.plan.rules.physical.stream
+
+import java.util
 
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
@@ -24,10 +26,11 @@ import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.JoinRelType
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTemporalTableJoin
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecTemporalTableJoin
-import org.apache.flink.table.plan.schema.{BaseRowSchema, RowSchema}
+import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.join.WindowJoinUtil
 
 class StreamExecTemporalTableJoinRule
@@ -54,17 +57,33 @@ class StreamExecTemporalTableJoinRule
   override def convert(rel: RelNode): RelNode = {
     val temporalJoin = rel.asInstanceOf[FlinkLogicalTemporalTableJoin]
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAMEXEC)
-    val left: RelNode = RelOptRule.convert(temporalJoin.getInput(0), FlinkConventions.STREAMEXEC)
-    val right: RelNode = RelOptRule.convert(temporalJoin.getInput(1), FlinkConventions.STREAMEXEC)
     val joinInfo = temporalJoin.analyzeCondition
-    val leftRowSchema = new BaseRowSchema(left.getRowType)
-    val rightRowSchema = new BaseRowSchema(right.getRowType)
+
+    def toHashTraitByColumns(columns: util.Collection[_ <: Number], inputTraitSets: RelTraitSet) = {
+      val distribution = if (columns.size() == 0) {
+        FlinkRelDistribution.SINGLETON
+      } else {
+        FlinkRelDistribution.hash(columns)
+      }
+      inputTraitSets.
+      replace(FlinkConventions.STREAMEXEC).
+      replace(distribution)
+    }
+    val (leftRequiredTrait, rightRequiredTrait) = (
+      toHashTraitByColumns(joinInfo.leftKeys, temporalJoin.getLeft.getTraitSet),
+      toHashTraitByColumns(joinInfo.rightKeys, temporalJoin.getRight.getTraitSet))
+
+    val convLeft: RelNode = RelOptRule.convert(temporalJoin.getInput(0), leftRequiredTrait)
+    val convRight: RelNode = RelOptRule.convert(temporalJoin.getInput(1), rightRequiredTrait)
+
+    val leftRowSchema = new BaseRowSchema(convLeft.getRowType)
+    val rightRowSchema = new BaseRowSchema(convRight.getRowType)
 
     new StreamExecTemporalTableJoin(
       rel.getCluster,
       traitSet,
-      left,
-      right,
+      convLeft,
+      convRight,
       temporalJoin.getCondition,
       joinInfo,
       leftRowSchema,

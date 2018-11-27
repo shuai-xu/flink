@@ -22,14 +22,31 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.JoinInfo
 import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
-import org.apache.calcite.rex.RexNode
-import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.dataformat.BaseRow
+import org.apache.calcite.rex._
+import org.apache.flink.api.common.functions.FlatJoinFunction
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.typeutils.ResultTypeQueryable
+import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
+import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
+import org.apache.flink.table.api.types.BaseRowType
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException, ValidationException}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.calcite.FlinkTypeFactory.{isProctimeIndicatorType, isRowtimeIndicatorType}
+import org.apache.flink.table.codegen.CodeGeneratorContext.DEFAULT_COLLECTOR_TERM
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
+import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin
+import org.apache.flink.table.plan.nodes.calcite.LogicalTemporalTableJoin.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.{JoinUtil, RexDefaultVisitor}
 import org.apache.flink.table.plan.util.JoinUtil.{joinConditionToString, joinSelectionToString, joinTypeToString}
+import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector}
+import org.apache.flink.table.runtime.join.TemporalProcessTimeJoin
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions.checkState
+
+import scala.collection.JavaConversions._
 
 /**
   * RelNode for a stream join with [[org.apache.flink.table.api.functions.TemporalTableFunction]].
@@ -80,6 +97,325 @@ class StreamExecTemporalTableJoin(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment)
   : StreamTransformation[BaseRow] = {
-    throw new NotImplementedError()
+
+    validateKeyTypes()
+
+    val returnType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[JoinedRow])
+
+    val joinTranslator = StreamExecTemporalJoinToCoProcessTranslator.create(
+      this.toString,
+      tableEnv.getConfig,
+      schema.internalType(classOf[GenericRow]),
+      leftSchema,
+      rightSchema,
+      joinInfo,
+      cluster.getRexBuilder)
+
+    val joinOperator = joinTranslator.getJoinOperator(
+      joinType,
+      schema.fieldNames,
+      ruleDescription)
+
+    val leftKeySelector = joinTranslator.getLeftKeySelector()
+    val rightKeySelector = joinTranslator.getRightKeySelector()
+
+    val joinOpName = JoinUtil.joinToString(getRowType, joinCondition, joinType, getExpressionString)
+
+    val leftTransform =
+      left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val rightTransform =
+      right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+
+    val ret = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
+      leftTransform,
+      rightTransform,
+      joinOpName,
+      joinOperator,
+      returnType.asInstanceOf[BaseRowTypeInfo[BaseRow]],
+      tableEnv.execEnv.getParallelism)
+
+    // set KeyType and Selector for state
+    ret.setStateKeySelectors(leftKeySelector, rightKeySelector)
+    ret.setStateKeyType(leftKeySelector.asInstanceOf[ResultTypeQueryable[_]].getProducedType)
+    ret
+  }
+
+  private def validateKeyTypes(): Unit = {
+    // at least one equality expression
+    val leftFields = left.getRowType.getFieldList
+    val rightFields = right.getRowType.getFieldList
+
+    joinInfo.pairs().toList.foreach(pair => {
+      val leftKeyType = leftFields.get(pair.source).getType.getSqlTypeName
+      val rightKeyType = rightFields.get(pair.target).getType.getSqlTypeName
+      // check if keys are compatible
+      if (leftKeyType != rightKeyType) {
+        throw new TableException(
+          "Equality join predicate on incompatible types.\n" +
+            s"\tLeft: $left,\n" +
+            s"\tRight: $right,\n" +
+            s"\tCondition: (${joinConditionToString(
+              schema.relDataType,
+              joinCondition, getExpressionString)})"
+        )
+      }
+    })
+  }
+}
+
+class StreamExecTemporalJoinToCoProcessTranslator private (
+  textualRepresentation: String,
+  config: TableConfig,
+  returnType: BaseRowType,
+  leftSchema: BaseRowSchema,
+  rightSchema: BaseRowSchema,
+  joinInfo: JoinInfo,
+  rexBuilder: RexBuilder,
+  leftTimeAttribute: RexNode,
+  rightTimeAttribute: Option[RexNode],
+  rightPrimaryKeyExpression: RexNode,
+  remainingNonEquiJoinPredicates: RexNode) {
+
+  val nonEquiJoinPredicates: Option[RexNode] = Some(remainingNonEquiJoinPredicates)
+
+  def getLeftKeySelector(): BaseRowKeySelector = {
+    new BinaryRowKeySelector(
+      joinInfo.leftKeys.toIntArray,
+      leftSchema.typeInfo(classOf[BaseRow]))
+  }
+
+  def getRightKeySelector(): BaseRowKeySelector = {
+    new BinaryRowKeySelector(
+      joinInfo.rightKeys.toIntArray,
+      rightSchema.typeInfo(classOf[BaseRow]))
+  }
+
+  def getJoinOperator(
+    joinType: FlinkJoinRelType,
+    returnFieldNames: Seq[String],
+    ruleDescription: String): TwoInputStreamOperator[BaseRow, BaseRow, BaseRow] = {
+
+    val leftType = leftSchema.internalType(classOf[BaseRow])
+    val rightType = rightSchema.internalType(classOf[BaseRow])
+
+    // input must not be nullable, because the runtime join function will make sure
+    // the code-generated function won't process null inputs
+    val ctx = CodeGeneratorContext(config)
+    val exprGenerator = new ExprCodeGenerator(
+      ctx,
+      nullableInput = false,
+      config.getNullCheck)
+      .bindInput(leftType)
+      .bindSecondInput(rightType)
+
+    val conversion = exprGenerator.generateConverterResultExpression(returnType)
+
+    val body = if (nonEquiJoinPredicates.isEmpty) {
+      // only equality condition
+      s"""
+         |${conversion.code}
+         |$DEFAULT_COLLECTOR_TERM.collect(${conversion.resultTerm});
+         |""".stripMargin
+    } else {
+      val condition = exprGenerator.generateExpression(nonEquiJoinPredicates.get)
+      s"""
+         |${condition.code}
+         |if (${condition.resultTerm}) {
+         |  ${conversion.code}
+         |  $DEFAULT_COLLECTOR_TERM.collect(${conversion.resultTerm});
+         |}
+         |""".stripMargin
+    }
+
+    FunctionCodeGenerator
+
+    val genFunction = FunctionCodeGenerator.generateFunction(
+      ctx,
+      ruleDescription,
+      classOf[FlatJoinFunction[BaseRow, BaseRow, BaseRow]],
+      body,
+      returnType,
+      leftType,
+      config,
+      input2Type = Some(rightType))
+      .asInstanceOf[GeneratedFunction[FlatJoinFunction[BaseRow, BaseRow, BaseRow], BaseRow]]
+
+    createJoinOperator(joinType, genFunction)
+  }
+
+  protected def createJoinOperator(
+    joinType: FlinkJoinRelType,
+    joinFunction: GeneratedFunction[FlatJoinFunction[BaseRow, BaseRow, BaseRow], BaseRow])
+  : TwoInputStreamOperator[BaseRow, BaseRow, BaseRow] = {
+
+    if (rightTimeAttribute.isDefined) {
+      throw new ValidationException(
+        s"Currently only proctime temporal joins are supported in [$textualRepresentation]")
+    }
+
+    joinType match {
+      case FlinkJoinRelType.INNER =>
+        new TemporalProcessTimeJoin(
+          leftSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+          rightSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+          joinFunction.name,
+          joinFunction.code)
+      case _ =>
+        throw new ValidationException(
+          s"Only ${FlinkJoinRelType.INNER} temporal join is supported in [$textualRepresentation]")
+    }
+  }
+}
+
+object StreamExecTemporalJoinToCoProcessTranslator {
+  def create(
+    textualRepresentation: String,
+    config: TableConfig,
+    returnType: BaseRowType,
+    leftSchema: BaseRowSchema,
+    rightSchema: BaseRowSchema,
+    joinInfo: JoinInfo,
+    rexBuilder: RexBuilder): StreamExecTemporalJoinToCoProcessTranslator = {
+
+    checkState(
+      !joinInfo.isEqui,
+      "Missing %s in join condition",
+      TEMPORAL_JOIN_CONDITION)
+
+    val nonEquiJoinRex: RexNode = joinInfo.getRemaining(rexBuilder)
+    val temporalJoinConditionExtractor = new TemporalJoinConditionExtractor(
+      textualRepresentation,
+      leftSchema.arity,
+      joinInfo,
+      rexBuilder)
+
+    val remainingNonEquiJoinPredicates = temporalJoinConditionExtractor.apply(nonEquiJoinRex)
+
+    checkState(
+      temporalJoinConditionExtractor.leftTimeAttribute.isDefined &&
+        temporalJoinConditionExtractor.rightPrimaryKeyExpression.isDefined,
+      "Missing %s in join condition",
+      TEMPORAL_JOIN_CONDITION)
+
+    new StreamExecTemporalJoinToCoProcessTranslator(
+      textualRepresentation,
+      config,
+      returnType,
+      leftSchema,
+      rightSchema,
+      joinInfo,
+      rexBuilder,
+      temporalJoinConditionExtractor.leftTimeAttribute.get,
+      temporalJoinConditionExtractor.rightTimeAttribute,
+      temporalJoinConditionExtractor.rightPrimaryKeyExpression.get,
+      remainingNonEquiJoinPredicates)
+  }
+
+  private class TemporalJoinConditionExtractor(
+    textualRepresentation: String,
+    rightKeysStartingOffset: Int,
+    joinInfo: JoinInfo,
+    rexBuilder: RexBuilder)
+
+    extends RexShuttle {
+
+    var leftTimeAttribute: Option[RexNode] = None
+
+    var rightTimeAttribute: Option[RexNode] = None
+
+    var rightPrimaryKeyExpression: Option[RexNode] = None
+
+    override def visitCall(call: RexCall): RexNode = {
+      if (call.getOperator != TEMPORAL_JOIN_CONDITION) {
+        return super.visitCall(call)
+      }
+
+      checkState(
+        leftTimeAttribute.isEmpty
+          && rightPrimaryKeyExpression.isEmpty
+          && rightTimeAttribute.isEmpty,
+        "Multiple %s functions in [%s]",
+        TEMPORAL_JOIN_CONDITION,
+        textualRepresentation)
+
+      if (LogicalTemporalTableJoin.isRowtimeCall(call)) {
+        leftTimeAttribute = Some(call.getOperands.get(0))
+        rightTimeAttribute = Some(call.getOperands.get(1))
+
+        rightPrimaryKeyExpression = Some(validateRightPrimaryKey(call.getOperands.get(2)))
+
+        if (!isRowtimeIndicatorType(rightTimeAttribute.get.getType)) {
+          throw new ValidationException(
+            s"Non rowtime timeAttribute [${rightTimeAttribute.get.getType}] " +
+              s"used to create TemporalTableFunction")
+        }
+        if (!isRowtimeIndicatorType(leftTimeAttribute.get.getType)) {
+          throw new ValidationException(
+            s"Non rowtime timeAttribute [${leftTimeAttribute.get.getType}] " +
+              s"passed as the argument to TemporalTableFunction")
+        }
+
+        throw new TableException("Event time temporal joins are not yet supported.")
+      }
+      else if (LogicalTemporalTableJoin.isProctimeCall(call)) {
+        leftTimeAttribute = Some(call.getOperands.get(0))
+        rightPrimaryKeyExpression = Some(validateRightPrimaryKey(call.getOperands.get(1)))
+
+        if (!isProctimeIndicatorType(leftTimeAttribute.get.getType)) {
+          throw new ValidationException(
+            s"Non processing timeAttribute [${leftTimeAttribute.get.getType}] " +
+              s"passed as the argument to TemporalTableFunction")
+        }
+      }
+      else {
+        throw new IllegalStateException(
+          s"Unsupported invocation $call in [$textualRepresentation]")
+      }
+      rexBuilder.makeLiteral(true)
+    }
+
+    private def validateRightPrimaryKey(rightPrimaryKey: RexNode): RexNode = {
+      if (joinInfo.rightKeys.size() != 1) {
+        throw new ValidationException(
+          s"Only single column join key is supported. " +
+            s"Found ${joinInfo.rightKeys} in [$textualRepresentation]")
+      }
+      val rightKey = joinInfo.rightKeys.get(0) + rightKeysStartingOffset
+
+      val primaryKeyVisitor = new PrimaryKeyVisitor(textualRepresentation)
+      rightPrimaryKey.accept(primaryKeyVisitor)
+
+      primaryKeyVisitor.inputReference match {
+        case None =>
+          throw new IllegalStateException(
+            s"Failed to find primary key reference in [$textualRepresentation]")
+        case Some(primaryKeyInputReference) if primaryKeyInputReference != rightKey =>
+          throw new ValidationException(
+            s"Join key [$rightKey] must be the same as " +
+              s"temporal table's primary key [$primaryKeyInputReference] " +
+              s"in [$textualRepresentation]")
+        case _ =>
+          rightPrimaryKey
+      }
+    }
+  }
+
+  /**
+    * Extracts input references from primary key expression.
+    */
+  private class PrimaryKeyVisitor(textualRepresentation: String)
+    extends RexDefaultVisitor[RexNode] {
+
+    var inputReference: Option[Int] = None
+
+    override def visitInputRef(inputRef: RexInputRef): RexNode = {
+      inputReference = Some(inputRef.getIndex)
+      inputRef
+    }
+
+    override def visitNode(rexNode: RexNode): RexNode = {
+      throw new ValidationException(
+        s"Unsupported right primary key expression [$rexNode] in [$textualRepresentation]")
+    }
   }
 }

@@ -23,7 +23,7 @@ import java.util.Collections
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core._
-import org.apache.calcite.rex.{RexBuilder, RexNode}
+import org.apache.calcite.rex.{RexBuilder, RexCall, RexNode}
 import org.apache.calcite.sql.`type`.{OperandTypes, ReturnTypes}
 import org.apache.calcite.sql.{SqlFunction, SqlFunctionCategory, SqlKind}
 import org.apache.flink.util.Preconditions.checkArgument
@@ -102,6 +102,39 @@ object LogicalTemporalTableJoin {
         OperandTypes.ANY)),
     SqlFunctionCategory.SYSTEM)
 
+
+  def isRowtimeCall(call: RexCall): Boolean = {
+    checkArgument(call.getOperator == TEMPORAL_JOIN_CONDITION)
+    call.getOperands.size() == 3
+  }
+
+  def isProctimeCall(call: RexCall): Boolean = {
+    checkArgument(call.getOperator == TEMPORAL_JOIN_CONDITION)
+    call.getOperands.size() == 2
+  }
+
+  def makeRowTimeTemporalJoinConditionCall(
+    rexBuilder: RexBuilder,
+    leftTimeAttribute: RexNode,
+    rightTimeAttribute: RexNode,
+    rightPrimaryKeyExpression: RexNode): RexNode = {
+    rexBuilder.makeCall(
+      TEMPORAL_JOIN_CONDITION,
+      leftTimeAttribute,
+      rightTimeAttribute,
+      rightPrimaryKeyExpression)
+  }
+
+  def makeProcTimeTemporalJoinConditionCall(
+    rexBuilder: RexBuilder,
+    leftTimeAttribute: RexNode,
+    rightPrimaryKeyExpression: RexNode): RexNode = {
+    rexBuilder.makeCall(
+      TEMPORAL_JOIN_CONDITION,
+      leftTimeAttribute,
+      rightPrimaryKeyExpression)
+  }
+
   /**
     * See [[LogicalTemporalTableJoin]]
     */
@@ -120,8 +153,8 @@ object LogicalTemporalTableJoin {
       traitSet,
       left,
       right,
-      rexBuilder.makeCall(
-        TEMPORAL_JOIN_CONDITION,
+      makeRowTimeTemporalJoinConditionCall(
+        rexBuilder,
         leftTimeAttribute,
         rightTimeAttribute,
         rightPrimaryKeyExpression))
@@ -149,8 +182,8 @@ object LogicalTemporalTableJoin {
       traitSet,
       left,
       right,
-      rexBuilder.makeCall(
-        TEMPORAL_JOIN_CONDITION,
+      makeProcTimeTemporalJoinConditionCall(
+        rexBuilder,
         leftTimeAttribute,
         rightPrimaryKeyExpression))
   }

@@ -23,10 +23,9 @@ import org.apache.calcite.rel.logical.{LogicalIntersect, LogicalMinus, LogicalUn
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.table.plan.nodes.logical._
-import org.apache.flink.table.plan.rules.datastream.StreamExecTemporalTableJoinRule
 import org.apache.flink.table.plan.rules.logical._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
-import org.apache.flink.table.plan.rules.physical.stream._
+import org.apache.flink.table.plan.rules.physical.stream.{StreamExecTemporalTableJoinRule, _}
 
 import scala.collection.JavaConverters._
 

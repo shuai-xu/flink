@@ -23,7 +23,7 @@ import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala.StreamTableEnvironment
 import org.apache.flink.test.util.AbstractTestBase
 import org.junit.{Before, Rule}
-import org.junit.rules.TemporaryFolder
+import org.junit.rules.{ExpectedException, TemporaryFolder}
 
 class StreamingTestBase extends AbstractTestBase {
 
@@ -31,6 +31,11 @@ class StreamingTestBase extends AbstractTestBase {
   var tEnv: StreamTableEnvironment = _
   val _tempFolder = new TemporaryFolder
   var enableObjectReuse = true
+  // used for accurate exception information checking.
+  val expectedException = ExpectedException.none()
+
+  @Rule
+  def thrown: ExpectedException = expectedException
 
   @Rule
   def tempFolder: TemporaryFolder = _tempFolder

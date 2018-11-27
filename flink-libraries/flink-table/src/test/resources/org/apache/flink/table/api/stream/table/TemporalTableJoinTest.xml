@@ -21,8 +21,10 @@ limitations under the License.
       <![CDATA[
 StreamExecCalc(select=[*(o_amount, rate) AS rate])
   StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_rowtime, currency, rate, rowtime], joinType=[InnerJoin])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+    StreamExecExchange(distribution=[hash[o_currency]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecExchange(distribution=[hash[currency]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
@@ -33,10 +35,12 @@ StreamExecJoin(where=[=(t3_secondary_key, secondary_key)], join=[rate, secondary
   StreamExecExchange(distribution=[hash[secondary_key]])
     StreamExecCalc(select=[*(o_amount, rate) AS rate, secondary_key])
       StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), OR(=(currency, o_currency), =(secondary_key, o_secondary_key)))], join=[o_rowtime, o_amount, o_currency, o_secondary_key, rowtime, currency, rate, secondary_key], joinType=[InnerJoin])
-        StreamExecCalc(select=[o_rowtime, o_amount, o_currency, o_secondary_key])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
-        StreamExecCalc(select=[rowtime, currency, rate, secondary_key])
-          StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+        StreamExecExchange(distribution=[single])
+          StreamExecCalc(select=[o_rowtime, o_amount, o_currency, o_secondary_key])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+        StreamExecExchange(distribution=[single])
+          StreamExecCalc(select=[rowtime, currency, rate, secondary_key])
+            StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
   StreamExecExchange(distribution=[hash[t3_secondary_key]])
     StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 ]]>
@@ -47,9 +51,11 @@ StreamExecJoin(where=[=(t3_secondary_key, secondary_key)], join=[rate, secondary
       <![CDATA[
 StreamExecCalc(select=[*(o_amount, rate) AS rate])
   StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_proctime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_proctime, currency, rate], joinType=[InnerJoin])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
-    StreamExecCalc(select=[currency, rate])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
+    StreamExecExchange(distribution=[hash[o_currency]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+    StreamExecExchange(distribution=[hash[currency]])
+      StreamExecCalc(select=[currency, rate])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_3]])
 ]]>
     </Resource>
   </TestCase>
@@ -58,9 +64,11 @@ StreamExecCalc(select=[*(o_amount, rate) AS rate])
       <![CDATA[
 StreamExecCalc(select=[*(o_amount, rate) AS rate])
   StreamExecTemporalTableJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(o_rowtime, rowtime, currency), =(currency, o_currency))], join=[o_amount, o_currency, o_rowtime, currency, rate, rowtime], joinType=[InnerJoin])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
-    StreamExecCalc(select=[currency, *(rate, 2) AS rate, rowtime], where=[>(rate, 100)])
-      StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+    StreamExecExchange(distribution=[hash[o_currency]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+    StreamExecExchange(distribution=[hash[currency]])
+      StreamExecCalc(select=[currency, *(rate, 2) AS rate, rowtime], where=[>(rate, 100)])
+        StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
 ]]>
     </Resource>
   </TestCase>
