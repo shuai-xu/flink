@@ -70,7 +70,12 @@ public class WatermarkAssignerOperator
 
 	@Override
 	public void processElement(StreamRecord<BaseRow> element) throws Exception {
-		long ts = element.getValue().getLong(rowtimeIndex);
+		BaseRow row = element.getValue();
+		if (row.isNullAt(rowtimeIndex)) {
+			throw new RuntimeException("RowTime field should not be null," +
+					" please convert it to a non-null long value.");
+		}
+		long ts = row.getLong(rowtimeIndex);
 		currentMaxTimestamp = Math.max(currentMaxTimestamp, ts);
 		// forward element
 		output.collect(element);
