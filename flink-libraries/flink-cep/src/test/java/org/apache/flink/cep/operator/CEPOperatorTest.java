@@ -19,7 +19,6 @@
 package org.apache.flink.cep.operator;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -36,6 +35,7 @@ import org.apache.flink.cep.pattern.conditions.IterativeCondition;
 import org.apache.flink.cep.pattern.conditions.SimpleCondition;
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.time.Time;
@@ -56,6 +56,7 @@ import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -463,8 +464,9 @@ public class CEPOperatorTest extends TestLogger {
 		try {
 			harness.open();
 
-			final ValueState nfaOperatorState = (ValueState) Whitebox.<ValueState>getInternalState(operator, "computationStates");
-			final ValueState nfaOperatorStateSpy = Mockito.spy(nfaOperatorState);
+			final KeyedValueState nfaOperatorState =
+				(KeyedValueState) Whitebox.<KeyedValueState>getInternalState(operator, "computationStates");
+			final KeyedValueState nfaOperatorStateSpy = Mockito.spy(new KeyedValueStateWrapper(nfaOperatorState));
 			Whitebox.setInternalState(operator, "computationStates", nfaOperatorStateSpy);
 
 			Event startEvent = new Event(42, "c", 1.0);
@@ -477,7 +479,7 @@ public class CEPOperatorTest extends TestLogger {
 			harness.processElement(new StreamRecord<>(endEvent, 4L));
 
 			// verify the number of invocations NFA is updated
-			Mockito.verify(nfaOperatorStateSpy, Mockito.times(3)).update(Mockito.any());
+			Mockito.verify(nfaOperatorStateSpy, Mockito.times(3)).put(Mockito.any(), Mockito.any());
 
 			// get and verify the output
 			Queue<Object> result = harness.getOutput();
@@ -508,8 +510,9 @@ public class CEPOperatorTest extends TestLogger {
 
 			harness.open();
 
-			final ValueState nfaOperatorState = (ValueState) Whitebox.<ValueState>getInternalState(operator, "computationStates");
-			final ValueState nfaOperatorStateSpy = Mockito.spy(nfaOperatorState);
+			final KeyedValueState nfaOperatorState =
+				(KeyedValueState) Whitebox.<KeyedValueState>getInternalState(operator, "computationStates");
+			final KeyedValueState nfaOperatorStateSpy = Mockito.spy(new KeyedValueStateWrapper(nfaOperatorState));
 			Whitebox.setInternalState(operator, "computationStates", nfaOperatorStateSpy);
 
 			Event startEvent = new Event(42, "c", 1.0);
@@ -522,7 +525,7 @@ public class CEPOperatorTest extends TestLogger {
 			harness.processElement(new StreamRecord<>(endEvent, 4L));
 
 			// verify the number of invocations NFA is updated
-			Mockito.verify(nfaOperatorStateSpy, Mockito.times(3)).update(Mockito.any());
+			Mockito.verify(nfaOperatorStateSpy, Mockito.times(3)).put(Mockito.any(), Mockito.any());
 
 			// get and verify the output
 			Queue<Object> result = harness.getOutput();
@@ -1321,6 +1324,74 @@ public class CEPOperatorTest extends TestLogger {
 			}).within(Time.milliseconds(10L));
 
 			return NFACompiler.compileFactory(pattern, handleTimeout).createNFA();
+		}
+	}
+
+	private static class KeyedValueStateWrapper implements KeyedValueState {
+		private final KeyedValueState keyedValueState;
+
+		public KeyedValueStateWrapper(KeyedValueState keyedValueState) {
+			this.keyedValueState = keyedValueState;
+		}
+
+		@Override
+		public boolean contains(Object key) {
+			return keyedValueState.contains(key);
+		}
+
+		@Override
+		public Object get(Object key) {
+			return keyedValueState.get(key);
+		}
+
+		@Override
+		public Object getOrDefault(Object key, Object defaultValue) {
+			return keyedValueState.getOrDefault(key, defaultValue);
+		}
+
+		@Override
+		public Map getAll(Collection keys) {
+			return keyedValueState.getAll(keys);
+		}
+
+		@Override
+		public void remove(Object key) {
+			keyedValueState.remove(key);
+		}
+
+		@Override
+		public void removeAll(Collection keys) {
+			keyedValueState.removeAll(keys);
+		}
+
+		@Override
+		public Map getAll() {
+			return keyedValueState.getAll();
+		}
+
+		@Override
+		public void removeAll() {
+			keyedValueState.removeAll();
+		}
+
+		@Override
+		public Iterable keys() {
+			return keyedValueState.keys();
+		}
+
+		@Override
+		public byte[] getSerializedValue(byte[] serializedKey) throws Exception {
+			return keyedValueState.getSerializedValue(serializedKey);
+		}
+
+		@Override
+		public void put(Object key, Object value) {
+			keyedValueState.put(key, value);
+		}
+
+		@Override
+		public void putAll(Map pairs) {
+			keyedValueState.putAll(pairs);
 		}
 	}
 }

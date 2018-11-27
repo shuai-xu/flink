@@ -20,8 +20,6 @@ package org.apache.flink.cep.operator;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.functions.Function;
-import org.apache.flink.api.common.state.MapState;
-import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -41,6 +39,10 @@ import org.apache.flink.runtime.state.KeyedStateFunction;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.keyed.KeyedMapState;
+import org.apache.flink.runtime.state.keyed.KeyedMapStateDescriptor;
+import org.apache.flink.runtime.state.keyed.KeyedValueState;
+import org.apache.flink.runtime.state.keyed.KeyedValueStateDescriptor;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.InternalTimer;
 import org.apache.flink.streaming.api.operators.InternalTimerService;
@@ -86,8 +88,8 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 
 	private final NFACompiler.NFAFactory<IN> nfaFactory;
 
-	private transient ValueState<NFAState> computationStates;
-	private transient MapState<Long, List<IN>> elementQueueState;
+	private transient KeyedValueState<KEY, NFAState> computationStates;
+	private transient KeyedMapState<KEY, Long, List<IN>> elementQueueState;
 	private transient SharedBuffer<IN> partialMatches;
 
 	private transient InternalTimerService<VoidNamespace> timerService;
@@ -138,16 +140,18 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		super.initializeState(context);
 
 		// initializeState through the provided context
-		computationStates = context.getKeyedStateStore().getState(
-				new ValueStateDescriptor<>(
+		computationStates = getKeyedState(
+				new KeyedValueStateDescriptor<>(
 						NFA_STATE_NAME,
+						(TypeSerializer<KEY>) getKeySerializer(),
 						NFAStateSerializer.INSTANCE));
 
 		partialMatches = new SharedBuffer<>(context.getKeyedStateStore(), inputSerializer);
 
-		elementQueueState = context.getKeyedStateStore().getMapState(
-				new MapStateDescriptor<>(
+		elementQueueState = getKeyedState(
+				new KeyedMapStateDescriptor<>(
 						EVENT_QUEUE_STATE_NAME,
+						(TypeSerializer<KEY>) getKeySerializer(),
 						LongSerializer.INSTANCE,
 						new ListSerializer<>(inputSerializer)));
 
@@ -166,7 +170,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 				@Override
 				public void process(Object key, ValueState<MigratedNFA<IN>> state) throws Exception {
 					MigratedNFA<IN> oldState = state.value();
-					computationStates.update(new NFAState(oldState.getComputationStates()));
+					computationStates.put((KEY) key, new NFAState(oldState.getComputationStates()));
 					org.apache.flink.cep.nfa.SharedBuffer<IN> sharedBuffer = oldState.getSharedBuffer();
 					partialMatches.init(sharedBuffer.getEventsBuffer(), sharedBuffer.getPages());
 					state.clear();
@@ -243,7 +247,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 	}
 
 	private void bufferEvent(IN event, long currentTime) throws Exception {
-		List<IN> elementsForTimestamp =  elementQueueState.get(currentTime);
+		List<IN> elementsForTimestamp =  elementQueueState.get((KEY) getCurrentKey(), currentTime);
 		if (elementsForTimestamp == null) {
 			elementsForTimestamp = new ArrayList<>();
 		}
@@ -254,7 +258,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		} else {
 			elementsForTimestamp.add(event);
 		}
-		elementQueueState.put(currentTime, elementsForTimestamp);
+		elementQueueState.add((KEY) getCurrentKey(), currentTime, elementsForTimestamp);
 	}
 
 	@Override
@@ -275,7 +279,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		// STEP 2
 		while (!sortedTimestamps.isEmpty() && sortedTimestamps.peek() <= timerService.currentWatermark()) {
 			long timestamp = sortedTimestamps.poll();
-			List<IN> elements = elementQueueState.get(timestamp);
+			List<IN> elements = elementQueueState.get((KEY) getCurrentKey(), timestamp);
 			if (elements != null) {
 				advanceTime(nfaState, timestamp);
 				try (Stream<IN> sortedElements = sort(elements)) {
@@ -296,7 +300,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 								"avoid this.";
 				LOG.warn(message);
 			}
-			elementQueueState.remove(timestamp);
+			elementQueueState.remove((KEY) getCurrentKey(), timestamp);
 		}
 
 		// STEP 3
@@ -328,7 +332,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 		// STEP 2
 		while (!sortedTimestamps.isEmpty()) {
 			long timestamp = sortedTimestamps.poll();
-			List<IN> elements = elementQueueState.get(timestamp);
+			List<IN> elements = elementQueueState.get((KEY) getCurrentKey(), timestamp);
 			if (elements != null) {
 				advanceTime(nfa, timestamp);
 				try (Stream<IN> sortedElements = sort(elements)) {
@@ -348,7 +352,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 								"avoid this.";
 				LOG.warn(message);
 			}
-			elementQueueState.remove(timestamp);
+			elementQueueState.remove((KEY) getCurrentKey(), timestamp);
 		}
 
 		// STEP 3
@@ -365,20 +369,20 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 	}
 
 	private NFAState getNFAState() throws IOException {
-		NFAState nfaState = computationStates.value();
+		NFAState nfaState = computationStates.get((KEY) getCurrentKey());
 		return nfaState != null ? nfaState : nfa.createInitialNFAState();
 	}
 
 	private void updateNFA(NFAState nfaState) throws IOException {
 		if (nfaState.isStateChanged()) {
 			nfaState.resetStateChanged();
-			computationStates.update(nfaState);
+			computationStates.put((KEY) getCurrentKey(), nfaState);
 		}
 	}
 
 	private PriorityQueue<Long> getSortedTimestamps() throws Exception {
 		PriorityQueue<Long> sortedTimestamps = new PriorityQueue<>();
-		for (Long timestamp : elementQueueState.keys()) {
+		for (Long timestamp : elementQueueState.mapKeys((KEY) getCurrentKey())) {
 			sortedTimestamps.offer(timestamp);
 		}
 		return sortedTimestamps;
@@ -430,14 +434,14 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT, F extends Fu
 	@VisibleForTesting
 	public boolean hasNonEmptyPQ(KEY key) throws Exception {
 		setCurrentKey(key);
-		return elementQueueState.keys().iterator().hasNext();
+		return elementQueueState.mapKeys(key).iterator().hasNext();
 	}
 
 	@VisibleForTesting
 	public int getPQSize(KEY key) throws Exception {
 		setCurrentKey(key);
 		int counter = 0;
-		for (List<IN> elements: elementQueueState.values()) {
+		for (List<IN> elements: elementQueueState.mapValues(key)) {
 			counter += elements.size();
 		}
 		return counter;
