@@ -199,7 +199,7 @@ public final class IOMetricsInfo {
 			recordsWritten == that.recordsWritten &&
 			recordsWrittenComplete == that.recordsWrittenComplete &&
 			bufferInPoolUsageMax == that.bufferInPoolUsageMax &&
-			bufferInPoolUsageMaxComplete == that.bufferOutPoolUsageMaxComplete &&
+			bufferInPoolUsageMaxComplete == that.bufferInPoolUsageMaxComplete &&
 			bufferOutPoolUsageMax == that.bufferOutPoolUsageMax &&
 			bufferOutPoolUsageMaxComplete == that.bufferOutPoolUsageMaxComplete;
 	}
