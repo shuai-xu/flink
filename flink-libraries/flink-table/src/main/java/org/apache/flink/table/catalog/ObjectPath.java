@@ -80,4 +80,12 @@ public class ObjectPath {
 	public int hashCode() {
 		return Objects.hash(schemaName, objectName);
 	}
+
+	@Override
+	public String toString() {
+		return "ObjectPath{" +
+			"schemaName='" + schemaName + '\'' +
+			", objectName='" + objectName + '\'' +
+			'}';
+	}
 }

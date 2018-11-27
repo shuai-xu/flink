@@ -45,8 +45,8 @@ public interface ReadableCatalog extends Closeable {
 	/**
 	 * Gets a database from this catalog.
 	 *
-	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
 	 * @return The requested database.
+	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
 	 */
 	CatalogDatabase getDatabase(String dbName) throws DatabaseNotExistException;
 
@@ -54,8 +54,9 @@ public interface ReadableCatalog extends Closeable {
 	 * Gets the names of all tables registered in this database. An empty list is returned if non match.
 	 *
 	 * @return A list of the names of all registered tables in this database.
+	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
 	 */
-	List<ObjectPath> listTablesByDatabase(String dbName);
+	List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException;
 
 	/**
 	 * Gets the names of all tables registered in all databases of the catalog. An empty list is returned if non match.

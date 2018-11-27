@@ -108,8 +108,12 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public List<ObjectPath> listTablesByDatabase(String dbName) {
+	public List<ObjectPath> listTablesByDatabase(String dbName) throws DatabaseNotExistException {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
+
+		if (!databases.containsKey(dbName)) {
+			throw new DatabaseNotExistException(catalogName, dbName);
+		}
 
 		return tables.keySet().stream()
 			.filter(k -> k.getSchemaName().equals(dbName))
@@ -174,12 +178,12 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	@Override
 	public CatalogDatabase getDatabase(String dbName) throws DatabaseNotExistException {
-		CatalogDatabase schema = databases.get(dbName);
+		CatalogDatabase database = databases.get(dbName);
 
-		if (schema == null) {
+		if (database == null) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} else {
-			return schema;
+			return database;
 		}
 	}
 }
