@@ -165,6 +165,11 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
 	}
 
 	@Override
+	public CompletableFuture<Tuple2<String, Long>> requestJmx(Time timeout) {
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException());
+	}
+
+	@Override
 	public String getAddress() {
 		return address;
 	}

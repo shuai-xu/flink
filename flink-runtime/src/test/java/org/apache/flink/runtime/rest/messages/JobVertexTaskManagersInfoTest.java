@@ -57,6 +57,10 @@ public class JobVertexTaskManagersInfoTest extends RestResponseMarshallingTestBa
 			random.nextFloat(),
 			random.nextBoolean(),
 			random.nextFloat(),
+			random.nextBoolean(),
+			Math.abs(random.nextLong()),
+			random.nextBoolean(),
+			Math.abs(random.nextLong()),
 			random.nextBoolean());
 		int count = 100;
 		for (ExecutionState executionState : ExecutionState.values()) {

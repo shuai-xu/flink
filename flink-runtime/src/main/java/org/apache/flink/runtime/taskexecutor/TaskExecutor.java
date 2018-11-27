@@ -115,6 +115,8 @@ import org.apache.flink.util.FlinkException;
 
 import org.apache.flink.shaded.guava18.com.google.common.io.ByteStreams;
 
+import org.apache.commons.io.IOUtils;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -919,6 +921,36 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			return CompletableFuture.completedFuture(logsWithLength);
 		}
 		return FutureUtils.completedExceptionally(new FlinkException("There is no log file available on the TaskExecutor."));
+	}
+
+	@Override
+	public CompletableFuture<Tuple2<String, Long>> requestJmx(Time timeout) {
+		final File logFile = new File(taskManagerConfiguration.getTaskManagerLogPath());
+		try {
+			FileOffsetRange fileOffsetRange = new FileOffsetRange(0, 1048576);
+			fileOffsetRange = fileOffsetRange.normalize(logFile.length());
+			final RandomAccessFile randomAccessFile = new RandomAccessFile(logFile, "r");
+			try (InputStream logFileInputStream =
+				ByteStreams.limit(
+					Channels.newInputStream(randomAccessFile.getChannel().position(fileOffsetRange.getStart())),
+					fileOffsetRange.getSize())) {
+				String info = IOUtils.toString(logFileInputStream);
+				String[] arr = info.split("\\n");
+				Long jmxPort = -1L;
+				for (String s : arr) {
+					if (s.contains("Started JMX server on port")) {
+						String[] tmp = s.split(" ");
+						String jmxPortStr = tmp[tmp.length - 1].substring(0, tmp[tmp.length - 1].length() - 1);
+						jmxPort = Long.valueOf(jmxPortStr);
+						break;
+					}
+				}
+				return CompletableFuture.completedFuture(Tuple2.of(this.getHostname(), jmxPort));
+			}
+		} catch (Exception e) {
+			log.error("Could not read file {}.", taskManagerConfiguration.getTaskManagerLogPath(), e);
+			return FutureUtils.completedExceptionally(e);
+		}
 	}
 
 	// ----------------------------------------------------------------------

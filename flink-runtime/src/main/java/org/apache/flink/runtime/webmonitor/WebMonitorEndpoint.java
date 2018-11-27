@@ -80,6 +80,7 @@ import org.apache.flink.runtime.rest.handler.legacy.files.StdoutFileHandlerSpeci
 import org.apache.flink.runtime.rest.handler.legacy.files.WebContentHandlerSpecification;
 import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricFetcher;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerDetailsHandler;
+import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerJMXHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerLogFileHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerLogFileRangeHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerLogsHandler;
@@ -116,6 +117,7 @@ import org.apache.flink.runtime.rest.messages.job.SubtaskCurrentAttemptDetailsHe
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptAccumulatorsHeaders;
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptDetailsHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerDetailsHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerJMXHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerLogFileHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerLogFileRangeHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerLogsHeaders;
@@ -349,6 +351,14 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			TaskManagerDetailsHeaders.getInstance(),
 			resourceManagerRetriever,
 			metricFetcher);
+
+		TaskManagerJMXHandler taskManagerJMXHandler = new TaskManagerJMXHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			TaskManagerJMXHeaders.getInstance(),
+			resourceManagerRetriever);
 
 		final JobDetailsHandler jobDetailsHandler = new JobDetailsHandler(
 			restAddressFuture,
@@ -623,6 +633,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(jobAccumulatorsHandler.getMessageHeaders(), jobAccumulatorsHandler));
 		handlers.add(Tuple2.of(taskManagersHandler.getMessageHeaders(), taskManagersHandler));
 		handlers.add(Tuple2.of(taskManagerDetailsHandler.getMessageHeaders(), taskManagerDetailsHandler));
+		handlers.add(Tuple2.of(taskManagerJMXHandler.getMessageHeaders(), taskManagerJMXHandler));
 		handlers.add(Tuple2.of(subtasksTimesHandler.getMessageHeaders(), subtasksTimesHandler));
 		handlers.add(Tuple2.of(jobVertexMetricsHandler.getMessageHeaders(), jobVertexMetricsHandler));
 		handlers.add(Tuple2.of(jobVerticesInfoHandler.getMessageHeaders(), jobVerticesInfoHandler));

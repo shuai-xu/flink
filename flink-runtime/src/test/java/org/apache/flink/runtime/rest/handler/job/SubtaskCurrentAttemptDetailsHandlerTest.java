@@ -161,6 +161,10 @@ public class SubtaskCurrentAttemptDetailsHandlerTest extends TestLogger {
 			0.0f,
 			true,
 			0.0f,
+			true,
+			0L,
+			true,
+			0L,
 			true
 		);
 

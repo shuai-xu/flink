@@ -240,11 +240,19 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 	CompletableFuture<TransientBlobKey> requestTaskManagerFileUpload(ResourceID taskManagerId, String filename, FileOffsetRange fileOffsetRange, @RpcTimeout Time timeout);
 
 	/**
-	 * Request log list from from the given {@link TaskExecutor}
-	 *
+	 * Request log list from the given {@link TaskExecutor}.
 	 * @param taskManagerId identifying the {@link TaskExecutor} to get log list from
 	 * @param timeout for the asynchronous operation
 	 * @return Future which is completed with the historical log list
 	 */
 	CompletableFuture<Collection<Tuple2<String, Long>>> requestTaskManagerLogList(ResourceID taskManagerId, @RpcTimeout Time timeout);
+
+	/**
+	 * Request jmx port from from the given {@link TaskExecutor}.
+	 * @param taskManagerId
+	 * @param timeout
+	 * @return
+	 */
+	CompletableFuture<Tuple2<String, Long>> requestJmx(ResourceID taskManagerId, @RpcTimeout Time timeout);
+
 }

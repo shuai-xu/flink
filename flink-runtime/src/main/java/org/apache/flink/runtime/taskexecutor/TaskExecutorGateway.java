@@ -40,10 +40,11 @@ import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.runtime.util.FileOffsetRange;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.Nullable;
 
 /**
  * {@link TaskExecutor} RPC gateway interface.
@@ -216,4 +217,11 @@ public interface TaskExecutorGateway extends RpcGateway {
 	 * @return A String Array with all historical log file names
 	 */
 	CompletableFuture<Collection<Tuple2<String, Long>>> requestLogList(@RpcTimeout Time timeout);
+
+	/**
+	 * Requests taskmanager jmx port from log file.
+	 * @param timeout
+	 * @return
+	 */
+	CompletableFuture<Tuple2<String, Long>> requestJmx(@RpcTimeout Time timeout);
 }

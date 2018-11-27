@@ -334,6 +334,11 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 	}
 
 	@Override
+	public CompletableFuture<Tuple2<String, Long>> requestJmx(ResourceID taskManagerId, Time timeout) {
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException("Not yet implemented"));
+	}
+
+	@Override
 	public ResourceManagerId getFencingToken() {
 		return resourceManagerId;
 	}

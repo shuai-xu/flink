@@ -54,6 +54,14 @@ public final class IOMetricsInfo {
 
 	private static final String FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE = "buffers-out-pool-usage-max-complete";
 
+	private static final String FIELD_NAME_TPS = "tps";
+
+	private static final String FIELD_NAME_TPS_COMPLETE = "tps-complete";
+
+	private static final String FIELD_NAME_DELAY = "delay";
+
+	private static final String FIELD_NAME_DELAY_COMPLETE = "delay-complete";
+
 	@JsonProperty(FIELD_NAME_BYTES_READ)
 	private final long bytesRead;
 
@@ -90,6 +98,18 @@ public final class IOMetricsInfo {
 	@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE)
 	private final boolean bufferOutPoolUsageMaxComplete;
 
+	@JsonProperty(FIELD_NAME_TPS)
+	private final long tps;
+
+	@JsonProperty(FIELD_NAME_TPS_COMPLETE)
+	private final boolean tpsComplete;
+
+	@JsonProperty(FIELD_NAME_DELAY)
+	private final long delay;
+
+	@JsonProperty(FIELD_NAME_DELAY_COMPLETE)
+	private final boolean delayComplete;
+
 	@JsonCreator
 	public IOMetricsInfo(
 			@JsonProperty(FIELD_NAME_BYTES_READ) long bytesRead,
@@ -103,7 +123,11 @@ public final class IOMetricsInfo {
 			@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX) float bufferInPoolUsageMax,
 			@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX_COMPLETE) boolean bufferInPoolUsageMaxComplete,
 			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX) float bufferOutPoolUsageMax,
-			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE) boolean bufferOutPoolUsageMaxComplete) {
+			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE) boolean bufferOutPoolUsageMaxComplete,
+			@JsonProperty(FIELD_NAME_TPS) long tps,
+			@JsonProperty(FIELD_NAME_TPS_COMPLETE) boolean tpsComplete,
+			@JsonProperty(FIELD_NAME_DELAY) long delay,
+			@JsonProperty(FIELD_NAME_DELAY_COMPLETE) boolean delayComplete) {
 		this.bytesRead = bytesRead;
 		this.bytesReadComplete = bytesReadComplete;
 		this.bytesWritten = bytesWritten;
@@ -116,6 +140,10 @@ public final class IOMetricsInfo {
 		this.bufferInPoolUsageMaxComplete = bufferInPoolUsageMaxComplete;
 		this.bufferOutPoolUsageMax = bufferOutPoolUsageMax;
 		this.bufferOutPoolUsageMaxComplete = bufferOutPoolUsageMaxComplete;
+		this.tps = tps;
+		this.tpsComplete = tpsComplete;
+		this.delay = delay;
+		this.delayComplete = delayComplete;
 	}
 
 	public IOMetricsInfo(MutableIOMetrics counts) {
@@ -131,6 +159,10 @@ public final class IOMetricsInfo {
 		this.bufferInPoolUsageMaxComplete = counts.isBufferInPoolUsageMaxComplete();
 		this.bufferOutPoolUsageMax = counts.getBufferOutPoolUsageMax();
 		this.bufferOutPoolUsageMaxComplete = counts.isBufferOutPoolUsageMaxComplete();
+		this.tps = counts.getTps();
+		this.tpsComplete = counts.isTpsComplete();
+		this.delay = counts.getDelay();
+		this.delayComplete = counts.isDelayComplete();
 	}
 
 	public long getBytesRead() {
@@ -181,6 +213,22 @@ public final class IOMetricsInfo {
 		return bufferOutPoolUsageMaxComplete;
 	}
 
+	public long getTps() {
+		return tps;
+	}
+
+	public boolean isTpsComplete() {
+		return tpsComplete;
+	}
+
+	public long getDelay() {
+		return delay;
+	}
+
+	public boolean isDelayComplete() {
+		return delayComplete;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -201,13 +249,18 @@ public final class IOMetricsInfo {
 			bufferInPoolUsageMax == that.bufferInPoolUsageMax &&
 			bufferInPoolUsageMaxComplete == that.bufferInPoolUsageMaxComplete &&
 			bufferOutPoolUsageMax == that.bufferOutPoolUsageMax &&
-			bufferOutPoolUsageMaxComplete == that.bufferOutPoolUsageMaxComplete;
+			bufferOutPoolUsageMaxComplete == that.bufferOutPoolUsageMaxComplete &&
+			tps == that.tps &&
+			tpsComplete == that.tpsComplete &&
+			delay == that.delay &&
+			delayComplete == that.delayComplete;
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(bytesRead, bytesReadComplete, bytesWritten, bytesWrittenComplete, recordsRead,
 			recordsReadComplete, recordsWritten, recordsWrittenComplete, bufferInPoolUsageMax,
-			bufferInPoolUsageMaxComplete, bufferOutPoolUsageMax, bufferOutPoolUsageMaxComplete);
+			bufferInPoolUsageMaxComplete, bufferOutPoolUsageMax, bufferOutPoolUsageMaxComplete,
+			tps, tpsComplete, delay, delayComplete);
 	}
 }

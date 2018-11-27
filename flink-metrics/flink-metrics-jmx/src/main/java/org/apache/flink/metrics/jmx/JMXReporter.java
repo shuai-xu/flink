@@ -109,6 +109,7 @@ public class JMXReporter implements MetricReporter {
 				int port = ports.next();
 				try {
 					server.start(port);
+					//org.apache.flink.runtime.taskexecutor.TaskExecutor.requestJmx need blow log prefix
 					LOG.info("Started JMX server on port " + port + ".");
 					// only set our field if the server was actually started
 					jmxServer = server;

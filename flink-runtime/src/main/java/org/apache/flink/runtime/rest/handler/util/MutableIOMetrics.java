@@ -53,6 +53,10 @@ public class MutableIOMetrics extends IOMetrics {
 	private float bufferOutPoolUsageMax = 0.0f;
 	private boolean bufferInPoolUsageMaxComplete = true;
 	private boolean bufferOutPoolUsageMaxComplete = true;
+	private long tps = 0L;
+	private boolean tpsComplete = true;
+	private long delay = 0L;
+	private boolean delayComplete = true;
 
 	public MutableIOMetrics() {
 		super(0, 0, 0, 0, 0, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
@@ -92,6 +96,22 @@ public class MutableIOMetrics extends IOMetrics {
 
 	public float getBufferOutPoolUsageMax() {
 		return bufferOutPoolUsageMax;
+	}
+
+	public long getTps() {
+		return tps;
+	}
+
+	public boolean isTpsComplete() {
+		return tpsComplete;
+	}
+
+	public long getDelay() {
+		return delay;
+	}
+
+	public boolean isDelayComplete() {
+		return delayComplete;
 	}
 
 	/**
@@ -160,17 +180,33 @@ public class MutableIOMetrics extends IOMetrics {
 					else {
 						this.numRecordsOut += Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_OUT));
 					}
+
 					if (metrics.getMetric(MetricNames.BUFFERS_IN_POOL_USAGE_NAME) == null) {
 						this.bufferInPoolUsageMaxComplete = false;
 					} else {
 						float bufferInQueue = Float.valueOf(metrics.getMetric(MetricNames.BUFFERS_IN_POOL_USAGE_NAME));
 						this.bufferInPoolUsageMax = Math.max(bufferInQueue, this.bufferInPoolUsageMax);
 					}
+
 					if (metrics.getMetric(MetricNames.BUFFERS_OUT_POOL_USAGE_NAME) == null) {
 						this.bufferOutPoolUsageMaxComplete = false;
 					} else {
 						float bufferOutQueue = Float.valueOf(metrics.getMetric(MetricNames.BUFFERS_OUT_POOL_USAGE_NAME));
 						this.bufferOutPoolUsageMax = Math.max(bufferOutQueue, this.bufferOutPoolUsageMax);
+					}
+
+					if (metrics.getMetric(MetricNames.IO_NUM_TPS) == null) {
+						this.tpsComplete = false;
+					} else {
+						long tps = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_TPS));
+						this.tps = Math.max(tps, this.tps);
+					}
+
+					if (metrics.getMetric(MetricNames.IO_NUM_DELAY) == null) {
+						this.delayComplete = false;
+					} else {
+						long delay = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_DELAY));
+						this.delay = Math.max(delay, this.delay);
 					}
 				}
 				else {
@@ -181,6 +217,8 @@ public class MutableIOMetrics extends IOMetrics {
 					this.numRecordsOutComplete = false;
 					this.bufferInPoolUsageMaxComplete = false;
 					this.bufferOutPoolUsageMaxComplete = false;
+					this.tpsComplete = false;
+					this.delayComplete = false;
 				}
 			}
 		}
