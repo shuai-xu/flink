@@ -490,6 +490,7 @@ public class RocksDBInternalStateBackend extends AbstractInternalStateBackend im
 						localRecoveryConfig.getLocalStateDirectoryProvider()) :
 
 					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						checkpointId,
 						CheckpointedStateScope.EXCLUSIVE,
 						primaryStreamFactory);
 

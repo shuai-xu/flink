@@ -39,6 +39,8 @@ public class FsCheckpointStorageLocation extends FsCheckpointStreamFactory imple
 
 	private final Path checkpointDirectory;
 
+	private final Path exclusiveCheckpointDirectory;
+
 	private final Path sharedStateDirectory;
 
 	private final Path taskOwnedStateDirectory;
@@ -52,17 +54,19 @@ public class FsCheckpointStorageLocation extends FsCheckpointStreamFactory imple
 	public FsCheckpointStorageLocation(
 			FileSystem fileSystem,
 			Path checkpointDir,
+			Path exclusiveCheckpointDir,
 			Path sharedStateDir,
 			Path taskOwnedStateDir,
 			CheckpointStorageLocationReference reference,
 			int fileStateSizeThreshold) {
 
-		super(fileSystem, checkpointDir, sharedStateDir, fileStateSizeThreshold);
+		super(fileSystem, checkpointDir, exclusiveCheckpointDir, sharedStateDir, fileStateSizeThreshold);
 
 		checkArgument(fileStateSizeThreshold >= 0);
 
 		this.fileSystem = checkNotNull(fileSystem);
 		this.checkpointDirectory = checkNotNull(checkpointDir);
+		this.exclusiveCheckpointDirectory = checkNotNull(exclusiveCheckpointDir);
 		this.sharedStateDirectory = checkNotNull(sharedStateDir);
 		this.taskOwnedStateDirectory = checkNotNull(taskOwnedStateDir);
 		this.reference = checkNotNull(reference);
@@ -77,6 +81,10 @@ public class FsCheckpointStorageLocation extends FsCheckpointStreamFactory imple
 
 	public Path getCheckpointDirectory() {
 		return checkpointDirectory;
+	}
+
+	public Path getExclusiveCheckpointDirectory() {
+		return exclusiveCheckpointDirectory;
 	}
 
 	public Path getSharedStateDirectory() {
@@ -121,6 +129,7 @@ public class FsCheckpointStorageLocation extends FsCheckpointStreamFactory imple
 		return "FsCheckpointStorageLocation {" +
 				"fileSystem=" + fileSystem +
 				", checkpointDirectory=" + checkpointDirectory +
+				", exclusiveCheckpointDirectory=" + exclusiveCheckpointDirectory +
 				", sharedStateDirectory=" + sharedStateDirectory +
 				", taskOwnedStateDirectory=" + taskOwnedStateDirectory +
 				", metadataFilePath=" + metadataFilePath +

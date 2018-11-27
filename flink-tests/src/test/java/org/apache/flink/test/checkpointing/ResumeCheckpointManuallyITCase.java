@@ -63,6 +63,7 @@ import static org.junit.Assert.assertNotNull;
  * snapshots.
  *
  * <p>This tests considers full and incremental checkpoints and was introduced to guard against problems like FLINK-6964.
+ * TODO re-enable this test after Niagara has already refactor to latest checkpoint stream API.
  */
 public class ResumeCheckpointManuallyITCase extends TestLogger {
 

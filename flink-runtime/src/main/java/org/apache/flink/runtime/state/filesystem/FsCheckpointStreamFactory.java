@@ -36,6 +36,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static org.apache.flink.runtime.state.filesystem.AbstractFsCheckpointStorage.CHECKPOINT_FILE_PREFIX;
+import static org.apache.flink.runtime.state.filesystem.AbstractFsCheckpointStorage.DUMMY_CHECKPOINT_ID;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -73,8 +75,11 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 	/** State below this size will be stored as part of the metadata, rather than in files */
 	private final int fileStateThreshold;
 
+	/** The directory for checkpoint meta data. */
+	private final Path metaDataDirectory;
+
 	/** The directory for checkpoint exclusive state data. */
-	private final Path checkpointDirectory;
+	private final Path exclusiveCheckpointDirectory;
 
 	/** The directory for shared checkpoint data. */
 	private final Path sharedStateDirectory;
@@ -90,14 +95,16 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 	 * JavaDocs for an explanation why this factory must not try and create the checkpoints.
 	 *
 	 * @param fileSystem The filesystem to write to.
-	 * @param checkpointDirectory The directory for checkpoint exclusive state data.
+	 * @param metaDataDirectory The directory for checkpoint meta data.
+	 * @param exclusiveCheckpointDirectory The directory for checkpoint exclusive state data.
 	 * @param sharedStateDirectory The directory for shared checkpoint data.
 	 * @param fileStateSizeThreshold State up to this size will be stored as part of the metadata,
 	 *                             rather than in files
 	 */
 	public FsCheckpointStreamFactory(
 			FileSystem fileSystem,
-			Path checkpointDirectory,
+			Path metaDataDirectory,
+			Path exclusiveCheckpointDirectory,
 			Path sharedStateDirectory,
 			int fileStateSizeThreshold) {
 
@@ -110,7 +117,8 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 		}
 
 		this.filesystem = checkNotNull(fileSystem);
-		this.checkpointDirectory = checkNotNull(checkpointDirectory);
+		this.metaDataDirectory = checkNotNull(metaDataDirectory);
+		this.exclusiveCheckpointDirectory = checkNotNull(exclusiveCheckpointDirectory);
 		this.sharedStateDirectory = checkNotNull(sharedStateDirectory);
 		this.fileStateThreshold = fileStateSizeThreshold;
 	}
@@ -118,13 +126,13 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 	// ------------------------------------------------------------------------
 
 	@Override
-	public FsCheckpointStateOutputStream createCheckpointStateOutputStream(CheckpointedStateScope scope) throws IOException {
+	public FsCheckpointStateOutputStream createCheckpointStateOutputStream(long checkpointId, CheckpointedStateScope scope) throws IOException {
 
 
-		Path target = scope == CheckpointedStateScope.EXCLUSIVE ?checkpointDirectory: sharedStateDirectory;
+		Path target = scope == CheckpointedStateScope.EXCLUSIVE ? exclusiveCheckpointDirectory : sharedStateDirectory;
 		int bufferSize = Math.max(DEFAULT_WRITE_BUFFER_SIZE, fileStateThreshold);
 
-		return new FsCheckpointStateOutputStream(target, filesystem, bufferSize, fileStateThreshold);
+		return new FsCheckpointStateOutputStream(target, filesystem, checkpointId, bufferSize, fileStateThreshold);
 	}
 
 	// ------------------------------------------------------------------------
@@ -133,7 +141,7 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 
 	@Override
 	public String toString() {
-		return "File Stream Factory @ " + checkpointDirectory;
+		return "File Stream Factory @ " + metaDataDirectory;
 	}
 
 	// ------------------------------------------------------------------------
@@ -159,13 +167,15 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 
 		private final FileSystem fs;
 
+		private final long checkpointId;
+
 		private Path statePath;
 
 		private volatile boolean closed;
 
 		public FsCheckpointStateOutputStream(
 					Path basePath, FileSystem fs,
-					int bufferSize, int localStateThreshold)
+					long checkpointId, int bufferSize, int localStateThreshold)
 		{
 			if (bufferSize < localStateThreshold) {
 				throw new IllegalArgumentException();
@@ -173,6 +183,7 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 
 			this.basePath = basePath;
 			this.fs = fs;
+			this.checkpointId = checkpointId;
 			this.writeBuffer = new byte[bufferSize];
 			this.localStateThreshold = localStateThreshold;
 		}
@@ -353,7 +364,11 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 		}
 
 		private Path createStatePath() {
-			return new Path(basePath, UUID.randomUUID().toString());
+			if (checkpointId == DUMMY_CHECKPOINT_ID) {
+				return new Path(basePath, UUID.randomUUID().toString());
+			} else {
+				return new Path(basePath, CHECKPOINT_FILE_PREFIX + checkpointId + "-" + UUID.randomUUID().toString());
+			}
 		}
 
 		private void createStream() throws IOException {

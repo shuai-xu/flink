@@ -334,7 +334,7 @@ public class PendingCheckpointTest {
 		final Path checkpointDir = new Path(tmpFolder.newFolder().toURI());
 		final FsCheckpointStorageLocation location = new FsCheckpointStorageLocation(
 				LocalFileSystem.getSharedInstance(),
-				checkpointDir, checkpointDir, checkpointDir,
+				checkpointDir, checkpointDir, checkpointDir, checkpointDir,
 				CheckpointStorageLocationReference.getDefault(),
 				1024);
 

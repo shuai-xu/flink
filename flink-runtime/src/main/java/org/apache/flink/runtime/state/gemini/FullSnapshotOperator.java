@@ -140,6 +140,7 @@ public final class FullSnapshotOperator implements SnapshotOperator {
 						stateBackend.getLocalRecoveryConfig().getLocalStateDirectoryProvider()) :
 
 					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						checkpointId,
 						CheckpointedStateScope.EXCLUSIVE,
 						primaryStreamFactory);
 

@@ -369,7 +369,7 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
 				}
 
 				private void openOutStream() throws Exception {
-					out = streamFactory.createCheckpointStateOutputStream(CheckpointedStateScope.EXCLUSIVE);
+					out = streamFactory.createCheckpointStateOutputStream(checkpointId, CheckpointedStateScope.EXCLUSIVE);
 					closeStreamOnCancelRegistry.registerCloseable(out);
 				}
 

@@ -187,6 +187,7 @@ public class HeapInternalStateBackend extends AbstractInternalStateBackend {
 						localRecoveryConfig.getLocalStateDirectoryProvider()) :
 
 					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						checkpointId,
 						CheckpointedStateScope.EXCLUSIVE,
 						primaryStreamFactory);
 

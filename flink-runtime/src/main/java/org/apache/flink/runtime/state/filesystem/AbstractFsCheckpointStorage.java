@@ -46,8 +46,11 @@ public abstract class AbstractFsCheckpointStorage implements CheckpointStorage {
 	//  Constants
 	// ------------------------------------------------------------------------
 
-	/** The prefix of the directory containing the data exclusive to a checkpoint. */
+	/** The prefix of the directory containing the meta data of a checkpoint. */
 	public static final String CHECKPOINT_DIR_PREFIX = "chk-";
+
+	/** The name of the directory for exclusive checkpoint state not shared. */
+	public static final String CHECKPOINT_EXCLUSICE_STATE_DIR = "exclusive";
 
 	/** The name of the directory for shared checkpoint state. */
 	public static final String CHECKPOINT_SHARED_STATE_DIR = "shared";
@@ -57,6 +60,12 @@ public abstract class AbstractFsCheckpointStorage implements CheckpointStorage {
 
 	/** The name of the metadata files in checkpoints / savepoints. */
 	public static final String METADATA_FILE_NAME = "_metadata";
+
+	/** The prefix of the checkpoint file for both exclusive and shared state. */
+	public static final String CHECKPOINT_FILE_PREFIX = "chk-";
+
+	/** The dummy checkpoint id, mainly used for task owned state. */
+	public static final long DUMMY_CHECKPOINT_ID = -1;
 
 	/** The magic number that is put in front of any reference. */
 	private static final byte[] REFERENCE_MAGIC_NUMBER = new byte[] { 0x05, 0x5F, 0x3F, 0x18 };
@@ -194,7 +203,7 @@ public abstract class AbstractFsCheckpointStorage implements CheckpointStorage {
 	}
 
 	/**
-	 * Creates the directory path for the data exclusive to a specific checkpoint.
+	 * Creates the directory path for the meta data to a specific checkpoint.
 	 *
 	 * @param baseDirectory The base directory into which the job checkpoints.
 	 * @param checkpointId The ID (logical timestamp) of the checkpoint.

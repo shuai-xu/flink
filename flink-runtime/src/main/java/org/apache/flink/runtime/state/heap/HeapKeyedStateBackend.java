@@ -631,6 +631,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 						localRecoveryConfig.getLocalStateDirectoryProvider()) :
 
 					() -> CheckpointStreamWithResultProvider.createSimpleStream(
+						checkpointId,
 						CheckpointedStateScope.EXCLUSIVE,
 						primaryStreamFactory);
 

@@ -316,7 +316,7 @@ public class RocksDBIncrementalSnapshotOperation {
 			closeableRegistry.registerCloseable(inputStream);
 
 			outputStream = checkpointStreamFactory
-				.createCheckpointStateOutputStream(CheckpointedStateScope.SHARED);
+				.createCheckpointStateOutputStream(checkpointId, CheckpointedStateScope.SHARED);
 			closeableRegistry.registerCloseable(outputStream);
 
 			while (true) {
@@ -362,6 +362,7 @@ public class RocksDBIncrementalSnapshotOperation {
 					localRecoveryConfig.getLocalStateDirectoryProvider()) :
 
 				CheckpointStreamWithResultProvider.createSimpleStream(
+					checkpointId,
 					CheckpointedStateScope.EXCLUSIVE,
 					checkpointStreamFactory);
 

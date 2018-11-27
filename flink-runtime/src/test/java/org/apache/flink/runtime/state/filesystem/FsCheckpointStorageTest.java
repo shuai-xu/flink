@@ -40,6 +40,7 @@ import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.flink.runtime.state.filesystem.AbstractFsCheckpointStorage.CHECKPOINT_FILE_PREFIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -84,6 +85,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 
 		// all state types should be in the expected location
 		assertParent(defaultSavepointDir, savepointLocation.getCheckpointDirectory());
+		assertParent(defaultSavepointDir, savepointLocation.getExclusiveCheckpointDirectory());
 		assertParent(defaultSavepointDir, savepointLocation.getSharedStateDirectory());
 		assertParent(defaultSavepointDir, savepointLocation.getTaskOwnedStateDirectory());
 
@@ -103,6 +105,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 
 		// all state types should be in the expected location
 		assertParent(savepointDir, savepointLocation.getCheckpointDirectory());
+		assertParent(savepointDir, savepointLocation.getExclusiveCheckpointDirectory());
 		assertParent(savepointDir, savepointLocation.getSharedStateDirectory());
 		assertParent(savepointDir, savepointLocation.getTaskOwnedStateDirectory());
 
@@ -144,43 +147,53 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 	public void testDirectoriesForExclusiveAndSharedState() throws Exception {
 		final FileSystem fs = LocalFileSystem.getSharedInstance();
 		final Path checkpointDir = randomTempPath();
+		final Path exclusiveStateDir = randomTempPath();
 		final Path sharedStateDir = randomTempPath();
 
 		FsCheckpointStorageLocation storageLocation = new FsCheckpointStorageLocation(
 				fs,
 				checkpointDir,
+				exclusiveStateDir,
 				sharedStateDir,
 				randomTempPath(),
 				CheckpointStorageLocationReference.getDefault(),
-				FILE_SIZE_THRESHOLD);
+				0);
 
 		assertNotEquals(storageLocation.getCheckpointDirectory(), storageLocation.getSharedStateDirectory());
 
 		assertEquals(0, fs.listStatus(storageLocation.getCheckpointDirectory()).length);
+		assertEquals(0, fs.listStatus(storageLocation.getExclusiveCheckpointDirectory()).length);
 		assertEquals(0, fs.listStatus(storageLocation.getSharedStateDirectory()).length);
 
+		long checkpointId = 23L;
 		// create exclusive state
 
 		CheckpointStateOutputStream exclusiveStream =
-				storageLocation.createCheckpointStateOutputStream(CheckpointedStateScope.EXCLUSIVE);
+				storageLocation.createCheckpointStateOutputStream(checkpointId, CheckpointedStateScope.EXCLUSIVE);
 
 		exclusiveStream.write(42);
 		exclusiveStream.flush();
 		StreamStateHandle exclusiveHandle = exclusiveStream.closeAndGetHandle();
+		assertTrue(exclusiveHandle instanceof FileStateHandle);
+		((FileStateHandle) exclusiveHandle).getFilePath().getName().startsWith(CHECKPOINT_FILE_PREFIX);
 
-		assertEquals(1, fs.listStatus(storageLocation.getCheckpointDirectory()).length);
+		assertEquals(0, fs.listStatus(storageLocation.getCheckpointDirectory()).length);
+		assertEquals(1, fs.listStatus(storageLocation.getExclusiveCheckpointDirectory()).length);
 		assertEquals(0, fs.listStatus(storageLocation.getSharedStateDirectory()).length);
 
 		// create shared state
 
 		CheckpointStateOutputStream sharedStream =
-				storageLocation.createCheckpointStateOutputStream(CheckpointedStateScope.SHARED);
+				storageLocation.createCheckpointStateOutputStream(checkpointId, CheckpointedStateScope.SHARED);
 
 		sharedStream.write(42);
 		sharedStream.flush();
 		StreamStateHandle sharedHandle = sharedStream.closeAndGetHandle();
+		assertTrue(sharedHandle instanceof FileStateHandle);
+		((FileStateHandle) sharedHandle).getFilePath().getName().startsWith(CHECKPOINT_FILE_PREFIX);
 
-		assertEquals(1, fs.listStatus(storageLocation.getCheckpointDirectory()).length);
+		assertEquals(0, fs.listStatus(storageLocation.getCheckpointDirectory()).length);
+		assertEquals(1, fs.listStatus(storageLocation.getExclusiveCheckpointDirectory()).length);
 		assertEquals(1, fs.listStatus(storageLocation.getSharedStateDirectory()).length);
 
 		// drop state

@@ -115,6 +115,8 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 	@Rule
 	public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+	private static long checkpointId = -1L;
+
 	/**
 	 * This ensures that asynchronous state handles are actually materialized asynchronously.
 	 *
@@ -268,7 +270,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 			int count = 1;
 
 			@Override
-			public CheckpointStateOutputStream createCheckpointStateOutputStream(CheckpointedStateScope scope) throws IOException {
+			public CheckpointStateOutputStream createCheckpointStateOutputStream(long checkpointId, CheckpointedStateScope scope) throws IOException {
 				// we skip the first created stream, because it is used to checkpoint the timer service, which is
 				// currently not asynchronous.
 				if (count > 0) {
@@ -279,7 +281,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 						null,
 						Integer.MAX_VALUE);
 				} else {
-					return super.createCheckpointStateOutputStream(scope);
+					return super.createCheckpointStateOutputStream(checkpointId, scope);
 				}
 			}
 		};
@@ -324,8 +326,9 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 			}
 		}
 
+		checkpointId = 42;
 		task.triggerCheckpoint(
-			new CheckpointMetaData(42, 17),
+			new CheckpointMetaData(checkpointId, 17),
 			CheckpointOptions.forCheckpointWithDefaultLocation());
 
 		testHarness.processElement(new StreamRecord<>("Wohoo", 0));
@@ -542,7 +545,7 @@ public class RocksDBAsyncSnapshotTest extends TestLogger {
 
 		@Override
 		public CheckpointStateOutputStream get() throws IOException {
-			return factory.createCheckpointStateOutputStream(CheckpointedStateScope.EXCLUSIVE);
+			return factory.createCheckpointStateOutputStream(checkpointId, CheckpointedStateScope.EXCLUSIVE);
 		}
 	}
 
