@@ -92,7 +92,7 @@ public class HistoryServerTest extends TestLogger {
 		}
 	}
 
-	@Test
+	@Test(timeout = 10000)
 	public void testHistoryServerIntegration() throws Exception {
 		final int numJobs = 2;
 		for (int x = 0; x < numJobs; x++) {

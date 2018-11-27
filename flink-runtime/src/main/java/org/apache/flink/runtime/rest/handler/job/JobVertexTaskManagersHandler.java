@@ -98,7 +98,7 @@ public class JobVertexTaskManagersHandler extends AbstractExecutionGraphHandler<
 		Collection<? extends AccessExecutionJobVertex> vertices = graph.getAllVertices().values();
 		List<ArchivedJson> archive = new ArrayList<>(vertices.size());
 		for (AccessExecutionJobVertex task : vertices) {
-			ResponseBody json = createJobVertexTaskManagersInfo(task, graph.getJobID(), null);
+			ResponseBody json = createJobVertexTaskManagersInfo(task, graph.getJobID(), metricFetcher);
 			String path = getMessageHeaders().getTargetRestEndpointURL()
 				.replace(':' + JobIDPathParameter.KEY, graph.getJobID().toString())
 				.replace(':' + JobVertexIdPathParameter.KEY, task.getJobVertexId().toString());

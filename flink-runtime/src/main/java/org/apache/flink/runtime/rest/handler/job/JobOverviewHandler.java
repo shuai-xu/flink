@@ -33,26 +33,20 @@ import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
 import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricFetcher;
 import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricStore;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
-import org.apache.flink.runtime.rest.messages.JobIDPathParameter;
 import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.MessageHeaders;
-import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.job.JobOverview;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMetricsInfo;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
-import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
-import org.apache.flink.runtime.webmonitor.history.JsonArchivist;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -62,7 +56,7 @@ import java.util.concurrent.Executor;
 /**
  * Handler returning overview for the specified job.
  */
-public class JobOverviewHandler extends AbstractExecutionGraphHandler<JobOverview, JobMessageParameters> implements JsonArchivist {
+public class JobOverviewHandler extends AbstractExecutionGraphHandler<JobOverview, JobMessageParameters>{
 
 	private final MetricFetcher<?> metricFetcher;
 
@@ -91,14 +85,6 @@ public class JobOverviewHandler extends AbstractExecutionGraphHandler<JobOvervie
 	protected JobOverview handleRequest(HandlerRequest<EmptyRequestBody, JobMessageParameters> request,
 			AccessExecutionGraph executionGraph) throws RestHandlerException {
 		return createJobOverview(executionGraph, metricFetcher);
-	}
-
-	@Override
-	public Collection<ArchivedJson> archiveJsonWithPath(AccessExecutionGraph graph) throws IOException {
-		ResponseBody json = createJobOverview(graph, metricFetcher);
-		String path = getMessageHeaders().getTargetRestEndpointURL()
-			.replace(':' + JobIDPathParameter.KEY, graph.getJobID().toString());
-		return Collections.singleton(new ArchivedJson(path, json));
 	}
 
 	private static JobOverview createJobOverview(AccessExecutionGraph executionGraph, @Nullable MetricFetcher<?> metricFetcher) {
