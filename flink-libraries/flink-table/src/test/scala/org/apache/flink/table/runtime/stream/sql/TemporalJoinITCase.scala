@@ -22,12 +22,15 @@ import java.sql.Timestamp
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
+import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.windowing.time.Time
+import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableEnvironment, TableException}
 import org.apache.flink.table.runtime.utils.{StreamingWithStateTestBase, TestingAppendSink}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.types.Row
+import org.junit.Assert.assertEquals
 import org.junit._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -93,9 +96,6 @@ class TemporalJoinITCase(state: StateBackendMode) extends StreamingWithStateTest
 
   @Test
   def testEventTimeInnerJoin(): Unit = {
-    expectedException.expect(classOf[TableException])
-    expectedException.expectMessage("Event time temporal joins are not yet supported")
-
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(1)
@@ -111,15 +111,33 @@ class TemporalJoinITCase(state: StateBackendMode) extends StreamingWithStateTest
         |WHERE r.currency = o.currency
         |""".stripMargin
 
+
     val ordersData = new mutable.MutableList[(Long, String, Timestamp)]
+    ordersData.+=((2L, "Euro", new Timestamp(2L)))
+    ordersData.+=((1L, "US Dollar", new Timestamp(3L)))
+    ordersData.+=((50L, "Yen", new Timestamp(4L)))
+    ordersData.+=((3L, "Euro", new Timestamp(5L)))
 
     val ratesHistoryData = new mutable.MutableList[(String, Long, Timestamp)]
+    ratesHistoryData.+=(("US Dollar", 102L, new Timestamp(1L)))
+    ratesHistoryData.+=(("Euro", 114L, new Timestamp(1L)))
+    ratesHistoryData.+=(("Yen", 1L, new Timestamp(1L)))
+    ratesHistoryData.+=(("Euro", 116L, new Timestamp(5L)))
+    ratesHistoryData.+=(("Euro", 119L, new Timestamp(7L)))
+
+    var expectedOutput = new mutable.HashSet[String]()
+    expectedOutput += (2 * 114).toString
+    expectedOutput += (1 * 102).toString
+    expectedOutput += (50 * 1).toString
+    expectedOutput += (3 * 116).toString
 
     val orders = env
       .fromCollection(ordersData)
+      .assignTimestampsAndWatermarks(new TimestampExtractor[Long, String]())
       .toTable(tEnv, 'amount, 'currency, 'rowtime.rowtime)
     val ratesHistory = env
       .fromCollection(ratesHistoryData)
+      .assignTimestampsAndWatermarks(new TimestampExtractor[String, Long]())
       .toTable(tEnv, 'currency, 'rate, 'rowtime.rowtime)
 
     tEnv.registerTable("Orders", orders)
@@ -129,7 +147,17 @@ class TemporalJoinITCase(state: StateBackendMode) extends StreamingWithStateTest
       ratesHistory.createTemporalTableFunction('rowtime, 'currency))
 
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
-    result.addSink(new TestingAppendSink)
+    val sink = new TestingAppendSink
+    result.addSink(sink)
     env.execute()
+
+    assertEquals(expectedOutput, sink.getAppendResults.toSet)
+  }
+}
+
+class TimestampExtractor[T1, T2]
+  extends BoundedOutOfOrdernessTimestampExtractor[(T1, T2, Timestamp)](Time.seconds(10))  {
+  override def extractTimestamp(element: (T1, T2, Timestamp)): Long = {
+    element._3.getTime
   }
 }

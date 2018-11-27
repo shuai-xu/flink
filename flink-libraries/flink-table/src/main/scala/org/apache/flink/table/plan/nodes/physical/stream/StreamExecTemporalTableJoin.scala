@@ -42,7 +42,7 @@ import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{JoinUtil, RexDefaultVisitor}
 import org.apache.flink.table.plan.util.JoinUtil.{joinConditionToString, joinSelectionToString, joinTypeToString}
 import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector}
-import org.apache.flink.table.runtime.join.TemporalProcessTimeJoin
+import org.apache.flink.table.runtime.join.{TemporalProcessTimeJoin, TemporalRowtimeJoin}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions.checkState
 
@@ -163,6 +163,9 @@ class StreamExecTemporalTableJoin(
   }
 }
 
+/**
+  * @param rightTimeAttributeInputReference is defined only for event time joins.
+  */
 class StreamExecTemporalJoinToCoProcessTranslator private (
   textualRepresentation: String,
   config: TableConfig,
@@ -171,9 +174,8 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
   rightSchema: BaseRowSchema,
   joinInfo: JoinInfo,
   rexBuilder: RexBuilder,
-  leftTimeAttribute: RexNode,
-  rightTimeAttribute: Option[RexNode],
-  rightPrimaryKeyExpression: RexNode,
+  leftTimeAttributeInputReference: Int,
+  rightTimeAttributeInputReference: Option[Int],
   remainingNonEquiJoinPredicates: RexNode) {
 
   val nonEquiJoinPredicates: Option[RexNode] = Some(remainingNonEquiJoinPredicates)
@@ -248,18 +250,24 @@ class StreamExecTemporalJoinToCoProcessTranslator private (
     joinFunction: GeneratedFunction[FlatJoinFunction[BaseRow, BaseRow, BaseRow], BaseRow])
   : TwoInputStreamOperator[BaseRow, BaseRow, BaseRow] = {
 
-    if (rightTimeAttribute.isDefined) {
-      throw new ValidationException(
-        s"Currently only proctime temporal joins are supported in [$textualRepresentation]")
-    }
-
     joinType match {
       case FlinkJoinRelType.INNER =>
-        new TemporalProcessTimeJoin(
-          leftSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
-          rightSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
-          joinFunction.name,
-          joinFunction.code)
+        if (rightTimeAttributeInputReference.isDefined) {
+          new TemporalRowtimeJoin(
+            leftSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+            rightSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+            joinFunction.name,
+            joinFunction.code,
+            leftTimeAttributeInputReference,
+            rightTimeAttributeInputReference.get)
+        }
+        else {
+          new TemporalProcessTimeJoin(
+            leftSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+            rightSchema.typeInfo(classOf[BaseRow]).asInstanceOf[TypeInformation[BaseRow]],
+            joinFunction.name,
+            joinFunction.code)
+        }
       case _ =>
         throw new ValidationException(
           s"Only ${FlinkJoinRelType.INNER} temporal join is supported in [$textualRepresentation]")
@@ -305,10 +313,23 @@ object StreamExecTemporalJoinToCoProcessTranslator {
       rightSchema,
       joinInfo,
       rexBuilder,
-      temporalJoinConditionExtractor.leftTimeAttribute.get,
-      temporalJoinConditionExtractor.rightTimeAttribute,
-      temporalJoinConditionExtractor.rightPrimaryKeyExpression.get,
+      extractInputReference(
+        temporalJoinConditionExtractor.leftTimeAttribute.get,
+        textualRepresentation),
+      temporalJoinConditionExtractor.rightTimeAttribute.map(
+        rightTimeAttribute =>
+          extractInputReference(rightTimeAttribute, textualRepresentation) - leftSchema.arity),
       remainingNonEquiJoinPredicates)
+  }
+
+  private def extractInputReference(rexNode: RexNode, textualRepresentation: String): Int = {
+    val inputReferenceVisitor = new InputReferenceVisitor(textualRepresentation)
+    rexNode.accept(inputReferenceVisitor)
+    checkState(
+      inputReferenceVisitor.inputReference.isDefined,
+      "Failed to find input reference in [%s]",
+      textualRepresentation)
+    inputReferenceVisitor.inputReference.get
   }
 
   private class TemporalJoinConditionExtractor(
@@ -354,8 +375,6 @@ object StreamExecTemporalJoinToCoProcessTranslator {
             s"Non rowtime timeAttribute [${leftTimeAttribute.get.getType}] " +
               s"passed as the argument to TemporalTableFunction")
         }
-
-        throw new TableException("Event time temporal joins are not yet supported.")
       }
       else if (LogicalTemporalTableJoin.isProctimeCall(call)) {
         leftTimeAttribute = Some(call.getOperands.get(0))
@@ -380,30 +399,27 @@ object StreamExecTemporalJoinToCoProcessTranslator {
           s"Only single column join key is supported. " +
             s"Found ${joinInfo.rightKeys} in [$textualRepresentation]")
       }
-      val rightKey = joinInfo.rightKeys.get(0) + rightKeysStartingOffset
+      val rightJoinKeyInputReference = joinInfo.rightKeys.get(0) + rightKeysStartingOffset
 
-      val primaryKeyVisitor = new PrimaryKeyVisitor(textualRepresentation)
-      rightPrimaryKey.accept(primaryKeyVisitor)
+      val rightPrimaryKeyInputReference = extractInputReference(
+        rightPrimaryKey,
+        textualRepresentation)
 
-      primaryKeyVisitor.inputReference match {
-        case None =>
-          throw new IllegalStateException(
-            s"Failed to find primary key reference in [$textualRepresentation]")
-        case Some(primaryKeyInputReference) if primaryKeyInputReference != rightKey =>
-          throw new ValidationException(
-            s"Join key [$rightKey] must be the same as " +
-              s"temporal table's primary key [$primaryKeyInputReference] " +
-              s"in [$textualRepresentation]")
-        case _ =>
-          rightPrimaryKey
+      if (rightPrimaryKeyInputReference != rightJoinKeyInputReference) {
+        throw new ValidationException(
+          s"Join key [$rightJoinKeyInputReference] must be the same as " +
+            s"temporal table's primary key [$rightPrimaryKey] " +
+            s"in [$textualRepresentation]")
       }
+
+      rightPrimaryKey
     }
   }
 
   /**
-    * Extracts input references from primary key expression.
+    * Extracts input references from RexNode.
     */
-  private class PrimaryKeyVisitor(textualRepresentation: String)
+  private class InputReferenceVisitor(textualRepresentation: String)
     extends RexDefaultVisitor[RexNode] {
 
     var inputReference: Option[Int] = None
@@ -415,7 +431,7 @@ object StreamExecTemporalJoinToCoProcessTranslator {
 
     override def visitNode(rexNode: RexNode): RexNode = {
       throw new ValidationException(
-        s"Unsupported right primary key expression [$rexNode] in [$textualRepresentation]")
+        s"Unsupported expression [$rexNode] in [$textualRepresentation]. Expected input reference")
     }
   }
 }

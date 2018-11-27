@@ -147,6 +147,17 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
     TestHarnessUtil.assertOutputEquals("Verify Error...", expected, actual)
   }
 
+  def removeWatermark(queue: JQueue[Object]): JQueue[Object] = {
+    val it = queue.iterator()
+    while (it.hasNext) {
+      val data = it.next()
+      if (data.isInstanceOf[Watermark]) {
+        it.remove()
+      }
+    }
+    queue
+  }
+
   private def extractExpectedTransformation(
       t: StreamTransformation[_],
       prefixOperatorName: String): OneInputTransformation[_, _] = {
