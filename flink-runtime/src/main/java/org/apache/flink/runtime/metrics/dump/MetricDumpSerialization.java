@@ -42,8 +42,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_DELAY;
-import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_RECORDS_IN;
-import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_RECORDS_OUT;
+import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_OPERATOR_RECORDS_IN;
+import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_OPERATOR_RECORDS_OUT;
 import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_TPS;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_JM;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_JOB;
@@ -119,8 +119,8 @@ public class MetricDumpSerialization {
 			if (scopeInfo.getCategory() == INFO_CATEGORY_OPERATOR) {
 				if (name.equals(IO_NUM_TPS) ||
 					name.equals(IO_NUM_DELAY) ||
-					name.equals(IO_NUM_RECORDS_IN) ||
-					name.equals(IO_NUM_RECORDS_OUT)) {
+					name.equals(IO_NUM_OPERATOR_RECORDS_IN) ||
+					name.equals(IO_NUM_OPERATOR_RECORDS_OUT)) {
 					return true;
 				}
 

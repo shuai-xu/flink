@@ -26,6 +26,7 @@ public class MetricNames {
 	}
 
 	private static final String SUFFIX_RATE = "PerSecond";
+	private static final String SUFFIX_OPERATOR = "Operator";
 
 	public static final String IO_NUM_TPS = "tps";
 	public static final String IO_NUM_DELAY = "delay";
@@ -33,6 +34,11 @@ public class MetricNames {
 	public static final String IO_NUM_RECORDS_OUT = "numRecordsOut";
 	public static final String IO_NUM_RECORDS_IN_RATE = IO_NUM_RECORDS_IN + SUFFIX_RATE;
 	public static final String IO_NUM_RECORDS_OUT_RATE = IO_NUM_RECORDS_OUT + SUFFIX_RATE;
+
+	public static final String IO_NUM_OPERATOR_RECORDS_IN = "numRecordsIn" + SUFFIX_OPERATOR;
+	public static final String IO_NUM_OPERATOR_RECORDS_OUT = "numRecordsOut" + SUFFIX_OPERATOR;
+	public static final String IO_NUM_OPERATOR_RECORDS_IN_RATE = IO_NUM_RECORDS_IN + SUFFIX_OPERATOR + SUFFIX_RATE;
+	public static final String IO_NUM_OPERATOR_RECORDS_OUT_RATE = IO_NUM_RECORDS_OUT + SUFFIX_OPERATOR + SUFFIX_RATE;
 
 	public static final String IO_NUM_BYTES_IN = "numBytesIn";
 	public static final String IO_NUM_BYTES_IN_LOCAL = IO_NUM_BYTES_IN + "Local";

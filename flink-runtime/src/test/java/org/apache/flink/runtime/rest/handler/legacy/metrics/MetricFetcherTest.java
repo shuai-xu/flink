@@ -133,9 +133,9 @@ public class MetricFetcherTest extends TestLogger {
 			assertEquals("x", store.getTaskManagerMetricStore(tmRID.toString()).metrics.get("abc.gauge"));
 			assertEquals("5.0", store.getJobMetricStore(jobID.toString()).metrics.get("abc.jc"));
 			assertEquals("2", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.abc.tc"));
-			assertEquals("1", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.opname.abc.numRecordsIn"));
 			assertEquals("2", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.opname.abc.tps"));
 			assertEquals("2", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.opname.abc.delay"));
+			assertEquals("1", store.getTaskMetricStore(jobID.toString(), "taskid").metrics.get("2.opname.abc.numRecordsInOperator"));
 		}
 	}
 
@@ -155,7 +155,7 @@ public class MetricFetcherTest extends TestLogger {
 		c3.inc(2);
 		c4.inc(2);
 
-		counters.put(c1, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "numRecordsIn"));
+		counters.put(c1, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "numRecordsInOperator"));
 		counters.put(c2, new Tuple2<>(new QueryScopeInfo.TaskQueryScopeInfo(jobID.toString(), "taskid", 2, "abc"), "tc"));
 		counters.put(c3, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "tps"));
 		counters.put(c4, new Tuple2<>(new QueryScopeInfo.OperatorQueryScopeInfo(jobID.toString(), "taskid", 2, "opname", "abc"), "delay"));
