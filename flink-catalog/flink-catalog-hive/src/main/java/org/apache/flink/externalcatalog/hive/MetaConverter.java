@@ -22,6 +22,7 @@ import org.apache.flink.table.api.Column;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.BooleanType;
+import org.apache.flink.table.api.types.ByteArrayType;
 import org.apache.flink.table.api.types.ByteType;
 import org.apache.flink.table.api.types.CharType;
 import org.apache.flink.table.api.types.DateType;
@@ -749,6 +750,8 @@ public class MetaConverter {
 			return serdeConstants.TIMESTAMP_TYPE_NAME;
 		} else if (internalType instanceof DecimalType) {
 			return serdeConstants.DECIMAL_TYPE_NAME;
+		} else if (internalType.equals(ByteArrayType.INSTANCE)) {
+			return serdeConstants.BINARY_TYPE_NAME;
 		} else {
 			throw new UnsupportedOperationException("Unsupported type information: "
 					+ internalType.toString());
@@ -790,6 +793,8 @@ public class MetaConverter {
 				return TimestampType.TIMESTAMP;
 			case serdeConstants.DECIMAL_TYPE_NAME:
 				return DecimalType.SYSTEM_DEFAULT;
+			case serdeConstants.BINARY_TYPE_NAME:
+				return ByteArrayType.INSTANCE;
 			default:
 				throw new UnsupportedOperationException("Unsupported field schema: name="
 						+ fieldSchema.getName() + ", type=" + fieldSchema.getType());
