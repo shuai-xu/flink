@@ -111,6 +111,10 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 	 * A value of 'UNDEFINED' means not yet configured, in which case the default will be used. */
 	private final TernaryBoolean asynchronousSnapshots;
 
+	/** Switch to create checkpoint sub-directory with name of jobId.
+	 * A value of 'undefined' means not yet configured, in which case the default will be used. */
+	private TernaryBoolean createCheckpointSubDirs = TernaryBoolean.UNDEFINED;
+
 	// ------------------------------------------------------------------------
 
 	/**
@@ -236,6 +240,11 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 		// else check the configuration
 		this.asynchronousSnapshots = original.asynchronousSnapshots.resolveUndefined(
 			configuration.getBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS));
+
+		// if whether to create checkpoint sub-dirs were configured, use that setting,
+		// else check the configuration
+		this.createCheckpointSubDirs = original.createCheckpointSubDirs.resolveUndefined(
+			configuration.getBoolean(CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS));
 	}
 
 	// ------------------------------------------------------------------------
@@ -284,7 +293,12 @@ public class MemoryStateBackend extends AbstractFileStateBackend implements Conf
 
 	@Override
 	public CheckpointStorage createCheckpointStorage(JobID jobId) throws IOException {
-		return new MemoryBackendCheckpointStorage(jobId, getCheckpointPath(), getSavepointPath(), maxStateSize);
+		return new MemoryBackendCheckpointStorage(
+			jobId,
+			createCheckpointSubDirs.getOrDefault(CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS.defaultValue()),
+			getCheckpointPath(),
+			getSavepointPath(),
+			maxStateSize);
 	}
 
 	// ------------------------------------------------------------------------

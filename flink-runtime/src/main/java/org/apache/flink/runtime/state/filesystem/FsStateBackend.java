@@ -108,6 +108,10 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 	 * A value of 'undefined' means not yet configured, in which case the default will be used. */
 	private final TernaryBoolean asynchronousSnapshots;
 
+	/** Switch to create checkpoint sub-directory with name of jobId.
+	 * A value of 'undefined' means not yet configured, in which case the default will be used. */
+	private TernaryBoolean createCheckpointSubDirs = TernaryBoolean.UNDEFINED;
+
 	// -----------------------------------------------------------------------
 
 	/**
@@ -360,6 +364,11 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 				CheckpointingOptions.FS_SMALL_FILE_THRESHOLD.key(), sizeThreshold,
 				CheckpointingOptions.FS_SMALL_FILE_THRESHOLD.defaultValue());
 		}
+
+		// if whether to create checkpoint sub-dirs were configured, use that setting,
+		// else check the configuration
+		this.createCheckpointSubDirs = original.createCheckpointSubDirs.resolveUndefined(
+			configuration.getBoolean(CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS));
 	}
 
 	// ------------------------------------------------------------------------
@@ -442,7 +451,12 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 	@Override
 	public CheckpointStorage createCheckpointStorage(JobID jobId) throws IOException {
 		checkNotNull(jobId, "jobId");
-		return new FsCheckpointStorage(getCheckpointPath(), getSavepointPath(), jobId, getMinFileSizeThreshold());
+			return new FsCheckpointStorage(
+				getCheckpointPath(),
+				getSavepointPath(),
+				jobId,
+				createCheckpointSubDirs.getOrDefault(CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS.defaultValue()),
+				getMinFileSizeThreshold());
 	}
 
 	// ------------------------------------------------------------------------

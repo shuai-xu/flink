@@ -1197,9 +1197,15 @@ public class CheckpointCoordinator {
 			checkpointStorage.resolveLatestCheckpoint(savepointPointer) :
 			checkpointStorage.resolveCheckpoint(savepointPointer);
 
+		if (checkpointLocation == null && resumeFromLatestCheckpoint) {
+			LOG.info("Fail to found any valid completed checkpoint from given checkpoint directory path, job would run from scratch.");
+			return false;
+		}
+
 		// Load the savepoint as a checkpoint into the system
+		boolean convertToSavepoint = !resumeFromLatestCheckpoint;
 		CompletedCheckpoint savepoint = Checkpoints.loadAndValidateCheckpoint(
-				job, tasks, checkpointLocation, userClassLoader, allowNonRestored);
+				job, tasks, checkpointLocation, userClassLoader, allowNonRestored, convertToSavepoint);
 
 		if (resumeFromLatestCheckpoint) {
 			LOG.info("Starting job {} from latest completed checkpoint {} ({})",

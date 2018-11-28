@@ -29,6 +29,7 @@ import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.filesystem.FsCheckpointStreamFactory.FsCheckpointStateOutputStream;
 
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
@@ -61,12 +62,12 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 
 	@Override
 	protected CheckpointStorage createCheckpointStorage(Path checkpointDir) throws Exception {
-		return new FsCheckpointStorage(checkpointDir, null, new JobID(), FILE_SIZE_THRESHOLD);
+		return new FsCheckpointStorage(checkpointDir, null, new JobID(), createCheckpointSubDir, FILE_SIZE_THRESHOLD);
 	}
 
 	@Override
 	protected CheckpointStorage createCheckpointStorageWithSavepointDir(Path checkpointDir, Path savepointDir) throws Exception {
-		return new FsCheckpointStorage(checkpointDir, savepointDir, new JobID(), FILE_SIZE_THRESHOLD);
+		return new FsCheckpointStorage(checkpointDir, savepointDir, new JobID(), createCheckpointSubDir, FILE_SIZE_THRESHOLD);
 	}
 
 	// ------------------------------------------------------------------------
@@ -78,7 +79,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 		final Path defaultSavepointDir = Path.fromLocalFile(tmp.newFolder());
 
 		final FsCheckpointStorage storage = new FsCheckpointStorage(
-				Path.fromLocalFile(tmp.newFolder()), defaultSavepointDir, new JobID(), FILE_SIZE_THRESHOLD);
+				Path.fromLocalFile(tmp.newFolder()), defaultSavepointDir, new JobID(), createCheckpointSubDir, FILE_SIZE_THRESHOLD);
 
 		final FsCheckpointStorageLocation savepointLocation = (FsCheckpointStorageLocation)
 				storage.initializeLocationForSavepoint(52452L, null);
@@ -98,7 +99,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 		final Path savepointDir = Path.fromLocalFile(tmp.newFolder());
 
 		final FsCheckpointStorage storage = new FsCheckpointStorage(
-				Path.fromLocalFile(tmp.newFolder()), null, new JobID(), FILE_SIZE_THRESHOLD);
+				Path.fromLocalFile(tmp.newFolder()), null, new JobID(), createCheckpointSubDir, FILE_SIZE_THRESHOLD);
 
 		final FsCheckpointStorageLocation savepointLocation = (FsCheckpointStorageLocation)
 				storage.initializeLocationForSavepoint(52452L, savepointDir.toString());
@@ -119,7 +120,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 
 		// we chose a small size threshold here to force the state to disk
 		final FsCheckpointStorage storage = new FsCheckpointStorage(
-				Path.fromLocalFile(tmp.newFolder()),  null, new JobID(), 10);
+				Path.fromLocalFile(tmp.newFolder()),  null, new JobID(), createCheckpointSubDir, 10);
 
 		final StreamStateHandle stateHandle;
 
@@ -208,7 +209,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 	@Test
 	public void testStorageLocationDoesNotMkdirs() throws Exception {
 		FsCheckpointStorage storage = new FsCheckpointStorage(
-				randomTempPath(), null, new JobID(), FILE_SIZE_THRESHOLD);
+				randomTempPath(), null, new JobID(), createCheckpointSubDir, FILE_SIZE_THRESHOLD);
 
 		File baseDir =  new File(storage.getCheckpointsDirectory().getPath());
 		assertTrue(baseDir.exists());
@@ -228,6 +229,7 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 			new TestingPath("hdfs:///checkpoint/", checkpointFileSystem),
 			null,
 			new JobID(),
+			createCheckpointSubDir,
 			FILE_SIZE_THRESHOLD);
 
 		final FsCheckpointStorageLocation checkpointStreamFactory =
@@ -241,6 +243,16 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 			(FsCheckpointStorageLocation) storage.resolveCheckpointStorageLocation(2L, savepointLocationReference);
 		final FileSystem fileSystem = savepointStreamFactory.getFileSystem();
 		assertTrue(fileSystem instanceof LocalFileSystem);
+	}
+
+	@Override
+	public void testPersistMultipleMetadataOnlyCheckpoints() throws Exception {
+		if (createCheckpointSubDir) {
+			super.testPersistMultipleMetadataOnlyCheckpoints();
+		} else {
+			throw new AssumptionViolatedException("Multiple checkpoints from different jobs with the same checkpoint ID cannot be guaranteed that they do not interfere with each other, " +
+				"due to we have not created checkpoint sub-directory.");
+		}
 	}
 
 	// ------------------------------------------------------------------------

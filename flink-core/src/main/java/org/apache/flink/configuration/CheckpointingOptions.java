@@ -111,6 +111,14 @@ public class CheckpointingOptions {
 				"in a Flink supported filesystem. The storage path must be accessible from all participating processes/nodes" +
 				"(i.e. all TaskManagers and JobManagers).");
 
+	/** Whether to create sub-directories with specific jobId to store the data files and meta data of checkpoints. */
+	public static final ConfigOption<Boolean> CHCKPOINTS_CREATE_SUBDIRS = ConfigOptions
+			.key("state.checkpoints.create-subdirs")
+			.defaultValue(true)
+			.withDescription("Whether to create sub-directories with specific jobId to store the data files and meta data of checkpoints. " +
+				"The default value is true to enable user could run several jobs with the same checkpoint directory simultaneously, " +
+				"if this value is set to false, pay attention to not run several jobs with the same directory simultaneously.");
+
 	/** The minimum size of state data files. All state chunks smaller than that
 	 * are stored inline in the root checkpoint metadata file. */
 	public static final ConfigOption<Integer> FS_SMALL_FILE_THRESHOLD = ConfigOptions

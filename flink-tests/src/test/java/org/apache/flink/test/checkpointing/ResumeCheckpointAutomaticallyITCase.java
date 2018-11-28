@@ -46,8 +46,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -58,18 +56,16 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
-import static org.junit.Assert.assertNotNull;
-
 /**
- * IT case for resuming from checkpoints manually via their external pointer, rather than automatic
- * failover through the checkpoint coordinator. This test checks that this works properly with the
- * common state backends and checkpoint stores, in combination with asynchronous and incremental
- * snapshots.
+ * IT case for resuming from checkpoints automatically via their external pointer.
+ * When create checkpoint sub-directory is set to true, the tests would find latest completed checkpoint from previous job-id's directory,
+ * otherwise the tests would find latest completed checkpoint from checkpoint base directory. If no checkpoint found, it will start from scratch.
+ * This test checks that this works properly with the common state backends and checkpoint stores, in combination with incremental snapshots.
  *
  * <p>This tests considers full and incremental checkpoints and was introduced to guard against problems like FLINK-6964.
  */
 @RunWith(Parameterized.class)
-public class ResumeCheckpointManuallyITCase extends TestLogger {
+public class ResumeCheckpointAutomaticallyITCase extends TestLogger {
 
 	private static final int PARALLELISM = 2;
 	private static final int NUM_TASK_MANAGERS = 2;
@@ -92,58 +88,7 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		testExternalizedCheckpoints(
 			checkpointDir,
 			null,
-			createRocksDBStateBackend(checkpointDir, true),
-			false);
-	}
-
-	@Test
-	public void testExternalizedFullRocksDBCheckpointsStandalone() throws Exception {
-		final File checkpointDir = temporaryFolder.newFolder();
-		testExternalizedCheckpoints(
-			checkpointDir,
-			null,
-			createRocksDBStateBackend(checkpointDir, false),
-			false);
-	}
-
-	@Test
-	public void testExternalizedIncrementalRocksDBCheckpointsWithLocalRecoveryStandalone() throws Exception {
-		final File checkpointDir = temporaryFolder.newFolder();
-		testExternalizedCheckpoints(
-			checkpointDir,
-			null,
-			createRocksDBStateBackend(checkpointDir, true),
-			true);
-	}
-
-	@Test
-	public void testExternalizedFullRocksDBCheckpointsWithLocalRecoveryStandalone() throws Exception {
-		final File checkpointDir = temporaryFolder.newFolder();
-		testExternalizedCheckpoints(
-			checkpointDir,
-			null,
-			createRocksDBStateBackend(checkpointDir, false),
-			true);
-	}
-
-	@Test
-	public void testExternalizedFSCheckpointsStandalone() throws Exception {
-		final File checkpointDir = temporaryFolder.newFolder();
-		testExternalizedCheckpoints(
-			checkpointDir,
-			null,
-			createFsStateBackend(checkpointDir),
-			false);
-	}
-
-	@Test
-	public void testExternalizedFSCheckpointsWithLocalRecoveryStandalone() throws Exception {
-		final File checkpointDir = temporaryFolder.newFolder();
-		testExternalizedCheckpoints(
-			checkpointDir,
-			null,
-			createFsStateBackend(checkpointDir),
-			true);
+			createRocksDBStateBackend(checkpointDir, true));
 	}
 
 	@Test
@@ -155,11 +100,19 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 			testExternalizedCheckpoints(
 				checkpointDir,
 				zkServer.getConnectString(),
-				createRocksDBStateBackend(checkpointDir, true),
-				false);
+				createRocksDBStateBackend(checkpointDir, true));
 		} finally {
 			zkServer.stop();
 		}
+	}
+
+	@Test
+	public void testExternalizedFullRocksDBCheckpointsStandalone() throws Exception {
+		final File checkpointDir = temporaryFolder.newFolder();
+		testExternalizedCheckpoints(
+			checkpointDir,
+			null,
+			createRocksDBStateBackend(checkpointDir, false));
 	}
 
 	@Test
@@ -171,43 +124,19 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 			testExternalizedCheckpoints(
 				checkpointDir,
 				zkServer.getConnectString(),
-				createRocksDBStateBackend(checkpointDir, false),
-				false);
+				createRocksDBStateBackend(checkpointDir, false));
 		} finally {
 			zkServer.stop();
 		}
 	}
 
 	@Test
-	public void testExternalizedIncrementalRocksDBCheckpointsWithLocalRecoveryZookeeper() throws Exception {
-		TestingServer zkServer = new TestingServer();
-		zkServer.start();
-		try {
-			final File checkpointDir = temporaryFolder.newFolder();
-			testExternalizedCheckpoints(
-				checkpointDir,
-				zkServer.getConnectString(),
-				createRocksDBStateBackend(checkpointDir, true),
-				true);
-		} finally {
-			zkServer.stop();
-		}
-	}
-
-	@Test
-	public void testExternalizedFullRocksDBCheckpointsWithLocalRecoveryZookeeper() throws Exception {
-		TestingServer zkServer = new TestingServer();
-		zkServer.start();
-		try {
-			final File checkpointDir = temporaryFolder.newFolder();
-			testExternalizedCheckpoints(
-				checkpointDir,
-				zkServer.getConnectString(),
-				createRocksDBStateBackend(checkpointDir, false),
-				true);
-		} finally {
-			zkServer.stop();
-		}
+	public void testExternalizedFSCheckpointsStandalone() throws Exception {
+		final File checkpointDir = temporaryFolder.newFolder();
+		testExternalizedCheckpoints(
+			checkpointDir,
+			null,
+			createFsStateBackend(checkpointDir));
 	}
 
 	@Test
@@ -219,24 +148,7 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 			testExternalizedCheckpoints(
 				checkpointDir,
 				zkServer.getConnectString(),
-				createFsStateBackend(checkpointDir),
-				false);
-		} finally {
-			zkServer.stop();
-		}
-	}
-
-	@Test
-	public void testExternalizedFSCheckpointsWithLocalRecoveryZookeeper() throws Exception {
-		TestingServer zkServer = new TestingServer();
-		zkServer.start();
-		try {
-			final File checkpointDir = temporaryFolder.newFolder();
-			testExternalizedCheckpoints(
-				checkpointDir,
-				zkServer.getConnectString(),
-				createFsStateBackend(checkpointDir),
-				true);
+				createFsStateBackend(checkpointDir));
 		} finally {
 			zkServer.stop();
 		}
@@ -256,8 +168,7 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 	private void testExternalizedCheckpoints(
 		File checkpointDir,
 		String zooKeeperQuorum,
-		StateBackend backend,
-		boolean localRecovery) throws Exception {
+		StateBackend backend) throws Exception {
 
 		final Configuration config = new Configuration();
 
@@ -265,7 +176,6 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 
 		config.setString(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir.toURI().toString());
 		config.setString(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepointDir.toURI().toString());
-		config.setBoolean(CheckpointingOptions.LOCAL_RECOVERY, localRecovery);
 		config.setBoolean(CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS, createCheckpointSubDir);
 
 		// ZooKeeper recovery mode?
@@ -290,21 +200,21 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 
 		try {
 			// main test sequence:  start job -> eCP -> restore job -> eCP -> restore job
-			String firstExternalCheckpoint = runJobAndGetExternalizedCheckpoint(backend, checkpointDir, null, client);
-			assertNotNull(firstExternalCheckpoint);
+			JobID dummyJobID = new JobID();
+			new File(checkpointDir, dummyJobID.toString()).mkdirs();
+			// resume from a dummy job, would not find any valid checkpoint, but continue running from scratch.
+			JobID jobID1 = runJobAndGetExternalizedCheckpoint(backend, checkpointDir, dummyJobID, client);
 
-			String secondExternalCheckpoint = runJobAndGetExternalizedCheckpoint(backend, checkpointDir, firstExternalCheckpoint, client);
-			assertNotNull(secondExternalCheckpoint);
+			JobID jobID2 = runJobAndGetExternalizedCheckpoint(backend, checkpointDir, jobID1, client);
 
-			String thirdExternalCheckpoint = runJobAndGetExternalizedCheckpoint(backend, checkpointDir, secondExternalCheckpoint, client);
-			assertNotNull(thirdExternalCheckpoint);
+			runJobAndGetExternalizedCheckpoint(backend, checkpointDir, jobID2, client);
 		} finally {
 			cluster.after();
 		}
 	}
 
-	private String runJobAndGetExternalizedCheckpoint(StateBackend backend, File checkpointDir, @Nullable String externalCheckpoint, ClusterClient<?> client) throws Exception {
-		JobGraph initialJobGraph = getJobGraph(backend, externalCheckpoint);
+	private JobID runJobAndGetExternalizedCheckpoint(StateBackend backend, File checkpointDir, JobID previousJobID, ClusterClient<?> client) throws Exception {
+		JobGraph initialJobGraph = getJobGraph(backend, checkpointDir, previousJobID);
 		NotifyingInfiniteTupleSource.countDownLatch = new CountDownLatch(PARALLELISM);
 
 		client.submitJob(initialJobGraph, ResumeCheckpointManuallyITCase.class.getClassLoader());
@@ -313,19 +223,40 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		NotifyingInfiniteTupleSource.countDownLatch.await();
 
 		waitUntilExternalizedCheckpointCreated(checkpointDir, initialJobGraph.getJobID());
-		client.cancel(initialJobGraph.getJobID());
+		JobID newJobID = initialJobGraph.getJobID();
+		client.cancel(newJobID);
 		waitUntilCanceled(initialJobGraph.getJobID(), client);
-
-		return getExternalizedCheckpointCheckpointPath(checkpointDir, initialJobGraph.getJobID());
+		return newJobID;
 	}
 
-	private String getExternalizedCheckpointCheckpointPath(File checkpointDir, JobID jobId) throws IOException {
-		Optional<Path> checkpoint = findExternalizedCheckpoint(checkpointDir, jobId);
-		if (!checkpoint.isPresent()) {
-			throw new AssertionError("No complete checkpoint could be found.");
+	private JobGraph getJobGraph(StateBackend backend, File checkpointDir, JobID previousJobID) {
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+		env.enableCheckpointing(500);
+		env.setStateBackend(backend);
+		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+		env.setParallelism(PARALLELISM);
+		env.getCheckpointConfig().enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
+
+		env.addSource(new NotifyingInfiniteTupleSource(10_000))
+			.keyBy(0)
+			.timeWindow(Time.seconds(3))
+			.reduce((value1, value2) -> Tuple2.of(value1.f0, value1.f1 + value2.f1))
+			.filter(value -> value.f0.startsWith("Tuple 0"));
+
+		StreamGraph streamGraph = env.getStreamGraph();
+		streamGraph.setJobName("Test");
+
+		JobGraph jobGraph = streamGraph.getJobGraph();
+
+		// always try to find latest completed checkpoint, if not found, just start from scratch.
+		if (createCheckpointSubDir) {
+			jobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forResumePath(new File(checkpointDir, previousJobID.toString()).toString(), false));
 		} else {
-			return checkpoint.get().toString();
+			jobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forResumePath(checkpointDir.toURI().toString(), false));
 		}
+
+		return jobGraph;
 	}
 
 	private void waitUntilExternalizedCheckpointCreated(File checkpointDir, JobID jobId) throws InterruptedException, IOException {
@@ -356,34 +287,6 @@ public class ResumeCheckpointManuallyITCase extends TestLogger {
 		while (client.getJobStatus(jobId).get() != JobStatus.CANCELED) {
 			Thread.sleep(50);
 		}
-	}
-
-	private static JobGraph getJobGraph(StateBackend backend, @Nullable String externalCheckpoint) {
-		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-		env.enableCheckpointing(500);
-		env.setStateBackend(backend);
-		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
-		env.setParallelism(PARALLELISM);
-		env.getCheckpointConfig().enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
-
-		env.addSource(new NotifyingInfiniteTupleSource(10_000))
-			.keyBy(0)
-			.timeWindow(Time.seconds(3))
-			.reduce((value1, value2) -> Tuple2.of(value1.f0, value1.f1 + value2.f1))
-			.filter(value -> value.f0.startsWith("Tuple 0"));
-
-		StreamGraph streamGraph = env.getStreamGraph();
-		streamGraph.setJobName("Test");
-
-		JobGraph jobGraph = streamGraph.getJobGraph();
-
-		// recover from previous iteration?
-		if (externalCheckpoint != null) {
-			jobGraph.setSavepointRestoreSettings(SavepointRestoreSettings.forPath(externalCheckpoint));
-		}
-
-		return jobGraph;
 	}
 
 	/**

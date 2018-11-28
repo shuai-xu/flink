@@ -28,6 +28,9 @@ import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
 import org.apache.flink.util.FileUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.annotation.Nullable;
 
 import java.io.FileNotFoundException;
@@ -41,6 +44,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * An implementation of durable checkpoint storage to file systems.
  */
 public abstract class AbstractFsCheckpointStorage implements CheckpointStorage {
+
+	private static final Logger LOG = LoggerFactory.getLogger(AbstractFsCheckpointStorage.class);
 
 	// ------------------------------------------------------------------------
 	//  Constants
@@ -295,9 +300,9 @@ public abstract class AbstractFsCheckpointStorage implements CheckpointStorage {
 			}
 
 			if (latestCompletedCheckpointMetadataStatus == null) {
-				throw new FileNotFoundException("When resuming from latest completed checkpoint, cannot find any meta data file '" + METADATA_FILE_NAME +
-					"' within sub-checkpoint directories under given parentDir: " + checkpointParentDir +
-					". Please ensure offering correct checkpoint directory path at job level.");
+				LOG.warn("When resuming from latest completed checkpoint, cannot find any meta data file '" + METADATA_FILE_NAME +
+					"' within sub-checkpoint directories under given parentDir: " + checkpointParentDir + ".");
+				return null;
 			} else {
 				metadataFileStatus = latestCompletedCheckpointMetadataStatus;
 				checkpointDir = latestCompletedCheckpointMetadataStatus.getPath().getParent();

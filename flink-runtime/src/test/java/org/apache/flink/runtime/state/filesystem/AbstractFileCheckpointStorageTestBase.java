@@ -33,6 +33,8 @@ import org.apache.flink.runtime.state.StreamStateHandle;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 
@@ -40,12 +42,15 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -54,7 +59,16 @@ import static org.junit.Assert.fail;
  * {@link org.apache.flink.runtime.state.memory.MemoryBackendCheckpointStorage} and the
  * {@link FsCheckpointStorage}.
  */
+@RunWith(Parameterized.class)
 public abstract class AbstractFileCheckpointStorageTestBase {
+
+	@Parameterized.Parameter
+	public Boolean createCheckpointSubDir;
+
+	@Parameterized.Parameters(name = "createCheckpointSubDir = {0}")
+	public static List<Boolean> parameters() {
+		return Arrays.asList(true, false);
+	}
 
 	@Rule
 	public final TemporaryFolder tmp = new TemporaryFolder();
@@ -118,7 +132,20 @@ public abstract class AbstractFileCheckpointStorageTestBase {
 	public void testLatestCheckpointResolution() throws Exception {
 		final FileSystem fs = FileSystem.getLocalFileSystem();
 		final File checkpointBasePath = tmp.newFolder();
-		final Path jobCheckpointBasePath = new Path(Path.fromLocalFile(checkpointBasePath), "/job1");
+		final Path jobCheckpointBasePath = createCheckpointSubDir ? new Path(Path.fromLocalFile(checkpointBasePath), "/job1") : Path.fromLocalFile(checkpointBasePath);
+		new File(jobCheckpointBasePath.getPath()).mkdirs();
+
+		// create the storage for some random checkpoint directory
+		final CheckpointStorage storage = createCheckpointStorage(randomTempPath());
+
+		final String pointer1 = jobCheckpointBasePath.getPath();
+		final String pointer2 = jobCheckpointBasePath.getPath() + '/';
+
+		// found no valid completed checkpoints
+		CompletedCheckpointStorageLocation completed1 = storage.resolveLatestCheckpoint(pointer1);
+		assertNull(completed1);
+		CompletedCheckpointStorageLocation completed2 = storage.resolveLatestCheckpoint(pointer2);
+		assertNull(completed2);
 
 		String latestCheckpointDir = null;
 		byte[] latestCheckpointMetaData = null;
@@ -139,14 +166,8 @@ public abstract class AbstractFileCheckpointStorageTestBase {
 			}
 		}
 
-		// create the storage for some random checkpoint directory
-		final CheckpointStorage storage = createCheckpointStorage(randomTempPath());
-
-		final String pointer1 = jobCheckpointBasePath.getPath();
-		final String pointer2 = jobCheckpointBasePath.getPath() + '/';
-
-		CompletedCheckpointStorageLocation completed1 = storage.resolveLatestCheckpoint(pointer1);
-		CompletedCheckpointStorageLocation completed2 = storage.resolveLatestCheckpoint(pointer2);
+		completed1 = storage.resolveLatestCheckpoint(pointer1);
+		completed2 = storage.resolveLatestCheckpoint(pointer2);
 
 		assertEquals(latestCheckpointDir, completed1.getExternalPointer());
 		assertEquals(latestCheckpointDir, completed2.getExternalPointer());
@@ -217,14 +238,6 @@ public abstract class AbstractFileCheckpointStorageTestBase {
 		// non-existing file
 		try {
 			storage.resolveLatestCheckpoint(tmp.newFile().toURI().toString() + "_not_existing");
-			fail("expected exception");
-		} catch (IOException ignored) {}
-
-		// resume from an empty folder
-		try {
-			File checkpointDir = new File(tmp.newFolder(), "/job-id/chk-1");
-			checkpointDir.mkdirs();
-			storage.resolveLatestCheckpoint(checkpointDir.getParent());
 			fail("expected exception");
 		} catch (IOException ignored) {}
 	}

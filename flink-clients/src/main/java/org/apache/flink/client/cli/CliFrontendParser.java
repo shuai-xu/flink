@@ -80,7 +80,10 @@ public class CliFrontendParser {
 			"Path to a savepoint to restore the job from (for example hdfs:///flink/savepoint-1537).");
 
 	static final Option RESUME_PATH_OPTION = new Option("r", "resume", true,
-		"Path to a previous-job dir to restore the job from latest externalized checkpoint (for example hdfs:///user-defined-dir/job-id).");
+		"Path to a checkpoint dir to restore the job from latest externalized checkpoint. " +
+			"If " + CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS + " is set to true as default, please give checkpoint directory at job-id level (for example hdfs:///user-defined-dir/job-id); " +
+			"if " + CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS + " is set to false, please just give the user defined checkpoint directory (for example hdfs:///user-defined-dir). " +
+			"If no valid checkpoint found, job would continue running from scratch.");
 
 	static final Option SAVEPOINT_ALLOW_NON_RESTORED_OPTION = new Option("n", "allowNonRestoredState", false,
 			"Allow to skip savepoint state that cannot be restored. " +
