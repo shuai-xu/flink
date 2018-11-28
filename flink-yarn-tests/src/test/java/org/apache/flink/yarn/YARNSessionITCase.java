@@ -29,12 +29,14 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMap
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ArrayNode;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -196,6 +198,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
 		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
 
+		waitForApplicationFinished(yc, app.getApplicationId());
 		LOG.info("Finished " + testName.getMethodName());
 	}
 
@@ -307,6 +310,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
 		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
 
+		waitForApplicationFinished(yc, app.getApplicationId());
 		LOG.info("Finished " + testName.getMethodName());
 	}
 
@@ -421,6 +425,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
 		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
 
+		waitForApplicationFinished(yc, app.getApplicationId());
 		LOG.info("Finished " + testName.getMethodName());
 	}
 
@@ -543,6 +548,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
 		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
 
+		waitForApplicationFinished(yc, app.getApplicationId());
 		LOG.info("Finished " + testName.getMethodName());
 	}
 
@@ -677,6 +683,7 @@ public class YARNSessionITCase extends YarnTestBase {
 		LOG.info("Sending stdout content through logger: \n\n{}\n\n", oC);
 		LOG.info("Sending stderr content through logger: \n\n{}\n\n", eC);
 
+		waitForApplicationFinished(yc, app.getApplicationId());
 		LOG.info("Finished " + testName.getMethodName());
 	}
 
@@ -685,6 +692,23 @@ public class YARNSessionITCase extends YarnTestBase {
 		if (!testName.getMethodName().equals("testAllocateContainerTimeoutWithResourceSetting")) {
 			ensureNoProhibitedStringInLogFiles(PROHIBITED_STRINGS, WHITELISTED_STRINGS,
 				appsToIgnore.toArray(new String[appsToIgnore.size()]));
+		}
+	}
+
+	private void waitForApplicationFinished(YarnClient yarnClient, ApplicationId applicationId)
+			throws IOException, YarnException, InterruptedException {
+		if (yarnClient != null && applicationId != null) {
+			boolean finished = false;
+
+			while (!finished) {
+				ApplicationReport applicationReport = yarnClient.getApplicationReport(applicationId);
+				if (applicationReport.getYarnApplicationState() == YarnApplicationState.FINISHED
+						|| applicationReport.getYarnApplicationState() == YarnApplicationState.KILLED
+						|| applicationReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
+					finished = true;
+				}
+				Thread.sleep(500);
+			}
 		}
 	}
 

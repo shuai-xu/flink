@@ -61,6 +61,7 @@ public class MiniClusterITCase extends TestLogger {
 	private Configuration configuration;
 	private static File tempConfPathForRun = null;
 	private String flinkConfDir;
+	private String jobManagerAddress;
 
 	// Temp directory which is deleted after the unit test.
 	public static TemporaryFolder tmp = new TemporaryFolder();
@@ -78,6 +79,7 @@ public class MiniClusterITCase extends TestLogger {
 		miniCluster = new MiniCluster(miniClusterConfiguration);
 		miniCluster.start();
 		configuration.setInteger(RestOptions.PORT, miniCluster.getRestAddress().getPort());
+		jobManagerAddress = miniCluster.getRestAddress().getHost() + ":" + miniCluster.getRestAddress().getPort();
 	}
 
 	@Test
@@ -86,7 +88,7 @@ public class MiniClusterITCase extends TestLogger {
 				configuration,
 				CliFrontend.loadCustomCommandLines(configuration, flinkConfDir));
 		File exampleJarLocation = getTestJarPath("StreamingWordCount-test-jar.jar");
-		String[] args = new String[]{"run", exampleJarLocation.getAbsolutePath()};
+		String[] args = new String[]{"run", "-m", jobManagerAddress, exampleJarLocation.getAbsolutePath()};
 		int returnValue = cli.parseParameters(args);
 		assertEquals(0, returnValue);
 	}
@@ -97,7 +99,7 @@ public class MiniClusterITCase extends TestLogger {
 				configuration,
 				CliFrontend.loadCustomCommandLines(configuration, flinkConfDir));
 		File exampleJarLocation = getTestJarPath("StreamingWordCount-test-jar.jar");
-		String[] args = new String[]{"run", exampleJarLocation.getAbsolutePath(),
+		String[] args = new String[]{"run", "-m", jobManagerAddress, exampleJarLocation.getAbsolutePath(),
 				"--resource", "vcores:0.1,memory:100"};
 		int returnValue = cli.parseParameters(args);
 		assertEquals(0, returnValue);
@@ -109,7 +111,7 @@ public class MiniClusterITCase extends TestLogger {
 				configuration,
 				CliFrontend.loadCustomCommandLines(configuration, flinkConfDir));
 		File exampleJarLocation = getTestJarPath("StreamingWordCount-test-jar.jar");
-		String[] args = new String[]{"run", "-d", exampleJarLocation.getAbsolutePath(),
+		String[] args = new String[]{"run", "-m", jobManagerAddress, "-d", exampleJarLocation.getAbsolutePath(),
 				"--resource", "vcores:0.1,memory:100"};
 		int returnValue = cli.parseParameters(args);
 		assertEquals(0, returnValue);
@@ -122,7 +124,7 @@ public class MiniClusterITCase extends TestLogger {
 				configuration,
 				CliFrontend.loadCustomCommandLines(configuration, null));
 		File exampleJarLocation = getTestJarPath("StreamingWordCount-test-jar.jar");
-		String[] args = new String[]{"run", exampleJarLocation.getAbsolutePath(),
+		String[] args = new String[]{"run", "-m", jobManagerAddress, exampleJarLocation.getAbsolutePath(),
 				"--resource", "vcores:100,memory:100"};
 		new Thread(() -> cli.parseParameters(args)).start();
 		assertFalse(waitForAllJobsFinishedOrTimeout());
@@ -134,7 +136,7 @@ public class MiniClusterITCase extends TestLogger {
 				configuration,
 				CliFrontend.loadCustomCommandLines(configuration, null));
 		File exampleJarLocation = getTestJarPath("StreamingWordCount-test-jar.jar");
-		String[] args = new String[]{"run", "-d", exampleJarLocation.getAbsolutePath(),
+		String[] args = new String[]{"run", "-m", jobManagerAddress, "-d", exampleJarLocation.getAbsolutePath(),
 				"--resource", "vcores:100,memory:100"};
 		int returnValue = cli.parseParameters(args);
 		assertEquals(0, returnValue);
@@ -156,7 +158,7 @@ public class MiniClusterITCase extends TestLogger {
 	 * @return True if all jobs finished and false if timeout.
 	 */
 	private boolean waitForAllJobsFinishedOrTimeout() throws ExecutionException, InterruptedException {
-		for (int i = 0; i < 60; i++) {
+		for (int i = 0; i < 10; i++) {
 			AtomicBoolean finished = new AtomicBoolean(true);
 			if (miniCluster.listJobs().get().size() > 0) {
 				miniCluster.listJobs().get().forEach(e -> {
