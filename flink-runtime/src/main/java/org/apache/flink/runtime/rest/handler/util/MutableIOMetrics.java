@@ -31,6 +31,7 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonGenerator
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * This class is a mutable version of the {@link IOMetrics} class that allows adding up IO-related metrics.
@@ -53,7 +54,7 @@ public class MutableIOMetrics extends IOMetrics {
 	private float bufferOutPoolUsageMax = 0.0f;
 	private boolean bufferInPoolUsageMaxComplete = true;
 	private boolean bufferOutPoolUsageMaxComplete = true;
-	private long tps = 0L;
+	private double tps = 0L;
 	private boolean tpsComplete = true;
 	private long delay = 0L;
 	private boolean delayComplete = true;
@@ -98,7 +99,7 @@ public class MutableIOMetrics extends IOMetrics {
 		return bufferOutPoolUsageMax;
 	}
 
-	public long getTps() {
+	public double getTps() {
 		return tps;
 	}
 
@@ -146,6 +147,17 @@ public class MutableIOMetrics extends IOMetrics {
 					 * In case a metric is missing for a parallel instance of a task, we set the complete flag as
 					 * false.
 					 */
+					boolean findTps = false;
+					for (Map.Entry<String, String> entry : metrics.getMetrics().entrySet()) {
+						if (entry.getKey().endsWith("." + MetricNames.IO_NUM_TPS)) {
+							double tps = Double.valueOf(entry.getValue());
+							this.tps = Math.max(tps, this.tps);
+							findTps = true;
+						} else if (entry.getKey().endsWith("." + MetricNames.IO_NUM_DELAY)) {
+							long delay = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_DELAY));
+							this.delay = Math.max(delay, this.delay);
+						}
+					}
 					if (metrics.getMetric(MetricNames.IO_NUM_BYTES_IN_LOCAL) == null){
 						this.numBytesInLocalComplete = false;
 					}
@@ -195,18 +207,9 @@ public class MutableIOMetrics extends IOMetrics {
 						this.bufferOutPoolUsageMax = Math.max(bufferOutQueue, this.bufferOutPoolUsageMax);
 					}
 
-					if (metrics.getMetric(MetricNames.IO_NUM_TPS) == null) {
-						this.tpsComplete = false;
-					} else {
-						long tps = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_TPS));
+					if (!findTps && metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE) != null) {
+						long tps = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE));
 						this.tps = Math.max(tps, this.tps);
-					}
-
-					if (metrics.getMetric(MetricNames.IO_NUM_DELAY) == null) {
-						this.delayComplete = false;
-					} else {
-						long delay = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_DELAY));
-						this.delay = Math.max(delay, this.delay);
 					}
 				}
 				else {

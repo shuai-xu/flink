@@ -99,7 +99,7 @@ public final class IOMetricsInfo {
 	private final boolean bufferOutPoolUsageMaxComplete;
 
 	@JsonProperty(FIELD_NAME_TPS)
-	private final long tps;
+	private final double tps;
 
 	@JsonProperty(FIELD_NAME_TPS_COMPLETE)
 	private final boolean tpsComplete;
@@ -124,7 +124,7 @@ public final class IOMetricsInfo {
 			@JsonProperty(FIELD_NAME_BUFFERS_IN_POOL_USAGE_MAX_COMPLETE) boolean bufferInPoolUsageMaxComplete,
 			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX) float bufferOutPoolUsageMax,
 			@JsonProperty(FIELD_NAME_BUFFERS_OUT_POOL_USAGE_MAX_COMPLETE) boolean bufferOutPoolUsageMaxComplete,
-			@JsonProperty(FIELD_NAME_TPS) long tps,
+			@JsonProperty(FIELD_NAME_TPS) double tps,
 			@JsonProperty(FIELD_NAME_TPS_COMPLETE) boolean tpsComplete,
 			@JsonProperty(FIELD_NAME_DELAY) long delay,
 			@JsonProperty(FIELD_NAME_DELAY_COMPLETE) boolean delayComplete) {
@@ -213,7 +213,7 @@ public final class IOMetricsInfo {
 		return bufferOutPoolUsageMaxComplete;
 	}
 
-	public long getTps() {
+	public double getTps() {
 		return tps;
 	}
 
