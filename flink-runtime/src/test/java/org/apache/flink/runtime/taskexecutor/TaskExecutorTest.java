@@ -2012,6 +2012,24 @@ public class TaskExecutorTest extends TestLogger {
 		}
 	}
 
+	@Test
+	public void testGetTaskExecutorTmHostName() throws Exception {
+		final TaskSlotTable taskSlotTable = new TaskSlotTable(
+			Collections.singleton(ResourceProfile.UNKNOWN),
+			ResourceProfile.UNKNOWN,
+			timerService);
+		final TaskManagerLocation taskManagerLocation = new LocalTaskManagerLocation();
+		final TaskManagerServices taskManagerServices = new TaskManagerServicesBuilder()
+			.setTaskSlotTable(taskSlotTable)
+			.setTaskManagerLocation(taskManagerLocation)
+			.build();
+		final TaskExecutor taskExecutor = createTaskExecutor(taskManagerServices);
+
+		taskExecutor.start();
+		assertEquals("test.abc.net",
+			taskExecutor.getHostNameFromAddress("akka.tcp://flink@test.abc.net:23676/user/taskmanager_0"));
+	}
+
 	/**
 	 * Tests that the {@link TaskExecutor} tries to reconnect if the initial slot report
 	 * fails.

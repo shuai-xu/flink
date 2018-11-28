@@ -923,6 +923,15 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		return FutureUtils.completedExceptionally(new FlinkException("There is no log file available on the TaskExecutor."));
 	}
 
+	public String getHostNameFromAddress(String address) {
+		String hostName = "localhost";
+		if (address.contains("@") && address.contains(":")) {
+			String[] tmp = address.split("@");
+			hostName = tmp[tmp.length - 1].split(":")[0];
+		}
+		return hostName;
+	}
+
 	@Override
 	public CompletableFuture<Tuple2<String, Long>> requestJmx(Time timeout) {
 		final File logFile = new File(taskManagerConfiguration.getTaskManagerLogPath());
@@ -930,6 +939,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 			FileOffsetRange fileOffsetRange = new FileOffsetRange(0, 1048576);
 			fileOffsetRange = fileOffsetRange.normalize(logFile.length());
 			final RandomAccessFile randomAccessFile = new RandomAccessFile(logFile, "r");
+			String hostName = this.getHostNameFromAddress(this.getAddress());
 			try (InputStream logFileInputStream =
 				ByteStreams.limit(
 					Channels.newInputStream(randomAccessFile.getChannel().position(fileOffsetRange.getStart())),
@@ -945,7 +955,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 						break;
 					}
 				}
-				return CompletableFuture.completedFuture(Tuple2.of(this.getHostname(), jmxPort));
+				return CompletableFuture.completedFuture(Tuple2.of(hostName, jmxPort));
 			}
 		} catch (Exception e) {
 			log.error("Could not read file {}.", taskManagerConfiguration.getTaskManagerLogPath(), e);
