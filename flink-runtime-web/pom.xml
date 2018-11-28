@@ -158,7 +158,7 @@ under the License.
 							<goal>npm</goal>
 						</goals>
 						<configuration>
-							<arguments>install --no-shrinkwrap</arguments>
+							<arguments>install</arguments>
 						</configuration>
 					</execution>
 					<execution>
