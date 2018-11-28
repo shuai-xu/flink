@@ -60,6 +60,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
         BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
@@ -84,8 +85,8 @@ class ExternalCatalogITCase {
       ),
       false)
     tableEnv.sqlUpdate("" +
-        s"insert into hive.t1 with (tableType = '3') select t1.b, w.a " +
-        s"from hive.t1 with (tableType = '1') join hive.t1 with (tableType = '2')" +
+        s"insert into t1 with (tableType = '3') select t1.b, w.a " +
+        s"from t1 with (tableType = '1') join t1 with (tableType = '2')" +
         "FOR SYSTEM_TIME AS OF PROCTIME() AS w on t1.a = w.a")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
@@ -104,6 +105,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
         BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
@@ -132,7 +134,7 @@ class ExternalCatalogITCase {
         richTableSchema
       ),
       false)
-    tableEnv.sqlUpdate(s"insert into hive.t1  select * from hive.t1 ")
+    tableEnv.sqlUpdate(s"insert into t1  select * from t1 ")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
     expected.add(toRow(new Integer(2), new Integer(1)))
@@ -147,6 +149,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
         BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO), Array[String]("a", "b"))
@@ -175,7 +178,7 @@ class ExternalCatalogITCase {
         richTableSchema
       ),
       false)
-    tableEnv.sqlUpdate(s"insert into hive.t1  select * from hive.t1 ")
+    tableEnv.sqlUpdate(s"insert into t1  select * from t1 ")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
     expected.add(toRow(new Integer(2), new Integer(1)))
@@ -191,6 +194,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -235,7 +239,7 @@ class ExternalCatalogITCase {
       ),
       false)
     tableEnv.sqlUpdate("" +
-        "insert into hive.t1(a, b) select t1.b, w.c from hive.t1 join hive.t1 " +
+        "insert into t1(a, b) select t1.b, w.c from t1 join t1 " +
         "FOR SYSTEM_TIME AS OF PROCTIME() AS w on t1.a = w.a")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
@@ -253,6 +257,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -299,8 +304,8 @@ class ExternalCatalogITCase {
       ),
       false)
     tableEnv.sqlUpdate("" +
-        "insert into hive.t1(a, b) " +
-        "select sum(a), sum(b) from hive.t1 group by TUMBLE(c, INTERVAL '2' Day)")
+        "insert into t1(a, b) " +
+        "select sum(a), sum(b) from t1 group by TUMBLE(c, INTERVAL '2' Day)")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
     assertEquals(expected, CollectionTableFactory.RESULT)
@@ -314,6 +319,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -365,9 +371,9 @@ class ExternalCatalogITCase {
       ),
       false)
     tableEnv.sqlUpdate("" +
-        "insert into hive.t1(a, b, c) " +
+        "insert into t1(a, b, c) " +
         "select sum(a), sum(b), max(to_timestamp(b)) " +
-        "from hive.t1 group by TUMBLE(c, INTERVAL '2' Second)")
+        "from t1 group by TUMBLE(c, INTERVAL '2' Second)")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
     expected.add(toRow(new Integer(4), new Integer(10), new Timestamp(4)))
@@ -381,6 +387,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -427,8 +434,8 @@ class ExternalCatalogITCase {
       ),
       false)
     tableEnv.sqlUpdate("" +
-        "insert into hive.t1(a, b) " +
-        "select a, cast(c as int) from hive.t1")
+        "insert into t1(a, b) " +
+        "select a, cast(c as int) from t1")
     tableEnv.execute()
     assertEquals(4, CollectionTableFactory.RESULT.size())
   }
@@ -441,6 +448,7 @@ class ExternalCatalogITCase {
     tableEnv.registerExternalCatalog(
       TableEnvironment.DEFAULT_SCHEMA,
       new InMemoryExternalCatalog(TableEnvironment.DEFAULT_SCHEMA))
+    tableEnv.useSchema(TableEnvironment.DEFAULT_SCHEMA)
 
     val rowTypeInfo =
       new RowTypeInfo(Array[TypeInformation[_]](
@@ -492,8 +500,8 @@ class ExternalCatalogITCase {
       ),
       false)
     tableEnv.sqlUpdate("" +
-        "insert into hive.t1(a, b, c) " +
-        "select a, b, c from hive.t1")
+        "insert into t1(a, b, c) " +
+        "select a, b, c from t1")
     tableEnv.execute()
     val expected = new util.LinkedList[Row]()
     expected.add(toRow(new Integer(1), new Integer(1), new Timestamp(1)))

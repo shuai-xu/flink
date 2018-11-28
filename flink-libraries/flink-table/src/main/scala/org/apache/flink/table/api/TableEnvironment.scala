@@ -75,7 +75,8 @@ import _root_.scala.collection.mutable
   */
 abstract class TableEnvironment(val config: TableConfig) {
 
-  private val catalogManager: CatalogManager = new CatalogManager();
+  private val catalogManager: CatalogManager = new CatalogManager()
+  private var currentSchema: SchemaPlus = catalogManager.getRootSchema
 
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
@@ -98,31 +99,16 @@ abstract class TableEnvironment(val config: TableConfig) {
     new ChainedFunctionCatalog(externalFunctionCatalogs :+ functionCatalog)
 
   // the configuration to create a Calcite planner
-  protected lazy val frameworkConfig: FrameworkConfig = Frameworks
-    .newConfigBuilder
-    .defaultSchema(catalogManager.getRootSchema)
-    .parserConfig(getSqlParserConfig)
-    .costFactory(getFlinkCostFactory)
-    .operatorTable(getSqlOperatorTable)
-    // set the executor to evaluate constant expressions
-    .executor(new ExpressionReducer(config))
-    .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(chainedFunctionCatalog)))
-    .build
+  protected var frameworkConfig: FrameworkConfig = createFrameworkConfig
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
-  protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
-    frameworkConfig, config, getTypeFactory)
+  protected var relBuilder: FlinkRelBuilder = createRelBuilder
 
   // the planner instance used to optimize queries of this TableEnvironment
-  private lazy val planner: RelOptPlanner = relBuilder.getPlanner
+  private var planner: RelOptPlanner = createRelOptPlanner
 
   // reuse flink planner
-  private lazy val flinkPlanner = new FlinkPlannerImpl(
-    getFrameworkConfig,
-    getPlanner,
-    getTypeFactory,
-    sqlToRelConverterConfig,
-    relBuilder.getCluster)
+  private var flinkPlanner: FlinkPlannerImpl = createFlinkPlanner
 
   // a counter for unique attribute names
   private[flink] val attrNameCntr: AtomicInteger = new AtomicInteger(0)
@@ -142,6 +128,18 @@ abstract class TableEnvironment(val config: TableConfig) {
       case Some(c) => c
       case None => getSqlToRelConverterConfig
     }
+  }
+
+  /**
+    * Switch the current schema to the sub schema.
+    * @param schemaName The sub schema name.
+    */
+  def useSchema(schemaName: String): Unit = {
+    currentSchema = catalogManager.getRootSchema.getSubSchema(schemaName)
+    frameworkConfig = createFrameworkConfig
+    relBuilder = createRelBuilder
+    planner = createRelOptPlanner
+    flinkPlanner = createFlinkPlanner
   }
 
   /** Returns the table config to define the runtime behavior of the Table API. */
@@ -291,6 +289,8 @@ abstract class TableEnvironment(val config: TableConfig) {
   @deprecated
   protected def registerExternalCatalogInternal(
       name: String, externalCatalog: ExternalCatalog, isStreaming: Boolean): Unit = {
+    // Here we use the root schema instead of the current schema, for the ExternalCatalog can
+    // only be registered at the root schema.
     if (catalogManager.getRootSchema.getSubSchema(name) != null) {
       throw new ExternalCatalogAlreadyExistException(name)
     }
@@ -302,6 +302,8 @@ abstract class TableEnvironment(val config: TableConfig) {
 
     this.externalCatalogs.put(name, externalCatalog)
     // create an external catalog calcite schema, register it on the root schema
+    // Here we use the root schema instead of the current schema, for the ExternalCatalog can
+    // only be registered at the root schema.
     ExternalCatalogSchema.registerCatalog(
       catalogManager.getRootSchema, name, externalCatalog, isStreaming)
   }
@@ -827,7 +829,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor
 
   private def getSchema(schemaPath: Array[String]): SchemaPlus = {
-    var schema = catalogManager.getRootSchema
+    var schema = currentSchema
     for (schemaName <- schemaPath) {
       schema = schema.getSubSchema(schemaName)
       if (schema == null) {
@@ -844,7 +846,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     */
   def listTables(): Array[String] = {
     // TODO list from external meta
-    catalogManager.getRootSchema.getTableNames.asScala.toArray
+    currentSchema.getTableNames.asScala.toArray
   }
 
   /**
@@ -1129,7 +1131,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       throw new TableException(s"Table \'$name\' already exists. " +
         s"Please, choose a different name.")
     } else {
-      catalogManager.getRootSchema.add(name, table)
+      currentSchema.add(name, table)
     }
   }
 
@@ -1147,7 +1149,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @return true, if a table is registered under the name, false otherwise.
     */
   protected[flink] def isRegistered(name: String): Boolean = {
-    val memContains: Boolean = catalogManager.getRootSchema.getTableNames.contains(name)
+    val memContains: Boolean = currentSchema.getTableNames.contains(name)
     if (!memContains) {
       val schemaPaths = Array(TableEnvironment.DEFAULT_SCHEMA)
       val schema = getSchema(schemaPaths)
@@ -1200,7 +1202,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
 
     val pathNames = name.split('.').toList
-    getTableFromSchema(catalogManager.getRootSchema, pathNames)
+    getTableFromSchema(currentSchema, pathNames)
   }
 
   /**
@@ -1231,7 +1233,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       catalogPaths: Array[String],
       tableName: String,
       externalTable: ExternalCatalogTable,
-      ignoreIfExists: Boolean) = {
+      ignoreIfExists: Boolean): Unit = {
 
     val externalCatalog = getExternalCatalog(catalogPaths)
     require(
@@ -1246,7 +1248,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       catalogPaths: Array[String],
       functionName: String,
       className: String,
-      ignoreIfExists: Boolean) = {
+      ignoreIfExists: Boolean): Unit = {
 
     val externalCatalog = getExternalCatalog(catalogPaths)
     require(
@@ -1296,9 +1298,40 @@ abstract class TableEnvironment(val config: TableConfig) {
     chainedFunctionCatalog
   }
 
+  private def createFrameworkConfig: FrameworkConfig = {
+    Frameworks
+      .newConfigBuilder
+      .defaultSchema(currentSchema)
+      .parserConfig(getSqlParserConfig)
+      .costFactory(getFlinkCostFactory)
+      .operatorTable(getSqlOperatorTable)
+      // set the executor to evaluate constant expressions
+      .executor(new ExpressionReducer(config))
+      .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(chainedFunctionCatalog)))
+      .build
+  }
+
   /** Returns the Calcite [[FrameworkConfig]] of this TableEnvironment. */
   private[flink] def getFrameworkConfig: FrameworkConfig = {
     frameworkConfig
+  }
+
+  protected def createRelBuilder: FlinkRelBuilder = {
+    FlinkRelBuilder.create(
+      frameworkConfig, config, getTypeFactory)
+  }
+
+  private def createRelOptPlanner: RelOptPlanner = {
+    relBuilder.getPlanner
+  }
+
+  private def createFlinkPlanner: FlinkPlannerImpl = {
+    new FlinkPlannerImpl(
+      getFrameworkConfig,
+      getPlanner,
+      getTypeFactory,
+      sqlToRelConverterConfig,
+      relBuilder.getCluster)
   }
 
    /**

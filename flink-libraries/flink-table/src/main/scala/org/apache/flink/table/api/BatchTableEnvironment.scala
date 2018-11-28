@@ -84,7 +84,7 @@ class BatchTableEnvironment(
   private [table] def getRUKeeper(): RunningUnitKeeper = ruKeeper
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
-  override protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
+  override protected def createRelBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
     frameworkConfig, config, getTypeFactory, Array(
       ConventionTraitDef.INSTANCE,
       FlinkRelDistributionTraitDef.INSTANCE,

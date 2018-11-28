@@ -94,7 +94,7 @@ abstract class StreamTableEnvironment(
   private var isConfigMerged: Boolean = false
 
   // the builder for Calcite RelNodes, Calcite's representation of a relational expression tree.
-  override protected lazy val relBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
+  override protected def createRelBuilder: FlinkRelBuilder = FlinkRelBuilder.create(
     frameworkConfig, config, getTypeFactory, Array(
       ConventionTraitDef.INSTANCE,
       FlinkRelDistributionTraitDef.INSTANCE,
