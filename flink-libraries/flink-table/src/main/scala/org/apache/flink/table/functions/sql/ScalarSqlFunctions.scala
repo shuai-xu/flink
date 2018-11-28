@@ -549,7 +549,12 @@ object ScalarSqlFunctions {
     FlinkReturnTypes.NUMERIC_FROM_ARG1_DEFAULT1_NULLABLE,
     null,
     OperandTypes.or(
-      new NumericExceptFirstOperandChecker(3),
+      OperandTypes.and(
+        // cannot only use `family(BOOLEAN, NUMERIC, NUMERIC)` here,
+        // as we don't want non-numeric types to be implicitly casted to numeric types.
+        new NumericExceptFirstOperandChecker(3),
+        OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
+      ),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.STRING, SqlTypeFamily.STRING),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.BOOLEAN, SqlTypeFamily.BOOLEAN),
       OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER),

@@ -205,6 +205,14 @@ class TypeCoercionITCase extends QueryTest {
       """
         |select if(1>0, date '2018-06-08', timestamp '2018-06-07 17:00:00.0') from t4
       """.stripMargin, Seq(row("2018-06-08")))
+    checkResult(
+      """
+        |select if(1>0, 'a', cast(0 as decimal(3, 2))) from t4
+      """.stripMargin, Seq(row("a")))
+    checkResult(
+      """
+        |select if(1<0, 'a', cast(0 as decimal(3, 2))) from t4
+      """.stripMargin, Seq(row("0.00")))
   }
 
   @Test

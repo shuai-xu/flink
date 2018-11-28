@@ -28,12 +28,17 @@ class CalcValidationTest extends TableTestBatchExecBase {
 
   @Test(expected = classOf[ValidationException])
   def testInvalidFields(): Unit = {
-
     val util = batchTestUtil()
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
-
     val sqlQuery = "SELECT a, foo FROM MyTable"
+    util.tableEnv.sqlQuery(sqlQuery)
+  }
 
+  @Test(expected = classOf[ValidationException])
+  def testIfFirstOperandNotBoolean(): Unit = {
+    val util = batchExecTestUtil()
+    util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
+    val sqlQuery = "SELECT if(c, a, b) FROM MyTable"
     util.tableEnv.sqlQuery(sqlQuery)
   }
 }
