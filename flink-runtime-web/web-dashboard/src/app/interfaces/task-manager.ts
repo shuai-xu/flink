@@ -2,6 +2,11 @@ export interface TaskManagerListInterface {
   taskmanagers: TaskmanagersItem[];
 }
 
+export interface JMXInterface {
+  host: string;
+  port: number;
+}
+
 export interface TaskManagerDetailInterface {
   id: string;
   path: string;

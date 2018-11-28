@@ -1,9 +1,10 @@
 import { Component, Input, OnInit, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { NzMessageService } from 'ng-zorro-antd';
 import { Subject } from 'rxjs';
 import { flatMap, startWith, takeUntil } from 'rxjs/operators';
 import { deepFind } from 'core';
 import { NodesItemCorrectInterface, JobSubTaskInterface } from 'interfaces';
-import { JobService, StatusService } from 'services';
+import { JobService, StatusService, TaskManagerService } from 'services';
 
 @Component({
   selector       : 'flink-job-overview-drawer-subtasks',
@@ -42,7 +43,17 @@ export class JobOverviewDrawerSubtasksComponent implements OnInit, OnDestroy {
     }
   }
 
-  constructor(private statusService: StatusService, private jobService: JobService) {
+  getJMX(id) {
+    this.taskManagerService.getJMX(id).subscribe(data => {
+      if (data.port === -1) {
+        this.nzMessageService.info('No JMX Link Found');
+      } else {
+        window.open(`http://zprofiler.alibaba-inc.com/dynamic/environment.htm?ip_port=${data.host}:${data.port}`);
+      }
+    });
+  }
+
+  constructor(private statusService: StatusService, private jobService: JobService, private taskManagerService: TaskManagerService, private nzMessageService: NzMessageService) {
   }
 
   ngOnInit() {

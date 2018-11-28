@@ -15,9 +15,29 @@ import { isNil } from 'lodash';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NodeComponent {
-
+  _node = {} as NodesItemCorrectInterface;
   visible = false;
-  @Input() node = {} as NodesItemCorrectInterface;
+  description = '';
+  inQ = 0;
+  outQ = 0;
+
+  @Input()
+  set node(value) {
+    this._node = value;
+    const description = this.node.description.replace('&gt;', '>');
+    if (description.length > 300) {
+      this.description = description.slice(0, 300) + '...';
+    } else {
+      this.description = description;
+    }
+    this.inQ = value.detail && value.detail.metrics[ 'buffers-in-pool-usage-max' ];
+    this.outQ = value.detail && value.detail.metrics[ 'buffers-out-pool-usage-max' ];
+
+  }
+
+  get node() {
+    return this._node;
+  }
 
   @HostListener('click')
   clickNode() {
@@ -44,24 +64,12 @@ export class NodeComponent {
     return this.node.parallelism;
   }
 
-  get inQ() {
-    return (this.node.detail && this.node.detail.metrics[ 'buffers-in-pool-usage-max' ]);
-  }
-
   get showInQ() {
     return !isNil(this.inQ);
   }
 
-  get outQ() {
-    return (this.node.detail && this.node.detail.metrics[ 'buffers-out-pool-usage-max' ]);
-  }
-
   get showOutQ() {
     return !isNil(this.outQ);
-  }
-
-  get description() {
-    return this.node.description.replace('&gt;', '>');
   }
 
   constructor(protected cd: ChangeDetectorRef) {

@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { BASE_URL } from '../app.config';
-import { TaskManagerListInterface, TaskManagerDetailInterface } from 'interfaces';
+import { TaskManagerListInterface, TaskManagerDetailInterface, JMXInterface } from 'interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -37,6 +37,10 @@ export class TaskManagerService {
 
   loadStdout(taskManagerId) {
     return this.httpClient.get(`${BASE_URL}/taskmanagers/${taskManagerId}/stdout`, { responseType: 'text' });
+  }
+
+  getJMX(taskManagerId) {
+    return this.httpClient.get<JMXInterface>(`${BASE_URL}/taskmanagers/${taskManagerId}/jmx`);
   }
 
   constructor(private httpClient: HttpClient) {

@@ -3,12 +3,13 @@
   [nzSize]="'small'"
   [nzLoading]="isLoading"
   [nzData]="listOfTaskManager"
-  [nzScroll]="{x:'1450px',y:'428px'}"
+  [nzScroll]="{x:'1550px',y:'428px'}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
     <tr>
       <th nzWidth="160px" nzLeft="0px" nzShowSort nzSortKey="host">Host</th>
+      <th nzWidth="100px">JMX</th>
       <th nzWidth="150px" nzShowSort nzSortKey="metrics.read-bytes">Bytes received</th>
       <th nzWidth="150px" nzShowSort nzSortKey="metrics.read-records">Records received</th>
       <th nzWidth="120px" nzShowSort nzSortKey="metrics.write-bytes">Bytes sent</th>
@@ -23,6 +24,9 @@
   <tbody>
     <tr *ngFor="let taskManager of listOfTaskManager; trackBy:trackTaskManagerBy;">
       <td nzLeft="0px"><a [routerLink]="['../../../','task-manager',taskManager['resource-id'],'metric']" target="_blank">{{ taskManager.host }}</a></td>
+      <td>
+        <a (click)="getJMX(taskManager['resource-id'])">ZProfile</a>
+      </td>
       <td>
         <span *ngIf="taskManager.metrics['read-bytes-complete'];else loadingTemplate">
           {{ taskManager.metrics['read-bytes'] | humanizeBytes }}

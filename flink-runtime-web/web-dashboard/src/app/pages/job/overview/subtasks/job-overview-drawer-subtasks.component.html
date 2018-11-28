@@ -3,14 +3,17 @@
   [nzSize]="'small'"
   [nzLoading]="isLoading"
   [nzData]="listOfTask"
-  [nzScroll]="{x:'1550px',y:'428px'}"
+  [nzScroll]="{x:'1850px',y:'428px'}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
     <tr>
       <th nzWidth="80px" nzLeft="0px">ID</th>
+      <th nzWidth="100px">JMX</th>
       <th nzSortKey="metrics.buffers-in-pool-usage-max" nzShowSort nzWidth="100px">In Queue</th>
       <th nzSortKey="metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="100px">Out Queue</th>
+      <th nzSortKey="metrics.tps" nzShowSort nzWidth="100px">TPS</th>
+      <th nzSortKey="metrics.delay" nzShowSort nzWidth="100px">Delay(ms)</th>
       <th nzSortKey="metrics.read-bytes" nzShowSort nzWidth="140px">Bytes Received</th>
       <th nzSortKey="metrics.read-records" nzShowSort nzWidth="150px">Records Received</th>
       <th nzSortKey="metrics.write-bytes" nzShowSort nzWidth="120px">Bytes Sent</th>
@@ -29,6 +32,9 @@
         <a [routerLink]="['../../../','task-manager',task['resource-id'],'log']" target="_blank">LOG {{ task.subtask }}</a>
       </td>
       <td>
+        <a (click)="getJMX(task['resource-id'])">ZProfile</a>
+      </td>
+      <td>
         <span *ngIf="task.metrics['buffers-in-pool-usage-max-complete'];else loadingTemplate">
           {{ task.metrics['buffers-in-pool-usage-max'] | percent }}
         </span>
@@ -36,6 +42,16 @@
       <td>
         <span *ngIf="task.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
           {{ task.metrics['buffers-out-pool-usage-max'] | percent }}
+        </span>
+      </td>
+      <td>
+        <span *ngIf="task.metrics['tps-complete'];else loadingTemplate">
+          {{ task.metrics['tps'] | number:'1.0-0' }}
+        </span>
+      </td>
+      <td>
+        <span *ngIf="task.metrics['delay-complete'];else loadingTemplate">
+          {{ task.metrics['delay'] | number:'1.0-0' }}
         </span>
       </td>
       <td>

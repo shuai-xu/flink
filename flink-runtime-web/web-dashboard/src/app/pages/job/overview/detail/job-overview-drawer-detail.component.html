@@ -46,6 +46,16 @@
           </nz-form-text>
         </nz-form-control>
       </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">TPS</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['tps-complete'];else loadingTemplate">
+              {{ node.detail.metrics['tps'] | number:'1.0-0' }}
+            </span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
     </form>
   </div>
   <div nz-col [nzSpan]="12">
@@ -104,6 +114,16 @@
           <nz-form-text>
             <span *ngIf="node.detail.metrics['buffers-out-pool-usage-max-complete'];else loadingTemplate">
               {{ node.detail.metrics['buffers-out-pool-usage-max'] | percent }}
+            </span>
+          </nz-form-text>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="9">Delay</nz-form-label>
+        <nz-form-control [nzSpan]="15">
+          <nz-form-text>
+            <span *ngIf="node.detail.metrics['delay-complete'];else loadingTemplate">
+              {{ node.detail.metrics['delay'] | number:'1.0-0' }} ms
             </span>
           </nz-form-text>
         </nz-form-control>
