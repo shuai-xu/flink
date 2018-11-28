@@ -73,13 +73,18 @@ object FlinkStreamPrograms {
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkBatchExecRuleSets.TABLE_REF_RULES)
+          .add(FlinkStreamExecRuleSets.TABLE_REF_RULES)
           .build(), "convert table references after sub-queries removed")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
+          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+          .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
+          .add(FlinkStreamExecRuleSets.EXPAND_PLAN_RULES)
+          .build(), "Expand plan by replacing references to tables into a proper plan sub trees")
+        .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkStreamExecRuleSets.TEMPORAL_JOIN_RULES)
-          .build(), "convert correlate with temporal table function into temporal table join")
+          .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
+          .add(FlinkStreamExecRuleSets.POST_EXPAND_CLEAN_UP_RULES)
+          .build(), "post expand cleanup")
         .addProgram(FlinkHepRuleSetProgramBuilder.newBuilder
           .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)

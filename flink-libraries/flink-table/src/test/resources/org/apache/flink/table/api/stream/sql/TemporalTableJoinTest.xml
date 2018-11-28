@@ -39,7 +39,7 @@ StreamExecJoin(where=[=(t3_secondary_key, secondary_key)], join=[rate, secondary
           StreamExecCalc(select=[o_rowtime, o_amount, o_currency, o_secondary_key])
             StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
         StreamExecExchange(distribution=[single])
-          StreamExecCalc(select=[rowtime, currency, rate, secondary_key])
+          StreamExecCalc(select=[rowtime, currency, rate, secondary_key], where=[>(rate, 110)])
             StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
   StreamExecExchange(distribution=[hash[t3_secondary_key]])
     StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
