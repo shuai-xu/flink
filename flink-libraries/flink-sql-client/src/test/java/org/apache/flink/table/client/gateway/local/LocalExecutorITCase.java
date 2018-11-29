@@ -183,6 +183,7 @@ public class LocalExecutorITCase extends TestLogger {
 		assertEquals(expectedTableSchema, actualTableSchema);
 	}
 
+	@Ignore
 	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionChangelog() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
