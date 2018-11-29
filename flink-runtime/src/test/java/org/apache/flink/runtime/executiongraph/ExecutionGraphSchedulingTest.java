@@ -86,6 +86,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -545,6 +546,40 @@ public class ExecutionGraphSchedulingTest extends TestLogger {
 
 		ExecutionGraphTestUtils.waitUntilJobStatus(eg, JobStatus.FAILED, 2000);
 		assertEquals(1, slotProvider.getNumberOfAvailableSlots());
+	}
+
+	/**
+	 * This test verifies that if deploy fail when batch scheduling will trigger the executions to failover.
+	 */
+	@Test
+	public void testTriggerFailoverIfBatchDeployFail() throws Exception {
+
+		final int parallelism = 2;
+
+		final JobVertex vertex = new JobVertex("vertex");
+		vertex.setParallelism(parallelism);
+		vertex.setInvokableClass(NoOpInvokable.class);
+
+		final JobID jobId = new JobID();
+		final JobGraph jobGraph = new JobGraph(jobId, "test", vertex);
+		jobGraph.setScheduleMode(ScheduleMode.EAGER);
+
+		final ProgrammedSlotProvider slotProvider = new ProgrammedSlotProvider(parallelism);
+
+		final SimpleSlot slot1 = createSlot(new SimpleAckingTaskManagerGateway(), jobGraph.getJobID(), new DummySlotOwner());
+		slotProvider.addSlot(vertex.getID(), 0, CompletableFuture.completedFuture(slot1));
+
+		final SimpleSlot slot2 = spy(createSlot(new SimpleAckingTaskManagerGateway(), jobGraph.getJobID(), new DummySlotOwner()));
+		when(slot2.isAlive()).thenReturn(false);
+		slotProvider.addSlot(vertex.getID(), 1, CompletableFuture.completedFuture(slot2));
+
+		final ExecutionGraph eg = createExecutionGraph(jobGraph, slotProvider);
+
+		//  kick off the scheduling
+		eg.setQueuedSchedulingAllowed(true);
+		eg.scheduleForExecution();
+
+		ExecutionGraphTestUtils.waitUntilJobStatus(eg, JobStatus.FAILING, 2000);
 	}
 
 	// ------------------------------------------------------------------------

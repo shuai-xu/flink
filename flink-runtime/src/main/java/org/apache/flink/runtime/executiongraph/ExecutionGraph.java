@@ -988,15 +988,12 @@ public class ExecutionGraph implements AccessExecutionGraph {
 							LOG.info("Batch request {} slots, but only {} are fulfilled.",
 									allAssignFutures.getNumFuturesTotal(), allAssignFutures.getNumFuturesCompleted());
 
-							List<Execution> needMarkFailExecutions = new ArrayList<>();
 							// Complete all futures first, or else the execution fail may cause global failover,
 							// and other executions may fail first without clear the pending request.
 							for (int i = 0; i < allocationFutures.size(); i++) {
-								if (!allocationFutures.get(i).completeExceptionally(throwable)) {
-									needMarkFailExecutions.add(scheduledExecutions.get(i));
-								}
+								allocationFutures.get(i).completeExceptionally(throwable);
 							}
-							for (Execution execution : needMarkFailExecutions) {
+							for (Execution execution : scheduledExecutions) {
 								execution.markFailed(ExceptionUtils.stripCompletionException(throwable));
 							}
 							throw new CompletionException(throwable);
@@ -1014,6 +1011,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 									} catch (Exception e) {
 										hasFailure = true;
 										LOG.info("Fail to deploy execution {}", scheduledExecutions.get(i), e);
+										scheduledExecutions.get(i).markFailed(e);
 									}
 								}
 								if (hasFailure) {
@@ -1501,21 +1499,13 @@ public class ExecutionGraph implements AccessExecutionGraph {
 				schedulingFuture.whenCompleteAsync(
 						(Void ignored, Throwable throwable) -> {
 							schedulingFutures.remove(schedulingFuture);
-
-							if (throwable != null) {
-								final Throwable strippedThrowable = ExceptionUtils.stripCompletionException(throwable);
-								if (!(strippedThrowable instanceof CancellationException)
-										&& !(strippedThrowable instanceof IllegalExecutionStateException)) {
-									// only fail if the scheduling future was not canceled
-									failGlobal(strippedThrowable);
-								}
-							}
 						},
 						futureExecutor);
 			} else {
 				schedulingFuture.cancel(false);
 			}
 		} catch (Throwable t) {
+			LOG.info("scheduleVertices meet exception, need to fail global execution graph", t);
 			failGlobal(t);
 		}
 	}
