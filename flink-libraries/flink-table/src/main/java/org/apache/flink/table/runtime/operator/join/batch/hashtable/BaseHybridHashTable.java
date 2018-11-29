@@ -26,7 +26,6 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.table.runtime.operator.join.batch.hashtable.longtable.LongHybridHashTable;
-import org.apache.flink.table.util.MemUtil;
 import org.apache.flink.table.util.MemorySegmentPool;
 import org.apache.flink.util.MathUtils;
 
@@ -481,11 +480,9 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 
 	public void free() {
 		if (this.closed.get()) {
-			if (allocatedFloatingNum > 0) {
-				MemUtil.releaseSpecificNumFloatingSegments(memManager, availableMemory, allocatedFloatingNum);
-				allocatedFloatingNum = 0;
-			}
-			memManager.release(availableMemory);
+			memManager.release(availableMemory, true);
+			memManager.release(availableMemory, false);
+			allocatedFloatingNum = 0;
 		} else {
 			throw new IllegalStateException("Cannot release memory until BinaryHashTable is closed!");
 		}
@@ -495,12 +492,10 @@ public abstract class BaseHybridHashTable implements MemorySegmentPool {
 	 * Free the memory not used.
 	 */
 	public void freeCurrent() {
-		int freeFloating = Math.min(allocatedFloatingNum, availableMemory.size());
-		if (freeFloating > 0) {
-			MemUtil.releaseSpecificNumFloatingSegments(memManager, availableMemory, freeFloating);
-			allocatedFloatingNum -= freeFloating;
-		}
-		memManager.release(availableMemory);
+		int beforeReleaseNum = availableMemory.size();
+		memManager.release(availableMemory, false);
+		allocatedFloatingNum -= (beforeReleaseNum - availableMemory.size());
+		memManager.release(availableMemory, true);
 	}
 
 	@VisibleForTesting

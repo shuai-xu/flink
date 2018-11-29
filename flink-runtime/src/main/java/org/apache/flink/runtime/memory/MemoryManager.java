@@ -365,8 +365,6 @@ public class MemoryManager {
 			return false;
 		}
 
-		final Object owner = segment.getOwner();
-
 		synchronized (lock) {
 			// prevent double return to this memory manager
 			if (segment.isFreed()) {
@@ -401,14 +399,12 @@ public class MemoryManager {
 	 *
 	 * @param segments The segments to be released.
 	 * @param isCoreSegment Whether the released segments are core or not.
-	 * @return The list of segments that have not been released.
 	 * @throws NullPointerException Thrown, if the given collection is null.
 	 * @throws IllegalArgumentException Thrown, id the segments are of an incompatible type.
 	 */
-	@Nullable
-	public Collection<MemorySegment> release(@Nullable Collection<MemorySegment> segments, boolean isCoreSegment) {
+	public void release(@Nullable Collection<MemorySegment> segments, boolean isCoreSegment) {
 		if (segments == null) {
-			return null;
+			return;
 		}
 
 		List<MemorySegment> notReleased = new ArrayList<>();
@@ -444,6 +440,7 @@ public class MemoryManager {
 					}
 
 					segments.clear();
+					segments.addAll(notReleased);
 
 					// the only way to exit the loop
 					successfullyReleased = true;
@@ -453,8 +450,6 @@ public class MemoryManager {
 				}
 			} while (!successfullyReleased);
 		}
-
-		return notReleased;
 	}
 
 	/**
@@ -555,7 +550,7 @@ public class MemoryManager {
 
 		AllocatedSegmentsWrapper(int numPages) {
 			this.numAvailablePages = numPages;
-			this.allocatedSegments = new HashMap<Object, Set<MemorySegment>>();
+			this.allocatedSegments = new HashMap<>();
 		}
 
 		/**

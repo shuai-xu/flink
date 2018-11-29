@@ -267,14 +267,14 @@ public class MemoryManagerTest {
 		allMemorySegments.addAll(floatingSegments);
 		Collections.shuffle(allMemorySegments);
 
-		Collection<MemorySegment> notReleased = memoryManager.release(allMemorySegments, releaseCore);
+		memoryManager.release(allMemorySegments, releaseCore);
 
-		assertEquals(releaseCore ? numFloatingPages : NUM_CORE_PAGES, notReleased.size());
+		assertEquals(releaseCore ? numFloatingPages : NUM_CORE_PAGES, allMemorySegments.size());
 		assertEquals(releaseCore ? new HashSet<>(floatingSegments) : new HashSet<>(coreSegments),
-			new HashSet<>(notReleased));
+			new HashSet<>(allMemorySegments));
 
-		notReleased = memoryManager.release(notReleased, !releaseCore);
-		assertEquals(0, notReleased.size());
+		memoryManager.release(allMemorySegments, !releaseCore);
+		assertEquals(0, allMemorySegments.size());
 	}
 
 	private boolean allMemorySegmentsValid(List<MemorySegment> memSegs) {
