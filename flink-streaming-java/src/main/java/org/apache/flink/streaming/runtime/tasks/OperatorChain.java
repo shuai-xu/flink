@@ -894,10 +894,6 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 			}
 		}
 
-		public StreamOperator<OUT> getStreamOperator() {
-			return operator;
-		}
-
 		@Override
 		public void setCurrentKey(Object key) {
 			operator.setCurrentKey(key);
@@ -1316,6 +1312,10 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 		@SuppressWarnings("unchecked")
 		static <IN, OUT> OutputBinder<IN> bind(StreamOperator<OUT> streamOperator, StreamEdge edge) {
 			if (streamOperator instanceof OneInputStreamOperator) {
+				if (streamOperator instanceof AbstractStreamOperatorProxy) {
+					// Bind original stream operator to speed processing up when it is one input stream operator proxy.
+					return new OneInputOutputBinder<>((OneInputStreamOperator<IN, OUT>) ((AbstractStreamOperatorProxy<OUT>) streamOperator).getOperator());
+				}
 				return new OneInputOutputBinder<>((OneInputStreamOperator) streamOperator);
 			} else if (streamOperator instanceof TwoInputStreamOperator) {
 				if (edge.getTypeNumber() == 1) {
