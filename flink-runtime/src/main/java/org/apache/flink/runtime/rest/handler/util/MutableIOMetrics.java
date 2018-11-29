@@ -208,7 +208,7 @@ public class MutableIOMetrics extends IOMetrics {
 					}
 
 					if (!findTps && metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE) != null) {
-						long tps = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE));
+						double tps = Double.valueOf(metrics.getMetric(MetricNames.IO_NUM_RECORDS_IN_RATE));
 						this.tps = Math.max(tps, this.tps);
 					}
 				}
