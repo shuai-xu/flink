@@ -34,11 +34,6 @@ under the License.
 
 	<packaging>jar</packaging>
 
-	<properties>
-		<hive.version>2.3.4</hive.version>
-		<thrift.version>0.9.3</thrift.version>
-	</properties>
-
 	<dependencies>
 		<!-- core dependencies -->
 		<dependency>
@@ -57,14 +52,9 @@ under the License.
 		<!-- Hive metastore dependencies-->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-shaded-hadoop2</artifactId>
+			<artifactId>flink-shaded-hadoop2-uber</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.thrift</groupId>
-			<artifactId>libthrift</artifactId>
-			<version>${thrift.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.hive</groupId>
@@ -83,8 +73,81 @@ under the License.
 					<groupId>org.apache.logging.log4j</groupId>
 					<artifactId>log4j-slf4j-impl</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>prg.apache.avro</groupId>
+					<artifactId>avro</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-core-asl</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-mapper-asl</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-jaxrs</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-xc</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-annotations</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>javax.servlet</groupId>
+					<artifactId>servlet-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.airlift</groupId>
+					<artifactId>aircompressor</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.orc</groupId>
+					<artifactId>orc-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.zookeeper</groupId>
+					<artifactId>zookeeper</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.netty</groupId>
+					<artifactId>netty</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.dropwizard.metrics</groupId>
+					<artifactId>metrics-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.thrift</groupId>
+					<artifactId>libthrift</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jersey</groupId>
+					<artifactId>jersey-client</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jersey</groupId>
+					<artifactId>jersey-json</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>co.cask.tephra</groupId>
+					<artifactId>tephra-core</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
+
 
 		<!-- test dependencies -->
 
@@ -129,13 +192,22 @@ under the License.
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<promoteTransitiveDependencies>true</promoteTransitiveDependencies>
-							<artifactSet combine.children="append">
+							<artifactSet>
 								<includes>
-									<include>org.apache.hive:*</include>
-									<include>org.apache.hadoop.hive:*</include>
+									<!-- TODO: should only include some core APIs here-->
+									<include>*:*</include>
 								</includes>
 							</artifactSet>
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
 							<relocations combine.children="override">
 								<!-- DO NOT RELOCATE GUAVA IN THIS PACKAGE -->
 								<relocation>
@@ -145,6 +217,12 @@ under the License.
 								<relocation>
 									<pattern>org.apache.hadoop.hive</pattern>
 									<shadedPattern>org.apache.flink.hive.shaded.org.apache.hadoop.hive</shadedPattern>
+								</relocation>
+								<!-- TODO: hive-metastore uses guava, but we probably shouln't shade guava here, as mentioned above.
+								 Not shade guava here seems to be a flink tradition.-->
+								<relocation>
+									<pattern>com.google</pattern>
+									<shadedPattern>org.apache.flink.hive.shaded.com.google</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>
