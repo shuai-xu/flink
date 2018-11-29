@@ -21,5 +21,27 @@ package org.apache.flink.table.catalog.hive;
  * HiveCatalog's configs.
  */
 public class HiveCatalogConfig {
+
+	// -------------------
+	// SQL Client yaml file configs
+	// -------------------
+
 	public static final String HIVE_METASTORE_URIS = "hive.metastore.uris";
+
+	// -------------------
+	// Hive storage information configs
+	// -------------------
+
+	public static final String HIVE_TABLE_LOCATION = "hive.table.location";
+
+	public static final String HIVE_TABLE_SERDE_LIBRARY = "hive.table.serde.library";
+
+	public static final String HIVE_TABLE_INPUT_FORMAT = "hive.table.input.format";
+
+	public static final String HIVE_TABLE_OUTPUT_FORMAT = "hive.table.output.format";
+
+	public static final String HIVE_TABLE_COMPRESSED = "hive.table.compressed";
+
+	public static final String HIVE_TABLE_NUM_BUCKETS = "hive.table.num.buckets";
+
 }

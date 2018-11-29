@@ -23,6 +23,7 @@ import org.apache.flink.table.catalog.ObjectPath;
 
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.serde.serdeConstants;
@@ -101,11 +102,11 @@ public class HiveCatalogTest {
 		return new StorageDescriptor(
 			getFieldSchemas(),
 			"mylocation",
-			null,
-			null,
+			"myinputformat",
+			"myoutputformat",
 			false,
 			1,
-			null,
+			new SerDeInfo("myserde", "myserdelib", Collections.emptyMap()),
 			Collections.emptyList(),
 			Collections.emptyList(),
 			Collections.emptyMap()

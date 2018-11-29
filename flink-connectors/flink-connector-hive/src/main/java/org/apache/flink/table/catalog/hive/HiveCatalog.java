@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.parquet.Strings;
@@ -45,10 +46,18 @@ import org.apache.thrift.TException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_COMPRESSED;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_INPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_LOCATION;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_NUM_BUCKETS;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_OUTPUT_FORMAT;
+import static org.apache.flink.table.catalog.hive.HiveCatalogConfig.HIVE_TABLE_SERDE_LIBRARY;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -125,7 +134,7 @@ public class HiveCatalog implements ReadableWritableCatalog {
 		return new ExternalCatalogTable(
 			"csv", // TODO: Need a dedicate 'hive' type. Temporarily set to 'csv' for now
 			getTableSchema(hiveTable.getSd().getCols()),
-			hiveTable.getParameters(),
+			getPropertiesFromHiveTable(hiveTable),
 			null,
 			null,
 			null,
@@ -136,6 +145,21 @@ public class HiveCatalog implements ReadableWritableCatalog {
 			-1L,
 			(long) hiveTable.getCreateTime(),
 			(long) hiveTable.getLastAccessTime());
+	}
+
+	private Map<String, String> getPropertiesFromHiveTable(Table table) {
+		Map<String, String> prop = new HashMap<>(table.getParameters());
+
+		StorageDescriptor sd = table.getSd();
+
+		prop.put(HIVE_TABLE_LOCATION, sd.getLocation());
+		prop.put(HIVE_TABLE_SERDE_LIBRARY, sd.getSerdeInfo().getSerializationLib());
+		prop.put(HIVE_TABLE_INPUT_FORMAT, sd.getInputFormat());
+		prop.put(HIVE_TABLE_OUTPUT_FORMAT, sd.getOutputFormat());
+		prop.put(HIVE_TABLE_COMPRESSED, String.valueOf(sd.isCompressed()));
+		prop.put(HIVE_TABLE_NUM_BUCKETS, String.valueOf(sd.getNumBuckets()));
+
+		return prop;
 	}
 
 	@VisibleForTesting
