@@ -40,7 +40,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * segment of the block is added to a collection to be returned.
  * <p>
  * The asynchrony of the access makes it possible to implement read-ahead or write-behind types of I/O accesses.
- * 
+ *
  * @param <R> The type of request (e.g. <tt>ReadRequest</tt> or <tt>WriteRequest</tt> issued by this access to the I/O threads.
  */
 public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends AbstractFileIOChannel {
@@ -58,7 +58,7 @@ public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends 
 
 	/** An atomic integer that counts the number of requests that we still wait for to return. */
 	protected final AtomicInteger requestsNotReturned = new AtomicInteger(0);
-	
+
 	/** Handler for completed requests */
 	protected final RequestDoneCallback<T> resultHandler;
 
@@ -84,7 +84,7 @@ public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends 
 	 *                     than in read-only mode.
 	 * @throws IOException Thrown, if the channel could no be opened.
 	 */
-	protected AsynchronousFileIOChannel(FileIOChannel.ID channelID, RequestQueue<R> requestQueue, 
+	protected AsynchronousFileIOChannel(FileIOChannel.ID channelID, RequestQueue<R> requestQueue,
 			RequestDoneCallback<T> callback, boolean writeEnabled) throws IOException
 	{
 		super(channelID, writeEnabled);
@@ -143,7 +143,7 @@ public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends 
 			}
 		}
 	}
-	
+
 	/**
 	 * This method waits for all pending asynchronous requests to return. When the
 	 * last request has returned, the channel is closed and deleted.
@@ -186,6 +186,10 @@ public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends 
 	 * @param ex     The exception that occurred in the I/O threads when processing the buffer's request.
 	 */
 	final protected void handleProcessedBuffer(T buffer, IOException ex) {
+		if (ex != null) {
+			LOG.error("Process buffer request failed.", ex);
+		}
+
 		if (buffer == null) {
 			return;
 		}
@@ -247,7 +251,7 @@ public abstract class AsynchronousFileIOChannel<T, R extends IORequest> extends 
 				listener.onNotification();
 			}
 
-			throw new IOException("I/O channel already closed. Could not fulfill: " + request);
+			throw new IOException("I/O channel already closed (" + this.closed + "," + this.requestQueue.isClosed() + "). Could not fulfill: " + request);
 		}
 
 		this.requestQueue.add(request);
@@ -302,7 +306,7 @@ final class SegmentReadRequest implements ReadRequest {
 		if (segment == null) {
 			throw new NullPointerException("Illegal read request with null memory segment.");
 		}
-		
+
 		this.channel = targetChannel;
 		this.segment = segment;
 	}

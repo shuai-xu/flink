@@ -28,12 +28,13 @@ import org.apache.flink.runtime.io.network.buffer.BufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * An utility class helps read buffers with limited free memory segments from
@@ -50,6 +51,8 @@ public class AsynchronousPartitionedStreamFileReaderDelegate implements RequestD
 
 	private int nextPartitionIdx;
 	private long nextOffset;
+
+	private final AtomicReference<IOException> cause = new AtomicReference<>(null);
 
 	public AsynchronousPartitionedStreamFileReaderDelegate(IOManager ioManager, FileIOChannel.ID channel,
 														   List<MemorySegment> segments,
@@ -69,8 +72,16 @@ public class AsynchronousPartitionedStreamFileReaderDelegate implements RequestD
 		return reader;
 	}
 
-	Buffer getNextBufferBlocking() throws InterruptedException, EOFException {
-		return retBuffers.take();
+	Buffer getNextBufferBlocking() throws InterruptedException, IOException {
+		Buffer buffer;
+		do {
+			if (cause.get() != null) {
+				throw cause.get();
+			}
+			buffer = retBuffers.poll(500, TimeUnit.MILLISECONDS);
+		} while (buffer == null);
+
+		return buffer;
 	}
 
 	private void sendRequestIfFeasible(MemorySegment memorySegment) throws IOException {
@@ -99,6 +110,7 @@ public class AsynchronousPartitionedStreamFileReaderDelegate implements RequestD
 
 	@Override
 	public void requestFailed(Buffer buffer, IOException e) {
+		cause.compareAndSet(null, e);
 		throw new RuntimeException(e);
 	}
 
@@ -107,6 +119,7 @@ public class AsynchronousPartitionedStreamFileReaderDelegate implements RequestD
 		try {
 			sendRequestIfFeasible(memorySegment);
 		} catch (IOException e) {
+			cause.compareAndSet(null, e);
 			throw new RuntimeException(e);
 		}
 	}
