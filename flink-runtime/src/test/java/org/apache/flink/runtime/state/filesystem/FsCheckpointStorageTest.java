@@ -24,6 +24,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.local.LocalFileSystem;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
+import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamFactory.CheckpointStateOutputStream;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.StreamStateHandle;
@@ -46,6 +47,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -255,6 +257,35 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 		}
 	}
 
+	@Test
+	public void testCreateStateSubDIrs() throws IOException {
+		final FsCheckpointStorage storage = new FsCheckpointStorage(
+			randomTempPath(),
+			null,
+			new JobID(),
+			createCheckpointSubDir,
+			0);
+
+		try {
+			storage.setStateSubDirs(-1);
+			fail("expect IllegalArgumentException.");
+		} catch (IllegalArgumentException ignored) {}
+
+		// verify default case, no sub-dirs for state directories.
+		long checkpointId = 17L;
+		CheckpointStreamFactory checkpointStreamFactory = storage.resolveCheckpointStorageLocation(checkpointId, CheckpointStorageLocationReference.getDefault());
+		verifySubDirIndex(checkpointStreamFactory, checkpointId, CheckpointedStateScope.EXCLUSIVE, storage.getStateSubDirs());
+		verifySubDirIndex(checkpointStreamFactory, checkpointId, CheckpointedStateScope.SHARED, storage.getStateSubDirs());
+
+		// verify case with 1024 sub-dirs for state directories.
+		int stateSubDirs = 1024;
+		storage.setStateSubDirs(stateSubDirs);
+		checkpointId = 18L;
+		checkpointStreamFactory = storage.resolveCheckpointStorageLocation(checkpointId, CheckpointStorageLocationReference.getDefault());
+		verifySubDirIndex(checkpointStreamFactory, checkpointId, CheckpointedStateScope.EXCLUSIVE, storage.getStateSubDirs());
+		verifySubDirIndex(checkpointStreamFactory, checkpointId, CheckpointedStateScope.SHARED, storage.getStateSubDirs());
+	}
+
 	// ------------------------------------------------------------------------
 	//  Utilities
 	// ------------------------------------------------------------------------
@@ -262,6 +293,20 @@ public class FsCheckpointStorageTest extends AbstractFileCheckpointStorageTestBa
 	private void assertParent(Path parent, Path child) {
 		Path path = new Path(parent, child.getName());
 		assertEquals(path, child);
+	}
+
+	private void verifySubDirIndex(CheckpointStreamFactory checkpointStreamFactory, long checkpointId, CheckpointedStateScope checkpointedStateScope, int stateSubDirs) throws IOException {
+		CheckpointStateOutputStream outputStream = checkpointStreamFactory.createCheckpointStateOutputStream(checkpointId, checkpointedStateScope);
+		outputStream.write(42);
+		outputStream.flush();
+		StreamStateHandle exclusiveStateHandle = outputStream.closeAndGetHandle();
+		assertTrue(exclusiveStateHandle instanceof FileStateHandle);
+		if (stateSubDirs == 0) {
+			assertEquals(checkpointedStateScope.name().toLowerCase(), ((FileStateHandle) exclusiveStateHandle).getFilePath().getParent().getName());
+		} else {
+			int subDirIndex = Integer.parseInt(((FileStateHandle) exclusiveStateHandle).getFilePath().getParent().getName());
+			assertTrue(0 <= subDirIndex && subDirIndex < stateSubDirs);
+		}
 	}
 
 	private static final class TestingPath extends Path {

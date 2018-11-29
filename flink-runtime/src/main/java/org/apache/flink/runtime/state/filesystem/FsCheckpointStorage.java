@@ -26,10 +26,12 @@ import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointStreamFactory.CheckpointStateOutputStream;
 import org.apache.flink.runtime.state.filesystem.FsCheckpointStreamFactory.FsCheckpointStateOutputStream;
+import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -50,6 +52,9 @@ public class FsCheckpointStorage extends AbstractFsCheckpointStorage {
 
 	private final int fileSizeThreshold;
 
+	/** The number of sub-directories for exclusive/shared/taskOwned state directory. */
+	private int stateSubDirs;
+
 	public FsCheckpointStorage(
 			Path checkpointBaseDirectory,
 			@Nullable Path defaultSavepointDirectory,
@@ -68,6 +73,7 @@ public class FsCheckpointStorage extends AbstractFsCheckpointStorage {
 		this.sharedStateDirectory = new Path(checkpointsDirectory, CHECKPOINT_SHARED_STATE_DIR);
 		this.taskOwnedStateDirectory = new Path(checkpointsDirectory, CHECKPOINT_TASK_OWNED_STATE_DIR);
 		this.fileSizeThreshold = fileSizeThreshold;
+		this.stateSubDirs = 0;
 
 		// initialize the dedicated directories
 		fileSystem.mkdirs(checkpointsDirectory);
@@ -80,6 +86,15 @@ public class FsCheckpointStorage extends AbstractFsCheckpointStorage {
 
 	public Path getCheckpointsDirectory() {
 		return checkpointsDirectory;
+	}
+
+	public void setStateSubDirs(int stateSubDirs) {
+		Preconditions.checkArgument(stateSubDirs >= 0, "assigned state sub-directories number cannot be less than zero.");
+		this.stateSubDirs = stateSubDirs;
+	}
+
+	public int getStateSubDirs() {
+		return stateSubDirs;
 	}
 
 	// ------------------------------------------------------------------------
@@ -120,7 +135,17 @@ public class FsCheckpointStorage extends AbstractFsCheckpointStorage {
 			// default reference, construct the default location for that particular checkpoint
 			final Path checkpointDir = createCheckpointDirectory(checkpointsDirectory, checkpointId);
 
-			return new FsCheckpointStorageLocation(
+			if (stateSubDirs > 0) {
+				return new FsCheckpointStorageLocation(
+					fileSystem,
+					checkpointDir,
+					new Path(exclusiveStateDirectory, String.valueOf(ThreadLocalRandom.current().nextInt(stateSubDirs))),
+					new Path(sharedStateDirectory, String.valueOf(ThreadLocalRandom.current().nextInt(stateSubDirs))),
+					new Path(taskOwnedStateDirectory, String.valueOf(ThreadLocalRandom.current().nextInt(stateSubDirs))),
+					reference,
+					fileSizeThreshold);
+			} else {
+				return new FsCheckpointStorageLocation(
 					fileSystem,
 					checkpointDir,
 					exclusiveStateDirectory,
@@ -128,6 +153,7 @@ public class FsCheckpointStorage extends AbstractFsCheckpointStorage {
 					taskOwnedStateDirectory,
 					reference,
 					fileSizeThreshold);
+			}
 		}
 		else {
 			// location encoded in the reference
