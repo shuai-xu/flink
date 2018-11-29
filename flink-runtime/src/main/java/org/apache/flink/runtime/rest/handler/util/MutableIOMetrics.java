@@ -28,6 +28,8 @@ import org.apache.flink.runtime.rest.handler.legacy.metrics.MetricStore;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonGenerator;
 
+import org.apache.commons.lang3.StringUtils;
+
 import javax.annotation.Nullable;
 
 import java.io.IOException;
@@ -149,12 +151,14 @@ public class MutableIOMetrics extends IOMetrics {
 					 */
 					boolean findTps = false;
 					for (Map.Entry<String, String> entry : metrics.getMetrics().entrySet()) {
-						if (entry.getKey().endsWith("." + MetricNames.IO_NUM_TPS)) {
+						if (entry.getKey().endsWith("." + MetricNames.IO_NUM_TPS) &&
+							StringUtils.isNotBlank(entry.getValue())) {
 							double tps = Double.valueOf(entry.getValue());
 							this.tps = Math.max(tps, this.tps);
 							findTps = true;
-						} else if (entry.getKey().endsWith("." + MetricNames.IO_NUM_DELAY)) {
-							long delay = Long.valueOf(metrics.getMetric(MetricNames.IO_NUM_DELAY));
+						} else if (entry.getKey().endsWith("." + MetricNames.IO_NUM_DELAY) &&
+							StringUtils.isNotBlank(entry.getValue())) {
+							long delay = Long.valueOf(entry.getValue());
 							this.delay = Math.max(delay, this.delay);
 						}
 					}
