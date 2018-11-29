@@ -45,6 +45,11 @@ public class ContextSubKeyedStateBinder {
 	/** The operator to create states. */
 	private final AbstractStreamOperator<?> operator;
 
+	/** For caching the last accessed subkeyed state. */
+	private String lastStateName;
+
+	private ContextSubKeyedState lastState;
+
 	public ContextSubKeyedStateBinder(AbstractStreamOperator<?> operator) {
 		Preconditions.checkNotNull(operator);
 		this.operator = operator;
@@ -54,10 +59,6 @@ public class ContextSubKeyedStateBinder {
 		ValueStateDescriptor<T> stateDesc,
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception {
-
-		Preconditions.checkNotNull(stateDesc);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
 
 		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
 
@@ -79,10 +80,6 @@ public class ContextSubKeyedStateBinder {
 		ListStateDescriptor<T> stateDesc,
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception {
-
-		Preconditions.checkNotNull(stateDesc);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
 
 		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
 
@@ -109,10 +106,6 @@ public class ContextSubKeyedStateBinder {
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception {
 
-		Preconditions.checkNotNull(stateDesc);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
-
 		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
 
 		SubKeyedValueStateDescriptor<Object, N, T> subKeyedValueStateDescriptor =
@@ -138,10 +131,6 @@ public class ContextSubKeyedStateBinder {
 		AggregatingStateDescriptor<IN, ACC, OUT> stateDesc,
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception {
-
-		Preconditions.checkNotNull(stateDesc);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
 
 		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
 
@@ -170,10 +159,6 @@ public class ContextSubKeyedStateBinder {
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception {
 
-		Preconditions.checkNotNull(stateDesc);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
-
 		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
 
 		SubKeyedValueStateDescriptor<Object, N, ACC> subKeyedValueStateDescriptor =
@@ -201,10 +186,6 @@ public class ContextSubKeyedStateBinder {
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception {
 
-		Preconditions.checkNotNull(stateDesc);
-		Preconditions.checkNotNull(namespace);
-		Preconditions.checkNotNull(namespaceSerializer);
-
 		stateDesc.initializeSerializerUnlessSet(operator.getExecutionConfig());
 
 		SubKeyedMapStateDescriptor<Object, N, MK, MV> subKeyedMapStateDescriptor = new SubKeyedMapStateDescriptor(
@@ -231,28 +212,50 @@ public class ContextSubKeyedStateBinder {
 		N namespace,
 		TypeSerializer<N> namespaceSerializer) throws Exception{
 
+		Preconditions.checkNotNull(stateDescriptor);
+		Preconditions.checkNotNull(namespace);
+		Preconditions.checkNotNull(namespaceSerializer);
+
+		if (lastStateName != null && lastStateName.equals(stateDescriptor.getName())) {
+			lastState.setNamespace(namespace);
+			return (S) lastState;
+		}
+
+		ContextSubKeyedState state;
+
 		switch (stateDescriptor.getType()) {
 			case VALUE:
-				return createValueState(
+				state = createValueState(
 					(ValueStateDescriptor<?>) stateDescriptor, namespace, namespaceSerializer);
+				break;
 			case LIST:
-				return createListState(
+				state = createListState(
 					(ListStateDescriptor<?>) stateDescriptor, namespace, namespaceSerializer);
+				break;
 			case MAP:
-				return createMapState(
+				state = createMapState(
 					(MapStateDescriptor<?, ?>) stateDescriptor, namespace, namespaceSerializer);
+				break;
 			case FOLDING:
-				return createFoldingState(
+				state = createFoldingState(
 					(FoldingStateDescriptor<?, ?>) stateDescriptor, namespace, namespaceSerializer);
+				break;
 			case REDUCING:
-				return createReducingState(
+				state = createReducingState(
 					(ReducingStateDescriptor<?>) stateDescriptor, namespace, namespaceSerializer);
+				break;
 			case AGGREGATING:
-				return createAggregatingState(
+				state = createAggregatingState(
 					(AggregatingStateDescriptor<?, ?, ?>) stateDescriptor, namespace, namespaceSerializer);
+				break;
 			default:
 				throw new RuntimeException("Not a supported State: " + stateDescriptor.getType());
 		}
+
+		lastStateName = stateDescriptor.getName();
+		lastState = state;
+
+		return (S) state;
 	}
 
 	public <N, V, S extends State> ContextSubKeyedValueState<V, N> getContextSubKeyedValueState(
