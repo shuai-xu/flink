@@ -120,6 +120,7 @@ public class NetworkBufferCalculationTest extends TestLogger {
 			Arrays.asList(ResourceProfile.UNKNOWN),
 			ResourceProfile.UNKNOWN,
 			-1,
-			-1);
+			-1,
+			1);
 	}
 }

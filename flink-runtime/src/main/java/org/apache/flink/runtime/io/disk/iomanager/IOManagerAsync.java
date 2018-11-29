@@ -35,7 +35,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * A version of the {@link IOManager} that uses asynchronous I/O.
  */
 public class IOManagerAsync extends IOManager implements UncaughtExceptionHandler {
-	
+
 	/** The writer threads used for asynchronous block oriented channel writing. */
 	private final WriterThread[] writers;
 
@@ -61,34 +61,34 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	public IOManagerAsync() {
 		this(EnvironmentInformation.getTemporaryFileDirectory());
 	}
-	
+
 	/**
 	 * Constructs a new asynchronous I/O manger, writing file to the given directory.
-	 * 
+	 *
 	 * @param tempDir The directory to write temporary files to.
 	 */
 	public IOManagerAsync(String tempDir) {
-		this(new String[] {tempDir}, -1, -1);
+		this(new String[] {tempDir}, -1, -1, 1);
 	}
 
 	public IOManagerAsync(String[] tempDir) {
-		this(tempDir, -1, -1);
+		this(tempDir, -1, -1, 1);
 	}
 
 	public IOManagerAsync(int bufferedReadSize, int bufferedWriteSize) {
-		this(new String[] {EnvironmentInformation.getTemporaryFileDirectory()}, bufferedReadSize, bufferedWriteSize);
+		this(new String[] {EnvironmentInformation.getTemporaryFileDirectory()}, bufferedReadSize, bufferedWriteSize, 1);
 	}
 
 	/**
 	 * Constructs a new asynchronous I/O manger, writing file round robin across the given directories.
-	 * 
+	 *
 	 * @param tempDirs The directories to write temporary files to.
 	 */
-	public IOManagerAsync(String[] tempDirs, int bufferedReadSize, int bufferedWriteSize) {
+	public IOManagerAsync(String[] tempDirs, int bufferedReadSize, int bufferedWriteSize, int numThreads) {
 		super(tempDirs);
-		
+
 		// start a write worker thread for each directory
-		this.writers = new WriterThread[tempDirs.length];
+		this.writers = new WriterThread[numThreads];
 		this.bufferedReadSize = bufferedReadSize;
 		this.bufferedWriteSize = bufferedWriteSize;
 		for (int i = 0; i < this.writers.length; i++) {
@@ -172,11 +172,11 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 			super.shutdown();
 		}
 	}
-	
+
 	/**
 	 * Utility method to check whether the IO manager has been properly shut down. The IO manager is considered
 	 * to be properly shut down when it is closed and its threads have ceased operation.
-	 * 
+	 *
 	 * @return True, if the IO manager has properly shut down, false otherwise.
 	 */
 	@Override
@@ -185,12 +185,12 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 		for (ReaderThread rt : readers) {
 			readersShutDown &= rt.getState() == Thread.State.TERMINATED;
 		}
-		
+
 		boolean writersShutDown = true;
 		for (WriterThread wt : writers) {
 			writersShutDown &= wt.getState() == Thread.State.TERMINATED;
 		}
-		
+
 		return isShutdown.get() && readersShutDown && writersShutDown && super.isProperlyShutDown();
 	}
 
@@ -200,11 +200,11 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 		LOG.error("IO Thread '" + t.getName() + "' terminated due to an exception. Shutting down I/O Manager.", e);
 		shutdown();
 	}
-	
+
 	// ------------------------------------------------------------------------
 	//                        Reader / Writer instantiations
 	// ------------------------------------------------------------------------
-	
+
 	@Override
 	public BlockChannelWriter<MemorySegment> createBlockChannelWriter(FileIOChannel.ID channelID,
 								LinkedBlockingQueue<MemorySegment> returnQueue) throws IOException
@@ -212,18 +212,18 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 		checkState(!isShutdown.get(), "I/O-Manger is shut down.");
 		return new AsynchronousBlockWriter(channelID, this.writers[channelID.getThreadNum()].requestQueue, returnQueue, bufferedWriteSize);
 	}
-	
+
 	@Override
 	public BlockChannelWriterWithCallback<MemorySegment> createBlockChannelWriter(FileIOChannel.ID channelID, RequestDoneCallback<MemorySegment> callback) throws IOException {
 		checkState(!isShutdown.get(), "I/O-Manger is shut down.");
 		return new AsynchronousBlockWriterWithCallback(channelID, this.writers[channelID.getThreadNum()].requestQueue, callback, bufferedWriteSize);
 	}
-	
+
 	/**
 	 * Creates a block channel reader that reads blocks from the given channel. The reader reads asynchronously,
 	 * such that a read request is accepted, carried out at some (close) point in time, and the full segment
 	 * is pushed to the given queue.
-	 * 
+	 *
 	 * @param channelID The descriptor for the channel to write to.
 	 * @param returnQueue The queue to put the full buffers into.
 	 * @return A block channel reader that reads from the given channel.
@@ -275,12 +275,12 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	/**
 	 * Creates a block channel reader that reads all blocks from the given channel directly in one bulk.
 	 * The reader draws segments to read the blocks into from a supplied list, which must contain as many
-	 * segments as the channel has blocks. After the reader is done, the list with the full segments can be 
+	 * segments as the channel has blocks. After the reader is done, the list with the full segments can be
 	 * obtained from the reader.
 	 * <p>
-	 * If a channel is not to be read in one bulk, but in multiple smaller batches, a  
+	 * If a channel is not to be read in one bulk, but in multiple smaller batches, a
 	 * {@link BlockChannelReader} should be used.
-	 * 
+	 *
 	 * @param channelID The descriptor for the channel to write to.
 	 * @param targetSegments The list to take the segments from into which to read the data.
 	 * @param numBlocks The number of blocks in the channel to read.
@@ -294,15 +294,15 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 		checkState(!isShutdown.get(), "I/O-Manger is shut down.");
 		return new AsynchronousBulkBlockReader(channelID, this.readers[channelID.getThreadNum()].requestQueue, targetSegments, numBlocks, bufferedReadSize);
 	}
-	
+
 	// -------------------------------------------------------------------------
 	//                             For Testing
 	// -------------------------------------------------------------------------
-	
+
 	RequestQueue<ReadRequest> getReadRequestQueue(FileIOChannel.ID channelID) {
 		return this.readers[channelID.getThreadNum()].requestQueue;
 	}
-	
+
 	RequestQueue<WriteRequest> getWriteRequestQueue(FileIOChannel.ID channelID) {
 		return this.writers[channelID.getThreadNum()].requestQueue;
 	}
@@ -310,12 +310,12 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	// -------------------------------------------------------------------------
 	//                           I/O Worker Threads
 	// -------------------------------------------------------------------------
-	
+
 	/**
 	 * A worker thread for asynchronous reads.
 	 */
 	private static final class ReaderThread extends Thread {
-		
+
 		protected final RequestQueue<ReadRequest> requestQueue;
 
 		private volatile boolean alive;
@@ -323,12 +323,12 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 		// ---------------------------------------------------------------------
 		// Constructors / Destructors
 		// ---------------------------------------------------------------------
-		
+
 		protected ReaderThread() {
 			this.requestQueue = new RequestQueue<ReadRequest>();
 			this.alive = true;
 		}
-		
+
 		/**
 		 * Shuts the thread down. This operation does not wait for all pending requests to be served, halts the thread
 		 * immediately. All buffers of pending requests are handed back to their channel readers and an exception is
@@ -346,10 +346,10 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 					join(1000);
 				}
 				catch (InterruptedException ignored) {}
-				
+
 				// notify all pending write requests that the thread has been shut down
 				IOException ioex = new IOException("IO-Manager has been closed.");
-					
+
 				while (!this.requestQueue.isEmpty()) {
 					ReadRequest request = this.requestQueue.poll();
 					if (request != null) {
@@ -371,9 +371,9 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 
 		@Override
 		public void run() {
-			
+
 			while (alive) {
-				
+
 				// get the next buffer. ignore interrupts that are not due to a shutdown.
 				ReadRequest request = null;
 				while (alive && request == null) {
@@ -388,7 +388,7 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 						}
 					}
 				}
-				
+
 				// remember any IO exception that occurs, so it can be reported to the writer
 				IOException ioex = null;
 
@@ -413,14 +413,14 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 				}
 			} // end while alive
 		}
-		
+
 	} // end reading thread
-	
+
 	/**
 	 * A worker thread that asynchronously writes the buffers to disk.
 	 */
 	private static final class WriterThread extends Thread {
-		
+
 		protected final RequestQueue<WriteRequest> requestQueue;
 
 		private volatile boolean alive;
@@ -451,10 +451,10 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 					join(1000);
 				}
 				catch (InterruptedException ignored) {}
-				
+
 				// notify all pending write requests that the thread has been shut down
 				IOException ioex = new IOException("IO-Manager has been closed.");
-					
+
 				while (!this.requestQueue.isEmpty()) {
 					WriteRequest request = this.requestQueue.poll();
 					if (request != null) {
@@ -476,11 +476,11 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 
 		@Override
 		public void run() {
-			
+
 			while (this.alive) {
-				
+
 				WriteRequest request = null;
-				
+
 				// get the next buffer. ignore interrupts that are not due to a shutdown.
 				while (alive && request == null) {
 					try {
@@ -494,10 +494,10 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 						}
 					}
 				}
-				
+
 				// remember any IO exception that occurs, so it can be reported to the writer
 				IOException ioex = null;
-				
+
 				try {
 					// write buffer to the specified channel
 					request.write();
@@ -519,6 +519,6 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 				}
 			} // end while alive
 		}
-		
+
 	}; // end writer thread
 }

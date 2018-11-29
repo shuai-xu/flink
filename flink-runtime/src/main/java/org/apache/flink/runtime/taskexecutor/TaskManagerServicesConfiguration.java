@@ -104,6 +104,8 @@ public class TaskManagerServicesConfiguration {
 
 	private final int ioManagerBufferedWriteSize;
 
+	private final int ioManagerNumAsyncReadWriteThread;
+
 	public TaskManagerServicesConfiguration(
 			InetAddress taskManagerAddress,
 			String[] tmpDirPaths,
@@ -121,7 +123,8 @@ public class TaskManagerServicesConfiguration {
 			List<ResourceProfile> resourceProfileList,
 			ResourceProfile totalResourceProfile,
 			int ioManagerBufferedReadSize,
-			int ioManagerBufferedWriteSize) {
+			int ioManagerBufferedWriteSize,
+			int ioManagerNumAsyncReadWriteThread) {
 
 		this.taskManagerAddress = checkNotNull(taskManagerAddress);
 		this.tmpDirPaths = checkNotNull(tmpDirPaths);
@@ -138,6 +141,7 @@ public class TaskManagerServicesConfiguration {
 		this.memoryFraction = memoryFraction;
 		this.ioManagerBufferedReadSize = ioManagerBufferedReadSize;
 		this.ioManagerBufferedWriteSize = ioManagerBufferedWriteSize;
+		this.ioManagerNumAsyncReadWriteThread = ioManagerNumAsyncReadWriteThread;
 
 		checkArgument(timerServiceShutdownTimeout >= 0L, "The timer " +
 			"service shutdown timeout must be greater or equal to 0.");
@@ -190,6 +194,10 @@ public class TaskManagerServicesConfiguration {
 
 	public int getIoManagerBufferedWriteSize() {
 		return ioManagerBufferedWriteSize;
+	}
+
+	public int getIoManagerNumAsyncReadWriteThread() {
+		return ioManagerNumAsyncReadWriteThread;
 	}
 
 	/**
@@ -336,7 +344,7 @@ public class TaskManagerServicesConfiguration {
 
 		final int ioManagerBufferedReadSize = configuration.getInteger(IO_MANAGER_BUFFERED_READ_SIZE);
 		final int ioManagerBufferedWriteSize = configuration.getInteger(IO_MANAGER_BUFFERED_WRITE_SIZE);
-
+		final int ioManagerNumAsyncReadWriteThread = configuration.getInteger(TaskManagerOptions.IO_MANAGER_ASYNC_NUM_READ_WRITE_THREAD);
 		return new TaskManagerServicesConfiguration(
 			remoteAddress,
 			tmpDirs,
@@ -354,7 +362,8 @@ public class TaskManagerServicesConfiguration {
 			resourceProfiles,
 			totalResourceProfile,
 			ioManagerBufferedReadSize,
-			ioManagerBufferedWriteSize);
+			ioManagerBufferedWriteSize,
+			ioManagerNumAsyncReadWriteThread);
 	}
 
 	// --------------------------------------------------------------------------

@@ -671,6 +671,11 @@ public class TaskManagerOptions {
 							" not use buffered write, this will reduce random IO, but will" +
 							" result in more than one copy.");
 
+	public static final ConfigOption<Integer> IO_MANAGER_ASYNC_NUM_READ_WRITE_THREAD =
+		key("io.manager.async.num-read-write-thread")
+			.defaultValue(1)
+			.withDescription("The number of async read write thread.");
+
 	// ------------------------------------------------------------------------
 
 	/** Not intended to be instantiated. */

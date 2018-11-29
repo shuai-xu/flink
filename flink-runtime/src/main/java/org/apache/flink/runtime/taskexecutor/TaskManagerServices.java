@@ -245,7 +245,8 @@ public class TaskManagerServices {
 		final IOManagerAsync ioManager = new IOManagerAsync(
 			taskManagerServicesConfiguration.getTmpDirPaths(),
 			taskManagerServicesConfiguration.getIoManagerBufferedReadSize(),
-			taskManagerServicesConfiguration.getIoManagerBufferedWriteSize());
+			taskManagerServicesConfiguration.getIoManagerBufferedWriteSize(),
+			taskManagerServicesConfiguration.getIoManagerNumAsyncReadWriteThread());
 
 		final BroadcastVariableManager broadcastVariableManager = new BroadcastVariableManager();
 
