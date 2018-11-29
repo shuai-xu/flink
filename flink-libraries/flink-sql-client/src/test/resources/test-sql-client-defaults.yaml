@@ -42,4 +42,14 @@ execution:
 deployment:
   response-timeout: 5000
 
+catalogs:
+   - name: myhive
+     catalog:
+      type: hive
+      connector:
+        hive.metastore.uris: "thrift://host1:10000,thrift://host2:10000"
+        hive.metastore.username: "flink"
+   - name: myinmemory
+     catalog:
+      type: inmemory
 

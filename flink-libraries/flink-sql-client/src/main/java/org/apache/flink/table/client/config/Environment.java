@@ -19,9 +19,13 @@
 package org.apache.flink.table.client.config;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.table.client.SqlClientException;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -39,9 +43,12 @@ public class Environment {
 
 	private Deployment deployment;
 
+	private Map<String, Catalog> catalogs;
+
 	public Environment() {
 		this.execution = new Execution();
 		this.deployment = new Deployment();
+		this.catalogs = Collections.emptyMap();
 	}
 
 	public void setExecution(Map<String, Object> config) {
@@ -58,6 +65,25 @@ public class Environment {
 
 	public Deployment getDeployment() {
 		return deployment;
+	}
+
+	public Map<String, Catalog> getCatalogs() {
+		return catalogs;
+	}
+
+	public void setCatalogs(List<Map<String, Object>> catalogList) {
+		this.catalogs = new HashMap<>(catalogList.size());
+
+		catalogList.forEach(config -> {
+			final Catalog catalog = Catalog.create(config);
+
+			if (catalogs.containsKey(catalog.getName())) {
+				throw new SqlClientException(
+					String.format("Catalog %s is already registered", catalog.getName()));
+			}
+
+			catalogs.put(catalog.getName(), catalog);
+		});
 	}
 
 	// --------------------------------------------------------------------------------------------

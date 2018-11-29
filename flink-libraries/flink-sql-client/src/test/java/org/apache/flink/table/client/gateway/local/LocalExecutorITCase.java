@@ -38,7 +38,7 @@ import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
 import org.apache.flink.table.client.gateway.SessionContext;
 import org.apache.flink.table.client.gateway.TypedResult;
-import org.apache.flink.table.client.gateway.utils.EnvironmentFileUtil;
+import org.apache.flink.table.client.gateway.utils.EnvironmentUtil;
 import org.apache.flink.test.util.MiniClusterResource;
 import org.apache.flink.test.util.TestBaseUtils;
 import org.apache.flink.types.Row;
@@ -71,6 +71,7 @@ import static org.junit.Assert.fail;
 /**
  * Contains basic tests for the {@link LocalExecutor}.
  */
+@Ignore
 public class LocalExecutorITCase extends TestLogger {
 
 	private static final String DEFAULTS_ENVIRONMENT_FILE = "test-sql-client-defaults.yaml";
@@ -448,7 +449,7 @@ public class LocalExecutorITCase extends TestLogger {
 
 	private <T> LocalExecutor createModifiedExecutor(ClusterClient<T> clusterClient, SessionContext session, Map<String, String> replaceVars) throws Exception {
 		LocalExecutor executor =  new LocalExecutor(
-			EnvironmentFileUtil.parseModified(DEFAULTS_ENVIRONMENT_FILE, replaceVars),
+			EnvironmentUtil.parseModified(DEFAULTS_ENVIRONMENT_FILE, replaceVars),
 			Collections.emptyList(),
 			clusterClient.getFlinkConfiguration(),
 			new DummyCustomCommandLine<T>(clusterClient),
