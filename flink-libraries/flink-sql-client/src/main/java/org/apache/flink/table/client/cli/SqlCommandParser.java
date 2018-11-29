@@ -93,6 +93,8 @@ public final class SqlCommandParser {
 		EXIT("exit"),
 		CLEAR("clear"),
 		HELP("help"),
+		SHOW_CATALOGS("show catalogs"),
+		SHOW_DATABASES("show databases"),
 		SHOW_TABLES("show tables"),
 		SHOW_FUNCTIONS("show functions"),
 		DESCRIBE("describe"),

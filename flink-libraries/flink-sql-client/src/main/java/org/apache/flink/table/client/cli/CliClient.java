@@ -305,6 +305,12 @@ public class CliClient {
 			case HELP:
 				callHelp(cmdCall);
 				break;
+			case SHOW_CATALOGS:
+				callShowCatalogs(cmdCall);
+				break;
+			case SHOW_DATABASES:
+				callShowDatabases(cmdCall);
+				break;
 			case SHOW_TABLES:
 				callShowTables(cmdCall);
 				break;
@@ -401,6 +407,38 @@ public class CliClient {
 
 	private void callHelp(SqlCommandCall cmdCall) {
 		terminal.writer().println(CliStrings.MESSAGE_HELP);
+		terminal.flush();
+	}
+
+	private void callShowCatalogs(SqlCommandCall cmdCall) {
+		final List<String> catalogs;
+		try {
+			catalogs = executor.listCatalogs(context);
+		} catch (SqlExecutionException e) {
+			printException(e);
+			return;
+		}
+		if (catalogs.isEmpty()) {
+			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_EMPTY).toAnsi());
+		} else {
+			catalogs.forEach((v) -> terminal.writer().println(v));
+		}
+		terminal.flush();
+	}
+
+	private void callShowDatabases(SqlCommandCall cmdCall) {
+		final List<String> dbs;
+		try {
+			dbs = executor.listDatabases(context);
+		} catch (SqlExecutionException e) {
+			printException(e);
+			return;
+		}
+		if (dbs.isEmpty()) {
+			terminal.writer().println(CliStrings.messageInfo(CliStrings.MESSAGE_EMPTY).toAnsi());
+		} else {
+			dbs.forEach((v) -> terminal.writer().println(v));
+		}
 		terminal.flush();
 	}
 

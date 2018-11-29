@@ -42,7 +42,17 @@ public interface Executor {
 	Map<String, String> getSessionProperties(SessionContext session) throws SqlExecutionException;
 
 	/**
-	 * Lists all tables known to the executor.
+	 * Lists all registered catalogs.
+	 */
+	List<String> listCatalogs(SessionContext session) throws SqlExecutionException;
+
+	/**
+	 * Lists all databases in the default catalog.
+	 */
+	List<String> listDatabases(SessionContext session) throws SqlExecutionException;
+
+	/**
+	 * Lists all tables in the default database.
 	 */
 	List<String> listTables(SessionContext session) throws SqlExecutionException;
 

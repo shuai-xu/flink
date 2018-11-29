@@ -44,6 +44,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class CatalogManager {
 	public static final String DEFAULT_CATALOG_NAME = "default_catalog";
+	public static final String DEFAULT_DATABASE_NAME = "default";
 
 	// The catalog to hold all registered and translated tables
 	// We disable caching here to prevent side effects
@@ -60,11 +61,11 @@ public class CatalogManager {
 	public CatalogManager() {
 		catalogs = new HashMap<>();
 
-		catalogs.put(DEFAULT_CATALOG_NAME, new FlinkInMemoryCatalog(DEFAULT_CATALOG_NAME));
-
+		FlinkInMemoryCatalog inMemoryCatalog = new FlinkInMemoryCatalog(DEFAULT_CATALOG_NAME);
+		inMemoryCatalog.createDatabase(DEFAULT_DATABASE_NAME, new CatalogDatabase(), false);
+		catalogs.put(DEFAULT_CATALOG_NAME, inMemoryCatalog);
 		defaultCatalog = DEFAULT_CATALOG_NAME;
-
-		// TODO: may need to create and set a default database
+		defaultDb = DEFAULT_DATABASE_NAME;
 	}
 
 	/**
@@ -126,6 +127,10 @@ public class CatalogManager {
 
 		defaultCatalog = catalogName;
 		defaultDb = dbName;
+	}
+
+	public String getDefaultDatabaseName() {
+		return defaultDb;
 	}
 
 	public SchemaPlus getRootSchema() {

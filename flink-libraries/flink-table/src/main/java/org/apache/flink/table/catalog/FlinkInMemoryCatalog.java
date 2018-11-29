@@ -138,11 +138,11 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void createDatabase(String dbName, CatalogDatabase schema, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
+	public void createDatabase(String dbName, CatalogDatabase db, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
 		if (databases.containsKey(dbName) && !ignoreIfExists) {
 			throw new DatabaseAlreadyExistException(catalogName, dbName);
 		} else {
-			databases.put(dbName, schema);
+			databases.put(dbName, db);
 		}
 	}
 
@@ -154,18 +154,18 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void alterDatabase(String dbName, CatalogDatabase schema, boolean ignoreIfNotExists) throws DatabaseNotExistException {
+	public void alterDatabase(String dbName, CatalogDatabase db, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		if (databases.containsKey(dbName)) {
-			databases.put(dbName, schema);
+			databases.put(dbName, db);
 		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		}
 	}
 
 	@Override
-	public void renameDatabase(String dbName, String newSchemaName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
+	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		if (databases.containsKey(dbName)) {
-			databases.put(newSchemaName, databases.remove(dbName));
+			databases.put(newDbName, databases.remove(dbName));
 		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		}

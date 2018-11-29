@@ -28,13 +28,29 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.types.DataTypes.{PROCTIME_INDICATOR => PROCTIME}
 import org.apache.flink.table.api.types.DataTypes.{ROWTIME_INDICATOR => ROWTIME}
 import org.apache.flink.table.api.types.DataTypes._
+import org.apache.flink.table.catalog.CatalogManager
 import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.TableTestBase
 import org.apache.flink.types.Row
 import org.junit.Test
 
 class TableEnvironmentTest extends TableTestBase {
+
+  @Test
+  def testListCatalogsAndDatabasesAndTables(): Unit = {
+    var tEnv = streamTestUtil().tableEnv
+    var testDb = "test"
+    tEnv.registerCatalog(testDb, CommonTestData.getTestFlinkInMemoryCatalog)
+
+    assert(tEnv.listCatalogs().sameElements(Array(testDb, CatalogManager.DEFAULT_CATALOG_NAME)))
+
+    tEnv.setDefaultDatabase(testDb, "db2")
+
+    assert(tEnv.listDatabases().sameElements(Array("db1", "db2")))
+    assert(tEnv.listTables().sameElements(Array("tb2")))
+  }
 
   // ----------------------------------------------------------------------------------------------
   // schema definition by position

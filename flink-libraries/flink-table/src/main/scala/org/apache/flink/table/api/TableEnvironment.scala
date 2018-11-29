@@ -840,13 +840,32 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Gets the names of all tables registered in this environment.
+    * Gets the names of all catalogs registered in this environment.
+    *
+    * @return A list of the names of all registered catalogs.
+    */
+  def listCatalogs(): Array[String] = {
+    catalogManager.getCatalogs.asScala.toArray
+  }
+
+  /**
+    * Gets the names of all databases registered in the default catalog.
+    *
+    * @return A list of the names of all registered databases.
+    */
+  def listDatabases(): Array[String] = {
+    catalogManager.getDefaultCatalog.listDatabases().asScala.toArray
+  }
+
+  /**
+    * Gets the names of all tables registered in the default database.
     *
     * @return A list of the names of all registered tables.
     */
   def listTables(): Array[String] = {
-    // TODO list from external meta
-    currentSchema.getTableNames.asScala.toArray
+    catalogManager.getDefaultCatalog.listTablesByDatabase(catalogManager.getDefaultDatabaseName)
+      .map(op => op.getObjectName)
+      .toArray
   }
 
   /**

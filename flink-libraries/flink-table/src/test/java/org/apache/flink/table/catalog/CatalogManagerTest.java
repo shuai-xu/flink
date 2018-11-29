@@ -74,7 +74,13 @@ public class CatalogManagerTest {
 
 	@Test
 	public void testSetDefaultDatabase() {
-		// TODO: implement this
+		assertEquals(CatalogManager.DEFAULT_DATABASE_NAME, manager.getDefaultDatabaseName());
+
+		String testDb = "test";
+		((ReadableWritableCatalog) manager.getDefaultCatalog()).createDatabase(testDb, new CatalogDatabase(), false);
+		manager.setDefaultDatabase(CatalogManager.DEFAULT_CATALOG_NAME, testDb);
+
+		assertEquals(testDb, manager.getDefaultDatabaseName());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
