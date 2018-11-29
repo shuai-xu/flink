@@ -18,8 +18,9 @@
 
 package org.apache.flink.runtime.jobgraph;
 
-import javax.xml.bind.DatatypeConverter;
 import org.apache.flink.util.AbstractID;
+
+import javax.xml.bind.DatatypeConverter;
 
 /**
  * A class for statistically unique operator IDs.

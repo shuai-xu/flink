@@ -102,7 +102,7 @@ public class JobVerticesInfo implements ResponseBody {
 
 		public static final String FIELD_NAME_JOB_VERTEX_NAME = "name";
 
-		public static final String FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS = "subatsk_metrics";
+		public static final String FIELD_NAME_JOB_VERTEX_SUBTASK_METRICS = "subtask_metrics";
 
 		@JsonProperty(FIELD_NAME_JOB_VERTEX_ID)
 		@JsonSerialize(using = JobVertexIDSerializer.class)
@@ -164,6 +164,8 @@ public class JobVerticesInfo implements ResponseBody {
 	 */
 	public static final class JobOperator{
 
+		public static final String FIELD_NAME_VERTEX_VERTEX_ID = "vertex_id";
+
 		public static final String FIELD_NAME_VERTEX_OPERATOR_ID = "operator_id";
 
 		public static final String FIELD_NAME_VERTEX_OPERATOR_NAME = "name";
@@ -171,6 +173,10 @@ public class JobVerticesInfo implements ResponseBody {
 		public static final String FIELD_NAME_VERTEX_OPERATOR_INPUTS = "inputs";
 
 		public static final String FIELD_NAME_VERTEX_OPERATOR_METRIC_NAME = "metric_name";
+
+		@JsonProperty(FIELD_NAME_VERTEX_VERTEX_ID)
+		@JsonSerialize(using = JobVertexIDSerializer.class)
+		private final JobVertexID jobVertexID;
 
 		@JsonProperty(FIELD_NAME_VERTEX_OPERATOR_ID)
 		@JsonSerialize(using = JobVertexOperatorIDSerializer.class)
@@ -187,6 +193,8 @@ public class JobVerticesInfo implements ResponseBody {
 
 		@JsonCreator
 		public JobOperator(
+			@JsonDeserialize(using = JobVertexIDDeserializer.class)
+			@JsonProperty(FIELD_NAME_VERTEX_VERTEX_ID) JobVertexID jobVertexID,
 			@JsonDeserialize(using = JobVertexOperatorIDDeserializer.class)
 			@JsonProperty(FIELD_NAME_VERTEX_OPERATOR_ID) OperatorID jobVertexOperatorID,
 			@JsonProperty(FIELD_NAME_VERTEX_OPERATOR_NAME) String name,
@@ -196,6 +204,12 @@ public class JobVerticesInfo implements ResponseBody {
 			this.name = Preconditions.checkNotNull(name);
 			this.inputs = inputs;
 			this.metricName = metricName;
+			this.jobVertexID = jobVertexID;
+		}
+
+		@JsonIgnore
+		public JobVertexID getJobVertexID() {
+			return jobVertexID;
 		}
 
 		@JsonIgnore
@@ -227,7 +241,8 @@ public class JobVerticesInfo implements ResponseBody {
 				return false;
 			}
 			JobOperator that = (JobOperator) o;
-			return Objects.equals(jobVertexOperatorID, that.jobVertexOperatorID) &&
+			return Objects.equals(jobVertexID, that.jobVertexID) &&
+					Objects.equals(jobVertexOperatorID, that.jobVertexOperatorID) &&
 					Objects.equals(name, that.name) &&
 					Objects.equals(inputs, that.inputs) &&
 					Objects.equals(metricName, that.metricName);
@@ -235,7 +250,7 @@ public class JobVerticesInfo implements ResponseBody {
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(jobVertexOperatorID, name, inputs, metricName);
+			return Objects.hash(jobVertexID, jobVertexOperatorID, name, inputs, metricName);
 		}
 	}
 

@@ -23,6 +23,7 @@ import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
 import org.apache.flink.runtime.executiongraph.AccessExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.AccessExecutionVertex;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorDescriptor;
 import org.apache.flink.runtime.jobgraph.OperatorEdgeDescriptor;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
@@ -127,20 +128,21 @@ public class JobVerticesInfoHandler extends AbstractExecutionGraphHandler<JobVer
 			}
 		}
 		for (OperatorDescriptor od: ejv.getOperatorDescriptors()) {
-			JobVerticesInfo.JobOperator jobOperator = createJobOperator(od);
+			JobVerticesInfo.JobOperator jobOperator = createJobOperator(ejv.getJobVertexId(), od);
 			jobOperators.add(jobOperator);
 		}
 		return new JobVerticesInfo.JobVertex(ejv.getJobVertexId(), ejv.getName(), subTaskMetrics);
 	}
 
-	private static JobVerticesInfo.JobOperator createJobOperator(OperatorDescriptor operatorDescriptor){
+	private static JobVerticesInfo.JobOperator createJobOperator(JobVertexID jobVertexID, OperatorDescriptor operatorDescriptor){
 		List<OperatorEdgeDescriptor> inputs = operatorDescriptor.getInputs();
 		Collection<JobVerticesInfo.OperatorEdgeInfo> operatorEdfInfos = new ArrayList<>(inputs.size());
 		for (OperatorEdgeDescriptor oed: inputs) {
-			operatorEdfInfos.add(new JobVerticesInfo.OperatorEdgeInfo(oed.getTargetOperator(),
+			operatorEdfInfos.add(new JobVerticesInfo.OperatorEdgeInfo(oed.getSourceOperator(),
 				oed.getPartitionerDescriptor(), oed.getTypeNumber()));
 		}
 		return new JobVerticesInfo.JobOperator(
+			jobVertexID,
 			operatorDescriptor.getOperatorID(),
 			operatorDescriptor.getOperatorName(),
 			operatorEdfInfos,
