@@ -44,7 +44,7 @@ class StreamExecExchange(
     relNode: RelNode,
     relDistribution: RelDistribution)
   extends CommonExchange(cluster, traitSet, relNode, relDistribution)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   private val DEFAULT_MAX_PARALLELISM = 1 << 7
 
@@ -56,7 +56,7 @@ class StreamExecExchange(
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    val input = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val input = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val inputType = input.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BaseRow])
 

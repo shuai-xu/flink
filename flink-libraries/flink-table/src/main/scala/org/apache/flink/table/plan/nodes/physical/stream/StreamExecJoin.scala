@@ -69,7 +69,7 @@ class StreamExecJoin(
     joinHint: JoinHint,
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = rowRelDataType
 
@@ -198,8 +198,8 @@ class StreamExecJoin(
     val (leftKeys, rightKeys) =
       JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
 
-    val leftTransform = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
-    val rightTransform = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val leftTransform = left.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val rightTransform = right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val leftType = leftTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val rightType = rightTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]

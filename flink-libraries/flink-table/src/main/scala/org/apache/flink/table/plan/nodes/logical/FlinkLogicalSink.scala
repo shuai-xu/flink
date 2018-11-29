@@ -45,11 +45,6 @@ class FlinkLogicalSink(
     new FlinkLogicalSink(cluster, traitSet, inputs.head, sink, sinkName)
   }
 
-  override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
-    .item("name", sinkName)
-    .item("fields", sink.getFieldNames.mkString(", "))
-  }
 }
 
 private class FlinkLogicalSinkConverter

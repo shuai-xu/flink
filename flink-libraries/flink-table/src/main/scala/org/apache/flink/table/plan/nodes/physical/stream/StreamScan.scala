@@ -28,7 +28,7 @@ import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 
-trait StreamScan extends CommonScan[BaseRow] with StreamExecRel {
+trait StreamScan extends CommonScan[BaseRow] with RowStreamExecRel {
 
   def convertToInternalRow(
       input: StreamTransformation[Any],

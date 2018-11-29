@@ -128,7 +128,7 @@ class SubplanReuseContext(root: RelNode, config: TableConfig) {
     * Returns true if the given nodes can be reused, else false.
     */
   private def isReusableNodes(reusableNodes: List[RelNode]): Boolean = {
-    if (reusableNodes.size() > 1) {
+    if (reusableNodes.size > 1) {
       if (isTableSource(reusableNodes.head)) {
         // TableSource node can be reused if reuse TableSource enabled
         config.getTableSourceReuse

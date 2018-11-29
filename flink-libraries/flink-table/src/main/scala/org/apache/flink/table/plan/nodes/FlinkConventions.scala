@@ -33,7 +33,7 @@ class FlinkConvention(name: String, relClass: Class[_ <: RelNode])
   override def useAbstractConvertersForConversion(
       fromTraits: RelTraitSet,
       toTraits: RelTraitSet): Boolean = {
-    if (relClass == classOf[StreamExecRel]) {
+    if (relClass == classOf[StreamExecRel[_]]) {
       //stream
       !fromTraits.satisfies(toTraits) &&
         fromTraits.containsIfApplicable(FlinkConventions.STREAMEXEC) &&
@@ -50,6 +50,6 @@ class FlinkConvention(name: String, relClass: Class[_ <: RelNode])
 object FlinkConventions {
 
   val LOGICAL: Convention = new Convention.Impl("LOGICAL", classOf[FlinkLogicalRel])
-  val STREAMEXEC: Convention = new FlinkConvention("STREAMEXEC", classOf[StreamExecRel])
+  val STREAMEXEC: Convention = new FlinkConvention("STREAMEXEC", classOf[StreamExecRel[_]])
   val BATCHEXEC: Convention = new FlinkConvention("BATCHEXEC", classOf[BatchExecRel[_]])
 }

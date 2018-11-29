@@ -14,18 +14,22 @@ StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
 StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
-  StreamExecExchange(distribution=[hash[b]])
-    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
-StreamExecRank(retract=[true], accMode=[AccRetract])
-  StreamExecExchange(retract=[false], accMode=[Acc])
-    StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecSink(fields=[a, b, c, rank_num])
+  StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum])
+    StreamExecExchange(distribution=[hash[b]])
+      StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+StreamExecSink(retract=[false], accMode=[AccRetract])
+  StreamExecRank(retract=[true], accMode=[AccRetract])
+    StreamExecExchange(retract=[false], accMode=[Acc])
+      StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecCalc(select=[a, b], where=[<(a, 6)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
-StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecDataStreamScan(retract=[false], accMode=[Acc])
+StreamExecSink(fields=[a, b])
+  StreamExecCalc(select=[a, b], where=[<(a, 6)])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+StreamExecSink(retract=[false], accMode=[Acc])
+  StreamExecCalc(retract=[false], accMode=[Acc])
+    StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

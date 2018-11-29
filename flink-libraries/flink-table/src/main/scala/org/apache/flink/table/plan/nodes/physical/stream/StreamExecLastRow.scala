@@ -51,7 +51,7 @@ class StreamExecLastRow(
    uniqueKeys: Array[Int],
    ruleDescription: String)
   extends SingleRel(cluster, traitSet, input)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -92,7 +92,7 @@ class StreamExecLastRow(
 
     val tableConfig = tableEnv.getConfig
 
-    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val rowTypeInfo = inputTransform.getOutputType.asInstanceOf[BaseRowTypeInfo[BaseRow]]
 

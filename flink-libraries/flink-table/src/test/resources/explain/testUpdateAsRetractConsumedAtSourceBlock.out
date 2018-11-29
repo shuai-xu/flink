@@ -17,16 +17,20 @@ StreamExecRank(retract=[true], accMode=[AccRetract])
     StreamExecDataStreamScan(retract=[false], accMode=[Acc])
 
 [[Sink]]
-StreamExecCalc(select=[a], where=[>(a, 6)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
-StreamExecCalc(retract=[true], accMode=[AccRetract])
-  StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
+StreamExecSink(fields=[a])
+  StreamExecCalc(select=[a], where=[>(a, 6)])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+StreamExecSink(retract=[false], accMode=[AccRetract])
+  StreamExecCalc(retract=[true], accMode=[AccRetract])
+    StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
-StreamExecCalc(select=[a, b], where=[<(a, 6)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
-StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
+StreamExecSink(fields=[a, b])
+  StreamExecCalc(select=[a, b], where=[<(a, 6)])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_2]])
+StreamExecSink(retract=[false], accMode=[AccRetract])
+  StreamExecCalc(retract=[false], accMode=[AccRetract])
+    StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source

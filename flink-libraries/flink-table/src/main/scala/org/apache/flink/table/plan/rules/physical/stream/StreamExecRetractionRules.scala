@@ -77,7 +77,7 @@ object StreamExecRetractionRules {
     * @param node The node to check.
     * @return True if the node ships updates as retractions, false otherwise.
     */
-  def shipUpdatesAsRetraction(node: StreamExecRel): Boolean = {
+  def shipUpdatesAsRetraction(node: StreamExecRel[_]): Boolean = {
     containUpdatesAsRetraction(node) && !node.consumesRetractions
   }
 
@@ -100,11 +100,11 @@ object StreamExecRetractionRules {
     */
   class AssignDefaultRetractionRule extends RelOptRule(
     operand(
-      classOf[StreamExecRel], none()),
+      classOf[StreamExecRel[_]], none()),
     "AssignDefaultRetractionRule") {
 
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val rel = call.rel(0).asInstanceOf[StreamExecRel]
+      val rel = call.rel(0).asInstanceOf[StreamExecRel[_]]
       val traits = rel.getTraitSet
 
       // init AccModeTrait
@@ -132,17 +132,17 @@ object StreamExecRetractionRules {
     */
   class SetUpdatesAsRetractionRule extends RelOptRule(
     operand(
-      classOf[StreamExecRel], none()),
+      classOf[StreamExecRel[_]], none()),
     "SetUpdatesAsRetractionRule") {
 
     /**
       * Checks if a [[StreamExecRel]] requires that update changes are sent with retraction
       * messages.
       */
-    def needsUpdatesAsRetraction(node: StreamExecRel, input: RelNode): Boolean = {
+    def needsUpdatesAsRetraction(node: StreamExecRel[_], input: RelNode): Boolean = {
       node match {
         case _ if shipUpdatesAsRetraction(node) => true
-        case dsr: StreamExecRel => dsr.needsUpdatesAsRetraction(input)
+        case dsr: StreamExecRel[_] => dsr.needsUpdatesAsRetraction(input)
       }
     }
 
@@ -167,7 +167,7 @@ object StreamExecRetractionRules {
       *
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val parent = call.rel(0).asInstanceOf[StreamExecRel]
+      val parent = call.rel(0).asInstanceOf[StreamExecRel[_]]
 
       val children = getChildRelNodes(parent)
       // check if children need to sent out retraction messages
@@ -191,7 +191,7 @@ object StreamExecRetractionRules {
     */
   class SetAccModeRule extends RelOptRule(
     operand(
-      classOf[StreamExecRel], none()),
+      classOf[StreamExecRel[_]], none()),
     "SetAccModeRule") {
 
     /**
@@ -205,14 +205,14 @@ object StreamExecRetractionRules {
     /**
       * Checks if a [[StreamExecRel]] produces retraction messages.
       */
-    def producesRetractions(node: StreamExecRel): Boolean = {
+    def producesRetractions(node: StreamExecRel[_]): Boolean = {
       containUpdatesAsRetraction(node) && node.producesUpdates || node.producesRetractions
     }
 
     /**
       * Checks if a [[StreamExecRel]] forwards retraction messages from its children.
       */
-    def forwardsRetractions(parent: StreamExecRel, children: Seq[RelNode]): Boolean = {
+    def forwardsRetractions(parent: StreamExecRel[_], children: Seq[RelNode]): Boolean = {
       children.exists(c => isAccRetract(c)) && !parent.consumesRetractions
     }
 
@@ -220,7 +220,7 @@ object StreamExecRetractionRules {
       * Updates the [[AccMode]] of a [[RelNode]] and its children if necessary.
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val parent = call.rel(0).asInstanceOf[StreamExecRel]
+      val parent = call.rel(0).asInstanceOf[StreamExecRel[_]]
       val children = getChildRelNodes(parent)
 
       // check if the AccMode of the parent needs to be updated

@@ -61,7 +61,7 @@ class TpcDsStreamExecPlanTest(caseName: String) {
     val sql = TpcUtils.getStreamTpcDsQuery(caseName)
     val table = tEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = tEnv.optimize(relNode, false)
+    val optimized = tEnv.optimize(relNode, updatesAsRetraction = false)
     val result = FlinkRelOptUtil.toString(optimized)
     // println(s"caseName: tpcds$caseName.sql, plan:\n$result")
   }

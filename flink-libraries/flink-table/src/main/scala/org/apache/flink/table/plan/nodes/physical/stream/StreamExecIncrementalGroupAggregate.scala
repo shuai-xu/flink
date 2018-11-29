@@ -68,7 +68,7 @@ class StreamExecIncrementalGroupAggregate(
     val shuffleKey: Array[Int],
     val groupKey: Array[Int])
   extends SingleRel(cluster, traitSet, inputNode)
-  with StreamExecRel
+  with RowStreamExecRel
   with Logging {
 
   override def deriveRowType(): RelDataType = outputDataType
@@ -121,7 +121,7 @@ class StreamExecIncrementalGroupAggregate(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])

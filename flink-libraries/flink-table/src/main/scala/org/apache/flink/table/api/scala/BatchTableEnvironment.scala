@@ -295,19 +295,22 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Converts the given [[Table]] into a [[DataStream]] of a specified type.
+    * Translates a [[Table]] into a [[DataStream]], emit the [[DataStream]] into a [[TableSink]]
+    * of a specified type and generated a new [[DataStream]].
     *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
+    * The fields of the [[Table]] are mapped to [[TableSink]] fields as follows:
     * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
     * types: Fields are mapped by position, field types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
+    * - POJO [[TableSink]] types: Fields are mapped by field name, field types must match.
     *
     * @param table The [[Table]] to convert.
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
+    * @param sink  The [[TableSink]] to emit the [[Table]] into.
+    * @tparam T The type of the [[TableSink]].
+    * @return The generated [[DataStream]] operators after emit the [[DataStream]] translated by
+    *         [[Table]] into a [[TableSink]].
     */
-  def toBoundedStream[T](table: Table, sink: TableSink[T]): DataStream[T] = {
-    new DataStream[T](translate(table, sink))
+  def toBoundedStream[T](table: Table, sink: TableSink[T]): DataStream[_] = {
+    new DataStream(translate(table, sink))
   }
 
   /**

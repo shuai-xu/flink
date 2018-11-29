@@ -29,7 +29,7 @@ import org.apache.flink.table.runtime.operator.AbstractProcessStreamOperator
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 
-trait StreamExecScan extends CommonScan[BaseRow] with StreamExecRel {
+trait StreamExecScan extends CommonScan[BaseRow] with RowStreamExecRel {
 
   def convertToInternalRow(
       input: StreamTransformation[Any],

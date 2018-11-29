@@ -63,7 +63,7 @@ class StreamExecLocalGroupAggregate(
     val aggCalls: Seq[AggregateCall],
     val partialFinal: PartialFinalType)
   extends SingleRel(cluster, traitSet, inputNode)
-  with StreamExecRel
+  with RowStreamExecRel
   with Logging {
 
   val inputRelDataType: RelDataType = getInput.getRowType
@@ -140,7 +140,7 @@ class StreamExecLocalGroupAggregate(
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val inputRowType = inputTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]]
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
 

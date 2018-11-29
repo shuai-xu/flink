@@ -66,7 +66,7 @@ class StreamExecWindowJoin(
     remainCondition: Option[RexNode],
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with StreamExecRel
+  with RowStreamExecRel
   with Logging {
 
   override def deriveRowType(): RelDataType = outputRowSchema.relDataType
@@ -117,8 +117,8 @@ class StreamExecWindowJoin(
         TableErrors.INST.sqlWindowJoinUpdateNotSupported())
     }
 
-    val leftDataStream = left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
-    val rightDataStream = right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val leftDataStream = left.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
+    val rightDataStream = right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     // get the equi-keys and other conditions
     val joinInfo = JoinInfo.of(leftNode, rightNode, joinCondition)

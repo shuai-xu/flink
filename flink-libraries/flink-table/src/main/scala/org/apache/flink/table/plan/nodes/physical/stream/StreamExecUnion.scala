@@ -46,7 +46,7 @@ class StreamExecUnion(
     outputRowType: RelDataType,
     all: Boolean)
   extends Union(cluster, traitSet, relList, all)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   require(all, "Only support union all")
 
@@ -100,7 +100,7 @@ class StreamExecUnion(
           diffFields.map(_._2).map { case (n, t) => s"$n:$t" }.mkString("[", ", ", "]")))
     }
 
-    val transformations = getInputs.map(_.asInstanceOf[StreamExecRel].translateToPlan(tableEnv))
+    val transformations = getInputs.map(_.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv))
     val outputRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[BinaryRow])
     new UnionTransformation(transformations, outputRowType.asInstanceOf[BaseRowTypeInfo[BaseRow]])
   }

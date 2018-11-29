@@ -46,7 +46,7 @@ class StreamExecCorrelate(
     joinType: SemiJoinType,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, child)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = relDataType
 
@@ -89,7 +89,7 @@ class StreamExecCorrelate(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val operatorCtx = CodeGeneratorContext(tableEnv.getConfig, supportReference = true)
       .setOperatorBaseClass(classOf[AbstractProcessStreamOperator[_]])
     CorrelateCodeGenerator.generateCorrelateTransformation(

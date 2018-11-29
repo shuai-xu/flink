@@ -53,7 +53,7 @@ class StreamExecTemporalSort(
     sortCollation: RelCollation,
     description: String)
   extends Sort(cluster, traitSet, inputNode, sortCollation)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -84,7 +84,7 @@ class StreamExecTemporalSort(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val inputTransformation = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     // need to identify time between others order fields. Time needs to be first sort element
     val timeType = SortUtil.getFirstSortField(sortCollation, outputSchema.relDataType).getType

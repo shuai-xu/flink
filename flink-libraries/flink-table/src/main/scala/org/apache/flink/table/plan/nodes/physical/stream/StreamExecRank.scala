@@ -60,7 +60,7 @@ class StreamExecRank(
     ImmutableBitSet.of(partitionKey: _*),
     sortCollation,
     rankRange)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   var strategy: RankStrategy = _
 
@@ -147,7 +147,7 @@ class StreamExecRank(
         throw new TableException(s"Streaming tables do not support $k rank function.")
     }
 
-    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val inputRowTypeInfo = new BaseRowTypeInfo(classOf[BaseRow], inputSchema.fieldTypeInfos: _*)
     val fieldCollation = sortCollation.getFieldCollations.asScala

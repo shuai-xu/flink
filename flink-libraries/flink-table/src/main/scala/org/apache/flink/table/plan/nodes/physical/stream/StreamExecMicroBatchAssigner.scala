@@ -34,7 +34,7 @@ class StreamExecMicroBatchAssigner(
     inputNode: RelNode,
     intervalMs: Long)
   extends SingleRel(cluster, traits, inputNode)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new StreamExecMicroBatchAssigner(cluster, traitSet, inputs.get(0), intervalMs)
@@ -46,7 +46,7 @@ class StreamExecMicroBatchAssigner(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val in = input.asInstanceOf[StreamExecRel]
+    val in = input.asInstanceOf[RowStreamExecRel]
     val inputTransformation = in.translateToPlan(tableEnv)
     val intervalMs = tableEnv.getConfig.getMicroBatchTriggerTime
 

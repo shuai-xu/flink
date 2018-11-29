@@ -18,19 +18,20 @@
 
 package org.apache.flink.table.calcite
 
+import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
+import org.apache.flink.table.api.{TableException, ValidationException}
+import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
+import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions}
+import org.apache.flink.table.plan.nodes.calcite._
+import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
+import org.apache.flink.table.validate.BasicOperatorTable
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical._
 import org.apache.calcite.rel.{RelNode, RelShuttle}
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
-import org.apache.flink.table.api.{TableException, ValidationException}
-import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
-import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions}
-import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalTemporalTableJoin, LogicalWatermarkAssigner, LogicalWindowAggregate}
-import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
-import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -114,6 +115,30 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
 
     case temporalTableJoin: LogicalTemporalTableJoin =>
       visit(temporalTableJoin)
+
+    case sink: LogicalSink =>
+      var newInput = sink.getInput.accept(this)
+      var needsConversion = false
+
+      val projects = newInput.getRowType.getFieldList.map { field =>
+        if (isProctimeIndicatorType(field.getType)) {
+          needsConversion = true
+          rexBuilder.makeCall(ProctimeSqlFunction, new RexInputRef(field.getIndex, field.getType))
+        } else {
+          new RexInputRef(field.getIndex, field.getType)
+        }
+      }
+
+      // add final conversion if necessary
+      if (needsConversion) {
+        newInput = LogicalProject.create(newInput, projects, newInput.getRowType.getFieldNames)
+      }
+      new LogicalSink(
+        sink.getCluster,
+        sink.getTraitSet,
+        newInput,
+        sink.sink,
+        sink.sinkName)
 
     case _ =>
       throw new TableException(s"Unsupported logical operator: ${other.getClass.getSimpleName}")
@@ -467,6 +492,9 @@ object RelTimeIndicatorConverter {
     val converter = new RelTimeIndicatorConverter(rexBuilder)
     val convertedRoot = rootRel.accept(converter)
 
+    if (rootRel.isInstanceOf[LogicalSink] || !isSinkBlock) {
+      return convertedRoot
+    }
     var needsConversion = false
 
     // materialize remaining proctime indicators
@@ -482,7 +510,7 @@ object RelTimeIndicatorConverter {
     )
 
     // add final conversion if necessary
-    if (needsConversion && isSinkBlock) {
+    if (needsConversion) {
       LogicalProject.create(
       convertedRoot,
       projects,

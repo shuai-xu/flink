@@ -55,7 +55,7 @@ object UpdatingPlanChecker {
 
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       node match {
-        case s: StreamExecRel if s.producesUpdates =>
+        case s: StreamExecRel[_] if s.producesUpdates =>
           isAppendOnly = false
         case hep: HepRelVertex =>
           visit(hep.getCurrentRel, ordinal, parent)   //remove wrapper node
@@ -188,7 +188,7 @@ object UpdatingPlanChecker {
               lJoinKeys.zip(rJoinKeys)
             )
           }
-        case _: StreamExecRel =>
+        case _: StreamExecRel[_] =>
           // anything else does not forward keys, so we can stop
           None
       }

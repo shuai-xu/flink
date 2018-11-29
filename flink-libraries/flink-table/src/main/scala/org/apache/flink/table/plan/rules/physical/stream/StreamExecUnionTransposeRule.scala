@@ -28,13 +28,13 @@ import scala.collection.JavaConversions._
 /**
   * Planner rule that transpose a stream RelNode with specified type into a [[StreamExecUnion]].
   */
-class StreamExecUnionTransposeRule[T <: StreamExecRel](
+class StreamExecUnionTransposeRule[T <: StreamExecRel[_]](
     outputClass: Class[T],
     description: String)
   extends RelOptRule(operand(outputClass, operand(classOf[StreamExecUnion], any)), description) {
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val outputRel = call.rels(0).asInstanceOf[StreamExecRel]
+    val outputRel = call.rels(0).asInstanceOf[StreamExecRel[_]]
     val union = call.rels(1).asInstanceOf[StreamExecUnion]
     val outputTraiSet = outputRel.getTraitSet
     val newInputsOfUnion = union.getInputs.map(input => outputRel.copy(outputTraiSet, Seq(input)))

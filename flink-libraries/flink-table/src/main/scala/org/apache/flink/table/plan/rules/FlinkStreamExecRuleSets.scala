@@ -25,7 +25,7 @@ import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.rules.logical._
 import org.apache.flink.table.plan.rules.physical.FlinkExpandConversionRule
-import org.apache.flink.table.plan.rules.physical.stream.{StreamExecTemporalTableJoinRule, _}
+import org.apache.flink.table.plan.rules.physical.stream._
 
 import scala.collection.JavaConverters._
 
@@ -238,7 +238,8 @@ object FlinkStreamExecRuleSets {
     FlinkLogicalDimensionTableSourceScan.STATIC_CONVERTER,
     FlinkLogicalDimensionTableSourceScan.TEMPORAL_CONVERTER,
     FlinkLogicalWatermarkAssigner.CONVERTER,
-    FlinkLogicalLastRow.CONVERTER
+    FlinkLogicalLastRow.CONVERTER,
+    FlinkLogicalSink.CONVERTER
   )
 
   /**
@@ -341,7 +342,9 @@ object FlinkStreamExecRuleSets {
     StreamExecRankRules.RANK_INSTANCE,
     StreamExecWatermarkAssignerRule.INSTANCE,
     StreamExecExpandRule.INSTANCE,
-    StreamExecLastRowRule.INSTANCE
+    StreamExecLastRowRule.INSTANCE,
+    // sink
+    StreamExecSinkRule.INSTANCE
   )
 
   /**

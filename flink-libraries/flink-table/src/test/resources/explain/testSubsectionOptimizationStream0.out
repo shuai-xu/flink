@@ -6,16 +6,18 @@ LogicalProject(num=[$0], cnt=[AS($1, 'cnt')])
 
 == Optimized Logical Plan ==
 [[Sink]]
-StreamExecCalc(select=[num, TMP_0 AS cnt])
-  StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS TMP_0])
-    StreamExecExchange(distribution=[hash[num]])
-      StreamExecCalc(select=[num, id])
-        StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
-StreamExecCalc(retract=[false], accMode=[Acc])
-  StreamExecGroupAggregate(retract=[false], accMode=[Acc])
-    StreamExecExchange(retract=[true], accMode=[Acc])
-      StreamExecCalc(retract=[true], accMode=[Acc])
-        StreamExecDataStreamScan(retract=[true], accMode=[Acc])
+StreamExecSink(fields=[num, cnt])
+  StreamExecCalc(select=[num, TMP_0 AS cnt])
+    StreamExecGroupAggregate(groupBy=[num], select=[num, COUNT(id) AS TMP_0])
+      StreamExecExchange(distribution=[hash[num]])
+        StreamExecCalc(select=[num, id])
+          StreamExecDataStreamScan(table=[[_DataStreamTable_0]])
+StreamExecSink(retract=[false], accMode=[Acc])
+  StreamExecCalc(retract=[false], accMode=[Acc])
+    StreamExecGroupAggregate(retract=[false], accMode=[Acc])
+      StreamExecExchange(retract=[true], accMode=[Acc])
+        StreamExecCalc(retract=[true], accMode=[Acc])
+          StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
  : Data Source

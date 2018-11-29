@@ -61,7 +61,7 @@ class StreamExecSort(
     sortCollation: RelCollation,
     description: String)
   extends Sort(cluster, traitSet, inputNode, sortCollation)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -97,7 +97,7 @@ class StreamExecSort(
       throw new TableException("Sort on a non-time-attribute field is not supported.")
     }
 
-    val inputTransformation = input.asInstanceOf[StreamExecRel].translateToPlan(
+    val inputTransformation = input.asInstanceOf[RowStreamExecRel].translateToPlan(
       tableEnv)
 
     val mangedMemorySize =

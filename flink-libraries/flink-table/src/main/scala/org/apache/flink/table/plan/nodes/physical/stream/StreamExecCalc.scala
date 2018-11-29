@@ -45,7 +45,7 @@ class StreamExecCalc(
     calcProgram: RexProgram,
     val ruleDescription: String)
   extends Calc(cluster, traitSet, input, calcProgram)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = relDataType
 
@@ -73,7 +73,7 @@ class StreamExecCalc(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
-    val inputTransform = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     // materialize time attributes in condition
     val condition = if (calcProgram.getCondition != null) {
       val materializedCondition = RelTimeIndicatorConverter.convertExpression(

@@ -67,7 +67,7 @@ class StreamExecGlobalGroupAggregate(
     val groupings: Array[Int],
     val partialFinal: PartialFinalType)
   extends SingleRel(cluster, traitSet, inputNode)
-  with StreamExecRel
+  with RowStreamExecRel
   with Logging {
 
   override def deriveRowType(): RelDataType = outputDataType
@@ -153,7 +153,7 @@ class StreamExecGlobalGroupAggregate(
         "state size. You may specify a retention time of 0 to not clean up the state.")
     }
 
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val outRowType = FlinkTypeFactory.toInternalBaseRowTypeInfo(outputDataType, classOf[BaseRow])
 

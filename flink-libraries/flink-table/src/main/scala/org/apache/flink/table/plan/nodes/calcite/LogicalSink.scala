@@ -23,7 +23,7 @@ import java.util
 import org.apache.flink.table.sinks.TableSink
 
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rel.RelNode
 
 import scala.collection.JavaConversions._
 
@@ -37,12 +37,6 @@ final class LogicalSink(
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new LogicalSink(cluster, traitSet, inputs.head, sink, sinkName)
-  }
-
-  override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
-    .item("name", sinkName)
-    .item("fields", sink.getFieldNames.mkString(", "))
   }
 
 }

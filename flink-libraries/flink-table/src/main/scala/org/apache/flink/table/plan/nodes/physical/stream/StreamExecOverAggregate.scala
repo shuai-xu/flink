@@ -57,7 +57,7 @@ class StreamExecOverAggregate(
     outputSchema: BaseRowSchema,
     inputSchema: BaseRowSchema)
   extends SingleRel(cluster, traitSet, inputNode)
-  with StreamExecRel
+  with RowStreamExecRel
   with Logging {
 
   override def needsUpdatesAsRetraction(input: RelNode) = true
@@ -136,7 +136,7 @@ class StreamExecOverAggregate(
           "The window can only be ordered in ASCENDING mode."))
     }
 
-    val inputDS = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputDS = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(input)
 

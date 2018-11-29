@@ -26,15 +26,15 @@ import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 
 import org.apache.calcite.rel.RelNode
 
-trait StreamExecRel extends FlinkPhysicalRel {
+trait StreamExecRel[T] extends FlinkPhysicalRel {
 
   /**
     * Translates the FlinkRelNode into a Flink operator.
     *
     * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
-    * @return StreamTransformation of type [[BaseRow]]
+    * @return StreamTransformation
     */
-  def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow]
+  def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[T]
 
   /**
     * Whether the [[FlinkRelNode]] produces update and delete changes.
@@ -57,3 +57,5 @@ trait StreamExecRel extends FlinkPhysicalRel {
     */
   def producesRetractions: Boolean = false
 }
+
+trait RowStreamExecRel extends StreamExecRel[BaseRow]

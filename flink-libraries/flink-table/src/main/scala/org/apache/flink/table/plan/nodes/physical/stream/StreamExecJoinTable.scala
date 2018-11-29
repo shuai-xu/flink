@@ -71,12 +71,12 @@ class StreamExecJoinTable(
     joinInfo,
     joinType,
     ruleDescription)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
     translateToPlanInternal(
-      getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv),
+      getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv),
       tableEnv.execEnv,
       tableEnv.getConfig)
   }

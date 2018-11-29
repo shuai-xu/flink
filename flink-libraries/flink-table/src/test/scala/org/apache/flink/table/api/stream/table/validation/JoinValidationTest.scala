@@ -63,7 +63,7 @@ class JoinValidationTest extends TableTestBase {
       .where('ltime >= 'rtime - 5.minutes && 'ltime < 'rtime + 3.seconds)
       .select('a, 'e, 'ltime)
 
-    util.tableEnv.optimize(resultTable.getRelNode, false)
+    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
   }
 
   /**
@@ -79,7 +79,7 @@ class JoinValidationTest extends TableTestBase {
       .where('a ==='d && 'ltime >= 'rtime - 5.minutes && 'ltime < 'ltime + 3.seconds)
       .select('a, 'e, 'ltime)
 
-    util.tableEnv.optimize(resultTable.getRelNode, false)
+    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
   }
 
   /**
@@ -95,7 +95,7 @@ class JoinValidationTest extends TableTestBase {
       .where('a ==='d && 'ltime >= 'rtime - 5.minutes && 'ltime > 'rtime + 3.seconds)
       .select('a, 'e, 'ltime)
 
-    util.tableEnv.optimize(resultTable.getRelNode, false)
+    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
   }
 
   /**
@@ -110,7 +110,7 @@ class JoinValidationTest extends TableTestBase {
     val resultTable = left.join(right)
       .where('a ==='d && 'ltime >= 'rtime - 5.minutes && 'ltime < 'rtime + 3.seconds)
 
-    util.tableEnv.optimize(resultTable.getRelNode, false)
+    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
   }
 
   @Test(expected = classOf[ValidationException])

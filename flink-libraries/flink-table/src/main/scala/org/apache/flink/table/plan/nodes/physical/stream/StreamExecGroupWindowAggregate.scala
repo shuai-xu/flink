@@ -57,7 +57,7 @@ class StreamExecGroupWindowAggregate(
     inputTimestampIndex: Int,
     emitStrategy: EmitStrategy)
   extends SingleRel(cluster, traitSet, inputNode)
-  with StreamExecRel
+  with RowStreamExecRel
   with Logging {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
@@ -107,7 +107,7 @@ class StreamExecGroupWindowAggregate(
 
     val config = tableEnv.getConfig
 
-    val inputTransform = input.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransform = input.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(input)
 

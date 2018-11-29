@@ -42,7 +42,7 @@ class StreamExecValues(
     tuples: ImmutableList[ImmutableList[RexLiteral]],
     description: String)
   extends Values(cluster, outputSchema.relDataType, tuples, traitSet)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 

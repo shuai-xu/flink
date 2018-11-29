@@ -18,14 +18,6 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
-
-import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
-import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.calcite.sql2rel.SqlToRelConverter
-import org.apache.calcite.sql2rel.SqlToRelConverter.Config
 import org.apache.flink.annotation.{InterfaceStability, VisibleForTesting}
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.accumulators.SerializedListAccumulator
@@ -57,6 +49,15 @@ import org.apache.flink.table.sources.{BatchTableSource, _}
 import org.apache.flink.table.util._
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.util.{AbstractID, Preconditions}
+
+import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
+import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.calcite.sql2rel.SqlToRelConverter
+import org.apache.calcite.sql2rel.SqlToRelConverter.Config
+
+import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
@@ -235,10 +236,9 @@ class BatchTableEnvironment(
       table: Table,
       sink: TableSink[T],
       sinkName: String): Unit = {
-    // Check the query configuration to be a batch one.
-
+    val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
     if (config.getSubsectionOptimization) {
-      sinkNodes += SinkNode(table.logicalPlan, sink, sinkName)
+      sinkNodes += sinkNode
     } else {
       val stream = translate(table, sink, sinkName)
       transformations.add(stream.getTransformation)
@@ -281,24 +281,24 @@ class BatchTableEnvironment(
     val blockLogicalPlan = block.getLogicalPlan
     val table = new Table(this, blockLogicalPlan)
 
-    val relNode = table.getRelNode
-    val batchExecPlan = optimize(relNode)
-    addQueryPlan(relNode, batchExecPlan)
+    val originTree = table.getRelNode
+    val optimizedTree = optimize(originTree)
+    addQueryPlan(originTree, optimizedTree)
 
-    val boundedStream: DataStream[_] = batchExecPlan match {
+    val boundedStream: DataStream[_] = optimizedTree match {
       case n: BatchExecSink[_] =>
         val outputType = n.sink.getOutputType
         translate(n, outputType)
       case _ =>
         val outputType = DataTypes.createRowType(table.getSchema.getTypes: _*)
-        val stream = translate(batchExecPlan, outputType)
+        val stream = translate(optimizedTree, outputType)
         val name = createUniqueTableName()
         registerIntermediateBoundedStreamInternal(
           // It is not a SinkNode, so it will be referenced by other blockLogicalPlan.
           // When registering a data collection, we should send a correct type.
           // If no this correct type, it will be converted from Flink's fieldTypes,
           // while STRING_TYPE_INFO will lose the length of varchar.
-          relNode.getRowType,
+          originTree.getRowType,
           name,
           stream,
           table.getSchema)
@@ -308,7 +308,7 @@ class BatchTableEnvironment(
         stream
     }
 
-    block.setOptimizedPlan(batchExecPlan)
+    block.setOptimizedPlan(optimizedTree)
     boundedStream
   }
 
@@ -419,25 +419,34 @@ class BatchTableEnvironment(
   }
 
   /**
-   * Translates a [[Table]] into a [[DataStream]].
-   *
-   * The transformation involves optimizing the relational expression tree as defined by
-   * Table API calls and / or SQL queries and generating corresponding [[DataStream]]
-   * operators.
-   *
-   * @param table      The root node of the relational expression tree.
-   * @return The [[DataStream]] that corresponds to the translated [[Table]].
-   */
-  protected def translate[A](
+    * Translates a [[Table]] into a [[DataStream]], emit the [[DataStream]] into a [[TableSink]]
+    * of a specified type and generated a new [[DataStream]].
+    *
+    * The transformation involves optimizing the relational expression tree as defined by
+    * Table API calls and / or SQL queries and generating corresponding [[DataStream]]
+    * operators.
+    *
+    * @param table The root node of the relational expression tree.
+    * @param sink  The [[TableSink]] to emit the [[Table]] into.
+    * @return The generated [[DataStream]] operators after emit the [[DataStream]] translated by
+    *         [[Table]] into a [[TableSink]].
+    */
+  protected def translate[A](table: Table, sink: TableSink[A]): DataStream[_] = {
+    val sinkName = createUniqueTableName()
+    translate(table, sink, sinkName)
+  }
+
+  private def translate[A](
       table: Table,
       sink: TableSink[A],
-      sinkName: String = null)
-    : DataStream[A] = {
-    val sinkNode = relBuilder.push(table.getRelNode).asInstanceOf[FlinkRelBuilder].
-                   sink(sink, sinkName).build()
-    val optimizedSinkNode = optimize(sinkNode)
-    addQueryPlan(sinkNode, optimizedSinkNode)
-    optimizedSinkNode match {
+      sinkName: String)
+    : DataStream[_] = {
+    val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
+    val sinkTable = new Table(this, sinkNode)
+    val originTree = sinkTable.getRelNode
+    val optimizedTree = optimize(originTree)
+    addQueryPlan(originTree, optimizedTree)
+    optimizedTree match {
       case batchExecSink: BatchExecSink[A] =>
         translate(batchExecSink, sink.getOutputType)
       case _ =>

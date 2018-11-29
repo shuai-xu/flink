@@ -45,7 +45,7 @@ class StreamExecExpand(
     expandIdIndex: Int,
     ruleDescription: String)
   extends Expand(cluster, traitSet, input, outputRowType, projects, expandIdIndex)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new StreamExecExpand(
@@ -70,7 +70,7 @@ class StreamExecExpand(
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val config = tableEnv.getConfig
-    val inputTransformation = getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+    val inputTransformation = getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val inputType = DataTypes.internal(inputTransformation.getOutputType)
     val outputType = FlinkTypeFactory.toInternalBaseRowTypeInfo(getRowType, classOf[GenericRow])
 

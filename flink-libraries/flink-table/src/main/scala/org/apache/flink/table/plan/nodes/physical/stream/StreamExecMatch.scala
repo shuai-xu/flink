@@ -79,7 +79,7 @@ class StreamExecMatch(
     outputSchema: BaseRowSchema,
     inputSchema: BaseRowSchema)
   extends SingleRel(cluster, traitSet, input)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
@@ -137,7 +137,7 @@ class StreamExecMatch(
       inputSchema.typeInfo(classOf[BaseRow]).asInstanceOf[BaseRowTypeInfo[BaseRow]]
 
     val inputTransform =
-      getInput.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+      getInput.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val rowtimeFields = inputSchema.relDataType
       .getFieldList.filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))

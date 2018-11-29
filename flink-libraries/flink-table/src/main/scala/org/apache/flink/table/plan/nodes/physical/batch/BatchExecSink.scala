@@ -33,7 +33,7 @@ import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.{ExecResourceUtil, PartitionUtils, RowConverters}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 
 /**
@@ -46,7 +46,7 @@ class BatchExecSink[T](
     sink: TableSink[T],
     sinkName: String)
   extends Sink(cluster, traitSet, input, sink, sinkName)
-  with BatchExecRel[T] {
+  with BatchExecRel[Any] {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new BatchExecSink(cluster, traitSet, inputs.get(0), sink, sinkName)
@@ -60,28 +60,23 @@ class BatchExecSink[T](
     */
   override def accept[R](visitor: BatchExecRelVisitor[R]): R = visitor.visit(this)
 
-  override def explainTerms(pw: RelWriter): RelWriter = {
-    super.explainTerms(pw)
-    .itemIf("name", sinkName, sinkName != null)
-    .item("fields", sink.getFieldNames.mkString(", "))
-  }
-
   /**
     * Translates the FlinkRelNode into a Flink operator.
     *
     * @param tableEnv    The [[StreamTableEnvironment]] of the translated Table.
-    * @return StreamTransformation of type [[BaseRow]]
+    * @return StreamTransformation
     */
-  override def translateToPlanInternal(tableEnv: BatchTableEnvironment): StreamTransformation[T] = {
+  override def translateToPlanInternal(
+    tableEnv: BatchTableEnvironment): StreamTransformation[Any] = {
     sink match {
       case _: BatchTableSink[T] =>
-        val result = translate[T](withChangeFlag = false, tableEnv)
-        emitBoundedStreamSink(result, tableEnv).
-        getTransformation.asInstanceOf[StreamTransformation[T]]
+        val result = translate(withChangeFlag = false, tableEnv)
+        emitBoundedStreamSink(result, tableEnv).getTransformation.
+        asInstanceOf[StreamTransformation[Any]]
       case _: BatchCompatibleStreamTableSink[T] =>
-        val result = translate[T](withChangeFlag = true, tableEnv)
-        emitBoundedStreamSink(result, tableEnv).
-        getTransformation.asInstanceOf[StreamTransformation[T]]
+        val result = translate(withChangeFlag = true, tableEnv)
+        emitBoundedStreamSink(result, tableEnv).getTransformation.
+        asInstanceOf[StreamTransformation[Any]]
       case _ =>
         throw new TableException("Only Support BatchTableSink or BatchCompatibleStreamTableSink")
     }
@@ -134,19 +129,19 @@ class BatchExecSink[T](
     *
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
     */
-  private def translate[A](
+  private def translate(
     withChangeFlag: Boolean,
-    tableEnv: BatchTableEnvironment): DataStream[A] = {
+    tableEnv: BatchTableEnvironment): DataStream[T] = {
     val resultType = sink.getOutputType
     TableEnvironment.validateType(resultType)
     val inputNode = getInput
     inputNode match {
-        // Sink's input must be RowBatchExecRel now.
+      // Sink's input must be RowBatchExecRel now.
       case node: RowBatchExecRel =>
         val plan = node.translateToPlan(tableEnv)
         val parTransformation = PartitionUtils.createPartitionTransformation(sink, plan)
         val convertTransformation =
-          getConversionMapper[BaseRow, A](
+          getConversionMapper[BaseRow, T](
             parTransformation,
             parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo[_]],
             inputNode.getRowType,

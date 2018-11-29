@@ -19,16 +19,20 @@ StreamExecGroupAggregate(retract=[true], accMode=[AccRetract])
       StreamExecDataStreamScan(retract=[true], accMode=[Acc])
 
 [[Sink]]
-StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
-StreamExecCalc(retract=[true], accMode=[AccRetract])
-  StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
+StreamExecSink(fields=[num, cnt])
+  StreamExecCalc(select=[num, cnt], where=[<(num, 4)])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+StreamExecSink(retract=[false], accMode=[AccRetract])
+  StreamExecCalc(retract=[true], accMode=[AccRetract])
+    StreamExecDataStreamScan(retract=[true], accMode=[AccRetract])
 
 [[Sink]]
-StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
-  StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
-StreamExecCalc(retract=[false], accMode=[AccRetract])
-  StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
+StreamExecSink(fields=[num, cnt])
+  StreamExecCalc(select=[num, cnt], where=[AND(>=(num, 4), <(num, 6))])
+    StreamExecDataStreamScan(table=[[_DataStreamTable_1]])
+StreamExecSink(retract=[false], accMode=[AccRetract])
+  StreamExecCalc(retract=[false], accMode=[AccRetract])
+    StreamExecDataStreamScan(retract=[false], accMode=[AccRetract])
 
 == Physical Execution Plan ==
  : Data Source

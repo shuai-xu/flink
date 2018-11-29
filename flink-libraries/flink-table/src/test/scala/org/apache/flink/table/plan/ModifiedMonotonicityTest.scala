@@ -260,7 +260,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   def assertMono(expect: RelModifiedMonotonicity, table: Table, util: StreamTableTestUtil): Unit = {
     val relNode = table.getRelNode
-    val optimized = util.tableEnv.optimize(relNode, false)
+    val optimized = util.tableEnv.optimize(relNode, updatesAsRetraction = false)
     val mq = util.tableEnv.getRelBuilder.getCluster.getMetadataQuery
     assertEquals(expect,
        mq.asInstanceOf[FlinkRelMetadataQuery].getRelModifiedMonotonicity(optimized))

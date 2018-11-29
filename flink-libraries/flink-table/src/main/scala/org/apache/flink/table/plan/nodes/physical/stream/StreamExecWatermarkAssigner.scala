@@ -37,7 +37,7 @@ class StreamExecWatermarkAssigner (
     rowtimeField: String,
     watermarkOffset: Long)
   extends WatermarkAssigner(cluster, traits, inputNode, rowtimeField, watermarkOffset)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def copy(
     traitSet: RelTraitSet,
@@ -47,7 +47,7 @@ class StreamExecWatermarkAssigner (
   }
 
   override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
-    val in = input.asInstanceOf[StreamExecRel]
+    val in = input.asInstanceOf[RowStreamExecRel]
     val inputTransformation = in.translateToPlan(tableEnv)
 
     val rowtimeIndex = getRowType.getFieldNames.indexOf(rowtimeField)

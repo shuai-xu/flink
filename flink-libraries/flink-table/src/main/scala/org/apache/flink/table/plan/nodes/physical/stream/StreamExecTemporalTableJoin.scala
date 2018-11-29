@@ -64,7 +64,7 @@ class StreamExecTemporalTableJoin(
     joinType: FlinkJoinRelType,
     ruleDescription: String)
   extends BiRel(cluster, traitSet, leftNode, rightNode)
-  with StreamExecRel {
+  with RowStreamExecRel {
 
   override def deriveRowType(): RelDataType = {
     schema.relDataType
@@ -122,9 +122,9 @@ class StreamExecTemporalTableJoin(
     val joinOpName = JoinUtil.joinToString(getRowType, joinCondition, joinType, getExpressionString)
 
     val leftTransform =
-      left.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+      left.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
     val rightTransform =
-      right.asInstanceOf[StreamExecRel].translateToPlan(tableEnv)
+      right.asInstanceOf[RowStreamExecRel].translateToPlan(tableEnv)
 
     val ret = new TwoInputTransformation[BaseRow, BaseRow, BaseRow](
       leftTransform,
