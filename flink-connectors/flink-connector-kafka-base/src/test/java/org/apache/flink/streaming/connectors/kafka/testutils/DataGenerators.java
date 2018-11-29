@@ -39,6 +39,8 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.serialization.KeyedSerializationSchemaWrapper;
 
+import org.apache.kafka.clients.producer.ProducerConfig;
+
 import java.util.Collection;
 import java.util.Properties;
 import java.util.Random;
@@ -106,6 +108,7 @@ public class DataGenerators {
 		if (secureProps != null) {
 			props.putAll(testServer.getSecureProperties());
 		}
+		props.setProperty(ProducerConfig.RETRIES_CONFIG, "10");
 
 		stream = stream.rebalance();
 		testServer.produceIntoKafka(stream, topic,
