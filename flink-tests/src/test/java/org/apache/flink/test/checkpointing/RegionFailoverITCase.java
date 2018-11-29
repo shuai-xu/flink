@@ -20,6 +20,7 @@ package org.apache.flink.test.checkpointing;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobSubmissionResult;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Deadline;
@@ -85,6 +86,9 @@ public class RegionFailoverITCase extends TestLogger {
 		cluster.before();
 		jobFailedCnt.set(0);
 		numCompletedCheckpoints = 0;
+		MapperFunction.resetForTest();
+		StringGeneratingSourceFunction.resetForTest();
+		MapperFunction.savepointTriggered = false;
 	}
 
 	@AfterClass
@@ -99,6 +103,10 @@ public class RegionFailoverITCase extends TestLogger {
 	public void testRegionFailover() {
 		final int restartTimes = 3;
 		final long numElements = failBase * 10;
+
+		// no need to trigger savepoint
+		StringGeneratingSourceFunction.waitSavepointLatch.countDown();
+		MapperFunction.savepointTriggered = true;
 
 		try {
 			// there exists 3 individual regions.
@@ -115,7 +123,7 @@ public class RegionFailoverITCase extends TestLogger {
 	@Test
 	public void testRegionFailoverWithParallelismChanged() throws IOException {
 		long numElements = failBase * 3;
-		Duration timeout = Duration.ofMinutes(3);
+		Duration timeout = Duration.ofMinutes(1);
 
 		String checkpointPathFolder = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
 		String externalizedCheckpointPath = "file://" + checkpointPathFolder;
@@ -128,8 +136,10 @@ public class RegionFailoverITCase extends TestLogger {
 			client.setDetached(true);
 			JobSubmissionResult submitJob = client.submitJob(jobGraph1, RegionFailoverITCase.class.getClassLoader());
 
-			MapperFunction.workLatch.await(Deadline.now().plus(timeout).timeLeft().toMillis(), TimeUnit.MILLISECONDS);
+			MapperFunction.triggerSavepointLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS);
 			String savepointPath = client.triggerSavepoint(submitJob.getJobID(), externalizedCheckpointPath).get();
+			StringGeneratingSourceFunction.waitSavepointLatch.countDown();
+			MapperFunction.savepointTriggered = true;
 
 			detectJobFinishedAsExpected(client, jobID1, timeout);
 
@@ -155,7 +165,7 @@ public class RegionFailoverITCase extends TestLogger {
 
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(parallelism);
-		env.enableCheckpointing(500, CheckpointingMode.EXACTLY_ONCE);
+		env.enableCheckpointing(1000, CheckpointingMode.EXACTLY_ONCE);
 		env.getCheckpointConfig().enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
 		env.disableOperatorChaining();
 		if (numberOfRetries == 0) {
@@ -171,6 +181,9 @@ public class RegionFailoverITCase extends TestLogger {
 		// there exists num of 'parallelism' individual regions.
 		env.addSource(new StringGeneratingSourceFunction(numElements, numElements / 2L)).setParallelism(parallelism)
 			.map(new MapperFunction(numberOfRetries)).setParallelism(parallelism);
+
+		env.addSource(new StringGeneratingSourceFunction(numElements, numElements / 2L)).setParallelism(1)
+			.map((MapFunction<Integer, Object>) value -> value).setParallelism(1);
 
 		return env.getStreamGraph().getJobGraph();
 	}
@@ -196,7 +209,9 @@ public class RegionFailoverITCase extends TestLogger {
 
 		private final int restartTimes;
 
-		private static volatile CountDownLatch workLatch = new CountDownLatch(1);
+		private static volatile CountDownLatch triggerSavepointLatch = new CountDownLatch(1);
+
+		private static volatile boolean savepointTriggered = false;
 
 		MapperFunction(int restartTimes) {
 			this.restartTimes = restartTimes;
@@ -205,7 +220,9 @@ public class RegionFailoverITCase extends TestLogger {
 		@Override
 		public Integer map(Integer input) throws Exception {
 			if (input > failBase) {
-				workLatch.countDown();
+				if (!savepointTriggered) {
+					triggerSavepointLatch.countDown();
+				}
 
 				if (jobFailedCnt.get() < restartTimes && getRuntimeContext().getIndexOfThisSubtask() == 0) {
 					jobFailedCnt.incrementAndGet();
@@ -213,6 +230,10 @@ public class RegionFailoverITCase extends TestLogger {
 				}
 			}
 			return input;
+		}
+
+		static void resetForTest() {
+			triggerSavepointLatch = new CountDownLatch(1);
 		}
 	}
 
@@ -226,6 +247,8 @@ public class RegionFailoverITCase extends TestLogger {
 		private int index = -1;
 
 		private volatile boolean isRunning = true;
+
+		private static volatile CountDownLatch waitSavepointLatch = new CountDownLatch(1);
 
 		StringGeneratingSourceFunction(long numElements, long checkpointLatestAt) {
 			this.numElements = numElements;
@@ -261,6 +284,9 @@ public class RegionFailoverITCase extends TestLogger {
 						}
 					}
 				}
+				if (!MapperFunction.savepointTriggered && index >= numElements / getRuntimeContext().getNumberOfParallelSubtasks()) {
+					waitSavepointLatch.await();
+				}
 			}
 		}
 
@@ -287,6 +313,10 @@ public class RegionFailoverITCase extends TestLogger {
 			if (getRuntimeContext().getIndexOfThisSubtask() == 0) {
 				numCompletedCheckpoints++;
 			}
+		}
+
+		static void resetForTest() {
+			waitSavepointLatch = new CountDownLatch(1);
 		}
 	}
 

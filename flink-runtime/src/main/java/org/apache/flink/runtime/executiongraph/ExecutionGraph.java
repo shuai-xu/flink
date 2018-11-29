@@ -1356,7 +1356,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		}
 		// if we have checkpointed state, reload it into the executions
 		if (checkpointCoordinator != null) {
-			checkpointCoordinator.restoreLatestCheckpointedState(executionVertices, false, false);
+			checkpointCoordinator.restoreLatestCheckpointedState(executionVertices, false, true);
 		}
 
 		graphManager.notifyExecutionVertexFailover(evIds);
