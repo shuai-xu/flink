@@ -153,8 +153,7 @@ public class MutableIOMetrics extends IOMetrics {
 					for (Map.Entry<String, String> entry : metrics.getMetrics().entrySet()) {
 						if (entry.getKey().endsWith("." + MetricNames.IO_NUM_TPS) &&
 							StringUtils.isNotBlank(entry.getValue())) {
-							double tps = Double.valueOf(entry.getValue());
-							this.tps = Math.max(tps, this.tps);
+							this.tps += Double.valueOf(entry.getValue());
 							findTps = true;
 						} else if (entry.getKey().endsWith("." + MetricNames.IO_NUM_DELAY) &&
 							StringUtils.isNotBlank(entry.getValue())) {
