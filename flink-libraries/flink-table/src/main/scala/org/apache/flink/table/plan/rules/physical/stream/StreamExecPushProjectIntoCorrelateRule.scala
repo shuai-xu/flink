@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
+import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecCalc, StreamExecCorrelate}
+import org.apache.flink.table.plan.util.CorrelateUtil._
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex._
-import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecCalc, StreamExecCorrelate}
-import org.apache.flink.table.plan.util.CorrelateUtil._
 
 import scala.collection.JavaConversions._
 
@@ -35,16 +36,16 @@ class StreamExecPushProjectIntoCorrelateRule extends RelOptRule(
       operand(classOf[RelNode], any))), "StreamExecPushProjectIntoCorrelateRule")  {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val calc = call.rel[StreamExecCalc](0)
+    val calc: StreamExecCalc = call.rel(0)
     projectable(calc.getProgram)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val calc = call.rel[StreamExecCalc](0)
+    val calc: StreamExecCalc = call.rel(0)
     val calcProgram = calc.getProgram
     val calcOutputType = calcProgram.getOutputRowType
     val calcInputType = calcProgram.getInputRowType
-    val correlate = call.rel[StreamExecCorrelate](1)
+    val correlate: StreamExecCorrelate = call.rel(1)
     val correlateInputFieldCnt = correlate.getInput.getRowType.getFieldCount
     val refs = calcProgram.getReferenceCounts
 
@@ -56,12 +57,6 @@ class StreamExecPushProjectIntoCorrelateRule extends RelOptRule(
       correlate.getCluster.getRexBuilder,
       selects)
 
-    // create new correlate
-    val newCorrelate = correlate.copy(
-      correlate.getTraitSet,
-      correlate.getInput,
-      Some(projectProgram),
-      correlateNewType)
 
     val (shiftProjects, shiftCondition) = shiftProjectsAndCondition(
       refs,
@@ -76,6 +71,12 @@ class StreamExecPushProjectIntoCorrelateRule extends RelOptRule(
       calc.getCluster.getRexBuilder)
 
     if (newProgram.isTrivial) {
+      // create new correlate
+      val newCorrelate = correlate.copy(
+        correlate.getTraitSet,
+        correlate.getInput,
+        Some(projectProgram),
+        calcOutputType)
       // do not create another StreamExecCalcRemoveRule
       // correlate cannot carry collation or distribution currently.
       call.transformTo(newCorrelate)
@@ -115,6 +116,12 @@ class StreamExecPushProjectIntoCorrelateRule extends RelOptRule(
       traitSet.replace(newDistribution)
       traitSet.replace(newCollation)*/
 
+      // create new correlate
+      val newCorrelate = correlate.copy(
+        correlate.getTraitSet,
+        correlate.getInput,
+        Some(projectProgram),
+        correlateNewType)
       val newCalc = calc.copy(calc.getTraitSet, newCorrelate, newProgram)
       call.transformTo(newCalc)
     }

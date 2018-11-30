@@ -434,7 +434,7 @@ LogicalProject(a=[$0], d=[$3], s=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[str_split($cor0.d)], correlate=[table(str_split($cor0.d))], select=[a,d,f0], rowType=[RecordType(INTEGER a, VARBINARY d, VARCHAR(65536) f0)], joinType=[INNER])
+Correlate(invocation=[str_split($cor0.d)], correlate=[table(str_split($cor0.d))], select=[a,d,s], rowType=[RecordType(INTEGER a, VARBINARY d, VARCHAR(65536) s)], joinType=[INNER])
 +- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a, b, c, d])
 ]]>
     </Resource>
@@ -461,10 +461,10 @@ LogicalProject(a2=[$0], b2=[$1], c2=[$2], c=[$3], s=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-HashJoin(where=[=(c2, f0)], join=[a2, b2, c2, c, f0], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
+HashJoin(where=[=(c2, s)], join=[a2, b2, c2, c, s], joinType=[LeftOuterJoin], isBroadcast=[true], build=[right])
 :- BoundedStreamScan(table=[[_DataStreamTable_1]], fields=[a2, b2, c2])
 +- Exchange(distribution=[broadcast])
-   +- Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,f0], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) f0)], joinType=[LEFT])
+   +- Correlate(invocation=[func1($cor0.c)], correlate=[table(func1($cor0.c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
       +- BoundedStreamScan(table=[[_DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>

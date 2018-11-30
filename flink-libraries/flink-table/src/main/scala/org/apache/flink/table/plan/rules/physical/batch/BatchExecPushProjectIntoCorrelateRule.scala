@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.plan.rules.physical.batch
 
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecCorrelate}
+import org.apache.flink.table.plan.util.CorrelateUtil._
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex._
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecCorrelate}
-import org.apache.flink.table.plan.util.CorrelateUtil._
 
 import scala.collection.JavaConversions._
 
@@ -56,13 +57,6 @@ class BatchExecPushProjectIntoCorrelateRule extends RelOptRule(
       correlate.getCluster.getRexBuilder,
       selects)
 
-    // create new correlate
-    val newCorrelate = correlate.copy(
-      correlate.getTraitSet,
-      correlate.getInput,
-      Some(projectProgram),
-      correlateNewType)
-
     val (shiftProjects, shiftCondition) = shiftProjectsAndCondition(
       refs,
       calcProgram,
@@ -76,6 +70,12 @@ class BatchExecPushProjectIntoCorrelateRule extends RelOptRule(
       calc.getCluster.getRexBuilder)
 
     if (newProgram.isTrivial) {
+      // create new correlate
+      val newCorrelate = correlate.copy(
+        correlate.getTraitSet,
+        correlate.getInput,
+        Some(projectProgram),
+        calcOutputType)
       // do not create another BatchExecCalcRemoveRule
       // correlate cannot carry collation or distribution currently.
       call.transformTo(newCorrelate)
@@ -114,6 +114,13 @@ class BatchExecPushProjectIntoCorrelateRule extends RelOptRule(
       val newDistribution = distribution.apply(projectMapping)
       traitSet.replace(newDistribution)
       traitSet.replace(newCollation)*/
+
+      // create new correlate
+      val newCorrelate = correlate.copy(
+        correlate.getTraitSet,
+        correlate.getInput,
+        Some(projectProgram),
+        correlateNewType)
 
       val newCalc = calc.copy(calc.getTraitSet, newCorrelate, newProgram)
       call.transformTo(newCalc)
