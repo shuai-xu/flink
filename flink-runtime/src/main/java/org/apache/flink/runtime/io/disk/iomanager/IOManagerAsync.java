@@ -85,7 +85,7 @@ public class IOManagerAsync extends IOManager implements UncaughtExceptionHandle
 	 * @param tempDirs The directories to write temporary files to.
 	 */
 	public IOManagerAsync(String[] tempDirs, int bufferedReadSize, int bufferedWriteSize, int numThreads) {
-		super(tempDirs);
+		super(tempDirs, numThreads);
 
 		// start a write worker thread for each directory
 		this.writers = new WriterThread[numThreads];

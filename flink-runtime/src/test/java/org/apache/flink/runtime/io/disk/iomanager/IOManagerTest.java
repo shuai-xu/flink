@@ -87,13 +87,13 @@ public class IOManagerTest {
 			}
 		}
 	}
-	
+
 	// --------------------------------------------------------------------------------------------
-	
+
 	private static class TestIOManager extends IOManager {
 
 		protected TestIOManager(String[] paths) {
-			super(paths);
+			super(paths, 1);
 		}
 
 		@Override
