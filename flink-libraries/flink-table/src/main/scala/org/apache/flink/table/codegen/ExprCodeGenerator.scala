@@ -255,7 +255,8 @@ class ExprCodeGenerator(ctx: CodeGeneratorContext, nullableInput: Boolean, nullC
       case (fieldExpr, i)
         if fieldExpr.resultType.isInstanceOf[GenericType[_]] ||
             fieldExpr.resultType.isInstanceOf[TimestampType] =>
-        if (returnType.getTypeAt(i).getClass != fieldExpr.resultType.getClass) {
+        if (returnType.getTypeAt(i).getClass != fieldExpr.resultType.getClass
+          && !returnType.getTypeAt(i).isInstanceOf[GenericType[_]]) {
           throw new CodeGenException(
             s"Incompatible types of expression and result type, Expression[$fieldExpr] type is " +
                 s"[${fieldExpr.resultType}], result type is [${returnType.getTypeAt(i)}]")

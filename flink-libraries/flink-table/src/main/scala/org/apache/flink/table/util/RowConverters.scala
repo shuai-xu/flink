@@ -245,7 +245,8 @@ object RowConverters {
           case (fieldTypeInfo, i) =>
             val requestedTypeInfo = tt.getTypeAt(i)
             validateFieldType(requestedTypeInfo)
-            if (fieldTypeInfo != requestedTypeInfo) {
+            if (fieldTypeInfo != requestedTypeInfo &&
+              !requestedTypeInfo.isInstanceOf[GenericTypeInfo[Object]]) {
               val fieldNames = tt.getFieldNames
               throw new TableException(s"Result field '${fieldNames(i)}' does not match requested" +
                 s" type. Requested: $requestedTypeInfo; Actual: $fieldTypeInfo")
