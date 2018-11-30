@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -69,7 +69,7 @@ public class StreamNetworkLatencyBenchmarkExecutor extends BenchmarkBase {
 		}
 
 		@TearDown
-		public void tearDown() {
+		public void tearDown() throws Exception {
 			super.tearDown();
 		}
 	}

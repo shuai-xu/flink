@@ -16,10 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
+
+import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.LongValueSerializer;
+import org.apache.flink.types.LongValue;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.OperationsPerInvocation;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
@@ -51,18 +56,63 @@ public class StreamNetworkBroadcastThroughputBenchmarkExecutor extends Benchmark
 
 	@Benchmark
 	public void networkBroadcastThroughput(MultiEnvironment context) throws Exception {
-		context.executeBenchmark(RECORDS_PER_INVOCATION);
+		context.executeBenchmark();
 	}
 
 	/**
 	 * Setup for the benchmark(s).
 	 */
 	@State(Thread)
-	public static class MultiEnvironment extends StreamNetworkBroadcastThroughputBenchmark {
+	public static class MultiEnvironment extends StreamNetworkThroughputBenchmark<LongValue> {
+
+		@Param({"1", "4"})
+		public int numWriters = 4;
+
+		@Param({"1", "4"})
+		public int numReceivers = 4;
+
+		@Param({"10", "100"})
+		public int numChannels = 100;
 
 		@Setup
 		public void setUp() throws Exception {
-			super.setUp(4, 100, 100);
+			super.setUp(
+				numWriters,
+				numReceivers,
+				numChannels,
+				100,
+				RECORDS_PER_INVOCATION,
+				new LongValue[] {new LongValue(0)},
+				new LongValue(),
+				new LongValueSerializer());
+		}
+
+		@Override
+		public void setUp(
+			int recordWriters,
+			int recordReceivers,
+			int channels,
+			int flushTimeout,
+			long numRecordToSend,
+			boolean localMode,
+			int senderBufferPoolSize,
+			int receiverBufferPoolSize,
+			LongValue[] recordsSet,
+			LongValue value,
+			TypeSerializer<LongValue> serializer) throws Exception {
+			setUp(
+				recordWriters,
+				recordReceivers,
+				channels,
+				flushTimeout,
+				numRecordToSend,
+				true,
+				localMode,
+				senderBufferPoolSize,
+				receiverBufferPoolSize,
+				recordsSet,
+				value,
+				serializer);
 		}
 
 		@TearDown

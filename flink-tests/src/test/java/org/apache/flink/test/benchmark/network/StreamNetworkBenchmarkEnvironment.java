@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.LongValueSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.io.IOReadableWritable;
+import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.deployment.InputChannelDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.ResultPartitionLocation;
+import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager.IOMode;
@@ -36,22 +37,23 @@ import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
-import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.api.writer.RoundRobinChannelSelector;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
 import org.apache.flink.runtime.io.network.netty.NettyConfig;
 import org.apache.flink.runtime.io.network.netty.NettyConnectionManager;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.InternalResultPartition;
+import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
-import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.PartitionRequestManager;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
-import org.apache.flink.runtime.io.network.partition.consumer.UnionInputGate;
+import org.apache.flink.runtime.io.network.partition.external.ExternalResultPartition;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
+import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.taskmanager.TaskActions;
@@ -67,14 +69,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.apache.flink.util.ExceptionUtils.suppressExceptions;
+import static org.apache.flink.util.Preconditions.checkNotNull;
+import static org.apache.flink.util.Preconditions.checkState;
+import static org.mockito.Mockito.mock;
 
 /**
  * Context for network benchmarks executed by the external
  * <a href="https://github.com/dataArtisans/flink-benchmarks">flink-benchmarks</a> project.
  */
 public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
-
-	private static final int BUFFER_SIZE = TaskManagerOptions.MEMORY_SEGMENT_SIZE.defaultValue();
 
 	private static final int NUM_SLOTS_AND_THREADS = 1;
 
@@ -88,6 +91,8 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 		}
 	}
 
+	private int bufferSize;
+
 	protected final JobID jobId = new JobID();
 	protected final IntermediateDataSetID dataSetID = new IntermediateDataSetID();
 	protected final ExecutionAttemptID executionAttemptID = new ExecutionAttemptID();
@@ -95,6 +100,7 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 	protected NetworkEnvironment senderEnv;
 	protected NetworkEnvironment receiverEnv;
 	protected IOManager ioManager;
+	protected MemoryManager memoryManager;
 
 	protected int channels;
 	protected boolean broadcastMode = false;
@@ -102,7 +108,11 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 
 	protected ResultPartitionID[] partitionIds;
 
-	private final ExecutorService executor = Executors.newSingleThreadExecutor();
+	private final ExecutorService executor = Executors.newFixedThreadPool(1);
+
+	protected final AbstractInvokable parentTask = new MockInvokable();
+
+	private Configuration configuration;
 
 	/**
 	 * Sets up the environment including buffer pools and netty threads.
@@ -111,30 +121,43 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 	 * 		number of writers
 	 * @param channels
 	 * 		outgoing channels per writer
+	 * @param broadcastMode
+	 * 		writers broadcast records to all channels?
 	 * @param localMode
 	 * 		only local channels?
 	 * @param senderBufferPoolSize
 	 * 		buffer pool size for the sender (set to <tt>-1</tt> for default)
 	 * @param receiverBufferPoolSize
 	 * 		buffer pool size for the receiver (set to <tt>-1</tt> for default)
+	 * @param configuration The configuration
 	 */
 	public void setUp(
-			int writers,
-			int channels,
-			boolean broadcastMode,
-			boolean localMode,
-			int senderBufferPoolSize,
-			int receiverBufferPoolSize) throws Exception {
+		int writers,
+		int channels,
+		boolean broadcastMode,
+		boolean localMode,
+		int senderBufferPoolSize,
+		int receiverBufferPoolSize,
+		Configuration configuration) throws Exception {
 		this.broadcastMode = broadcastMode;
 		this.localMode = localMode;
 		this.channels = channels;
+		this.configuration = checkNotNull(configuration);
 		this.partitionIds = new ResultPartitionID[writers];
+		this.bufferSize = configuration.getInteger(TaskManagerOptions.MEMORY_SEGMENT_SIZE);
+
 		if (senderBufferPoolSize == -1) {
-			senderBufferPoolSize = Math.max(2048, writers * channels * 4);
+			senderBufferPoolSize = Math.max(4096, writers * channels * (
+				configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION)));
 		}
 		if (receiverBufferPoolSize == -1) {
-			receiverBufferPoolSize = Math.max(2048, writers * channels * 4);
+			receiverBufferPoolSize = Math.max(4096, writers * channels * (
+				configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL) +
+					configuration.getInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE)));
 		}
+
+		memoryManager = new MemoryManager(
+			10240 * bufferSize, 0, 1, bufferSize, MemoryType.HEAP, true);
 
 		ioManager = new IOManagerAsync();
 
@@ -151,43 +174,24 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 		generatePartitionIds();
 	}
 
-	public void tearDown() {
+	public void tearDown() throws InterruptedException {
 		suppressExceptions(senderEnv::shutdown);
 		suppressExceptions(receiverEnv::shutdown);
 		suppressExceptions(ioManager::shutdown);
-		suppressExceptions(executor::shutdown);
+		suppressExceptions(memoryManager::shutdown);
+		// shutdown the executor and wait the thread to finish
+		// (jmh will check if there is any unfinished thread, it
+		// is particularly import for external shuffle mode)
+		suppressExceptions(executor::shutdownNow);
+		while (!executor.isTerminated()) {
+			Thread.sleep(1000);
+		}
 	}
 
-	public SerializingLongReceiver createReceiver() throws Exception {
-		TaskManagerLocation senderLocation = new TaskManagerLocation(
-			ResourceID.generate(),
-			LOCAL_ADDRESS,
-			senderEnv.getConnectionManager().getDataPort());
-
-		InputGate receiverGate = createInputGate(
-			jobId,
-			dataSetID,
-			executionAttemptID,
-			senderLocation,
-			receiverEnv,
-			channels);
-
-		SerializingLongReceiver receiver = new SerializingLongReceiver(receiverGate, channels * partitionIds.length);
-
-		receiver.start();
-		return receiver;
-	}
-
-	public StreamRecordWriter<T> createRecordWriter(int partitionIndex, long flushTimeout) throws Exception {
-		return createRecordWriter(partitionIndex,  flushTimeout, false);
-	}
-
-	public StreamRecordWriter<T> createRecordWriter(
-		int partitionIndex, long flushTimeout, boolean broadcastMode) throws Exception {
+	public StreamRecordWriter<T> createRecordWriter(ResultPartition resultPartition, long flushTimeout) throws Exception {
 		ChannelSelector channelSelector = broadcastMode ? new BroadcastPartitioner<>() : new RoundRobinChannelSelector<>();
-		ResultPartitionWriter sender = createResultPartition(jobId, partitionIds[partitionIndex], senderEnv, channels);
 
-		return new StreamRecordWriter<T>(sender, channelSelector , flushTimeout);
+		return new StreamRecordWriter<T>(resultPartition, channelSelector , flushTimeout);
 	}
 
 	private void generatePartitionIds() throws Exception {
@@ -198,11 +202,10 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 
 	private NetworkEnvironment createNettyNetworkEnvironment(
 			@SuppressWarnings("SameParameterValue") int bufferPoolSize) throws Exception {
-
-		final NetworkBufferPool bufferPool = new NetworkBufferPool(bufferPoolSize, BUFFER_SIZE);
+		final NetworkBufferPool bufferPool = new NetworkBufferPool(bufferPoolSize, bufferSize);
 
 		final NettyConnectionManager nettyConnectionManager = new NettyConnectionManager(
-			new NettyConfig(LOCAL_ADDRESS, 0, BUFFER_SIZE, NUM_SLOTS_AND_THREADS, new Configuration()));
+			new NettyConfig(LOCAL_ADDRESS, 0, bufferSize, NUM_SLOTS_AND_THREADS, new Configuration()));
 
 		return new NetworkEnvironment(
 			bufferPool,
@@ -213,53 +216,93 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 			null,
 			null,
 			IOMode.SYNC,
-			TaskManagerOptions.NETWORK_REQUEST_BACKOFF_INITIAL.defaultValue(),
-			TaskManagerOptions.NETWORK_REQUEST_BACKOFF_MAX.defaultValue(),
-			TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL.defaultValue(),
-			TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE.defaultValue(),
-			TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL.defaultValue(),
-			TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE.defaultValue(),
-			TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION.defaultValue(),
+			configuration.getInteger(TaskManagerOptions.NETWORK_REQUEST_BACKOFF_INITIAL),
+			configuration.getInteger(TaskManagerOptions.NETWORK_REQUEST_BACKOFF_MAX),
+			configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL),
+			configuration.getInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE),
+			configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL),
+			configuration.getInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_EXTERNAL_BLOCKING_GATE),
+			configuration.getInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION),
 			true);
 	}
 
-	protected ResultPartitionWriter createResultPartition(
-			JobID jobId,
-			ResultPartitionID partitionId,
-			NetworkEnvironment environment,
-			int channels) throws Exception {
+	protected ResultPartition<T> createInternalResultPartition(int subTaskIndex, TypeSerializer serializer) throws Exception {
 
 		InternalResultPartition<T> resultPartition = new InternalResultPartition<T>(
 			"sender task",
 			new NoOpTaskActions(),
 			jobId,
-			partitionId,
+			partitionIds[subTaskIndex],
 			ResultPartitionType.PIPELINED,
 			channels,
 			1,
-			environment.getResultPartitionManager(),
+			senderEnv.getResultPartitionManager(),
 			new NoOpResultPartitionConsumableNotifier(),
 			ioManager,
 			false);
 
-		TypeSerializer typeSerializer = new LongValueSerializer();
-		resultPartition.setTypeSerializer(typeSerializer);
-		environment.setupPartition(resultPartition);
+		resultPartition.setTypeSerializer(serializer);
+		senderEnv.setupPartition(resultPartition);
 
 		return resultPartition;
 	}
 
-	private InputGate createInputGate(
-			JobID jobId,
-			IntermediateDataSetID dataSetID,
-			ExecutionAttemptID executionAttemptID,
+	protected ResultPartition<T> createExternalResultPartition(int subTaskIndex, TypeSerializer<T> serializer) throws Exception {
+		generatePartitionIds();
+
+		ResultPartition<T> resultPartition = new ExternalResultPartition<>(
+			configuration,
+			"sender task",
+			jobId,
+			partitionIds[subTaskIndex],
+			ResultPartitionType.BLOCKING,
+			channels,
+			1,
+			memoryManager,
+			ioManager);
+
+		resultPartition.setTypeSerializer(serializer);
+		resultPartition.setParentTask(parentTask);
+
+		return resultPartition;
+	}
+
+	public SingleInputGate[] createInputGate(
+		int dataPort,
+		ResultPartitionType resultPartitionType,
+		int channelIndexStart,
+		int channelIndexEnd) throws IOException {
+		TaskManagerLocation senderLocation = new TaskManagerLocation(
+			ResourceID.generate(), LOCAL_ADDRESS, dataPort);
+
+		return createInputGate(senderLocation, receiverEnv, resultPartitionType, channelIndexStart, channelIndexEnd);
+	}
+
+	public SingleInputGate[] createInputGate(
+		ResultPartitionType resultPartitionType,
+		int channelIndexStart,
+		int channelIndexEnd) throws Exception {
+		TaskManagerLocation senderLocation = new TaskManagerLocation(
+			ResourceID.generate(),
+			LOCAL_ADDRESS,
+			senderEnv.getConnectionManager().getDataPort());
+
+		return createInputGate(senderLocation, receiverEnv, resultPartitionType, channelIndexStart, channelIndexEnd);
+	}
+
+	private SingleInputGate[] createInputGate(
 			final TaskManagerLocation senderLocation,
 			NetworkEnvironment environment,
-			final int channels) throws IOException {
+			ResultPartitionType resultPartitionType,
+			int subpartitionStart,
+			int subpartitionEnd) throws IOException {
+		checkState(environment != null, "setup should be called before creating input gate");
 
-		InputGate[] gates = new InputGate[channels];
-		for (int channel = 0; channel < channels; ++channel) {
-			int finalChannel = channel;
+		SingleInputGate[] gates = new SingleInputGate[subpartitionEnd - subpartitionStart];
+		// the subpartitions range from subpartitionStart to subpartitionEnd will be assigned to one receiver thread,
+		// each subpartition a single input gate and each input gate with (number of writer thread) input channels.
+		for (int subpartitionIndex = subpartitionStart; subpartitionIndex < subpartitionEnd; ++subpartitionIndex) {
+			int finalChannel = subpartitionIndex;
 			InputChannelDeploymentDescriptor[] channelDescriptors = Arrays.stream(partitionIds)
 				.map(partitionId -> new InputChannelDeploymentDescriptor(
 					partitionId,
@@ -268,31 +311,27 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 
 			final InputGateDeploymentDescriptor gateDescriptor = new InputGateDeploymentDescriptor(
 				dataSetID,
-				ResultPartitionType.PIPELINED,
-				channel,
+				resultPartitionType,
+				subpartitionIndex,
 				channelDescriptors);
 
 			SingleInputGate gate = SingleInputGate.create(
-				"receiving task[" + channel + "]",
+				"receiving task[" + subpartitionIndex + "]",
 				jobId,
 				executionAttemptID,
 				gateDescriptor,
 				environment,
 				new NoOpTaskActions(),
 				UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup(),
-				new PartitionRequestManager(Integer.MAX_VALUE, channelDescriptors.length),
-				BlockingShuffleType.TM,
+				new PartitionRequestManager(configuration.getInteger(TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS), channelDescriptors.length),
+				BlockingShuffleType.valueOf(configuration.getString(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE)),
 				executor);
 
 			environment.setupInputGate(gate);
-			gates[channel] = gate;
+			gates[subpartitionIndex - subpartitionStart] = gate;
 		}
 
-		if (channels > 1) {
-			return new UnionInputGate(gates);
-		} else {
-			return gates[0];
-		}
+		return gates;
 	}
 
 	// ------------------------------------------------------------------------
@@ -320,5 +359,23 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 
 		@Override
 		public void notifyPartitionConsumable(JobID j, ResultPartitionID p, TaskActions t) {}
+	}
+
+	/**
+	 * A mock invokable which is used by external shuffle.
+	 */
+	public final class MockInvokable extends AbstractInvokable {
+
+		public MockInvokable() {
+			super(mock(Environment.class));
+		}
+
+		@Override
+		public void invoke() {}
+
+		@Override
+		public Configuration getTaskConfiguration() {
+			return configuration;
+		}
 	}
 }

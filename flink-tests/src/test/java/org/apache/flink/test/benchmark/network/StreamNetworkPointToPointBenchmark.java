@@ -16,9 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
 
+import org.apache.flink.api.common.typeutils.base.LongValueSerializer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.partition.ResultPartition;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
+import org.apache.flink.streaming.runtime.io.StreamRecordWriter;
 import org.apache.flink.types.LongValue;
 
 import java.util.concurrent.CompletableFuture;
@@ -32,8 +38,8 @@ public class StreamNetworkPointToPointBenchmark {
 	private static final long RECEIVER_TIMEOUT = 2000;
 
 	private StreamNetworkBenchmarkEnvironment<LongValue> environment;
-	private ReceiverThread receiver;
-	private RecordWriter<LongValue> recordWriter;
+	private ReceiverThread<LongValue> receiver;
+	private StreamRecordWriter<LongValue> recordWriter;
 
 	/**
 	 * Executes the latency benchmark with the given number of records.
@@ -69,16 +75,28 @@ public class StreamNetworkPointToPointBenchmark {
 	 */
 	public void setUp(long flushTimeout) throws Exception {
 		environment = new StreamNetworkBenchmarkEnvironment<>();
-		environment.setUp(1, 1, false, false, -1, -1);
+		environment.setUp(
+			1,
+			1,
+			false,
+			false,
+			-1,
+			-1,
+			new Configuration());
 
-		receiver = environment.createReceiver();
-		recordWriter = environment.createRecordWriter(0, flushTimeout);
+		ResultPartition resultPartition = environment.createInternalResultPartition(0, new LongValueSerializer());
+		recordWriter = environment.createRecordWriter(resultPartition, flushTimeout);
+
+		SingleInputGate[] inputGates = environment.createInputGate(ResultPartitionType.PIPELINED, 0, 1);
+		receiver = new ReceiverThread<>(new LongValue());
+		receiver.setupReader(inputGates);
+		receiver.start();
 	}
 
 	/**
 	 * Shuts down a benchmark previously set up via {@link #setUp}.
 	 */
-	public void tearDown() {
+	public void tearDown() throws Exception {
 		environment.tearDown();
 		receiver.shutdown();
 	}

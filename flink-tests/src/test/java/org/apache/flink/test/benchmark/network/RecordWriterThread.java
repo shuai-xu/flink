@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
 
+import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.testutils.CheckedThread;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.streaming.runtime.io.StreamRecordWriter;
-import org.apache.flink.types.LongValue;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -33,9 +34,11 @@ import static org.apache.flink.util.Preconditions.checkState;
  * Wrapping thread around {@link RecordWriter} that sends a fixed number of <tt>LongValue(0)</tt>
  * records.
  */
-public class LongRecordWriterThread extends CheckedThread {
-	private final StreamRecordWriter<LongValue> recordWriter;
+public class RecordWriterThread<T extends IOReadableWritable> extends CheckedThread {
+	protected StreamRecordWriter<T> recordWriter;
+	protected ResultPartition resultPartition;
 	private final boolean broadcastMode;
+	private final T[] recordsSet;
 
 	/**
 	 * Future to wait on a definition of the number of records to send.
@@ -44,16 +47,20 @@ public class LongRecordWriterThread extends CheckedThread {
 
 	private volatile boolean running = true;
 
-	public LongRecordWriterThread(
-		StreamRecordWriter<LongValue> recordWriter,
-		boolean broadcastMode) {
-		this.recordWriter = checkNotNull(recordWriter);
+	public RecordWriterThread(boolean broadcastMode, T[] recordsSet) {
 		this.broadcastMode = broadcastMode;
+		this.recordsSet = checkNotNull(recordsSet);
+	}
+
+	public void setupWriter(StreamRecordWriter<T> recordWriter, ResultPartition resultPartition) {
+		this.recordWriter = checkNotNull(recordWriter);
+		this.resultPartition = checkNotNull(resultPartition);
 	}
 
 	public synchronized void shutdown() {
 		running = false;
 		recordsToSend.complete(0L);
+		resultPartition.release();
 	}
 
 	/**
@@ -73,7 +80,7 @@ public class LongRecordWriterThread extends CheckedThread {
 		return recordsToSend;
 	}
 
-	private synchronized void finishSendingRecords() {
+	protected synchronized void finishSendingRecords() throws IOException {
 		recordsToSend = new CompletableFuture<>();
 	}
 
@@ -90,19 +97,16 @@ public class LongRecordWriterThread extends CheckedThread {
 	}
 
 	private void sendRecords(long records) throws IOException, InterruptedException {
-		LongValue value = new LongValue(0);
-		for (int i = 1; i < records; i++) {
+		int currentIndex = 0;
+		for (long i = 0; i < records; i++) {
+			currentIndex = currentIndex % recordsSet.length;
 			if (broadcastMode) {
-				recordWriter.broadcastEmit(value);
+				recordWriter.broadcastEmit(recordsSet[currentIndex++]);
 			} else {
-				recordWriter.emit(value);
+				recordWriter.emit(recordsSet[currentIndex++]);
 			}
 		}
-
-		value.setValue(records);
-		recordWriter.broadcastEmit(value);
 		recordWriter.flushAll();
-
 		finishSendingRecords();
 	}
 }

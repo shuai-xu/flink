@@ -16,32 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
+
+import org.junit.Test;
 
 /**
- * Network broadcast throughput benchmarks.
+ * Tests for {@link StreamNetworkPointToPointBenchmark}.
  */
-public class StreamNetworkBroadcastThroughputBenchmark extends StreamNetworkThroughputBenchmark {
-
-	/**
-	 * Same as {@link StreamNetworkThroughputBenchmark#setUp(int, int, int, boolean)}
-	 * but also setups broadcast mode.
-	 */
-	@Override
-	public void setUp(
-		int recordWriters,
-		int channels,
-		int flushTimeout,
-		boolean localMode,
-		int senderBufferPoolSize,
-		int receiverBufferPoolSize) throws Exception {
-		setUp(
-			recordWriters,
-			channels,
-			flushTimeout,
-			true,
-			localMode,
-			senderBufferPoolSize,
-			receiverBufferPoolSize);
+public class StreamNetworkPointToPointBenchmarkTest {
+	@Test
+	public void test() throws Exception {
+		StreamNetworkPointToPointBenchmark benchmark = new StreamNetworkPointToPointBenchmark();
+		benchmark.setUp(10);
+		try {
+			benchmark.executeBenchmark(100, false);
+		}
+		finally {
+			benchmark.tearDown();
+		}
 	}
 }

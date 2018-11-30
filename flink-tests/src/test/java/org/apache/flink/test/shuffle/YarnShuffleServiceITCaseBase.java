@@ -26,14 +26,12 @@ import org.apache.flink.client.program.MiniClusterClient;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
-import org.apache.flink.network.yarn.YarnShuffleService;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.reader.MutableRecordReader;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
-import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleService;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
 import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
 import org.apache.flink.runtime.io.network.partition.external.YarnLocalResultPartitionResolver;
@@ -47,6 +45,7 @@ import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.MiniClusterConfiguration;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
 import org.apache.flink.runtime.plugable.NonReusingDeserializationDelegate;
+import org.apache.flink.test.util.MockYarnShuffleService;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.TestLogger;
 
@@ -335,53 +334,6 @@ public class YarnShuffleServiceITCaseBase extends TestLogger {
 		consumer.connectNewDataSetAsInput(producer, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
 
 		return jobGraph;
-	}
-
-	/**
-	 * A mock shuffle service server.
-	 */
-	private static class MockYarnShuffleService {
-		private final org.apache.hadoop.conf.Configuration
-			hadoopConf = new org.apache.hadoop.conf.Configuration();
-
-		private final String user;
-
-		private final String appId;
-
-		private final int port;
-
-		private ExternalBlockShuffleService shuffleService = null;
-
-		public MockYarnShuffleService(String externalDir, String user, String appId, int port, int threadNum) {
-			this.user = user;
-			this.appId = appId;
-			this.port = port;
-
-			hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.LOCAL_DIRS.key(), "[test]" + externalDir);
-			hadoopConf.setInt(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), port);
-			hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE.key(), "test: " + threadNum);
-			hadoopConf.setInt(ExternalBlockShuffleServiceOptions.MIN_BUFFER_NUMBER.key(), 20);
-		}
-
-		public int getPort() {
-			return port;
-		}
-
-		public void start() throws Exception {
-			// Postpone the creation of shuffle service till start to avoid startings all the thread pool in advance.
-			shuffleService = new ExternalBlockShuffleService(YarnShuffleService.fromHadoopConfiguration(hadoopConf));
-			shuffleService.start();
-			// shuffle service need to use this message to map appId to user
-			shuffleService.initializeApplication(user, appId);
-		}
-
-		public void stop() {
-			if (shuffleService != null) {
-				shuffleService.stopApplication(appId);
-				shuffleService.stop();
-				shuffleService = null;
-			}
-		}
 	}
 
 	private static int findAvailableServerPort() throws IOException {

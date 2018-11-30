@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.io.benchmark;
+package org.apache.flink.test.benchmark.network;
+
+import org.apache.flink.api.common.typeutils.base.LongValueSerializer;
+import org.apache.flink.types.LongValue;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.OperationsPerInvocation;
@@ -39,7 +42,7 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @OperationsPerInvocation(value = StreamNetworkThroughputBenchmarkExecutor.RECORDS_PER_INVOCATION)
 public class StreamNetworkThroughputBenchmarkExecutor extends BenchmarkBase {
 
-	static final int RECORDS_PER_INVOCATION = 5_000_000;
+	static final int RECORDS_PER_INVOCATION = 50_000_000;
 
 	public static void main(String[] args)
 			throws RunnerException {
@@ -53,14 +56,14 @@ public class StreamNetworkThroughputBenchmarkExecutor extends BenchmarkBase {
 
 	@Benchmark
 	public void networkThroughput(MultiEnvironment context) throws Exception {
-		context.executeBenchmark(RECORDS_PER_INVOCATION);
+		context.executeBenchmark();
 	}
 
 	/**
 	 * Setup for the benchmark(s).
 	 */
 	@State(Thread)
-	public static class MultiEnvironment extends StreamNetworkThroughputBenchmark {
+	public static class MultiEnvironment extends StreamNetworkThroughputBenchmark<LongValue> {
 
 		//Ideally we would like to run 1,100ms, 1000,1ms, 1000,100ms. However 1000,1ms is too slow to execute.
 		@Param({"1,100ms", "100,1ms", "1000,100ms"})
@@ -68,13 +71,24 @@ public class StreamNetworkThroughputBenchmarkExecutor extends BenchmarkBase {
 
 		//Do not spam continuous benchmarking with number of writers parameter.
 		@Param({"1", "4"})
-		public int writers = 4;
+		public int numWriters = 4;
+
+		@Param({"1", "4"})
+		public int numReceivers = 4;
 
 		@Setup
 		public void setUp() throws Exception {
 			int channels = parseChannels(channelsFlushTimeout);
 			int flushTimeout = parseFlushTimeout(channelsFlushTimeout);
-			super.setUp(writers, channels, flushTimeout);
+			super.setUp(
+				numWriters,
+				numReceivers,
+				channels,
+				flushTimeout,
+				RECORDS_PER_INVOCATION,
+				new LongValue[] {new LongValue(0)},
+				new LongValue(),
+				new LongValueSerializer());
 		}
 
 		private static int parseFlushTimeout(String channelsFlushTimeout) {
