@@ -18,10 +18,12 @@
 
 package org.apache.flink.table.runtime.functions.aggfunctions;
 
+import org.apache.flink.api.java.typeutils.GenericTypeInfo;
 import org.apache.flink.table.api.functions.AggregateFunction;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
+import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.runtime.functions.aggfunctions.hyperloglog.HyperLogLogPlusPlus;
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo;
 
@@ -83,6 +85,11 @@ public class ApproximateCountDistinct {
 			} else {
 				throw new UnsupportedOperationException();
 			}
+		}
+
+		@Override
+		public DataType getAccumulatorType() {
+			return new GenericType<>(new GenericTypeInfo<>(HllBuffer.class));
 		}
 	}
 

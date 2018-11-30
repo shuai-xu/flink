@@ -83,4 +83,12 @@ class SortDistinctAggITCase
       Seq(row(1, 5, 7), row(2, 7, 8), row(3, 3, 10))
     )
   }
+
+  @Test
+  def testApproximateCountDistinct(): Unit = {
+    checkResult(
+      "SELECT APPROX_COUNT_DISTINCT(b) FROM Table3",
+      Seq(row(6))
+    )
+  }
 }
