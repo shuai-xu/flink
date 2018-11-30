@@ -615,7 +615,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	@VisibleForTesting
 	int calculateTaskNetworkMemory(ExecutionVertex executionVertex) {
 
-		Configuration config = getVertex().getJobVertex().getGraph().getJobConfiguration();
+		Configuration config = getVertex().getJobVertex().getGraph().getJobManagerConfiguration();
 
 		BlockingShuffleType shuffleType;
 		try {

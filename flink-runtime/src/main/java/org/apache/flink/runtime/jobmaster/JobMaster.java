@@ -26,7 +26,6 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.queryablestate.KvStateID;
@@ -314,11 +313,6 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		this.resultPartitionLocationTrackerProxy = new ResultPartitionLocationTrackerProxy(
 			jobMasterConfiguration.getConfiguration());
-
-		// set the blocking shuffle type, this will be used when calculating the network memory
-		this.jobGraph.getJobConfiguration().setString(
-			TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE,
-			jobMasterConfiguration.getConfiguration().getString(TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE));
 
 		log.info("Using restart strategy {} for {} ({}).", restartStrategy, jobName, jid);
 

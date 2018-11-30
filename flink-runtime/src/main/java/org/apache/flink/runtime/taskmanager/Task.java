@@ -172,6 +172,9 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	/** The task-specific configuration. */
 	private final Configuration taskConfiguration;
 
+	/** The task manager configuration. */
+	private final Configuration taskManagerConfiguration;
+
 	/** The jar files used by this task. */
 	private final Collection<PermanentBlobKey> requiredJarFiles;
 
@@ -354,10 +357,10 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		this.nameOfInvokableClass = taskInformation.getInvokableClassName();
 		this.serializedExecutionConfig = jobInformation.getSerializedExecutionConfig();
 
-		Configuration tmConfig = taskManagerConfig.getConfiguration();
-		this.taskCancellationInterval = tmConfig.getLong(TaskManagerOptions.TASK_CANCELLATION_INTERVAL);
-		this.taskCancellationTimeout = tmConfig.getLong(TaskManagerOptions.TASK_CANCELLATION_TIMEOUT);
-		this.checkPartitionProducerState = tmConfig.getBoolean(TaskManagerOptions.CHECK_PARTITION_PRODUCER_STATE);
+		this.taskManagerConfiguration = taskManagerConfig.getConfiguration();
+		this.taskCancellationInterval = taskManagerConfiguration.getLong(TaskManagerOptions.TASK_CANCELLATION_INTERVAL);
+		this.taskCancellationTimeout = taskManagerConfiguration.getLong(TaskManagerOptions.TASK_CANCELLATION_TIMEOUT);
+		this.checkPartitionProducerState = taskManagerConfiguration.getBoolean(TaskManagerOptions.CHECK_PARTITION_PRODUCER_STATE);
 
 		this.createTimestamp = createTimestamp;
 
@@ -923,7 +926,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	private void createAllInputGates(
 		String taskNameWithSubtaskAndId,
 		Collection<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
-		int maxConcurrentPartitionRequests = jobConfiguration.getInteger(
+		int maxConcurrentPartitionRequests = taskManagerConfiguration.getInteger(
 			TaskManagerOptions.TASK_EXTERNAL_SHUFFLE_MAX_CONCURRENT_REQUESTS);
 		if (maxConcurrentPartitionRequests > 0) {
 			maxConcurrentPartitionRequests = Math.max(inputGates.length, maxConcurrentPartitionRequests);
@@ -959,7 +962,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	private BlockingShuffleType getBlockingShuffleType() {
 		BlockingShuffleType shuffleType;
 		try {
-			shuffleType = BlockingShuffleType.valueOf(jobConfiguration.getString(
+			shuffleType = BlockingShuffleType.valueOf(taskManagerConfiguration.getString(
 				TaskManagerOptions.TASK_BLOCKING_SHUFFLE_TYPE).toUpperCase());
 		} catch (IllegalArgumentException e) {
 			LOG.warn("The configured blocking shuffle is illegal, using default value.", e);

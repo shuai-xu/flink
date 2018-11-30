@@ -255,6 +255,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	/** The manager for the graph. */
 	private GraphManager graphManager;
 
+	private final Configuration jobManagerConfiguration;
+
 	// ------ Configuration of the Execution -------
 
 	/** Flag to indicate whether the scheduler may queue tasks for execution, or needs to be able
@@ -328,7 +330,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		ClassLoader userClassLoader,
 		BlobWriter blobWriter,
 		ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
-		Time allocationTimeout) throws IOException {
+		Time allocationTimeout,
+		Configuration jobManagerConfiguration) throws IOException {
 
 		this(
 			jobInformation,
@@ -342,7 +345,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			blobWriter,
 			resultPartitionLocationTrackerProxy,
 			allocationTimeout,
-			new UnregisteredMetricsGroup());
+			new UnregisteredMetricsGroup(),
+			jobManagerConfiguration);
 	}
 
 	public ExecutionGraph(
@@ -357,7 +361,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 			BlobWriter blobWriter,
 			ResultPartitionLocationTrackerProxy resultPartitionLocationTrackerProxy,
 			Time allocationTimeout,
-			MetricGroup metricGroup) throws IOException {
+			MetricGroup metricGroup,
+			Configuration jobManagerConfiguration) throws IOException {
 
 		checkNotNull(futureExecutor);
 
@@ -404,6 +409,8 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		this.schedulingFutures = new ConcurrentHashMap<>();
 
 		this.failOverMetrics = metricGroup.meter("task_failover", new MeterView(60));
+
+		this.jobManagerConfiguration = checkNotNull(jobManagerConfiguration);
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -811,6 +818,9 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		this.updatePartitionInfoSendInterval = updatePartitionInfoSendInterval;
 	}
 
+	Configuration getJobManagerConfiguration() {
+		return jobManagerConfiguration;
+	}
 
 	// --------------------------------------------------------------------------------------------
 	//  Actions

@@ -19,10 +19,13 @@
 package org.apache.flink.runtime.executiongraph;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
 import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
+import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
@@ -35,6 +38,7 @@ import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobmanager.scheduler.LocationPreferenceConstraint;
+import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmanager.scheduler.SchedulerTestUtils;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.jobmaster.SlotOwner;
@@ -49,6 +53,8 @@ import org.apache.flink.runtime.testutils.DirectScheduledExecutorService;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
 
@@ -58,6 +64,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -69,7 +76,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
@@ -431,6 +441,121 @@ public class ExecutionTest extends TestLogger {
 	}
 
 	@Test
+	public void testResourceCalculationBeforeSlotAllocationInScheduled() throws Exception {
+		// Prepare input gates and input channels.
+		final int numPipelineChannelsPerGate = 10;
+		final int numPipelineGates = 2;
+
+		IntermediateResult mockIntermediateResult = new IntermediateResult(
+			new IntermediateDataSetID(),
+			mock(ExecutionJobVertex.class),
+			numPipelineChannelsPerGate,
+			ResultPartitionType.PIPELINED);
+
+		IntermediateResultPartition mockIntermediateResultPartition = mock(IntermediateResultPartition.class);
+		when(mockIntermediateResultPartition.getIntermediateResult()).thenReturn(mockIntermediateResult);
+
+		ExecutionEdge mockExecutionEdge = mock(ExecutionEdge.class);
+		when(mockExecutionEdge.getSource()).thenReturn(mockIntermediateResultPartition);
+
+		ExecutionEdge[][] inputEdges = new ExecutionEdge[numPipelineGates][numPipelineChannelsPerGate];
+		for (int i = 0; i < numPipelineGates; i++) {
+			ExecutionEdge[] edgesPerGate = new ExecutionEdge[numPipelineChannelsPerGate];
+			for (int j = 0; j < numPipelineChannelsPerGate; j++) {
+				edgesPerGate[j] = mockExecutionEdge;
+			}
+			inputEdges[i] = edgesPerGate;
+		}
+
+		final JobVertex jobVertex = spy(createNoOpJobVertex());
+		when(jobVertex.getMinResources()).thenReturn(ResourceSpec.newBuilder()
+			.setCpuCores(1.0)
+			.setHeapMemoryInMB(1024)
+			.setDirectMemoryInMB(200)
+			.setNativeMemoryInMB(100)
+			.build());
+
+		final JobVertexID jobVertexId = jobVertex.getID();
+
+		final SingleSlotTestingSlotOwner slotOwner = new SingleSlotTestingSlotOwner();
+
+		final SimpleSlot slot = new SimpleSlot(
+			slotOwner,
+			new LocalTaskManagerLocation(),
+			0,
+			new SimpleAckingTaskManagerGateway());
+
+		final AtomicReference<SlotProfile> actualSlotProfile = new AtomicReference(null);
+
+		final ProgrammedSlotProvider slotProvider = spy(new ProgrammedSlotProvider(1) {
+			@Override
+			public CompletableFuture<LogicalSlot> allocateSlot(
+				SlotRequestId slotRequestId,
+				ScheduledUnit task,
+				boolean allowQueued,
+				SlotProfile slotProfile,
+				Time allocationTimeout) {
+
+				actualSlotProfile.set(slotProfile);
+				return super.allocateSlot(
+					slotRequestId, task, allowQueued, slotProfile, allocationTimeout);
+			}
+		});
+
+		slotProvider.addSlot(jobVertexId, 0, CompletableFuture.completedFuture(slot));
+
+		Configuration jobManagerConfiguration = new Configuration();
+		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, 100);
+		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION, 50);
+		jobManagerConfiguration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, 20);
+
+		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createSimpleTestGraph(
+			new JobID(),
+			jobManagerConfiguration,
+			slotProvider,
+			new NoRestartStrategy(),
+			TestingUtils.defaultExecutor(),
+			jobVertex);
+
+		ExecutionJobVertex executionJobVertex = spy(executionGraph.getJobVertex(jobVertexId));
+
+		final Execution execution = spy(executionJobVertex.getTaskVertices()[0].getCurrentExecutionAttempt());
+
+		ExecutionVertex executionVertex = spy(execution.getVertex());
+		when(executionVertex.getNumberOfInputs()).thenReturn(inputEdges.length);
+		doAnswer(new Answer<ExecutionEdge[]>() {
+			@Override
+			public ExecutionEdge[] answer(InvocationOnMock invocation) {
+				int index = invocation.getArgumentAt(0, int.class);
+				return inputEdges[index];
+			}
+		}).when(executionVertex).getInputEdges(any(int.class));
+
+		when(execution.getVertex()).thenReturn(executionVertex);
+
+		CompletableFuture<Execution> allocationFuture = execution.allocateAndAssignSlotForExecution(
+			slotProvider,
+			false,
+			LocationPreferenceConstraint.ALL,
+			TestingUtils.infiniteTime());
+
+		assertTrue(allocationFuture.isDone());
+
+		assertEquals(ExecutionState.SCHEDULED, execution.getState());
+
+		assertEquals(slot, execution.getAssignedResource());
+
+		// cancelling the execution should move it into state CANCELED
+		execution.cancel();
+		assertEquals(ExecutionState.CANCELED, execution.getState());
+
+		assertEquals(slot, slotOwner.getReturnedSlotFuture().get());
+
+		assertTrue(actualSlotProfile.get() != null);
+		assertEquals(64, actualSlotProfile.get().getResourceProfile().getNetworkMemoryInMB());
+	}
+
+	@Test
 	public void testNetworkMemoryCalculation() throws Exception {
 		int[][] parameters = {{2, 8, 128, 2, 10, 10 * 128 + 2 * 2 + 2 * 10 + 8},
 			{2, 8, 128, 2, 1, 2 * 128 + 2 * 2 + 2 * 10 + 8}};
@@ -459,7 +584,7 @@ public class ExecutionTest extends TestLogger {
 		final JobVertex jobVertex4 = createNoOpJobVertex();
 		jobVertex4.setParallelism(10);
 
-		final Configuration configuration = jobVertex4.getConfiguration();
+		final Configuration configuration = new Configuration();
 		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, NETWORK_BUFFERS_PER_CHANNEL);
 		configuration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, NETWORK_EXTRA_BUFFERS_PER_GATE);
 		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_EXTERNAL_BLOCKING_CHANNEL, NETWORK_BUFFERS_PER_BLOCKING_CHANNEL);
@@ -496,11 +621,11 @@ public class ExecutionTest extends TestLogger {
 
 		ExecutionGraph executionGraph = ExecutionGraphTestUtils.createSimpleTestGraph(
 			new JobID(),
+			configuration,
 			slotProvider,
 			new NoRestartStrategy(),
+			TestingUtils.defaultExecutor(),
 			new JobVertex[] {jobVertex1, jobVertex2, jobVertex3, jobVertex4});
-
-		executionGraph.getJobConfiguration().addAll(configuration);
 
 		ExecutionJobVertex executionJobVertex = executionGraph.getJobVertex(jobVertex4.getID());
 

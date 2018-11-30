@@ -177,7 +177,8 @@ public class ExecutionGraphBuilder {
 					blobWriter,
 					resultPartitionLocationTrackerProxy,
 					allocationTimeout,
-					metrics);
+					metrics,
+					jobManagerConfig);
 		} catch (IOException e) {
 			throw new JobException("Could not create the ExecutionGraph.", e);
 		}

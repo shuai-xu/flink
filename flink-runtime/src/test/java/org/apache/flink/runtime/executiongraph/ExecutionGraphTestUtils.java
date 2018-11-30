@@ -429,11 +429,29 @@ public class ExecutionGraphTestUtils {
 			ScheduledExecutorService executor,
 			JobVertex... vertices) throws Exception {
 
+		return createSimpleTestGraph(
+			jid,
+			new Configuration(),
+			slotProvider,
+			restartStrategy,
+			executor,
+			vertices);
+	}
+
+	public static ExecutionGraph createSimpleTestGraph(
+		JobID jid,
+		Configuration jobManagerConfiguration,
+		SlotProvider slotProvider,
+		RestartStrategy restartStrategy,
+		ScheduledExecutorService executor,
+		JobVertex... vertices) throws Exception {
+
 		checkNotNull(jid);
 		checkNotNull(vertices);
 
 		return createExecutionGraph(
 			new JobGraph(jid, "test job", vertices),
+			jobManagerConfiguration,
 			slotProvider,
 			restartStrategy,
 			executor,
@@ -489,9 +507,25 @@ public class ExecutionGraphTestUtils {
 		Time timeout) throws Exception {
 
 		return createExecutionGraph(
-			null,
 			jobGraph,
 			new Configuration(),
+			slotProvider,
+			restartStrategy,
+			executor,
+			timeout);
+	}
+
+	public static ExecutionGraph createExecutionGraph(
+		JobGraph jobGraph,
+		Configuration jobManagerConfiguration,
+		SlotProvider slotProvider,
+		RestartStrategy restartStrategy,
+		ScheduledExecutorService executor,
+		Time timeout) throws Exception {
+		return createExecutionGraph(
+			null,
+			jobGraph,
+			jobManagerConfiguration,
 			executor,
 			executor,
 			slotProvider,
@@ -678,7 +712,8 @@ public class ExecutionGraphTestUtils {
 			classLoader,
 			blobWriter,
 			new ResultPartitionLocationTrackerProxy(jobInformation.getJobConfiguration()),
-			timeout);
+			timeout,
+			new Configuration());
 
 		eg.attachJobGraph(vertices);
 
@@ -830,7 +865,8 @@ public class ExecutionGraphTestUtils {
 			ExecutionGraph.class.getClassLoader(),
 			VoidBlobWriter.getInstance(),
 			new ResultPartitionLocationTrackerProxy(new Configuration()),
-			AkkaUtils.getDefaultTimeout());
+			AkkaUtils.getDefaultTimeout(),
+			new Configuration());
 
 		return spy(new ExecutionJobVertex(graph, ajv, 1, AkkaUtils.getDefaultTimeout()));
 	}
